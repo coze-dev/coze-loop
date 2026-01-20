@@ -59,10 +59,10 @@ importers:
         version: link:../../packages/arch/logger
       '@cozeloop/account':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/account
+        version: link:../../packages/loop-base/account
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/api-schema
+        version: link:../../packages/loop-base/api-schema
       '@cozeloop/auth-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/auth-pages
@@ -71,19 +71,19 @@ importers:
         version: link:../../packages/cozeloop/biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/components
+        version: link:../../packages/loop-base/components
       '@cozeloop/evaluate-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/evaluate-pages
       '@cozeloop/guard':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/guard
+        version: link:../../packages/loop-base/guard
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/base-hooks
+        version: link:../../packages/loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/i18n
+        version: link:../../packages/loop-base/i18n
       '@cozeloop/observation-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/observation-pages
@@ -92,16 +92,16 @@ importers:
         version: link:../../packages/cozeloop/prompt-pages
       '@cozeloop/stores':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/stores
+        version: link:../../packages/loop-base/stores
       '@cozeloop/tag-pages':
         specifier: workspace:*
         version: link:../../packages/cozeloop/tag-pages
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/tea
+        version: link:../../packages/loop-base/tea
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/toolkit
+        version: link:../../packages/loop-base/toolkit
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -1268,131 +1268,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/account:
-    dependencies:
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
-      ahooks:
-        specifier: 3.7.8
-        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      zustand:
-        specifier: ^4.4.7
-        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/adapter-interfaces:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
-      '@cozeloop/observation-components':
-        specifier: workspace:*
-        version: link:../observation-components
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      ahooks:
-        specifier: 3.7.8
-        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/api-schema:
-    dependencies:
-      eventemitter3:
-        specifier: ^5.0.1
-        version: 5.0.1
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/idl2ts-cli':
-        specifier: workspace:*
-        version: link:../../../infra/idl/idl2ts-cli
-      '@coze-arch/idl2ts-runtime':
-        specifier: workspace:*
-        version: link:../../../infra/idl/idl2ts-runtime
-      '@coze-arch/logger':
-        specifier: workspace:*
-        version: link:../../arch/logger
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@microsoft/api-extractor':
-        specifier: 7.43.0
-        version: 7.43.0(@types/node@18.18.9)
-      '@rsbuild/core':
-        specifier: ~1.1.0
-        version: 1.1.13
-      '@rslib/core':
-        specifier: ~0.11.0
-        version: 0.11.2(@microsoft/api-extractor@7.43.0)
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
-
   ../../../frontend/packages/cozeloop/auth-pages:
     dependencies:
       '@coze-arch/coze-design':
@@ -1400,16 +1275,16 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/account':
         specifier: workspace:*
-        version: link:../account
+        version: link:../../loop-base/account
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/stores':
         specifier: workspace:*
-        version: link:../stores
+        version: link:../../loop-base/stores
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -1451,46 +1326,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/base-hooks:
-    dependencies:
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-      '@cozeloop/stores':
-        specifier: workspace:*
-        version: link:../stores
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      zustand:
-        specifier: ^4.4.7
-        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      ahooks:
-        specifier: 3.7.8
-        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
   ../../../frontend/packages/cozeloop/biz-components:
     dependencies:
       '@coze-arch/coze-design':
@@ -1498,19 +1333,19 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../../loop-base/tea
       classnames:
         specifier: ^2.3.2
         version: 2.5.1
@@ -1568,7 +1403,7 @@ importers:
     dependencies:
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -1596,16 +1431,16 @@ importers:
     dependencies:
       '@cozeloop/account':
         specifier: workspace:*
-        version: link:../account
+        version: link:../../loop-base/account
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/route-base':
         specifier: workspace:*
-        version: link:../route
+        version: link:../../loop-base/route
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -1644,124 +1479,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/components:
-    dependencies:
-      '@codemirror/commands':
-        specifier: ^6.3.3
-        version: 6.8.1
-      '@codemirror/state':
-        specifier: ^6.4.1
-        version: 6.5.2
-      '@codemirror/view':
-        specifier: ^6.34.1
-        version: 6.37.2
-      '@coze-arch/coze-design':
-        specifier: 0.0.7-alpha.985c0d
-        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@coze-editor/editor':
-        specifier: 0.1.0-alpha.dac011
-        version: 0.1.0-alpha.dac011(@codemirror/autocomplete@6.18.6)(@codemirror/language@6.11.1)(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(@lezer/common@1.2.3)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)(vue@3.5.16)
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
-      '@cozeloop/hooks':
-        specifier: workspace:*
-        version: link:../base-hooks
-      '@cozeloop/toolkit':
-        specifier: workspace:*
-        version: link:../toolkit
-      '@monaco-editor/react':
-        specifier: ^4.5.2
-        version: 4.7.0(monaco-editor@0.45.0)(react-dom@18.2.0)(react@18.2.0)
-      '@rjsf/core':
-        specifier: ~5.24.9
-        version: 5.24.13(@rjsf/utils@5.24.13)(react@18.2.0)
-      '@rjsf/utils':
-        specifier: ~5.24.9
-        version: 5.24.13(react@18.2.0)
-      '@rjsf/validator-ajv8':
-        specifier: ~5.24.9
-        version: 5.24.13(@rjsf/utils@5.24.13)
-      ahooks:
-        specifier: 3.7.8
-        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      classnames:
-        specifier: ^2.3.2
-        version: 2.5.1
-      copy-to-clipboard:
-        specifier: ^3.3.3
-        version: 3.3.3
-      dayjs:
-        specifier: ^1.11.7
-        version: 1.11.13
-      immer:
-        specifier: ^10.0.3
-        version: 10.1.1
-      lodash-es:
-        specifier: ^4.17.21
-        version: 4.17.21
-      monaco-editor:
-        specifier: ^0.45.0
-        version: 0.45.0
-      nanoid:
-        specifier: ^4.0.2
-        version: 4.0.2
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      react-sortable-hoc:
-        specifier: 2.0.0
-        version: 2.0.0(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
-      sortablejs:
-        specifier: ~1.15.2
-        version: 1.15.6
-    devDependencies:
-      '@coze-arch/bot-typings':
-        specifier: workspace:*
-        version: link:../../arch/bot-typings
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@cozeloop/tailwind-config':
-        specifier: workspace:*
-        version: link:../../loop-config/tailwind-config
-      '@types/lodash-es':
-        specifier: ^4.17.10
-        version: 4.17.12
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      happy-dom:
-        specifier: ^20.0.10
-        version: 20.0.10
-      react-dom:
-        specifier: 18.2.0
-        version: 18.2.0(react@18.2.0)
-      react-router-dom:
-        specifier: ^6.22.0
-        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
-      tsconfig-paths:
-        specifier: 4.1.0
-        version: 4.1.0
-      vite:
-        specifier: ^4.3.9
-        version: 4.5.14(@types/node@18.18.9)
-      vite-plugin-svgr:
-        specifier: ~3.3.0
-        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
   ../../../frontend/packages/cozeloop/components-with-adapter:
     dependencies:
       '@coze-arch/coze-design':
@@ -1772,7 +1489,7 @@ importers:
         version: link:../biz-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
     devDependencies:
       '@coze-arch/bot-typings':
         specifier: workspace:*
@@ -1822,27 +1539,6 @@ importers:
       vitest:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/env:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
   ../../../frontend/packages/cozeloop/evaluate:
     dependencies:
@@ -1854,10 +1550,10 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/adapter-interfaces':
         specifier: workspace:*
-        version: link:../adapter-interfaces
+        version: link:../../loop-base/adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/base-with-adapter-components':
         specifier: workspace:*
         version: link:../components-with-adapter
@@ -1872,7 +1568,7 @@ importers:
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/evaluate-adapter':
         specifier: workspace:*
         version: link:../evaluate-adapter
@@ -1881,13 +1577,13 @@ importers:
         version: link:../evaluate-components
       '@cozeloop/guard':
         specifier: workspace:*
-        version: link:../guard
+        version: link:../../loop-base/guard
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/observation-adapter':
         specifier: workspace:*
         version: link:../observation-adapter
@@ -1896,16 +1592,16 @@ importers:
         version: link:../prompt-components
       '@cozeloop/shared-components':
         specifier: workspace:*
-        version: link:../shared-components
+        version: link:../../loop-base/shared-components
       '@cozeloop/tag-components':
         specifier: workspace:*
         version: link:../tag-components
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../../loop-base/tea
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
       '@visactor/vchart':
         specifier: 1.13.11
         version: 1.13.11
@@ -1948,7 +1644,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/stores':
         specifier: workspace:*
-        version: link:../stores
+        version: link:../../loop-base/stores
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -1996,19 +1692,19 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/adapter-interfaces':
         specifier: workspace:*
-        version: link:../adapter-interfaces
+        version: link:../../loop-base/adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/prompt-components':
         specifier: workspace:*
         version: link:../prompt-components
@@ -2075,10 +1771,10 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/adapter-interfaces':
         specifier: workspace:*
-        version: link:../adapter-interfaces
+        version: link:../../loop-base/adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/base-with-adapter-components':
         specifier: workspace:*
         version: link:../components-with-adapter
@@ -2093,22 +1789,22 @@ importers:
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/env-adapter':
         specifier: workspace:*
-        version: link:../env
+        version: link:../../loop-base/env
       '@cozeloop/evaluate-adapter':
         specifier: workspace:*
         version: link:../evaluate-adapter
       '@cozeloop/guard':
         specifier: workspace:*
-        version: link:../guard
+        version: link:../../loop-base/guard
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/observation-adapter':
         specifier: workspace:*
         version: link:../observation-adapter
@@ -2117,16 +1813,16 @@ importers:
         version: link:../prompt-components
       '@cozeloop/shared-components':
         specifier: workspace:*
-        version: link:../shared-components
+        version: link:../../loop-base/shared-components
       '@cozeloop/stores':
         specifier: workspace:*
-        version: link:../stores
+        version: link:../../loop-base/stores
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../../loop-base/tea
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
       '@dnd-kit/core':
         specifier: ^6.0.8
         version: 6.3.1(react-dom@18.2.0)(react@18.2.0)
@@ -2304,10 +2000,10 @@ importers:
         version: link:../evaluate-components
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
     devDependencies:
       '@coze-arch/bot-typings':
         specifier: workspace:*
@@ -2364,162 +2060,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/guard:
-    dependencies:
-      '@cozeloop/biz-hooks-adapter':
-        specifier: workspace:*
-        version: link:../biz-hooks
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-      classnames:
-        specifier: ^2.3.2
-        version: 2.5.1
-    devDependencies:
-      '@coze-arch/bot-typings':
-        specifier: workspace:*
-        version: link:../../arch/bot-typings
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/stylelint-config':
-        specifier: workspace:*
-        version: link:../../../config/stylelint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@testing-library/jest-dom':
-        specifier: ^6.1.5
-        version: 6.6.3
-      '@testing-library/react':
-        specifier: ^14.1.2
-        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
-      '@testing-library/react-hooks':
-        specifier: ^8.0.1
-        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      react-dom:
-        specifier: 18.2.0
-        version: 18.2.0(react@18.2.0)
-      stylelint:
-        specifier: ^15.11.0
-        version: 15.11.0(typescript@5.8.2)
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/i18n:
-    dependencies:
-      '@cozeloop/intl':
-        specifier: workspace:*
-        version: link:../intl
-      '@cozeloop/loop-lng':
-        specifier: workspace:*
-        version: link:../resources/loop-lng
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@formatjs/icu-messageformat-parser':
-        specifier: ^2.11.2
-        version: 2.11.2
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(tsx@4.20.3)
-
-  ../../../frontend/packages/cozeloop/intl:
-    dependencies:
-      i18next:
-        specifier: '>= 19.0.0'
-        version: 25.2.1(typescript@5.8.2)
-      i18next-browser-languagedetector:
-        specifier: ^8.2.0
-        version: 8.2.0
-      intl-messageformat:
-        specifier: ^10.7.16
-        version: 10.7.16
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@rushstack/rush-sdk':
-        specifier: 5.147.2
-        version: 5.147.2(@types/node@18.18.9)
-      '@types/jju':
-        specifier: ^1.4.5
-        version: 1.4.5
-      '@types/klaw':
-        specifier: ^3.0.7
-        version: 3.0.7
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      jju:
-        specifier: ^1.4.0
-        version: 1.4.0
-      klaw:
-        specifier: ^4.1.0
-        version: 4.1.0
-      p-limit:
-        specifier: ^6.2.0
-        version: 6.2.0
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      tsx:
-        specifier: ^4.19.2
-        version: 4.20.3
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(tsx@4.20.3)
-
   ../../../frontend/packages/cozeloop/observation-adapter:
     dependencies:
       '@coze-arch/coze-design':
@@ -2527,16 +2067,16 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/adapter-interfaces':
         specifier: workspace:*
-        version: link:../adapter-interfaces
+        version: link:../../loop-base/adapter-interfaces
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/observation-components':
         specifier: workspace:*
         version: link:../observation-components
@@ -2624,10 +2164,10 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@textea/json-viewer':
         specifier: ^3.0.0
         version: 3.5.0(@emotion/react@11.11.1)(@emotion/styled@11.11.0)(@mui/material@5.17.1)(@types/react@18.2.37)(immer@10.1.1)(react-dom@18.2.0)(react@18.2.0)
@@ -2826,19 +2366,19 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/guard':
         specifier: workspace:*
-        version: link:../guard
+        version: link:../../loop-base/guard
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/observation-components':
         specifier: workspace:*
         version: link:../observation-components
@@ -2935,22 +2475,22 @@ importers:
         version: 0.1.0-alpha.0fd19e(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-hooks-adapter':
         specifier: workspace:*
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../../loop-base/tea
       '@lezer/common':
         specifier: ^1.2.2
         version: 1.2.3
@@ -3092,19 +2632,19 @@ importers:
         version: 0.1.0-alpha.0fd19e(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
       '@lezer/common':
         specifier: ^1.2.2
         version: 1.2.3
@@ -3228,7 +2768,7 @@ importers:
         version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -3237,13 +2777,13 @@ importers:
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/observation-adapter':
         specifier: workspace:*
         version: link:../observation-adapter
@@ -3255,7 +2795,7 @@ importers:
         version: link:../prompt-components-v2
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -3315,162 +2855,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/resources/loop-lng:
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../../config/ts-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-
-  ../../../frontend/packages/cozeloop/route:
-    dependencies:
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@testing-library/react':
-        specifier: ^14.1.2
-        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react-router-dom:
-        specifier: ^6.22.0
-        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/shared-components:
-    dependencies:
-      '@coze-arch/coze-design':
-        specifier: 0.0.7-alpha.985c0d
-        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
-      '@cozeloop/api-schema':
-        specifier: workspace:*
-        version: link:../api-schema
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-      ahooks:
-        specifier: 3.7.8
-        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
-      classnames:
-        specifier: ^2.3.2
-        version: 2.5.1
-    devDependencies:
-      '@coze-arch/bot-typings':
-        specifier: workspace:*
-        version: link:../../arch/bot-typings
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@cozeloop/guard':
-        specifier: workspace:*
-        version: link:../guard
-      '@types/lodash-es':
-        specifier: ^4.17.10
-        version: 4.17.12
-      '@types/react':
-        specifier: 18.2.37
-        version: 18.2.37
-      '@types/react-dom':
-        specifier: 18.2.15
-        version: 18.2.15
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      less:
-        specifier: ^4.2.0
-        version: 4.4.2
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      react-dom:
-        specifier: 18.2.0
-        version: 18.2.0(react@18.2.0)
-      react-router-dom:
-        specifier: ^6.22.0
-        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
-      sucrase:
-        specifier: ^3.32.0
-        version: 3.35.0
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(less@4.4.2)
-
-  ../../../frontend/packages/cozeloop/stores:
-    dependencies:
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-      '@cozeloop/toolkit':
-        specifier: workspace:*
-        version: link:../toolkit
-      eventemitter3:
-        specifier: ^5.0.1
-        version: 5.0.1
-      immer:
-        specifier: ^10.0.3
-        version: 10.1.1
-      zustand:
-        specifier: ^4.4.7
-        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(happy-dom@20.0.10)
-
   ../../../frontend/packages/cozeloop/tag-components:
     dependencies:
       '@coze-arch/coze-design':
@@ -3481,7 +2865,7 @@ importers:
         version: link:../../arch/logger
       '@cozeloop/api-schema':
         specifier: workspace:*
-        version: link:../api-schema
+        version: link:../../loop-base/api-schema
       '@cozeloop/biz-components-adapter':
         specifier: workspace:*
         version: link:../biz-components
@@ -3490,25 +2874,25 @@ importers:
         version: link:../biz-hooks
       '@cozeloop/components':
         specifier: workspace:*
-        version: link:../components
+        version: link:../../loop-base/components
       '@cozeloop/env-adapter':
         specifier: workspace:*
-        version: link:../env
+        version: link:../../loop-base/env
       '@cozeloop/guard':
         specifier: workspace:*
-        version: link:../guard
+        version: link:../../loop-base/guard
       '@cozeloop/hooks':
         specifier: workspace:*
-        version: link:../base-hooks
+        version: link:../../loop-base/base-hooks
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@cozeloop/tea-adapter':
         specifier: workspace:*
-        version: link:../tea
+        version: link:../../loop-base/tea
       '@cozeloop/toolkit':
         specifier: workspace:*
-        version: link:../toolkit
+        version: link:../../loop-base/toolkit
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
@@ -3609,7 +2993,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../i18n
+        version: link:../../loop-base/i18n
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -3650,7 +3034,623 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/tea:
+  ../../../frontend/packages/loop-base/account:
+    dependencies:
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      zustand:
+        specifier: ^4.4.7
+        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/adapter-interfaces:
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/observation-components':
+        specifier: workspace:*
+        version: link:../../cozeloop/observation-components
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/api-schema:
+    dependencies:
+      eventemitter3:
+        specifier: ^5.0.1
+        version: 5.0.1
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/idl2ts-cli':
+        specifier: workspace:*
+        version: link:../../../infra/idl/idl2ts-cli
+      '@coze-arch/idl2ts-runtime':
+        specifier: workspace:*
+        version: link:../../../infra/idl/idl2ts-runtime
+      '@coze-arch/logger':
+        specifier: workspace:*
+        version: link:../../arch/logger
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@microsoft/api-extractor':
+        specifier: 7.43.0
+        version: 7.43.0(@types/node@18.18.9)
+      '@rsbuild/core':
+        specifier: ~1.1.0
+        version: 1.1.13
+      '@rslib/core':
+        specifier: ~0.11.0
+        version: 0.11.2(@microsoft/api-extractor@7.43.0)
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      sucrase:
+        specifier: ^3.32.0
+        version: 3.35.0
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/base-hooks:
+    dependencies:
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      '@cozeloop/stores':
+        specifier: workspace:*
+        version: link:../stores
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      zustand:
+        specifier: ^4.4.7
+        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/components:
+    dependencies:
+      '@codemirror/commands':
+        specifier: ^6.3.3
+        version: 6.8.1
+      '@codemirror/state':
+        specifier: ^6.4.1
+        version: 6.5.2
+      '@codemirror/view':
+        specifier: ^6.34.1
+        version: 6.37.2
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@coze-editor/editor':
+        specifier: 0.1.0-alpha.dac011
+        version: 0.1.0-alpha.dac011(@codemirror/autocomplete@6.18.6)(@codemirror/language@6.11.1)(@codemirror/state@6.5.2)(@codemirror/view@6.37.2)(@lezer/common@1.2.3)(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)(typescript@5.8.2)(vue@3.5.16)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/hooks':
+        specifier: workspace:*
+        version: link:../base-hooks
+      '@cozeloop/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
+      '@monaco-editor/react':
+        specifier: ^4.5.2
+        version: 4.7.0(monaco-editor@0.45.0)(react-dom@18.2.0)(react@18.2.0)
+      '@rjsf/core':
+        specifier: ~5.24.9
+        version: 5.24.13(@rjsf/utils@5.24.13)(react@18.2.0)
+      '@rjsf/utils':
+        specifier: ~5.24.9
+        version: 5.24.13(react@18.2.0)
+      '@rjsf/validator-ajv8':
+        specifier: ~5.24.9
+        version: 5.24.13(@rjsf/utils@5.24.13)
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+      copy-to-clipboard:
+        specifier: ^3.3.3
+        version: 3.3.3
+      dayjs:
+        specifier: ^1.11.7
+        version: 1.11.13
+      immer:
+        specifier: ^10.0.3
+        version: 10.1.1
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
+      monaco-editor:
+        specifier: ^0.45.0
+        version: 0.45.0
+      nanoid:
+        specifier: ^4.0.2
+        version: 4.0.2
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-sortable-hoc:
+        specifier: 2.0.0
+        version: 2.0.0(prop-types@15.8.1)(react-dom@18.2.0)(react@18.2.0)
+      sortablejs:
+        specifier: ~1.15.2
+        version: 1.15.6
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@cozeloop/tailwind-config':
+        specifier: workspace:*
+        version: link:../../loop-config/tailwind-config
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      happy-dom:
+        specifier: ^20.0.10
+        version: 20.0.10
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      tsconfig-paths:
+        specifier: 4.1.0
+        version: 4.1.0
+      vite:
+        specifier: ^4.3.9
+        version: 4.5.14(@types/node@18.18.9)
+      vite-plugin-svgr:
+        specifier: ~3.3.0
+        version: 3.3.0(typescript@5.8.2)(vite@4.5.14)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/env:
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/guard:
+    dependencies:
+      '@cozeloop/biz-hooks-adapter':
+        specifier: workspace:*
+        version: link:../../cozeloop/biz-hooks
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/stylelint-config':
+        specifier: workspace:*
+        version: link:../../../config/stylelint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@testing-library/jest-dom':
+        specifier: ^6.1.5
+        version: 6.6.3
+      '@testing-library/react':
+        specifier: ^14.1.2
+        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
+      '@testing-library/react-hooks':
+        specifier: ^8.0.1
+        version: 8.0.1(@types/react@18.2.37)(react-dom@18.2.0)(react@18.2.0)
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      stylelint:
+        specifier: ^15.11.0
+        version: 15.11.0(typescript@5.8.2)
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/i18n:
+    dependencies:
+      '@cozeloop/intl':
+        specifier: workspace:*
+        version: link:../intl
+      '@cozeloop/loop-lng':
+        specifier: workspace:*
+        version: link:../loop-lng
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@formatjs/icu-messageformat-parser':
+        specifier: ^2.11.2
+        version: 2.11.2
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.3
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(tsx@4.20.3)
+
+  ../../../frontend/packages/loop-base/intl:
+    dependencies:
+      i18next:
+        specifier: '>= 19.0.0'
+        version: 25.2.1(typescript@5.8.2)
+      i18next-browser-languagedetector:
+        specifier: ^8.2.0
+        version: 8.2.0
+      intl-messageformat:
+        specifier: ^10.7.16
+        version: 10.7.16
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@rushstack/rush-sdk':
+        specifier: 5.147.2
+        version: 5.147.2(@types/node@18.18.9)
+      '@types/jju':
+        specifier: ^1.4.5
+        version: 1.4.5
+      '@types/klaw':
+        specifier: ^3.0.7
+        version: 3.0.7
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      jju:
+        specifier: ^1.4.0
+        version: 1.4.0
+      klaw:
+        specifier: ^4.1.0
+        version: 4.1.0
+      p-limit:
+        specifier: ^6.2.0
+        version: 6.2.0
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.20.3
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(tsx@4.20.3)
+
+  ../../../frontend/packages/loop-base/loop-lng:
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+
+  ../../../frontend/packages/loop-base/route:
+    dependencies:
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@testing-library/react':
+        specifier: ^14.1.2
+        version: 14.3.1(react-dom@18.2.0)(react@18.2.0)
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      sucrase:
+        specifier: ^3.32.0
+        version: 3.35.0
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/shared-components:
+    dependencies:
+      '@coze-arch/coze-design':
+        specifier: 0.0.7-alpha.985c0d
+        version: 0.0.7-alpha.985c0d(@types/react@18.2.37)(acorn@8.15.0)(react-dom@18.2.0)(react@18.2.0)
+      '@cozeloop/api-schema':
+        specifier: workspace:*
+        version: link:../api-schema
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      ahooks:
+        specifier: 3.7.8
+        version: 3.7.8(patch_hash=sa4ddrxdk2yhjzudeck6u5ww3i)(react@18.2.0)
+      classnames:
+        specifier: ^2.3.2
+        version: 2.5.1
+    devDependencies:
+      '@coze-arch/bot-typings':
+        specifier: workspace:*
+        version: link:../../arch/bot-typings
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@cozeloop/guard':
+        specifier: workspace:*
+        version: link:../guard
+      '@types/lodash-es':
+        specifier: ^4.17.10
+        version: 4.17.12
+      '@types/react':
+        specifier: 18.2.37
+        version: 18.2.37
+      '@types/react-dom':
+        specifier: 18.2.15
+        version: 18.2.15
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      less:
+        specifier: ^4.2.0
+        version: 4.4.2
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      react-router-dom:
+        specifier: ^6.22.0
+        version: 6.30.1(react-dom@18.2.0)(react@18.2.0)
+      sucrase:
+        specifier: ^3.32.0
+        version: 3.35.0
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(less@4.4.2)
+
+  ../../../frontend/packages/loop-base/stores:
+    dependencies:
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../i18n
+      '@cozeloop/toolkit':
+        specifier: workspace:*
+        version: link:../toolkit
+      eventemitter3:
+        specifier: ^5.0.1
+        version: 5.0.1
+      immer:
+        specifier: ^10.0.3
+        version: 10.1.1
+      zustand:
+        specifier: ^4.4.7
+        version: 4.5.7(@types/react@18.2.37)(immer@10.1.1)(react@18.2.0)
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-base/tea:
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*
@@ -3680,7 +3680,7 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/toolkit:
+  ../../../frontend/packages/loop-base/toolkit:
     dependencies:
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
@@ -3736,7 +3736,7 @@ importers:
         version: link:../../arch/bot-env-adapter
       '@cozeloop/i18n-adapter':
         specifier: workspace:*
-        version: link:../../cozeloop/i18n
+        version: link:../../loop-base/i18n
     devDependencies:
       '@coze-arch/eslint-config':
         specifier: workspace:*

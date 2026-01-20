@@ -162,18 +162,18 @@
     },
     {
       "packageName": "@cozeloop/account",
-      "projectFolder": "frontend/packages/cozeloop/account",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/account",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/adapter-interfaces",
-      "projectFolder": "frontend/packages/cozeloop/adapter-interfaces",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/adapter-interfaces",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/api-schema",
-      "projectFolder": "frontend/packages/cozeloop/api-schema",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/api-schema",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/auth-pages",
@@ -182,8 +182,8 @@
     },
     {
       "packageName": "@cozeloop/hooks",
-      "projectFolder": "frontend/packages/cozeloop/base-hooks",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/base-hooks",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/biz-components-adapter",
@@ -202,13 +202,13 @@
     },
     {
       "packageName": "@cozeloop/components",
-      "projectFolder": "frontend/packages/cozeloop/components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/components",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/env-adapter",
-      "projectFolder": "frontend/packages/cozeloop/env",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/env",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/evaluate",
@@ -232,18 +232,18 @@
     },
     {
       "packageName": "@cozeloop/guard",
-      "projectFolder": "frontend/packages/cozeloop/guard",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/guard",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/i18n-adapter",
-      "projectFolder": "frontend/packages/cozeloop/i18n",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/i18n",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/intl",
-      "projectFolder": "frontend/packages/cozeloop/intl",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/intl",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/observation-components",
@@ -272,13 +272,13 @@
     },
     {
       "packageName": "@cozeloop/loop-lng",
-      "projectFolder": "frontend/packages/cozeloop/resources/loop-lng",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/loop-lng",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/route-base",
-      "projectFolder": "frontend/packages/cozeloop/route",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/route",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/rsbuild-config",
@@ -287,8 +287,8 @@
     },
     {
       "packageName": "@cozeloop/stores",
-      "projectFolder": "frontend/packages/cozeloop/stores",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/stores",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/tag-components",
@@ -312,13 +312,13 @@
     },
     {
       "packageName": "@cozeloop/tea-adapter",
-      "projectFolder": "frontend/packages/cozeloop/tea",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/tea",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/toolkit",
-      "projectFolder": "frontend/packages/cozeloop/toolkit",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-base/toolkit",
+      "tags": ["level-3", "level-base"]
     },
     {
       "packageName": "@cozeloop/base-with-adapter-components",
@@ -328,8 +328,8 @@
     },
     {
       "packageName": "@cozeloop/shared-components",
-      "projectFolder": "frontend/packages/cozeloop/shared-components",
-      "tags": ["level-3"],
+      "projectFolder": "frontend/packages/loop-base/shared-components",
+      "tags": ["level-3", "level-base"],
       "decoupledLocalDependencies": []
     },
     {
