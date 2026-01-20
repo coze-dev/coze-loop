@@ -37,17 +37,17 @@
     {
       "packageName": "@coze-arch/eslint-config",
       "projectFolder": "frontend/config/eslint-config",
-      "tags": ["level-1"]
+      "tags": ["level-1", "core"]
     },
     {
       "packageName": "@coze-arch/stylelint-config",
       "projectFolder": "frontend/config/stylelint-config",
-      "tags": ["level-1"]
+      "tags": ["level-1", "core"]
     },
     {
       "packageName": "@coze-arch/tailwind-config",
       "projectFolder": "frontend/config/tailwind-config",
-      "tags": ["level-1"]
+      "tags": ["level-1", "core"]
     },
     {
       "packageName": "@coze-arch/ts-config",
@@ -57,7 +57,7 @@
     {
       "packageName": "@coze-arch/vitest-config",
       "projectFolder": "frontend/config/vitest-config",
-      "tags": ["level-1"]
+      "tags": ["level-1", "core"]
     },
     {
       "packageName": "@coze-arch/eslint-plugin",
