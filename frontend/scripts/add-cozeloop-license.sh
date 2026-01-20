@@ -27,4 +27,8 @@ add_header_in_dir() {
 }
 
 add_header_in_dir "./frontend/apps/cozeloop"
-add_header_in_dir "./frontend/packages/cozeloop"
+add_header_in_dir "./frontend/packages/loop-base"
+add_header_in_dir "./frontend/packages/loop-components"
+add_header_in_dir "./frontend/packages/loop-config"
+add_header_in_dir "./frontend/packages/loop-modules"
+add_header_in_dir "./frontend/packages/loop-pages"

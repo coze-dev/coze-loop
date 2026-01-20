@@ -1,0 +1,61 @@
+{
+  "extends": "@coze-arch/ts-config/tsconfig.web.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "outDir": "dist/types",
+    "jsx": "react-jsx",
+    "lib": ["DOM", "ESNext"],
+    "emitDeclarationOnly": true,
+    "module": "ESNext",
+    "target": "ES2020",
+    "declaration": true,
+    "rootDir": "src",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "tsBuildInfoFile": "dist/types/tsconfig.build.tsbuildinfo"
+  },
+  "include": ["src", "src/**/*.json"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    {
+      "path": "../../../config/eslint-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/stylelint-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/tailwind-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/ts-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/pkg-root-webpack-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/postcss-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-config/tailwind-plugin/tsconfig.build.json"
+    }
+  ]
+}

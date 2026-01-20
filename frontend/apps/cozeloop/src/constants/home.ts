@@ -14,7 +14,7 @@ export const COZELOOP_DOC_URL =
 export const COZELOOP_GITHUB_URL = 'https://github.com/coze-dev/coze-loop';
 
 /** discord url */
-export const COZELOOP_DISCORD_URL = 'https://discord.gg/a6YtkysB';
+export const COZELOOP_DISCORD_URL = 'https://discord.com/invite/sTVN9EVS4B';
 
 /** lark group url */
 export const COZELOOP_LARK_GROUP_URL =
