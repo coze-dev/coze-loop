@@ -280,8 +280,7 @@
     {
       "packageName": "@cozeloop/shared-components",
       "projectFolder": "frontend/packages/loop-components/shared-components",
-      "tags": ["level-3"],
-      "decoupledLocalDependencies": []
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/tag-components",
@@ -299,34 +298,34 @@
       "tags": ["level-3"]
     },
     {
+      "packageName": "@cozeloop/evaluate",
+      "projectFolder": "frontend/packages/loop-modules/evaluate",
+      "tags": ["level-4"]
+    },
+    {
       "packageName": "@cozeloop/auth-pages",
       "projectFolder": "frontend/packages/loop-pages/auth-pages",
-      "tags": ["level-4"]
+      "tags": ["level-5"]
     },
     {
       "packageName": "@cozeloop/evaluate-pages",
       "projectFolder": "frontend/packages/loop-pages/evaluate-pages",
-      "tags": ["level-4"]
+      "tags": ["level-5"]
     },
     {
       "packageName": "@cozeloop/observation-pages",
       "projectFolder": "frontend/packages/loop-pages/observation-pages",
-      "tags": ["level-4"]
+      "tags": ["level-5"]
     },
     {
       "packageName": "@cozeloop/prompt-pages",
       "projectFolder": "frontend/packages/loop-pages/prompt-pages",
-      "tags": ["level-4"]
+      "tags": ["level-5"]
     },
     {
       "packageName": "@cozeloop/tag-pages",
       "projectFolder": "frontend/packages/loop-pages/tag-pages",
-      "tags": ["level-4"]
-    },
-    {
-      "packageName": "@cozeloop/evaluate",
-      "projectFolder": "frontend/packages/loop-modules/evaluate",
-      "tags": ["level-4"]
+      "tags": ["level-5"]
     },
     {
       "packageName": "@cozeloop/community-base",
