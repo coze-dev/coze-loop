@@ -18,6 +18,9 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
+      "path": "../adapter-interfaces/tsconfig.build.json"
+    },
+    {
       "path": "../biz-hooks/tsconfig.build.json"
     },
     {
@@ -31,9 +34,6 @@
     },
     {
       "path": "../../../config/vitest-config/tsconfig.build.json"
-    },
-    {
-      "path": "../../loop-base/adapter-interfaces/tsconfig.build.json"
     },
     {
       "path": "../../loop-base/api-schema/tsconfig.build.json"

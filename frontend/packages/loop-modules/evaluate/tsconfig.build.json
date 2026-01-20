@@ -30,9 +30,6 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../../loop-base/adapter-interfaces/tsconfig.build.json"
-    },
-    {
       "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {
@@ -54,9 +51,6 @@
       "path": "../../loop-base/i18n/tsconfig.build.json"
     },
     {
-      "path": "../../loop-base/shared-components/tsconfig.build.json"
-    },
-    {
       "path": "../../loop-base/stores/tsconfig.build.json"
     },
     {
@@ -64,6 +58,9 @@
     },
     {
       "path": "../../loop-base/toolkit/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-components/adapter-interfaces/tsconfig.build.json"
     },
     {
       "path": "../../loop-components/biz-components/tsconfig.build.json"
@@ -88,6 +85,9 @@
     },
     {
       "path": "../../loop-components/prompt-components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-components/shared-components/tsconfig.build.json"
     },
     {
       "path": "../../loop-components/tag-components/tsconfig.build.json"

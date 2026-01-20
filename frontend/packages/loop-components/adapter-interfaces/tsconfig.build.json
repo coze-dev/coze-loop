@@ -13,9 +13,6 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
-      "path": "../api-schema/tsconfig.build.json"
-    },
-    {
       "path": "../../../config/eslint-config/tsconfig.build.json"
     },
     {
@@ -25,7 +22,10 @@
       "path": "../../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../../loop-components/observation-components/tsconfig.build.json"
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../observation-components/tsconfig.build.json"
     }
   ]
 }

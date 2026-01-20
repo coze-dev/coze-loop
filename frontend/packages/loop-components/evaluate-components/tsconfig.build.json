@@ -18,6 +18,9 @@
   "exclude": ["node_modules", "dist"],
   "references": [
     {
+      "path": "../adapter-interfaces/tsconfig.build.json"
+    },
+    {
       "path": "../biz-components/tsconfig.build.json"
     },
     {
@@ -45,9 +48,6 @@
       "path": "../evaluate-adapter/tsconfig.build.json"
     },
     {
-      "path": "../../loop-base/adapter-interfaces/tsconfig.build.json"
-    },
-    {
       "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {
@@ -72,9 +72,6 @@
       "path": "../../loop-base/i18n/tsconfig.build.json"
     },
     {
-      "path": "../../loop-base/shared-components/tsconfig.build.json"
-    },
-    {
       "path": "../../loop-base/stores/tsconfig.build.json"
     },
     {
@@ -91,6 +88,9 @@
     },
     {
       "path": "../prompt-components/tsconfig.build.json"
+    },
+    {
+      "path": "../shared-components/tsconfig.build.json"
     }
   ]
 }

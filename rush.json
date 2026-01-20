@@ -24,314 +24,314 @@
     "core",
     "infra",
     "rush-tools",
-    "loop-config",
-    "loop-base",
-    "loop-components",
-    "loop-pages",
-    "loop-modules",
-    "loop-app"
+    "level-1",
+    "level-2",
+    "level-3",
+    "level-4",
+    "level-5",
+    "level-6"
   ],
   "projects": [
     {
       "packageName": "@coze-arch/eslint-config",
       "projectFolder": "frontend/config/eslint-config",
-      "tags": ["core"]
+      "tags": ["core", "level-1"]
     },
     {
       "packageName": "@coze-arch/stylelint-config",
       "projectFolder": "frontend/config/stylelint-config",
-      "tags": ["core"]
+      "tags": ["core", "level-1"]
     },
     {
       "packageName": "@coze-arch/tailwind-config",
       "projectFolder": "frontend/config/tailwind-config",
-      "tags": ["core"]
+      "tags": ["core", "level-1"]
     },
     {
       "packageName": "@coze-arch/ts-config",
       "projectFolder": "frontend/config/ts-config",
-      "tags": ["core"]
+      "tags": ["core", "level-1"]
     },
     {
       "packageName": "@coze-arch/vitest-config",
       "projectFolder": "frontend/config/vitest-config",
-      "tags": ["core"]
+      "tags": ["core", "level-1"]
     },
     {
       "packageName": "@coze-arch/eslint-plugin",
       "projectFolder": "frontend/infra/eslint-plugin",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/idl-parser",
       "projectFolder": "frontend/infra/idl/idl-parser",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/idl2ts-cli",
       "projectFolder": "frontend/infra/idl/idl2ts-cli",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/idl2ts-generator",
       "projectFolder": "frontend/infra/idl/idl2ts-generator",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/idl2ts-helper",
       "projectFolder": "frontend/infra/idl/idl2ts-helper",
-      "tags": ["infra", "rush-tools"]
+      "tags": ["infra", "level-1", "rush-tools"]
     },
     {
       "packageName": "@coze-arch/idl2ts-plugin",
       "projectFolder": "frontend/infra/idl/idl2ts-plugin",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/idl2ts-runtime",
       "projectFolder": "frontend/infra/idl/idl2ts-runtime",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/pkg-root-webpack-plugin",
       "projectFolder": "frontend/infra/plugins/pkg-root-webpack-plugin",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/postcss-plugin",
       "projectFolder": "frontend/infra/plugins/postcss-plugin",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/subspace-resolve-plugin",
       "projectFolder": "frontend/infra/plugins/subspace-resolve-plugin",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/monorepo-kits",
       "projectFolder": "frontend/infra/utils/monorepo-kits",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@coze-arch/rush-logger",
       "projectFolder": "frontend/infra/utils/rush-logger",
-      "tags": ["infra"]
+      "tags": ["infra", "level-1"]
     },
     {
       "packageName": "@cozeloop/rsbuild-config",
       "projectFolder": "frontend/packages/loop-config/rsbuild-config",
-      "tags": ["loop-config"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/tailwind-config",
       "projectFolder": "frontend/packages/loop-config/tailwind-config",
-      "tags": ["loop-config"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@cozeloop/tailwind-plugin",
       "projectFolder": "frontend/packages/loop-config/tailwind-plugin",
-      "tags": ["loop-config"]
+      "tags": ["level-1"]
     },
     {
       "packageName": "@coze-arch/bot-env",
       "projectFolder": "frontend/packages/loop-base/bot-env",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-studio/bot-env-adapter",
       "projectFolder": "frontend/packages/loop-base/bot-env-adapter",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/bot-flags",
       "projectFolder": "frontend/packages/loop-base/bot-flags",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/bot-md-box-adapter",
       "projectFolder": "frontend/packages/loop-base/bot-md-box-adapter",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/bot-typings",
       "projectFolder": "frontend/packages/loop-base/bot-typings",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/fetch-stream",
       "projectFolder": "frontend/packages/loop-base/fetch-stream",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@coze-arch/logger",
       "projectFolder": "frontend/packages/loop-base/logger",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/account",
       "projectFolder": "frontend/packages/loop-base/account",
-      "tags": ["loop-base"]
-    },
-    {
-      "packageName": "@cozeloop/adapter-interfaces",
-      "projectFolder": "frontend/packages/loop-base/adapter-interfaces",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/api-schema",
       "projectFolder": "frontend/packages/loop-base/api-schema",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/hooks",
       "projectFolder": "frontend/packages/loop-base/base-hooks",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/components",
       "projectFolder": "frontend/packages/loop-base/components",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/env-adapter",
       "projectFolder": "frontend/packages/loop-base/env",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/guard",
       "projectFolder": "frontend/packages/loop-base/guard",
-      "tags": ["loop-base"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/i18n-adapter",
       "projectFolder": "frontend/packages/loop-base/i18n",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/intl",
       "projectFolder": "frontend/packages/loop-base/intl",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/loop-lng",
       "projectFolder": "frontend/packages/loop-base/loop-lng",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/route-base",
       "projectFolder": "frontend/packages/loop-base/route",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/stores",
       "projectFolder": "frontend/packages/loop-base/stores",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/tea-adapter",
       "projectFolder": "frontend/packages/loop-base/tea",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
       "packageName": "@cozeloop/toolkit",
       "projectFolder": "frontend/packages/loop-base/toolkit",
-      "tags": ["loop-base"]
+      "tags": ["level-2"]
     },
     {
-      "packageName": "@cozeloop/shared-components",
-      "projectFolder": "frontend/packages/loop-base/shared-components",
-      "tags": ["loop-base"],
-      "decoupledLocalDependencies": []
+      "packageName": "@cozeloop/adapter-interfaces",
+      "projectFolder": "frontend/packages/loop-components/adapter-interfaces",
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-components-adapter",
       "projectFolder": "frontend/packages/loop-components/biz-components",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-config-adapter",
       "projectFolder": "frontend/packages/loop-components/biz-config",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/biz-hooks-adapter",
       "projectFolder": "frontend/packages/loop-components/biz-hooks",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/evaluate-adapter",
       "projectFolder": "frontend/packages/loop-components/evaluate-adapter",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/evaluate-components",
       "projectFolder": "frontend/packages/loop-components/evaluate-components",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/observation-components",
       "projectFolder": "frontend/packages/loop-components/observation-components",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/observation-adapter",
       "projectFolder": "frontend/packages/loop-components/observation-adapter",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/prompt-components",
       "projectFolder": "frontend/packages/loop-components/prompt-components",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
+    },
+    {
+      "packageName": "@cozeloop/shared-components",
+      "projectFolder": "frontend/packages/loop-components/shared-components",
+      "tags": ["level-3"],
+      "decoupledLocalDependencies": []
     },
     {
       "packageName": "@cozeloop/tag-components",
       "projectFolder": "frontend/packages/loop-components/tag-components",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/base-with-adapter-components",
       "projectFolder": "frontend/packages/loop-components/components-with-adapter",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/prompt-components-v2",
       "projectFolder": "frontend/packages/loop-components/prompt-components-v2",
-      "tags": ["loop-components"]
+      "tags": ["level-3"]
     },
     {
       "packageName": "@cozeloop/auth-pages",
       "projectFolder": "frontend/packages/loop-pages/auth-pages",
-      "tags": ["loop-pages"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/evaluate-pages",
       "projectFolder": "frontend/packages/loop-pages/evaluate-pages",
-      "tags": ["loop-pages"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/observation-pages",
       "projectFolder": "frontend/packages/loop-pages/observation-pages",
-      "tags": ["loop-pages"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/prompt-pages",
       "projectFolder": "frontend/packages/loop-pages/prompt-pages",
-      "tags": ["loop-pages"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/tag-pages",
       "projectFolder": "frontend/packages/loop-pages/tag-pages",
-      "tags": ["loop-pages"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/evaluate",
       "projectFolder": "frontend/packages/loop-modules/evaluate",
-      "tags": ["loop-modules"]
+      "tags": ["level-4"]
     },
     {
       "packageName": "@cozeloop/community-base",
       "projectFolder": "frontend/apps/cozeloop",
-      "tags": ["loop-app"]
+      "tags": ["level-6"]
     }
   ]
 }
