@@ -115,16 +115,17 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				// get tool_call
 				toolCall, ok := tc["tool_call"].(map[string]interface{})
 				if !ok {
-					continue
+					toolCall = tc // maybe no tool_call key, it has been a raw tool_call
 				}
 				// get function from tool_call
 				function, ok := toolCall["function"].(map[string]interface{})
 				if !ok {
 					continue
 				}
-
+				id, _ := toolCall["id"]
 				modelCall := map[string]interface{}{
 					"type": "function",
+					"id":   id,
 					"function": map[string]interface{}{
 						"name": function["name"],
 					},
