@@ -187,18 +187,18 @@
     },
     {
       "packageName": "@cozeloop/biz-components-adapter",
-      "projectFolder": "frontend/packages/cozeloop/biz-components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/biz-components",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/biz-config-adapter",
-      "projectFolder": "frontend/packages/cozeloop/biz-config",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/biz-config",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/biz-hooks-adapter",
-      "projectFolder": "frontend/packages/cozeloop/biz-hooks",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/biz-hooks",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/components",
@@ -217,13 +217,13 @@
     },
     {
       "packageName": "@cozeloop/evaluate-adapter",
-      "projectFolder": "frontend/packages/cozeloop/evaluate-adapter",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/evaluate-adapter",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/evaluate-components",
-      "projectFolder": "frontend/packages/cozeloop/evaluate-components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/evaluate-components",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/evaluate-pages",
@@ -247,13 +247,13 @@
     },
     {
       "packageName": "@cozeloop/observation-components",
-      "projectFolder": "frontend/packages/cozeloop/observation-components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/observation-components",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/observation-adapter",
-      "projectFolder": "frontend/packages/cozeloop/observation-adapter",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/observation-adapter",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/observation-pages",
@@ -262,8 +262,8 @@
     },
     {
       "packageName": "@cozeloop/prompt-components",
-      "projectFolder": "frontend/packages/cozeloop/prompt-components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/prompt-components",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/prompt-pages",
@@ -292,8 +292,8 @@
     },
     {
       "packageName": "@cozeloop/tag-components",
-      "projectFolder": "frontend/packages/cozeloop/tag-components",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-components/tag-components",
+      "tags": ["level-3", "level-loop-components"]
     },
     {
       "packageName": "@cozeloop/tag-pages",
@@ -322,8 +322,8 @@
     },
     {
       "packageName": "@cozeloop/base-with-adapter-components",
-      "projectFolder": "frontend/packages/cozeloop/components-with-adapter",
-      "tags": ["level-3"],
+      "projectFolder": "frontend/packages/loop-components/components-with-adapter",
+      "tags": ["level-3", "level-loop-components"],
       "decoupledLocalDependencies": []
     },
     {
@@ -334,8 +334,8 @@
     },
     {
       "packageName": "@cozeloop/prompt-components-v2",
-      "projectFolder": "frontend/packages/cozeloop/prompt-components-v2",
-      "tags": ["level-3"],
+      "projectFolder": "frontend/packages/loop-components/prompt-components-v2",
+      "tags": ["level-3", "level-loop-components"],
       "decoupledLocalDependencies": []
     }
   ]
