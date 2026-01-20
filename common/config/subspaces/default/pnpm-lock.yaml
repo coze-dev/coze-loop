@@ -144,10 +144,10 @@ importers:
         version: link:../../config/vitest-config
       '@cozeloop/rsbuild-config':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/rsbuild-config
+        version: link:../../packages/loop-config/rsbuild-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../../packages/cozeloop/tailwind-config
+        version: link:../../packages/loop-config/tailwind-config
       '@rsbuild/core':
         specifier: ~1.1.0
         version: 1.1.13
@@ -1727,7 +1727,7 @@ importers:
         version: link:../../../config/ts-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@types/lodash-es':
         specifier: ^4.17.10
         version: 4.17.12
@@ -1785,7 +1785,7 @@ importers:
         version: link:../../../config/ts-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@types/lodash-es':
         specifier: ^4.17.10
         version: 4.17.12
@@ -2027,7 +2027,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -2217,7 +2217,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@emotion/react':
         specifier: 11.11.1
         version: 11.11.1(@types/react@18.2.37)(react@18.2.0)
@@ -2564,7 +2564,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@testing-library/jest-dom':
         specifier: ^6.1.5
         version: 6.6.3
@@ -2718,10 +2718,10 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@cozeloop/tailwind-plugin':
         specifier: workspace:*
-        version: link:../tailwind-plugin
+        version: link:../../loop-config/tailwind-plugin
       '@douyinfe/semi-rspack-plugin':
         specifier: 2.61.0
         version: 2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0)
@@ -3023,7 +3023,7 @@ importers:
         version: link:../../../config/ts-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@types/lodash-es':
         specifier: ^4.17.10
         version: 4.17.12
@@ -3189,7 +3189,7 @@ importers:
         version: link:../../../config/ts-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@types/lodash-es':
         specifier: ^4.17.10
         version: 4.17.12
@@ -3280,7 +3280,7 @@ importers:
         version: link:../../../config/vitest-config
       '@cozeloop/tailwind-config':
         specifier: workspace:*
-        version: link:../tailwind-config
+        version: link:../../loop-config/tailwind-config
       '@types/react':
         specifier: 18.2.37
         version: 18.2.37
@@ -3366,85 +3366,6 @@ importers:
       vitest:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
-
-  ../../../frontend/packages/cozeloop/rsbuild-config:
-    dependencies:
-      '@coze-studio/bot-env-adapter':
-        specifier: workspace:*
-        version: link:../../arch/bot-env-adapter
-      '@cozeloop/i18n-adapter':
-        specifier: workspace:*
-        version: link:../i18n
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/pkg-root-webpack-plugin':
-        specifier: workspace:*
-        version: link:../../../infra/plugins/pkg-root-webpack-plugin
-      '@coze-arch/postcss-plugin':
-        specifier: workspace:*
-        version: link:../../../infra/plugins/postcss-plugin
-      '@coze-arch/semi-theme-hand01':
-        specifier: 0.0.6-alpha.346d77
-        version: 0.0.6-alpha.346d77
-      '@coze-arch/subspace-resolve-plugin':
-        specifier: workspace:*
-        version: link:../../../infra/plugins/subspace-resolve-plugin
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@douyinfe/semi-rspack-plugin':
-        specifier: 2.61.0
-        version: 2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0)
-      '@rsbuild/core':
-        specifier: ~1.1.0
-        version: 1.1.13
-      '@rsbuild/plugin-less':
-        specifier: ~1.1.0
-        version: 1.1.1(@rsbuild/core@1.1.13)
-      '@rsbuild/plugin-react':
-        specifier: ~1.1.0
-        version: 1.1.1(@rsbuild/core@1.1.13)
-      '@rsbuild/plugin-sass':
-        specifier: ~1.1.0
-        version: 1.1.2(@rsbuild/core@1.1.13)
-      '@rsbuild/plugin-svgr':
-        specifier: ~1.0.6
-        version: 1.0.7(@rsbuild/core@1.1.13)(typescript@5.8.2)
-      '@rspack/core':
-        specifier: '>=0.7'
-        version: 1.3.15
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9)
-      react:
-        specifier: 18.2.0
-        version: 18.2.0
-      react-dom:
-        specifier: 18.2.0
-        version: 18.2.0(react@18.2.0)
-      tailwindcss:
-        specifier: ~3.3.3
-        version: 3.3.7
-      tsconfig-paths:
-        specifier: 4.1.0
-        version: 4.1.0
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
-      webpack:
-        specifier: ~5.91.0
-        version: 5.91.0
 
   ../../../frontend/packages/cozeloop/shared-components:
     dependencies:
@@ -3729,68 +3650,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
 
-  ../../../frontend/packages/cozeloop/tailwind-config:
-    dependencies:
-      '@coze-arch/tailwind-config':
-        specifier: workspace:*
-        version: link:../../../config/tailwind-config
-      '@cozeloop/tailwind-plugin':
-        specifier: workspace:*
-        version: link:../tailwind-plugin
-      '@microsoft/rush-lib':
-        specifier: ~5.147.1
-        version: 5.147.2(@types/node@18.18.9)
-      tailwindcss:
-        specifier: ~3.3.3
-        version: 3.3.7
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-      typescript:
-        specifier: 5.8.2
-        version: 5.8.2
-
-  ../../../frontend/packages/cozeloop/tailwind-plugin:
-    dependencies:
-      '@tailwindcss/forms':
-        specifier: ^0.5.7
-        version: 0.5.10(tailwindcss@3.3.7)
-      '@tailwindcss/nesting':
-        specifier: latest
-        version: 0.0.0-insiders.565cd3e(postcss@8.5.6)
-      autoprefixer:
-        specifier: ^10.4.16
-        version: 10.4.21(postcss@8.5.6)
-      postcss:
-        specifier: ^8.4.32
-        version: 8.5.6
-      postcss-loader:
-        specifier: ^7.3.3
-        version: 7.3.4(postcss@8.5.6)(webpack@5.91.0)
-      tailwindcss:
-        specifier: ~3.3.3
-        version: 3.3.7
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@types/node':
-        specifier: 18.18.9
-        version: 18.18.9
-
   ../../../frontend/packages/cozeloop/tea:
     devDependencies:
       '@coze-arch/eslint-config':
@@ -3869,6 +3728,147 @@ importers:
       vitest:
         specifier: ~3.0.5
         version: 3.0.9(happy-dom@20.0.10)
+
+  ../../../frontend/packages/loop-config/rsbuild-config:
+    dependencies:
+      '@coze-studio/bot-env-adapter':
+        specifier: workspace:*
+        version: link:../../arch/bot-env-adapter
+      '@cozeloop/i18n-adapter':
+        specifier: workspace:*
+        version: link:../../cozeloop/i18n
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/pkg-root-webpack-plugin':
+        specifier: workspace:*
+        version: link:../../../infra/plugins/pkg-root-webpack-plugin
+      '@coze-arch/postcss-plugin':
+        specifier: workspace:*
+        version: link:../../../infra/plugins/postcss-plugin
+      '@coze-arch/semi-theme-hand01':
+        specifier: 0.0.6-alpha.346d77
+        version: 0.0.6-alpha.346d77
+      '@coze-arch/subspace-resolve-plugin':
+        specifier: workspace:*
+        version: link:../../../infra/plugins/subspace-resolve-plugin
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@douyinfe/semi-rspack-plugin':
+        specifier: 2.61.0
+        version: 2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0)
+      '@rsbuild/core':
+        specifier: ~1.1.0
+        version: 1.1.13
+      '@rsbuild/plugin-less':
+        specifier: ~1.1.0
+        version: 1.1.1(@rsbuild/core@1.1.13)
+      '@rsbuild/plugin-react':
+        specifier: ~1.1.0
+        version: 1.1.1(@rsbuild/core@1.1.13)
+      '@rsbuild/plugin-sass':
+        specifier: ~1.1.0
+        version: 1.1.2(@rsbuild/core@1.1.13)
+      '@rsbuild/plugin-svgr':
+        specifier: ~1.0.6
+        version: 1.0.7(@rsbuild/core@1.1.13)(typescript@5.8.2)
+      '@rspack/core':
+        specifier: '>=0.7'
+        version: 1.4.11(@swc/helpers@0.5.17)
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      '@vitest/coverage-v8':
+        specifier: ~3.0.5
+        version: 3.0.9(vitest@3.0.9)
+      react:
+        specifier: 18.2.0
+        version: 18.2.0
+      react-dom:
+        specifier: 18.2.0
+        version: 18.2.0(react@18.2.0)
+      tailwindcss:
+        specifier: ~3.3.3
+        version: 3.3.7
+      tsconfig-paths:
+        specifier: 4.1.0
+        version: 4.1.0
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+      vitest:
+        specifier: ~3.0.5
+        version: 3.0.9(@types/node@18.18.9)(happy-dom@20.0.10)
+      webpack:
+        specifier: ~5.91.0
+        version: 5.91.0
+
+  ../../../frontend/packages/loop-config/tailwind-config:
+    dependencies:
+      '@coze-arch/tailwind-config':
+        specifier: workspace:*
+        version: link:../../../config/tailwind-config
+      '@cozeloop/tailwind-plugin':
+        specifier: workspace:*
+        version: link:../tailwind-plugin
+      '@microsoft/rush-lib':
+        specifier: ~5.147.1
+        version: 5.147.2(@types/node@18.18.9)
+      tailwindcss:
+        specifier: ~3.3.3
+        version: 3.3.7
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@coze-arch/vitest-config':
+        specifier: workspace:*
+        version: link:../../../config/vitest-config
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
+      typescript:
+        specifier: 5.8.2
+        version: 5.8.2
+
+  ../../../frontend/packages/loop-config/tailwind-plugin:
+    dependencies:
+      '@tailwindcss/forms':
+        specifier: ^0.5.7
+        version: 0.5.10(tailwindcss@3.3.7)
+      '@tailwindcss/nesting':
+        specifier: latest
+        version: 0.0.0-insiders.565cd3e(postcss@8.5.6)
+      autoprefixer:
+        specifier: ^10.4.16
+        version: 10.4.21(postcss@8.5.6)
+      postcss:
+        specifier: ^8.4.32
+        version: 8.5.6
+      postcss-loader:
+        specifier: ^7.3.3
+        version: 7.3.4(postcss@8.5.6)(webpack@5.91.0)
+      tailwindcss:
+        specifier: ~3.3.3
+        version: 3.3.7
+    devDependencies:
+      '@coze-arch/eslint-config':
+        specifier: workspace:*
+        version: link:../../../config/eslint-config
+      '@coze-arch/ts-config':
+        specifier: workspace:*
+        version: link:../../../config/ts-config
+      '@types/node':
+        specifier: 18.18.9
+        version: 18.18.9
 
 packages:
 
@@ -8383,19 +8383,8 @@ packages:
   /@microsoft/tsdoc@0.14.2:
     resolution: {integrity: sha512-9b8mPpKrfeGRuhFH5iO1iwCLeIIsV6+H1sRfxbkoGXIyQE2BTsPd9zqSqQJ+pv5sJ/hT5M1zvOFL02MnEezFug==}
 
-  /@module-federation/error-codes@0.14.3:
-    resolution: {integrity: sha512-sBJ3XKU9g5Up31jFeXPFsD8AgORV7TLO/cCSMuRewSfgYbG/3vSKLJmfHrO6+PvjZSb9VyV2UaF02ojktW65vw==}
-    dev: true
-
   /@module-federation/error-codes@0.17.1:
     resolution: {integrity: sha512-n6Elm4qKSjwAPxLUGtwnl7qt4y1dxB8OpSgVvXBIzqI9p27a3ZXshLPLnumlpPg1Qudaj8sLnSnFtt9yGpt5yQ==}
-    dev: true
-
-  /@module-federation/runtime-core@0.14.3:
-    resolution: {integrity: sha512-xMFQXflLVW/AJTWb4soAFP+LB4XuhE7ryiLIX8oTyUoBBgV6U2OPghnFljPjeXbud72O08NYlQ1qsHw1kN/V8Q==}
-    dependencies:
-      '@module-federation/error-codes': 0.14.3
-      '@module-federation/sdk': 0.14.3
     dev: true
 
   /@module-federation/runtime-core@0.17.1:
@@ -8410,13 +8399,6 @@ packages:
     dependencies:
       '@module-federation/runtime': 0.0.8
       '@module-federation/webpack-bundler-runtime': 0.0.8
-    dev: true
-
-  /@module-federation/runtime-tools@0.14.3:
-    resolution: {integrity: sha512-QBETX7iMYXdSa3JtqFlYU+YkpymxETZqyIIRiqg0gW+XGpH3jgU68yjrme2NBJp7URQi/CFZG8KWtfClk0Pjgw==}
-    dependencies:
-      '@module-federation/runtime': 0.14.3
-      '@module-federation/webpack-bundler-runtime': 0.14.3
     dev: true
 
   /@module-federation/runtime-tools@0.17.1:
@@ -8439,14 +8421,6 @@ packages:
       '@module-federation/sdk': 0.0.8
     dev: true
 
-  /@module-federation/runtime@0.14.3:
-    resolution: {integrity: sha512-7ZHpa3teUDVhraYdxQGkfGHzPbjna4LtwbpudgzAxSLLFxLDNanaxCuSeIgSM9c+8sVUNC9kvzUgJEZB0krPJw==}
-    dependencies:
-      '@module-federation/error-codes': 0.14.3
-      '@module-federation/runtime-core': 0.14.3
-      '@module-federation/sdk': 0.14.3
-    dev: true
-
   /@module-federation/runtime@0.17.1:
     resolution: {integrity: sha512-vKEN32MvUbpeuB/s6UXfkHDZ9N5jFyDDJnj83UTJ8n4N1jHIJu9VZ6Yi4/Ac8cfdvU8UIK9bIbfVXWbUYZUDsw==}
     dependencies:
@@ -8465,10 +8439,6 @@ packages:
     resolution: {integrity: sha512-lkasywBItjUTNT0T0IskonDE2E/2tXE9UhUCPVoDL3NteDUSFGg4tpkF+cey1pD8mHh0XJcGrCuOW7s96peeAg==}
     dev: true
 
-  /@module-federation/sdk@0.14.3:
-    resolution: {integrity: sha512-THJZMfbXpqjQOLblCQ8jjcBFFXsGRJwUWE9l/Q4SmuCSKMgAwie7yLT0qSGrHmyBYrsUjAuy+xNB4nfKP0pnGw==}
-    dev: true
-
   /@module-federation/sdk@0.17.1:
     resolution: {integrity: sha512-nlUcN6UTEi+3HWF+k8wPy7gH0yUOmCT+xNatihkIVR9REAnr7BUvHFGlPJmx7WEbLPL46+zJUbtQHvLzXwFhng==}
     dev: true
@@ -8482,13 +8452,6 @@ packages:
     dependencies:
       '@module-federation/runtime': 0.0.8
       '@module-federation/sdk': 0.0.8
-    dev: true
-
-  /@module-federation/webpack-bundler-runtime@0.14.3:
-    resolution: {integrity: sha512-hIyJFu34P7bY2NeMIUHAS/mYUHEY71VTAsN0A0AqEJFSVPszheopu9VdXq0VDLrP9KQfuXT8SDxeYeJXyj0mgA==}
-    dependencies:
-      '@module-federation/runtime': 0.14.3
-      '@module-federation/sdk': 0.14.3
     dev: true
 
   /@module-federation/webpack-bundler-runtime@0.17.1:
@@ -10206,14 +10169,6 @@ packages:
     dev: true
     optional: true
 
-  /@rspack/binding-darwin-arm64@1.3.15:
-    resolution: {integrity: sha512-f+DnVRENRdVe+ufpZeqTtWAUDSTnP48jVo7x9KWsXf8XyJHUi+eHKEPrFoy1HvL1/k5yJ3HVnFBh1Hb9cNIwSg==}
-    cpu: [arm64]
-    os: [darwin]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rspack/binding-darwin-arm64@1.4.11:
     resolution: {integrity: sha512-PrmBVhR8MC269jo6uQ+BMy1uwIDx0HAJYLQRQur8gXiehWabUBCRg/d4U9KR7rLzdaSScRyc5JWXR52T7/4MfA==}
     cpu: [arm64]
@@ -10248,14 +10203,6 @@ packages:
 
   /@rspack/binding-darwin-x64@1.1.8:
     resolution: {integrity: sha512-vfqf/c+mcx8rr1M8LnqKmzDdnrgguflZnjGerBLjNerAc+dcUp3lCvNxRIvZ2TkSZZBW8BpCMgjj3n70CZ4VLQ==}
-    cpu: [x64]
-    os: [darwin]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /@rspack/binding-darwin-x64@1.3.15:
-    resolution: {integrity: sha512-TfUvEIBqYUT2OK01BYXb2MNcZeZIhAnJy/5aj0qV0uy4KlvwW63HYcKWa1sFd4Ac7bnGShDkanvP3YEuHOFOyg==}
     cpu: [x64]
     os: [darwin]
     requiresBuild: true
@@ -10302,14 +10249,6 @@ packages:
     dev: true
     optional: true
 
-  /@rspack/binding-linux-arm64-gnu@1.3.15:
-    resolution: {integrity: sha512-D/YjYk9snKvYm1Elotq8/GsEipB4ZJWVv/V8cZ+ohhFNOPzygENi6JfyI06TryBTQiN0/JDZqt/S9RaWBWnMqw==}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rspack/binding-linux-arm64-gnu@1.4.11:
     resolution: {integrity: sha512-ms6uwECUIcu+6e82C5HJhRMHnfsI+l33v7XQezntzRPN0+sG3EpikEoT7SGbgt4vDwaWLR7wS20suN4qd5r3GA==}
     cpu: [arm64]
@@ -10344,14 +10283,6 @@ packages:
 
   /@rspack/binding-linux-arm64-musl@1.1.8:
     resolution: {integrity: sha512-bX7exULSZwy8xtDh6Z65b6sRC4uSxGuyvSLCEKyhmG6AnJkg0gQMxk3hoO0hWnyGEZgdJEn+jEhk0fjl+6ZRAQ==}
-    cpu: [arm64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /@rspack/binding-linux-arm64-musl@1.3.15:
-    resolution: {integrity: sha512-lJbBsPMOiR0hYPCSM42yp7QiZjfo0ALtX7ws2wURpsQp3BMfRVAmXU3Ixpo2XCRtG1zj8crHaCmAWOJTS0smsA==}
     cpu: [arm64]
     os: [linux]
     requiresBuild: true
@@ -10398,14 +10329,6 @@ packages:
     dev: true
     optional: true
 
-  /@rspack/binding-linux-x64-gnu@1.3.15:
-    resolution: {integrity: sha512-qGB8ucHklrzNg6lsAS36VrBsCbOw0acgpQNqTE5cuHWrp1Pu3GFTRiFEogenxEmzoRbohMZt0Ev5grivrcgKBQ==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rspack/binding-linux-x64-gnu@1.4.11:
     resolution: {integrity: sha512-bHYFLxPPYBOSaHdQbEoCYGMQ1gOrEWj7Mro/DLfSHZi1a0okcQ2Q1y0i1DczReim3ZhLGNrK7k1IpFXCRbAobQ==}
     cpu: [x64]
@@ -10440,14 +10363,6 @@ packages:
 
   /@rspack/binding-linux-x64-musl@1.1.8:
     resolution: {integrity: sha512-bnVGB/mQBKEdzOU/CPmcOE3qEXxGOGGW7/i6iLl2MamVOykJq8fYjL9j86yi6L0r009ja16OgWckykQGc4UqGw==}
-    cpu: [x64]
-    os: [linux]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /@rspack/binding-linux-x64-musl@1.3.15:
-    resolution: {integrity: sha512-qRn6e40fLQP+N2rQD8GAj/h4DakeTIho32VxTIaHRVuzw68ZD7VmKkwn55ssN370ejmey35ZdoNFNE12RBrMZA==}
     cpu: [x64]
     os: [linux]
     requiresBuild: true
@@ -10503,14 +10418,6 @@ packages:
     dev: true
     optional: true
 
-  /@rspack/binding-win32-arm64-msvc@1.3.15:
-    resolution: {integrity: sha512-7uJ7dWhO1nWXJiCss6Rslz8hoAxAhFpwpbWja3eHgRb7O4NPHg6MWw63AQSI2aFVakreenfu9yXQqYfpVWJ2dA==}
-    cpu: [arm64]
-    os: [win32]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rspack/binding-win32-arm64-msvc@1.4.11:
     resolution: {integrity: sha512-+HF/mnjmTr8PC1dccRt1bkrD2tPDGeqvXC1BBLYd/Klq1VbtIcnrhfmvQM6KaXbiLcY9VWKzcZPOTmnyZ8TaHQ==}
     cpu: [arm64]
@@ -10551,14 +10458,6 @@ packages:
     dev: true
     optional: true
 
-  /@rspack/binding-win32-ia32-msvc@1.3.15:
-    resolution: {integrity: sha512-UsaWTYCjDiSCB0A0qETgZk4QvhwfG8gCrO4SJvA+QSEWOmgSai1YV70prFtLLIiyT9mDt1eU3tPWl1UWPRU/EQ==}
-    cpu: [ia32]
-    os: [win32]
-    requiresBuild: true
-    dev: true
-    optional: true
-
   /@rspack/binding-win32-ia32-msvc@1.4.11:
     resolution: {integrity: sha512-EU2fQGwrRfwFd/tcOInlD0jy6gNQE4Q3Ayj0Is+cX77sbhPPyyOz0kZDEaQ4qaN2VU8w4Hu/rrD7c0GAKLFvCw==}
     cpu: [ia32]
@@ -10593,14 +10492,6 @@ packages:
 
   /@rspack/binding-win32-x64-msvc@1.1.8:
     resolution: {integrity: sha512-SBzIcND4qpDt71jlu1MCDxt335tqInT3YID9V4DoQ4t8wgM/uad7EgKOWKTK6vc2RRaOIShfS2XzqjNUxPXh4w==}
-    cpu: [x64]
-    os: [win32]
-    requiresBuild: true
-    dev: true
-    optional: true
-
-  /@rspack/binding-win32-x64-msvc@1.3.15:
-    resolution: {integrity: sha512-ZnDIc9Es8EF94MirPDN+hOMt7tkb8nMEbRJFKLMmNd0ElNPgsql+1cY5SqyGRH1hsKB87KfSUQlhFiKZvzbfIg==}
     cpu: [x64]
     os: [win32]
     requiresBuild: true
@@ -10669,20 +10560,6 @@ packages:
       '@rspack/binding-win32-arm64-msvc': 1.1.8
       '@rspack/binding-win32-ia32-msvc': 1.1.8
       '@rspack/binding-win32-x64-msvc': 1.1.8
-    dev: true
-
-  /@rspack/binding@1.3.15:
-    resolution: {integrity: sha512-utNPuJglLO5lW9XbwIqjB7+2ilMo6JkuVLTVdnNVKU94FW7asn9F/qV+d+MgjUVqU1QPCGm0NuGO9xhbgeJ7pg==}
-    optionalDependencies:
-      '@rspack/binding-darwin-arm64': 1.3.15
-      '@rspack/binding-darwin-x64': 1.3.15
-      '@rspack/binding-linux-arm64-gnu': 1.3.15
-      '@rspack/binding-linux-arm64-musl': 1.3.15
-      '@rspack/binding-linux-x64-gnu': 1.3.15
-      '@rspack/binding-linux-x64-musl': 1.3.15
-      '@rspack/binding-win32-arm64-msvc': 1.3.15
-      '@rspack/binding-win32-ia32-msvc': 1.3.15
-      '@rspack/binding-win32-x64-msvc': 1.3.15
     dev: true
 
   /@rspack/binding@1.4.11:
@@ -10785,20 +10662,6 @@ packages:
       '@rspack/lite-tapable': 1.0.1
       '@swc/helpers': 0.5.17
       caniuse-lite: 1.0.30001723
-    dev: true
-
-  /@rspack/core@1.3.15:
-    resolution: {integrity: sha512-QuElIC8jXSKWAp0LSx18pmbhA7NiA5HGoVYesmai90UVxz98tud0KpMxTVCg+0lrLrnKZfCWN9kwjCxM5pGnrA==}
-    engines: {node: '>=16.0.0'}
-    peerDependencies:
-      '@swc/helpers': '>=0.5.1'
-    peerDependenciesMeta:
-      '@swc/helpers':
-        optional: true
-    dependencies:
-      '@module-federation/runtime-tools': 0.14.3
-      '@rspack/binding': 1.3.15
-      '@rspack/lite-tapable': 1.0.1
     dev: true
 
   /@rspack/core@1.4.11(@swc/helpers@0.5.17):

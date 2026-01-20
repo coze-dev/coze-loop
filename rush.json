@@ -25,6 +25,12 @@
     "level-2",
     "level-3",
     "level-4",
+    "level-config",
+    "level-base",
+    "level-loop-components",
+    "level-loop-pages",
+    "level-loop-modules",
+    "level-app",
     "rush-tools",
     "core"
   ],
@@ -276,8 +282,8 @@
     },
     {
       "packageName": "@cozeloop/rsbuild-config",
-      "projectFolder": "frontend/packages/cozeloop/rsbuild-config",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-config/rsbuild-config",
+      "tags": ["level-3", "level-config"]
     },
     {
       "packageName": "@cozeloop/stores",
@@ -296,13 +302,13 @@
     },
     {
       "packageName": "@cozeloop/tailwind-config",
-      "projectFolder": "frontend/packages/cozeloop/tailwind-config",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-config/tailwind-config",
+      "tags": ["level-3", "level-config"]
     },
     {
       "packageName": "@cozeloop/tailwind-plugin",
-      "projectFolder": "frontend/packages/cozeloop/tailwind-plugin",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-config/tailwind-plugin",
+      "tags": ["level-3", "level-config"]
     },
     {
       "packageName": "@cozeloop/tea-adapter",
