@@ -127,38 +127,38 @@
     },
     {
       "packageName": "@coze-arch/bot-env",
-      "projectFolder": "frontend/packages/arch/bot-env",
-      "tags": ["level-1"]
+      "projectFolder": "frontend/packages/loop-base/bot-env",
+      "tags": ["level-1", "level-base"]
     },
     {
       "packageName": "@coze-studio/bot-env-adapter",
-      "projectFolder": "frontend/packages/arch/bot-env-adapter",
-      "tags": ["level-1"]
+      "projectFolder": "frontend/packages/loop-base/bot-env-adapter",
+      "tags": ["level-1", "level-base"]
     },
     {
       "packageName": "@coze-arch/bot-flags",
-      "projectFolder": "frontend/packages/arch/bot-flags",
-      "tags": ["level-1"]
+      "projectFolder": "frontend/packages/loop-base/bot-flags",
+      "tags": ["level-1", "level-base"]
     },
     {
       "packageName": "@coze-arch/bot-md-box-adapter",
-      "projectFolder": "frontend/packages/arch/bot-md-box-adapter",
-      "tags": ["level-2"]
+      "projectFolder": "frontend/packages/loop-base/bot-md-box-adapter",
+      "tags": ["level-2", "level-base"]
     },
     {
       "packageName": "@coze-arch/bot-typings",
-      "projectFolder": "frontend/packages/arch/bot-typings",
-      "tags": ["level-1"]
+      "projectFolder": "frontend/packages/loop-base/bot-typings",
+      "tags": ["level-1", "level-base"]
     },
     {
       "packageName": "@coze-arch/fetch-stream",
-      "projectFolder": "frontend/packages/arch/fetch-stream",
-      "tags": ["level-2"]
+      "projectFolder": "frontend/packages/loop-base/fetch-stream",
+      "tags": ["level-2", "level-base"]
     },
     {
       "packageName": "@coze-arch/logger",
-      "projectFolder": "frontend/packages/arch/logger",
-      "tags": ["level-1"]
+      "projectFolder": "frontend/packages/loop-base/logger",
+      "tags": ["level-1", "level-base"]
     },
     {
       "packageName": "@cozeloop/account",
