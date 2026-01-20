@@ -38,7 +38,7 @@
     {
       "packageName": "@cozeloop/community-base",
       "projectFolder": "frontend/apps/cozeloop",
-      "tags": ["level-3"]
+      "tags": ["level-3", "level-app"]
     },
     {
       "packageName": "@coze-arch/eslint-config",
@@ -177,8 +177,8 @@
     },
     {
       "packageName": "@cozeloop/auth-pages",
-      "projectFolder": "frontend/packages/cozeloop/auth-pages",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-pages/auth-pages",
+      "tags": ["level-3", "level-loop-pages"]
     },
     {
       "packageName": "@cozeloop/hooks",
@@ -212,8 +212,8 @@
     },
     {
       "packageName": "@cozeloop/evaluate",
-      "projectFolder": "frontend/packages/cozeloop/evaluate",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-modules/evaluate",
+      "tags": ["level-3", "level-loop-modules"]
     },
     {
       "packageName": "@cozeloop/evaluate-adapter",
@@ -227,8 +227,8 @@
     },
     {
       "packageName": "@cozeloop/evaluate-pages",
-      "projectFolder": "frontend/packages/cozeloop/evaluate-pages",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-pages/evaluate-pages",
+      "tags": ["level-3", "level-loop-pages"]
     },
     {
       "packageName": "@cozeloop/guard",
@@ -257,8 +257,8 @@
     },
     {
       "packageName": "@cozeloop/observation-pages",
-      "projectFolder": "frontend/packages/cozeloop/observation-pages",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-pages/observation-pages",
+      "tags": ["level-3", "level-loop-pages"]
     },
     {
       "packageName": "@cozeloop/prompt-components",
@@ -267,8 +267,8 @@
     },
     {
       "packageName": "@cozeloop/prompt-pages",
-      "projectFolder": "frontend/packages/cozeloop/prompt-pages",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-pages/prompt-pages",
+      "tags": ["level-3", "level-loop-pages"]
     },
     {
       "packageName": "@cozeloop/loop-lng",
@@ -297,8 +297,8 @@
     },
     {
       "packageName": "@cozeloop/tag-pages",
-      "projectFolder": "frontend/packages/cozeloop/tag-pages",
-      "tags": ["level-3"]
+      "projectFolder": "frontend/packages/loop-pages/tag-pages",
+      "tags": ["level-3", "level-loop-pages"]
     },
     {
       "packageName": "@cozeloop/tailwind-config",
