@@ -82,6 +82,7 @@ const (
 
 	// Service 服务调用指标
 	MetricNameServiceTraceCount         = "service_trace_count"
+	MetricNameServiceUniqTrace          = "service_uniq_trace"
 	MetricNameServiceTraceErrorCount    = "service_trace_error_count"
 	MetricNameServiceTraceSuccessCount  = "service_trace_success_count"
 	MetricNameServiceSpanCount          = "service_span_count"
