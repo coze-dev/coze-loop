@@ -30,3 +30,6 @@ ENGINE = ReplacingMergeTree(updated_at)
 PARTITION BY created_date
 ORDER BY (expt_id, item_id, turn_id)
 SETTINGS index_granularity = 8192;
+ALTER TABLE expt_turn_result_filter
+ADD COLUMN IF NOT EXISTS `eval_target_metrics` Map(String, Int64)
+AFTER `updated_at`;
