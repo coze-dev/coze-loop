@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 // import { runtimeEnv } from '@coze-arch/bot-env/runtime';
 const DEBUG_TAG = 'open_debug';
 const OPEN_CONSOLE_MARK = new RegExp(`(?:\\?|\\&)${DEBUG_TAG}=true`);

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { base } from './base';
 const { IS_RELEASE_VERSION, IS_OVERSEA, IS_BOE } = base;
 export const features = {

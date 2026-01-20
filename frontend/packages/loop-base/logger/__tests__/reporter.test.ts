@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type TraceDuration } from '../src/reporter/duration-tracer';
 import { Reporter, reporter as rawReporter } from '../src/reporter';
 

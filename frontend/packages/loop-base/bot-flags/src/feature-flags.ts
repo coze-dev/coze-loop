@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /** ************************************************* */
 /** This file is auto generate by `rush flags` */
 /** Please don't update manually.                   */

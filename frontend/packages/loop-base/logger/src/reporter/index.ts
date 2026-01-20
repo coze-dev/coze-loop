@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type CommonLogOptions, LogAction, LogLevel } from '../types';
 import { Logger } from '../logger';
 import { genDurationTracer, type TracePointName } from './duration-tracer';

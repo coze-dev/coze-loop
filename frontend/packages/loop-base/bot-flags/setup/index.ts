@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 const log = {
   info: vi.fn().mockImplementation(console.log.bind(console, '[info]')),
   error: vi.fn().mockImplementation(console.error.bind(console, '[error]')),

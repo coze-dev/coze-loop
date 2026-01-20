@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type FEATURE_FLAGS as ORIGIN_FEATURE_FLAGS } from './feature-flags';
 
 // eslint-disable-next-line @typescript-eslint/naming-convention

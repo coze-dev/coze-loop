@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { describe, it, expect } from 'vitest';
 
 import { FetchStreamErrorCode, type ValidateResult } from '../src/type';

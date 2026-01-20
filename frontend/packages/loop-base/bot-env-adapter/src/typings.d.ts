@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /* eslint-disable */
 /* prettier-ignore */
 // 基于src/index.ts自动生成，请勿手动修改

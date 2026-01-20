@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 /** bot详情页来源：目前只有bot和explore列表 */
 export enum BotPageFromEnum {
   Bot = 'bot', //bot列表

@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 import { type Mock } from 'vitest';
 
 import { Logger } from '../src/logger/logger';

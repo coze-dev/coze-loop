@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 export { reporter, Reporter } from './reporter';
 
 // reporter 相关类型导出

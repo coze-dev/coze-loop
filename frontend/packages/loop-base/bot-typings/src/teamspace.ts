@@ -1,3 +1,5 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
 // copy from packages/arch/bot-typings/src/teamspace.ts
 export interface DynamicParams extends Record<string, string | undefined> {
   space_id?: string;
