@@ -155,6 +155,8 @@ export interface RunEvaluatorRequest {
   experiment_run_id?: string,
   item_id?: string,
   turn_id?: string,
+  /** 评估器运行配置参数 */
+  evaluator_run_conf?: evaluator.EvaluatorRunConfig,
   ext?: {
     [key: string | number]: string
   },
@@ -170,6 +172,8 @@ export interface DebugEvaluatorRequest {
   /** 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace */
   input_data: evaluator.EvaluatorInputData,
   evaluator_type: evaluator.EvaluatorType,
+  /** 评估器运行配置参数 */
+  evaluator_run_conf?: evaluator.EvaluatorRunConfig,
 }
 export interface DebugEvaluatorResponse {
   /** 输出数据 */
@@ -183,6 +187,8 @@ export interface BatchDebugEvaluatorRequest {
   /** 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace */
   input_data: evaluator.EvaluatorInputData[],
   evaluator_type: evaluator.EvaluatorType,
+  /** 评估器运行配置参数 */
+  evaluator_run_conf?: evaluator.EvaluatorRunConfig,
 }
 export interface BatchDebugEvaluatorResponse {
   /** 输出数据 */
@@ -541,7 +547,7 @@ export const RunEvaluator = /*#__PURE__*/createAPI<RunEvaluatorRequest, RunEvalu
   "name": "RunEvaluator",
   "reqType": "RunEvaluatorRequest",
   "reqMapping": {
-    "body": ["workspace_id", "input_data", "experiment_id", "experiment_run_id", "item_id", "turn_id", "ext"],
+    "body": ["workspace_id", "input_data", "experiment_id", "experiment_run_id", "item_id", "turn_id", "evaluator_run_conf", "ext"],
     "path": ["evaluator_version_id"]
   },
   "resType": "RunEvaluatorResponse",
@@ -555,7 +561,7 @@ export const DebugEvaluator = /*#__PURE__*/createAPI<DebugEvaluatorRequest, Debu
   "name": "DebugEvaluator",
   "reqType": "DebugEvaluatorRequest",
   "reqMapping": {
-    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type"]
+    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type", "evaluator_run_conf"]
   },
   "resType": "DebugEvaluatorResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
@@ -568,7 +574,7 @@ export const BatchDebugEvaluator = /*#__PURE__*/createAPI<BatchDebugEvaluatorReq
   "name": "BatchDebugEvaluator",
   "reqType": "BatchDebugEvaluatorRequest",
   "reqMapping": {
-    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type"]
+    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type", "evaluator_run_conf"]
   },
   "resType": "BatchDebugEvaluatorResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
@@ -683,23 +689,6 @@ export const DebugBuiltinEvaluator = /*#__PURE__*/createAPI<DebugBuiltinEvaluato
     "body": ["evaluator_id", "input_data", "workspace_id"]
   },
   "resType": "DebugBuiltinEvaluatorResponse",
-  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
-  "service": "evaluationEvaluator"
-});
-/**
- * 更新预置评估器tag
- * 更新预置评估器
-*/
-export const UpdateBuiltinEvaluatorTags = /*#__PURE__*/createAPI<UpdateBuiltinEvaluatorTagsRequest, UpdateBuiltinEvaluatorTagsResponse>({
-  "url": "/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags",
-  "method": "PATCH",
-  "name": "UpdateBuiltinEvaluatorTags",
-  "reqType": "UpdateBuiltinEvaluatorTagsRequest",
-  "reqMapping": {
-    "path": ["evaluator_id"],
-    "body": ["workspace_id", "tags"]
-  },
-  "resType": "UpdateBuiltinEvaluatorTagsResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });

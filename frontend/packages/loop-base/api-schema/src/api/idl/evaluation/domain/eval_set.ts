@@ -84,6 +84,8 @@ export interface FieldSchema {
   status?: dataset.FieldStatus,
   /** 是否必填 */
   isRequired?: boolean,
+  /** 对应的内置 schema */
+  schema_key?: dataset.SchemaKey,
   /**
    * [20,50) 内容格式限制相关
    * 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as trajectory from './../trajectory';
+export { trajectory };
 import * as task from './domain/task';
 export { task };
 import * as export_dataset from './domain/export_dataset';
@@ -287,6 +289,28 @@ export interface SpanInfo {
 export interface ExtractSpanInfoResponse {
   span_infos: SpanInfo[]
 }
+export interface UpsertTrajectoryConfigRequest {
+  workspace_id: string,
+  filters?: filter.FilterFields,
+}
+export interface UpsertTrajectoryConfigResponse {}
+export interface GetTrajectoryConfigRequest {
+  workspace_id: string
+}
+export interface GetTrajectoryConfigResponse {
+  filters?: filter.FilterFields
+}
+export interface ListTrajectoryRequest {
+  /** 需要准确填写，用于确定查询哪些租户的数据 */
+  platform_type: common.PlatformType,
+  workspace_id: string,
+  trace_ids: string[],
+  /** ms */
+  start_time?: string,
+}
+export interface ListTrajectoryResponse {
+  trajectories?: trajectory.Trajectory[]
+}
 export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansResponse>({
   "url": "/api/observability/v1/spans/list",
   "method": "POST",
@@ -517,6 +541,42 @@ export const ExtractSpanInfo = /*#__PURE__*/createAPI<ExtractSpanInfoRequest, Ex
     "body": ["workspace_id", "trace_id", "span_ids", "start_time", "end_time", "platform_type", "field_mappings"]
   },
   "resType": "ExtractSpanInfoResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const UpsertTrajectoryConfig = /*#__PURE__*/createAPI<UpsertTrajectoryConfigRequest, UpsertTrajectoryConfigResponse>({
+  "url": "/api/observability/v1/traces/trajectory_config",
+  "method": "POST",
+  "name": "UpsertTrajectoryConfig",
+  "reqType": "UpsertTrajectoryConfigRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "filters"]
+  },
+  "resType": "UpsertTrajectoryConfigResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const GetTrajectoryConfig = /*#__PURE__*/createAPI<GetTrajectoryConfigRequest, GetTrajectoryConfigResponse>({
+  "url": "/api/observability/v1/traces/trajectory_config",
+  "method": "GET",
+  "name": "GetTrajectoryConfig",
+  "reqType": "GetTrajectoryConfigRequest",
+  "reqMapping": {
+    "query": ["workspace_id"]
+  },
+  "resType": "GetTrajectoryConfigResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListTrajectory = /*#__PURE__*/createAPI<ListTrajectoryRequest, ListTrajectoryResponse>({
+  "url": "/api/observability/v1/traces/trajectory",
+  "method": "POST",
+  "name": "ListTrajectory",
+  "reqType": "ListTrajectoryRequest",
+  "reqMapping": {
+    "body": ["platform_type", "workspace_id", "trace_ids", "start_time"]
+  },
+  "resType": "ListTrajectoryResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });

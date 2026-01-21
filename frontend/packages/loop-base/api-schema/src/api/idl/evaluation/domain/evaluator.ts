@@ -63,6 +63,9 @@ export enum EvaluatorBoxType {
 /** 黑盒 */
 export enum EvaluatorAccessProtocol {
   RPC = "rpc",
+  AccessProtocol_RPCOld = "rpc_old",
+  AccessProtocol_FaasHTTP = "faas_http",
+  AccessProtocol_FaasHTTPOld = "faas_http_old",
 }
 export enum EvaluatorVersionType {
   Latest = "Latest",
@@ -105,10 +108,16 @@ export interface CustomRPCEvaluator {
   access_protocol: EvaluatorAccessProtocol,
   service_name?: string,
   cluster?: string,
+  /** 执行http信息 */
+  invoke_http_info?: EvaluatorHTTPInfo,
   /** ms */
   timeout?: number,
   /** 自定义评估器的限流配置 */
   rate_limit?: common.RateLimit,
+  /** extra fields */
+  ext?: {
+    [key: string | number]: string
+  },
 }
 export interface EvaluatorVersion {
   /** 版本id */
@@ -131,6 +140,7 @@ export interface EvaluatorContent {
 export interface EvaluatorIDVersionItem {
   evaluator_id?: string,
   version?: string,
+  run_config?: EvaluatorRunConfig,
 }
 export interface EvaluatorInfo {
   benchmark?: string,
@@ -284,4 +294,16 @@ export interface EvaluatorInputData {
   ext?: {
     [key: string | number]: string
   },
+}
+export interface EvaluatorHTTPInfo {
+  method?: EvaluatorHTTPMethod,
+  path?: string,
+}
+export enum EvaluatorHTTPMethod {
+  HTTPMethod_Get = "get",
+  HTTPMethod_Post = "post",
+}
+export interface EvaluatorRunConfig {
+  env?: string,
+  evaluator_runtime_param?: common.RuntimeParam,
 }
