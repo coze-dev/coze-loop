@@ -7,9 +7,8 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/pkg/errors"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/pkg/errors"
 )
 
 type Model struct {
@@ -25,6 +24,17 @@ type Model struct {
 	ProtocolConfig  *ProtocolConfig              `json:"protocol_config" yaml:"protocol_config" mapstructure:"protocol_config"`    // 该模型的协议配置
 	ScenarioConfigs map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
 	ParamConfig     *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
+	Identification  string                       `json:"identification" yaml:"identification"`
+	Series          *Series                      `json:"series" yaml:"series"`
+	Visibility      *Visibility                  `json:"visibility" yaml:"visibility"`
+	Icon            string                       `json:"icon" yaml:"icon" mapstructure:"icon"`       // 模型图标
+	Tags            []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`       //模型标签
+	Status          ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"` // 模型状态
+
+	CreatedBy string `json:"created_by" yaml:"created_by" mapstructure:"created_by"` // 创建人
+	CreatedAt int64  `json:"created_at" yaml:"created_at" mapstructure:"created_at"` // 创建时间
+	UpdatedBy string `json:"updated_by" yaml:"updated_by" mapstructure:"updated_by"` // 更新人
+	UpdatedAt int64  `json:"updated_at" yaml:"updated_at" mapstructure:"updated_at"` // 更新时间
 }
 
 func (m *Model) Valid() error {
@@ -364,6 +374,19 @@ const (
 	ProtocolArkBot   Protocol = "arkbot"
 )
 
+type Family string
+
+const (
+	FamilyUndefined Family = "undefined"
+	FamilySeed      Family = "seed"
+)
+
+type Series struct {
+	Name   string `json:"name"`
+	Icon   string `json:"icon"`
+	Family Family `json:"family"`
+}
+
 type ListModelReq struct {
 	WorkspaceID *int64
 	Scenario    *Scenario
@@ -375,3 +398,25 @@ type GetModelReq struct {
 	WorkspaceID *int64
 	ModelID     int64
 }
+
+type VisibleMode string
+
+const (
+	VisibleModeUndefined  VisibleMode = "undefined"
+	VisibleModelAll       VisibleMode = "all"
+	VisibleModelSpecified VisibleMode = "specified"
+	VisibleModelDefault   VisibleMode = "default"
+)
+
+type Visibility struct {
+	Mode     VisibleMode `json:"mode"`
+	SpaceIDs []int64     `json:"space_ids"` // model为specified时有效
+}
+
+type ModelStatus string
+
+const (
+	ModelStatusUndefined ModelStatus = "undefined"
+	ModelStatusEnabled   ModelStatus = "enabled"
+	ModelStatusDisabled  ModelStatus = "disabled"
+)
