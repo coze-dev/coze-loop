@@ -37,6 +37,7 @@ struct GetModelRequest {
     1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
     2: optional i64 model_id (api.js_conv='true', api.path='model_id', go.tag='json:"model_id"')
     3: optional string identification
+    4: optional manage.Protocol protocol
 
     255: optional base.Base Base
 }
