@@ -1,6 +1,6 @@
 {
   "name": "@cozeloop/community-base",
-  "version": "1.4.1",
+  "version": "1.5.1",
   "private": true,
   "description": "🧭 CozeLoop platform",
   "keywords": [],
@@ -71,4 +71,3 @@
     "vitest": "~3.0.5"
   }
 }
-
