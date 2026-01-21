@@ -53,7 +53,7 @@ func InitPromptManageApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, red
 	iLabelRepo := repo.NewLabelRepo(db2, idgen2, meter, iLabelDAO, iCommitLabelMappingDAO, iPromptBasicDAO, iPromptLabelVersionDAO)
 	iPromptFormatter := service.NewPromptFormatter()
 	iToolConfigProvider := service.NewToolConfigProvider()
-	iToolResultsProcessor := service.NewToolResultsCollector()
+	iToolResultsCollector := service.NewToolResultsCollector()
 	iDebugLogDAO := mysql.NewDebugLogDAO(db2)
 	iDebugLogRepo := repo.NewDebugLogRepo(idgen2, iDebugLogDAO)
 	iDebugContextDAO := mysql.NewDebugContextDAO(db2)
@@ -61,7 +61,7 @@ func InitPromptManageApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, red
 	illmProvider := rpc.NewLLMRPCProvider(llmClient)
 	iFileProvider := rpc.NewFileRPCProvider(fileClient)
 	snippetParser := service.NewCozeLoopSnippetParser()
-	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsProcessor, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
+	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsCollector, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
 	iAuthProvider := rpc.NewAuthRPCProvider(authClient)
 	iUserProvider := rpc.NewUserRPCProvider(userClient)
 	iAuditProvider := rpc.NewAuditRPCProvider(auditClient)
@@ -76,7 +76,7 @@ func InitPromptDebugApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redi
 	iDebugContextRepo := repo.NewDebugContextRepo(idgen2, iDebugContextDAO)
 	iPromptFormatter := service.NewPromptFormatter()
 	iToolConfigProvider := service.NewToolConfigProvider()
-	iToolResultsProcessor := service.NewToolResultsCollector()
+	iToolResultsCollector := service.NewToolResultsCollector()
 	iPromptBasicDAO := mysql.NewPromptBasicDAO(db2, redisCli)
 	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli)
 	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli)
@@ -95,7 +95,7 @@ func InitPromptDebugApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redi
 	illmProvider := rpc.NewLLMRPCProvider(llmClient)
 	iFileProvider := rpc.NewFileRPCProvider(fileClient)
 	snippetParser := service.NewCozeLoopSnippetParser()
-	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsProcessor, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
+	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsCollector, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
 	iAuthProvider := rpc.NewAuthRPCProvider(authClient)
 	promptDebugService := NewPromptDebugApplication(iDebugLogRepo, iDebugContextRepo, iPromptService, benefitSvc, iAuthProvider, iFileProvider)
 	return promptDebugService, nil
@@ -104,7 +104,7 @@ func InitPromptDebugApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redi
 func InitPromptExecuteApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, llmClient llmruntimeservice.Client, fileClient fileservice.Client) (execute.PromptExecuteService, error) {
 	iPromptFormatter := service.NewPromptFormatter()
 	iToolConfigProvider := service.NewToolConfigProvider()
-	iToolResultsProcessor := service.NewToolResultsCollector()
+	iToolResultsCollector := service.NewToolResultsCollector()
 	iDebugLogDAO := mysql.NewDebugLogDAO(db2)
 	iDebugLogRepo := repo.NewDebugLogRepo(idgen2, iDebugLogDAO)
 	iDebugContextDAO := mysql.NewDebugContextDAO(db2)
@@ -127,7 +127,7 @@ func InitPromptExecuteApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	illmProvider := rpc.NewLLMRPCProvider(llmClient)
 	iFileProvider := rpc.NewFileRPCProvider(fileClient)
 	snippetParser := service.NewCozeLoopSnippetParser()
-	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsProcessor, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
+	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsCollector, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
 	promptExecuteService := NewPromptExecuteApplication(iPromptService, iManageRepo)
 	return promptExecuteService, nil
 }
@@ -135,7 +135,7 @@ func InitPromptExecuteApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, limiterFactory limiter.IRateLimiterFactory, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client) (openapi.PromptOpenAPIService, error) {
 	iPromptFormatter := service.NewPromptFormatter()
 	iToolConfigProvider := service.NewToolConfigProvider()
-	iToolResultsProcessor := service.NewToolResultsCollector()
+	iToolResultsCollector := service.NewToolResultsCollector()
 	iDebugLogDAO := mysql.NewDebugLogDAO(db2)
 	iDebugLogRepo := repo.NewDebugLogRepo(idgen2, iDebugLogDAO)
 	iDebugContextDAO := mysql.NewDebugContextDAO(db2)
@@ -158,10 +158,10 @@ func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	illmProvider := rpc.NewLLMRPCProvider(llmClient)
 	iFileProvider := rpc.NewFileRPCProvider(fileClient)
 	snippetParser := service.NewCozeLoopSnippetParser()
-	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsProcessor, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
+	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsCollector, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
 	iAuthProvider := rpc.NewAuthRPCProvider(authClient)
 	iCollectorProvider := collector.NewEventCollectorProvider()
-	promptOpenAPIService, err := NewPromptOpenAPIApplication(iPromptService, iManageRepo, iConfigProvider, iAuthProvider, limiterFactory, iCollectorProvider)
+	promptOpenAPIService, err := NewPromptOpenAPIApplication(iPromptService, iManageRepo, iConfigProvider, iAuthProvider, limiterFactory, iCollectorProvider, meter)
 	if err != nil {
 		return nil, err
 	}

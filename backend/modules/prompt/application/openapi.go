@@ -21,6 +21,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
@@ -30,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
+	promptmetrics "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -47,7 +49,11 @@ func NewPromptOpenAPIApplication(
 	auth rpc.IAuthProvider,
 	factory limiter.IRateLimiterFactory,
 	collector collector.ICollectorProvider,
+	meter metrics.Meter,
 ) (openapi.PromptOpenAPIService, error) {
+	// Initialize PaaS metrics (global instance)
+	promptmetrics.NewPromptPaasMetrics(meter)
+
 	return &PromptOpenAPIApplicationImpl{
 		promptService:    promptService,
 		promptManageRepo: promptManageRepo,
@@ -127,6 +133,7 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 }
 
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
 	if req.GetWorkspaceID() == 0 {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
@@ -135,6 +142,9 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 		if err != nil {
 			logs.CtxError(ctx, "openapi get prompts failed, err=%v", err)
 		}
+		promptmetrics.WithPaasStatus(ctx, err)
+		promptmetrics.WithPaasMethod(ctx, "BatchGetPromptByPromptKey")
+		promptmetrics.EmitPaasMetric(ctx)
 	}()
 
 	// 限流检查
