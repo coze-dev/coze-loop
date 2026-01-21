@@ -13,12 +13,11 @@ struct Model {
     8: optional map<common.Scenario, ScenarioConfig> scenario_configs
     9: optional ParamConfig param_config
     10: optional string identification // 模型表示 (name, endpoint)
-    11: optional Family family // 模型家族
-    14: optional bool is_public
-    15: optional Visibility visibility
-    16: optional string icon // 模型图标
-    17: optional list<string> tags //模型标签
-    18: optional ModelStatus status // 模型状态
+    11: optional Series series // 模型
+    12: optional Visibility visibility
+    13: optional string icon // 模型图标
+    14: optional list<string> tags //模型标签
+    15: optional ModelStatus status // 模型状态
 
     100: optional string created_by
     101: optional i64 created_at
