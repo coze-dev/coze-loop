@@ -127,7 +127,7 @@ struct EvaluatorContent {
 // 明确有顺序的 evaluator 与版本映射元素
 struct EvaluatorIDVersionItem {
     1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
-    2: optional string version (api.js_conv = 'true', go.tag = 'json:"version"')
+    2: optional string version
     3: optional EvaluatorRunConfig run_config (go.tag = 'json:"run_config"')
 }
 
