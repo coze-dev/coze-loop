@@ -287,7 +287,7 @@ struct TurnTargetOutput {
 struct TurnEvaluatorOutput {
     1: map<i64, evaluator.EvaluatorRecord> evaluator_records (go.tag = 'json:"evaluator_records"')
 
-    11: optional double weighted_score (api.js_conv = 'true', go.tag = 'json:"weighted_score"') // 加权汇总得分
+    11: optional double weighted_score (go.tag = 'json:"weighted_score"') // 加权汇总得分
 }
 
 struct TurnAnnotateResult {

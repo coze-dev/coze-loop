@@ -130,7 +130,7 @@ struct EvaluatorIDVersionItem {
     2: optional string version (api.js_conv = 'true', go.tag = 'json:"version"')
     3: optional EvaluatorRunConfig run_config (go.tag = 'json:"run_config"')
     4: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
-    5: optional double score_weight (api.js_conv = 'true', go.tag = 'json:"score_weight"')
+    5: optional double score_weight (go.tag = 'json:"score_weight"')
 }
 
 struct EvaluatorInfo {
