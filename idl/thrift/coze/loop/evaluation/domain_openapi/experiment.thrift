@@ -142,6 +142,8 @@ struct Experiment {
     // 三元组信息
     31: optional TargetFieldMapping target_field_mapping
     32: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    33: optional eval_set.EvaluationSet eval_set
+    34: optional eval_target.EvalTarget eval_target
 
     // 统计信息
     50: optional ExperimentStatistics expt_stats

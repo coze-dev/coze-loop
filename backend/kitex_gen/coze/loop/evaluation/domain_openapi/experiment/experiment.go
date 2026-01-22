@@ -4055,6 +4055,8 @@ type Experiment struct {
 	// 三元组信息
 	TargetFieldMapping    *TargetFieldMapping      `thrift:"target_field_mapping,31,optional" frugal:"31,optional,TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty" query:"target_field_mapping"`
 	EvaluatorFieldMapping []*EvaluatorFieldMapping `thrift:"evaluator_field_mapping,32,optional" frugal:"32,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty" query:"evaluator_field_mapping"`
+	EvalSet               *eval_set.EvaluationSet  `thrift:"eval_set,33,optional" frugal:"33,optional,eval_set.EvaluationSet" form:"eval_set" json:"eval_set,omitempty" query:"eval_set"`
+	EvalTarget            *eval_target.EvalTarget  `thrift:"eval_target,34,optional" frugal:"34,optional,eval_target.EvalTarget" form:"eval_target" json:"eval_target,omitempty" query:"eval_target"`
 	// 统计信息
 	ExptStats *ExperimentStatistics `thrift:"expt_stats,50,optional" frugal:"50,optional,ExperimentStatistics" form:"expt_stats" json:"expt_stats,omitempty" query:"expt_stats"`
 	BaseInfo  *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
@@ -4187,6 +4189,30 @@ func (p *Experiment) GetEvaluatorFieldMapping() (v []*EvaluatorFieldMapping) {
 	return p.EvaluatorFieldMapping
 }
 
+var Experiment_EvalSet_DEFAULT *eval_set.EvaluationSet
+
+func (p *Experiment) GetEvalSet() (v *eval_set.EvaluationSet) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSet() {
+		return Experiment_EvalSet_DEFAULT
+	}
+	return p.EvalSet
+}
+
+var Experiment_EvalTarget_DEFAULT *eval_target.EvalTarget
+
+func (p *Experiment) GetEvalTarget() (v *eval_target.EvalTarget) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTarget() {
+		return Experiment_EvalTarget_DEFAULT
+	}
+	return p.EvalTarget
+}
+
 var Experiment_ExptStats_DEFAULT *ExperimentStatistics
 
 func (p *Experiment) GetExptStats() (v *ExperimentStatistics) {
@@ -4240,6 +4266,12 @@ func (p *Experiment) SetTargetFieldMapping(val *TargetFieldMapping) {
 func (p *Experiment) SetEvaluatorFieldMapping(val []*EvaluatorFieldMapping) {
 	p.EvaluatorFieldMapping = val
 }
+func (p *Experiment) SetEvalSet(val *eval_set.EvaluationSet) {
+	p.EvalSet = val
+}
+func (p *Experiment) SetEvalTarget(val *eval_target.EvalTarget) {
+	p.EvalTarget = val
+}
 func (p *Experiment) SetExptStats(val *ExperimentStatistics) {
 	p.ExptStats = val
 }
@@ -4258,6 +4290,8 @@ var fieldIDToName_Experiment = map[int16]string{
 	14:  "target_runtime_param",
 	31:  "target_field_mapping",
 	32:  "evaluator_field_mapping",
+	33:  "eval_set",
+	34:  "eval_target",
 	50:  "expt_stats",
 	100: "base_info",
 }
@@ -4300,6 +4334,14 @@ func (p *Experiment) IsSetTargetFieldMapping() bool {
 
 func (p *Experiment) IsSetEvaluatorFieldMapping() bool {
 	return p.EvaluatorFieldMapping != nil
+}
+
+func (p *Experiment) IsSetEvalSet() bool {
+	return p.EvalSet != nil
+}
+
+func (p *Experiment) IsSetEvalTarget() bool {
+	return p.EvalTarget != nil
 }
 
 func (p *Experiment) IsSetExptStats() bool {
@@ -4403,6 +4445,22 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 32:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField32(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 33:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField33(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 34:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField34(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4569,6 +4627,22 @@ func (p *Experiment) ReadField32(iprot thrift.TProtocol) error {
 	p.EvaluatorFieldMapping = _field
 	return nil
 }
+func (p *Experiment) ReadField33(iprot thrift.TProtocol) error {
+	_field := eval_set.NewEvaluationSet()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalSet = _field
+	return nil
+}
+func (p *Experiment) ReadField34(iprot thrift.TProtocol) error {
+	_field := eval_target.NewEvalTarget()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvalTarget = _field
+	return nil
+}
 func (p *Experiment) ReadField50(iprot thrift.TProtocol) error {
 	_field := NewExperimentStatistics()
 	if err := _field.Read(iprot); err != nil {
@@ -4630,6 +4704,14 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField32(oprot); err != nil {
 			fieldId = 32
+			goto WriteFieldError
+		}
+		if err = p.writeField33(oprot); err != nil {
+			fieldId = 33
+			goto WriteFieldError
+		}
+		if err = p.writeField34(oprot); err != nil {
+			fieldId = 34
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -4846,6 +4928,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 32 end error: ", p), err)
 }
+func (p *Experiment) writeField33(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSet() {
+		if err = oprot.WriteFieldBegin("eval_set", thrift.STRUCT, 33); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalSet.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 33 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 33 end error: ", p), err)
+}
+func (p *Experiment) writeField34(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTarget() {
+		if err = oprot.WriteFieldBegin("eval_target", thrift.STRUCT, 34); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvalTarget.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 34 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 34 end error: ", p), err)
+}
 func (p *Experiment) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExptStats() {
 		if err = oprot.WriteFieldBegin("expt_stats", thrift.STRUCT, 50); err != nil {
@@ -4925,6 +5043,12 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field32DeepEqual(ano.EvaluatorFieldMapping) {
+		return false
+	}
+	if !p.Field33DeepEqual(ano.EvalSet) {
+		return false
+	}
+	if !p.Field34DeepEqual(ano.EvalTarget) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.ExptStats) {
@@ -5044,6 +5168,20 @@ func (p *Experiment) Field32DeepEqual(src []*EvaluatorFieldMapping) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *Experiment) Field33DeepEqual(src *eval_set.EvaluationSet) bool {
+
+	if !p.EvalSet.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field34DeepEqual(src *eval_target.EvalTarget) bool {
+
+	if !p.EvalTarget.DeepEqual(src) {
+		return false
 	}
 	return true
 }

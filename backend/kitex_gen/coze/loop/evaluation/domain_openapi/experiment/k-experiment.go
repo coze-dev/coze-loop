@@ -3012,6 +3012,34 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 33:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField33(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 34:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField34(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField50(buf[offset:])
@@ -3205,6 +3233,30 @@ func (p *Experiment) FastReadField32(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField33(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_set.NewEvaluationSet()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalSet = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField34(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewEvalTarget()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.EvalTarget = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField50(buf []byte) (int, error) {
 	offset := 0
 	_field := NewExperimentStatistics()
@@ -3246,6 +3298,8 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField31(buf[offset:], w)
 		offset += p.fastWriteField32(buf[offset:], w)
+		offset += p.fastWriteField33(buf[offset:], w)
+		offset += p.fastWriteField34(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
@@ -3266,6 +3320,8 @@ func (p *Experiment) BLength() int {
 		l += p.field14Length()
 		l += p.field31Length()
 		l += p.field32Length()
+		l += p.field33Length()
+		l += p.field34Length()
 		l += p.field50Length()
 		l += p.field100Length()
 	}
@@ -3366,6 +3422,24 @@ func (p *Experiment) fastWriteField32(buf []byte, w thrift.NocopyWriter) int {
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
 		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField33(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalSet() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 33)
+		offset += p.EvalSet.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField34(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEvalTarget() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 34)
+		offset += p.EvalTarget.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -3482,6 +3556,24 @@ func (p *Experiment) field32Length() int {
 	return l
 }
 
+func (p *Experiment) field33Length() int {
+	l := 0
+	if p.IsSetEvalSet() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalSet.BLength()
+	}
+	return l
+}
+
+func (p *Experiment) field34Length() int {
+	l := 0
+	if p.IsSetEvalTarget() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.EvalTarget.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) field50Length() int {
 	l := 0
 	if p.IsSetExptStats() {
@@ -3579,6 +3671,24 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 			p.EvaluatorFieldMapping = append(p.EvaluatorFieldMapping, _elem)
 		}
 	}
+
+	var _evalSet *eval_set.EvaluationSet
+	if src.EvalSet != nil {
+		_evalSet = &eval_set.EvaluationSet{}
+		if err := _evalSet.DeepCopy(src.EvalSet); err != nil {
+			return err
+		}
+	}
+	p.EvalSet = _evalSet
+
+	var _evalTarget *eval_target.EvalTarget
+	if src.EvalTarget != nil {
+		_evalTarget = &eval_target.EvalTarget{}
+		if err := _evalTarget.DeepCopy(src.EvalTarget); err != nil {
+			return err
+		}
+	}
+	p.EvalTarget = _evalTarget
 
 	var _exptStats *ExperimentStatistics
 	if src.ExptStats != nil {
