@@ -19,12 +19,19 @@ struct PromptBasic {
     7: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
     8: optional i64 latest_committed_at (api.js_conv="true", go.tag='json:"latest_committed_at"')
     9: optional PromptType prompt_type
+    10: optional SecurityLevel security_level
 
 }
 
 typedef string PromptType (ts.enum="true")
 const PromptType PromptType_Normal = "normal"
 const PromptType PromptType_Snippet = "snippet"
+
+typedef string SecurityLevel (ts.enum="true")
+const SecurityLevel SecurityLevel_L1 = "L1"
+const SecurityLevel SecurityLevel_L2 = "L2"
+const SecurityLevel SecurityLevel_L3 = "L3"
+const SecurityLevel SecurityLevel_L4 = "L4"
 
 struct PromptCommit {
     1: optional PromptDetail detail

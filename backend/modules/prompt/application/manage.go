@@ -126,16 +126,20 @@ func (app *PromptManageApplicationImpl) CreatePrompt(ctx context.Context, reques
 	if request.PromptType == nil {
 		request.PromptType = ptr.Of(prompt.PromptTypeNormal)
 	}
+	if request.SecurityLevel == nil {
+		request.SecurityLevel = ptr.Of(prompt.SecurityLevelL3)
+	}
 	// create prompt
 	promptDTO := &prompt.Prompt{
 		WorkspaceID: request.WorkspaceID,
 		PromptKey:   request.PromptKey,
 		PromptBasic: &prompt.PromptBasic{
-			PromptType:  request.PromptType,
-			DisplayName: request.PromptName,
-			Description: request.PromptDescription,
-			CreatedBy:   ptr.Of(userID),
-			UpdatedBy:   ptr.Of(userID),
+			PromptType:    request.PromptType,
+			DisplayName:   request.PromptName,
+			Description:   request.PromptDescription,
+			CreatedBy:     ptr.Of(userID),
+			UpdatedBy:     ptr.Of(userID),
+			SecurityLevel: request.SecurityLevel,
 		},
 		PromptDraft: func() *prompt.PromptDraft {
 			if request.DraftDetail == nil {
@@ -203,15 +207,18 @@ func (app *PromptManageApplicationImpl) ClonePrompt(ctx context.Context, request
 	clonedPromptDO.PromptKey = request.GetClonedPromptKey()
 
 	promptType := entity.PromptTypeNormal
+	securityLevel := entity.SecurityLevelL3
 	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType != "" {
 		promptType = promptDO.PromptBasic.PromptType
+		securityLevel = promptDO.PromptBasic.SecurityLevel
 	}
 
 	clonedPromptDO.PromptBasic = &entity.PromptBasic{
-		DisplayName: request.GetClonedPromptName(),
-		Description: request.GetClonedPromptDescription(),
-		CreatedBy:   userID,
-		PromptType:  promptType,
+		DisplayName:   request.GetClonedPromptName(),
+		Description:   request.GetClonedPromptDescription(),
+		CreatedBy:     userID,
+		PromptType:    promptType,
+		SecurityLevel: securityLevel,
 	}
 	clonedPromptDO.PromptDraft = &entity.PromptDraft{
 		DraftInfo: &entity.DraftInfo{
@@ -474,6 +481,13 @@ func (app *PromptManageApplicationImpl) UpdatePrompt(ctx context.Context, reques
 	if err != nil {
 		return r, err
 	}
+	securityLevel := convertor.SecurityLevelDTO2DO(request.GetSecurityLevel())
+	if promptDO.PromptBasic != nil && promptDO.PromptBasic.SecurityLevel != securityLevel {
+		err = app.authRPCProvider.MCheckPromptPermission(ctx, promptDO.SpaceID, []int64{request.GetPromptID()}, consts.ActionLoopPromptEditSecLevel)
+		if err != nil {
+			return r, err
+		}
+	}
 
 	// 审核
 	err = app.auditRPCProvider.AuditPrompt(ctx, &entity.Prompt{
@@ -494,6 +508,7 @@ func (app *PromptManageApplicationImpl) UpdatePrompt(ctx context.Context, reques
 
 		PromptName:        request.GetPromptName(),
 		PromptDescription: request.GetPromptDescription(),
+		SecurityLevel:     securityLevel,
 	}
 	return r, app.manageRepo.UpdatePrompt(ctx, updatePromptParam)
 }

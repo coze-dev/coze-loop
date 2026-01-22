@@ -40,6 +40,7 @@ func newPromptBasic(db *gorm.DB, opts ...gen.DOOption) promptBasic {
 	_promptBasic.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_promptBasic.DeletedAt = field.NewField(tableName, "deleted_at")
 	_promptBasic.PromptType = field.NewString(tableName, "prompt_type")
+	_promptBasic.SecurityLevel = field.NewString(tableName, "security_level")
 
 	_promptBasic.fillFieldMap()
 
@@ -64,6 +65,7 @@ type promptBasic struct {
 	UpdatedAt        field.Time   // 更新时间
 	DeletedAt        field.Field  // 删除时间
 	PromptType       field.String // Prompt类型
+	SecurityLevel    field.String // security level
 
 	fieldMap map[string]field.Expr
 }
@@ -93,6 +95,7 @@ func (p *promptBasic) updateTableName(table string) *promptBasic {
 	p.UpdatedAt = field.NewTime(table, "updated_at")
 	p.DeletedAt = field.NewField(table, "deleted_at")
 	p.PromptType = field.NewString(table, "prompt_type")
+	p.SecurityLevel = field.NewString(table, "security_level")
 
 	p.fillFieldMap()
 
@@ -119,7 +122,7 @@ func (p *promptBasic) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (p *promptBasic) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 13)
+	p.fieldMap = make(map[string]field.Expr, 14)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_key"] = p.PromptKey
@@ -133,6 +136,7 @@ func (p *promptBasic) fillFieldMap() {
 	p.fieldMap["updated_at"] = p.UpdatedAt
 	p.fieldMap["deleted_at"] = p.DeletedAt
 	p.fieldMap["prompt_type"] = p.PromptType
+	p.fieldMap["security_level"] = p.SecurityLevel
 }
 
 func (p promptBasic) clone(db *gorm.DB) promptBasic {

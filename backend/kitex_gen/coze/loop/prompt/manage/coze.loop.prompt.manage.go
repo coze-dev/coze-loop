@@ -22,13 +22,14 @@ type ListPromptOrderBy = string
 
 // --------------- Prompt管理 --------------- //
 type CreatePromptRequest struct {
-	WorkspaceID       *int64               `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	PromptName        *string              `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
-	PromptKey         *string              `thrift:"prompt_key,12,optional" frugal:"12,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
-	PromptDescription *string              `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
-	PromptType        *prompt.PromptType   `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty" query:"prompt_type"`
-	DraftDetail       *prompt.PromptDetail `thrift:"draft_detail,21,optional" frugal:"21,optional,prompt.PromptDetail" form:"draft_detail" json:"draft_detail,omitempty" query:"draft_detail"`
-	Base              *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID       *int64                `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	PromptName        *string               `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
+	PromptKey         *string               `thrift:"prompt_key,12,optional" frugal:"12,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
+	PromptDescription *string               `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
+	PromptType        *prompt.PromptType    `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty" query:"prompt_type"`
+	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,15,optional" frugal:"15,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	DraftDetail       *prompt.PromptDetail  `thrift:"draft_detail,21,optional" frugal:"21,optional,prompt.PromptDetail" form:"draft_detail" json:"draft_detail,omitempty" query:"draft_detail"`
+	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreatePromptRequest() *CreatePromptRequest {
@@ -98,6 +99,18 @@ func (p *CreatePromptRequest) GetPromptType() (v prompt.PromptType) {
 	return *p.PromptType
 }
 
+var CreatePromptRequest_SecurityLevel_DEFAULT prompt.SecurityLevel
+
+func (p *CreatePromptRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSecurityLevel() {
+		return CreatePromptRequest_SecurityLevel_DEFAULT
+	}
+	return *p.SecurityLevel
+}
+
 var CreatePromptRequest_DraftDetail_DEFAULT *prompt.PromptDetail
 
 func (p *CreatePromptRequest) GetDraftDetail() (v *prompt.PromptDetail) {
@@ -136,6 +149,9 @@ func (p *CreatePromptRequest) SetPromptDescription(val *string) {
 func (p *CreatePromptRequest) SetPromptType(val *prompt.PromptType) {
 	p.PromptType = val
 }
+func (p *CreatePromptRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
+	p.SecurityLevel = val
+}
 func (p *CreatePromptRequest) SetDraftDetail(val *prompt.PromptDetail) {
 	p.DraftDetail = val
 }
@@ -149,6 +165,7 @@ var fieldIDToName_CreatePromptRequest = map[int16]string{
 	12:  "prompt_key",
 	13:  "prompt_description",
 	14:  "prompt_type",
+	15:  "security_level",
 	21:  "draft_detail",
 	255: "Base",
 }
@@ -171,6 +188,10 @@ func (p *CreatePromptRequest) IsSetPromptDescription() bool {
 
 func (p *CreatePromptRequest) IsSetPromptType() bool {
 	return p.PromptType != nil
+}
+
+func (p *CreatePromptRequest) IsSetSecurityLevel() bool {
+	return p.SecurityLevel != nil
 }
 
 func (p *CreatePromptRequest) IsSetDraftDetail() bool {
@@ -234,6 +255,14 @@ func (p *CreatePromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -339,6 +368,17 @@ func (p *CreatePromptRequest) ReadField14(iprot thrift.TProtocol) error {
 	p.PromptType = _field
 	return nil
 }
+func (p *CreatePromptRequest) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *prompt.SecurityLevel
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SecurityLevel = _field
+	return nil
+}
 func (p *CreatePromptRequest) ReadField21(iprot thrift.TProtocol) error {
 	_field := prompt.NewPromptDetail()
 	if err := _field.Read(iprot); err != nil {
@@ -380,6 +420,10 @@ func (p *CreatePromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField21(oprot); err != nil {
@@ -498,6 +542,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
+func (p *CreatePromptRequest) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSecurityLevel() {
+		if err = oprot.WriteFieldBegin("security_level", thrift.STRING, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SecurityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
 func (p *CreatePromptRequest) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDraftDetail() {
 		if err = oprot.WriteFieldBegin("draft_detail", thrift.STRUCT, 21); err != nil {
@@ -562,6 +624,9 @@ func (p *CreatePromptRequest) DeepEqual(ano *CreatePromptRequest) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.PromptType) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.SecurityLevel) {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.DraftDetail) {
@@ -629,6 +694,18 @@ func (p *CreatePromptRequest) Field14DeepEqual(src *prompt.PromptType) bool {
 		return false
 	}
 	if strings.Compare(*p.PromptType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreatePromptRequest) Field15DeepEqual(src *prompt.SecurityLevel) bool {
+
+	if p.SecurityLevel == src {
+		return true
+	} else if p.SecurityLevel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SecurityLevel, *src) != 0 {
 		return false
 	}
 	return true
@@ -5706,10 +5783,12 @@ func (p *ListPromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type UpdatePromptRequest struct {
-	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	PromptName        *string    `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
-	PromptDescription *string    `thrift:"prompt_description,12,optional" frugal:"12,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
-	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID          *int64                `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	PromptName        *string               `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
+	PromptDescription *string               `thrift:"prompt_description,12,optional" frugal:"12,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
+	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,13,optional" frugal:"13,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	DowngradeReason   *string               `thrift:"downgrade_reason,14,optional" frugal:"14,optional,string" form:"downgrade_reason" json:"downgrade_reason,omitempty" query:"downgrade_reason"`
+	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdatePromptRequest() *UpdatePromptRequest {
@@ -5755,6 +5834,30 @@ func (p *UpdatePromptRequest) GetPromptDescription() (v string) {
 	return *p.PromptDescription
 }
 
+var UpdatePromptRequest_SecurityLevel_DEFAULT prompt.SecurityLevel
+
+func (p *UpdatePromptRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSecurityLevel() {
+		return UpdatePromptRequest_SecurityLevel_DEFAULT
+	}
+	return *p.SecurityLevel
+}
+
+var UpdatePromptRequest_DowngradeReason_DEFAULT string
+
+func (p *UpdatePromptRequest) GetDowngradeReason() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDowngradeReason() {
+		return UpdatePromptRequest_DowngradeReason_DEFAULT
+	}
+	return *p.DowngradeReason
+}
+
 var UpdatePromptRequest_Base_DEFAULT *base.Base
 
 func (p *UpdatePromptRequest) GetBase() (v *base.Base) {
@@ -5775,6 +5878,12 @@ func (p *UpdatePromptRequest) SetPromptName(val *string) {
 func (p *UpdatePromptRequest) SetPromptDescription(val *string) {
 	p.PromptDescription = val
 }
+func (p *UpdatePromptRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
+	p.SecurityLevel = val
+}
+func (p *UpdatePromptRequest) SetDowngradeReason(val *string) {
+	p.DowngradeReason = val
+}
 func (p *UpdatePromptRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -5783,6 +5892,8 @@ var fieldIDToName_UpdatePromptRequest = map[int16]string{
 	1:   "prompt_id",
 	11:  "prompt_name",
 	12:  "prompt_description",
+	13:  "security_level",
+	14:  "downgrade_reason",
 	255: "Base",
 }
 
@@ -5796,6 +5907,14 @@ func (p *UpdatePromptRequest) IsSetPromptName() bool {
 
 func (p *UpdatePromptRequest) IsSetPromptDescription() bool {
 	return p.PromptDescription != nil
+}
+
+func (p *UpdatePromptRequest) IsSetSecurityLevel() bool {
+	return p.SecurityLevel != nil
+}
+
+func (p *UpdatePromptRequest) IsSetDowngradeReason() bool {
+	return p.DowngradeReason != nil
 }
 
 func (p *UpdatePromptRequest) IsSetBase() bool {
@@ -5839,6 +5958,22 @@ func (p *UpdatePromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5914,6 +6049,28 @@ func (p *UpdatePromptRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.PromptDescription = _field
 	return nil
 }
+func (p *UpdatePromptRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *prompt.SecurityLevel
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SecurityLevel = _field
+	return nil
+}
+func (p *UpdatePromptRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DowngradeReason = _field
+	return nil
+}
 func (p *UpdatePromptRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -5939,6 +6096,14 @@ func (p *UpdatePromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6017,6 +6182,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *UpdatePromptRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSecurityLevel() {
+		if err = oprot.WriteFieldBegin("security_level", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SecurityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+func (p *UpdatePromptRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDowngradeReason() {
+		if err = oprot.WriteFieldBegin("downgrade_reason", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DowngradeReason); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *UpdatePromptRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -6059,6 +6260,12 @@ func (p *UpdatePromptRequest) DeepEqual(ano *UpdatePromptRequest) bool {
 	if !p.Field12DeepEqual(ano.PromptDescription) {
 		return false
 	}
+	if !p.Field13DeepEqual(ano.SecurityLevel) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.DowngradeReason) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -6097,6 +6304,30 @@ func (p *UpdatePromptRequest) Field12DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PromptDescription, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdatePromptRequest) Field13DeepEqual(src *prompt.SecurityLevel) bool {
+
+	if p.SecurityLevel == src {
+		return true
+	} else if p.SecurityLevel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SecurityLevel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdatePromptRequest) Field14DeepEqual(src *string) bool {
+
+	if p.DowngradeReason == src {
+		return true
+	} else if p.DowngradeReason == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DowngradeReason, *src) != 0 {
 		return false
 	}
 	return true

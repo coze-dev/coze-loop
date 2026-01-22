@@ -52,6 +52,7 @@ struct CreatePromptRequest {
     12: optional string prompt_key (vt.not_nil="true", vt.min_size="1")
     13: optional string prompt_description
     14: optional prompt.PromptType prompt_type
+    15: optional prompt.SecurityLevel security_level
 
     21: optional prompt.PromptDetail draft_detail
 
@@ -168,6 +169,8 @@ struct UpdatePromptRequest {
 
     11: optional string prompt_name (vt.not_nil="true", vt.min_size="1")
     12: optional string prompt_description
+    13: optional prompt.SecurityLevel security_level
+    14: optional string downgrade_reason
 
     255: optional base.Base Base
 }

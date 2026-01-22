@@ -62,6 +62,7 @@ type UpdatePromptParam struct {
 
 	PromptName        string
 	PromptDescription string
+	SecurityLevel     entity.SecurityLevel
 }
 
 type CommitDraftParam struct {

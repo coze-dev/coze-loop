@@ -555,6 +555,20 @@ func (p *PromptBasic) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -699,6 +713,20 @@ func (p *PromptBasic) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *PromptBasic) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *SecurityLevel
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SecurityLevel = _field
+	return offset, nil
+}
+
 func (p *PromptBasic) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -715,6 +743,7 @@ func (p *PromptBasic) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -732,6 +761,7 @@ func (p *PromptBasic) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -818,6 +848,15 @@ func (p *PromptBasic) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *PromptBasic) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSecurityLevel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SecurityLevel)
+	}
+	return offset
+}
+
 func (p *PromptBasic) field1Length() int {
 	l := 0
 	if p.IsSetDisplayName() {
@@ -899,6 +938,15 @@ func (p *PromptBasic) field9Length() int {
 	return l
 }
 
+func (p *PromptBasic) field10Length() int {
+	l := 0
+	if p.IsSetSecurityLevel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SecurityLevel)
+	}
+	return l
+}
+
 func (p *PromptBasic) DeepCopy(s interface{}) error {
 	src, ok := s.(*PromptBasic)
 	if !ok {
@@ -963,6 +1011,11 @@ func (p *PromptBasic) DeepCopy(s interface{}) error {
 	if src.PromptType != nil {
 		tmp := *src.PromptType
 		p.PromptType = &tmp
+	}
+
+	if src.SecurityLevel != nil {
+		tmp := *src.SecurityLevel
+		p.SecurityLevel = &tmp
 	}
 
 	return nil
