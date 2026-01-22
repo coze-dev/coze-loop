@@ -113,13 +113,18 @@ func (dao *ExptAggrResultDAOImpl) UpdateExptAggrResultByVersion(ctx context.Cont
 	exptAggrResult.Status = calculateStatusIdle
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptAggrResult
+	// 只更新分数字段和聚合结果字段，避免无意覆盖 version、created_at 等字段
 	_, err := q.WithContext(ctx).
 		Where(q.ExperimentID.Eq(exptAggrResult.ExperimentID),
 			q.FieldType.Eq(gptr.Indirect(exptAggrResult.FieldType)),
 			q.FieldKey.Eq(exptAggrResult.FieldKey),
 			q.Version.Eq(taskVersion),
 			q.Status.Eq(calculateStatusCalculating)).
-		Updates(exptAggrResult)
+		Updates(map[string]interface{}{
+			"score":       exptAggrResult.Score,
+			"aggr_result": exptAggrResult.AggrResult,
+			"status":      exptAggrResult.Status,
+		})
 	if err != nil {
 		return err
 	}

@@ -1086,6 +1086,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
 
+				mockExptResultService := mocks.NewMockExptResultService(ctrl)
 				handler := NewEvaluatorHandlerImpl(
 					mockIDGen,
 					mockConfiger,
@@ -1099,6 +1100,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockBenefitService,
 					mockFileProvider,
 					make(map[entity.EvaluatorType]service.EvaluatorSourceService),
+					mockExptResultService,
 				)
 
 				// 测试复杂的调试场景，涉及多个服务交互
@@ -1503,6 +1505,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
 
+				mockExptResultService := mocks.NewMockExptResultService(ctrl)
 				handler := NewEvaluatorHandlerImpl(
 					mockIDGen,
 					mockConfiger,
@@ -1516,6 +1519,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockBenefitService,
 					mockFileProvider,
 					make(map[entity.EvaluatorType]service.EvaluatorSourceService),
+					mockExptResultService,
 				)
 
 				// 模拟完整的评估器生命周期：创建 -> 更新 -> 提交版本 -> 运行 -> 删除

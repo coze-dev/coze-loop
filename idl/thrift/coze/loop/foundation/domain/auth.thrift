@@ -39,6 +39,7 @@ typedef string AuthEntityType (ts.enum="true")      // 鉴权实体类型
 const AuthEntityType AuthEntityType_Space = "Space" // 空间
 const AuthEntityType AuthEntityType_Prompt = "Prompt"
 const AuthEntityType AuthEntityType_EvaluationExperiment = "EvaluationExperiment"
+const AuthEntityType AuthEntityType_EvaluationExptTemplate = "EvaluationExptTemplate"
 const AuthEntityType AuthEntityType_EvaluationSet = "EvaluationSet"
 const AuthEntityType AuthEntityType_Evaluator = "Evaluator"
 const AuthEntityType AuthEntityType_EvaluationTarget = "EvaluationTarget"
