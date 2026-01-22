@@ -2675,9 +2675,10 @@ func (p *GetEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type CreateEvaluatorRequest struct {
-	Evaluator *evaluator.Evaluator `thrift:"evaluator,1,required" frugal:"1,required,evaluator.Evaluator" form:"evaluator,required" json:"evaluator,required"`
-	Cid       *string              `thrift:"cid,100,optional" frugal:"100,optional,string" form:"cid" json:"cid,omitempty"`
-	Base      *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Evaluator   *evaluator.Evaluator `thrift:"evaluator,1,required" frugal:"1,required,evaluator.Evaluator" form:"evaluator,required" json:"evaluator,required"`
+	WorkspaceID *int64               `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"evaluator_id" form:"workspace_id" query:"workspace_id"`
+	Cid         *string              `thrift:"cid,100,optional" frugal:"100,optional,string" form:"cid" json:"cid,omitempty"`
+	Base        *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateEvaluatorRequest() *CreateEvaluatorRequest {
@@ -2697,6 +2698,18 @@ func (p *CreateEvaluatorRequest) GetEvaluator() (v *evaluator.Evaluator) {
 		return CreateEvaluatorRequest_Evaluator_DEFAULT
 	}
 	return p.Evaluator
+}
+
+var CreateEvaluatorRequest_WorkspaceID_DEFAULT int64
+
+func (p *CreateEvaluatorRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return CreateEvaluatorRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var CreateEvaluatorRequest_Cid_DEFAULT string
@@ -2725,6 +2738,9 @@ func (p *CreateEvaluatorRequest) GetBase() (v *base.Base) {
 func (p *CreateEvaluatorRequest) SetEvaluator(val *evaluator.Evaluator) {
 	p.Evaluator = val
 }
+func (p *CreateEvaluatorRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *CreateEvaluatorRequest) SetCid(val *string) {
 	p.Cid = val
 }
@@ -2734,12 +2750,17 @@ func (p *CreateEvaluatorRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_CreateEvaluatorRequest = map[int16]string{
 	1:   "evaluator",
+	2:   "workspace_id",
 	100: "cid",
 	255: "Base",
 }
 
 func (p *CreateEvaluatorRequest) IsSetEvaluator() bool {
 	return p.Evaluator != nil
+}
+
+func (p *CreateEvaluatorRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *CreateEvaluatorRequest) IsSetCid() bool {
@@ -2775,6 +2796,14 @@ func (p *CreateEvaluatorRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetEvaluator = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -2837,6 +2866,17 @@ func (p *CreateEvaluatorRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.Evaluator = _field
 	return nil
 }
+func (p *CreateEvaluatorRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *CreateEvaluatorRequest) ReadField100(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -2865,6 +2905,10 @@ func (p *CreateEvaluatorRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -2908,6 +2952,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CreateEvaluatorRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *CreateEvaluatorRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCid() {
@@ -2963,6 +3025,9 @@ func (p *CreateEvaluatorRequest) DeepEqual(ano *CreateEvaluatorRequest) bool {
 	if !p.Field1DeepEqual(ano.Evaluator) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Cid) {
 		return false
 	}
@@ -2975,6 +3040,18 @@ func (p *CreateEvaluatorRequest) DeepEqual(ano *CreateEvaluatorRequest) bool {
 func (p *CreateEvaluatorRequest) Field1DeepEqual(src *evaluator.Evaluator) bool {
 
 	if !p.Evaluator.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateEvaluatorRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
 		return false
 	}
 	return true

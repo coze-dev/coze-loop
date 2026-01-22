@@ -57,6 +57,8 @@ struct GetEvaluatorResponse {
 
 struct CreateEvaluatorRequest {
     1: required evaluator.Evaluator evaluator (api.body='evaluator')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"evaluator_id"')
+
     100: optional string cid (api.body='cid')
 
     255: optional base.Base Base

@@ -3785,7 +3785,7 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 // 明确有顺序的 evaluator 与版本映射元素
 type EvaluatorIDVersionItem struct {
 	EvaluatorID *int64              `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	Version     *string             `thrift:"version,2,optional" frugal:"2,optional,string" json:"version" form:"version" query:"version"`
+	Version     *string             `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 	RunConfig   *EvaluatorRunConfig `thrift:"run_config,3,optional" frugal:"3,optional,EvaluatorRunConfig" json:"run_config" form:"run_config" query:"run_config"`
 }
 
