@@ -50,6 +50,7 @@ func NewPromptOpenAPIApplication(
 	factory limiter.IRateLimiterFactory,
 	collector collector.ICollectorProvider,
 	meter metrics.Meter,
+	user rpc.IUserProvider,
 ) (openapi.PromptOpenAPIService, error) {
 	// Initialize PaaS metrics (global instance)
 	promptmetrics.NewPromptPaasMetrics(meter)
@@ -61,6 +62,7 @@ func NewPromptOpenAPIApplication(
 		auth:             auth,
 		rateLimiter:      factory.NewRateLimiter(),
 		collector:        collector,
+		user:             user,
 	}, nil
 }
 
@@ -71,6 +73,7 @@ type PromptOpenAPIApplicationImpl struct {
 	auth             rpc.IAuthProvider
 	rateLimiter      limiter.IRateLimiter
 	collector        collector.ICollectorProvider
+	user             rpc.IUserProvider
 }
 
 func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
@@ -219,11 +222,20 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		}
 		commitVersion := promptKeyCommitVersionMap[queryParam]
 
-		mgetParams = append(mgetParams, repo.GetPromptParam{
-			PromptID:      promptKeyIDMap[query.GetPromptKey()],
-			WithCommit:    true,
-			CommitVersion: commitVersion,
-		})
+		// 根据 commitVersion 类型构建参数
+		param := repo.GetPromptParam{
+			PromptID: promptKeyIDMap[query.GetPromptKey()],
+		}
+		if commitVersion != consts.PromptPersonalDraftVersion {
+			param.WithCommit = true
+			param.CommitVersion = commitVersion
+		} else {
+			param.WithDraft = true
+			if userID, ok := p.user.GetUserIdInCtx(ctx); ok {
+				param.UserID = userID
+			}
+		}
+		mgetParams = append(mgetParams, param)
 	}
 
 	// 获取prompt详细信息

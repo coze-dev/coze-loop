@@ -41,6 +41,21 @@ func (m *MockIUserProvider) EXPECT() *MockIUserProviderMockRecorder {
 	return m.recorder
 }
 
+// GetUserIdInCtx mocks base method.
+func (m *MockIUserProvider) GetUserIdInCtx(ctx context.Context) (string, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserIdInCtx", ctx)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// GetUserIdInCtx indicates an expected call of GetUserIdInCtx.
+func (mr *MockIUserProviderMockRecorder) GetUserIdInCtx(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserIdInCtx", reflect.TypeOf((*MockIUserProvider)(nil).GetUserIdInCtx), ctx)
+}
+
 // MGetUserInfo mocks base method.
 func (m *MockIUserProvider) MGetUserInfo(ctx context.Context, userIDs []string) ([]*rpc.UserInfo, error) {
 	m.ctrl.T.Helper()

@@ -132,7 +132,7 @@ func InitPromptExecuteApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	return promptExecuteService, nil
 }
 
-func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, limiterFactory limiter.IRateLimiterFactory, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client) (openapi.PromptOpenAPIService, error) {
+func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, limiterFactory limiter.IRateLimiterFactory, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client, userClient userservice.Client) (openapi.PromptOpenAPIService, error) {
 	iPromptFormatter := service.NewPromptFormatter()
 	iToolConfigProvider := service.NewToolConfigProvider()
 	iToolResultsCollector := service.NewToolResultsCollector()
@@ -161,7 +161,8 @@ func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	iPromptService := service.NewPromptService(iPromptFormatter, iToolConfigProvider, iToolResultsCollector, idgen2, iDebugLogRepo, iDebugContextRepo, iManageRepo, iLabelRepo, iConfigProvider, illmProvider, iFileProvider, snippetParser)
 	iAuthProvider := rpc.NewAuthRPCProvider(authClient)
 	iCollectorProvider := collector.NewEventCollectorProvider()
-	promptOpenAPIService, err := NewPromptOpenAPIApplication(iPromptService, iManageRepo, iConfigProvider, iAuthProvider, limiterFactory, iCollectorProvider, meter)
+	iUserProvider := rpc.NewUserRPCProvider(userClient)
+	promptOpenAPIService, err := NewPromptOpenAPIApplication(iPromptService, iManageRepo, iConfigProvider, iAuthProvider, limiterFactory, iCollectorProvider, meter, iUserProvider)
 	if err != nil {
 		return nil, err
 	}
