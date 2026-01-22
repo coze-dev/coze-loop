@@ -468,6 +468,20 @@ struct ListExperimentTemplatesResponse {
     255: base.BaseResp BaseResp
 }
 
+struct CheckExperimentTemplateNameRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required string name (api.body='name', api.js_conv='true', go.tag='json:"name"')
+    3: optional i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    255: optional base.Base Base
+}
+
+struct CheckExperimentTemplateNameResponse {
+    1: optional bool is_available (api.body = 'is_available')
+
+    255: base.BaseResp BaseResp
+}
+
 typedef string UpsertExptTurnResultFilterType (ts.enum="true")           // 标签状态
 const UpsertExptTurnResultFilterType UpsertExptTurnResultFilterType_MANUAL = "manual"         // 启用
 const UpsertExptTurnResultFilterType UpsertExptTurnResultFilterType_AUTO = "auto"     // 禁用
@@ -778,5 +792,6 @@ service ExperimentService {
     UpdateExperimentTemplateResponse UpdateExperimentTemplate(1: UpdateExperimentTemplateRequest req) (api.patch = '/api/evaluation/v1/experiment_templates/:template_id') // 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置）
     DeleteExperimentTemplateResponse DeleteExperimentTemplate(1: DeleteExperimentTemplateRequest req) (api.delete = '/api/evaluation/v1/experiment_templates/:template_id')
     ListExperimentTemplatesResponse ListExperimentTemplates(1: ListExperimentTemplatesRequest req) (api.post = '/api/evaluation/v1/experiment_templates/list')
+    CheckExperimentTemplateNameResponse CheckExperimentTemplateName(1: CheckExperimentTemplateNameRequest req) (api.post = '/api/evaluation/v1/experiment_templates/check_name')
 }
 

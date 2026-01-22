@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -25,7 +26,7 @@ type IExptTemplateDAO interface {
 	Create(ctx context.Context, template *model.ExptTemplate) error
 	GetByID(ctx context.Context, id int64) (*model.ExptTemplate, error)
 	GetByName(ctx context.Context, name string, spaceID int64) (*model.ExptTemplate, error)
-	MGetByID(ctx context.Context, ids []int64) ([]*model.ExptTemplate, error)
+	MGetByID(ctx context.Context, ids []int64, opts ...db.Option) ([]*model.ExptTemplate, error)
 	Update(ctx context.Context, template *model.ExptTemplate) error
 	UpdateFields(ctx context.Context, id int64, ufields map[string]any) error
 	Delete(ctx context.Context, id int64) error
@@ -77,12 +78,17 @@ func (d *exptTemplateDAOImpl) GetByName(ctx context.Context, name string, spaceI
 	return result, nil
 }
 
-func (d *exptTemplateDAOImpl) MGetByID(ctx context.Context, ids []int64) ([]*model.ExptTemplate, error) {
+func (d *exptTemplateDAOImpl) MGetByID(ctx context.Context, ids []int64, opts ...db.Option) ([]*model.ExptTemplate, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	q := query.Use(d.db.NewSession(ctx)).ExptTemplate
-	results, err := q.WithContext(ctx).Where(q.ID.In(ids...)).Find()
+	template := d.query.ExptTemplate
+	q := template.WithContext(ctx)
+	// 如果 context 中有写标志，使用主库
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
+	results, err := q.Where(template.ID.In(ids...)).Find()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "mget expt_template fail, ids: %v", ids)
 	}
@@ -119,9 +125,10 @@ func (d *exptTemplateDAOImpl) List(ctx context.Context, page, size int32, filter
 		templates []*model.ExptTemplate
 		db        = d.db.NewSession(ctx)
 		count     int64
+		needJoin  = d.filterNeedJoin(filter)
 	)
 
-	if d.filterNeedJoin(filter) {
+	if needJoin {
 		db = db.Model(&model.ExptTemplate{}).
 			Joins("INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id").
 			Where("expt_template.space_id = ?", spaceID).
@@ -141,7 +148,10 @@ func (d *exptTemplateDAOImpl) List(ctx context.Context, page, size int32, filter
 		db = cond(db)
 	}
 
-	db.Group("expt_template.id")
+	// 只有在需要 join 时才使用 Group，避免重复数据
+	if needJoin {
+		db = db.Group("expt_template.id")
+	}
 	db.Count(&count)
 
 	if page > 0 && size > 0 {
@@ -221,7 +231,7 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 			})
 		}
 		if len(ffields.EvaluatorIDs) > 0 {
-			conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
 				return db.Where(fmt.Sprintf("%sevaluator_id %s (?)", refPrefix, scopeComparator), ffields.EvaluatorIDs)
 			})
 		}
@@ -240,23 +250,28 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 		})
 	}
 
-	conditions = append(conditions, condFn("=", "IN", f.Includes)...)
-	conditions = append(conditions, condFn("!=", "NOT IN", f.Excludes)...)
+	if f != nil {
+		conditions = append(conditions, condFn("=", "IN", f.Includes)...)
+		conditions = append(conditions, condFn("!=", "NOT IN", f.Excludes)...)
+	}
 
 	ordered := false
 	for _, orderBy := range orders {
-		column := templateSortFieldToColumn[gptr.Indirect(orderBy.Field)]
+		column := gptr.Indirect(orderBy.Field)
 		if len(column) == 0 {
 			continue
 		}
 
 		ordered = true
+		// 在闭包内部使用局部变量，避免闭包捕获问题
+		col := column
+		prefix := templatePrefix
 		conditions = append(conditions, func(db *gorm.DB) *gorm.DB {
 			sort := consts.SortDesc
 			if gptr.Indirect(orderBy.IsAsc) {
 				sort = consts.SortAsc
 			}
-			return db.Order(templatePrefix + column + " " + sort)
+			return db.Order(prefix + col + " " + sort)
 		})
 	}
 
@@ -267,9 +282,4 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 	}
 
 	return conditions, true
-}
-
-var templateSortFieldToColumn = map[string]string{
-	"created_time": "created_at",
-	"updated_time": "updated_at",
 }

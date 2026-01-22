@@ -318,3 +318,9 @@ func UpdateExperimentTemplateMeta(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// CheckExperimentTemplateName .
+// @router /api/evaluation/v1/experiment_templates/check_name [POST]
+func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.CheckExperimentTemplateName)
+}

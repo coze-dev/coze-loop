@@ -24,16 +24,16 @@ func NewExptTemplateRepo(
 	idgen idgen.IIDGenerator,
 ) repo.IExptTemplateRepo {
 	return &exptTemplateRepoImpl{
-		templateDAO:              templateDAO,
+		templateDAO:             templateDAO,
 		templateEvaluatorRefDAO: templateEvaluatorRefDAO,
-		idgen:                    idgen,
+		idgen:                   idgen,
 	}
 }
 
 type exptTemplateRepoImpl struct {
-	idgen                    idgen.IIDGenerator
-	templateDAO              mysql.IExptTemplateDAO
-	templateEvaluatorRefDAO   mysql.IExptTemplateEvaluatorRefDAO
+	idgen                   idgen.IIDGenerator
+	templateDAO             mysql.IExptTemplateDAO
+	templateEvaluatorRefDAO mysql.IExptTemplateEvaluatorRefDAO
 }
 
 func (e *exptTemplateRepoImpl) Create(ctx context.Context, template *entity.ExptTemplate, refs []*entity.ExptTemplateEvaluatorRef) error {
@@ -66,7 +66,7 @@ func (e *exptTemplateRepoImpl) Create(ctx context.Context, template *entity.Expt
 	return nil
 }
 
-func (e *exptTemplateRepoImpl) GetByID(ctx context.Context, id, spaceID int64) (*entity.ExptTemplate, error) {
+func (e *exptTemplateRepoImpl) GetByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error) {
 	po, err := e.templateDAO.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -74,7 +74,8 @@ func (e *exptTemplateRepoImpl) GetByID(ctx context.Context, id, spaceID int64) (
 	if po == nil {
 		return nil, nil
 	}
-	if po.SpaceID != spaceID {
+	// 仅在 spaceID 非空时进行空间校验；spaceID 为空则不校验
+	if spaceID != nil && po.SpaceID != *spaceID {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found or access denied"))
 	}
 

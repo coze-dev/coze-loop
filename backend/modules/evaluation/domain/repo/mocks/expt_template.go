@@ -70,7 +70,7 @@ func (mr *MockIExptTemplateRepoMockRecorder) Delete(ctx, id, spaceID any) *gomoc
 }
 
 // GetByID mocks base method.
-func (m *MockIExptTemplateRepo) GetByID(ctx context.Context, id, spaceID int64) (*entity.ExptTemplate, error) {
+func (m *MockIExptTemplateRepo) GetByID(ctx context.Context, id int64, spaceID *int64) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetByID", ctx, id, spaceID)
 	ret0, _ := ret[0].(*entity.ExptTemplate)

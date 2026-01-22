@@ -1143,15 +1143,6 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorRecord(ctx context.Context, reques
 		return nil, err
 	}
 
-	// 如果修改了评估器得分，需要重新计算加权得分并更新到 expt_turn_result
-	if correctionDO != nil && correctionDO.Score != nil {
-		if err := e.exptResultService.RecalculateWeightedScore(ctx, evaluatorRecord.SpaceID, evaluatorRecord.ExperimentID, evaluatorRecord.ItemID, evaluatorRecord.TurnID); err != nil {
-			logs.CtxError(ctx, "Failed to recalculate weighted score, expt_id: %v, item_id: %v, turn_id: %v, err: %v",
-				evaluatorRecord.ExperimentID, evaluatorRecord.ItemID, evaluatorRecord.TurnID, err)
-			// 不返回错误，避免影响主流程
-		}
-	}
-
 	return &evaluatorservice.UpdateEvaluatorRecordResponse{
 		Record: evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord),
 	}, nil

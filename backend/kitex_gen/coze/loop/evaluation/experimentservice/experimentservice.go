@@ -287,6 +287,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CheckExperimentTemplateName": kitex.NewMethodInfo(
+		checkExperimentTemplateNameHandler,
+		newExperimentServiceCheckExperimentTemplateNameArgs,
+		newExperimentServiceCheckExperimentTemplateNameResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -1061,6 +1068,25 @@ func newExperimentServiceListExperimentTemplatesResult() interface{} {
 	return expt.NewExperimentServiceListExperimentTemplatesResult()
 }
 
+func checkExperimentTemplateNameHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceCheckExperimentTemplateNameArgs)
+	realResult := result.(*expt.ExperimentServiceCheckExperimentTemplateNameResult)
+	success, err := handler.(expt.ExperimentService).CheckExperimentTemplateName(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceCheckExperimentTemplateNameArgs() interface{} {
+	return expt.NewExperimentServiceCheckExperimentTemplateNameArgs()
+}
+
+func newExperimentServiceCheckExperimentTemplateNameResult() interface{} {
+	return expt.NewExperimentServiceCheckExperimentTemplateNameResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1458,6 +1484,16 @@ func (p *kClient) ListExperimentTemplates(ctx context.Context, req *expt.ListExp
 	_args.Req = req
 	var _result expt.ExperimentServiceListExperimentTemplatesResult
 	if err = p.c.Call(ctx, "ListExperimentTemplates", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest) (r *expt.CheckExperimentTemplateNameResponse, err error) {
+	var _args expt.ExperimentServiceCheckExperimentTemplateNameArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceCheckExperimentTemplateNameResult
+	if err = p.c.Call(ctx, "CheckExperimentTemplateName", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

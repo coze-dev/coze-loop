@@ -671,7 +671,8 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 
 // calculateWeightedAggregateResults 计算所有数值型聚合指标（如 avg、p99 等）的加权结果
 // 约定：对任意 AggregatorType，只要其 Data.Value 为数值类型（Double），则参与加权计算：
-//   weighted_value = Σ(value_i * weight_i) / Σ(weight_i)
+//
+//	weighted_value = Σ(value_i * weight_i) / Σ(weight_i)
 func (e *ExptAggrResultServiceImpl) calculateWeightedAggregateResults(
 	evaluatorResults map[int64]*entity.EvaluatorAggregateResult,
 	weights map[int64]float64,

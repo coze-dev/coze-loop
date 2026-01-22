@@ -75,7 +75,7 @@ type DefaultSchedulerModeFactory struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
-	templateManager           IExptTemplateManager
+	templateManager          IExptTemplateManager
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -85,7 +85,7 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeSubmit:
 		return NewExptSubmitMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.resultSvc, f.templateManager), nil
 	case entity.EvaluationModeFailRetry:
-		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService), nil
+		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
 		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	default:
@@ -374,6 +374,7 @@ type ExptFailRetryExec struct {
 	configer               component.IConfiger
 	publisher              events.ExptEventPublisher
 	evaluatorRecordService EvaluatorRecordService
+	templateManager        IExptTemplateManager
 }
 
 func NewExptFailRetryMode(
@@ -387,6 +388,7 @@ func NewExptFailRetryMode(
 	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
+	templateManager IExptTemplateManager,
 ) *ExptFailRetryExec {
 	return &ExptFailRetryExec{
 		manager:                manager,
@@ -399,6 +401,7 @@ func NewExptFailRetryMode(
 		configer:               configer,
 		publisher:              publisher,
 		evaluatorRecordService: evaluatorRecordService,
+		templateManager:        templateManager,
 	}
 }
 
@@ -515,6 +518,26 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		return err
 	}
 
+	// 如果实验关联了模板，在 FailRetry 模式下重新开始时，也需要更新模板上的最新实验状态
+	if e.templateManager != nil {
+		var templateID int64
+		if expt != nil && expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
+			templateID = expt.ExptTemplateMeta.ID
+		} else {
+			// 兜底：从数据库重新获取实验对象
+			if updatedExpt, err := e.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID); err == nil && updatedExpt != nil && updatedExpt.ExptTemplateMeta != nil && updatedExpt.ExptTemplateMeta.ID > 0 {
+				templateID = updatedExpt.ExptTemplateMeta.ID
+			}
+		}
+		if templateID > 0 {
+			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+				logs.CtxError(ctx, "UpdateExptInfo failed in ExptFailRetryExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
+			} else {
+				logs.CtxInfo(ctx, "UpdateExptInfo succeeded in ExptFailRetryExec.ExptStart, template_id: %v, expt_id: %v, status: %v", templateID, event.ExptID, entity.ExptStatus_Processing)
+			}
+		}
+	}
+
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
 	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
 		return err
@@ -570,7 +593,7 @@ type ExptAppendExec struct {
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
-	templateManager           IExptTemplateManager
+	templateManager          IExptTemplateManager
 }
 
 func NewExptAppendMode(

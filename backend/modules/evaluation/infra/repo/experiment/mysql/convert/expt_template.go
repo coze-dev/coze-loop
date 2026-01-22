@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/samber/lo"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -130,12 +131,12 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 
 	// 构建 TripleConfig
 	tripleConfig := &entity.ExptTemplateTuple{
-		EvalSetID:              po.EvalSetID,
-		EvalSetVersionID:       po.EvalSetVersionID,
-		TargetID:               po.TargetID,
-		TargetVersionID:        po.TargetVersionID,
-		TargetType:             entity.EvalTargetType(po.TargetType),
-		EvaluatorVersionIds:    evaluatorVersionIds,
+		EvalSetID:               po.EvalSetID,
+		EvalSetVersionID:        po.EvalSetVersionID,
+		TargetID:                po.TargetID,
+		TargetVersionID:         po.TargetVersionID,
+		TargetType:              entity.EvalTargetType(po.TargetType),
+		EvaluatorVersionIds:     evaluatorVersionIds,
 		EvaluatorIDVersionItems: evaluatorIDVersionItems,
 	}
 
@@ -163,11 +164,10 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 			}
 			fieldMappingConfig.TargetFieldMapping = targetMapping
 
-			// 提取运行时参数
+			// 提取运行时参数（使用统一的内置字段名）
 			if ingressConf.CustomConf != nil {
 				for _, fc := range ingressConf.CustomConf.FieldConfs {
-					// 运行时参数存储在 CustomConf 中，字段名为 runtime_param
-					if fc.FieldName == "runtime_param" {
+					if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
 						fieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
 							JSONValue: gptr.Of(fc.Value),
 						}

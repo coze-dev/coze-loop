@@ -530,7 +530,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		return err
 	}
 
-		// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
+	// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
 	if got.ExptTemplateMeta != nil && got.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0); err != nil {
 			// 记录错误但不影响主流程

@@ -144,14 +144,14 @@ func (a AggregatorResult) GetScore() float64 {
 type ExptAggrResult struct {
 	ID            int64
 	SpaceID       int64
-	ExperimentID int64
-	FieldType    int32
-	FieldKey     string
-	Score        float64
-	AggrResult   []byte
-	Version      int64
-	Status       int32
-	UpdateAt     *time.Time
+	ExperimentID  int64
+	FieldType     int32
+	FieldKey      string
+	Score         float64
+	AggrResult    []byte
+	Version       int64
+	Status        int32
+	UpdateAt      *time.Time
 	WeightedScore float64
 }
 

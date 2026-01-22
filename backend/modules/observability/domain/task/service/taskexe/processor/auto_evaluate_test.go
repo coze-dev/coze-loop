@@ -335,6 +335,14 @@ func (f *fakeExperimentClient) ListExptInsightAnalysisComment(ctx context.Contex
 	return nil, nil
 }
 
+func (f *fakeExperimentClient) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest, callOptions ...callopt.Option) (*expt.UpdateExperimentTemplateMetaResponse, error) {
+	return nil, nil
+}
+
+func (f *fakeExperimentClient) CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest, callOptions ...callopt.Option) (*expt.CheckExperimentTemplateNameResponse, error) {
+	return nil, nil
+}
+
 // 使用真实 EvaluationProvider 注入 Processor，验证三种路径：BizStatus、非 BizStatus 包装、成功返回条数
 func TestAutoEvaluateProcessor_Invoke_WithEvaluationProvider_BizStatusPassthrough(t *testing.T) {
 	t.Parallel()

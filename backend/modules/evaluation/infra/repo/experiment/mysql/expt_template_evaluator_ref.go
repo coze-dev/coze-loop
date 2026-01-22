@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/query"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -49,8 +50,13 @@ func (d *exptTemplateEvaluatorRefDAOImpl) GetByTemplateIDs(ctx context.Context, 
 	if len(templateIDs) == 0 {
 		return nil, nil
 	}
-	q := query.Use(d.db.NewSession(ctx)).ExptTemplateEvaluatorRef
-	results, err := q.WithContext(ctx).Where(q.ExptTemplateID.In(templateIDs...)).Find()
+	ref := d.query.ExptTemplateEvaluatorRef
+	q := ref.WithContext(ctx)
+	// 如果 context 中有写标志，使用主库
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
+	results, err := q.Where(ref.ExptTemplateID.In(templateIDs...)).Find()
 	if err != nil {
 		return nil, errorx.Wrapf(err, "get expt_template_evaluator_ref by template_ids fail, template_ids: %v", templateIDs)
 	}

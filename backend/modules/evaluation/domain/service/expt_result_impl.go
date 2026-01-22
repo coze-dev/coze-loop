@@ -1217,7 +1217,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			}
 			// 如果有评估器结果，则计算加权分数
 			// 如果没有权重配置，calculateWeightedScore 会按所有评估器权重都为1进行计算（简单平均）
-			if evaluatorVersionID2Result != nil && len(evaluatorVersionID2Result) > 0 {
+			if len(evaluatorVersionID2Result) > 0 {
 				// 将 map[int64]*entity.EvaluatorRecord 转换为 calculateWeightedScore 需要的格式
 				evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
 				for evaluatorVersionID, record := range evaluatorVersionID2Result {

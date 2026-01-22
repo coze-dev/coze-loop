@@ -174,6 +174,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v11.POST("/experiment_templates", append(_experiment_templatesMw(handler), apis.CreateExperimentTemplate)...)
 				_experiment_templates := _v11.Group("/experiment_templates", _experiment_templatesMw(handler)...)
 				_experiment_templates.POST("/batch_get", append(_batchgetexperimenttemplateMw(handler), apis.BatchGetExperimentTemplate)...)
+				_experiment_templates.POST("/check_name", append(_checkexperimenttemplatenameMw(handler), apis.CheckExperimentTemplateName)...)
 				_experiment_templates.POST("/list", append(_listexperimenttemplatesMw(handler), apis.ListExperimentTemplates)...)
 				_experiment_templates.DELETE("/:template_id", append(_deleteexperimenttemplateMw(handler), apis.DeleteExperimentTemplate)...)
 				_experiment_templates.PATCH("/:template_id", append(_updateexperimenttemplateMw(handler), apis.UpdateExperimentTemplate)...)

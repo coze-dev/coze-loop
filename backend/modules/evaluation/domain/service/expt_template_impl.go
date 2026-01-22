@@ -12,6 +12,7 @@ import (
 	"github.com/bytedance/gg/gslice"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
@@ -29,6 +30,7 @@ func NewExptTemplateManager(
 	evalTargetService IEvalTargetService,
 	evaluationSetService IEvaluationSetService,
 	evaluationSetVersionService EvaluationSetVersionService,
+	lwt platestwrite.ILatestWriteTracker,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
 		templateRepo:                templateRepo,
@@ -37,6 +39,7 @@ func NewExptTemplateManager(
 		evalTargetService:           evalTargetService,
 		evaluationSetService:        evaluationSetService,
 		evaluationSetVersionService: evaluationSetVersionService,
+		lwt:                         lwt,
 	}
 }
 
@@ -47,6 +50,7 @@ type ExptTemplateManagerImpl struct {
 	evalTargetService           IEvalTargetService
 	evaluationSetService        IEvaluationSetService
 	evaluationSetVersionService EvaluationSetVersionService
+	lwt                         platestwrite.ILatestWriteTracker
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
@@ -81,7 +85,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		}
 	}
 
-		// 从 EvaluatorIDVersionItems 构建 evaluatorVersionRefs
+	// 从 EvaluatorIDVersionItems 构建 evaluatorVersionRefs
 	evaluatorVersionRefs := e.buildEvaluatorVersionRefs(param.EvaluatorIDVersionItems)
 
 	// 生成模板ID
@@ -92,7 +96,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 
 	// 处理创建评测对象参数
 	finalTargetID, finalTargetVersionID, targetType, err := e.resolveTargetForCreate(ctx, param)
-		if err != nil {
+	if err != nil {
 		return nil, err
 	}
 
@@ -141,6 +145,9 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		return nil, err
 	}
 
+	// 设置写标志，用于主从延迟兜底
+	e.lwt.SetWriteFlag(ctx, platestwrite.ResourceTypeExptTemplate, templateID)
+
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）
 	// 如果创建了新的 EvalTarget，需要从主库读取以避免主从延迟
 	queryCtx := ctx
@@ -175,6 +182,11 @@ func (e *ExptTemplateManagerImpl) Get(ctx context.Context, templateID, spaceID i
 }
 
 func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptTemplate, error) {
+	// 参考 ExptMangerImpl.MGet 的方式，如果只有一个模板ID且有写标志，则从主库读取
+	if len(templateIDs) == 1 && e.lwt.CheckWriteFlagByID(ctx, platestwrite.ResourceTypeExptTemplate, templateIDs[0]) {
+		ctx = contexts.WithCtxWriteDB(ctx)
+	}
+
 	templates, err := e.templateRepo.MGetByID(ctx, templateIDs, spaceID)
 	if err != nil {
 		return nil, err
@@ -208,7 +220,7 @@ func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64,
 
 func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.UpdateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
 	// 获取现有模板
-	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +349,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		param.TemplateConf.ConnectorConf.TargetConf.TargetVersionID = finalTargetVersionID
 	} else if param.TemplateConf != nil && param.TemplateConf.ConnectorConf.TargetConf != nil && finalTargetVersionID > 0 {
 		// 更新 TemplateConf 中的 TargetVersionID（如果提供了新版本）
-			param.TemplateConf.ConnectorConf.TargetConf.TargetVersionID = finalTargetVersionID
+		param.TemplateConf.ConnectorConf.TargetConf.TargetVersionID = finalTargetVersionID
 	}
 
 	// 构建更新后的模板实体（默认沿用原有 EnableScoreWeight）
@@ -350,10 +362,6 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	if existingTemplate.BaseInfo != nil {
 		baseInfo.CreatedAt = existingTemplate.BaseInfo.CreatedAt
 		baseInfo.CreatedBy = existingTemplate.BaseInfo.CreatedBy
-	} else {
-		// 如果 BaseInfo 为 nil（理论上不应该发生，因为 PO2DO 会设置），创建一个新的 BaseInfo
-		// CreatedBy 保持为 nil，CreatedAt 也保持为 nil
-		// 这样在 DO2PO 转换时，如果 CreatedBy 为 nil，created_by 字段会保持为空字符串
 	}
 	updatedTemplate := &entity.ExptTemplate{
 		Meta:                updatedMeta,
@@ -380,7 +388,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	}
 
 	// 重新获取更新后的模板
-	updatedTemplate, err = e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	updatedTemplate, err = e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +418,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 
 func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.UpdateExptTemplateMetaParam, session *entity.Session) (*entity.ExptTemplate, error) {
 	// 获取现有模板
-	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	existingTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -451,12 +459,12 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 	// 更新数据库
 	if len(ufields) > 0 {
 		if err := e.templateRepo.UpdateFields(ctx, param.TemplateID, ufields); err != nil {
-		return nil, err
+			return nil, err
 		}
 	}
 
 	// 重新获取更新后的模板
-	updatedTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, param.SpaceID)
+	updatedTemplate, err := e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +488,7 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 // adjustCount: 实验数量的增量（创建实验时为 +1，删除实验时为 -1，状态变更时为 0）
 func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID, spaceID int64, exptID int64, exptStatus entity.ExptStatus, adjustCount int64) error {
 	// 获取现有模板
-	existingTemplate, err := e.templateRepo.GetByID(ctx, templateID, spaceID)
+	existingTemplate, err := e.templateRepo.GetByID(ctx, templateID, &spaceID)
 	if err != nil {
 		return errorx.Wrapf(err, "get template fail, template_id: %d", templateID)
 	}
@@ -496,7 +504,7 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 		exptInfo = &entity.ExptInfo{
 			CreatedExptCount: 0,
 			LatestExptID:     0,
-			LatestExptStatus:  entity.ExptStatus_Unknown,
+			LatestExptStatus: entity.ExptStatus_Unknown,
 		}
 	}
 
@@ -514,7 +522,7 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 
 	// 序列化 ExptInfo
 	exptInfoBytes, err := json.Marshal(exptInfo)
-			if err != nil {
+	if err != nil {
 		return errorx.Wrapf(err, "marshal ExptInfo fail, template_id: %d", templateID)
 	}
 
@@ -535,7 +543,7 @@ func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceI
 
 func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 	templates, count, err := e.templateRepo.List(ctx, page, pageSize, filter, orderBys, spaceID)
-			if err != nil {
+	if err != nil {
 		return nil, 0, err
 	}
 
@@ -688,8 +696,8 @@ func (e *ExptTemplateManagerImpl) resolveAndFillEvaluatorVersionIDs(
 			ev = pair2Eval[key]
 		}
 		if ev != nil {
-		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
-			item.EvaluatorVersionID = verID
+			if verID := ev.GetEvaluatorVersionID(); verID != 0 {
+				item.EvaluatorVersionID = verID
 			}
 		}
 	}
@@ -849,8 +857,8 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 		evaluatorMappings := make([]*entity.EvaluatorFieldMapping, 0, len(templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf))
 		for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
 			if ec.IngressConf == nil {
-					continue
-				}
+				continue
+			}
 			em := &entity.EvaluatorFieldMapping{
 				EvaluatorVersionID: ec.EvaluatorVersionID,
 			}
@@ -882,11 +890,11 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 			for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
 				if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
 					templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
-							break
-						}
-					}
+					break
 				}
 			}
+		}
+	}
 
 	template.FieldMappingConfig = fieldMappingConfig
 }
@@ -966,7 +974,7 @@ func (e *ExptTemplateManagerImpl) mgetExptTupleByID(ctx context.Context, tupleID
 			if poolErr != nil {
 				return poolErr
 			}
-	return nil
+			return nil
 		})
 	}
 
@@ -981,7 +989,8 @@ func (e *ExptTemplateManagerImpl) mgetExptTupleByID(ctx context.Context, tupleID
 		if len(evalSetVersionIDs) > 0 {
 			pool.Add(func() error {
 				verIDs := maps.ToSlice(gslice.ToMap(evalSetVersionIDs, func(t int64) (int64, bool) { return t, true }), func(k int64, v bool) int64 { return k })
-				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(true))
+				// 仅查询未删除版本，避免带出已删除列
+				got, poolErr := e.evaluationSetVersionService.BatchGetEvaluationSetVersions(ctx, gptr.Of(spaceID), verIDs, gptr.Of(false))
 				if poolErr != nil {
 					return poolErr
 				}

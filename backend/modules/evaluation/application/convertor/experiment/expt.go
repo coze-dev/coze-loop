@@ -90,6 +90,9 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 	}
 	ec := make([]*entity.EvaluatorConf, 0, len(mapping))
 	for _, fm := range mapping {
+		if fm == nil {
+			continue
+		}
 		esf := make([]*entity.FieldConf, 0, len(fm.GetFromEvalSet()))
 		for _, fes := range fm.GetFromEvalSet() {
 			esf = append(esf, &entity.FieldConf{
@@ -110,7 +113,7 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 		// 从 EvaluatorIDVersionItem 中提取信息，如果不存在则使用 EvaluatorVersionID
 		var evaluatorID int64
 		var version string
-		var evaluatorVersionID int64 = fm.GetEvaluatorVersionID()
+		evaluatorVersionID := fm.GetEvaluatorVersionID()
 
 		if fm.IsSetEvaluatorIDVersionItem() {
 			item := fm.GetEvaluatorIDVersionItem()

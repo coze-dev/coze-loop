@@ -43,13 +43,13 @@ type ItemSnapshotFilter struct {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters       []*FieldFilter
-	EvaluatorScoreFilters       []*FieldFilter
+	EvalTargetDataFilters        []*FieldFilter
+	EvaluatorScoreFilters        []*FieldFilter
 	EvaluatorWeightedScoreFilter *FieldFilter
-	AnnotationFloatFilters      []*FieldFilter
-	AnnotationBoolFilters       []*FieldFilter
-	AnnotationStringFilters     []*FieldFilter
-	EvalTargetMetricsFilters    []*FieldFilter
+	AnnotationFloatFilters       []*FieldFilter
+	AnnotationBoolFilters        []*FieldFilter
+	AnnotationStringFilters      []*FieldFilter
+	EvalTargetMetricsFilters     []*FieldFilter
 }
 
 type KeywordMapCond struct {

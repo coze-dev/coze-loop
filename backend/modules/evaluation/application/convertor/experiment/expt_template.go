@@ -9,7 +9,6 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
-	domain_evaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
@@ -32,8 +31,7 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 	fillCreateTemplateMeta(param, req)
 	fillCreateTemplateTripleConfig(param, req)
 
-	targetFieldMapping, evaluatorFieldMapping, itemConcurNum :=
-		buildTemplateFieldMappingsForCreate(req, param)
+	targetFieldMapping, evaluatorFieldMapping, itemConcurNum := buildTemplateFieldMappingsForCreate(req, param)
 
 	evaluatorScoreWeights := buildEvaluatorScoreWeights(param.EvaluatorIDVersionItems)
 	evaluatorConfs := buildEvaluatorConfsFromItems(param.EvaluatorIDVersionItems, evaluatorFieldMapping)
@@ -49,11 +47,11 @@ func fillCreateTemplateMeta(param *entity.CreateExptTemplateParam, req *expt.Cre
 	if req.GetMeta() == nil {
 		return
 	}
-		meta := req.GetMeta()
-		param.Name = meta.GetName()
-		param.Description = meta.GetDesc()
-		param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
-	}
+	meta := req.GetMeta()
+	param.Name = meta.GetName()
+	param.Description = meta.GetDesc()
+	param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
+}
 
 // 拆分的子函数：从 triple_config 中提取三元组配置
 func fillCreateTemplateTripleConfig(param *entity.CreateExptTemplateParam, req *expt.CreateExperimentTemplateRequest) {
@@ -61,32 +59,32 @@ func fillCreateTemplateTripleConfig(param *entity.CreateExptTemplateParam, req *
 		return
 	}
 
-		tripleConfig := req.GetTripleConfig()
-		param.EvalSetID = tripleConfig.GetEvalSetID()
-		param.EvalSetVersionID = tripleConfig.GetEvalSetVersionID()
-		param.TargetID = tripleConfig.GetTargetID()
-		param.TargetVersionID = tripleConfig.GetTargetVersionID()
+	tripleConfig := req.GetTripleConfig()
+	param.EvalSetID = tripleConfig.GetEvalSetID()
+	param.EvalSetVersionID = tripleConfig.GetEvalSetVersionID()
+	param.TargetID = tripleConfig.GetTargetID()
+	param.TargetVersionID = tripleConfig.GetTargetVersionID()
 
 	// 从 EvaluatorIDVersionItems 构建 entity 层的 EvaluatorIDVersionItems
-		evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0)
-		if items := tripleConfig.GetEvaluatorIDVersionItems(); len(items) > 0 {
-			for _, item := range items {
-				if item == nil {
-					continue
-				}
-				entityItem := &entity.EvaluatorIDVersionItem{
-					EvaluatorID:        item.GetEvaluatorID(),
-					Version:            item.GetVersion(),
-					EvaluatorVersionID: item.GetEvaluatorVersionID(),
-				}
-				if item.IsSetScoreWeight() {
-					entityItem.ScoreWeight = item.GetScoreWeight()
-				}
-				evaluatorIDVersionItems = append(evaluatorIDVersionItems, entityItem)
+	evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0)
+	if items := tripleConfig.GetEvaluatorIDVersionItems(); len(items) > 0 {
+		for _, item := range items {
+			if item == nil {
+				continue
 			}
+			entityItem := &entity.EvaluatorIDVersionItem{
+				EvaluatorID:        item.GetEvaluatorID(),
+				Version:            item.GetVersion(),
+				EvaluatorVersionID: item.GetEvaluatorVersionID(),
+			}
+			if item.IsSetScoreWeight() {
+				entityItem.ScoreWeight = item.GetScoreWeight()
+			}
+			evaluatorIDVersionItems = append(evaluatorIDVersionItems, entityItem)
 		}
-		param.EvaluatorIDVersionItems = evaluatorIDVersionItems
 	}
+	param.EvaluatorIDVersionItems = evaluatorIDVersionItems
+}
 
 // 拆分的子函数：构造创建模板场景下的字段映射配置
 func buildTemplateFieldMappingsForCreate(
@@ -154,11 +152,15 @@ func buildEvaluatorConfsFromItems(
 
 		if hasValidVersionID {
 			ingressByVersionID := make(map[int64]*entity.EvaluatorIngressConf)
+			runConfByVersionID := make(map[int64]*entity.EvaluatorRunConfig)
 			for _, ec := range evaluatorFieldMapping {
 				if ec == nil || ec.EvaluatorVersionID <= 0 {
 					continue
 				}
 				ingressByVersionID[ec.EvaluatorVersionID] = ec.IngressConf
+				if ec.RunConf != nil {
+					runConfByVersionID[ec.EvaluatorVersionID] = ec.RunConf
+				}
 			}
 
 			evaluatorConfs := make([]*entity.EvaluatorConf, 0, len(items))
@@ -171,6 +173,7 @@ func buildEvaluatorConfsFromItems(
 					EvaluatorID:        item.EvaluatorID,
 					Version:            item.Version,
 					IngressConf:        ingressByVersionID[item.EvaluatorVersionID],
+					RunConf:            runConfByVersionID[item.EvaluatorVersionID],
 				}
 				evaluatorConfs = append(evaluatorConfs, conf)
 			}
@@ -235,15 +238,15 @@ func buildTemplateConfForCreate(
 		return templateConf
 	}
 
-		templateConf.ConnectorConf = entity.Connector{
-			TargetConf: &entity.TargetConf{
-				TargetVersionID: param.TargetVersionID,
-				IngressConf:     targetFieldMapping,
-			},
-		}
+	templateConf.ConnectorConf = entity.Connector{
+		TargetConf: &entity.TargetConf{
+			TargetVersionID: param.TargetVersionID,
+			IngressConf:     targetFieldMapping,
+		},
+	}
 
 	if len(evaluatorConfs) > 0 {
-			templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
+		templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
 			EvaluatorConf: evaluatorConfs,
 		}
 	}
@@ -287,6 +290,9 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 	result := make([]*entity.EvaluatorConf, 0, len(mapping))
 
 	for _, fm := range mapping {
+		if fm == nil {
+			continue
+		}
 		esf := make([]*entity.FieldConf, 0, len(fm.GetFromEvalSet()))
 		for _, fes := range fm.GetFromEvalSet() {
 			esf = append(esf, &entity.FieldConf{
@@ -306,7 +312,8 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 		// 从 EvaluatorIDVersionItem 中提取信息，如果不存在则使用 EvaluatorVersionID
 		var evaluatorID int64
 		var version string
-		var evaluatorVersionID int64 = fm.GetEvaluatorVersionID()
+		evaluatorVersionID := fm.GetEvaluatorVersionID()
+		var runConf *entity.EvaluatorRunConfig
 
 		if fm.IsSetEvaluatorIDVersionItem() {
 			item := fm.GetEvaluatorIDVersionItem()
@@ -320,6 +327,18 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 				if item.IsSetEvaluatorVersionID() {
 					evaluatorVersionID = item.GetEvaluatorVersionID()
 				}
+				// 透传 evaluator 运行配置（env + runtime_param）
+				if item.IsSetRunConfig() && item.GetRunConfig() != nil {
+					rc := item.GetRunConfig()
+					runConf = &entity.EvaluatorRunConfig{
+						Env: rc.Env,
+					}
+					if rc.EvaluatorRuntimeParam != nil {
+						runConf.EvaluatorRuntimeParam = &entity.RuntimeParam{
+							JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
+						}
+					}
+				}
 			}
 		}
 
@@ -328,6 +347,7 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 			EvaluatorVersionID: evaluatorVersionID,
 			EvaluatorID:        evaluatorID,
 			Version:            version,
+			RunConf:            runConf,
 			IngressConf: &entity.EvaluatorIngressConf{
 				EvalSetAdapter: &entity.FieldAdapter{FieldConfs: esf},
 				TargetAdapter:  &entity.FieldAdapter{FieldConfs: tf},
@@ -357,7 +377,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 		if template.Meta != nil && template.Meta.ExptType != entity.ExptType_Online {
 			dto.TripleConfig.EvalSet = evaluation_set.EvaluationSetDO2DTO(template.EvalSet)
 		}
-		dto.TripleConfig.Evaluators = make([]*domain_evaluator.Evaluator, 0, len(template.Evaluators))
+		dto.TripleConfig.Evaluators = make([]*evaluatorpkg.Evaluator, 0, len(template.Evaluators))
 		for _, evaluatorDO := range template.Evaluators {
 			if evaluatorDO != nil {
 				dto.TripleConfig.Evaluators = append(dto.TripleConfig.Evaluators, evaluator.ConvertEvaluatorDO2DTO(evaluatorDO))
@@ -426,14 +446,14 @@ func fillTemplateMetaDTO(template *entity.ExptTemplate, dto *domain_expt.ExptTem
 	if template.Meta == nil {
 		return
 	}
-		dto.Meta = &domain_expt.ExptTemplateMeta{
-			ID:          gptr.Of(template.Meta.ID),
-			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
-			Name:        gptr.Of(template.Meta.Name),
-			Desc:        gptr.Of(template.Meta.Desc),
-			ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
-		}
+	dto.Meta = &domain_expt.ExptTemplateMeta{
+		ID:          gptr.Of(template.Meta.ID),
+		WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+		Name:        gptr.Of(template.Meta.Name),
+		Desc:        gptr.Of(template.Meta.Desc),
+		ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
 	}
+}
 
 // 拆分子函数：TripleConfig -> DTO
 func buildTemplateTripleConfigDTO(template *entity.ExptTemplate) *domain_expt.ExptTuple {
@@ -453,26 +473,53 @@ func buildTemplateTripleConfigDTO(template *entity.ExptTemplate) *domain_expt.Ex
 }
 
 // 拆分子函数：根据模板信息构建 EvaluatorIDVersionItems DTO 列表
-func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*domain_evaluator.EvaluatorIDVersionItem {
-		evaluatorIDVersionItems := make([]*domain_evaluator.EvaluatorIDVersionItem, 0)
+func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluatorpkg.EvaluatorIDVersionItem {
+	evaluatorIDVersionItems := make([]*evaluatorpkg.EvaluatorIDVersionItem, 0)
 
-		// 优先使用 entity 层的 EvaluatorIDVersionItems
-		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
-			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
-				if entityItem == nil {
-					continue
-				}
-				item := domain_evaluator.NewEvaluatorIDVersionItem()
-				item.EvaluatorID = gptr.Of(entityItem.EvaluatorID)
-				if entityItem.Version != "" {
-					item.Version = gptr.Of(entityItem.Version)
-				}
-				item.EvaluatorVersionID = gptr.Of(entityItem.EvaluatorVersionID)
-				if entityItem.ScoreWeight > 0 {
-					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
-				}
-				evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+	// 辅助函数：根据 evaluator_version_id 从 TemplateConf 中提取 RunConfig
+	buildRunConfigDTO := func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig {
+		if template == nil || template.TemplateConf == nil ||
+			template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+			return nil
+		}
+		for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+			if ec == nil || ec.EvaluatorVersionID != evalVerID || ec.RunConf == nil {
+				continue
 			}
+			rc := ec.RunConf
+			runCfg := evaluatorpkg.NewEvaluatorRunConfig()
+			runCfg.Env = rc.Env
+			if rc.EvaluatorRuntimeParam != nil {
+				runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+					JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
+				}
+			}
+			return runCfg
+		}
+		return nil
+	}
+
+	// 优先使用 entity 层的 EvaluatorIDVersionItems
+	if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
+		for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
+			if entityItem == nil {
+				continue
+			}
+			item := evaluatorpkg.NewEvaluatorIDVersionItem()
+			item.EvaluatorID = gptr.Of(entityItem.EvaluatorID)
+			if entityItem.Version != "" {
+				item.Version = gptr.Of(entityItem.Version)
+			}
+			item.EvaluatorVersionID = gptr.Of(entityItem.EvaluatorVersionID)
+			if entityItem.ScoreWeight > 0 {
+				item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
+			}
+			// 透传 RunConfig：根据 evaluator_version_id 在 TemplateConf 中查找
+			if rc := buildRunConfigDTO(entityItem.EvaluatorVersionID); rc != nil {
+				item.RunConfig = rc
+			}
+			evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+		}
 		return evaluatorIDVersionItems
 	}
 
@@ -491,31 +538,31 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*domain_ev
 // 细分：从 Evaluators 构建 EvaluatorIDVersionItems
 func appendEvaluatorIDVersionItemsFromEvaluators(
 	template *entity.ExptTemplate,
-	dst *[]*domain_evaluator.EvaluatorIDVersionItem,
+	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
 ) {
-			for _, evaluator := range template.Evaluators {
-				if evaluator == nil {
-					continue
-				}
-				evaluatorID := evaluator.GetEvaluatorID()
-				version := evaluator.GetVersion()
-				evaluatorVersionID := evaluator.GetEvaluatorVersionID()
+	for _, evaluator := range template.Evaluators {
+		if evaluator == nil {
+			continue
+		}
+		evaluatorID := evaluator.GetEvaluatorID()
+		version := evaluator.GetVersion()
+		evaluatorVersionID := evaluator.GetEvaluatorVersionID()
 		if evaluatorID <= 0 || evaluatorVersionID <= 0 {
 			continue
 		}
-					item := domain_evaluator.NewEvaluatorIDVersionItem()
-					item.EvaluatorID = gptr.Of(evaluatorID)
-					item.Version = gptr.Of(version)
-					item.EvaluatorVersionID = gptr.Of(evaluatorVersionID)
+		item := evaluatorpkg.NewEvaluatorIDVersionItem()
+		item.EvaluatorID = gptr.Of(evaluatorID)
+		item.Version = gptr.Of(version)
+		item.EvaluatorVersionID = gptr.Of(evaluatorVersionID)
 
-					if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
-						for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
-							if entityItem != nil && entityItem.EvaluatorVersionID == evaluatorVersionID && entityItem.ScoreWeight > 0 {
-								item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
-								break
-							}
-						}
-					}
+		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
+			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
+				if entityItem != nil && entityItem.EvaluatorVersionID == evaluatorVersionID && entityItem.ScoreWeight > 0 {
+					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
+					break
+				}
+			}
+		}
 		*dst = append(*dst, item)
 	}
 }
@@ -523,24 +570,24 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 // 细分：从 EvaluatorVersionRef 构建 EvaluatorIDVersionItems
 func appendEvaluatorIDVersionItemsFromVersionRef(
 	template *entity.ExptTemplate,
-	dst *[]*domain_evaluator.EvaluatorIDVersionItem,
+	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
 ) {
-			for _, ref := range template.EvaluatorVersionRef {
+	for _, ref := range template.EvaluatorVersionRef {
 		if ref.EvaluatorID <= 0 || ref.EvaluatorVersionID <= 0 {
 			continue
 		}
-					item := domain_evaluator.NewEvaluatorIDVersionItem()
-					item.EvaluatorID = gptr.Of(ref.EvaluatorID)
-					item.EvaluatorVersionID = gptr.Of(ref.EvaluatorVersionID)
+		item := evaluatorpkg.NewEvaluatorIDVersionItem()
+		item.EvaluatorID = gptr.Of(ref.EvaluatorID)
+		item.EvaluatorVersionID = gptr.Of(ref.EvaluatorVersionID)
 
-					if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
-						for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
-							if entityItem != nil && entityItem.EvaluatorVersionID == ref.EvaluatorVersionID && entityItem.ScoreWeight > 0 {
-								item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
-								break
-							}
-						}
-					}
+		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
+			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
+				if entityItem != nil && entityItem.EvaluatorVersionID == ref.EvaluatorVersionID && entityItem.ScoreWeight > 0 {
+					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
+					break
+				}
+			}
+		}
 		*dst = append(*dst, item)
 	}
 }
@@ -551,67 +598,96 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 		return nil
 	}
 
-		fieldMapping := &domain_expt.ExptFieldMapping{
-			ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
-		}
+	fieldMapping := &domain_expt.ExptFieldMapping{
+		ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+	}
 
-		if template.FieldMappingConfig.TargetFieldMapping != nil {
-			targetMapping := &domain_expt.TargetFieldMapping{}
-			for _, fm := range template.FieldMappingConfig.TargetFieldMapping.FromEvalSet {
-				targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &domain_expt.FieldMapping{
+	if template.FieldMappingConfig.TargetFieldMapping != nil {
+		targetMapping := &domain_expt.TargetFieldMapping{}
+		for _, fm := range template.FieldMappingConfig.TargetFieldMapping.FromEvalSet {
+			targetMapping.FromEvalSet = append(targetMapping.FromEvalSet, &domain_expt.FieldMapping{
+				FieldName:     gptr.Of(fm.FieldName),
+				FromFieldName: gptr.Of(fm.FromFieldName),
+				ConstValue:    gptr.Of(fm.ConstValue),
+			})
+		}
+		fieldMapping.TargetFieldMapping = targetMapping
+	}
+
+	// 为后续构建 EvaluatorIDVersionItem 时准备一个根据 evaluator_version_id 查 RunConf 的辅助函数
+	var buildRunConfigDTO func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig
+	if template != nil && template.TemplateConf != nil &&
+		template.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
+		buildRunConfigDTO = func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig {
+			for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+				if ec == nil || ec.EvaluatorVersionID != evalVerID || ec.RunConf == nil {
+					continue
+				}
+				rc := ec.RunConf
+				runCfg := evaluatorpkg.NewEvaluatorRunConfig()
+				runCfg.Env = rc.Env
+				if rc.EvaluatorRuntimeParam != nil {
+					runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+						JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
+					}
+				}
+				return runCfg
+			}
+			return nil
+		}
+	}
+
+	if len(template.FieldMappingConfig.EvaluatorFieldMapping) > 0 {
+		evaluatorMappings := make([]*domain_expt.EvaluatorFieldMapping, 0, len(template.FieldMappingConfig.EvaluatorFieldMapping))
+		for _, em := range template.FieldMappingConfig.EvaluatorFieldMapping {
+			m := &domain_expt.EvaluatorFieldMapping{
+				EvaluatorVersionID: em.EvaluatorVersionID,
+			}
+
+			// 构建 EvaluatorIDVersionItem（包含 RunConfig）
+			if em.EvaluatorID > 0 || em.Version != "" || em.EvaluatorVersionID > 0 {
+				item := &evaluatorpkg.EvaluatorIDVersionItem{}
+				if em.EvaluatorID > 0 {
+					item.SetEvaluatorID(gptr.Of(em.EvaluatorID))
+				}
+				if em.Version != "" {
+					item.SetVersion(gptr.Of(em.Version))
+				}
+				if em.EvaluatorVersionID > 0 {
+					item.SetEvaluatorVersionID(gptr.Of(em.EvaluatorVersionID))
+					// 透传 RunConfig：根据 evaluator_version_id 在 TemplateConf 中查找
+					if buildRunConfigDTO != nil {
+						if rc := buildRunConfigDTO(em.EvaluatorVersionID); rc != nil {
+							item.RunConfig = rc
+						}
+					}
+				}
+				m.SetEvaluatorIDVersionItem(item)
+			}
+			for _, fm := range em.FromEvalSet {
+				m.FromEvalSet = append(m.FromEvalSet, &domain_expt.FieldMapping{
 					FieldName:     gptr.Of(fm.FieldName),
 					FromFieldName: gptr.Of(fm.FromFieldName),
 					ConstValue:    gptr.Of(fm.ConstValue),
 				})
 			}
-			fieldMapping.TargetFieldMapping = targetMapping
-		}
-
-		if len(template.FieldMappingConfig.EvaluatorFieldMapping) > 0 {
-			evaluatorMappings := make([]*domain_expt.EvaluatorFieldMapping, 0, len(template.FieldMappingConfig.EvaluatorFieldMapping))
-			for _, em := range template.FieldMappingConfig.EvaluatorFieldMapping {
-				m := &domain_expt.EvaluatorFieldMapping{
-					EvaluatorVersionID: em.EvaluatorVersionID,
-				}
-
-				// 构建 EvaluatorIDVersionItem
-				if em.EvaluatorID > 0 || em.Version != "" || em.EvaluatorVersionID > 0 {
-					item := &evaluatorpkg.EvaluatorIDVersionItem{}
-				if em.EvaluatorID > 0 {
-						item.SetEvaluatorID(gptr.Of(em.EvaluatorID))
-				}
-				if em.Version != "" {
-						item.SetVersion(gptr.Of(em.Version))
-					}
-					if em.EvaluatorVersionID > 0 {
-						item.SetEvaluatorVersionID(gptr.Of(em.EvaluatorVersionID))
-					}
-					m.SetEvaluatorIDVersionItem(item)
-				}
-				for _, fm := range em.FromEvalSet {
-					m.FromEvalSet = append(m.FromEvalSet, &domain_expt.FieldMapping{
-						FieldName:     gptr.Of(fm.FieldName),
-						FromFieldName: gptr.Of(fm.FromFieldName),
-						ConstValue:    gptr.Of(fm.ConstValue),
-					})
-				}
-				for _, fm := range em.FromTarget {
-					m.FromTarget = append(m.FromTarget, &domain_expt.FieldMapping{
-						FieldName:     gptr.Of(fm.FieldName),
-						FromFieldName: gptr.Of(fm.FromFieldName),
-						ConstValue:    gptr.Of(fm.ConstValue),
-					})
-				}
-				evaluatorMappings = append(evaluatorMappings, m)
+			for _, fm := range em.FromTarget {
+				m.FromTarget = append(m.FromTarget, &domain_expt.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+					ConstValue:    gptr.Of(fm.ConstValue),
+				})
 			}
-			fieldMapping.EvaluatorFieldMapping = evaluatorMappings
+			evaluatorMappings = append(evaluatorMappings, m)
 		}
+		fieldMapping.EvaluatorFieldMapping = evaluatorMappings
+	}
 
-		if template.FieldMappingConfig.TargetRuntimeParam != nil {
-			fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
-				JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
-			}
+	if template.FieldMappingConfig.TargetRuntimeParam != nil {
+		fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
+			JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
 		}
+	}
 
 	return fieldMapping
 }
@@ -622,7 +698,7 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 	evaluatorScoreWeights := buildScoreWeightsFromTemplateConf(template)
 
 	// 2) 若为空，再从 TripleConfig.EvaluatorIDVersionItems.ScoreWeight 补充（向后兼容）
-	if (evaluatorScoreWeights == nil || len(evaluatorScoreWeights) == 0) &&
+	if len(evaluatorScoreWeights) == 0 &&
 		template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 		evaluatorScoreWeights = make(map[int64]float64)
 		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
@@ -643,10 +719,10 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 	}
 
 	return &domain_expt.ExptScoreWeight{
-			EnableWeightedScore:   gptr.Of(hasWeightedScore),
-			EvaluatorScoreWeights: evaluatorScoreWeights,
-		}
+		EnableWeightedScore:   gptr.Of(hasWeightedScore),
+		EvaluatorScoreWeights: evaluatorScoreWeights,
 	}
+}
 
 // 细分：从 TemplateConf 中抽取权重
 func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]float64 {
@@ -711,10 +787,10 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 			// 构建 EvaluatorIDVersionItem
 			if evaluatorConf.EvaluatorID > 0 || evaluatorConf.Version != "" || evaluatorConf.EvaluatorVersionID > 0 {
 				item := &evaluatorpkg.EvaluatorIDVersionItem{}
-			if evaluatorConf.EvaluatorID > 0 {
+				if evaluatorConf.EvaluatorID > 0 {
 					item.SetEvaluatorID(gptr.Of(evaluatorConf.EvaluatorID))
-			}
-			if evaluatorConf.Version != "" {
+				}
+				if evaluatorConf.Version != "" {
 					item.SetVersion(gptr.Of(evaluatorConf.Version))
 				}
 				if evaluatorConf.EvaluatorVersionID > 0 {
@@ -723,6 +799,18 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 				// 如果 EvaluatorConf 中有 ScoreWeight，也填充到 item 中
 				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight > 0 {
 					item.SetScoreWeight(gptr.Of(*evaluatorConf.ScoreWeight))
+				}
+				// 透传 RunConfig：将 entity.EvaluatorRunConfig 转为 DTO
+				if evaluatorConf.RunConf != nil {
+					rc := evaluatorConf.RunConf
+					runCfg := evaluatorpkg.NewEvaluatorRunConfig()
+					runCfg.Env = rc.Env
+					if rc.EvaluatorRuntimeParam != nil {
+						runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+							JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
+						}
+					}
+					item.RunConfig = runCfg
 				}
 				m.SetEvaluatorIDVersionItem(item)
 			}
