@@ -737,6 +737,34 @@ func TestAutoEvaluateProcessor_Invoke(t *testing.T) {
 		err := proc.Invoke(context.Background(), trigger)
 		assert.NoError(t, err)
 	})
+
+	t.Run("success but addedItems is zero", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		taskObj := buildTestTask(t)
+		taskObj.Sampler.SampleSize = 5
+		trigger := buildTrigger(taskObj, textSchema)
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+		repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
+		repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
+		repoMock.EXPECT().GetTaskCount(gomock.Any(), taskObj.ID).Return(int64(1), nil)
+		repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID).Return(int64(1), nil)
+		repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskObj.ID, gomock.Any()).Return(nil)
+		repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskObj.ID, trigger.TaskRun.ID, gomock.Any()).Return(nil)
+
+		evalMock := &fakeEvaluationAdapter{}
+		evalMock.invokeResp.addedItems = 0
+
+		proc := &AutoEvaluateProcessor{
+			evaluationSvc: evalMock,
+			taskRepo:      repoAdapter,
+		}
+		err := proc.Invoke(context.Background(), trigger)
+		assert.NoError(t, err)
+	})
 }
 
 func TestAutoEvaluateProcessor_OnUpdateTaskChange(t *testing.T) {

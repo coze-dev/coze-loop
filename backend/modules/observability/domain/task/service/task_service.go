@@ -213,6 +213,16 @@ func (t *TaskServiceImpl) UpdateTask(ctx context.Context, req *UpdateTaskReq) (e
 		}
 
 		if event != nil {
+			if event.After == entity.TaskStatusRunning && event.Before != entity.TaskStatusRunning {
+				if err := t.TaskRepo.AddNonFinalTask(ctx, strconv.FormatInt(taskDO.WorkspaceID, 10), taskDO.ID); err != nil {
+					logs.CtxError(ctx, "add non final task failed, task_id=%d, err=%v", taskDO.ID, err)
+				}
+			}
+			if event.Before == entity.TaskStatusRunning && event.After == entity.TaskStatusPending {
+				if err := t.TaskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(taskDO.WorkspaceID, 10), taskDO.ID); err != nil {
+					logs.CtxError(ctx, "remove non final task failed, task_id=%d, err=%v", taskDO.ID, err)
+				}
+			}
 			if event.After == entity.TaskStatusDisabled {
 				// 禁用操作处理
 				proc := t.taskProcessor.GetTaskProcessor(taskDO.TaskType)
