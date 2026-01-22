@@ -2676,7 +2676,7 @@ func (p *GetEvaluatorResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type CreateEvaluatorRequest struct {
 	Evaluator   *evaluator.Evaluator `thrift:"evaluator,1,required" frugal:"1,required,evaluator.Evaluator" form:"evaluator,required" json:"evaluator,required"`
-	WorkspaceID *int64               `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"evaluator_id" form:"workspace_id" query:"workspace_id"`
+	WorkspaceID *int64               `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Cid         *string              `thrift:"cid,100,optional" frugal:"100,optional,string" form:"cid" json:"cid,omitempty"`
 	Base        *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
