@@ -29,9 +29,6 @@ overrides:
   minimist: 1.2.8
 
 patchedDependencies:
-  '@douyinfe/semi-rspack-plugin@2.61.0':
-    hash: jgvrbizgnsxhugflluipewtgrm
-    path: patches/@douyinfe__semi-rspack-plugin@2.61.0.patch
   ahooks@3.7.8:
     hash: sa4ddrxdk2yhjzudeck6u5ww3i
     path: patches/ahooks@3.7.8.patch
@@ -2612,8 +2609,8 @@ importers:
         specifier: workspace:*
         version: link:../../loop-config/tailwind-plugin
       '@douyinfe/semi-rspack-plugin':
-        specifier: 2.61.0
-        version: 2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0)
+        specifier: 2.90.10
+        version: 2.90.10(webpack@5.91.0)
       '@microsoft/rush-lib':
         specifier: ~5.147.1
         version: 5.147.2(@types/node@18.18.9)
@@ -3244,8 +3241,8 @@ importers:
         specifier: workspace:*
         version: link:../../../config/vitest-config
       '@douyinfe/semi-rspack-plugin':
-        specifier: 2.61.0
-        version: 2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0)
+        specifier: 2.90.10
+        version: 2.90.10(webpack@5.91.0)
       '@rsbuild/core':
         specifier: ~1.1.0
         version: 1.1.13
@@ -7099,8 +7096,8 @@ packages:
       jsonc-parser: 3.3.1
     dev: false
 
-  /@douyinfe/semi-rspack-plugin@2.61.0(patch_hash=jgvrbizgnsxhugflluipewtgrm)(webpack@5.91.0):
-    resolution: {integrity: sha512-OlE7vUMbJa87aTao8DW76aVoOb1vsr8S8pngReO9K2aqKJubF8/BwqwXmIzNb4MTHDkwMu2SizweJGLUw8K8Sw==}
+  /@douyinfe/semi-rspack-plugin@2.90.10(webpack@5.91.0):
+    resolution: {integrity: sha512-4r2N7mPK9FkQJEl0wnSlSGQggpzpFpk83c3UdOAB8WoCOEoICa36p+3GvY8UkcqI4Cu8wN2X++fOcq7fUyvOCg==}
     peerDependencies:
       webpack: ^5
     dependencies:
@@ -7116,7 +7113,6 @@ packages:
       - sass
       - supports-color
     dev: true
-    patched: true
 
   /@douyinfe/semi-theme-default@2.53.2:
     resolution: {integrity: sha512-2RhUGg3T6wmNicRpfDo/SNHuq3jqNKk/FjSMtquM2S/q/L1DPa6ONrjPfED0vsD/uMHCfrJmH38tjT2OnxmKEA==}
