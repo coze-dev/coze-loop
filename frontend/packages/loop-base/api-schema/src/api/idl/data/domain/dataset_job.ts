@@ -40,6 +40,10 @@ export enum FileFormat {
   /** [100, 200) 压缩格 */
   ZIP = 100,
 }
+export enum SourceType {
+  File = 1,
+  Dataset = 2,
+}
 export interface DatasetIOFile {
   provider: dataset.StorageProvider,
   path: string,
@@ -49,6 +53,18 @@ export interface DatasetIOFile {
   compress_format?: FileFormat,
   /** path 为文件夹或压缩包时，数据文件列表, 服务端设置 */
   files?: string[],
+  /** 原始的文件名，创建文件时由前端写入。为空则与 path 保持一致 */
+  original_file_name?: string,
+  /** 文件下载地址 */
+  download_url?: string,
+  /** 存储提供方ID，目前主要在 provider==imagex 时生效 */
+  provider_id?: string,
+  /** 存储提供方鉴权信息，目前主要在 provider==imagex 时生效 */
+  provider_auth?: ProviderAuth,
+}
+export interface ProviderAuth {
+  /** provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID */
+  provider_account_id?: string
 }
 export interface DatasetIODataset {
   space_id?: string,

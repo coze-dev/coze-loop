@@ -67,6 +67,10 @@ export enum SchemaKey {
   Float = 3,
   Bool = 4,
   Message = 5,
+  /** 单选 */
+  SingleChoice = 6,
+  /** 轨迹 */
+  Trajectory = 7,
 }
 export interface DatasetFeatures {
   /** 变更 schema */

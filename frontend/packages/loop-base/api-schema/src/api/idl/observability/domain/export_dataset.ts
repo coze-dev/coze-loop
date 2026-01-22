@@ -28,6 +28,8 @@ export interface FieldSchema {
   content_type?: common.ContentType,
   /** 默认渲染格式，如 code, json, etc. */
   default_format?: dataset.FieldDisplayFormat,
+  /** 对应的内置 schema */
+  schema_key?: dataset.SchemaKey,
   /**
    * [20,50) 内容格式限制相关
    * 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
@@ -40,6 +42,7 @@ export interface Item {
   field_list?: FieldData[],
   /** 错误信息 */
   errors?: ItemError[],
+  span_info?: ExportSpanInfo,
 }
 export interface FieldData {
   key?: string,
@@ -62,6 +65,10 @@ export interface ItemError {
   type?: dataset.ItemErrorType,
   /** 有错误的字段名，非必填 */
   field_names?: string[],
+}
+export interface ExportSpanInfo {
+  trace_id?: string,
+  span_id?: string,
 }
 export interface FieldMapping {
   /** 数据集字段约束 */

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as dataset_job from './../data/domain/dataset_job';
+export { dataset_job };
 import * as dataset from './../data/domain/dataset';
 export { dataset };
 import * as common from './domain/common';
@@ -20,6 +22,45 @@ export interface CreateEvaluationSetRequest {
 }
 export interface CreateEvaluationSetResponse {
   evaluation_set_id?: string
+}
+export interface CreateEvaluationSetWithImportRequest {
+  workspace_id: string,
+  name?: string,
+  description?: string,
+  evaluation_set_schema?: eval_set.EvaluationSetSchema,
+  /** 业务分类 */
+  biz_category?: eval_set.BizCategory,
+  source_type?: dataset_job.SourceType,
+  source: dataset_job.DatasetIOEndpoint,
+  fieldMappings?: dataset_job.FieldMapping[],
+  session?: common.Session,
+}
+export interface CreateEvaluationSetWithImportResponse {
+  evaluation_set_id?: string,
+  job_id?: string,
+}
+export interface ParseImportSourceFileRequest {
+  workspace_id: string,
+  /** 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析 */
+  file?: dataset_job.DatasetIOFile,
+}
+export interface ParseImportSourceFileResponse {
+  /** 文件大小，单位为 byte */
+  bytes?: string,
+  /** 数据集字段约束 */
+  field_schemas?: eval_set.FieldSchema[],
+  /** 冲突详情。key: 列名，val：冲突详情 */
+  conflicts?: ConflictField[],
+  /** 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况 */
+  files_with_ambiguous_column?: string[],
+}
+export interface ConflictField {
+  /** 存在冲突的列名 */
+  field_name?: string,
+  /** 冲突详情。key: 文件名，val：该文件中包含的类型 */
+  detail_m?: {
+    [key: string | number]: eval_set.FieldSchema
+  },
 }
 export interface UpdateEvaluationSetRequest {
   workspace_id: string,
@@ -193,6 +234,19 @@ export interface ClearEvaluationSetDraftItemRequest {
   evaluation_set_id: string,
 }
 export interface ClearEvaluationSetDraftItemResponse {}
+export interface GetEvaluationSetItemFieldRequest {
+  workspace_id: string,
+  evaluation_set_id: string,
+  /** item 的主键ID，即 item.ID 这一字段 */
+  item_pk: string,
+  /** 列名 */
+  field_name: string,
+  /** 当 item 为多轮时，必须提供 */
+  turn_id?: string,
+}
+export interface GetEvaluationSetItemFieldResponse {
+  field_data?: eval_set.FieldData
+}
 /** 基本信息管理 */
 export const CreateEvaluationSet = /*#__PURE__*/createAPI<CreateEvaluationSetRequest, CreateEvaluationSetResponse>({
   "url": "/api/evaluation/v1/evaluation_sets",
@@ -254,6 +308,30 @@ export const ListEvaluationSets = /*#__PURE__*/createAPI<ListEvaluationSetsReque
     "body": ["workspace_id", "name", "creators", "evaluation_set_ids", "page_number", "page_size", "page_token", "order_bys"]
   },
   "resType": "ListEvaluationSetsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
+  "service": "evaluationEvalSet"
+});
+export const CreateEvaluationSetWithImport = /*#__PURE__*/createAPI<CreateEvaluationSetWithImportRequest, CreateEvaluationSetWithImportResponse>({
+  "url": "/api/evaluation/v1/evaluation_sets/create_with_import",
+  "method": "POST",
+  "name": "CreateEvaluationSetWithImport",
+  "reqType": "CreateEvaluationSetWithImportRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "name", "description", "evaluation_set_schema", "biz_category", "source_type", "source", "fieldMappings", "session"]
+  },
+  "resType": "CreateEvaluationSetWithImportResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
+  "service": "evaluationEvalSet"
+});
+export const ParseImportSourceFile = /*#__PURE__*/createAPI<ParseImportSourceFileRequest, ParseImportSourceFileResponse>({
+  "url": "/api/evaluation/v1/evaluation_sets/parse_import_source_file",
+  "method": "POST",
+  "name": "ParseImportSourceFile",
+  "reqType": "ParseImportSourceFileRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "file"]
+  },
+  "resType": "ParseImportSourceFileResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
   "service": "evaluationEvalSet"
 });
@@ -399,6 +477,19 @@ export const ClearEvaluationSetDraftItem = /*#__PURE__*/createAPI<ClearEvaluatio
     "path": ["evaluation_set_id"]
   },
   "resType": "ClearEvaluationSetDraftItemResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
+  "service": "evaluationEvalSet"
+});
+export const GetEvaluationSetItemField = /*#__PURE__*/createAPI<GetEvaluationSetItemFieldRequest, GetEvaluationSetItemFieldResponse>({
+  "url": "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field",
+  "method": "GET",
+  "name": "GetEvaluationSetItemField",
+  "reqType": "GetEvaluationSetItemFieldRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "field_name", "turn_id"],
+    "path": ["evaluation_set_id", "item_pk"]
+  },
+  "resType": "GetEvaluationSetItemFieldResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
   "service": "evaluationEvalSet"
 });

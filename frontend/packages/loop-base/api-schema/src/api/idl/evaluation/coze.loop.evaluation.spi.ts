@@ -119,7 +119,19 @@ export interface InvokeEvaluatorInputData {
   /** key-value structure of input variables required by the evaluator */
   input_fields?: {
     [key: string | number]: Content
-  }
+  },
+  /** key-value structure of dataset variables required by the evaluator */
+  evaluate_dataset_fields?: {
+    [key: string | number]: Content
+  },
+  /** key-value structure of target output variables required by the evaluator */
+  evaluate_target_output_fields?: {
+    [key: string | number]: Content
+  },
+  /** dynamic fields for inject parameters */
+  ext?: {
+    [key: string | number]: string
+  },
 }
 /** the output data structure for custom evaluator */
 export interface InvokeEvaluatorOutputData {

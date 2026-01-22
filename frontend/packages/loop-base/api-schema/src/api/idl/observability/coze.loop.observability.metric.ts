@@ -39,9 +39,24 @@ export interface GetDrillDownValuesRequest {
 export interface DrillDownValue {
   value: string,
   display_name?: string,
+  sub_drill_down_values?: DrillDownValue[],
 }
 export interface GetDrillDownValuesResponse {
   drill_down_values?: DrillDownValue[]
+}
+export interface TraverseMetricsRequest {
+  platform_types?: common.PlatformType[],
+  workspace_id?: string,
+  metric_names?: string[],
+  start_date?: string,
+}
+export interface TraverseMetricsStatistic {
+  total?: number,
+  success?: number,
+  failure?: number,
+}
+export interface TraverseMetricsResponse {
+  statistic?: TraverseMetricsStatistic
 }
 export const GetMetrics = /*#__PURE__*/createAPI<GetMetricsRequest, GetMetricsResponse>({
   "url": "/api/observability/v1/metrics/list",

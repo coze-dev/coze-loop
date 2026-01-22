@@ -17,6 +17,15 @@ export interface Content {
   image?: Image,
   multi_part?: Content[],
   audio?: Audio,
+  /**
+   * 超大文本相关字段
+   * 当前列的数据是否省略, 如果此处返回 true, 需要通过 GetDatasetItemField 获取当前列的具体内容, 或者是通过 omittedDataStorage.url 下载
+  */
+  content_omitted?: boolean,
+  /** 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效) */
+  full_content?: dataset.ObjectStorage,
+  /** 超长数据完整内容的大小，单位 byte */
+  full_content_bytes?: number,
 }
 export interface AudioContent {
   audios?: Audio[]
@@ -50,12 +59,18 @@ export interface Message {
     [key: string | number]: string
   },
 }
+export enum ArgSchemaTextType {
+  Trajectory = 1,
+}
+export const ArgSchemaKey_ActualOutput = "actual_output";
+export const ArgSchemaKey_Trajectory = "trajectory";
 export interface ArgsSchema {
   key?: string,
   support_content_types?: ContentType[],
   /** 序列化后的jsonSchema字符串，例如："{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}, \"age\": {\"type\": \"integer\"}, \"isStudent\": {\"type\": \"boolean\"}}, \"required\": [\"name\", \"age\", \"isStudent\"]}" */
   json_schema?: string,
   default_value?: Content,
+  text_type?: ArgSchemaTextType,
 }
 export interface UserInfo {
   /** 姓名 */
