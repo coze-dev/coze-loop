@@ -55,8 +55,8 @@ func OpenAPIArgsSchemaDO2DTO(do *commonentity.ArgsSchema) *commondto.ArgsSchema 
 		contentTypes = append(contentTypes, commondto.ContentType(ct))
 	}
 	return &commondto.ArgsSchema{
-		Key:                 &do.Key,
+		Key:                 do.Key,
 		SupportContentTypes: contentTypes,
-		JSONSchema:          &do.JsonSchema,
+		JSONSchema:          do.JsonSchema,
 	}
 }
