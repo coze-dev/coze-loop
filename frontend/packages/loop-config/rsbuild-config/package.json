@@ -22,7 +22,7 @@
     "@coze-arch/subspace-resolve-plugin": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
-    "@douyinfe/semi-rspack-plugin": "2.61.0",
+    "@douyinfe/semi-rspack-plugin": "2.90.10",
     "@rsbuild/core": "~1.1.0",
     "@rsbuild/plugin-less": "~1.1.0",
     "@rsbuild/plugin-react": "~1.1.0",

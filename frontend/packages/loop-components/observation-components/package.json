@@ -44,7 +44,7 @@
     "test:cov": "npm run test -- --coverage"
   },
   "dependencies": {
-    "@coze-arch/coze-design": "0.0.7-alpha.985c0d",
+    "@coze-arch/coze-design": "0.0.7-alpha.5f0418",
     "@cozeloop/api-schema": "workspace:*",
     "@cozeloop/components": "workspace:*",
     "@textea/json-viewer": "^3.0.0",
@@ -80,7 +80,7 @@
     "@coze-arch/vitest-config": "workspace:*",
     "@cozeloop/tailwind-config": "workspace:*",
     "@cozeloop/tailwind-plugin": "workspace:*",
-    "@douyinfe/semi-rspack-plugin": "2.61.0",
+    "@douyinfe/semi-rspack-plugin": "2.90.10",
     "@microsoft/rush-lib": "~5.147.1",
     "@rsbuild/core": "~1.1.0",
     "@rsbuild/plugin-less": "~1.1.0",
@@ -150,4 +150,3 @@
     }
   }
 }
-

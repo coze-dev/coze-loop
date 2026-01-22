@@ -164,7 +164,7 @@ export const useDatasetColumnEdit = ({
           }}
         >
           {({ formState }) => {
-            const { columns } = formState.values;
+            const { columns } = formState.values ?? {};
             return (
               <div
                 className="w-full flex h-full py-[16px]  pl-[24px]  pr-[18px] overflow-y-auto styled-scrollbar gap-[16px]"
