@@ -3981,6 +3981,10 @@ if __name__ == "__main__":
   (key: 'fornax_analytics_week', fallbackText?: string): string;
   /** 全部模型 */
   (key: 'model_all_models', fallbackText?: string): string;
+  /** 且 */
+  (key: 'fornax_components_logic_expr_and', fallbackText?: string): string;
+  /** 或 */
+  (key: 'fornax_components_logic_expr_or', fallbackText?: string): string;
   /** 全部工具 */
   (key: 'observation_all_tools', fallbackText?: string): string;
   /** 模型 QPS | QPM */
