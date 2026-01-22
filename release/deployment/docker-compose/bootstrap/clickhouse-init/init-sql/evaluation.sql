@@ -34,3 +34,6 @@ SETTINGS index_granularity = 8192;
 ALTER TABLE expt_turn_result_filter
 ADD COLUMN IF NOT EXISTS `eval_target_metrics` Map(String, Int64)
 AFTER `updated_at`;
+ALTER TABLE expt_turn_result_filter
+ADD COLUMN IF NOT EXISTS `evaluator_weighted_score` Float64
+AFTER `eval_target_metrics`;
