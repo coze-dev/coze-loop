@@ -120,7 +120,7 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 		if turnEvaluatorVerIDToResultID[ref.ExptTurnResultID] == nil {
 			turnEvaluatorVerIDToResultID[ref.ExptTurnResultID] = make(map[int64]int64)
 		}
-		turnEvaluatorVerIDToResultID[ref.ExptTurnResultID][ref.EvaluatorVersionID] = ref.EvaluatorVersionID
+		turnEvaluatorVerIDToResultID[ref.ExptTurnResultID][ref.EvaluatorVersionID] = ref.EvaluatorResultID
 	}
 
 	res := make([]*entity.ExptTurnResult, 0, len(turnResults))
