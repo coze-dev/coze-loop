@@ -1195,13 +1195,13 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(targetDO.EvalTargetType))
 	}
 	if targetDO.EvalTargetVersion != nil {
-		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion)
+		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, targetDO.EvalTargetType)
 	}
 	targetDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(targetDO.BaseInfo)
 	return targetDTO
 }
 
-func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion) *openapiEvalTarget.EvalTargetVersion {
+func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ entity.EvalTargetType) *openapiEvalTarget.EvalTargetVersion {
 	if versionDO == nil {
 		return nil
 	}
@@ -1220,7 +1220,7 @@ func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion) *openap
 		contentDTO.RuntimeParamJSONDemo = versionDO.RuntimeParamDemo
 	}
 
-	switch versionDO.EvalTargetType {
+	switch typ {
 	case entity.EvalTargetTypeLoopPrompt:
 		if versionDO.Prompt != nil {
 			contentDTO.Prompt = &openapiEvalTarget.EvalPrompt{
