@@ -125,6 +125,11 @@ type paasMetricsCtx struct {
 }
 
 func NewPaasMetricsCtx(ctx context.Context) context.Context {
+	// 如果已经存在，直接返回原 context
+	if _, ok := ctx.Value(paasMetricsCtxKey{}).(*paasMetricsCtx); ok {
+		return ctx
+	}
+	// 不存在则初始化
 	return context.WithValue(ctx, paasMetricsCtxKey{}, &paasMetricsCtx{
 		start:  time.Now(),
 		tagMap: make(map[string]string),
