@@ -118,15 +118,15 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
           <div className="text-xxl font-semibold leading-6 text-[var(--coz-fg-plus)] mb-4 flex items-center gap-x-[6px]">
             {I18n.t('tag_list')}
             <span className="text-[12px] font-semibold leading-4 text-[var(--coz-fg-dim)]">
-              {formState.values.tags?.length ?? 0} / 50
+              {formState.values?.tags?.length ?? 0} / 50
             </span>
           </div>
           <ArrayField field="tags">
             {({ arrayFields, add }) => (
               <div>
                 {arrayFields.map(({ field, remove, key }, index) => {
-                  const tagItem = formState.values.tags?.[index];
-                  const disableSelectList = formState.values.tags?.map(
+                  const tagItem = formState.values?.tags?.[index];
+                  const disableSelectList = formState.values?.tags?.map(
                     item => item.tagInfo?.tag_key_id ?? '',
                   );
                   return (
@@ -155,7 +155,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                           onCreateAnnotationSuccess={(_value, annotationId) => {
                             if (tagItem) {
                               tagItem.isRemoteValue = true;
-                              if (annotationId) {
+                              if (annotationId && tagItem.annotation) {
                                 tagItem.annotation.id = annotationId;
                               }
                             }
@@ -167,11 +167,12 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                           onTagSelectChange={(v, extraInfo) => {
                             const { value, label, ...tagInfo } = v as any;
 
-                            const isCreateNewTag = !formState.values.tags?.some(
-                              item =>
-                                item.tagInfo?.tag_key_id ===
-                                extraInfo?.tag_key_id,
-                            );
+                            const isCreateNewTag =
+                              !formState.values?.tags?.some(
+                                item =>
+                                  item.tagInfo?.tag_key_id ===
+                                  extraInfo?.tag_key_id,
+                              );
 
                             if (isCreateNewTag) {
                               formApi.setValue(
@@ -194,7 +195,8 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                                   annotation_key:
                                     tagItem?.annotation?.key ??
                                     tagItem?.annotation?.manual_feedback
-                                      ?.tag_key_id,
+                                      ?.tag_key_id ??
+                                    '',
                                   platform_type: platformType as PlatformType,
                                 });
                               }
@@ -222,13 +224,14 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                         />
 
                         <AnnotationRemoveButton
-                          annotation_id={tagItem?.annotation?.id}
+                          annotation_id={tagItem?.annotation?.id ?? ''}
                           span_id={span.span_id}
                           start_time={span.started_at}
                           trace_id={span.trace_id}
                           annotation_key={
                             tagItem?.annotation?.key ??
-                            tagItem?.annotation?.manual_feedback?.tag_key_id
+                            tagItem?.annotation?.manual_feedback?.tag_key_id ??
+                            ''
                           }
                           onClick={() => remove()}
                           isRemoteItem={tagItem?.isRemoteValue ?? false}
@@ -240,7 +243,7 @@ export const AnnotationContent = (props: AnnotationContentProps) => {
                 <AnnotationAddButton
                   onAdd={add}
                   disabled={
-                    (formState.values.tags?.length ?? 0) >= MAX_TAG_LENGTH
+                    (formState.values?.tags?.length ?? 0) >= MAX_TAG_LENGTH
                   }
                 />
               </div>

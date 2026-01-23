@@ -260,7 +260,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 		}
 		recordMap := make(map[int64]*entity.EvaluatorRecord)
 		for _, record := range evaluatorRecords {
-			recordMap[record.ID] = record
+			recordMap[record.EvaluatorVersionID] = record
 		}
 		etec.ExptTurnRunResult.EvaluatorResults = recordMap
 	}

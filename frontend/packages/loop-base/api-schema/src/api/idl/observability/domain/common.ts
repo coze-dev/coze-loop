@@ -16,6 +16,7 @@ export enum PlatformType {
   InnerDoubao = "inner_doubao",
   InnerPrompt = "inner_prompt",
   InnerCozeBot = "inner_coze_bot",
+  TraceDetail = "trace_detail",
 }
 export enum SpanListType {
   RootSpan = "root_span",

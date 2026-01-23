@@ -43,12 +43,13 @@ type ItemSnapshotFilter struct {
 }
 
 type ExptTurnResultFilterMapCond struct {
-	EvalTargetDataFilters    []*FieldFilter
-	EvaluatorScoreFilters    []*FieldFilter
-	AnnotationFloatFilters   []*FieldFilter
-	AnnotationBoolFilters    []*FieldFilter
-	AnnotationStringFilters  []*FieldFilter
-	EvalTargetMetricsFilters []*FieldFilter
+	EvalTargetDataFilters        []*FieldFilter
+	EvaluatorScoreFilters        []*FieldFilter
+	EvaluatorWeightedScoreFilter *FieldFilter
+	AnnotationFloatFilters       []*FieldFilter
+	AnnotationBoolFilters        []*FieldFilter
+	AnnotationStringFilters      []*FieldFilter
+	EvalTargetMetricsFilters     []*FieldFilter
 }
 
 type KeywordMapCond struct {
@@ -282,6 +283,37 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 			// 删除 mapContains 条件
 			*whereSQL += fmt.Sprintf(" AND etrf.evaluator_score['%s'] BETWEEN ? AND ?", f.Key)
 			*args = append(*args, floatValue1, floatValue2)
+		}
+	}
+	// 处理加权得分查询条件
+	if cond.MapCond.EvaluatorWeightedScoreFilter != nil {
+		f := cond.MapCond.EvaluatorWeightedScoreFilter
+		switch f.Op {
+		case "=":
+			floatValue, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			if err != nil {
+				logs.CtxError(context.Background(), "Parse float value failed: %v", err)
+			} else {
+				*whereSQL += fmt.Sprintf(" AND abs(etrf.evaluator_weighted_score - ?) < %g", floatEpsilon)
+				*args = append(*args, floatValue)
+			}
+		case ">", ">=", "<", "<=", "!=":
+			floatValue, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			if err != nil {
+				logs.CtxError(context.Background(), "Parse float value failed: %v", err)
+			} else {
+				*whereSQL += fmt.Sprintf(" AND etrf.evaluator_weighted_score %s ?", f.Op)
+				*args = append(*args, floatValue)
+			}
+		case "BETWEEN":
+			floatValue1, err1 := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			floatValue2, err2 := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[1]), 64)
+			if err1 != nil || err2 != nil {
+				logs.CtxError(context.Background(), "Parse float value failed: %v, %v", err1, err2)
+			} else {
+				*whereSQL += " AND etrf.evaluator_weighted_score BETWEEN ? AND ?"
+				*args = append(*args, floatValue1, floatValue2)
+			}
 		}
 	}
 	for _, f := range cond.MapCond.AnnotationFloatFilters {
@@ -573,6 +605,7 @@ func (d *exptTurnResultFilterDAOImpl) buildGetByExptIDItemIDsSQL(ctx context.Con
 		"etrf.evaluator_score['key8'] as evaluator_score_key_8, " +
 		"etrf.evaluator_score['key9'] as evaluator_score_key_9, " +
 		"etrf.evaluator_score['key10'] as evaluator_score_key_10, " +
+		"etrf.evaluator_weighted_score, " +
 		"etrf.evaluator_score_corrected " +
 		"FROM " + getClickHouseDatabaseName() + ".expt_turn_result_filter" + " etrf " +
 		"WHERE etrf.space_id = ? AND etrf.expt_id = ? AND etrf.created_date =?"

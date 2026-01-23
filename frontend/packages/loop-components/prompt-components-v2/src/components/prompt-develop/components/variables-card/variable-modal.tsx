@@ -371,7 +371,7 @@ export function VariableModal({
         labelPosition="top"
       >
         {({ formState }) => {
-          const { type } = formState.values;
+          const { type } = formState.values ?? {};
           const isJson =
             type?.includes('array') || type === VariableType.Object;
           return (
@@ -456,7 +456,7 @@ export function VariableModal({
                         className={'!text-[13px]'}
                         link
                         onClick={() => {
-                          const json = safeJsonParse(formState.values.value);
+                          const json = safeJsonParse(formState.values?.value);
                           if (json) {
                             formApiRef.current?.setValue(
                               'value',

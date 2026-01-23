@@ -291,6 +291,7 @@ export interface EvalTargetOutputData {
 export interface EvalTargetUsage {
   input_tokens: string,
   output_tokens: string,
+  total_tokens: string,
 }
 export interface EvalTargetRunError {
   code?: number,

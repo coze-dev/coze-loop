@@ -34,6 +34,8 @@ export interface CreateExperimentRequest {
   max_alive_time?: number,
   source_type?: expt.SourceType,
   source_id?: string,
+  /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
+  evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
   session?: common.Session,
 }
 export interface CreateExperimentResponse {
@@ -155,6 +157,8 @@ export interface BatchGetExperimentResultRequest {
   page_number?: number,
   page_size?: number,
   use_accelerator?: boolean,
+  /** 是否包含轨迹 */
+  full_trajectory?: boolean,
 }
 export interface BatchGetExperimentResultResponse {
   /** 数据集表头信息 */
@@ -164,6 +168,7 @@ export interface BatchGetExperimentResultResponse {
   expt_column_evaluators?: expt.ExptColumnEvaluator[],
   /** 人工标注标签表头信息 */
   expt_column_annotations?: expt.ExptColumnAnnotation[],
+  expt_column_eval_target?: expt.ExptColumnEvalTarget[],
   /** item粒度实验结果详情 */
   item_results?: expt.ItemResult[],
   total?: number,
@@ -175,6 +180,11 @@ export interface BatchGetExperimentAggrResultRequest {
 export interface BatchGetExperimentAggrResultResponse {
   expt_aggregate_result?: expt.ExptAggregateResult[]
 }
+export interface CalculateExperimentAggrResultRequest {
+  workspace_id: string,
+  expt_id: string,
+}
+export interface CalculateExperimentAggrResultResponse {}
 export interface CheckExperimentNameRequest {
   workspace_id: string,
   name?: string,
@@ -364,6 +374,15 @@ export interface ListExptInsightAnalysisCommentResponse {
   expt_insight_analysis_feedback_comments: expt.ExptInsightAnalysisFeedbackComment[],
   total?: number,
 }
+export interface GetAnalysisRecordFeedbackVoteRequest {
+  workspace_id?: string,
+  expt_id?: string,
+  insight_analysis_record_id?: string,
+  session?: common.Session,
+}
+export interface GetAnalysisRecordFeedbackVoteResponse {
+  vote?: expt.ExptInsightAnalysisFeedbackVote
+}
 export const CheckExperimentName = /*#__PURE__*/createAPI<CheckExperimentNameRequest, CheckExperimentNameResponse>({
   "url": "/api/evaluation/v1/experiments/check_name",
   "method": "POST",
@@ -497,10 +516,23 @@ export const BatchGetExperimentResult = /*#__PURE__*/createAPI<BatchGetExperimen
   "name": "BatchGetExperimentResult",
   "reqType": "BatchGetExperimentResultRequest",
   "reqMapping": {
-    "query": ["workspace_id", "page_number", "page_size", "use_accelerator"],
+    "query": ["workspace_id", "page_number", "page_size", "use_accelerator", "full_trajectory"],
     "body": ["experiment_ids", "baseline_experiment_id", "filters"]
   },
   "resType": "BatchGetExperimentResultResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const CalculateExperimentAggrResult = /*#__PURE__*/createAPI<CalculateExperimentAggrResultRequest, CalculateExperimentAggrResultResponse>({
+  "url": "/api/evaluation/v1/experiments/:expt_id/aggr_results",
+  "method": "POST",
+  "name": "CalculateExperimentAggrResult",
+  "reqType": "CalculateExperimentAggrResultRequest",
+  "reqMapping": {
+    "body": ["workspace_id"],
+    "path": ["expt_id"]
+  },
+  "resType": "CalculateExperimentAggrResultResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
   "service": "evaluationExpt"
 });
@@ -686,6 +718,19 @@ export const ListExptInsightAnalysisComment = /*#__PURE__*/createAPI<ListExptIns
     "path": ["expt_id", "insight_analysis_record_id"]
   },
   "resType": "ListExptInsightAnalysisCommentResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const GetAnalysisRecordFeedbackVote = /*#__PURE__*/createAPI<GetAnalysisRecordFeedbackVoteRequest, GetAnalysisRecordFeedbackVoteResponse>({
+  "url": "/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote",
+  "method": "GET",
+  "name": "GetAnalysisRecordFeedbackVote",
+  "reqType": "GetAnalysisRecordFeedbackVoteRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "expt_id", "session"],
+    "path": ["insight_analysis_record_id"]
+  },
+  "resType": "GetAnalysisRecordFeedbackVoteResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
   "service": "evaluationExpt"
 });

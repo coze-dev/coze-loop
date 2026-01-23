@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as dataset from './../../data/domain/dataset';
+export { dataset };
 import * as tag from './../../data/domain/tag';
 export { tag };
 import * as eval_set from './eval_set';
@@ -64,6 +66,8 @@ export interface Experiment {
   max_alive_time?: number,
   source_type?: SourceType,
   source_id?: string,
+  /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
+  evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
 }
 export interface TokenUsage {
   input_tokens?: string,
@@ -151,6 +155,21 @@ export interface ColumnEvaluator {
   description?: string,
   builtin?: boolean,
 }
+export interface ExptColumnEvalTarget {
+  experiment_id?: string,
+  column_eval_targets?: ColumnEvalTarget[],
+}
+export const ColumnEvalTargetName_ActualOutput = "actual_output";
+export const ColumnEvalTargetName_Trajectory = "trajectory";
+export const ColumnEvalTargetName_EvalTargetTotalLatency = "eval_target_total_latency";
+export const ColumnEvalTargetName_EvaluatorInputTokens = "eval_target_input_tokens";
+export const ColumnEvalTargetName_EvaluatorOutputTokens = "eval_target_output_tokens";
+export const ColumnEvalTargetName_EvaluatorTotalTokens = "eval_target_total_tokens";
+export interface ColumnEvalTarget {
+  name?: string,
+  description?: string,
+  label?: string,
+}
 export interface ColumnEvalSetField {
   key?: string,
   name?: string,
@@ -158,6 +177,7 @@ export interface ColumnEvalSetField {
   content_type?: common.ContentType,
   /** 5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat */
   text_schema?: string,
+  schema_key?: dataset.SchemaKey,
 }
 export interface ItemResult {
   item_id: string,
@@ -232,6 +252,12 @@ export interface ExperimentTurnPayload {
   system_info?: TurnSystemInfo,
   /** 人工标注结果结果 */
   annotate_result?: TurnAnnotateResult,
+  /** 轨迹分析结果 */
+  trajectory_analysis_result?: TrajectoryAnalysisResult,
+}
+export interface TrajectoryAnalysisResult {
+  record_id?: string,
+  Status?: InsightAnalysisStatus,
 }
 export interface KeywordSearch {
   keyword?: string,
@@ -291,6 +317,14 @@ export enum FieldType {
   AnnotationText = 50,
   /** 使用二级key, field_key为tag_key_id, value为tag_value_id */
   AnnotationCategorical = 51,
+  /** 目前使用固定key：total_latency */
+  TotalLatency = 60,
+  /** 目前使用固定key：input_tokens */
+  InputTokens = 61,
+  /** 目前使用固定key：output_tokens */
+  OutputTokens = 62,
+  /** 目前使用固定key：total_tokens */
+  TotalTokens = 63,
 }
 /** 字段过滤器 */
 export interface FilterCondition {
@@ -349,6 +383,17 @@ export interface ExptAggregateResult {
   annotation_results?: {
     [key: string | number]: AnnotationAggregateResult
   },
+  eval_target_aggr_result?: EvalTargetAggregateResult,
+  /** timestamp in seconds */
+  update_time?: number,
+}
+export interface EvalTargetAggregateResult {
+  target_id?: string,
+  target_version_id?: string,
+  latency?: AggregatorResult[],
+  input_tokens?: AggregatorResult[],
+  output_tokens?: AggregatorResult[],
+  total_tokens?: AggregatorResult[],
 }
 /** 评估器版本粒度聚合结果 */
 export interface EvaluatorAggregateResult {
@@ -479,6 +524,11 @@ export interface ExptInsightAnalysisRecord {
   analysis_report_content?: string,
   expt_insight_analysis_feedback?: ExptInsightAnalysisFeedback,
   base_info?: common.BaseInfo,
+  analysis_report_index?: ExptInsightAnalysisIndex[],
+}
+export interface ExptInsightAnalysisIndex {
+  id?: string,
+  title?: string,
 }
 /** 洞察分析反馈统计 */
 export interface ExptInsightAnalysisFeedback {
@@ -495,6 +545,10 @@ export interface ExptInsightAnalysisFeedbackComment {
   record_id: string,
   content: string,
   base_info?: common.BaseInfo,
+}
+export interface ExptInsightAnalysisFeedbackVote {
+  comment_id?: string,
+  feedback_action_type?: FeedbackActionType,
 }
 /** 反馈动作 */
 export enum FeedbackActionType {

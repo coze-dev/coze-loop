@@ -181,13 +181,13 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
             />
 
             <>
-              {formState.values.content_type === TagContentType.Categorical ? (
+              {formState.values?.content_type === TagContentType.Categorical ? (
                 <ArrayField field="tag_values">
                   {({ add, arrayFields }) => (
                     <div className="w-full flex flex-col gap-y-3 mt-2">
                       {arrayFields.map(({ field, key, remove }, index) => {
                         const currentValueItem =
-                          formState.values.tag_values?.[index];
+                          formState.values?.tag_values?.[index];
 
                         const originValueItem = originValues?.tag_values?.find(
                           tagItem =>
@@ -201,7 +201,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                             currentValueItem?.tag_value_name;
                         const tagNames =
                           formState.values?.tag_values?.map(
-                            item => item.tag_value_name,
+                            item => item.tag_value_name ?? '',
                           ) ?? [];
 
                         return (
@@ -296,7 +296,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
               ) : null}
             </>
             <>
-              {formState.values.content_type === TagContentType.Boolean && (
+              {formState.values?.content_type === TagContentType.Boolean && (
                 <div className="px-3 py-4 rounded-[12px] bg-[var(--coz-bg-primary)] flex flex-col gap-y-2">
                   <div className="flex items-center gap-x-3 w-full">
                     <span className="text-[var(--coz-fg-primary)] text-[14px] font-normal leading-5">
@@ -312,7 +312,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                         tagNameValidate,
                         tagValidateNameUniqByOptions(
                           formState.values.tag_values?.map(
-                            item => item.tag_value_name,
+                            item => item.tag_value_name ?? '',
                           ) ?? [],
                           0,
                         ),
@@ -339,7 +339,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                         tagNameValidate,
                         tagValidateNameUniqByOptions(
                           formState.values.tag_values?.map(
-                            item => item.tag_value_name,
+                            item => item.tag_value_name ?? '',
                           ) ?? [],
                           1,
                         ),

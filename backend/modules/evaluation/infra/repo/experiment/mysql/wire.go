@@ -24,4 +24,6 @@ var ExperimentMySQLDAOSet = wire.NewSet(
 	NewExptInsightAnalysisRecordDAO,
 	NewExptInsightAnalysisFeedbackVoteDAO,
 	NewExptInsightAnalysisFeedbackCommentDAO,
+	NewExptTemplateDAO,
+	NewExptTemplateEvaluatorRefDAO,
 )
