@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/hooks"
 	"github.com/samber/lo"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -32,12 +33,14 @@ type IPromptUserDraftDAO interface {
 type PromptUserDraftDAOImpl struct {
 	db           db.Provider
 	writeTracker platestwrite.ILatestWriteTracker
+	hook         hooks.IPromptUserDraftHook
 }
 
-func NewPromptUserDraftDAO(db db.Provider, redisCli redis.Cmdable) IPromptUserDraftDAO {
+func NewPromptUserDraftDAO(db db.Provider, redisCli redis.Cmdable, hook hooks.IPromptUserDraftHook) IPromptUserDraftDAO {
 	return &PromptUserDraftDAOImpl{
 		db:           db,
 		writeTracker: platestwrite.NewLatestWriteTracker(redisCli),
+		hook:         hook,
 	}
 }
 
@@ -55,6 +58,11 @@ func (d *PromptUserDraftDAOImpl) Create(ctx context.Context, promptDraftPO *mode
 	q := query.Use(d.db.NewSession(ctx, opts...)).WithContext(ctx)
 	promptDraftPO.CreatedAt = time.Time{}
 	promptDraftPO.UpdatedAt = time.Time{}
+	err = d.hook.BeforeSave(ctx, promptDraftPO)
+	if err != nil {
+		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
+
 	err = q.PromptUserDraft.Create(promptDraftPO)
 	if err != nil {
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
@@ -80,6 +88,10 @@ func (d *PromptUserDraftDAOImpl) Get(ctx context.Context, promptID int64, userID
 	if len(promptDraftPOs) <= 0 {
 		return nil, nil
 	}
+	err = d.hook.AfterFind(ctx, promptDraftPOs)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
 	return promptDraftPOs[0], nil
 }
 
@@ -96,6 +108,10 @@ func (d *PromptUserDraftDAOImpl) GetByID(ctx context.Context, draftID int64, opt
 	}
 	if len(promptDraftPOs) <= 0 {
 		return nil, nil
+	}
+	err = d.hook.AfterFind(ctx, promptDraftPOs)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
 	return promptDraftPOs[0], nil
 }
@@ -120,6 +136,10 @@ func (d *PromptUserDraftDAOImpl) MGet(ctx context.Context, pairs []PromptIDUserI
 	if len(promptDraftPOs) <= 0 {
 		return nil, nil
 	}
+	err = d.hook.AfterFind(ctx, promptDraftPOs)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
 	pairDraftPOMap = make(map[PromptIDUserIDPair]*model.PromptUserDraft, len(promptDraftPOs))
 	for _, promptDraftPO := range promptDraftPOs {
 		if promptDraftPO == nil {
@@ -139,6 +159,10 @@ func (d *PromptUserDraftDAOImpl) MGet(ctx context.Context, pairs []PromptIDUserI
 func (d *PromptUserDraftDAOImpl) Update(ctx context.Context, promptDraftPO *model.PromptUserDraft, opts ...db.Option) (err error) {
 	if promptDraftPO == nil {
 		return errorx.New("promptDraftPO is empty")
+	}
+	err = d.hook.BeforeSave(ctx, promptDraftPO)
+	if err != nil {
+		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
 
 	q := query.Use(d.db.NewSession(ctx, opts...))

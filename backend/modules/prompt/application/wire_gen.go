@@ -27,6 +27,7 @@ import (
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/hooks"
 	redis2 "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/rpc"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -37,8 +38,10 @@ import (
 
 func InitPromptManageApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, meter metrics.Meter, configFactory conf.IConfigLoaderFactory, llmClient llmruntimeservice.Client, authClient authservice.Client, fileClient fileservice.Client, userClient userservice.Client, auditClient audit.IAuditService) (manage.PromptManageService, error) {
 	iPromptBasicDAO := mysql.NewPromptBasicDAO(db2, redisCli)
-	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli)
-	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli)
+	iPromptCommitHook := hooks.NewEmptyPromptCommitHook()
+	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli, iPromptCommitHook)
+	iPromptUserDraftHook := hooks.NewEmptyPromptUserDraftHook()
+	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli, iPromptUserDraftHook)
 	iCommitLabelMappingDAO := mysql.NewCommitLabelMappingDAO(db2, redisCli)
 	iPromptRelationDAO := mysql.NewPromptRelationDAO(db2, redisCli)
 	redisIPromptBasicDAO := redis2.NewPromptBasicDAO()
@@ -74,8 +77,10 @@ func InitPromptDebugApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, redi
 	iDebugContextRepo := repo.NewDebugContextRepo(idgen2, iDebugContextDAO)
 	iPromptFormatter := service.NewPromptFormatter()
 	iPromptBasicDAO := mysql.NewPromptBasicDAO(db2, redisCli)
-	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli)
-	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli)
+	iPromptCommitHook := hooks.NewEmptyPromptCommitHook()
+	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli, iPromptCommitHook)
+	iPromptUserDraftHook := hooks.NewEmptyPromptUserDraftHook()
+	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli, iPromptUserDraftHook)
 	iCommitLabelMappingDAO := mysql.NewCommitLabelMappingDAO(db2, redisCli)
 	iPromptRelationDAO := mysql.NewPromptRelationDAO(db2, redisCli)
 	redisIPromptBasicDAO := redis2.NewPromptBasicDAO()
@@ -104,8 +109,10 @@ func InitPromptExecuteApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	iDebugContextDAO := mysql.NewDebugContextDAO(db2)
 	iDebugContextRepo := repo.NewDebugContextRepo(idgen2, iDebugContextDAO)
 	iPromptBasicDAO := mysql.NewPromptBasicDAO(db2, redisCli)
-	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli)
-	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli)
+	iPromptCommitHook := hooks.NewEmptyPromptCommitHook()
+	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli, iPromptCommitHook)
+	iPromptUserDraftHook := hooks.NewEmptyPromptUserDraftHook()
+	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli, iPromptUserDraftHook)
 	iCommitLabelMappingDAO := mysql.NewCommitLabelMappingDAO(db2, redisCli)
 	iPromptRelationDAO := mysql.NewPromptRelationDAO(db2, redisCli)
 	redisIPromptBasicDAO := redis2.NewPromptBasicDAO()
@@ -133,8 +140,10 @@ func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	iDebugContextDAO := mysql.NewDebugContextDAO(db2)
 	iDebugContextRepo := repo.NewDebugContextRepo(idgen2, iDebugContextDAO)
 	iPromptBasicDAO := mysql.NewPromptBasicDAO(db2, redisCli)
-	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli)
-	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli)
+	iPromptCommitHook := hooks.NewEmptyPromptCommitHook()
+	iPromptCommitDAO := mysql.NewPromptCommitDAO(db2, redisCli, iPromptCommitHook)
+	iPromptUserDraftHook := hooks.NewEmptyPromptUserDraftHook()
+	iPromptUserDraftDAO := mysql.NewPromptUserDraftDAO(db2, redisCli, iPromptUserDraftHook)
 	iCommitLabelMappingDAO := mysql.NewCommitLabelMappingDAO(db2, redisCli)
 	iPromptRelationDAO := mysql.NewPromptRelationDAO(db2, redisCli)
 	redisIPromptBasicDAO := redis2.NewPromptBasicDAO()
@@ -163,7 +172,7 @@ func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 // wire.go:
 
 var (
-	promptDomainSet = wire.NewSet(service.NewPromptFormatter, service.NewPromptService, repo.NewManageRepo, repo.NewLabelRepo, repo.NewDebugLogRepo, repo.NewDebugContextRepo, mysql.NewPromptBasicDAO, mysql.NewPromptCommitDAO, mysql.NewPromptUserDraftDAO, mysql.NewPromptRelationDAO, mysql.NewLabelDAO, mysql.NewCommitLabelMappingDAO, mysql.NewDebugLogDAO, mysql.NewDebugContextDAO, redis2.NewPromptBasicDAO, redis2.NewPromptDAO, redis2.NewPromptLabelVersionDAO, conf2.NewPromptConfigProvider, rpc.NewLLMRPCProvider, rpc.NewAuthRPCProvider, rpc.NewFileRPCProvider, rpc.NewUserRPCProvider, rpc.NewAuditRPCProvider, collector.NewEventCollectorProvider, service.NewCozeLoopSnippetParser)
+	promptDomainSet = wire.NewSet(service.NewPromptFormatter, service.NewPromptService, repo.NewManageRepo, repo.NewLabelRepo, repo.NewDebugLogRepo, repo.NewDebugContextRepo, hooks.NewEmptyPromptCommitHook, hooks.NewEmptyPromptUserDraftHook, mysql.NewPromptBasicDAO, mysql.NewPromptCommitDAO, mysql.NewPromptUserDraftDAO, mysql.NewPromptRelationDAO, mysql.NewLabelDAO, mysql.NewCommitLabelMappingDAO, mysql.NewDebugLogDAO, mysql.NewDebugContextDAO, redis2.NewPromptBasicDAO, redis2.NewPromptDAO, redis2.NewPromptLabelVersionDAO, conf2.NewPromptConfigProvider, rpc.NewLLMRPCProvider, rpc.NewAuthRPCProvider, rpc.NewFileRPCProvider, rpc.NewUserRPCProvider, rpc.NewAuditRPCProvider, collector.NewEventCollectorProvider, service.NewCozeLoopSnippetParser)
 	manageSet       = wire.NewSet(
 		NewPromptManageApplication,
 		promptDomainSet,
