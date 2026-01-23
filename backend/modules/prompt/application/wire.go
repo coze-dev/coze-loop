@@ -29,6 +29,7 @@ import (
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/hooks"
 	rediscache "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/rpc"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -42,6 +43,8 @@ var (
 		repo.NewLabelRepo,
 		repo.NewDebugLogRepo,
 		repo.NewDebugContextRepo,
+		hooks.NewEmptyPromptCommitHook,
+		hooks.NewEmptyPromptUserDraftHook,
 		mysql.NewPromptBasicDAO,
 		mysql.NewPromptCommitDAO,
 		mysql.NewPromptUserDraftDAO,
