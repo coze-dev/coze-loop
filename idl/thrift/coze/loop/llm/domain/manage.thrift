@@ -12,7 +12,41 @@ struct Model {
     7: optional ProtocolConfig protocol_config
     8: optional map<common.Scenario, ScenarioConfig> scenario_configs
     9: optional ParamConfig param_config
+    10: optional string identification // 模型表示 (name, endpoint)
+    11: optional Series series // 模型
+    12: optional Visibility visibility
+    13: optional string icon // 模型图标
+    14: optional list<string> tags //模型标签
+    15: optional ModelStatus status // 模型状态
+
+    100: optional string created_by
+    101: optional i64 created_at
+    102: optional string updated_by
+    103: optional i64 updated_at
 }
+
+struct Series {
+    1: optional string name // series name
+    2: optional string icon // series icon url
+    3: optional Family family // family name
+}
+
+struct Visibility {
+    1: optional VisibleMode mode
+    2: optional list<i64> spaceIDs // Mode为Specified有效，配置为除模型所属空间外的其他空间
+}
+
+struct ProviderInfo {
+    1: optional MaaSInfo maas_info
+}
+
+struct MaaSInfo {
+    1: optional string host
+    2: optional string region
+    3: optional string baseURL // v3 sdk
+    4: optional string customizationJobsID // 精调模型任务的 ID
+}
+
 
 struct Ability {
     1: optional i64 max_context_tokens (api.js_conv='true', go.tag='json:"max_context_tokens"')
@@ -22,11 +56,14 @@ struct Ability {
     5: optional bool json_mode
     6: optional bool multi_modal
     7: optional AbilityMultiModal ability_multi_modal
+    8: optional InterfaceCategory interface_category
 }
 
 struct AbilityMultiModal {
+    // 图片
     1: optional bool image
     2: optional AbilityImage ability_image
+    // 视频
     3: optional bool video
     4: optional AbilityVideo ability_video
 }
@@ -143,6 +180,14 @@ struct ParamSchema {
     6: optional string max
     7: optional string default_value
     8: optional list<ParamOption> options
+    9: optional list<ParamSchema> properties
+    10: optional Reaction reaction      // 依赖参数
+    11: optional string jsonpath // 赋值路径
+}
+
+struct Reaction {
+    1: optional string dependency // 依赖的字段
+    2: optional string visible // 可见性表达式
 }
 
 struct ParamOption {
@@ -171,6 +216,73 @@ const ParamType param_type_float = "float"
 const ParamType param_type_int = "int"
 const ParamType param_type_boolean = "boolean"
 const ParamType param_type_string = "string"
+const ParamType param_type_void = "void"
+const ParamType param_type_object = "object"
+
+typedef string Family (ts.enum="true")
+const Family family_undefined = "undefined"
+const Family family_gpt = "gpt"
+const Family family_seed = "seed"
+const Family family_gemini = "gemini"
+const Family family_claude = "claude"
+const Family family_ernie = "ernie"
+const Family family_baichuan = "baichuan"
+const Family family_qwen = "qwen"
+const Family family_glm = "glm"
+const Family family_skylark = "skylark"
+const Family family_moonshot = "moonshot"
+const Family family_minimax = "minimax"
+const Family family_doubao = "doubao"
+const Family family_baichuan2 = "baichuan2"
+const Family family_deepseekv2 = "deepseekv2"
+const Family family_deepseek_coder_v2 = "deepseek_coder_v2"
+const Family family_deepseek_coder = "deepseek_coder"
+const Family family_internalm25 = "internalm2_5"
+const Family family_qwen2 = "qwen2"
+const Family family_qwen25 = "qwen2.5"
+const Family family_qwen25_coder = "qwen2.5_coder"
+const Family family_mini_cpm = "mini_cpm"
+const Family family_mini_cpm3 = "mini_cpm_3"
+const Family family_chat_glm3 = "chat_glm_3"
+const Family family_mistra = "mistral"
+const Family family_gemma = "gemma"
+const Family family_gemma_2 = "gemma_2"
+const Family family_intern_vl2 = "intern_vl2"
+const Family family_intern_vl25 = "intern_vl2.5"
+const Family family_deepseek_v3 = "deepseek_v3"
+const Family family_deepseek_r1 = "deepseek_r1"
+const Family family_kimi = "kimi"
+const Family family_seedream = "seedream"
+const Family family_intern_vl3 = "intern_vl3"
+
+
+typedef string Provider (ts.enum="true")
+const Provider provider_undefined = "undefined"
+const Provider provider_maas = "maas"
+
+typedef string VisibleMode (ts.enum="true")
+const VisibleMode visible_mode_default = "default"
+const VisibleMode visible_mode_specified = "specified"
+const VisibleMode visible_mode_undefined = "undefined"
+const VisibleMode visible_mode_all = "all"
+
+typedef string ModelStatus (ts.enum="true")
+const ModelStatus model_status_undefined = "undefined"
+const ModelStatus model_status_available = "available"      //可用
+const ModelStatus model_status_unavailable = "unavailable"    //不可用
+
+typedef string InterfaceCategory (ts.enum="true")
+const InterfaceCategory interface_category_undefined = "undefined"
+const InterfaceCategory interface_category_chat_completion_api = "chat_completion_api"
+const InterfaceCategory interface_category_response_api = "response_api"
+
+typedef string AbilityEnum (ts.enum="true")
+const AbilityEnum ability_undefined = "undefined"
+const AbilityEnum ability_json_mode = "json_mode"
+const AbilityEnum ability_function_call = "function_call"
+const AbilityEnum ability_multi_modal = "multi_modal"
+
+
 
 typedef string VideoFormat (ts.enum="true")
 const VideoFormat video_format_undefined = "undefined"
