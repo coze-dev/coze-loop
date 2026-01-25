@@ -3,7 +3,9 @@
 
 package entity
 
-import "time"
+import (
+	"time"
+)
 
 type Message struct {
 	Role             Role   `json:"role"`
@@ -238,4 +240,11 @@ const (
 
 type ResponseFormat struct {
 	Type ResponseFormatType `json:"type,omitempty"`
+}
+
+type ParamValue struct {
+	Name      string    `json:"name"`
+	ParamType ParamType `json:"param_type"`
+	Value     string    `json:"value"`
+	JsonPath  string    `json:"json_path"`
 }

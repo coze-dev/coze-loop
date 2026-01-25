@@ -28,6 +28,8 @@ type Options struct {
 	FrequencyPenalty *float32
 	// Parameters is the extra parameters for the model.
 	Parameters map[string]string
+	// ParamValues
+	ParamValues map[string]*ParamValue
 }
 
 type Option struct {
@@ -174,6 +176,14 @@ func WithParameters(p map[string]string) Option {
 	return Option{
 		apply: func(opts *Options) {
 			opts.Parameters = p
+		},
+	}
+}
+
+func WithParamValues(p map[string]*ParamValue) Option {
+	return Option{
+		apply: func(opts *Options) {
+			opts.ParamValues = p
 		},
 	}
 }

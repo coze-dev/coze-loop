@@ -4,9 +4,9 @@
 package entity
 
 import (
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
-
+	druntime "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func MergeStreamMsgs(msgs []*Message) *Message {
@@ -220,4 +220,26 @@ func OptionsToTrace(os []Option) *tracespec.ModelCallOption {
 		res.TopP = *opts.TopP
 	}
 	return res
+}
+
+func ConvertToParamValues(model *Model, paramValues []*druntime.ParamConfigValue) map[string]*ParamValue {
+	if model == nil || model.ParamConfig == nil {
+		return nil
+	}
+	schemaMap := make(map[string]*ParamSchema)
+	for _, item := range model.ParamConfig.ParamSchemas {
+		schemaMap[item.Name] = item
+	}
+	resp := make(map[string]*ParamValue)
+	for _, item := range paramValues {
+		if v, ok := schemaMap[item.GetName()]; ok {
+			resp[item.GetName()] = &ParamValue{
+				Name:      item.GetName(),
+				ParamType: v.Type,
+				Value:     item.GetValue().GetValue(),
+				JsonPath:  v.JsonPath,
+			}
+		}
+	}
+	return resp
 }
