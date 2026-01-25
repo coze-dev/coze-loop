@@ -374,15 +374,16 @@ const (
 type Protocol string
 
 const (
-	ProtocolArk      Protocol = "ark"
-	ProtocolOpenAI   Protocol = "openai"
-	ProtocolDeepseek Protocol = "deepseek"
-	ProtocolClaude   Protocol = "claude"
-	ProtocolOllama   Protocol = "ollama"
-	ProtocolGemini   Protocol = "gemini"
-	ProtocolQwen     Protocol = "qwen"
-	ProtocolQianfan  Protocol = "qianfan"
-	ProtocolArkBot   Protocol = "arkbot"
+	ProtocolUndefined Protocol = "undefined"
+	ProtocolArk       Protocol = "ark"
+	ProtocolOpenAI    Protocol = "openai"
+	ProtocolDeepseek  Protocol = "deepseek"
+	ProtocolClaude    Protocol = "claude"
+	ProtocolOllama    Protocol = "ollama"
+	ProtocolGemini    Protocol = "gemini"
+	ProtocolQwen      Protocol = "qwen"
+	ProtocolQianfan   Protocol = "qianfan"
+	ProtocolArkBot    Protocol = "arkbot"
 )
 
 type Family string
