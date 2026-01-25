@@ -338,6 +338,14 @@ type ParamSchema struct {
 	Max          string         `json:"max" yaml:"max" mapstructure:"max"`
 	DefaultValue string         `json:"default_value" yaml:"default_value" mapstructure:"default_value"`
 	Options      []*ParamOption `json:"options" yaml:"options" mapstructure:"options"`
+	Properties   []*ParamSchema `json:"properties" mapstructrue:"properties"`
+	JsonPath     string         `json:"json_path" mapstructrue:"json_path"`
+	Reaction     Reaction       `json:"reaction" mapstructrue:"reaction"`
+}
+
+type Reaction struct {
+	Dependency string `json:"dependency"`
+	Visible    string `json:"visible"`
 }
 
 type ParamOption struct {
@@ -352,6 +360,8 @@ const (
 	ParamTypeInt     ParamType = "int"
 	ParamTypeBoolean ParamType = "boolean"
 	ParamTypeString  ParamType = "string"
+	ParamTypeVoid    ParamType = "void"
+	ParamTypeObject  ParamType = "object"
 )
 
 type Frame string
