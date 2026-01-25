@@ -153,6 +153,7 @@ type Ability struct {
 	JsonMode          bool               `json:"json_mode" yaml:"json_mode" mapstructure:"json_mode"`
 	MultiModal        bool               `json:"multi_modal" yaml:"multi_modal" mapstructure:"multi_modal"`
 	AbilityMultiModal *AbilityMultiModal `json:"ability_multi_modal" yaml:"ability_multi_modal" mapstructure:"ability_multi_modal"`
+	Thinking          bool               `json:"thinking" mapstructure:"thinking"`
 }
 
 type AbilityMultiModal struct {
