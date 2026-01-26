@@ -4,6 +4,8 @@
 package convertor
 
 import (
+	"github.com/bytedance/gg/gptr"
+	"github.com/bytedance/gg/gvalue"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity"
@@ -25,7 +27,7 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 	if !mask {
 		pc = ProtocolConfigDO2DTO(model.ProtocolConfig)
 	}
-	return &manage.Model{
+	resp := &manage.Model{
 		ModelID:         ptr.Of(model.ID),
 		WorkspaceID:     ptr.Of(model.WorkspaceID),
 		Name:            ptr.Of(model.Name),
@@ -33,8 +35,79 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 		Ability:         AbilityDO2DTO(model.Ability),
 		Protocol:        ptr.Of(manage.Protocol(model.Protocol)),
 		ProtocolConfig:  pc,
+		Identification:  ptr.Of(model.Identification),
+		Icon:            ptr.Of(model.Icon),
+		Status:          ptr.Of(ModelStatusDO2DTO(model.Status)),
+		Tags:            model.Tags,
+		Series:          SeriesDO2DTO(model.Series),
+		Visibility:      VisibilityDO2DTO(model.Visibility),
 		ScenarioConfigs: ScenarioConfigMapDO2DTO(model.ScenarioConfigs),
 		ParamConfig:     ParamConfigDO2DTO(model.ParamConfig),
+	}
+	if gvalue.IsNotZero(model.CreatedAt) {
+		resp.CreatedAt = gptr.Of(model.CreatedAt)
+	}
+	if gvalue.IsNotZero(model.UpdatedAt) {
+		resp.UpdatedAt = gptr.Of(model.UpdatedAt)
+	}
+	if gvalue.IsNotZero(model.CreatedBy) {
+		resp.CreatedBy = gptr.Of(model.CreatedBy)
+	}
+	if gvalue.IsNotZero(model.UpdatedBy) {
+		resp.UpdatedBy = gptr.Of(model.UpdatedBy)
+	}
+	return resp
+}
+
+func SeriesDO2DTO(v *entity.Series) *manage.Series {
+	if v == nil {
+		return nil
+	}
+	return &manage.Series{
+		Name:   ptr.Of(v.Name),
+		Icon:   ptr.Of(v.Icon),
+		Family: ptr.Of(SeriesFamilyDO2DTO(v.Family)),
+	}
+}
+
+func SeriesFamilyDO2DTO(v entity.Family) manage.Family {
+	switch v {
+	default:
+		return manage.FamilyUndefined
+	}
+}
+
+func VisibilityDO2DTO(v *entity.Visibility) *manage.Visibility {
+	if v == nil {
+		return nil
+	}
+	return &manage.Visibility{
+		Mode:     ptr.Of(VisibleModelDO2DTO(v.Mode)),
+		SpaceIDs: v.SpaceIDs,
+	}
+}
+
+func VisibleModelDO2DTO(v entity.VisibleMode) manage.VisibleMode {
+	switch v {
+	case entity.VisibleModelAll:
+		return manage.VisibleModeAll
+	case entity.VisibleModelSpecified:
+		return manage.VisibleModeSpecified
+	case entity.VisibleModelDefault:
+		return manage.VisibleModeDefault
+	default:
+		return manage.VisibleModeUndefined
+	}
+}
+
+func ModelStatusDO2DTO(status entity.ModelStatus) manage.ModelStatus {
+	switch status {
+	case entity.ModelStatusDisabled:
+		return manage.ModelStatusUnavailable
+	case entity.ModelStatusEnabled:
+		return manage.ModelStatusAvailable
+	default:
+		return manage.ModelStatusUndefined
 	}
 }
 
