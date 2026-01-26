@@ -481,6 +481,44 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 		assert.Equal(t, entity.TaskStatusPending, taskDO.TaskStatus)
 	})
 
+	t.Run("running to pending remove cache error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		taskDO := &entity.ObservabilityTask{
+			ID:          1,
+			WorkspaceID: 2,
+			TaskType:    entity.TaskTypeAutoEval,
+			TaskStatus:  entity.TaskStatusRunning,
+			Sampler:     &entity.Sampler{},
+			EffectiveTime: &entity.EffectiveTime{
+				StartAt: time.Now().Add(-time.Minute).UnixMilli(),
+				EndAt:   time.Now().Add(time.Minute).UnixMilli(),
+			},
+			TaskRuns: []*entity.TaskRun{{RunStatus: entity.TaskRunStatusRunning}},
+		}
+
+		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
+		repoMock.EXPECT().RemoveNonFinalTask(gomock.Any(), "2", int64(1)).Return(errors.New("remove cache fail"))
+		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
+
+		procMock := &fakeProcessor{}
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
+
+		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
+			TaskID:      1,
+			WorkspaceID: 2,
+			TaskStatus:  gptr.Of(entity.TaskStatusPending),
+			UserID:      "user",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, entity.TaskStatusPending, taskDO.TaskStatus)
+	})
+
 	t.Run("pending to running adds cache", func(t *testing.T) {
 		t.Parallel()
 		ctrl := gomock.NewController(t)
@@ -501,6 +539,43 @@ func TestTaskServiceImpl_UpdateTask(t *testing.T) {
 
 		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
 		repoMock.EXPECT().AddNonFinalTask(gomock.Any(), "2", int64(1)).Return(nil)
+		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
+
+		procMock := &fakeProcessor{}
+		tp := processor.NewTaskProcessor()
+		tp.Register(entity.TaskTypeAutoEval, procMock)
+		svc := &TaskServiceImpl{TaskRepo: repoMock, taskProcessor: *tp}
+
+		err := svc.UpdateTask(session.WithCtxUser(context.Background(), &session.User{ID: "user"}), &UpdateTaskReq{
+			TaskID:      1,
+			WorkspaceID: 2,
+			TaskStatus:  gptr.Of(entity.TaskStatusRunning),
+			UserID:      "user",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, entity.TaskStatusRunning, taskDO.TaskStatus)
+	})
+
+	t.Run("pending to running add cache error", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		repoMock := repomocks.NewMockITaskRepo(ctrl)
+		taskDO := &entity.ObservabilityTask{
+			ID:          1,
+			WorkspaceID: 2,
+			TaskType:    entity.TaskTypeAutoEval,
+			TaskStatus:  entity.TaskStatusPending,
+			Sampler:     &entity.Sampler{},
+			EffectiveTime: &entity.EffectiveTime{
+				StartAt: time.Now().Add(-time.Minute).UnixMilli(),
+				EndAt:   time.Now().Add(time.Minute).UnixMilli(),
+			},
+		}
+
+		repoMock.EXPECT().GetTask(gomock.Any(), int64(1), gomock.Any(), gomock.Nil()).Return(taskDO, nil)
+		repoMock.EXPECT().AddNonFinalTask(gomock.Any(), "2", int64(1)).Return(errors.New("add cache fail"))
 		repoMock.EXPECT().UpdateTask(gomock.Any(), taskDO).Return(nil)
 
 		procMock := &fakeProcessor{}

@@ -1523,3 +1523,65 @@ func TestTraceHubServiceImpl_buildSubscriberOfSpan_Filtering(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceHubServiceImpl_withTaskRunCreateLock(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLocker := lock_mocks.NewMockILocker(ctrl)
+	impl := &TraceHubServiceImpl{
+		locker: mockLocker,
+	}
+
+	ctx := context.Background()
+	taskID := int64(1001)
+	runType := entity.TaskRunTypeNewData
+	runStartAt := int64(2000)
+	runEndAt := int64(3000)
+
+	t.Run("Lock error", func(t *testing.T) {
+		mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, errors.New("redis error"))
+
+		err := impl.withTaskRunCreateLock(ctx, taskID, runType, runStartAt, runEndAt, func() error {
+			return nil
+		})
+		require.ErrorContains(t, err, "redis error")
+	})
+
+	t.Run("Not locked", func(t *testing.T) {
+		mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(false, nil)
+
+		called := false
+		err := impl.withTaskRunCreateLock(ctx, taskID, runType, runStartAt, runEndAt, func() error {
+			called = true
+			return nil
+		})
+		require.NoError(t, err)
+		require.False(t, called)
+	})
+
+	t.Run("Lock success", func(t *testing.T) {
+		mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+		mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil)
+
+		called := false
+		err := impl.withTaskRunCreateLock(ctx, taskID, runType, runStartAt, runEndAt, func() error {
+			called = true
+			return nil
+		})
+		require.NoError(t, err)
+		require.True(t, called)
+	})
+
+	t.Run("Locker nil", func(t *testing.T) {
+		nilLockerImpl := &TraceHubServiceImpl{locker: nil}
+		called := false
+		err := nilLockerImpl.withTaskRunCreateLock(ctx, taskID, runType, runStartAt, runEndAt, func() error {
+			called = true
+			return nil
+		})
+		require.NoError(t, err)
+		require.True(t, called)
+	})
+}
