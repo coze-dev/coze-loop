@@ -21,12 +21,20 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *Filter) IsValid() error {
+	return nil
+}
 func (p *ListModelsRequest) IsValid() error {
 	if p.WorkspaceID == nil {
 		return fmt.Errorf("field WorkspaceID not_nil rule failed")
 	}
 	if *p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	"strings"
 )
 
@@ -4193,11 +4194,13 @@ type ModelConfig struct {
 	// 模型id
 	ModelID *int64 `thrift:"model_id,1,optional" frugal:"1,optional,i64" json:"model_id" form:"model_id" query:"model_id"`
 	// 模型名称
-	ModelName   *string  `thrift:"model_name,2,optional" frugal:"2,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
-	Temperature *float64 `thrift:"temperature,3,optional" frugal:"3,optional,double" form:"temperature" json:"temperature,omitempty" query:"temperature"`
-	MaxTokens   *int32   `thrift:"max_tokens,4,optional" frugal:"4,optional,i32" form:"max_tokens" json:"max_tokens,omitempty" query:"max_tokens"`
-	TopP        *float64 `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
-	JSONExt     *string  `thrift:"json_ext,50,optional" frugal:"50,optional,string" form:"json_ext" json:"json_ext,omitempty" query:"json_ext"`
+	ModelName      *string          `thrift:"model_name,2,optional" frugal:"2,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
+	Temperature    *float64         `thrift:"temperature,3,optional" frugal:"3,optional,double" form:"temperature" json:"temperature,omitempty" query:"temperature"`
+	MaxTokens      *int32           `thrift:"max_tokens,4,optional" frugal:"4,optional,i32" form:"max_tokens" json:"max_tokens,omitempty" query:"max_tokens"`
+	TopP           *float64         `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
+	Protocol       *manage.Protocol `thrift:"protocol,6,optional" frugal:"6,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
+	Identification *string          `thrift:"identification,7,optional" frugal:"7,optional,string" form:"identification" json:"identification,omitempty" query:"identification"`
+	JSONExt        *string          `thrift:"json_ext,50,optional" frugal:"50,optional,string" form:"json_ext" json:"json_ext,omitempty" query:"json_ext"`
 }
 
 func NewModelConfig() *ModelConfig {
@@ -4267,6 +4270,30 @@ func (p *ModelConfig) GetTopP() (v float64) {
 	return *p.TopP
 }
 
+var ModelConfig_Protocol_DEFAULT manage.Protocol
+
+func (p *ModelConfig) GetProtocol() (v manage.Protocol) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetProtocol() {
+		return ModelConfig_Protocol_DEFAULT
+	}
+	return *p.Protocol
+}
+
+var ModelConfig_Identification_DEFAULT string
+
+func (p *ModelConfig) GetIdentification() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIdentification() {
+		return ModelConfig_Identification_DEFAULT
+	}
+	return *p.Identification
+}
+
 var ModelConfig_JSONExt_DEFAULT string
 
 func (p *ModelConfig) GetJSONExt() (v string) {
@@ -4293,6 +4320,12 @@ func (p *ModelConfig) SetMaxTokens(val *int32) {
 func (p *ModelConfig) SetTopP(val *float64) {
 	p.TopP = val
 }
+func (p *ModelConfig) SetProtocol(val *manage.Protocol) {
+	p.Protocol = val
+}
+func (p *ModelConfig) SetIdentification(val *string) {
+	p.Identification = val
+}
 func (p *ModelConfig) SetJSONExt(val *string) {
 	p.JSONExt = val
 }
@@ -4303,6 +4336,8 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	3:  "temperature",
 	4:  "max_tokens",
 	5:  "top_p",
+	6:  "protocol",
+	7:  "identification",
 	50: "json_ext",
 }
 
@@ -4324,6 +4359,14 @@ func (p *ModelConfig) IsSetMaxTokens() bool {
 
 func (p *ModelConfig) IsSetTopP() bool {
 	return p.TopP != nil
+}
+
+func (p *ModelConfig) IsSetProtocol() bool {
+	return p.Protocol != nil
+}
+
+func (p *ModelConfig) IsSetIdentification() bool {
+	return p.Identification != nil
 }
 
 func (p *ModelConfig) IsSetJSONExt() bool {
@@ -4383,6 +4426,22 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.DOUBLE {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4480,6 +4539,28 @@ func (p *ModelConfig) ReadField5(iprot thrift.TProtocol) error {
 	p.TopP = _field
 	return nil
 }
+func (p *ModelConfig) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *manage.Protocol
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Protocol = _field
+	return nil
+}
+func (p *ModelConfig) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Identification = _field
+	return nil
+}
 func (p *ModelConfig) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -4516,6 +4597,14 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -4630,6 +4719,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ModelConfig) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetProtocol() {
+		if err = oprot.WriteFieldBegin("protocol", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Protocol); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *ModelConfig) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIdentification() {
+		if err = oprot.WriteFieldBegin("identification", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Identification); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *ModelConfig) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetJSONExt() {
 		if err = oprot.WriteFieldBegin("json_ext", thrift.STRING, 50); err != nil {
@@ -4676,6 +4801,12 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.TopP) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Protocol) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.Identification) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.JSONExt) {
@@ -4740,6 +4871,30 @@ func (p *ModelConfig) Field5DeepEqual(src *float64) bool {
 		return false
 	}
 	if *p.TopP != *src {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field6DeepEqual(src *manage.Protocol) bool {
+
+	if p.Protocol == src {
+		return true
+	} else if p.Protocol == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Protocol, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field7DeepEqual(src *string) bool {
+
+	if p.Identification == src {
+		return true
+	} else if p.Identification == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Identification, *src) != 0 {
 		return false
 	}
 	return true

@@ -36,11 +36,13 @@ func ModelConfigDO2DTO(modelConfig *commonentity.ModelConfig, toolCallConfig *co
 		toolChoice = gptr.Of(ToolChoiceTypeDO2DTO(toolCallConfig.ToolChoice))
 	}
 	return &runtimedto.ModelConfig{
-		ModelID:     modelConfig.ModelID,
-		Temperature: modelConfig.Temperature,
-		MaxTokens:   gptr.Of(int64(gptr.Indirect(modelConfig.MaxTokens))),
-		TopP:        modelConfig.TopP,
-		ToolChoice:  toolChoice,
+		ModelID:        modelConfig.ModelID,
+		Temperature:    modelConfig.Temperature,
+		MaxTokens:      gptr.Of(int64(gptr.Indirect(modelConfig.MaxTokens))),
+		TopP:           modelConfig.TopP,
+		ToolChoice:     toolChoice,
+		Protocol:       modelConfig.Protocol,
+		Identification: modelConfig.Identification,
 	}
 }
 
