@@ -1381,3 +1381,145 @@ func TestTraceHubServiceImpl_preDispatchCycleCreativeError(t *testing.T) {
 	require.ErrorContains(t, err, "cycle create fail")
 	require.Equal(t, 1, len(procMock.createTaskRunReqs))
 }
+
+func TestTraceHubServiceImpl_buildSubscriberOfSpan_Filtering(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	configLoader := config_mocks.NewMockITraceConfig(ctrl)
+
+	impl := &TraceHubServiceImpl{
+		taskRepo:      mockRepo,
+		config:        configLoader,
+		localCache:    NewLocalCache(),
+		taskProcessor: processor.NewTaskProcessor(),
+	}
+
+	// Setup local cache to pass the initial span filter
+	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{
+		WorkspaceIDs: []string{"space-1"},
+	})
+
+	baseSpan := &loop_span.Span{
+		TraceID:     "trace-1",
+		SpanID:      "span-1",
+		WorkspaceID: "space-1",
+		StartTime:   2000,
+	}
+
+	tests := []struct {
+		name        string
+		configSetup func()
+		taskSetup   func() *entity.ObservabilityTask
+		spanSetup   func() *loop_span.Span
+	}{
+		{
+			name: "Filter by SpaceList",
+			configSetup: func() {
+				configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{
+					IsAllSpace: false,
+					SpaceList:  []int64{999},
+				}, nil)
+			},
+			taskSetup: func() *entity.ObservabilityTask {
+				return &entity.ObservabilityTask{
+					ID:            1,
+					WorkspaceID:   1,
+					TaskType:      entity.TaskTypeAutoEval,
+					EffectiveTime: &entity.EffectiveTime{StartAt: 1000},
+				}
+			},
+		},
+		{
+			name: "Filter by Nil EffectiveTime",
+			configSetup: func() {
+				configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{
+					IsAllSpace: true,
+				}, nil)
+			},
+			taskSetup: func() *entity.ObservabilityTask {
+				return &entity.ObservabilityTask{
+					ID:            2,
+					WorkspaceID:   1,
+					TaskType:      entity.TaskTypeAutoEval,
+					EffectiveTime: nil,
+				}
+			},
+		},
+		{
+			name: "Filter by Zero StartAt",
+			configSetup: func() {
+				configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{
+					IsAllSpace: true,
+				}, nil)
+			},
+			taskSetup: func() *entity.ObservabilityTask {
+				return &entity.ObservabilityTask{
+					ID:            3,
+					WorkspaceID:   1,
+					TaskType:      entity.TaskTypeAutoEval,
+					EffectiveTime: &entity.EffectiveTime{StartAt: 0},
+				}
+			},
+		},
+		{
+			name: "Filter by Pending Status",
+			configSetup: func() {
+				configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{
+					IsAllSpace: true,
+				}, nil)
+			},
+			taskSetup: func() *entity.ObservabilityTask {
+				return &entity.ObservabilityTask{
+					ID:            4,
+					WorkspaceID:   1,
+					TaskType:      entity.TaskTypeAutoEval,
+					TaskStatus:    entity.TaskStatusPending,
+					EffectiveTime: &entity.EffectiveTime{StartAt: 1000},
+				}
+			},
+		},
+		{
+			name: "Filter by Span StartTime before Task StartAt",
+			configSetup: func() {
+				configLoader.EXPECT().GetConsumerListening(gomock.Any()).Return(&componentconfig.ConsumerListening{
+					IsAllSpace: true,
+				}, nil)
+			},
+			taskSetup: func() *entity.ObservabilityTask {
+				return &entity.ObservabilityTask{
+					ID:            5,
+					WorkspaceID:   1,
+					TaskType:      entity.TaskTypeAutoEval,
+					EffectiveTime: &entity.EffectiveTime{StartAt: 3000},
+				}
+			},
+			spanSetup: func() *loop_span.Span {
+				s := *baseSpan
+				s.StartTime = 2000
+				return &s
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.configSetup()
+			taskDO := tt.taskSetup()
+
+			mockRepo.EXPECT().ListNonFinalTaskBySpaceID(gomock.Any(), "space-1").Return([]int64{taskDO.ID}, nil)
+			mockRepo.EXPECT().GetTaskByCache(gomock.Any(), taskDO.ID).Return(taskDO, nil)
+
+			span := baseSpan
+			if tt.spanSetup != nil {
+				span = tt.spanSetup()
+			}
+
+			err := impl.SpanTrigger(context.Background(), span)
+			require.NoError(t, err)
+		})
+	}
+}
