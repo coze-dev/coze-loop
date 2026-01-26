@@ -20,7 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/config"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -33,11 +33,13 @@ var (
 
 func NewOnboardApplicationImpl(
 	auth rpc.IAuthProvider,
-	configer config.IOnboardConfiger,
+	configer conf.IOnboardConfiger,
 	evaluationSetService service.IEvaluationSetService,
 	evaluationSetVersionService service.EvaluationSetVersionService,
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluatorService service.EvaluatorService,
+	templateManager service.IExptTemplateManager,
+	evalTargetService service.IEvalTargetService,
 ) expt.OnboardService {
 	onboardApplicationOnce.Do(func() {
 		onboardApplication = &OnboardApplicationImpl{
@@ -47,6 +49,8 @@ func NewOnboardApplicationImpl(
 			evaluationSetVersionService: evaluationSetVersionService,
 			evaluationSetItemService:    evaluationSetItemService,
 			evaluatorService:            evaluatorService,
+			templateManager:             templateManager,
+			evalTargetService:           evalTargetService,
 		}
 	})
 	return onboardApplication
@@ -54,11 +58,13 @@ func NewOnboardApplicationImpl(
 
 type OnboardApplicationImpl struct {
 	auth                        rpc.IAuthProvider
-	configer                    config.IOnboardConfiger
+	configer                    conf.IOnboardConfiger
 	evaluationSetService        service.IEvaluationSetService
 	evaluationSetVersionService service.EvaluationSetVersionService
 	evaluationSetItemService    service.EvaluationSetItemService
 	evaluatorService            service.EvaluatorService
+	templateManager             service.IExptTemplateManager
+	evalTargetService           service.IEvalTargetService
 }
 
 // Onboard 实现onboard接口：根据模板id从tcc读取配置，创建评测集，提交版本，创建评估器
@@ -88,10 +94,15 @@ func (o *OnboardApplicationImpl) Onboard(ctx context.Context, req *expt.OnboardR
 	sessionDO := o.buildSessionFromCtx(ctx)
 
 	// 5. 评测集相关流程（创建评测集、items 和版本）
-	o.setupEvaluationSetFlow(ctx, req.WorkspaceID, onboardConfig, sessionDO)
+	evalSetID, evalSetVersionID := o.setupEvaluationSetFlow(ctx, req.WorkspaceID, onboardConfig, sessionDO)
 
 	// 6. 评估器相关流程（即使评测集创建失败，也尝试创建评估器）
-	o.setupEvaluatorsFlow(ctx, req.WorkspaceID, templateID, onboardConfig)
+	evaluatorIDVersionItems := o.setupEvaluatorsFlow(ctx, req.WorkspaceID, templateID, onboardConfig)
+
+	// 7. 创建实验模板（基于创建的评测集、评估器和source_target_id）
+	if evalSetID > 0 && evalSetVersionID > 0 && len(evaluatorIDVersionItems) > 0 && req.SourceTargetID != nil {
+		o.setupExptTemplateFlow(ctx, req.WorkspaceID, req.GetSourceTargetID(), evalSetID, evalSetVersionID, evaluatorIDVersionItems, onboardConfig, sessionDO)
+	}
 
 	return &expt.OnboardResponse{
 		BaseResp: base.NewBaseResp(),
@@ -132,17 +143,24 @@ func (o *OnboardApplicationImpl) buildSessionFromCtx(ctx context.Context) *entit
 
 // setupEvaluationSetFlow 负责评测集全流程：创建评测集 -> 批量新增 items -> 创建版本
 // 行为与原 Onboard 方法保持一致：任一步失败都会跳过后续评测集步骤，但不会影响评估器流程。
+// 返回创建的评测集ID和版本ID（如果创建失败则返回0）
 func (o *OnboardApplicationImpl) setupEvaluationSetFlow(
 	ctx context.Context,
 	workspaceID int64,
-	onboardConfig *config.OnboardTemplateConfig,
+	onboardConfig *conf.OnboardTemplateConfig,
 	sessionDO *entity.Session,
-) {
-	// 1. 构造评测集 schema 和业务类目
+) (evalSetID, evalSetVersionID int64) {
+	// 1. 检查评测集配置是否存在
+	if onboardConfig.EvaluationSet == nil {
+		logs.CtxError(ctx, "evaluation set config is nil, skip evaluation set related steps and proceed to evaluator creation")
+		return 0, 0
+	}
+
+	// 2. 构造评测集 schema 和业务类目
 	schemaDO := buildEvaluationSetSchema(onboardConfig)
 	bizCategory := buildBizCategory(onboardConfig)
 
-	// 2. 创建评测集
+	// 3. 创建评测集
 	evalSetID, err := o.evaluationSetService.CreateEvaluationSet(ctx, &entity.CreateEvaluationSetParam{
 		SpaceID:             workspaceID,
 		Name:                onboardConfig.EvaluationSet.Name,
@@ -153,30 +171,32 @@ func (o *OnboardApplicationImpl) setupEvaluationSetFlow(
 	})
 	if err != nil {
 		logs.CtxError(ctx, "failed to create evaluation set: %v, skip evaluation set related steps and proceed to evaluator creation", err)
-		return
+		return 0, 0
 	}
 	logs.CtxInfo(ctx, "created evaluation set with id: %d", evalSetID)
 
-	// 3. 批量创建评测集 items
+	// 4. 批量创建评测集 items
 	itemsCreated := o.batchCreateEvaluationSetItems(ctx, workspaceID, evalSetID, onboardConfig)
 
-	// 4. 创建评测集版本（仅在 items 创建成功时执行）
+	// 5. 创建评测集版本（仅在 items 创建成功时执行）
 	if itemsCreated {
-		o.createEvaluationSetVersion(ctx, workspaceID, evalSetID, onboardConfig)
+		versionID := o.createEvaluationSetVersion(ctx, workspaceID, evalSetID, onboardConfig)
+		return evalSetID, versionID
 	}
+	return evalSetID, 0
 }
 
 // buildEvaluationSetSchema 根据配置构建评测集 schema
-func buildEvaluationSetSchema(onboardConfig *config.OnboardTemplateConfig) *entity.EvaluationSetSchema {
-	if onboardConfig.EvaluationSet.EvaluationSetSchema == nil {
+func buildEvaluationSetSchema(onboardConfig *conf.OnboardTemplateConfig) *entity.EvaluationSetSchema {
+	if onboardConfig.EvaluationSet == nil || onboardConfig.EvaluationSet.EvaluationSetSchema == nil {
 		return nil
 	}
 	return evaluation_set_convertor.SchemaDTO2DO(onboardConfig.EvaluationSet.EvaluationSetSchema)
 }
 
 // buildBizCategory 根据配置构建业务类目指针
-func buildBizCategory(onboardConfig *config.OnboardTemplateConfig) *entity.BizCategory {
-	if onboardConfig.EvaluationSet.BizCategory == "" {
+func buildBizCategory(onboardConfig *conf.OnboardTemplateConfig) *entity.BizCategory {
+	if onboardConfig.EvaluationSet == nil || onboardConfig.EvaluationSet.BizCategory == "" {
 		return nil
 	}
 	bizCategoryVal := onboardConfig.EvaluationSet.BizCategory
@@ -187,9 +207,9 @@ func buildBizCategory(onboardConfig *config.OnboardTemplateConfig) *entity.BizCa
 func (o *OnboardApplicationImpl) batchCreateEvaluationSetItems(
 	ctx context.Context,
 	workspaceID, evalSetID int64,
-	onboardConfig *config.OnboardTemplateConfig,
+	onboardConfig *conf.OnboardTemplateConfig,
 ) bool {
-	if len(onboardConfig.EvaluationSet.Items) == 0 {
+	if onboardConfig.EvaluationSet == nil || len(onboardConfig.EvaluationSet.Items) == 0 {
 		return true
 	}
 
@@ -239,11 +259,12 @@ func (o *OnboardApplicationImpl) batchCreateEvaluationSetItems(
 }
 
 // createEvaluationSetVersion 创建评测集版本，失败只记录日志，不影响后续评估器流程
+// 返回创建的版本ID（如果创建失败则返回0）
 func (o *OnboardApplicationImpl) createEvaluationSetVersion(
 	ctx context.Context,
 	workspaceID, evalSetID int64,
-	onboardConfig *config.OnboardTemplateConfig,
-) {
+	onboardConfig *conf.OnboardTemplateConfig,
+) int64 {
 	versionDesc := onboardConfig.EvaluationSet.VersionDesc
 	if versionDesc == "" {
 		versionDesc = "onboard initial version"
@@ -256,19 +277,22 @@ func (o *OnboardApplicationImpl) createEvaluationSetVersion(
 	})
 	if err != nil {
 		logs.CtxError(ctx, "failed to create evaluation set version: %v, proceed to evaluator creation", err)
-		return
+		return 0
 	}
 	logs.CtxInfo(ctx, "created evaluation set version with id: %d", versionID)
+	return versionID
 }
 
 // setupEvaluatorsFlow 按配置创建评估器列表
 // 行为保持不变：单个评估器失败只记录日志并跳过，其余继续。
+// 返回创建的评估器ID版本项列表（包含EvaluatorID、Version、EvaluatorVersionID）
 func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 	ctx context.Context,
 	workspaceID int64,
 	templateID string,
-	onboardConfig *config.OnboardTemplateConfig,
-) {
+	onboardConfig *conf.OnboardTemplateConfig,
+) []*entity.EvaluatorIDVersionItem {
+	evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0)
 	for i, evaluatorConfig := range onboardConfig.Evaluators {
 		evaluatorDO, err := o.buildEvaluatorDO(ctx, workspaceID, evaluatorConfig)
 		if err != nil {
@@ -282,11 +306,32 @@ func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 			continue
 		}
 		logs.CtxInfo(ctx, "created evaluator with id: %d", evaluatorID)
+
+		// 获取创建的评估器以获取版本ID
+		evaluators, err := o.evaluatorService.BatchGetEvaluator(ctx, workspaceID, []int64{evaluatorID}, false)
+		if err != nil || len(evaluators) == 0 {
+			logs.CtxWarn(ctx, "failed to get evaluator %d after creation: %v, skip adding to template", evaluatorID, err)
+			continue
+		}
+		evaluator := evaluators[0]
+		if evaluator == nil {
+			logs.CtxWarn(ctx, "evaluator %d is nil after creation, skip adding to template", evaluatorID)
+			continue
+		}
+
+		// 构建 EvaluatorIDVersionItem
+		item := &entity.EvaluatorIDVersionItem{
+			EvaluatorID:        evaluator.GetEvaluatorID(),
+			Version:            evaluator.GetVersion(),
+			EvaluatorVersionID: evaluator.GetEvaluatorVersionID(),
+		}
+		evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
 	}
+	return evaluatorIDVersionItems
 }
 
 // buildEvaluatorDO 根据配置构建评估器DO
-func (o *OnboardApplicationImpl) buildEvaluatorDO(ctx context.Context, workspaceID int64, cfg *config.OnboardEvaluatorConfig) (*entity.Evaluator, error) {
+func (o *OnboardApplicationImpl) buildEvaluatorDO(ctx context.Context, workspaceID int64, cfg *conf.OnboardEvaluatorConfig) (*entity.Evaluator, error) {
 	userID := session.UserIDInCtxOrEmpty(ctx)
 
 	// 构建评估器DTO
@@ -319,4 +364,228 @@ func (o *OnboardApplicationImpl) buildEvaluatorDO(ctx context.Context, workspace
 	}
 
 	return evaluatorDO, nil
+}
+
+// setupExptTemplateFlow 创建实验模板流程
+// 基于创建的评测集、评估器和source_target_id，以及TCC中的模板配置创建实验模板
+func (o *OnboardApplicationImpl) setupExptTemplateFlow(
+	ctx context.Context,
+	workspaceID int64,
+	sourceTargetID string,
+	evalSetID, evalSetVersionID int64,
+	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
+	onboardConfig *conf.OnboardTemplateConfig,
+	sessionDO *entity.Session,
+) {
+	// 如果没有模板配置，跳过创建模板流程
+	if onboardConfig.Template == nil {
+		logs.CtxInfo(ctx, "no template config in onboard config, skip creating experiment template")
+		return
+	}
+
+	templateConfig := onboardConfig.Template
+
+	// 1. 构建 CreateEvalTargetParam，直接注入 source_target_id 和 target_type
+	createEvalTargetParam := &entity.CreateEvalTargetParam{
+		SourceTargetID: gptr.Of(sourceTargetID),
+		EvalTargetType: gptr.Of(entity.EvalTargetTypeVolcengineAgentAgentkit),
+	}
+
+	// 2. 构建 CreateExptTemplateParam
+	param := &entity.CreateExptTemplateParam{
+		SpaceID:                 workspaceID,
+		Name:                    templateConfig.Name,
+		Description:             templateConfig.Description,
+		EvalSetID:               evalSetID,
+		EvalSetVersionID:        evalSetVersionID,
+		EvaluatorIDVersionItems: evaluatorIDVersionItems,
+		ExptType:                entity.ExptType(templateConfig.ExptType),
+		CreateEvalTargetParam:   createEvalTargetParam,
+	}
+
+	// 3. 构建 TemplateConf（从 FieldMappingConfig）
+	// 注意：targetVersionID 传入 0，因为 target 会在 service 层创建时自动填充
+	param.TemplateConf = o.buildTemplateConfFromOnboardConfig(
+		templateConfig,
+		0, // targetVersionID 会在创建 target 后自动填充
+		evaluatorIDVersionItems,
+	)
+
+	// 5. 创建实验模板
+	template, err := o.templateManager.Create(ctx, param, sessionDO)
+	if err != nil {
+		logs.CtxError(ctx, "failed to create experiment template: %v", err)
+		return
+	}
+	logs.CtxInfo(ctx, "created experiment template with id: %d", template.GetID())
+}
+
+// buildTemplateConfFromOnboardConfig 从 onboard 配置构建 TemplateConf
+func (o *OnboardApplicationImpl) buildTemplateConfFromOnboardConfig(
+	templateConfig *conf.OnboardExptTemplateConfig,
+	targetVersionID int64,
+	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
+) *entity.ExptTemplateConfiguration {
+	templateConf := &entity.ExptTemplateConfiguration{
+		ItemConcurNum:       convertInt32PtrToIntPtr(templateConfig.ItemConcurNum),
+		EvaluatorsConcurNum: convertInt32PtrToIntPtr(templateConfig.EvaluatorsConcurNum),
+	}
+
+	// 构建 TargetConf
+	var targetIngressConf *entity.TargetIngressConf
+	if templateConfig.FieldMappingConfig != nil && templateConfig.FieldMappingConfig.TargetFieldMapping != nil {
+		targetIngressConf = o.buildTargetIngressConf(templateConfig.FieldMappingConfig.TargetFieldMapping, templateConfig.FieldMappingConfig.TargetRuntimeParam)
+	}
+
+	// 构建 EvaluatorsConf
+	var evaluatorConfs []*entity.EvaluatorConf
+	if templateConfig.FieldMappingConfig != nil && len(templateConfig.FieldMappingConfig.EvaluatorFieldMapping) > 0 {
+		evaluatorConfs = o.buildEvaluatorConfs(templateConfig.FieldMappingConfig.EvaluatorFieldMapping, evaluatorIDVersionItems, templateConfig.EvaluatorScoreWeights)
+	}
+
+	// 构建 ConnectorConf
+	if targetIngressConf != nil || len(evaluatorConfs) > 0 {
+		templateConf.ConnectorConf = entity.Connector{
+			TargetConf: &entity.TargetConf{
+				TargetVersionID: targetVersionID,
+				IngressConf:     targetIngressConf,
+			},
+		}
+		if len(evaluatorConfs) > 0 {
+			templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
+				EvaluatorConf: evaluatorConfs,
+			}
+		}
+	}
+
+	return templateConf
+}
+
+// buildTargetIngressConf 构建 TargetIngressConf
+func (o *OnboardApplicationImpl) buildTargetIngressConf(
+	targetMapping *conf.OnboardTargetFieldMapping,
+	runtimeParam *conf.OnboardRuntimeParam,
+) *entity.TargetIngressConf {
+	tic := &entity.TargetIngressConf{
+		EvalSetAdapter: &entity.FieldAdapter{},
+	}
+
+	if targetMapping != nil {
+		// 构建 FromEvalSet
+		if len(targetMapping.FromEvalSet) > 0 {
+			fc := make([]*entity.FieldConf, 0, len(targetMapping.FromEvalSet))
+			for _, fm := range targetMapping.FromEvalSet {
+				fc = append(fc, &entity.FieldConf{
+					FieldName: fm.FieldName,
+					FromField: fm.FromFieldName,
+					Value:     fm.ConstValue,
+				})
+			}
+			tic.EvalSetAdapter.FieldConfs = fc
+		}
+
+		// 注意：TargetIngressConf 没有 TargetAdapter 字段，只有 EvalSetAdapter 和 CustomConf
+		// FromTarget 字段映射通常用于评估器，而不是目标本身
+		// 如果需要支持 FromTarget，可能需要调整配置结构或使用其他方式
+	}
+
+	// 构建运行时参数
+	if runtimeParam != nil && runtimeParam.JSONValue != "" {
+		tic.CustomConf = &entity.FieldAdapter{
+			FieldConfs: []*entity.FieldConf{
+				{
+					FieldName: "builtin_runtime_param",
+					Value:     runtimeParam.JSONValue,
+				},
+			},
+		}
+	}
+
+	return tic
+}
+
+// buildEvaluatorConfs 构建 EvaluatorConf 列表
+func (o *OnboardApplicationImpl) buildEvaluatorConfs(
+	evaluatorMappings []*conf.OnboardEvaluatorFieldMapping,
+	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
+	scoreWeights map[string]float64,
+) []*entity.EvaluatorConf {
+	// 构建 evaluatorIDVersionID 映射（用于匹配字段映射）
+	itemMap := make(map[string]*entity.EvaluatorIDVersionItem)
+	for _, item := range evaluatorIDVersionItems {
+		if item != nil && item.EvaluatorID > 0 && item.Version != "" {
+			key := fmt.Sprintf("%d#%s", item.EvaluatorID, item.Version)
+			itemMap[key] = item
+		}
+	}
+
+	evaluatorConfs := make([]*entity.EvaluatorConf, 0, len(evaluatorMappings))
+	for _, em := range evaluatorMappings {
+		if em == nil {
+			continue
+		}
+
+		// 查找对应的 EvaluatorIDVersionItem
+		key := fmt.Sprintf("%d#%s", em.EvaluatorID, em.Version)
+		item, ok := itemMap[key]
+		if !ok {
+			logs.CtxWarn(context.Background(), "evaluator mapping %s not found in created evaluators, skip", key)
+			continue
+		}
+
+		// 构建 IngressConf
+		ingressConf := &entity.EvaluatorIngressConf{}
+		if len(em.FromEvalSet) > 0 {
+			ingressConf.EvalSetAdapter = &entity.FieldAdapter{
+				FieldConfs: make([]*entity.FieldConf, 0, len(em.FromEvalSet)),
+			}
+			for _, fm := range em.FromEvalSet {
+				ingressConf.EvalSetAdapter.FieldConfs = append(ingressConf.EvalSetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.FieldName,
+					FromField: fm.FromFieldName,
+					Value:     fm.ConstValue,
+				})
+			}
+		}
+		if len(em.FromTarget) > 0 {
+			ingressConf.TargetAdapter = &entity.FieldAdapter{
+				FieldConfs: make([]*entity.FieldConf, 0, len(em.FromTarget)),
+			}
+			for _, fm := range em.FromTarget {
+				ingressConf.TargetAdapter.FieldConfs = append(ingressConf.TargetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.FieldName,
+					FromField: fm.FromFieldName,
+					Value:     fm.ConstValue,
+				})
+			}
+		}
+
+		// 构建 EvaluatorConf
+		conf := &entity.EvaluatorConf{
+			EvaluatorID:        item.EvaluatorID,
+			Version:            item.Version,
+			EvaluatorVersionID: item.EvaluatorVersionID,
+			IngressConf:        ingressConf,
+		}
+
+		// 应用评分权重
+		if scoreWeights != nil {
+			if w, ok := scoreWeights[key]; ok && w > 0 {
+				conf.ScoreWeight = gptr.Of(w)
+			}
+		}
+
+		evaluatorConfs = append(evaluatorConfs, conf)
+	}
+
+	return evaluatorConfs
+}
+
+// convertInt32PtrToIntPtr 将 *int32 转换为 *int
+func convertInt32PtrToIntPtr(v *int32) *int {
+	if v == nil {
+		return nil
+	}
+	val := int(*v)
+	return &val
 }
