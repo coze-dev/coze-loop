@@ -1297,9 +1297,7 @@ func OpenAPICustomRPCServerDO2DTO(do *entity.CustomRPCServer) *openapiEvalTarget
 		AsyncTimeout:        do.AsyncTimeout,
 		Ext:                 do.Ext,
 	}
-	for _, r := range do.Regions {
-		res.Regions = append(res.Regions, r)
-	}
+	res.Regions = append(res.Regions, do.Regions...)
 	return res
 }
 
