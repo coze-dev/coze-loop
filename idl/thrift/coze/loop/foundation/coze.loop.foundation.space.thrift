@@ -33,9 +33,52 @@ struct ListUserSpaceResponse {
     255: base.BaseResp  BaseResp
 }
 
+struct EnsureMappingSpaceRequest {
+    1: required string Identifier (vt.min_size = "1") // 映射标识，如项目名、应用名等
+    2: required i64 AppID (vt.gt = "0") // 应用ID
+
+    10: optional bool IncludeSpace // true: 返回完整 Space 信息；false: 仅返回 SpaceID
+    11: optional bool SkipResourceInit // true: 空间创建时不初始化资源，默认 false
+
+    255: optional base.Base Base
+}
+
+struct EnsureMappingSpaceResponse {
+    1: optional i64 SpaceID
+    2: optional bool IsCreated
+
+    10: optional space.Space Space
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetMappingSpaceRequest {
+    1: required string Identifier ( vt.min_size = "1") // 映射标识，如项目名、应用名等
+    2: required i64 AppID (vt.gt = "0")
+
+    10: optional bool IncludeSpace // true: 返回完整 Space 信息；false: 仅返回 SpaceID
+
+    255: optional base.Base Base
+}
+
+struct GetMappingSpaceResponse {
+    1: optional i64 SpaceID
+
+    10: optional space.Space Space
+
+    255: optional base.BaseResp BaseResp
+}
+
 service SpaceService{
     // 查询空间信息
     GetSpaceResponse GetSpace(1: GetSpaceRequest request) (api.get = "/api/foundation/v1/spaces/:space_id")
     // 空间列表
     ListUserSpaceResponse ListUserSpaces(1: ListUserSpaceRequest request) (api.post = "/api/foundation/v1/spaces/list")
+
+    EnsureMappingSpaceResponse EnsureMappingSpace(1: EnsureMappingSpaceRequest request) (
+        api.category="loopspace", api.post = "/api/space_manage/v1/spaces/mapping/create", api.op_type = 'create', api.tag = 'volc-agentkit'
+    )
+    GetMappingSpaceResponse GetMappingSpace(1: GetMappingSpaceRequest request) (
+        api.category="loopspace", api.post = "/api/space_manage/v1/spaces/mapping", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
 }
