@@ -1283,7 +1283,7 @@ func OpenAPICustomRPCServerDO2DTO(do *entity.CustomRPCServer) *openapiEvalTarget
 		Name:                gptr.Of(do.Name),
 		Description:         gptr.Of(do.Description),
 		ServerName:          gptr.Of(do.ServerName),
-		AccessProtocol:      gptr.Of(openapiEvalTarget.AccessProtocol(do.AccessProtocol)),
+		AccessProtocol:      gptr.Of(do.AccessProtocol),
 		Cluster:             gptr.Of(do.Cluster),
 		InvokeHTTPInfo:      OpenAPIHTTPInfoDO2DTO(do.InvokeHTTPInfo),
 		AsyncInvokeHTTPInfo: OpenAPIHTTPInfoDO2DTO(do.AsyncInvokeHTTPInfo),
@@ -1291,14 +1291,14 @@ func OpenAPICustomRPCServerDO2DTO(do *entity.CustomRPCServer) *openapiEvalTarget
 		SearchHTTPInfo:      OpenAPIHTTPInfoDO2DTO(do.SearchHTTPInfo),
 		CustomEvalTarget:    OpenAPICustomEvalTargetDO2DTO(do.CustomEvalTarget),
 		IsAsync:             do.IsAsync,
-		ExecRegion:          gptr.Of(openapiEvalTarget.Region(do.ExecRegion)),
+		ExecRegion:          gptr.Of(do.ExecRegion),
 		ExecEnv:             do.ExecEnv,
 		Timeout:             do.Timeout,
 		AsyncTimeout:        do.AsyncTimeout,
 		Ext:                 do.Ext,
 	}
 	for _, r := range do.Regions {
-		res.Regions = append(res.Regions, openapiEvalTarget.Region(r))
+		res.Regions = append(res.Regions, r)
 	}
 	return res
 }
@@ -1308,7 +1308,7 @@ func OpenAPIHTTPInfoDO2DTO(do *entity.HTTPInfo) *openapiEvalTarget.HTTPInfo {
 		return nil
 	}
 	return &openapiEvalTarget.HTTPInfo{
-		Method: gptr.Of(openapiEvalTarget.HTTPMethod(do.Method)),
+		Method: gptr.Of(do.Method),
 		Path:   gptr.Of(do.Path),
 	}
 }

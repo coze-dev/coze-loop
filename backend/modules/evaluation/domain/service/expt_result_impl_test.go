@@ -311,8 +311,15 @@ func TestExptResultServiceImpl_CreateStats(t *testing.T) {
 }
 
 func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+
 	t.Run("skip experiments without eval target", func(t *testing.T) {
-		svc := ExptResultServiceImpl{}
+		svc := ExptResultServiceImpl{
+			evalTargetService: mockEvalTargetService,
+		}
 		expts := []*entity.Experiment{
 			{
 				ID:              1,
@@ -326,7 +333,9 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 	})
 
 	t.Run("experiment with eval target but without trajectory support", func(t *testing.T) {
-		svc := ExptResultServiceImpl{}
+		svc := ExptResultServiceImpl{
+			evalTargetService: mockEvalTargetService,
+		}
 		expts := []*entity.Experiment{
 			{
 				ID:              2,
@@ -334,6 +343,21 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 				TargetType:      entity.EvalTargetTypeCozeBot, // SupptTrajectory == false
 			},
 		}
+
+		mockEvalTargetService.EXPECT().
+			BatchGetEvalTargetVersion(gomock.Any(), int64(100), []int64{1}, false).
+			Return([]*entity.EvalTarget{
+				{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID: 1,
+						OutputSchema: []*entity.ArgsSchema{
+							{
+								Key: gptr.Of(consts.ReportColumnNameEvalTargetActualOutput),
+							},
+						},
+					},
+				},
+			}, nil)
 
 		got, err := svc.getExptColumnsEvalTarget(context.Background(), int64(100), expts, false)
 		assert.NoError(t, err)
@@ -351,7 +375,9 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 	})
 
 	t.Run("experiment with eval target and trajectory support, fullTrajectory=true", func(t *testing.T) {
-		svc := ExptResultServiceImpl{}
+		svc := ExptResultServiceImpl{
+			evalTargetService: mockEvalTargetService,
+		}
 		expts := []*entity.Experiment{
 			{
 				ID:              3,
@@ -359,6 +385,21 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
 			},
 		}
+
+		mockEvalTargetService.EXPECT().
+			BatchGetEvalTargetVersion(gomock.Any(), int64(100), []int64{1}, false).
+			Return([]*entity.EvalTarget{
+				{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID: 1,
+						OutputSchema: []*entity.ArgsSchema{
+							{
+								Key: gptr.Of(consts.ReportColumnNameEvalTargetActualOutput),
+							},
+						},
+					},
+				},
+			}, nil)
 
 		got, err := svc.getExptColumnsEvalTarget(context.Background(), int64(100), expts, true)
 		assert.NoError(t, err)
@@ -372,7 +413,9 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 	})
 
 	t.Run("experiment with eval target and trajectory support, fullTrajectory=false", func(t *testing.T) {
-		svc := ExptResultServiceImpl{}
+		svc := ExptResultServiceImpl{
+			evalTargetService: mockEvalTargetService,
+		}
 		expts := []*entity.Experiment{
 			{
 				ID:              4,
@@ -380,6 +423,21 @@ func TestExptResultServiceImpl_getExptColumnsEvalTarget(t *testing.T) {
 				TargetType:      entity.EvalTargetTypeVolcengineAgent, // SupptTrajectory == true
 			},
 		}
+
+		mockEvalTargetService.EXPECT().
+			BatchGetEvalTargetVersion(gomock.Any(), int64(100), []int64{1}, false).
+			Return([]*entity.EvalTarget{
+				{
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						ID: 1,
+						OutputSchema: []*entity.ArgsSchema{
+							{
+								Key: gptr.Of(consts.ReportColumnNameEvalTargetActualOutput),
+							},
+						},
+					},
+				},
+			}, nil)
 
 		got, err := svc.getExptColumnsEvalTarget(context.Background(), int64(100), expts, false)
 		assert.NoError(t, err)

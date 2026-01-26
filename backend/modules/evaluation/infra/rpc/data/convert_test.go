@@ -170,6 +170,7 @@ func TestConvert2EvaluationSetFieldData(t *testing.T) {
 					Text:        gptr.Of("Audio description"),
 					Image:       nil,
 					Audio: &entity.Audio{
+						Name:   gptr.Of("test.mp3"),
 						Format: gptr.Of("mp3"),
 						URL:    gptr.Of("https://example.com/test.mp3"),
 					},
@@ -210,6 +211,7 @@ func TestConvert2EvaluationSetFieldData(t *testing.T) {
 						StorageProvider: gptr.Of(entity.StorageProvider_ImageX),
 					},
 					Audio: &entity.Audio{
+						Name:   gptr.Of("audio.wav"),
 						Format: gptr.Of("wav"),
 						URL:    gptr.Of("https://example.com/audio.wav"),
 					},
@@ -465,6 +467,7 @@ func TestConvert2EvaluationSetFieldData(t *testing.T) {
 								URL:  gptr.Of("https://example.com/media.jpg"),
 							},
 							Audio: &entity.Audio{
+								Name:   gptr.Of("sound.mp3"),
 								Format: gptr.Of("mp3"),
 								URL:    gptr.Of("https://example.com/sound.mp3"),
 							},
@@ -475,6 +478,7 @@ func TestConvert2EvaluationSetFieldData(t *testing.T) {
 									Text:        gptr.Of("Nested audio content"),
 									Image:       nil,
 									Audio: &entity.Audio{
+										Name:   gptr.Of("nested.wav"),
 										Format: gptr.Of("wav"),
 										URL:    gptr.Of("https://example.com/nested.wav"),
 									},

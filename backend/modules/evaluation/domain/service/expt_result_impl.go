@@ -588,10 +588,10 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 }
 
 var (
-	columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
-		Name:  consts.ReportColumnNameEvalTargetActualOutput,
-		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
-	}
+	// columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
+	// 	Name:  consts.ReportColumnNameEvalTargetActualOutput,
+	// 	Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
+	// }
 	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
@@ -608,18 +608,22 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 	// 查询评估对象信息
 	versionIDs := make([]int64, 0)
 	for _, expt := range expts {
-		versionIDs = append(versionIDs, expt.TargetVersionID)
-	}
-	targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
-	if err != nil {
-		return nil, err
+		if expt.ContainsEvalTarget() {
+			versionIDs = append(versionIDs, expt.TargetVersionID)
+		}
 	}
 	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
-	for _, info := range targetInfos {
-		if info.EvalTargetVersion == nil {
-			continue
+	if len(versionIDs) > 0 {
+		targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
+		if err != nil {
+			return nil, err
 		}
-		versionID2TargetInfo[info.EvalTargetVersion.ID] = info
+		for _, info := range targetInfos {
+			if info.EvalTargetVersion == nil {
+				continue
+			}
+			versionID2TargetInfo[info.EvalTargetVersion.ID] = info
+		}
 	}
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {

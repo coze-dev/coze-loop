@@ -1365,6 +1365,7 @@ func (e *EvaluatorHandlerImpl) fillURLs(uriToContentMap map[string][]*evaluatorc
 		}
 	}
 }
+
 func (e *EvaluatorHandlerImpl) fillAudioURLs(uriToContentMap map[string][]*evaluatorcommon.Audio, urlMap map[string]string) {
 	for uri, content := range uriToContentMap {
 		if url, exists := urlMap[uri]; exists {
@@ -1374,6 +1375,7 @@ func (e *EvaluatorHandlerImpl) fillAudioURLs(uriToContentMap map[string][]*evalu
 		}
 	}
 }
+
 func (e *EvaluatorHandlerImpl) fillVideoURLs(uriToContentMap map[string][]*evaluatorcommon.Video, urlMap map[string]string) {
 	for uri, content := range uriToContentMap {
 		if url, exists := urlMap[uri]; exists {
