@@ -29,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -68,6 +69,9 @@ type experimentApplication struct {
 
 	// 新增：EvaluatorService 用于查询内置评估器版本
 	evaluatorService service.EvaluatorService
+
+	// 实验模板管理服务
+	templateManager service.IExptTemplateManager
 }
 
 func NewExperimentApplication(
@@ -87,6 +91,7 @@ func NewExperimentApplication(
 	exptResultExportService service.IExptResultExportService,
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
 	evaluatorService service.EvaluatorService,
+	templateManager service.IExptTemplateManager,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -105,6 +110,7 @@ func NewExperimentApplication(
 		IExptResultExportService:    exptResultExportService,
 		IExptInsightAnalysisService: exptInsightAnalysisService,
 		evaluatorService:            evaluatorService,
+		templateManager:             templateManager,
 	}
 }
 
@@ -117,8 +123,8 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	logs.CtxInfo(ctx, "CreateExperiment userIDInContext: %s", session.UserID)
 
-	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）
-	evalVersionIDs, evaluatorVersionRunConfigs, err := e.resolveEvaluatorVersionIDs(ctx, req)
+	// 收集 evaluator_version_id（包含顺序解析 EvaluatorIDVersionList）、runconfig 和 score weight
+	evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, err := e.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +144,11 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	}
 	req.EvaluatorVersionIds = evalVersionIDs
 
+	// 将解析出的权重配置合并到请求中（如果请求中没有显式设置）
+	if len(evaluatorScoreWeights) > 0 && len(req.EvaluatorScoreWeights) == 0 {
+		req.EvaluatorScoreWeights = evaluatorScoreWeights
+	}
+
 	param, err := experiment.ConvertCreateReq(req, evaluatorVersionRunConfigs)
 	if err != nil {
 		return nil, err
@@ -150,6 +161,273 @@ func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.
 	return &expt.CreateExperimentResponse{
 		Experiment: experiment.ToExptDTO(createExpt),
 		BaseResp:   base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest) (r *expt.CreateExperimentTemplateResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+	logs.CtxInfo(ctx, "CreateExperimentTemplate userIDInContext: %s", session.UserID)
+
+	// 权限校验
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	param, err := experiment.ConvertCreateExptTemplateReq(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 业务逻辑已下沉到 service 层，在 Create 方法中会自动解析并回填 evaluator_version_id
+	createTemplate, err := e.templateManager.Create(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := experiment.ToExptTemplateDTO(createTemplate)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
+
+	return &expt.CreateExperimentTemplateResponse{
+		ExperimentTemplate: dto,
+		BaseResp:           base.NewBaseResp(),
+	}, nil
+}
+
+// BatchGetExperimentTemplate 批量获取实验模板
+func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, req *expt.BatchGetExperimentTemplateRequest) (r *expt.BatchGetExperimentTemplateResponse, err error) {
+	session := entity.NewSession(ctx)
+	logs.CtxInfo(ctx, "BatchGetExperimentTemplate template_ids: %v, workspace_id: %d", req.GetTemplateIds(), req.GetWorkspaceID())
+
+	templateIDs := req.GetTemplateIds()
+	if len(templateIDs) == 0 {
+		return &expt.BatchGetExperimentTemplateResponse{
+			ExperimentTemplates: nil,
+			BaseResp:            base.NewBaseResp(),
+		}, nil
+	}
+
+	templates, err := e.templateManager.MGet(ctx, templateIDs, req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 权限校验，抽象成与实验类似的批量鉴权方法
+	if err := e.AuthReadExptTemplates(ctx, templates, req.GetWorkspaceID()); err != nil {
+		return nil, err
+	}
+
+	dtos := experiment.ToExptTemplateDTOs(templates)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, dtos)
+
+	return &expt.BatchGetExperimentTemplateResponse{
+		ExperimentTemplates: dtos,
+		BaseResp:            base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, req *expt.UpdateExperimentTemplateRequest) (r *expt.UpdateExperimentTemplateResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	// 从顶层字段提取 template_id 和 workspace_id
+	templateID := req.GetTemplateID()
+	workspaceID := req.GetWorkspaceID()
+	if templateID == 0 || workspaceID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id and workspace_id are required"))
+	}
+
+	logs.CtxInfo(ctx, "UpdateExperimentTemplate template_id: %d, workspace_id: %d", templateID, workspaceID)
+
+	// 获取现有模板用于权限校验
+	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 权限校验
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(templateID, 10),
+		SpaceID:         workspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+		OwnerID:         gptr.Of(got.GetCreatedBy()),
+		ResourceSpaceID: workspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换请求参数
+	param, err := experiment.ConvertUpdateExptTemplateReq(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新模板
+	updatedTemplate, err := e.templateManager.Update(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	dto := experiment.ToExptTemplateDTO(updatedTemplate)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, []*domain_expt.ExptTemplate{dto})
+
+	return &expt.UpdateExperimentTemplateResponse{
+		ExperimentTemplate: dto,
+		BaseResp:           base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) UpdateExperimentTemplateMeta(ctx context.Context, req *expt.UpdateExperimentTemplateMetaRequest) (r *expt.UpdateExperimentTemplateMetaResponse, err error) {
+	session := entity.NewSession(ctx)
+
+	templateID := req.GetTemplateID()
+	workspaceID := req.GetWorkspaceID()
+	if templateID == 0 || workspaceID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id and workspace_id are required"))
+	}
+
+	logs.CtxInfo(ctx, "UpdateExperimentTemplateMeta template_id: %d, workspace_id: %d", templateID, workspaceID)
+
+	// 获取现有模板用于权限校验
+	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 权限校验
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(templateID, 10),
+		SpaceID:         workspaceID,
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+		OwnerID:         gptr.Of(got.GetCreatedBy()),
+		ResourceSpaceID: workspaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换请求参数
+	param, err := experiment.ConvertUpdateExptTemplateMetaReq(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新模板 meta
+	updatedTemplate, err := e.templateManager.UpdateMeta(ctx, param, session)
+	if err != nil {
+		return nil, err
+	}
+
+	// 转换为 Meta DTO
+	var metaDTO *domain_expt.ExptTemplateMeta
+	if updatedTemplate.Meta != nil {
+		metaDTO = &domain_expt.ExptTemplateMeta{
+			ID:          gptr.Of(updatedTemplate.Meta.ID),
+			WorkspaceID: gptr.Of(updatedTemplate.Meta.WorkspaceID),
+			Name:        gptr.Of(updatedTemplate.Meta.Name),
+			Desc:        gptr.Of(updatedTemplate.Meta.Desc),
+			ExptType:    gptr.Of(domain_expt.ExptType(updatedTemplate.Meta.ExptType)),
+		}
+	}
+
+	return &expt.UpdateExperimentTemplateMetaResponse{
+		Meta:     metaDTO,
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest) (r *expt.DeleteExperimentTemplateResponse, err error) {
+	session := entity.NewSession(ctx)
+	logs.CtxInfo(ctx, "DeleteExperimentTemplate template_id: %d, workspace_id: %d", req.GetTemplateID(), req.GetWorkspaceID())
+
+	// 获取现有模板用于权限校验
+	existingTemplate, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if existingTemplate == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template not found"))
+	}
+
+	// 权限校验
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetTemplateID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+		OwnerID:         gptr.Of(existingTemplate.GetCreatedBy()),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 删除模板
+	if err := e.templateManager.Delete(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session); err != nil {
+		return nil, err
+	}
+
+	return &expt.DeleteExperimentTemplateResponse{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+// ListExperimentTemplates 列出实验模板
+func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest) (r *expt.ListExperimentTemplatesResponse, err error) {
+	session := entity.NewSession(ctx)
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// 当 FilterOption 为空时，直接不下发过滤条件，避免在 Filter 转换过程中出现空指针等异常
+	var filters *entity.ExptTemplateListFilter
+	if req.GetFilterOption() != nil {
+		filters, err = experiment.NewExptTemplateFilterConvertor(e.evalTargetService).Convert(ctx, req.GetFilterOption(), req.GetWorkspaceID())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	orderBys := slices.Transform(req.GetOrderBys(), func(e *common.OrderBy, _ int) *entity.OrderBy {
+		return &entity.OrderBy{Field: gptr.Of(e.GetField()), IsAsc: gptr.Of(e.GetIsAsc())}
+	})
+	// 如果没有显式指定排序字段，默认按 updated_at 倒序
+	if len(orderBys) == 0 {
+		orderBys = []*entity.OrderBy{
+			{
+				Field: gptr.Of(entity.OrderByUpdatedAt),
+				IsAsc: gptr.Of(false),
+			},
+		}
+	}
+	templates, count, err := e.templateManager.List(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
+	if err != nil {
+		return nil, err
+	}
+
+	dtos := experiment.ToExptTemplateDTOs(templates)
+	// 填充完整的用户信息
+	e.mPackExptTemplateUserInfo(ctx, dtos)
+
+	return &expt.ListExperimentTemplatesResponse{
+		ExperimentTemplates: dtos,
+		Total:               gptr.Of(int32(count)),
+		BaseResp:            base.NewBaseResp(),
 	}, nil
 }
 
@@ -167,7 +445,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	cresp, err := e.CreateExperiment(ctx, &expt.CreateExperimentRequest{
+	// 构建 CreateExperimentRequest，resolveEvaluatorVersionIDs 流程已在 CreateExperiment 中完成
+	createReq := &expt.CreateExperimentRequest{
 		WorkspaceID:            req.GetWorkspaceID(),
 		EvalSetVersionID:       req.EvalSetVersionID,
 		EvalSetID:              req.EvalSetID,
@@ -186,7 +465,13 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TargetRuntimeParam:     req.TargetRuntimeParam,
 		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
 		Session:                req.Session,
-	})
+		EnableWeightedScore:    req.EnableWeightedScore,
+		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
+	}
+	if req.IsSetExptTemplateID() {
+		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
+	}
+	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
 	}
@@ -202,6 +487,17 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	// 如果有关联的实验模板，更新模板的 ExptInfo（创建实验，数量 +1）
+	if req.IsSetExptTemplateID() && req.GetExptTemplateID() > 0 {
+		exptID := gptr.Indirect(cresp.GetExperiment().ID)
+		exptStatus := entity.ExptStatus_Pending // Submit 时实验状态为 Pending
+		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1); err != nil {
+			// 记录错误但不影响主流程
+			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed after SubmitExperiment, template_id: %v, expt_id: %v, err: %v",
+				req.GetExptTemplateID(), exptID, err)
+		}
+	}
+
 	return &expt.SubmitExperimentResponse{
 		Experiment: cresp.GetExperiment(),
 		RunID:      gptr.Of(rresp.GetRunID()),
@@ -209,12 +505,25 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}, nil
 }
 
-// resolveEvaluatorVersionIDs 汇总 evaluator_version_ids：
+// resolveEvaluatorVersionIDsFromCreateReq 汇总 evaluator_version_ids、runconfig 和权重配置：
 // 1) 先取请求中的 EvaluatorVersionIds
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
-func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, error) {
+// 3) 从 EvaluatorIDVersionList 中提取 runconfig 和权重配置，构建 evaluator_version_id 到 runconfig/权重的映射
+// 注意：runconfig 用于评估器运行时配置，score weight 用于加权分数计算
+func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
+
+	// 权重映射：key 为 evaluator_version_id，value 为权重（用于加权分数计算）
+	evaluatorScoreWeights := make(map[int64]float64)
+	// 如果请求中已经显式设置了权重，优先使用
+	if len(req.EvaluatorScoreWeights) > 0 {
+		for k, v := range req.EvaluatorScoreWeights {
+			if v > 0 {
+				evaluatorScoreWeights[k] = v
+			}
+		}
+	}
 
 	// 解析有序列表并批量查询：将 BuiltinVisible 与普通版本分离，分别批量查，最后按输入顺序回填版本ID
 	items := req.GetEvaluatorIDVersionList()
@@ -241,7 +550,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(builtinIDs) > 0 {
 		evs, err := e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev != nil {
@@ -254,7 +563,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 	if len(normalPairs) > 0 {
 		evs, err := e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		for _, ev := range evs {
 			if ev == nil {
@@ -265,7 +574,9 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 	}
 
-	// 按输入顺序回填版本ID
+	// 按输入顺序回填版本ID，同时提取 runconfig 和权重配置
+	// runconfig: 用于评估器运行时配置（如超时、重试等）
+	// score weight: 用于加权分数计算
 	evaluatorVersionRunConfigs := make(map[int64]*evaluatordto.EvaluatorRunConfig)
 	for _, it := range items {
 		if it == nil {
@@ -288,8 +599,19 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 		if verID := ev.GetEvaluatorVersionID(); verID != 0 {
 			evalVersionIDs = append(evalVersionIDs, verID)
+			// 提取 runconfig（如果存在）- 用于评估器运行时配置
 			if it.RunConfig != nil {
 				evaluatorVersionRunConfigs[verID] = it.RunConfig
+			}
+			// 提取权重配置（如果存在且请求中未显式设置）- 用于加权分数计算
+			if it.ScoreWeight != nil {
+				weight := *it.ScoreWeight
+				if weight > 0 {
+					// 如果请求中已经显式设置了权重，则不覆盖
+					if _, exists := evaluatorScoreWeights[verID]; !exists {
+						evaluatorScoreWeights[verID] = weight
+					}
+				}
 			}
 		}
 	}
@@ -322,7 +644,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDs(ctx context.Context, 
 		}
 	}
 
-	return evalVersionIDs, evaluatorVersionRunConfigs, nil
+	return evalVersionIDs, evaluatorVersionRunConfigs, evaluatorScoreWeights, nil
 }
 
 func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *expt.CheckExperimentNameRequest) (r *expt.CheckExperimentNameResponse, err error) {
@@ -346,6 +668,47 @@ func (e *experimentApplication) CheckExperimentName(ctx context.Context, req *ex
 	return &expt.CheckExperimentNameResponse{
 		Pass:    gptr.Of(pass),
 		Message: &message,
+	}, nil
+}
+
+// CheckExperimentTemplateName 校验实验模板名称是否可用。
+// 如果传入了 template_id，且名称与该模板当前名称相同，则认为可用。
+func (e *experimentApplication) CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest) (r *expt.CheckExperimentTemplateNameResponse, err error) {
+	// 空间级别创建模板权限校验，沿用 CreateExperimentTemplate 的策略
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	session := entity.NewSession(ctx)
+
+	// 如果传了 template_id，且名称与当前模板名称相同，则直接返回可用
+	if req.IsSetTemplateID() && req.GetTemplateID() > 0 {
+		tpl, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
+		if err != nil {
+			return nil, err
+		}
+		if tpl != nil && tpl.Meta != nil && tpl.Meta.Name == req.GetName() {
+			isAvailable := true
+			return &expt.CheckExperimentTemplateNameResponse{
+				IsAvailable: &isAvailable,
+				BaseResp:    base.NewBaseResp(),
+			}, nil
+		}
+	}
+
+	// 否则走正常的重名校验：模板名在该空间下是否已存在
+	pass, err := e.templateManager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.CheckExperimentTemplateNameResponse{
+		IsAvailable: &pass,
+		BaseResp:    base.NewBaseResp(),
 	}, nil
 }
 
@@ -742,6 +1105,7 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		BaseExptID:     req.BaselineExperimentID,
 		Page:           page,
 		UseAccelerator: req.GetUseAccelerator(),
+		FullTrajectory: req.GetFullTrajectory(),
 	}
 	if err = buildExptTurnResultFilter(req, param); err != nil {
 		return nil, err
@@ -837,6 +1201,23 @@ func (e *experimentApplication) mPackUserInfo(ctx context.Context, expts []*doma
 	return expts, nil
 }
 
+func (e *experimentApplication) mPackExptTemplateUserInfo(ctx context.Context, templates []*domain_expt.ExptTemplate) {
+	if len(templates) == 0 {
+		return
+	}
+
+	userCarriers := make([]userinfo.UserInfoCarrier, 0, len(templates))
+	for _, template := range templates {
+		if template != nil && template.GetBaseInfo() != nil {
+			userCarriers = append(userCarriers, template)
+		}
+	}
+
+	if len(userCarriers) > 0 {
+		e.userInfoService.PackUserInfo(ctx, userCarriers)
+	}
+}
+
 func (e *experimentApplication) AuthReadExperiments(ctx context.Context, dos []*entity.Experiment, spaceID int64) error {
 	var authParams []*rpc.AuthorizationWithoutSPIParam
 	for _, do := range dos {
@@ -849,6 +1230,24 @@ func (e *experimentApplication) AuthReadExperiments(ctx context.Context, dos []*
 			SpaceID:         spaceID,
 			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
 			OwnerID:         gptr.Of(do.CreatedBy),
+			ResourceSpaceID: spaceID,
+		})
+	}
+	return e.auth.MAuthorizeWithoutSPI(ctx, spaceID, authParams)
+}
+
+func (e *experimentApplication) AuthReadExptTemplates(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) error {
+	var authParams []*rpc.AuthorizationWithoutSPIParam
+	for _, tpl := range templates {
+		if tpl == nil {
+			continue
+		}
+		templateID := tpl.GetID()
+		authParams = append(authParams, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(templateID, 10),
+			SpaceID:         spaceID,
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
+			OwnerID:         gptr.Of(tpl.GetCreatedBy()),
 			ResourceSpaceID: spaceID,
 		})
 	}
@@ -1059,7 +1458,8 @@ func (e *experimentApplication) CreateAnnotateRecord(ctx context.Context, req *e
 		if err != nil {
 			return nil, err
 		}
-		recordDO.AnnotateData.Score = &score
+		roundedScore := utils.RoundScoreToTwoDecimals(score)
+		recordDO.AnnotateData.Score = &roundedScore
 	}
 
 	err = e.annotateService.SaveAnnotateRecord(ctx, req.GetExptID(), req.GetItemID(), req.GetTurnID(), recordDO)
@@ -1109,7 +1509,8 @@ func (e *experimentApplication) UpdateAnnotateRecord(ctx context.Context, req *e
 		if err != nil {
 			return nil, err
 		}
-		recordDO.AnnotateData.Score = &score
+		roundedScore := utils.RoundScoreToTwoDecimals(score)
+		recordDO.AnnotateData.Score = &roundedScore
 	}
 	err = e.annotateService.UpdateAnnotateRecord(ctx, req.GetItemID(), req.GetTurnID(), recordDO)
 	if err != nil {

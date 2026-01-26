@@ -1,0 +1,29 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.coze-up-panel{
+  :global {
+    .semi-collapse-header,
+    .semi-collapse-content{
+      margin: 0;
+      padding: 0;
+    }
+
+    .semi-collapse-content{
+      padding-top: 0px;
+      padding-bottom: 0;
+    }
+  }
+
+  .chevron-icon {
+    cursor: pointer;
+    transition: transform 0.3s;
+
+    &.chevron-icon-close {
+      transform: rotate(-90deg);
+    }
+  }
+}
+
+.coze-up-panel-hidden{
+  border:0
+}

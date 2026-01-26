@@ -1,0 +1,48 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+import { SchemaEditor } from '@cozeloop/prompt-components';
+import { I18n } from '@cozeloop/i18n-adapter';
+import {
+  EvalTargetType,
+  type EvalTarget,
+  type RuntimeParam,
+} from '@cozeloop/api-schema/evaluation';
+import { Popover, Typography } from '@coze-arch/coze-design';
+
+import { PromptDynamicParams } from './prompt-dynamic-params';
+
+interface Props {
+  data: RuntimeParam;
+  evalTarget?: EvalTarget;
+}
+
+export function DynamicParams({ data, evalTarget }: Props) {
+  return (
+    <Popover
+      content={
+        <div className="max-h-[640px] overflow-auto">
+          <div className="px-5 py-3 text-[16px] font-medium coz-fg-plus">
+            {I18n.t('parameter_details')}
+          </div>
+          <div className="w-[612px] px-5 pb-6">
+            {evalTarget?.eval_target_type === EvalTargetType.CustomRPCServer ? (
+              <SchemaEditor
+                value={data?.json_value || ''}
+                readOnly
+                className="!h-[200px]"
+                language="json"
+              />
+            ) : null}
+            {evalTarget?.eval_target_type === EvalTargetType.CozeLoopPrompt ? (
+              <PromptDynamicParams data={data} evalTarget={evalTarget} />
+            ) : null}
+          </div>
+        </div>
+      }
+    >
+      <span>
+        <Typography.Text link>{I18n.t('parameter_details')}</Typography.Text>
+      </span>
+    </Popover>
+  );
+}

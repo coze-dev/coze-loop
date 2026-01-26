@@ -79,6 +79,7 @@ type TraverseMetricDetail struct {
 type IMetricsService interface {
 	QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error)
 	TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) (*TraverseMetricsResp, error)
+	GetMetricGroupBy(metricName string) ([]string, error)
 }
 
 type MetricsService struct {
@@ -164,6 +165,22 @@ func (m *MetricsService) checkMetricsValid() error {
 		}
 	}
 	return nil
+}
+
+func (m *MetricsService) GetMetricGroupBy(metricName string) ([]string, error) {
+	metricDef, ok := m.metricDefMap[metricName]
+	if !ok {
+		return nil, fmt.Errorf("metric definition %s not found", metricName)
+	}
+	dims := metricDef.GroupBy()
+	keys := make([]string, 0, len(dims))
+	for _, dim := range dims {
+		if dim.Alias == "" {
+			return nil, fmt.Errorf("%s groupby dimension has no alias", metricName)
+		}
+		keys = append(keys, dim.Alias)
+	}
+	return keys, nil
 }
 
 func (m *MetricsService) checkMetricValid(def entity.IMetricDefinition) error {

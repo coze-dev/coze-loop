@@ -41,6 +41,8 @@ const (
 
 	AuthEntityType_EvaluationExperiment = "EvaluationExperiment"
 
+	AuthEntityType_EvaluationExptTemplate = "EvaluationExptTemplate"
+
 	AuthEntityType_EvaluationSet = "EvaluationSet"
 
 	AuthEntityType_Evaluator = "Evaluator"

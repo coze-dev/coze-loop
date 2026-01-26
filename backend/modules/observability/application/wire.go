@@ -323,6 +323,7 @@ func NewMetricsPlatformConfig() *metrics_entity.PlatformMetrics {
 					metric_service_def.NewServiceTraceSuccessCountMetric(),
 					metric_service_def.NewServiceTraceErrorCountMetric(),
 					metric_service_def.NewServiceUserCountMetric(),
+					metric_service_def.NewServiceUniqTraceMetric(),
 
 					metric_tool.NewToolDurationMetric(),
 					metric_tool.NewToolSuccessRatioMetric(),

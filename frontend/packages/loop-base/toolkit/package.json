@@ -1,0 +1,44 @@
+{
+  "name": "@cozeloop/toolkit",
+  "version": "0.0.1",
+  "description": "Toolkit For Devops",
+  "author": "wangziqiang.carl@bytedance.com",
+  "exports": {
+    ".": "./src/index.ts",
+    "./type-utils": "./src/type-utils/index.ts"
+  },
+  "main": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      "type-utils": [
+        "src/type-utils/index.ts"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "exit 0",
+    "lint": "eslint ./ --cache",
+    "test": "NODE_OPTIONS='--max_old_space_size=2048' NODE_ENV=test vitest --run --passWithNoTests"
+  },
+  "dependencies": {
+    "@cozeloop/i18n-adapter": "workspace:*",
+    "dayjs": "^1.11.7",
+    "json-bigint": "~1.0.0",
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@coze-arch/eslint-config": "workspace:*",
+    "@coze-arch/ts-config": "workspace:*",
+    "@coze-arch/vitest-config": "workspace:*",
+    "@types/json-bigint": "~1.0.4",
+    "@types/lodash-es": "^4.17.10",
+    "@types/react": "18.2.37",
+    "@vitest/coverage-v8": "~3.0.5",
+    "react": "~18.2.0",
+    "tsconfig-paths": "4.1.0",
+    "typescript": "~5.8.2",
+    "vitest": "~3.0.5"
+  },
+  "// deps": "debug@^4.3.4 为脚本自动补齐，请勿改动"
+}
+

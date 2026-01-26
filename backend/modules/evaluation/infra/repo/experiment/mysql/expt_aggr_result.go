@@ -113,13 +113,18 @@ func (dao *ExptAggrResultDAOImpl) UpdateExptAggrResultByVersion(ctx context.Cont
 	exptAggrResult.Status = calculateStatusIdle
 	db := dao.provider.NewSession(ctx, opts...)
 	q := query.Use(db).ExptAggrResult
+	// 只更新分数字段和聚合结果字段，避免无意覆盖 version、created_at 等字段
 	_, err := q.WithContext(ctx).
 		Where(q.ExperimentID.Eq(exptAggrResult.ExperimentID),
 			q.FieldType.Eq(gptr.Indirect(exptAggrResult.FieldType)),
 			q.FieldKey.Eq(exptAggrResult.FieldKey),
 			q.Version.Eq(taskVersion),
 			q.Status.Eq(calculateStatusCalculating)).
-		Updates(exptAggrResult)
+		Updates(map[string]interface{}{
+			"score":       exptAggrResult.Score,
+			"aggr_result": exptAggrResult.AggrResult,
+			"status":      exptAggrResult.Status,
+		})
 	if err != nil {
 		return err
 	}
@@ -140,6 +145,21 @@ func (dao *ExptAggrResultDAOImpl) UpdateAndGetLatestVersion(ctx context.Context,
 		}).Error
 	if err != nil {
 		return 0, err
+	}
+
+	// 如果未开启 Returning 能力，po.Version 可能为 0，此时通过额外查询拿到最新版本，保证乐观锁生效
+	if po.Version == 0 {
+		q := query.Use(db).ExptAggrResult
+		rec, err := q.WithContext(ctx).
+			Where(
+				q.ExperimentID.Eq(experimentID),
+				q.FieldType.Eq(fieldType),
+				q.FieldKey.Eq(fieldKey),
+			).First()
+		if err != nil {
+			return 0, err
+		}
+		return rec.Version, nil
 	}
 
 	return po.Version, nil

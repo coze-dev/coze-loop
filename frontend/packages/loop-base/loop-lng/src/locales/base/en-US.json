@@ -1,0 +1,12 @@
+{
+  "prompt_engineering": "Prompt Engineering",
+  "prompt_development": "Prompt Development",
+  "click_retry": "Click to retry",
+  "lark_group": "Lark Group",
+  "space_not_exists": "Space does not exist",
+  "platform_name": "Coze Loop",
+  "not_join_space": "You have not joined any spaces.",
+  "confirm_logout": "Are you sure you want to log out?",
+  "no_space": "No available space at present.",
+  "account_settings": "Account settings"
+}

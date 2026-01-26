@@ -5,8 +5,6 @@ import { initIntl } from '@cozeloop/i18n-adapter';
 import { dynamicImportMdBoxStyle } from '@coze-arch/bot-md-box-adapter/style';
 import { pullFeatureFlags, type FEATURE_FLAGS } from '@coze-arch/bot-flags';
 
-import { App } from './app';
-
 export async function render() {
   await Promise.all([
     initIntl({
@@ -22,6 +20,7 @@ export async function render() {
   const dom = document.getElementById('cozeloop-root');
 
   if (dom) {
+    const { App } = await import('./app');
     const root = createRoot(dom);
     root.render(<App />);
   }

@@ -12,6 +12,9 @@ const (
 	ActionReadExpt   = "listLoopEvaluationExperiment"
 
 	ActionDebugEvalTarget = "debugLoopEvalTarget"
+
+	ActionCreateExptTemplate = "createLoopExptTemplate"
+	ActionReadExptTemplate   = "listLoopExptTemplate"
 )
 
 const (

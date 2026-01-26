@@ -1,0 +1,145 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable max-nesting-depth */
+/* stylelint-disable declaration-no-important */
+.tree {
+  // padding: 10px;
+  overflow: auto;
+  display: flex;
+  box-sizing: border-box;
+  height: 100%;
+  // background-color: #f1f1f1;
+
+  .tree-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+
+    .tree-path-list {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    .tree-node-list {
+      position: relative;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: stretch;
+
+      width: fit-content;
+      min-width: 100%;
+      height: 100%;
+
+      .tree-node-select {
+        position: relative;
+
+        &::before {
+          content: '';
+
+          position: absolute;
+          z-index: -1;
+          top: 5%;
+          left: 0;
+
+          width: 100%;
+          height: 90%;
+          // background-color: rgba(90, 108, 167, 4%);
+          background: var(--coz-mg-primary);
+          // background-color: #e3e7ff;
+        }
+        // 在同时是tree-node-matched的情况下，才展示border
+        &.tree-node-matched::after {
+          content: '';
+
+          position: absolute;
+          z-index: -1;
+          top: 5%;
+          left: 0;
+
+          width: calc(100% - 1px);
+          height: 87%;
+
+          border: 1px solid #5a4ded;
+          border-left-width: 0;
+        }
+      }
+
+      .tree-node-matched {
+        position: relative;
+
+        &::before {
+          content: '';
+
+          position: absolute;
+          z-index: -1;
+          top: 5%;
+          left: 0;
+
+          width: 100%;
+          height: 90%;
+
+          background-color: #eff1ff;
+        }
+      }
+
+      .tree-node {
+        cursor: pointer;
+
+        position: relative;
+
+        display: flex;
+        align-items: stretch;
+
+        width: 100%;
+        padding: 0 0 0 20px;
+
+        border-left-width: 0 !important;
+
+        &:hover:not(.tree-node-matched, .tree-node-select) {
+          position: relative;
+
+          &::before {
+            content: '';
+
+            position: absolute;
+            z-index: -1;
+            top: 5%;
+            left: 0;
+
+            width: 100%;
+            height: 90%;
+
+            background-color: rgba(90, 108, 167, 4%);
+          }
+        }
+
+        .tree-node-box {
+          overflow: hidden;
+          display: flex;
+          flex: 1;
+          align-items: stretch;
+        }
+
+        // .tree-node-icon {
+        //   display: flex;
+        //   justify-content: center;
+        //   align-items: center;
+        // }
+      }
+    }
+  }
+}
+
+.virtuoso {
+  height: 100%;
+
+  :global {
+    // 给div中存在属性 data-testid的增加样式
+    div[data-testid] {
+      width: fit-content;
+      min-width: 100%;
+    }
+  }
+}

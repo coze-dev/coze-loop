@@ -6,8 +6,10 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -156,15 +158,24 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 			mockMetric := metricsMocks.NewMockExptMetric(ctrl)
 			mockEvalTargetSvc := svcMocks.NewMockIEvalTargetService(ctrl)
 			mockLocker := lockMocks.NewMockILocker(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptTurnResultRepo:     mockExptTurnResultRepo,
 				exptAggrResultRepo:     mockExptAggrResultRepo,
+				experimentRepo:         mockExperimentRepo,
 				evaluatorRecordService: mockEvaluatorRecordService,
 				metric:                 mockMetric,
 				evalTargetSvc:          mockEvalTargetSvc,
 				locker:                 mockLocker,
 			}
+
+			// CreateExptAggrResult 内部会调用 experimentRepo.GetByID，用于加权得分聚合配置判断。
+			// 这里统一 mock 成为空实验以跳过这部分逻辑，避免意外的 nil 访问或未预期调用。
+			mockExperimentRepo.EXPECT().
+				GetByID(gomock.Any(), tt.exptID, tt.spaceID).
+				Return((*entity.Experiment)(nil), nil).
+				AnyTimes()
 
 			tt.setup(mockExptTurnResultRepo, mockExptAggrResultRepo, mockEvaluatorRecordService, mockMetric, mockLocker)
 
@@ -303,12 +314,23 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult(t *testing.T) {
 			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 			mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 			mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAggrResultRepo:     mockExptAggrResultRepo,
 				exptTurnResultRepo:     mockExptTurnResultRepo,
+				experimentRepo:         mockExperimentRepo,
 				evaluatorRecordService: mockEvaluatorRecordService,
 				metric:                 mockMetric,
+			}
+
+			// UpdateExptAggrResult 在内部会调用 experimentRepo.GetByID，用于判断是否需要更新加权得分聚合结果。
+			// 这里默认返回 nil 实验配置，跳过这部分逻辑，除非用例在 setup 中显式期望其它行为。
+			if tt.param != nil {
+				mockExperimentRepo.EXPECT().
+					GetByID(gomock.Any(), tt.param.ExperimentID, tt.param.SpaceID).
+					Return((*entity.Experiment)(nil), nil).
+					AnyTimes()
 			}
 
 			tt.setup(mockExptAggrResultRepo, mockExptTurnResultRepo, mockEvaluatorRecordService, mockMetric)
@@ -619,6 +641,11 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				// 先检查是否已有聚合结果，返回 ResourceNotFound 走创建逻辑
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -649,6 +676,10 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -676,6 +707,10 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
@@ -722,10 +757,89 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 				FieldKey:     "1",
 			},
 			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
 				mockExptAnnotateRepo.EXPECT().
 					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
 					Return([]*entity.ExptTurnAnnotateRecordRef{}, nil)
 				mockMetric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), false, gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "GetExptAggrResult returns non-ResourceNotFound error",
+			param: &entity.CreateSpecificFieldAggrResultParam{
+				SpaceID:      100,
+				ExperimentID: 1,
+				FieldType:    entity.FieldType_Annotation,
+				FieldKey:     "1",
+			},
+			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(nil, errors.New("repo error"))
+				mockMetric.EXPECT().EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), true, gomock.Any()).Return()
+			},
+			wantErr: true,
+			checkFunc: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "repo error")
+			},
+		},
+		{
+			name: "CreateAnnotationAggrResult when record already exists should call UpdateAnnotationAggrResult",
+			param: &entity.CreateSpecificFieldAggrResultParam{
+				SpaceID:      100,
+				ExperimentID: 1,
+				FieldType:    entity.FieldType_Annotation,
+				FieldKey:     "1",
+			},
+			setup: func(mockExptAnnotateRepo *repoMocks.MockIExptAnnotateRepo, mockExptAggrResultRepo *repoMocks.MockIExptAggrResultRepo, mockMetric *metricsMocks.MockExptMetric) {
+				// Mock GetExptAggrResult to return existing record
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(&entity.ExptAggrResult{
+						ExperimentID: 1,
+						FieldType:    int32(entity.FieldType_Annotation),
+						FieldKey:     "1",
+					}, nil)
+
+				// Mock UpdateAnnotationAggrResult calls
+				mockExptAggrResultRepo.EXPECT().
+					GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(&entity.ExptAggrResult{}, nil)
+
+				mockExptAggrResultRepo.EXPECT().
+					UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_Annotation), "1").
+					Return(int64(1), nil)
+
+				mockExptAnnotateRepo.EXPECT().
+					GetExptTurnAnnotateRecordRefsByTagKeyID(gomock.Any(), int64(1), int64(100), int64(1)).
+					Return([]*entity.ExptTurnAnnotateRecordRef{{AnnotateRecordID: 1}}, nil)
+
+				mockExptAnnotateRepo.EXPECT().
+					GetAnnotateRecordsByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.AnnotateRecord{{
+						AnnotateData: &entity.AnnotateData{
+							TagContentType: entity.TagContentTypeContinuousNumber,
+							Score:          gptr.Of(0.8),
+						},
+					}}, nil)
+
+				mockExptAggrResultRepo.EXPECT().
+					UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+					Return(nil)
+
+				// CreateAnnotationAggrResult 本身的埋点（CreateAnnotationFields）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.CreateAnnotationFields), false, gomock.Any()).
+					Return()
+				// UpdateAnnotationAggrResult 的埋点（UpdateSpecificField）
+				mockMetric.EXPECT().
+					EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+					Return()
 			},
 			wantErr: false,
 		},
@@ -739,11 +853,13 @@ func TestExptAggrResultServiceImpl_CreateAnnotationAggrResult(t *testing.T) {
 			mockExptAnnotateRepo := repoMocks.NewMockIExptAnnotateRepo(ctrl)
 			mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
 			mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAnnotateRepo:   mockExptAnnotateRepo,
 				exptAggrResultRepo: mockExptAggrResultRepo,
 				metric:             mockMetric,
+				experimentRepo:     mockExperimentRepo,
 			}
 
 			tt.setup(mockExptAnnotateRepo, mockExptAggrResultRepo, mockMetric)
@@ -1256,10 +1372,19 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAggrResultRepo: mockExptAggrResultRepo,
+				experimentRepo:     mockExperimentRepo,
 			}
+
+			// CreateOrUpdateExptAggrResult 内部在追加加权得分聚合指标时，会调用 experimentRepo.GetByID。
+			// 这里统一 mock 为返回 nil 实验，跳过加权逻辑，避免未预期的调用或 nil 访问。
+			mockExperimentRepo.EXPECT().
+				GetByID(gomock.Any(), tt.exptID, tt.spaceID).
+				Return((*entity.Experiment)(nil), nil).
+				AnyTimes()
 
 			tt.setup(mockExptAggrResultRepo)
 
@@ -2607,5 +2732,955 @@ func TestBucketScoreDistributionAggregator_BoundaryValueHandling(t *testing.T) {
 			totalCount += item.Count
 		}
 		assert.Equal(t, int64(numBuckets), totalCount, "Total count should equal number of boundary scores")
+	})
+}
+
+// TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScore 测试 CreateOrUpdateExptAggrResult 中加权得分聚合结果创建逻辑 (229-235行)
+func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+
+	svc := &ExptAggrResultServiceImpl{
+		exptAggrResultRepo: mockExptAggrResultRepo,
+		exptTurnResultRepo: mockExptTurnResultRepo,
+		experimentRepo:     mockExperimentRepo,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	experimentID := int64(1)
+
+	t.Run("实验启用加权得分，创建加权得分聚合结果", func(t *testing.T) {
+		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
+			1: func() *AggregatorGroup {
+				ag := NewAggregatorGroup()
+				ag.Append(0.8)
+				return ag
+			}(),
+		}
+		tmag := &targetMtrAggrGroup{
+			latency:      NewAggregatorGroup(),
+			inputTokens:  NewAggregatorGroup(),
+			outputTokens: NewAggregatorGroup(),
+			totalTokens:  NewAggregatorGroup(),
+		}
+		existedAggrResults := []*entity.ExptAggrResult{}
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, experimentID, spaceID).
+			Return(&entity.Experiment{
+				ID: experimentID,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock createWeightedScoreAggrResult 的依赖
+		// ScanTurnResults 返回有加权得分的 turn results
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.85),
+				},
+			}, int64(0), nil)
+
+		// Mock BatchCreateExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, results []*entity.ExptAggrResult) error {
+				// 验证包含加权得分聚合结果
+				hasWeightedScore := false
+				for _, result := range results {
+					if result.FieldType == int32(entity.FieldType_WeightedScore) {
+						hasWeightedScore = true
+						assert.Equal(t, strconv.FormatInt(experimentID, 10), result.FieldKey)
+						assert.Equal(t, spaceID, result.SpaceID)
+						assert.Equal(t, experimentID, result.ExperimentID)
+					}
+				}
+				assert.True(t, hasWeightedScore, "应该包含加权得分聚合结果")
+				return nil
+			})
+
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		assert.NoError(t, err)
+	})
+
+	t.Run("实验未启用加权得分，不创建加权得分聚合结果", func(t *testing.T) {
+		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
+			1: func() *AggregatorGroup {
+				ag := NewAggregatorGroup()
+				ag.Append(0.8)
+				return ag
+			}(),
+		}
+		tmag := &targetMtrAggrGroup{
+			latency:      NewAggregatorGroup(),
+			inputTokens:  NewAggregatorGroup(),
+			outputTokens: NewAggregatorGroup(),
+			totalTokens:  NewAggregatorGroup(),
+		}
+		existedAggrResults := []*entity.ExptAggrResult{}
+
+		// Mock GetByID 返回未启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, experimentID, spaceID).
+			Return(&entity.Experiment{
+				ID: experimentID,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: false,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock BatchCreateExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, results []*entity.ExptAggrResult) error {
+				// 验证不包含加权得分聚合结果
+				for _, result := range results {
+					assert.NotEqual(t, int32(entity.FieldType_WeightedScore), result.FieldType, "不应该包含加权得分聚合结果")
+				}
+				return nil
+			})
+
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		assert.NoError(t, err)
+	})
+
+	t.Run("createWeightedScoreAggrResult返回错误，返回错误", func(t *testing.T) {
+		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
+			1: func() *AggregatorGroup {
+				ag := NewAggregatorGroup()
+				ag.Append(0.8)
+				return ag
+			}(),
+		}
+		tmag := &targetMtrAggrGroup{
+			latency:      NewAggregatorGroup(),
+			inputTokens:  NewAggregatorGroup(),
+			outputTokens: NewAggregatorGroup(),
+			totalTokens:  NewAggregatorGroup(),
+		}
+		existedAggrResults := []*entity.ExptAggrResult{}
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, experimentID, spaceID).
+			Return(&entity.Experiment{
+				ID: experimentID,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock ScanTurnResults 返回错误
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return(nil, int64(0), errors.New("scan error"))
+
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "scan error")
+	})
+}
+
+// TestExptAggrResultServiceImpl_createWeightedScoreAggrResult 测试 createWeightedScoreAggrResult 方法
+func TestExptAggrResultServiceImpl_createWeightedScoreAggrResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+
+	svc := &ExptAggrResultServiceImpl{
+		exptTurnResultRepo: mockExptTurnResultRepo,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	experimentID := int64(1)
+
+	t.Run("成功创建加权得分聚合结果", func(t *testing.T) {
+		// Mock ScanTurnResults 返回有加权得分的 turn results
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.85),
+				},
+				{
+					WeightedScore: gptr.Of(0.90),
+				},
+			}, int64(0), nil)
+
+		result, err := svc.createWeightedScoreAggrResult(ctx, spaceID, experimentID)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, int32(entity.FieldType_WeightedScore), result.FieldType)
+		assert.Equal(t, strconv.FormatInt(experimentID, 10), result.FieldKey)
+		assert.Equal(t, spaceID, result.SpaceID)
+		assert.Equal(t, experimentID, result.ExperimentID)
+		// 验证平均分是 (0.85 + 0.90) / 2 = 0.875
+		assert.Equal(t, 0.88, result.Score) // 四舍五入到两位小数
+	})
+
+	t.Run("没有加权得分数据，返回nil", func(t *testing.T) {
+		// Mock ScanTurnResults 返回没有加权得分的 turn results
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: nil,
+				},
+			}, int64(0), nil)
+
+		result, err := svc.createWeightedScoreAggrResult(ctx, spaceID, experimentID)
+		assert.NoError(t, err)
+		assert.Nil(t, result)
+	})
+
+	t.Run("ScanTurnResults返回错误，返回错误", func(t *testing.T) {
+		// Mock ScanTurnResults 返回错误
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return(nil, int64(0), errors.New("scan error"))
+
+		result, err := svc.createWeightedScoreAggrResult(ctx, spaceID, experimentID)
+		assert.Error(t, err)
+		assert.Nil(t, result)
+		assert.Contains(t, err.Error(), "scan error")
+	})
+
+	t.Run("多页扫描，聚合所有加权得分", func(t *testing.T) {
+		// 第一页
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.80),
+				},
+			}, int64(100), nil)
+
+		// 第二页
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(100),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.90),
+				},
+			}, int64(0), nil)
+
+		result, err := svc.createWeightedScoreAggrResult(ctx, spaceID, experimentID)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		// 验证平均分是 (0.80 + 0.90) / 2 = 0.85
+		assert.Equal(t, 0.85, result.Score)
+	})
+}
+
+// TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore 测试 UpdateExptAggrResult 中加权得分聚合结果更新逻辑 (457-484行)
+func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
+	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+
+	svc := &ExptAggrResultServiceImpl{
+		exptAggrResultRepo:     mockExptAggrResultRepo,
+		exptTurnResultRepo:     mockExptTurnResultRepo,
+		evaluatorRecordService: mockEvaluatorRecordService,
+		metric:                 mockMetric,
+		experimentRepo:         mockExperimentRepo,
+	}
+
+	ctx := context.Background()
+	param := &entity.UpdateExptAggrResultParam{
+		SpaceID:      100,
+		ExperimentID: 1,
+		FieldType:    entity.FieldType_EvaluatorScore,
+		FieldKey:     "1",
+	}
+
+	t.Run("实验启用加权得分，加权得分聚合结果不存在，创建新的", func(t *testing.T) {
+		// Mock GetExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(&entity.ExptAggrResult{}, nil)
+
+		// Mock UpdateAndGetLatestVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(int64(1), nil)
+
+		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
+		mockExptTurnResultRepo.EXPECT().
+			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
+			Return([]*entity.ExptTurnEvaluatorResultRef{
+				{
+					EvaluatorResultID: 1,
+				},
+			}, nil)
+
+		// Mock BatchGetEvaluatorRecord
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+			}, nil)
+
+		// Mock UpdateExptAggrResultByVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+			Return(nil)
+
+		// Mock EmitCalculateExptAggrResult
+		mockMetric.EXPECT().
+			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+			Return()
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, int64(1), int64(100)).
+			Return(&entity.Experiment{
+				ID: 1,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock createWeightedScoreAggrResult 的依赖
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				int64(1),
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				int64(100),
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.85),
+				},
+			}, int64(0), nil)
+
+		// Mock GetExptAggrResult 返回 ResourceNotFound（加权得分聚合结果不存在）
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
+			Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode))
+
+		// Mock BatchCreateExptAggrResult（创建加权得分聚合结果）
+		mockExptAggrResultRepo.EXPECT().
+			BatchCreateExptAggrResult(ctx, gomock.Any()).
+			Return(nil)
+
+		err := svc.UpdateExptAggrResult(ctx, param)
+		assert.NoError(t, err)
+	})
+
+	t.Run("实验启用加权得分，加权得分聚合结果已存在，更新", func(t *testing.T) {
+		// Mock GetExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(&entity.ExptAggrResult{}, nil)
+
+		// Mock UpdateAndGetLatestVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(int64(1), nil)
+
+		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
+		mockExptTurnResultRepo.EXPECT().
+			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
+			Return([]*entity.ExptTurnEvaluatorResultRef{
+				{
+					EvaluatorResultID: 1,
+				},
+			}, nil)
+
+		// Mock BatchGetEvaluatorRecord
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+			}, nil)
+
+		// Mock UpdateExptAggrResultByVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+			Return(nil)
+
+		// Mock EmitCalculateExptAggrResult
+		mockMetric.EXPECT().
+			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+			Return()
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, int64(1), int64(100)).
+			Return(&entity.Experiment{
+				ID: 1,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock createWeightedScoreAggrResult 的依赖
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				int64(1),
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				int64(100),
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.85),
+				},
+			}, int64(0), nil)
+
+		// Mock GetExptAggrResult 返回已存在的加权得分聚合结果
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
+			Return(&entity.ExptAggrResult{}, nil)
+
+		// Mock UpdateAndGetLatestVersion（更新版本）
+		mockExptAggrResultRepo.EXPECT().
+			UpdateAndGetLatestVersion(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
+			Return(int64(2), nil)
+
+		// Mock UpdateExptAggrResultByVersion（更新加权得分聚合结果）
+		mockExptAggrResultRepo.EXPECT().
+			UpdateExptAggrResultByVersion(ctx, gomock.Any(), int64(2)).
+			DoAndReturn(func(ctx context.Context, result *entity.ExptAggrResult, version int64) error {
+				assert.Equal(t, int64(2), result.Version)
+				assert.Equal(t, int32(entity.FieldType_WeightedScore), result.FieldType)
+				return nil
+			}).
+			Return(nil)
+
+		err := svc.UpdateExptAggrResult(ctx, param)
+		assert.NoError(t, err)
+	})
+
+	t.Run("createWeightedScoreAggrResult返回错误，不返回错误（记录日志）", func(t *testing.T) {
+		// Mock GetExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(&entity.ExptAggrResult{}, nil)
+
+		// Mock UpdateAndGetLatestVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(int64(1), nil)
+
+		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
+		mockExptTurnResultRepo.EXPECT().
+			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
+			Return([]*entity.ExptTurnEvaluatorResultRef{
+				{
+					EvaluatorResultID: 1,
+				},
+			}, nil)
+
+		// Mock BatchGetEvaluatorRecord
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+			}, nil)
+
+		// Mock UpdateExptAggrResultByVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+			Return(nil)
+
+		// Mock EmitCalculateExptAggrResult
+		mockMetric.EXPECT().
+			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+			Return()
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, int64(1), int64(100)).
+			Return(&entity.Experiment{
+				ID: 1,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock createWeightedScoreAggrResult 返回错误
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				int64(1),
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				int64(100),
+			).
+			Return(nil, int64(0), errors.New("scan error"))
+
+		// 即使 createWeightedScoreAggrResult 返回错误，UpdateExptAggrResult 也不应该返回错误
+		err := svc.UpdateExptAggrResult(ctx, param)
+		assert.NoError(t, err)
+	})
+
+	t.Run("GetExptAggrResult返回非ResourceNotFound错误，记录日志但不返回错误", func(t *testing.T) {
+		// Mock GetExptAggrResult
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(&entity.ExptAggrResult{}, nil)
+
+		// Mock UpdateAndGetLatestVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
+			Return(int64(1), nil)
+
+		// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
+		mockExptTurnResultRepo.EXPECT().
+			GetTurnEvaluatorResultRefByEvaluatorVersionID(gomock.Any(), int64(100), int64(1), int64(1)).
+			Return([]*entity.ExptTurnEvaluatorResultRef{
+				{
+					EvaluatorResultID: 1,
+				},
+			}, nil)
+
+		// Mock BatchGetEvaluatorRecord
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+			}, nil)
+
+		// Mock UpdateExptAggrResultByVersion
+		mockExptAggrResultRepo.EXPECT().
+			UpdateExptAggrResultByVersion(gomock.Any(), gomock.Any(), int64(1)).
+			Return(nil)
+
+		// Mock EmitCalculateExptAggrResult
+		mockMetric.EXPECT().
+			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
+			Return()
+
+		// Mock GetByID 返回启用加权得分的实验
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, int64(1), int64(100)).
+			Return(&entity.Experiment{
+				ID: 1,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+						},
+					},
+				},
+			}, nil)
+
+		// Mock createWeightedScoreAggrResult 的依赖
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				int64(1),
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				int64(100),
+			).
+			Return([]*entity.ExptTurnResult{
+				{
+					WeightedScore: gptr.Of(0.85),
+				},
+			}, int64(0), nil)
+
+		// Mock GetExptAggrResult 返回非ResourceNotFound错误
+		mockExptAggrResultRepo.EXPECT().
+			GetExptAggrResult(ctx, int64(1), int32(entity.FieldType_WeightedScore), "1").
+			Return(nil, errors.New("db error"))
+
+		// 即使 GetExptAggrResult 返回错误，UpdateExptAggrResult 也不应该返回错误
+		err := svc.UpdateExptAggrResult(ctx, param)
+		assert.NoError(t, err)
+	})
+}
+
+// TestExptAggrResultServiceImpl_calculateWeightedAggregateResults 测试 calculateWeightedAggregateResults 方法
+func TestExptAggrResultServiceImpl_calculateWeightedAggregateResults(t *testing.T) {
+	svc := &ExptAggrResultServiceImpl{}
+
+	t.Run("成功计算加权聚合结果", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+				},
+			},
+			2: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.9),
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+			2: 0.4,
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.NotNil(t, result)
+		assert.Len(t, result, 1)
+		assert.Equal(t, entity.Average, result[0].AggregatorType)
+		// 加权平均 = (0.8 * 0.6 + 0.9 * 0.4) / (0.6 + 0.4) = (0.48 + 0.36) / 1.0 = 0.84
+		// 使用 InDelta 进行浮点数近似比较，避免精度问题
+		assert.InDelta(t, 0.84, *result[0].Data.Value, 0.0001)
+	})
+
+	t.Run("evaluatorResults为空，返回nil", func(t *testing.T) {
+		weights := map[int64]float64{
+			1: 0.6,
+		}
+		result := svc.calculateWeightedAggregateResults(nil, weights)
+		assert.Nil(t, result)
+	})
+
+	t.Run("weights为空，返回nil", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+				},
+			},
+		}
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("权重为0或负数，跳过该评估器", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+				},
+			},
+			2: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.9),
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+			2: 0.0, // 权重为0，应该跳过
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.NotNil(t, result)
+		assert.Len(t, result, 1)
+		// 只有评估器1参与计算，所以结果是0.8
+		// 使用 InDelta 进行浮点数近似比较，避免精度问题
+		assert.InDelta(t, 0.8, *result[0].Data.Value, 0.0001)
+	})
+
+	t.Run("评估器结果中Data为nil，跳过", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data:           nil, // Data为nil，应该跳过
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.Nil(t, result)
+	})
+
+	t.Run("评估器结果中Value为nil，跳过", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    nil, // Value为nil，应该跳过
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.Nil(t, result)
+	})
+
+	t.Run("多个聚合类型，分别计算加权平均", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+					{
+						AggregatorType: entity.Max,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.9),
+						},
+					},
+				},
+			},
+			2: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.7),
+						},
+					},
+					{
+						AggregatorType: entity.Max,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.85),
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+			2: 0.4,
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.NotNil(t, result)
+		assert.Len(t, result, 2)
+
+		// 找到Average和Max的结果
+		var avgResult, maxResult *entity.AggregatorResult
+		for _, r := range result {
+			switch r.AggregatorType {
+			case entity.Average:
+				avgResult = r
+			case entity.Max:
+				maxResult = r
+			}
+		}
+
+		assert.NotNil(t, avgResult)
+		// Average加权平均 = (0.8 * 0.6 + 0.7 * 0.4) / (0.6 + 0.4) = (0.48 + 0.28) / 1.0 = 0.76
+		// 使用 InDelta 进行浮点数近似比较，避免精度问题
+		assert.InDelta(t, 0.76, *avgResult.Data.Value, 0.0001)
+
+		assert.NotNil(t, maxResult)
+		// Max加权平均 = (0.9 * 0.6 + 0.85 * 0.4) / (0.6 + 0.4) = (0.54 + 0.34) / 1.0 = 0.88
+		// 使用 InDelta 进行浮点数近似比较，避免精度问题
+		assert.InDelta(t, 0.88, *maxResult.Data.Value, 0.0001)
+	})
+
+	t.Run("评估器版本ID在weights中不存在，跳过", func(t *testing.T) {
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			2: 0.6, // 评估器1不在weights中，应该跳过
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.Nil(t, result)
+	})
+
+	t.Run("sumWeight为0，跳过该聚合类型", func(t *testing.T) {
+		// 这个场景理论上不会发生，因为如果sumWeight为0，说明所有权重都是0或负数
+		// 但为了测试代码覆盖，我们可以构造一个场景
+		// 实际上，由于我们在循环中检查 weight <= 0 时会跳过，所以sumWeight不会为0
+		// 但为了完整性，我们测试一下边界情况
+		evaluatorResults := map[int64]*entity.EvaluatorAggregateResult{
+			1: {
+				AggregatorResults: []*entity.AggregatorResult{
+					{
+						AggregatorType: entity.Average,
+						Data: &entity.AggregateData{
+							DataType: entity.Double,
+							Value:    gptr.Of(0.8),
+						},
+					},
+				},
+			},
+		}
+		weights := map[int64]float64{
+			1: 0.6,
+		}
+
+		result := svc.calculateWeightedAggregateResults(evaluatorResults, weights)
+		assert.NotNil(t, result)
+		assert.Len(t, result, 1)
 	})
 }

@@ -1,8 +1,3 @@
-const path = require('path');
-const fs = require('fs');
-
-const JSON5 = require('json5');
-
 const noRestrictedSyntaxRule = [
   'error',
   {
@@ -17,14 +12,14 @@ const noRestrictedSyntaxRule = [
   },
 ];
 
-const readBlockList = () =>
-  JSON5.parse(
-    fs.readFileSync(
-      // fixme @fanwenjie.fe
-      path.resolve(__dirname, '../../../disallowed_3rd_libraries.json'),
-      'utf-8',
-    ),
-  );
+const disallowedLibs = [
+  // 可使用 @vitest/coverage-v8 替代
+  ['@vitest/coverage-c8', null, '请使用 @vitest/coverage-v8'],
+  'husky',
+  'lint-staged',
+  'jest',
+  ['jsdom', null, '请使用 happy-dom 代替'],
+];
 
 /** @type {(import('eslint').Linter.Config)[]} */
 module.exports = [
@@ -78,7 +73,7 @@ module.exports = [
       'eslint-comments': require('eslint-plugin-eslint-comments'),
     },
     rules: {
-      '@coze-arch/package-disallow-deps': ['error', readBlockList()],
+      '@coze-arch/package-disallow-deps': ['error', disallowedLibs],
       'no-restricted-syntax': noRestrictedSyntaxRule,
       'prettier/prettier': [
         'warn',
