@@ -26,9 +26,6 @@ const (
 var errSkipSubscriber = errors.New("skip subscriber")
 
 func calcTaskRunEndAt(t *entity.ObservabilityTask, runStartAt int64) int64 {
-	if t == nil || t.EffectiveTime == nil || t.Sampler == nil {
-		return 0
-	}
 	if !t.Sampler.IsCycle {
 		return t.EffectiveTime.EndAt
 	}

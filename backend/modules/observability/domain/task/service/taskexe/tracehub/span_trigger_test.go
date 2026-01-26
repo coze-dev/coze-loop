@@ -6,6 +6,8 @@ package tracehub
 import (
 	"context"
 	"errors"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -20,6 +22,7 @@ import (
 	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	trace_service_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
@@ -372,6 +375,273 @@ func TestTraceHubServiceImpl_preDispatchDedupTaskRunCreateWithLock(t *testing.T)
 	require.NoError(t, impl.preDispatch(context.Background(), []*spanSubscriber{sub}))
 	require.Equal(t, 1, len(procMock.createTaskRunReqs))
 	require.Equal(t, 1, procMock.updateCallCount)
+}
+
+func TestTraceHubServiceImpl_preDispatchConcurrent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockLocker := lock_mocks.NewMockILocker(ctrl)
+
+	now := time.Now()
+	startAt := now.Add(-10 * time.Minute).UnixMilli()
+	endAt := now.Add(time.Hour).UnixMilli()
+	workspaceID := int64(3301)
+	taskID := int64(3402)
+
+	sampl := &task.Sampler{
+		SampleRate: floatPtr(1),
+		SampleSize: int64Ptr(5),
+		IsCycle:    boolPtr(false),
+	}
+	rule := &task.Rule{
+		EffectiveTime: &task.EffectiveTime{
+			StartAt: ptr.Of(startAt),
+			EndAt:   ptr.Of(endAt),
+		},
+		Sampler: sampl,
+	}
+
+	// 构造基础 task DO，后续在 goroutine 中深拷贝使用
+	baseTask := toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
+
+	taskRunConfig := &entity.TaskRun{
+		ID:          3503,
+		TaskID:      taskID,
+		WorkspaceID: workspaceID,
+		TaskType:    entity.TaskRunTypeNewData,
+		RunStatus:   task.TaskStatusRunning,
+		RunStartAt:  time.UnixMilli(startAt),
+		RunEndAt:    time.UnixMilli(endAt),
+	}
+
+	// 并发控制状态
+	var createCount int32
+	var taskRunCreated atomic.Bool
+
+	// 1. 模拟 GetLatestNewDataTaskRun：
+	//    - 如果已经创建过 (taskRunCreated=true)，返回存在的 config
+	//    - 否则返回 nil，触发创建逻辑
+	mockRepo.EXPECT().
+		GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).
+		DoAndReturn(func(context.Context, *int64, int64) (*entity.TaskRun, error) {
+			if taskRunCreated.Load() {
+				return taskRunConfig, nil
+			}
+			return nil, nil
+		}).
+		AnyTimes()
+
+	// 模拟 Lock/Unlock：总是成功
+	mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
+
+	safeProc := &concurrentStubProcessor{
+		createAction: func() error {
+			atomic.AddInt32(&createCount, 1)
+			taskRunCreated.Store(true)
+			time.Sleep(10 * time.Millisecond)
+			return nil
+		},
+	}
+
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), taskID).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil).AnyTimes()
+
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, locker: mockLocker}
+
+	concurrency := 10
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			defer wg.Done()
+			myTask := *baseTask
+
+			mySub := &spanSubscriber{
+				taskID:    taskID,
+				processor: safeProc,
+				taskRepo:  mockRepo,
+				runType:   entity.TaskRunTypeNewData,
+				t:         &myTask,
+			}
+			_ = impl.preDispatch(context.Background(), []*spanSubscriber{mySub})
+		}()
+	}
+
+	wg.Wait()
+	require.Equal(t, int32(1), atomic.LoadInt32(&createCount))
+}
+
+func TestTraceHubServiceImpl_preDispatchHandlesUnstartedTaskWithExistingRunConfig(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockLocker := lock_mocks.NewMockILocker(ctrl)
+	procMock := &stubProcessor{}
+
+	now := time.Now()
+	startAt := now.Add(-10 * time.Minute).UnixMilli()
+	endAt := now.Add(time.Hour).UnixMilli()
+	workspaceID := int64(3601)
+	taskID := int64(3702)
+
+	sampl := &task.Sampler{
+		SampleRate: floatPtr(1),
+		SampleSize: int64Ptr(5),
+		IsCycle:    boolPtr(false),
+	}
+	rule := &task.Rule{
+		EffectiveTime: &task.EffectiveTime{
+			StartAt: ptr.Of(startAt),
+			EndAt:   ptr.Of(endAt),
+		},
+		Sampler: sampl,
+	}
+
+	sub := &spanSubscriber{
+		taskID:    taskID,
+		processor: procMock,
+		taskRepo:  mockRepo,
+		runType:   entity.TaskRunTypeNewData,
+	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
+
+	taskRunConfig := &entity.TaskRun{
+		ID:          3803,
+		TaskID:      taskID,
+		WorkspaceID: workspaceID,
+		TaskType:    entity.TaskRunTypeNewData,
+		RunStatus:   task.TaskStatusRunning,
+		RunStartAt:  time.UnixMilli(startAt),
+		RunEndAt:    time.UnixMilli(endAt),
+	}
+
+	// 模拟 GetLatestNewDataTaskRun 返回已存在的配置
+	mockRepo.EXPECT().
+		GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).
+		Return(taskRunConfig, nil).
+		AnyTimes()
+
+	// 模拟 Lock/Unlock
+	mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
+
+	mockRepo.EXPECT().GetTaskCount(gomock.Any(), taskID).Return(int64(0), nil).AnyTimes()
+	mockRepo.EXPECT().GetTaskRunCount(gomock.Any(), taskID, taskRunConfig.ID).Return(int64(0), nil).AnyTimes()
+
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, locker: mockLocker}
+
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
+	require.NoError(t, err)
+
+	require.Empty(t, procMock.createTaskRunReqs)
+	// 应调用 OnTaskUpdated 将状态更新为 Running
+	require.Equal(t, 1, procMock.updateCallCount)
+}
+
+func TestTraceHubServiceImpl_preDispatchHandlesUnstartedTaskWithExistingRunConfig_UpdateError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockLocker := lock_mocks.NewMockILocker(ctrl)
+	procMock := &stubProcessor{updateErr: errors.New("update fail")}
+
+	now := time.Now()
+	startAt := now.Add(-10 * time.Minute).UnixMilli()
+	endAt := now.Add(time.Hour).UnixMilli()
+	workspaceID := int64(3901)
+	taskID := int64(4002)
+
+	sampl := &task.Sampler{
+		SampleRate: floatPtr(1),
+		SampleSize: int64Ptr(5),
+		IsCycle:    boolPtr(false),
+	}
+	rule := &task.Rule{
+		EffectiveTime: &task.EffectiveTime{
+			StartAt: ptr.Of(startAt),
+			EndAt:   ptr.Of(endAt),
+		},
+		Sampler: sampl,
+	}
+
+	sub := &spanSubscriber{
+		taskID:    taskID,
+		processor: procMock,
+		taskRepo:  mockRepo,
+		runType:   entity.TaskRunTypeNewData,
+	}
+	sub.t = toObservabilityTask(&task.Task{
+		ID:          ptr.Of(taskID),
+		WorkspaceID: ptr.Of(workspaceID),
+		TaskType:    task.TaskTypeAutoEval,
+		TaskStatus:  ptr.Of(task.TaskStatusUnstarted),
+		Rule:        rule,
+		BaseInfo:    &common.BaseInfo{},
+	})
+
+	taskRunConfig := &entity.TaskRun{
+		ID:          4103,
+		TaskID:      taskID,
+		WorkspaceID: workspaceID,
+		TaskType:    entity.TaskRunTypeNewData,
+		RunStatus:   task.TaskStatusRunning,
+		RunStartAt:  time.UnixMilli(startAt),
+		RunEndAt:    time.UnixMilli(endAt),
+	}
+
+	mockRepo.EXPECT().
+		GetLatestNewDataTaskRun(gomock.Any(), gomock.AssignableToTypeOf(ptr.Of(int64(0))), taskID).
+		Return(taskRunConfig, nil).
+		AnyTimes()
+
+	mockLocker.EXPECT().Lock(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	mockLocker.EXPECT().Unlock(gomock.Any()).Return(true, nil).AnyTimes()
+
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, locker: mockLocker}
+
+	err := impl.preDispatch(context.Background(), []*spanSubscriber{sub})
+	// 因为返回的是 errSkipSubscriber，在 loop 中会被 swallow 掉，所以外层 err 应该是 nil
+	require.NoError(t, err)
+
+	require.Empty(t, procMock.createTaskRunReqs)
+	require.Equal(t, 1, procMock.updateCallCount)
+}
+
+// 线程安全的桩 Processor
+type concurrentStubProcessor struct {
+	stubProcessor // 继承其他方法的默认实现
+	createAction  func() error
+}
+
+func (p *concurrentStubProcessor) OnTaskRunCreated(ctx context.Context, req taskexe.OnTaskRunCreatedReq) error {
+	if p.createAction != nil {
+		return p.createAction()
+	}
+	return nil
+}
+
+func (p *concurrentStubProcessor) OnTaskUpdated(ctx context.Context, task *entity.ObservabilityTask, status entity.TaskStatus) error {
+	return nil
 }
 
 func TestTraceHubServiceImpl_preDispatchHandlesNonCycle(t *testing.T) {
