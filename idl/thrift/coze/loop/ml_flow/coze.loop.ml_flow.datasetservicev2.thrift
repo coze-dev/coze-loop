@@ -6,15 +6,6 @@ include "../ml_flow/data/datasetv2job.thrift"
 include "../ml_flow/data/filter.thrift"
 include "../ml_flow/data/datasetv2similarity.thrift"
 
-typedef ListDatasetItemsReq SearchDatasetItemsReq
-typedef ListDatasetItemsResp SearchDatasetItemsResp
-typedef ListDatasetVersionsReq SearchDatasetVersionsReq
-typedef ListDatasetVersionsResp SearchDatasetVersionsResp
-typedef ListDatasetItemsByVersionReq SearchDatasetItemsByVersionReq
-typedef ListDatasetItemsByVersionResp SearchDatasetItemsByVersionResp
-typedef ListDatasetIOJobsOfDatasetReq SearchDatasetIOJobsOfDatasetReq
-typedef ListDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDatasetResp
-
 struct CreateDatasetReq {
     1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
     2: optional i32 appID (agw.js_conv = "str")
@@ -747,6 +738,15 @@ struct BatchUploadDatasetAttachmentsResp {
     1: optional list<UploadAttachmentDetail> details // 成功上传的附件
     255: optional base.Base base
 }
+
+typedef ListDatasetItemsReq SearchDatasetItemsReq
+typedef ListDatasetItemsResp SearchDatasetItemsResp
+typedef ListDatasetVersionsReq SearchDatasetVersionsReq
+typedef ListDatasetVersionsResp SearchDatasetVersionsResp
+typedef ListDatasetItemsByVersionReq SearchDatasetItemsByVersionReq
+typedef ListDatasetItemsByVersionResp SearchDatasetItemsByVersionResp
+typedef ListDatasetIOJobsOfDatasetReq SearchDatasetIOJobsOfDatasetReq
+typedef ListDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDatasetResp
 
 service DatasetServiceV2 {
 
