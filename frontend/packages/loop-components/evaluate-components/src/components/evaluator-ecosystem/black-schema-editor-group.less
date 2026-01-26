@@ -1,0 +1,53 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+.black-schema-editor-group {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  height: auto;
+
+  border: 1px solid var(--coz-stroke-plus, rgba(68, 83, 130, 25%));
+  border-radius: 6px;
+
+  & .header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    height: 40px;
+
+    border-bottom: 1px solid var(--semi-color-border);
+
+    & .title {
+      padding-left: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--coz-fg-dim, rgba(55, 67, 106, 38%));
+    }
+  }
+
+  & .panel-group {
+    flex-grow: 1;
+    height: 500px;
+  }
+
+  & .panel {
+    min-width: 50px;
+    height: 100%;
+  }
+
+  & .resize-handle-outer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2px;
+  }
+
+  & .resize-handle-inner {
+    width: 1px;
+    height: 100%;
+    background: var(--coz-stroke-primary, rgba(82, 100, 154, 13%));
+  }
+}

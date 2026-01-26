@@ -64,6 +64,63 @@ struct Experiment {
     43: optional string source_id
 
     51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+
+    60: optional ExptTemplateMeta expt_template_meta
+    // 评估器得分加权配置
+    61: optional ExptScoreWeight score_weight_config
+    62: optional bool enable_weighted_score
+}
+
+// 实验模板基础信息
+struct ExptTemplateMeta {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional string name
+    4: optional string desc
+    5: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
+
+}
+
+// 实验三元组配置
+struct ExptTuple {
+    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    4: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    6: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_items
+    7: optional eval_set.EvaluationSet eval_set
+    8: optional eval_target.EvalTarget eval_target
+    9: optional list<evaluator.Evaluator> evaluators
+}
+
+// 实验字段映射和运行时参数配置
+struct ExptFieldMapping {
+    1: optional TargetFieldMapping target_field_mapping
+    2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    3: optional common.RuntimeParam target_runtime_param
+    4: optional i32 item_concur_num
+}
+
+// 实验评估器得分加权配置
+struct ExptScoreWeight {
+    1: optional bool enable_weighted_score
+    2: optional map<i64, double> evaluator_score_weights
+}
+
+struct ExptTemplate {
+    1: optional ExptTemplateMeta meta
+    2: optional ExptTuple triple_config
+    3: optional ExptFieldMapping field_mapping_config
+    4: optional ExptScoreWeight score_weight_config
+    5: optional ExptInfo expt_info
+
+    255: optional common.BaseInfo base_info
+}
+
+struct ExptInfo {
+    1: optional i64 created_expt_count
+    2: optional i64 latest_expt_id (api.js_conv='true', go.tag='json:"latest_expt_id"')
+    3: optional ExptStatus latest_expt_status
 }
 
 struct TokenUsage {
@@ -229,6 +286,8 @@ struct TurnTargetOutput {
 
 struct TurnEvaluatorOutput {
     1: map<i64, evaluator.EvaluatorRecord> evaluator_records (go.tag = 'json:"evaluator_records"')
+
+    11: optional double weighted_score (go.tag = 'json:"weighted_score"') // 加权汇总得分
 }
 
 struct TurnAnnotateResult {
@@ -274,6 +333,12 @@ struct KeywordSearch {
 }
 
 struct ExperimentFilter {
+    1: optional Filters filters
+    2: optional KeywordSearch keyword_search
+}
+
+// 实验模板筛选器，字段设计复用实验的 Filters / KeywordSearch 能力
+struct ExperimentTemplateFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
 }
@@ -330,6 +395,10 @@ enum FieldType {
     InputTokens = 61 // 目前使用固定key：input_tokens
     OutputTokens = 62 // 目前使用固定key：output_tokens
     TotalTokens = 63 // 目前使用固定key：total_tokens
+
+    ExperimentTemplateID = 70
+    EvaluatorWeightedScore = 71
+    UpdatedBy = 72
 }
 
 // 字段过滤器
@@ -379,11 +448,13 @@ struct ExptAggregateResult {
     4: optional map<i64, AnnotationAggregateResult> annotation_results (go.tag = 'json:"annotation_results"')    // tag_key_id -> result
     5: optional EvalTargetAggregateResult eval_target_aggr_result
     6: optional i64 update_time // timestamp in seconds
+
+    10: optional list<AggregatorResult> weighted_results (go.tag = 'json:"weighted_results"')
 }
 
 struct EvalTargetAggregateResult {
-    1: optional i64 target_id (api.js_conv = 'true')
-    2: optional i64 target_version_id (api.js_conv = 'true')
+    1: optional i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    2: optional i64 target_version_id (api.js_conv = 'true', go.tag = 'json:"target_version_id"')
 
     5: optional list<AggregatorResult> latency
     6: optional list<AggregatorResult> input_tokens

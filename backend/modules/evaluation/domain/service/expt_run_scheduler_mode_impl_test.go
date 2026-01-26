@@ -326,6 +326,8 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 		configer                 *configmocks.MockIConfiger
 		publisher                *eventmocks.MockExptEventPublisher
 		resultSvc                *svcmocks.MockExptResultService
+		evaluatorRecordService   *svcmocks.MockEvaluatorRecordService
+		templateManager          *svcmocks.MockIExptTemplateManager
 	}
 
 	type args struct {
@@ -356,6 +358,12 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
+				// 新逻辑中，当 ExptTemplateMeta 为空时，会从 exptRepo.GetByID 重新拉取实验，用于后续模板关联处理。
+				// 这里统一返回传入的 mockExpt，避免出现未预期的 GetByID 调用导致的 panic。
+				f.exptRepo.EXPECT().
+					GetByID(gomock.Any(), args.event.ExptID, args.event.SpaceID).
+					Return(args.expt, nil).
+					Times(1)
 				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 					{ItemID: 1, Turns: []*entity.Turn{{ID: 1}}},
 					{ItemID: 2, Turns: []*entity.Turn{{ID: 2}}},
@@ -438,6 +446,8 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 				configer:                 configmocks.NewMockIConfiger(ctrl),
 				publisher:                eventmocks.NewMockExptEventPublisher(ctrl),
 				resultSvc:                svcmocks.NewMockExptResultService(ctrl),
+				evaluatorRecordService:   svcmocks.NewMockEvaluatorRecordService(ctrl),
+				templateManager:          svcmocks.NewMockIExptTemplateManager(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -456,6 +466,8 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 				configer:                 f.configer,
 				publisher:                f.publisher,
 				resultSvc:                f.resultSvc,
+				evaluatorRecordService:   f.evaluatorRecordService,
+				templateManager:          f.templateManager,
 			}
 
 			err := e.ExptStart(tt.args.ctx, tt.args.event, tt.args.expt)
@@ -2050,6 +2062,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 	evaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 	resultService := svcmocks.NewMockExptResultService(ctrl)
+	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
 
 	factory := NewSchedulerModeFactory(
 		manager,
@@ -2064,6 +2077,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 		publisher,
 		evaluatorRecordService,
 		resultService,
+		templateManager,
 	)
 
 	tests := []struct {
@@ -2127,8 +2141,9 @@ func TestNewExptSubmitMode(t *testing.T) {
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 	evaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 	resultSvc := svcmocks.NewMockExptResultService(ctrl)
+	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
 
-	exec := NewExptSubmitMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, resultSvc)
+	exec := NewExptSubmitMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, resultSvc, templateManager)
 	assert.NotNil(t, exec)
 	assert.Equal(t, manager, exec.manager)
 	assert.Equal(t, exptItemResultRepo, exec.exptItemResultRepo)
@@ -2155,8 +2170,9 @@ func TestNewExptFailRetryMode(t *testing.T) {
 	configer := configmocks.NewMockIConfiger(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 	evaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
+	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
 
-	exec := NewExptFailRetryMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, exptRepo, idem, configer, publisher, evaluatorRecordService)
+	exec := NewExptFailRetryMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, exptRepo, idem, configer, publisher, evaluatorRecordService, templateManager)
 	assert.NotNil(t, exec)
 	assert.Equal(t, manager, exec.manager)
 	assert.Equal(t, exptItemResultRepo, exec.exptItemResultRepo)
@@ -2183,8 +2199,9 @@ func TestNewExptAppendMode(t *testing.T) {
 	configer := configmocks.NewMockIConfiger(ctrl)
 	publisher := eventmocks.NewMockExptEventPublisher(ctrl)
 	evaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
+	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
 
-	exec := NewExptAppendMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService)
+	exec := NewExptAppendMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, templateManager)
 	assert.NotNil(t, exec)
 	assert.Equal(t, manager, exec.manager)
 	assert.Equal(t, exptItemResultRepo, exec.exptItemResultRepo)

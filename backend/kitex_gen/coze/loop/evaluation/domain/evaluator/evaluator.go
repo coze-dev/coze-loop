@@ -3784,9 +3784,11 @@ func (p *EvaluatorContent) Field103DeepEqual(src *CustomRPCEvaluator) bool {
 
 // 明确有顺序的 evaluator 与版本映射元素
 type EvaluatorIDVersionItem struct {
-	EvaluatorID *int64              `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
-	Version     *string             `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
-	RunConfig   *EvaluatorRunConfig `thrift:"run_config,3,optional" frugal:"3,optional,EvaluatorRunConfig" json:"run_config" form:"run_config" query:"run_config"`
+	EvaluatorID        *int64              `thrift:"evaluator_id,1,optional" frugal:"1,optional,i64" json:"evaluator_id" form:"evaluator_id" query:"evaluator_id"`
+	Version            *string             `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	RunConfig          *EvaluatorRunConfig `thrift:"run_config,3,optional" frugal:"3,optional,EvaluatorRunConfig" json:"run_config" form:"run_config" query:"run_config"`
+	EvaluatorVersionID *int64              `thrift:"evaluator_version_id,4,optional" frugal:"4,optional,i64" json:"evaluator_version_id" form:"evaluator_version_id" query:"evaluator_version_id"`
+	ScoreWeight        *float64            `thrift:"score_weight,5,optional" frugal:"5,optional,double" json:"score_weight" form:"score_weight" query:"score_weight"`
 }
 
 func NewEvaluatorIDVersionItem() *EvaluatorIDVersionItem {
@@ -3831,6 +3833,30 @@ func (p *EvaluatorIDVersionItem) GetRunConfig() (v *EvaluatorRunConfig) {
 	}
 	return p.RunConfig
 }
+
+var EvaluatorIDVersionItem_EvaluatorVersionID_DEFAULT int64
+
+func (p *EvaluatorIDVersionItem) GetEvaluatorVersionID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionID() {
+		return EvaluatorIDVersionItem_EvaluatorVersionID_DEFAULT
+	}
+	return *p.EvaluatorVersionID
+}
+
+var EvaluatorIDVersionItem_ScoreWeight_DEFAULT float64
+
+func (p *EvaluatorIDVersionItem) GetScoreWeight() (v float64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScoreWeight() {
+		return EvaluatorIDVersionItem_ScoreWeight_DEFAULT
+	}
+	return *p.ScoreWeight
+}
 func (p *EvaluatorIDVersionItem) SetEvaluatorID(val *int64) {
 	p.EvaluatorID = val
 }
@@ -3840,11 +3866,19 @@ func (p *EvaluatorIDVersionItem) SetVersion(val *string) {
 func (p *EvaluatorIDVersionItem) SetRunConfig(val *EvaluatorRunConfig) {
 	p.RunConfig = val
 }
+func (p *EvaluatorIDVersionItem) SetEvaluatorVersionID(val *int64) {
+	p.EvaluatorVersionID = val
+}
+func (p *EvaluatorIDVersionItem) SetScoreWeight(val *float64) {
+	p.ScoreWeight = val
+}
 
 var fieldIDToName_EvaluatorIDVersionItem = map[int16]string{
 	1: "evaluator_id",
 	2: "version",
 	3: "run_config",
+	4: "evaluator_version_id",
+	5: "score_weight",
 }
 
 func (p *EvaluatorIDVersionItem) IsSetEvaluatorID() bool {
@@ -3857,6 +3891,14 @@ func (p *EvaluatorIDVersionItem) IsSetVersion() bool {
 
 func (p *EvaluatorIDVersionItem) IsSetRunConfig() bool {
 	return p.RunConfig != nil
+}
+
+func (p *EvaluatorIDVersionItem) IsSetEvaluatorVersionID() bool {
+	return p.EvaluatorVersionID != nil
+}
+
+func (p *EvaluatorIDVersionItem) IsSetScoreWeight() bool {
+	return p.ScoreWeight != nil
 }
 
 func (p *EvaluatorIDVersionItem) Read(iprot thrift.TProtocol) (err error) {
@@ -3896,6 +3938,22 @@ func (p *EvaluatorIDVersionItem) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.DOUBLE {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3960,6 +4018,28 @@ func (p *EvaluatorIDVersionItem) ReadField3(iprot thrift.TProtocol) error {
 	p.RunConfig = _field
 	return nil
 }
+func (p *EvaluatorIDVersionItem) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorVersionID = _field
+	return nil
+}
+func (p *EvaluatorIDVersionItem) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *float64
+	if v, err := iprot.ReadDouble(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ScoreWeight = _field
+	return nil
+}
 
 func (p *EvaluatorIDVersionItem) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3977,6 +4057,14 @@ func (p *EvaluatorIDVersionItem) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -4051,6 +4139,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *EvaluatorIDVersionItem) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionID() {
+		if err = oprot.WriteFieldBegin("evaluator_version_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorVersionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *EvaluatorIDVersionItem) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScoreWeight() {
+		if err = oprot.WriteFieldBegin("score_weight", thrift.DOUBLE, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteDouble(*p.ScoreWeight); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *EvaluatorIDVersionItem) String() string {
 	if p == nil {
@@ -4073,6 +4197,12 @@ func (p *EvaluatorIDVersionItem) DeepEqual(ano *EvaluatorIDVersionItem) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.RunConfig) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorVersionID) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ScoreWeight) {
 		return false
 	}
 	return true
@@ -4105,6 +4235,30 @@ func (p *EvaluatorIDVersionItem) Field2DeepEqual(src *string) bool {
 func (p *EvaluatorIDVersionItem) Field3DeepEqual(src *EvaluatorRunConfig) bool {
 
 	if !p.RunConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorIDVersionItem) Field4DeepEqual(src *int64) bool {
+
+	if p.EvaluatorVersionID == src {
+		return true
+	} else if p.EvaluatorVersionID == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorVersionID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorIDVersionItem) Field5DeepEqual(src *float64) bool {
+
+	if p.ScoreWeight == src {
+		return true
+	} else if p.ScoreWeight == nil || src == nil {
+		return false
+	}
+	if *p.ScoreWeight != *src {
 		return false
 	}
 	return true

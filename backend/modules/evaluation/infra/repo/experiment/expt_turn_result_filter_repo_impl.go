@@ -49,6 +49,9 @@ func (e *ExptTurnResultFilterRepoImpl) Save(ctx context.Context, filter []*entit
 }
 
 func fieldFilterEntityToCK(src *entity.FieldFilter) *ck.FieldFilter {
+	if src == nil {
+		return nil
+	}
 	return &ck.FieldFilter{
 		Key:    src.Key,
 		Op:     src.Op,
@@ -57,8 +60,14 @@ func fieldFilterEntityToCK(src *entity.FieldFilter) *ck.FieldFilter {
 }
 
 func fieldFiltersEntityToCK(src []*entity.FieldFilter) []*ck.FieldFilter {
+	if len(src) == 0 {
+		return nil
+	}
 	res := make([]*ck.FieldFilter, 0, len(src))
 	for _, f := range src {
+		if f == nil {
+			continue
+		}
 		res = append(res, &ck.FieldFilter{
 			Key:    f.Key,
 			Op:     f.Op,

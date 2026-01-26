@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -54,6 +55,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
 	fileProvider rpc.IFileProvider,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
+	exptResultService service.ExptResultService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                    idgen,
@@ -68,6 +70,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		benefitService:           benefitService,
 		fileProvider:             fileProvider,
 		evaluatorSourceServices:  evaluatorSourceServices,
+		exptResultService:        exptResultService,
 	}
 	return handler
 }
@@ -86,6 +89,7 @@ type EvaluatorHandlerImpl struct {
 	benefitService           benefit.IBenefitService
 	fileProvider             rpc.IFileProvider
 	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
+	exptResultService        service.ExptResultService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -1132,10 +1136,16 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorRecord(ctx context.Context, reques
 		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
 	}
 	correctionDO := evaluatorconvertor.ConvertCorrectionDTO2DO(request.GetCorrection())
+	// 对修正分数进行四舍五入到两位小数
+	if correctionDO != nil && correctionDO.Score != nil {
+		roundedScore := utils.RoundScoreToTwoDecimals(*correctionDO.Score)
+		correctionDO.Score = &roundedScore
+	}
 	err = e.evaluatorRecordService.CorrectEvaluatorRecord(ctx, evaluatorRecord, correctionDO)
 	if err != nil {
 		return nil, err
 	}
+
 	return &evaluatorservice.UpdateEvaluatorRecordResponse{
 		Record: evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord),
 	}, nil

@@ -1,0 +1,72 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable selector-class-pattern */
+/* stylelint-disable declaration-no-important */
+.diff-desc-table{
+  overflow: hidden;
+  border: 1px solid rgba(82, 100, 154, 13%);
+  border-radius: 6px;
+
+  &-row{
+    padding: 8px 12px;
+    border-bottom:  1px solid rgba(82, 100, 154, 13%);
+  }
+
+  &-row:last-child{
+    border-bottom: none;
+  }
+}
+
+.diff-info-compare{
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+
+  border: 1px solid rgba(82, 100, 154, 13%);
+  border-radius: 6px;
+
+  &-header{
+    display: flex;
+    align-items: center;
+
+    width: 100%;
+    padding-right: 5px;
+
+    background: #f0f0f7;
+    border-bottom: 1px solid rgba(82, 100, 154, 13%);
+
+    &-item{
+      flex:1;
+      padding: 8px 12px;
+
+      &:last-child{
+        border-left: 1px solid rgba(82, 100, 154, 13%);
+      }
+    }
+  }
+
+  &-content{
+    flex:1;
+
+    :global{
+      .diffOverview{
+        pointer-events: none;
+      }
+
+      .diffViewport{
+        display: none;
+      }
+
+      .monaco-scrollable-element {
+        scrollbar-width: thin; /* 适用于 Firefox */
+      }
+
+      .slider{
+        right: 0;
+        left: unset!important;
+        width: 6px !important;
+        border-radius: 3px;
+      }
+    }
+  }
+}

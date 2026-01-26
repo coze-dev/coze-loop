@@ -10,6 +10,7 @@ import { useErrorInCatch } from './rules/use-error-in-catch';
 import { noEmptyCatch } from './rules/no-empty-catch';
 import { noPkgDirImport } from './rules/no-pkg-dir-import';
 import { tsxNoLeakedRender } from './rules/tsx-no-leaked-render';
+import { noDestructuringUseRequestRule } from './rules/no-destructuring-use-request';
 
 export const flowPreset = {
   rules: {
@@ -24,6 +25,7 @@ export const flowPreset = {
     'use-error-in-catch': useErrorInCatch,
     'no-pkg-dir-import': noPkgDirImport,
     'tsx-no-leaked-render': tsxNoLeakedRender,
+    'no-destructuring-use-request': noDestructuringUseRequestRule,
   },
   configs: {
     recommended: [
@@ -51,6 +53,7 @@ export const flowPreset = {
           '@coze-arch/no-batch-import-or-export': 'error',
           '@coze-arch/no-empty-catch': 'error',
           '@coze-arch/use-error-in-catch': 'warn',
+          '@coze-arch/no-destructuring-use-request': 'warn',
         },
       },
       {

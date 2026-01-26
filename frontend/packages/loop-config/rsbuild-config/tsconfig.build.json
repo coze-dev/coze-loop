@@ -1,0 +1,40 @@
+{
+  "extends": "@coze-arch/ts-config/tsconfig.web.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "useUnknownInCatchVariables": false,
+    "types": ["vitest/globals"],
+    "strictNullChecks": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
+  },
+  "include": ["./src"],
+  "references": [
+    {
+      "path": "../../../config/eslint-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/ts-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/pkg-root-webpack-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/postcss-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/bot-env-adapter/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    }
+  ],
+  "$schema": "https://json.schemastore.org/tsconfig"
+}

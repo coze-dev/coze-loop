@@ -13,9 +13,8 @@ has_license_header() {
 }
 
 add_header_in_dir() {
-    # 遍历目标目录中的所有 .ts 文件,但排除 api-schema 目录
-    find "$1" -type d -name "api-schema" -prune -o\
-        \( -name "*.ts" -o -name "*.tsx" -o -name "*.less" -o -name "*.css" \) -print0 | while read -r -d $'\0' file; do
+    # 遍历目标目录中的所有 .ts/.tsx/.less/.css 文件
+    find "$1" \( -name "*.ts" -o -name "*.tsx" -o -name "*.less" -o -name "*.css" \) -print0 | while read -r -d $'\0' file; do
         if ! has_license_header "$file"; then
             echo "Adding license header to $file"
             temp_file=$(mktemp)
@@ -28,4 +27,8 @@ add_header_in_dir() {
 }
 
 add_header_in_dir "./frontend/apps/cozeloop"
-add_header_in_dir "./frontend/packages/cozeloop"
+add_header_in_dir "./frontend/packages/loop-base"
+add_header_in_dir "./frontend/packages/loop-components"
+add_header_in_dir "./frontend/packages/loop-config"
+add_header_in_dir "./frontend/packages/loop-modules"
+add_header_in_dir "./frontend/packages/loop-pages"

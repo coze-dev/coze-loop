@@ -80,13 +80,13 @@
       "name": "update-api",
       "commandKind": "global",
       "summary": "⭐️ Update api-schema",
-      "shellCommand": "pushd frontend/packages/cozeloop/api-schema && npm run update && popd"
+      "shellCommand": "pushd frontend/packages/loop-base/api-schema && npm run update && popd"
     },
     {
       "name": "update-i18n-types",
       "commandKind": "global",
       "summary": "⭐️ Update I18n types",
-      "shellCommand": "pushd frontend/packages/cozeloop/i18n && npm run gen-i18n-types && popd"
+      "shellCommand": "pushd frontend/packages/loop-base/i18n && npm run gen-i18n-types && popd"
     }
   ],
   "parameters": [
