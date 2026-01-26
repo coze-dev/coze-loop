@@ -917,3 +917,14 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *OnboardRequest) IsValid() error {
+	return nil
+}
+func (p *OnboardResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

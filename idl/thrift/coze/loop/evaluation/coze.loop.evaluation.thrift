@@ -21,3 +21,5 @@ service EvalTargetService extends coze.loop.evaluation.eval_target.EvalTargetSer
 service EvalOpenAPIService extends coze.loop.evaluation.openapi.EvaluationOpenAPIService{}
 
 service EvalSPIService extends coze.loop.evaluation.spi.EvaluationSPIService{}
+
+service OnboardService extends coze.loop.evaluation.expt.OnboardService{}

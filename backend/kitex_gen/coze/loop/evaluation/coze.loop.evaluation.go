@@ -175,6 +175,32 @@ func NewEvalSPIServiceClient(c thrift.TClient) *EvalSPIServiceClient {
 	}
 }
 
+type OnboardService interface {
+	expt.OnboardService
+}
+
+type OnboardServiceClient struct {
+	*expt.OnboardServiceClient
+}
+
+func NewOnboardServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *OnboardServiceClient {
+	return &OnboardServiceClient{
+		OnboardServiceClient: expt.NewOnboardServiceClientFactory(t, f),
+	}
+}
+
+func NewOnboardServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *OnboardServiceClient {
+	return &OnboardServiceClient{
+		OnboardServiceClient: expt.NewOnboardServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewOnboardServiceClient(c thrift.TClient) *OnboardServiceClient {
+	return &OnboardServiceClient{
+		OnboardServiceClient: expt.NewOnboardServiceClient(c),
+	}
+}
+
 type EvaluationSetServiceProcessor struct {
 	*eval_set.EvaluationSetServiceProcessor
 }
@@ -226,5 +252,14 @@ type EvalSPIServiceProcessor struct {
 
 func NewEvalSPIServiceProcessor(handler EvalSPIService) *EvalSPIServiceProcessor {
 	self := &EvalSPIServiceProcessor{spi.NewEvaluationSPIServiceProcessor(handler)}
+	return self
+}
+
+type OnboardServiceProcessor struct {
+	*expt.OnboardServiceProcessor
+}
+
+func NewOnboardServiceProcessor(handler OnboardService) *OnboardServiceProcessor {
+	self := &OnboardServiceProcessor{expt.NewOnboardServiceProcessor(handler)}
 	return self
 }

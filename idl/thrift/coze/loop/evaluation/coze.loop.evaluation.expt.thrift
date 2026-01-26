@@ -795,3 +795,16 @@ service ExperimentService {
     CheckExperimentTemplateNameResponse CheckExperimentTemplateName(1: CheckExperimentTemplateNameRequest req) (api.post = '/api/evaluation/v1/experiment_templates/check_name')
 }
 
+struct OnboardRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
+    2: optional string template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"') // 模板 id
+    3: optional string source_target_id
+}
+
+struct OnboardResponse {
+    255: base.BaseResp BaseResp
+}
+
+service OnboardService {
+    OnboardResponse Onboard(1: OnboardRequest req) (api.post="/api/evaluation/v1/onboard")//  onboard 预置评估器
+} (agw.js_conv = "str", agw.cli_conv = "str")
