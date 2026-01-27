@@ -14,13 +14,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	evaluation_set_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
+	conf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -39,7 +39,6 @@ func NewOnboardApplicationImpl(
 	evaluationSetItemService service.EvaluationSetItemService,
 	evaluatorService service.EvaluatorService,
 	templateManager service.IExptTemplateManager,
-	evalTargetService service.IEvalTargetService,
 ) expt.OnboardService {
 	onboardApplicationOnce.Do(func() {
 		onboardApplication = &OnboardApplicationImpl{
@@ -50,7 +49,6 @@ func NewOnboardApplicationImpl(
 			evaluationSetItemService:    evaluationSetItemService,
 			evaluatorService:            evaluatorService,
 			templateManager:             templateManager,
-			evalTargetService:           evalTargetService,
 		}
 	})
 	return onboardApplication
@@ -64,10 +62,9 @@ type OnboardApplicationImpl struct {
 	evaluationSetItemService    service.EvaluationSetItemService
 	evaluatorService            service.EvaluatorService
 	templateManager             service.IExptTemplateManager
-	evalTargetService           service.IEvalTargetService
 }
 
-// Onboard 实现onboard接口：根据模板id从tcc读取配置，创建评测集，提交版本，创建评估器
+// Onboard 实现 OnboardService：根据模板ID从配置中心读取配置，创建评测集、评估器和实验模板
 func (o *OnboardApplicationImpl) Onboard(ctx context.Context, req *expt.OnboardRequest) (resp *expt.OnboardResponse, err error) {
 	// 1. 参数校验
 	templateID, err := validateOnboardRequest(req)
@@ -80,7 +77,7 @@ func (o *OnboardApplicationImpl) Onboard(ctx context.Context, req *expt.OnboardR
 		return nil, err
 	}
 
-	// 3. 从 tcc 读取配置
+	// 3. 从配置中心读取 Onboard 配置
 	onboardConfig, err := o.configer.GetOnboardConfigByTemplateID(ctx, templateID)
 	if err != nil {
 		logs.CtxError(ctx, "failed to get onboard config for template_id %s: %v, skip onboard process", templateID, err)
@@ -97,11 +94,12 @@ func (o *OnboardApplicationImpl) Onboard(ctx context.Context, req *expt.OnboardR
 	evalSetID, evalSetVersionID := o.setupEvaluationSetFlow(ctx, req.WorkspaceID, onboardConfig, sessionDO)
 
 	// 6. 评估器相关流程（即使评测集创建失败，也尝试创建评估器）
-	evaluatorIDVersionItems := o.setupEvaluatorsFlow(ctx, req.WorkspaceID, templateID, onboardConfig)
+	evaluatorIDVersionItems, scoreWeights := o.setupEvaluatorsFlow(ctx, req.WorkspaceID, templateID, onboardConfig)
 
 	// 7. 创建实验模板（基于创建的评测集、评估器和source_target_id）
-	if evalSetID > 0 && evalSetVersionID > 0 && len(evaluatorIDVersionItems) > 0 && req.SourceTargetID != nil {
-		o.setupExptTemplateFlow(ctx, req.WorkspaceID, req.GetSourceTargetID(), evalSetID, evalSetVersionID, evaluatorIDVersionItems, onboardConfig, sessionDO)
+	sourceTargetID := req.GetSourceTargetID()
+	if evalSetID > 0 && evalSetVersionID > 0 && len(evaluatorIDVersionItems) > 0 && sourceTargetID != "" {
+		o.setupExptTemplateFlow(ctx, req.WorkspaceID, sourceTargetID, evalSetID, evalSetVersionID, evaluatorIDVersionItems, scoreWeights, onboardConfig, sessionDO)
 	}
 
 	return &expt.OnboardResponse{
@@ -285,14 +283,15 @@ func (o *OnboardApplicationImpl) createEvaluationSetVersion(
 
 // setupEvaluatorsFlow 按配置创建评估器列表
 // 行为保持不变：单个评估器失败只记录日志并跳过，其余继续。
-// 返回创建的评估器ID版本项列表（包含EvaluatorID、Version、EvaluatorVersionID）
+// 返回创建的评估器ID版本项列表（包含EvaluatorID、Version、EvaluatorVersionID）和评估器ID到权重的映射
 func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 	ctx context.Context,
 	workspaceID int64,
 	templateID string,
 	onboardConfig *conf.OnboardTemplateConfig,
-) []*entity.EvaluatorIDVersionItem {
+) ([]*entity.EvaluatorIDVersionItem, map[int64]float64) {
 	evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0)
+	scoreWeights := make(map[int64]float64) // evaluatorID -> scoreWeight
 	for i, evaluatorConfig := range onboardConfig.Evaluators {
 		evaluatorDO, err := o.buildEvaluatorDO(ctx, workspaceID, evaluatorConfig)
 		if err != nil {
@@ -326,8 +325,13 @@ func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 			EvaluatorVersionID: evaluator.GetEvaluatorVersionID(),
 		}
 		evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+
+		// 保存权重信息（如果配置中有）
+		if evaluatorConfig.ScoreWeight != nil && *evaluatorConfig.ScoreWeight > 0 {
+			scoreWeights[evaluatorID] = *evaluatorConfig.ScoreWeight
+		}
 	}
-	return evaluatorIDVersionItems
+	return evaluatorIDVersionItems, scoreWeights
 }
 
 // buildEvaluatorDO 根据配置构建评估器DO
@@ -374,6 +378,7 @@ func (o *OnboardApplicationImpl) setupExptTemplateFlow(
 	sourceTargetID string,
 	evalSetID, evalSetVersionID int64,
 	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
+	scoreWeights map[int64]float64,
 	onboardConfig *conf.OnboardTemplateConfig,
 	sessionDO *entity.Session,
 ) {
@@ -386,9 +391,14 @@ func (o *OnboardApplicationImpl) setupExptTemplateFlow(
 	templateConfig := onboardConfig.Template
 
 	// 1. 构建 CreateEvalTargetParam，直接注入 source_target_id 和 target_type
+	// 如果配置中指定了 eval_target_type，使用配置值；否则使用默认值
+	evalTargetType := entity.EvalTargetTypeVolcengineAgent
+	if templateConfig.EvalTargetType != nil {
+		evalTargetType = entity.EvalTargetType(*templateConfig.EvalTargetType)
+	}
 	createEvalTargetParam := &entity.CreateEvalTargetParam{
 		SourceTargetID: gptr.Of(sourceTargetID),
-		EvalTargetType: gptr.Of(entity.EvalTargetTypeVolcengineAgentAgentkit),
+		EvalTargetType: gptr.Of(evalTargetType),
 	}
 
 	// 2. 构建 CreateExptTemplateParam
@@ -409,6 +419,7 @@ func (o *OnboardApplicationImpl) setupExptTemplateFlow(
 		templateConfig,
 		0, // targetVersionID 会在创建 target 后自动填充
 		evaluatorIDVersionItems,
+		scoreWeights,
 	)
 
 	// 5. 创建实验模板
@@ -425,6 +436,7 @@ func (o *OnboardApplicationImpl) buildTemplateConfFromOnboardConfig(
 	templateConfig *conf.OnboardExptTemplateConfig,
 	targetVersionID int64,
 	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
+	scoreWeights map[int64]float64,
 ) *entity.ExptTemplateConfiguration {
 	templateConf := &entity.ExptTemplateConfiguration{
 		ItemConcurNum:       convertInt32PtrToIntPtr(templateConfig.ItemConcurNum),
@@ -440,7 +452,7 @@ func (o *OnboardApplicationImpl) buildTemplateConfFromOnboardConfig(
 	// 构建 EvaluatorsConf
 	var evaluatorConfs []*entity.EvaluatorConf
 	if templateConfig.FieldMappingConfig != nil && len(templateConfig.FieldMappingConfig.EvaluatorFieldMapping) > 0 {
-		evaluatorConfs = o.buildEvaluatorConfs(templateConfig.FieldMappingConfig.EvaluatorFieldMapping, evaluatorIDVersionItems, templateConfig.EvaluatorScoreWeights)
+		evaluatorConfs = o.buildEvaluatorConfs(templateConfig.FieldMappingConfig.EvaluatorFieldMapping, evaluatorIDVersionItems, scoreWeights)
 	}
 
 	// 构建 ConnectorConf
@@ -508,7 +520,7 @@ func (o *OnboardApplicationImpl) buildTargetIngressConf(
 func (o *OnboardApplicationImpl) buildEvaluatorConfs(
 	evaluatorMappings []*conf.OnboardEvaluatorFieldMapping,
 	evaluatorIDVersionItems []*entity.EvaluatorIDVersionItem,
-	scoreWeights map[string]float64,
+	scoreWeights map[int64]float64,
 ) []*entity.EvaluatorConf {
 	// 构建 evaluatorIDVersionID 映射（用于匹配字段映射）
 	itemMap := make(map[string]*entity.EvaluatorIDVersionItem)
@@ -568,9 +580,9 @@ func (o *OnboardApplicationImpl) buildEvaluatorConfs(
 			IngressConf:        ingressConf,
 		}
 
-		// 应用评分权重
+		// 应用评分权重（从评估器ID获取）
 		if scoreWeights != nil {
-			if w, ok := scoreWeights[key]; ok && w > 0 {
+			if w, ok := scoreWeights[item.EvaluatorID]; ok && w > 0 {
 				conf.ScoreWeight = gptr.Of(w)
 			}
 		}

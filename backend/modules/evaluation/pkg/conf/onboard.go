@@ -24,7 +24,8 @@ type OnboardConfig map[string]*OnboardTemplateConfig
 
 // NewOnboardConfiger 创建 OnboardConfiger 实例
 func NewOnboardConfiger(configFactory conf.IConfigLoaderFactory) IOnboardConfiger {
-	loader, err := configFactory.NewConfigLoader(";" + env.PSM())
+	// 这里不依赖外部 env 包，直接使用默认命名空间
+	loader, err := configFactory.NewConfigLoader("")
 	if err != nil {
 		return nil
 	}
@@ -69,6 +70,8 @@ type OnboardEvaluatorConfig struct {
 	Type        evaluatordto.EvaluatorType     `json:"type"` // evaluatordto.EvaluatorType
 	Version     string                         `json:"version"`
 	Content     *evaluatordto.EvaluatorContent `json:"content"` // *evaluatordto.EvaluatorContent
+	// ScoreWeight 评估器权重（可选）
+	ScoreWeight *float64 `json:"score_weight,omitempty"`
 }
 
 // GetOnboardConfigByTemplateID 根据模板ID获取onboard配置
@@ -98,6 +101,8 @@ type OnboardExptTemplateConfig struct {
 	Description string `json:"description"`
 	// ExptType 实验类型
 	ExptType int32 `json:"expt_type"`
+	// EvalTargetType 评测对象类型（可选），不配置则由服务侧按默认类型处理
+	EvalTargetType *int32 `json:"eval_target_type,omitempty"`
 	// FieldMappingConfig 字段映射配置
 	FieldMappingConfig *OnboardFieldMappingConfig `json:"field_mapping_config"`
 	// ItemConcurNum 评测项并发数
