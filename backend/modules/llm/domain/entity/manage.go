@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/pkg/errors"
-
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/pkg/errors"
 )
 
 type Model struct {
@@ -353,15 +353,29 @@ const (
 type Protocol string
 
 const (
-	ProtocolArk      Protocol = "ark"
-	ProtocolOpenAI   Protocol = "openai"
-	ProtocolDeepseek Protocol = "deepseek"
-	ProtocolClaude   Protocol = "claude"
-	ProtocolOllama   Protocol = "ollama"
-	ProtocolGemini   Protocol = "gemini"
-	ProtocolQwen     Protocol = "qwen"
-	ProtocolQianfan  Protocol = "qianfan"
-	ProtocolArkBot   Protocol = "arkbot"
+	ProtocolUndefined Protocol = "undefined"
+	ProtocolArk       Protocol = "ark"
+	ProtocolOpenAI    Protocol = "openai"
+	ProtocolDeepseek  Protocol = "deepseek"
+	ProtocolClaude    Protocol = "claude"
+	ProtocolOllama    Protocol = "ollama"
+	ProtocolGemini    Protocol = "gemini"
+	ProtocolQwen      Protocol = "qwen"
+	ProtocolQianfan   Protocol = "qianfan"
+	ProtocolArkBot    Protocol = "arkbot"
+)
+
+type Family string
+
+const (
+	FamilyUndefined = "undefined"
+	FamilyGPT       = "gpt"
+	FamilySeed      = "seed"
+	FamilyGemini    = "gemini"
+	FamilyClaude    = "claude"
+	FamilyErnie     = "ernie"
+	FamilyBaichuan  = "baichuan"
+	FamilyQwen      = "qwen"
 )
 
 type ListModelReq struct {
@@ -374,4 +388,9 @@ type ListModelReq struct {
 type GetModelReq struct {
 	WorkspaceID *int64
 	ModelID     int64
+}
+
+type ListModelFilter struct {
+	NameLike *string `json:"name_like,omitempty"`
+	Fimalies []manage.Family
 }
