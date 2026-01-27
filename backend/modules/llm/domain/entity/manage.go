@@ -432,3 +432,19 @@ const (
 	ModelStatusEnabled   ModelStatus = "enabled"
 	ModelStatusDisabled  ModelStatus = "disabled"
 )
+
+type ListModelsFilter struct {
+	NameLike      *string       `json:"name_like,omitempty"`
+	Families      []Family      `json:"families,omitempty"`
+	ModelStatuses []ModelStatus `json:"model_statuses,omitempty"`
+	Abilities     []AbilityEnum `json:"abilities,omitempty"`
+}
+
+type AbilityEnum string
+
+const (
+	AbilityEnumUndefined    AbilityEnum = "undefined"
+	AbilityEnumFunctionCall AbilityEnum = "function_call"
+	AbilityEnumMultiModal   AbilityEnum = "multi_modal"
+	AbilityEnumJsonMode     AbilityEnum = "json_mode"
+)

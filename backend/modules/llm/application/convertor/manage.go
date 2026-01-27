@@ -5,9 +5,11 @@ package convertor
 
 import (
 	"github.com/bytedance/gg/gptr"
+	"github.com/bytedance/gg/gslice"
 	"github.com/bytedance/gg/gvalue"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
+	manage2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
@@ -66,14 +68,25 @@ func SeriesDO2DTO(v *entity.Series) *manage.Series {
 	return &manage.Series{
 		Name:   ptr.Of(v.Name),
 		Icon:   ptr.Of(v.Icon),
-		Family: ptr.Of(SeriesFamilyDO2DTO(v.Family)),
+		Family: ptr.Of(FamilyDO2DTO(v.Family)),
 	}
 }
 
-func SeriesFamilyDO2DTO(v entity.Family) manage.Family {
+func FamilyDO2DTO(v entity.Family) manage.Family {
 	switch v {
+	case entity.FamilySeed:
+		return manage.FamilySeed
 	default:
 		return manage.FamilyUndefined
+	}
+}
+
+func FamilyDTO2DO(val manage.Family) entity.Family {
+	switch val {
+	case manage.FamilySeed:
+		return entity.FamilySeed
+	default:
+		return entity.FamilyUndefined
 	}
 }
 
@@ -108,6 +121,17 @@ func ModelStatusDO2DTO(status entity.ModelStatus) manage.ModelStatus {
 		return manage.ModelStatusAvailable
 	default:
 		return manage.ModelStatusUndefined
+	}
+}
+
+func ModelStatusDTO2DO(val manage.ModelStatus) entity.ModelStatus {
+	switch val {
+	case manage.ModelStatusUnavailable:
+		return entity.ModelStatusDisabled
+	case manage.ModelStatusAvailable:
+		return entity.ModelStatusEnabled
+	default:
+		return entity.ModelStatusUndefined
 	}
 }
 
@@ -358,5 +382,30 @@ func ParamOptionDO2DTO(o *entity.ParamOption) *manage.ParamOption {
 	return &manage.ParamOption{
 		Value: ptr.Of(o.Value),
 		Label: ptr.Of(o.Label),
+	}
+}
+
+func AbilityEnumDTO2DO(val manage.AbilityEnum) entity.AbilityEnum {
+	switch val {
+	case manage.AbilityJSONMode:
+		return entity.AbilityEnumJsonMode
+	case manage.AbilityFunctionCall:
+		return entity.AbilityEnumFunctionCall
+	case manage.AbilityMultiModal_:
+		return entity.AbilityEnumMultiModal
+	default:
+		return entity.AbilityEnumUndefined
+	}
+}
+
+func ListModelsFilterDTO2DO(val *manage2.Filter) *entity.ListModelsFilter {
+	if val == nil {
+		return nil
+	}
+	return &entity.ListModelsFilter{
+		NameLike:      val.NameLike,
+		Families:      gslice.Map(val.Families, FamilyDTO2DO),
+		ModelStatuses: gslice.Map(val.Statuses, ModelStatusDTO2DO),
+		Abilities:     gslice.Map(val.Abilities, AbilityEnumDTO2DO),
 	}
 }
