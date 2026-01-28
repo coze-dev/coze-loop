@@ -29,7 +29,7 @@ const (
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
 	backfillLockTTL         = 3 * time.Minute
-	backfillMaxRetryTimes   = 15
+	backfillMaxRetryTimes   = 5
 )
 
 // 定时任务+锁
