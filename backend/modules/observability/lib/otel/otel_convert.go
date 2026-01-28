@@ -68,6 +68,11 @@ var (
 			IsTag:     true,
 			DataType:  dataTypeString,
 		},
+		"status_code": {
+			AttributeKey: []string{otelAttributeStatusCode},
+			IsTag:        false,
+			DataType:     dataTypeInt64,
+		},
 		"psm": {
 			AttributeKey: []string{"service.name"},
 			IsTag:        false,
@@ -343,6 +348,11 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			}
 			if conf.IsTag {
 				tagsLong[fieldKey] = value
+			} else {
+				switch fieldKey {
+				case "status_code":
+					statusCode = int32(value)
+				}
 			}
 		case dataTypeBool:
 			value, ok := srcValue.(bool)

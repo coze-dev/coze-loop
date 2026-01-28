@@ -21,6 +21,7 @@ const (
 	otelAttributeInput       = "cozeloop.input"
 	otelAttributeOutput      = "cozeloop.output"
 	otelAttributeLogID       = "cozeloop.logid"
+	otelAttributeStatusCode  = "cozeloop.status_code"
 
 	apmInput  = "gen_ai.input"
 	apmOutput = "gen_ai.output"
