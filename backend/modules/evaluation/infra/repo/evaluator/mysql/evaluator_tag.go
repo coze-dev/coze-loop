@@ -229,7 +229,7 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 
 	outerQuery := dbsession.WithContext(ctx).
 		Table("(?) AS src", subQuery).
-		Order("src.tag_value IS NULL, src.tag_value ASC")
+		Order("ISNULL(src.tag_value), src.tag_value ASC")
 	if limit > 0 {
 		outerQuery = outerQuery.Limit(limit).Offset(offset)
 	}
