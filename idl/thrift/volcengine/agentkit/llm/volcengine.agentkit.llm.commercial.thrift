@@ -4,7 +4,6 @@ include "../../../base.thrift"
 include "../../../coze/loop/llm/coze.loop.llm.manage.thrift"
 include "../../../coze/loop/llm/domain/manage.thrift"
 include "../../../coze/loop/llm/domain/common.thrift"
-include "../../../coze/loop/llm/coze.loop.llm.commercial.thrift"
 
 struct ListModelsRequest {
     1: optional i64 workspace_id (api.js_conv = 'true', vt.not_nil = 'true', vt.gt = '0', go.tag = 'json:"workspace_id"', api.query = 'WorkspaceId')
