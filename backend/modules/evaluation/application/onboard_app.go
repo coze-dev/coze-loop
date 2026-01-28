@@ -6,6 +6,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -154,11 +155,17 @@ func (o *OnboardApplicationImpl) setupEvaluationSetFlow(
 		return 0, 0
 	}
 
-	// 2. 构造评测集 schema 和业务类目
+	// 2. 尝试复用同名评测集（按 Name + SpaceID 唯一）
+	if existingID, existingVersionID, ok := o.findExistingEvaluationSetByName(ctx, workspaceID, onboardConfig.EvaluationSet.Name); ok {
+		logs.CtxInfo(ctx, "reusing existing evaluation set, id: %d, version_id: %d, name: %s", existingID, existingVersionID, onboardConfig.EvaluationSet.Name)
+		return existingID, existingVersionID
+	}
+
+	// 3. 构造评测集 schema 和业务类目
 	schemaDO := buildEvaluationSetSchema(onboardConfig)
 	bizCategory := buildBizCategory(onboardConfig)
 
-	// 3. 创建评测集
+	// 4. 创建评测集
 	evalSetID, err := o.evaluationSetService.CreateEvaluationSet(ctx, &entity.CreateEvaluationSetParam{
 		SpaceID:             workspaceID,
 		Name:                onboardConfig.EvaluationSet.Name,
@@ -173,15 +180,100 @@ func (o *OnboardApplicationImpl) setupEvaluationSetFlow(
 	}
 	logs.CtxInfo(ctx, "created evaluation set with id: %d", evalSetID)
 
-	// 4. 批量创建评测集 items
+	// 5. 批量创建评测集 items
 	itemsCreated := o.batchCreateEvaluationSetItems(ctx, workspaceID, evalSetID, onboardConfig)
 
-	// 5. 创建评测集版本（仅在 items 创建成功时执行）
+	// 6. 创建评测集版本（仅在 items 创建成功时执行）
 	if itemsCreated {
 		versionID := o.createEvaluationSetVersion(ctx, workspaceID, evalSetID, onboardConfig)
 		return evalSetID, versionID
 	}
 	return evalSetID, 0
+}
+
+// findExistingEvaluationSetByName 尝试按名称在当前空间中复用已存在的评测集
+func (o *OnboardApplicationImpl) findExistingEvaluationSetByName(ctx context.Context, workspaceID int64, name string) (evalSetID, evalSetVersionID int64, ok bool) {
+	if name == "" {
+		return 0, 0, false
+	}
+	pageNum := int32(1)
+	pageSize := int32(50)
+	// 按更新时间倒序，优先拉取最近更新的一批同名评测集
+	orderBys := []*entity.OrderBy{
+		{
+			Field: gptr.Of(entity.OrderByUpdatedAt),
+			IsAsc: gptr.Of(false),
+		},
+	}
+	param := &entity.ListEvaluationSetsParam{
+		SpaceID:    workspaceID,
+		Name:       gptr.Of(name),
+		PageNumber: &pageNum,
+		PageSize:   &pageSize,
+		OrderBys:   orderBys,
+	}
+	sets, _, _, err := o.evaluationSetService.ListEvaluationSets(ctx, param)
+	if err != nil || len(sets) == 0 {
+		return 0, 0, false
+	}
+
+	// 先选出最近更新的评测集
+	latestSet := sets[0]
+	if latestSet == nil || latestSet.ID == 0 {
+		return 0, 0, false
+	}
+
+	// 使用 ListEvaluationSetVersions 查询该评测集的所有版本，并按创建时间倒排
+	var (
+		allVersions []*entity.EvaluationSetVersion
+		pageToken   *string
+		versions    []*entity.EvaluationSetVersion
+		nextCursor  *string
+		err         error
+	)
+	verPageSize := int32(50)
+	pageNum := int32(1)
+	for {
+		verParam := &entity.ListEvaluationSetVersionsParam{
+			SpaceID:         workspaceID,
+			EvaluationSetID: latestSet.ID,
+			PageToken:       pageToken,
+			PageSize:        &verPageSize,
+			PageNumber:      &pageNum,
+		}
+		versions, _, nextCursor, err = o.evaluationSetVersionService.ListEvaluationSetVersions(ctx, verParam)
+		if err != nil {
+			// 查询失败时，只复用评测集本身
+			return latestSet.ID, 0, true
+		}
+		if len(versions) > 0 {
+			allVersions = append(allVersions, versions...)
+		}
+		if nextCursor == nil || *nextCursor == "" {
+			break
+		}
+		pageToken = nextCursor
+		pageNum++
+	}
+
+	if len(allVersions) == 0 {
+		// 查不到版本时，只复用评测集本身
+		return latestSet.ID, 0, true
+	}
+
+	// 按创建时间倒排（CreatedAt 可能为空，视为 0）
+	sort.Slice(allVersions, func(i, j int) bool {
+		var ci, cj int64
+		if allVersions[i].BaseInfo != nil && allVersions[i].BaseInfo.CreatedAt != nil {
+			ci = *allVersions[i].BaseInfo.CreatedAt
+		}
+		if allVersions[j].BaseInfo != nil && allVersions[j].BaseInfo.CreatedAt != nil {
+			cj = *allVersions[j].BaseInfo.CreatedAt
+		}
+		return ci > cj
+	})
+
+	return latestSet.ID, allVersions[0].ID, true
 }
 
 // buildEvaluationSetSchema 根据配置构建评测集 schema
@@ -293,6 +385,23 @@ func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 	evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0)
 	scoreWeights := make(map[int64]float64) // evaluatorID -> scoreWeight
 	for i, evaluatorConfig := range onboardConfig.Evaluators {
+		// 1. 优先复用同名 + 同版本评估器（按 Name + Version + SpaceID）
+		if existingVer, ok := o.findExistingEvaluatorVersion(ctx, workspaceID, evaluatorConfig); ok {
+			item := &entity.EvaluatorIDVersionItem{
+				EvaluatorID:        existingVer.GetEvaluatorID(),
+				Version:            existingVer.GetVersion(),
+				EvaluatorVersionID: existingVer.GetEvaluatorVersionID(),
+			}
+			evaluatorIDVersionItems = append(evaluatorIDVersionItems, item)
+			if evaluatorConfig.ScoreWeight != nil && *evaluatorConfig.ScoreWeight > 0 {
+				scoreWeights[item.EvaluatorID] = *evaluatorConfig.ScoreWeight
+			}
+			logs.CtxInfo(ctx, "reusing existing evaluator, id: %d, version_id: %d, name: %s, version: %s",
+				item.EvaluatorID, item.EvaluatorVersionID, evaluatorConfig.Name, evaluatorConfig.Version)
+			continue
+		}
+
+		// 2. 不存在则创建新的评估器
 		evaluatorDO, err := o.buildEvaluatorDO(ctx, workspaceID, evaluatorConfig)
 		if err != nil {
 			logs.CtxError(ctx, "failed to build evaluator DO for evaluator %d: %v, skip this evaluator", i, err)
@@ -306,17 +415,30 @@ func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 		}
 		logs.CtxInfo(ctx, "created evaluator with id: %d", evaluatorID)
 
-		// 获取创建的评估器以获取版本ID
+		// 获取创建的评估器元信息以获取 LatestVersion
 		evaluators, err := o.evaluatorService.BatchGetEvaluator(ctx, workspaceID, []int64{evaluatorID}, false)
 		if err != nil || len(evaluators) == 0 {
 			logs.CtxWarn(ctx, "failed to get evaluator %d after creation: %v, skip adding to template", evaluatorID, err)
 			continue
 		}
-		evaluator := evaluators[0]
-		if evaluator == nil {
+		evaluatorMeta := evaluators[0]
+		if evaluatorMeta == nil {
 			logs.CtxWarn(ctx, "evaluator %d is nil after creation, skip adding to template", evaluatorID)
 			continue
 		}
+
+		// 使用 LatestVersion 获取最新已提交版本（而不是 draft 版本）
+		if evaluatorMeta.LatestVersion == "" {
+			logs.CtxWarn(ctx, "evaluator %d has no latest version, skip adding to template", evaluatorID)
+			continue
+		}
+		pairs := [][2]interface{}{{evaluatorID, evaluatorMeta.LatestVersion}}
+		versions, err := o.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
+		if err != nil || len(versions) == 0 || versions[0] == nil {
+			logs.CtxWarn(ctx, "failed to get latest version for evaluator %d: %v, skip adding to template", evaluatorID, err)
+			continue
+		}
+		evaluator := versions[0]
 
 		// 构建 EvaluatorIDVersionItem
 		item := &entity.EvaluatorIDVersionItem{
@@ -332,6 +454,45 @@ func (o *OnboardApplicationImpl) setupEvaluatorsFlow(
 		}
 	}
 	return evaluatorIDVersionItems, scoreWeights
+}
+
+// findExistingEvaluatorVersion 按名称在当前空间中查找已存在的评估器，并返回最新已提交版本
+func (o *OnboardApplicationImpl) findExistingEvaluatorVersion(ctx context.Context, workspaceID int64, cfg *conf.OnboardEvaluatorConfig) (*entity.Evaluator, bool) {
+	if cfg == nil || cfg.Name == "" {
+		return nil, false
+	}
+
+	// 1. 先按名称在当前空间中查找评估器元信息，按更新时间倒序保证取到最新的同名评估器
+	orderBys := []*entity.OrderBy{
+		{
+			Field: gptr.Of(entity.OrderByUpdatedAt),
+			IsAsc: gptr.Of(false),
+		},
+	}
+	listReq := &entity.ListEvaluatorRequest{
+		SpaceID:    workspaceID,
+		SearchName: cfg.Name,
+		PageSize:   1,
+		PageNum:    1,
+		OrderBys:   orderBys,
+		WithVersion: false,
+	}
+	evals, _, err := o.evaluatorService.ListEvaluator(ctx, listReq)
+	if err != nil || len(evals) == 0 || evals[0] == nil {
+		return nil, false
+	}
+	meta := evals[0]
+
+	// 2. 使用 LatestVersion 获取最新已提交版本（而不是 draft 版本）
+	if meta.LatestVersion == "" {
+		return nil, false
+	}
+	pairs := [][2]interface{}{{meta.ID, meta.LatestVersion}}
+	versions, err := o.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
+	if err != nil || len(versions) == 0 || versions[0] == nil {
+		return nil, false
+	}
+	return versions[0], true
 }
 
 // buildEvaluatorDO 根据配置构建评估器DO
@@ -411,6 +572,12 @@ func (o *OnboardApplicationImpl) setupExptTemplateFlow(
 		EvaluatorIDVersionItems: evaluatorIDVersionItems,
 		ExptType:                entity.ExptType(templateConfig.ExptType),
 		CreateEvalTargetParam:   createEvalTargetParam,
+	}
+
+	// 2.1 如果同名模板已经存在，则直接跳过创建（保持幂等），按当前逻辑视为成功
+	if pass, err := o.templateManager.CheckName(ctx, param.Name, workspaceID, sessionDO); err == nil && !pass {
+		logs.CtxInfo(ctx, "template %s already exists in workspace %d, skip creating", param.Name, workspaceID)
+		return
 	}
 
 	// 3. 构建 TemplateConf（从 FieldMappingConfig）
