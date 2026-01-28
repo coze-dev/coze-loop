@@ -14,6 +14,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/litellm"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_telemetry"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 
@@ -673,9 +674,17 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 			}
 			// pack tools
 			srcTools := aggregateAttributesByPrefix(attributeMap, openInferenceAttributeModelInputTools)
-			toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
-			if err != nil {
-				continue
+			if srcTools != nil { // openInference tools
+				toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
+				if err != nil {
+					continue
+				}
+			} else { // otel tools
+				srcTools = aggregateAttributesByPrefix(attributeMap, otelAttributeModelInputTools)
+				toBeMarshalObject, err = open_telemetry.AddTools2ModelInput(srcInput, srcTools)
+				if err != nil {
+					continue
+				}
 			}
 		case openInferenceAttributeModelOutputMessages: // openInference output message
 			resObject, err := open_inference.ConvertToModelOutput(srcAttrAggrRes)
