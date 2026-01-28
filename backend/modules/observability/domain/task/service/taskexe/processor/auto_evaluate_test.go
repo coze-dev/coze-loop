@@ -20,6 +20,7 @@ import (
 	"github.com/cloudwego/kitex/client/callopt"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -457,7 +458,12 @@ func TestAutoEvaluateProcessor_Invoke_WithEvaluationProvider_SuccessAddedItems(t
 	repoMock.EXPECT().DecrTaskCount(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 	repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
-	client := &fakeExperimentClient{invokeResp: &expt.InvokeExperimentResponse{AddedItems: map[int64]int64{1: 1, 2: 1}}}
+	client := &fakeExperimentClient{invokeResp: &expt.InvokeExperimentResponse{
+		ItemOutputs: []*datadataset.CreateDatasetItemOutput{
+			{IsNewItem: gptr.Of(true)},
+			{IsNewItem: gptr.Of(true)},
+		},
+	}}
 	provider := evalrpc.NewEvaluationRPCProvider(client)
 	proc := &AutoEvaluateProcessor{evaluationSvc: provider, taskRepo: repoAdapter}
 	err := proc.Invoke(context.Background(), trigger)

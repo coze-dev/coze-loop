@@ -203,14 +203,14 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 					}
 					return nil
 				}
+				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
+					return err
+				}
 				if err := sub.processor.OnTaskUpdated(ctx, sub.t, entity.TaskStatusRunning); err != nil {
 					logs.CtxWarn(ctx, "sub.processor.OnTaskUpdated err:%v", err)
 					return errSkipSubscriber
 				}
 				sub.t.TaskStatus = entity.TaskStatusRunning
-				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
-					return err
-				}
 				return nil
 			}); err != nil {
 				if errors.Is(err, errSkipSubscriber) {
