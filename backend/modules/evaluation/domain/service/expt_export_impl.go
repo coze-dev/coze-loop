@@ -672,8 +672,8 @@ func formatMultiPartData(data *entity.Content) string {
 			builder.WriteString(url)
 		case entity.ContentTypeVideo:
 			url := ""
-			if content.Audio != nil && content.Audio.URL != nil {
-				url = fmt.Sprintf("<ref_video_url:%s>\n", *content.Audio.URL)
+			if content.Video != nil && content.Video.URL != nil {
+				url = fmt.Sprintf("<ref_video_url:%s>\n", *content.Video.URL)
 			}
 			builder.WriteString(url)
 		case entity.ContentTypeMultipart:
