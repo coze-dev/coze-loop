@@ -1,23 +1,19 @@
 namespace go volcengine.agentkit.llm.commercial
 
 include "../../../base.thrift"
+include "../../../coze/loop/llm/coze.loop.llm.manage.thrift"
 include "../../../coze/loop/llm/domain/manage.thrift"
 include "../../../coze/loop/llm/domain/common.thrift"
-
-typedef string Scenario (ts.enum="true")
-const Scenario scenario_default = "default"
-const Scenario scenario_prompt_debug = "prompt_debug"
-const Scenario scenario_prompt_as_a_service = "prompt_as_a_service"
-const Scenario scenario_eval_target = "eval_target"
-const Scenario scenario_evaluator = "evaluator"
-const Scenario scenario_data_synthesis = "data_synthesis"
+include "../../../coze/loop/llm/coze.loop.llm.commercial.thrift"
 
 struct ListModelsRequest {
     1: optional i64 workspace_id (api.js_conv = 'true', vt.not_nil = 'true', vt.gt = '0', go.tag = 'json:"workspace_id"', api.query = 'WorkspaceId')
-    2: optional Scenario scenario
+    2: optional common.Scenario scenario
+    3: optional coze.loop.llm.manage.Filter filter
     100: optional string cookie (api.header = 'cookie')
     127: optional i32 page_size
     128: optional string page_token
+    129: optional i32 page
     250: optional string project_name (api.query = 'ProjectName')
     255: optional base.Base Base
 }

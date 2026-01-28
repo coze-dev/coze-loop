@@ -3,7 +3,7 @@ namespace go stone.fornax.ml_flow.domain.datasetv2jobt
 include "datasetv2.thrift"
 include "datasetv2similarity.thrift"
 include "trainingdatasetv2.thrift"
-include "../../../../coze/loop/data/domain/common.thrift"
+include "../../data/domain/common.thrift"
 
 // 通用任务类型
 enum JobType {
@@ -30,7 +30,7 @@ const string LogLevelWarning = "warning"
 struct JobLog {
     1: required string content
     2: required string level
-    3: required i64 timestamp (agw.js_conv = "str")
+    3: required i64 timestamp (api.js_conv = "str")
     10: required bool hidden
 }
 
@@ -63,9 +63,9 @@ enum IODatasetProvider {
 }
 
 struct DatasetIODataset {
-    1: optional i64 spaceID (agw.js_conv = "str")
-    2: optional i64 datasetID (agw.js_conv = "str")
-    3: optional i64 versionID (agw.js_conv = "str")
+    1: optional i64 spaceID (api.js_conv = "str")
+    2: optional i64 datasetID (api.js_conv = "str")
+    3: optional i64 versionID (api.js_conv = "str")
     4: optional datasetv2.Dataset dataset                       // 数据集详情，在接口上返回，不写入
     5: optional datasetv2.DatasetVersion version                // 版本详情，在接口上返回，不写入
     6: optional string newDatasetName
@@ -85,10 +85,10 @@ struct DatasetIOEndpoint {
 
 // DatasetIOJob 数据集导入导出任务
 struct DatasetIOJob {
-    1: required i64 id (agw.js_conv = "str")
+    1: required i64 id (api.js_conv = "str")
     2: optional i32 appID
-    3: required i64 spaceID (agw.js_conv = "str")
-    4: required i64 datasetID (agw.js_conv = "str")   // 导入导出到文件时，为数据集 ID；数据集间转移时，为目标数据集 ID
+    3: required i64 spaceID (api.js_conv = "str")
+    4: required i64 datasetID (api.js_conv = "str")   // 导入导出到文件时，为数据集 ID；数据集间转移时，为目标数据集 ID
     5: required JobType jobType
     6: required DatasetIOEndpoint source
     7: required DatasetIOEndpoint target
@@ -103,11 +103,11 @@ struct DatasetIOJob {
 
     /* 通用信息 */
     100: optional string createdBy
-    101: optional i64 createdAt (agw.js_conv = "str")
+    101: optional i64 createdAt (api.js_conv = "str")
     102: optional string updatedBy
-    103: optional i64 updatedAt (agw.js_conv = "str")
-    104: optional i64 startedAt (agw.js_conv = "str")
-    105: optional i64 endedAt (agw.js_conv = "str")
+    103: optional i64 updatedAt (api.js_conv = "str")
+    104: optional i64 startedAt (api.js_conv = "str")
+    105: optional i64 endedAt (api.js_conv = "str")
     106: optional common.UserInfo createdByDetail
     107: optional common.UserInfo updatedByDetail
 }
@@ -158,9 +158,9 @@ enum SourceType {
 }
 
 struct ItemDeduplicateJob {
-    1: required i64 id (agw.js_conv = "str"),
-    2: required i64 spaceID (agw.js_conv = "str")
-    3: required i64 datasetID (agw.js_conv = "str")
+    1: required i64 id (api.js_conv = "str"),
+    2: required i64 spaceID (api.js_conv = "str")
+    3: required i64 datasetID (api.js_conv = "str")
 
     /* 导入文件需要的数据 */
     10: optional JobType jobType
@@ -186,24 +186,24 @@ struct ItemDeduplicateJob {
 
     /* 通用信息 */
     103: optional string createdBy
-    104: optional i64 createdAt (agw.js_conv = "str")
+    104: optional i64 createdAt (api.js_conv = "str")
     105: optional string updatedBy
-    106: optional i64 updatedAt (agw.js_conv = "str")
-    107: optional i64 startedAt (agw.js_conv = "str")
-    108: optional i64 endedAt (agw.js_conv = "str")
+    106: optional i64 updatedAt (api.js_conv = "str")
+    107: optional i64 startedAt (api.js_conv = "str")
+    108: optional i64 endedAt (api.js_conv = "str")
 }
 
 struct ItemDeduplicatePair {
-    1: required i64 id (agw.js_conv = "str"),
+    1: required i64 id (api.js_conv = "str"),
     2: required string uniqKey,  // 本条主键
     3: optional datasetv2.DatasetItem newItem,  // 新导入的内容
     4: optional list<SuspectedDupItemInfo> items, // 可能重复的内容
     5: optional ImportConfirmType importConfirmType,    // 是否确认
 
     103: optional string createdBy
-    104: optional i64 createdAt (agw.js_conv = "str")
+    104: optional i64 createdAt (api.js_conv = "str")
     105: optional string updatedBy
-    106: optional i64 updatedAt (agw.js_conv = "str")
+    106: optional i64 updatedAt (api.js_conv = "str")
 }
 
 struct SuspectedDupItemInfo {
@@ -236,7 +236,7 @@ enum ExportETLStrategyType {
 }
 
 struct ProviderAuth {
-    1: optional i64 providerAccountID (agw.js_conv = "str") // provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID
+    1: optional i64 providerAccountID (api.js_conv = "str") // provider == VETOS 时，此处存储的是用户在 fornax 上托管的方舟账号的ID
 }
 
 enum CallbackType {

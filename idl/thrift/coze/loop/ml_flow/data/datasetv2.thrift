@@ -98,10 +98,10 @@ struct TrainingSetProperties {
 
 // Dataset 数据集实体
 struct Dataset {
-    1: required i64 id (agw.js_conv = "str")
+    1: required i64 id (api.js_conv = "str")
     2: optional i32 appID
-    3: required i64 spaceID (agw.js_conv = "str")
-    4: required i64 schemaID (agw.js_conv = "str")
+    3: required i64 spaceID (api.js_conv = "str")
+    4: required i64 schemaID (api.js_conv = "str")
     10: optional string name
     11: optional string description
     12: optional DatasetStatus status
@@ -114,15 +114,15 @@ struct Dataset {
     19: optional DatasetFeatures features             // 数据集功能开关
     20: optional string latestVersion                 // 最新的版本号
     21: optional i64 nextVersionNum                   // 下一个的版本号
-    22: optional i64 itemCount (agw.js_conv = "str")  // 数据条数
+    22: optional i64 itemCount (api.js_conv = "str")  // 数据条数
     23: optional DatasetBizProperties bizProperties   // 提供给上层业务定义的属性
 
     /* 通用信息 */
     100: optional string createdBy
-    101: optional i64 createdAt (agw.js_conv = "str")
+    101: optional i64 createdAt (api.js_conv = "str")
     102: optional string updatedBy
-    103: optional i64 updatedAt (agw.js_conv = "str")
-    104: optional i64 expiredAt (agw.js_conv = "str")
+    103: optional i64 updatedAt (api.js_conv = "str")
+    104: optional i64 expiredAt (api.js_conv = "str")
 
     /* DTO 专用字段 */
     150: optional bool changeUncommitted              // 是否有未提交的修改
@@ -131,8 +131,8 @@ struct Dataset {
 
 struct DatasetLockInfo {
     1: optional DatasetLockReason reason
-    2: optional i64 crowdsourcingAnnotateJobID (agw.js_conv = "str") // 众包标注任务ID
-    3: optional i64 pipelineRunID (agw.js_conv = "str")              // 工作流运行ID. 在 reason=PipelineTemporary 时有值
+    2: optional i64 crowdsourcingAnnotateJobID (api.js_conv = "str") // 众包标注任务ID
+    3: optional i64 pipelineRunID (api.js_conv = "str")              // 工作流运行ID. 在 reason=PipelineTemporary 时有值
 }
 
 enum DatasetLockReason {
@@ -142,50 +142,50 @@ enum DatasetLockReason {
 }
 
 struct DatasetSpec {
-    1: optional i64 maxItemCount (agw.js_conv = "str")           // 条数上限
-    2: optional i32 maxFieldCount (agw.js_conv = "str")          // 字段数量上限
-    3: optional i64 maxItemSize (agw.js_conv = "str")            // 单条数据字数上限
-    4: optional i32 maxItemDataNestedDepth (agw.js_conv = "str") // 单条 array/struct 数据嵌套上限
+    1: optional i64 maxItemCount (api.js_conv = "str")           // 条数上限
+    2: optional i32 maxFieldCount (api.js_conv = "str")          // 字段数量上限
+    3: optional i64 maxItemSize (api.js_conv = "str")            // 单条数据字数上限
+    4: optional i32 maxItemDataNestedDepth (api.js_conv = "str") // 单条 array/struct 数据嵌套上限
     5: optional MultiModalSpec multiModalSpec
 }
 
 // DatasetVersion 数据集版本元信息，不包含数据本身
 struct DatasetVersion {
-    1: required i64 id (agw.js_conv = "str")
+    1: required i64 id (api.js_conv = "str")
     2: optional i32 appID
-    3: required i64 spaceID (agw.js_conv = "str")
-    4: required i64 datasetID (agw.js_conv = "str")
-    5: required i64 schemaID (agw.js_conv = "str")
+    3: required i64 spaceID (api.js_conv = "str")
+    4: required i64 datasetID (api.js_conv = "str")
+    5: required i64 schemaID (api.js_conv = "str")
     10: optional string version                        // 展示的版本号，SemVer2 三段式
-    11: optional i64 versionNum (agw.js_conv = "str")  // 后端记录的数字版本号，从 1 开始递增
+    11: optional i64 versionNum (api.js_conv = "str")  // 后端记录的数字版本号，从 1 开始递增
     12: optional string description                    // 版本描述
     13: optional string datasetBrief                   // marshal 后的版本保存时的数据集元信息，不包含 schema
-    14: optional i64 itemCount (agw.js_conv = "str")   // 数据条数
+    14: optional i64 itemCount (api.js_conv = "str")   // 数据条数
     15: optional SnapshotStatus snapshotStatus         // 当前版本的快照状态
 
     /* 通用信息 */
     100: optional string createdBy
-    101: optional i64 createdAt (agw.js_conv = "str")
-    102: optional i64 disabledAt (agw.js_conv = "str") // 版本禁用的时间
+    101: optional i64 createdAt (api.js_conv = "str")
+    102: optional i64 disabledAt (api.js_conv = "str") // 版本禁用的时间
     103: optional string updatedBy
-    104: optional i64 updatedAt (agw.js_conv = "str")
+    104: optional i64 updatedAt (api.js_conv = "str")
 }
 
 // DatasetSchema 数据集 Schema，包含数据集列的类型限制等信息
 struct DatasetSchema {
-    1: optional i64 id (agw.js_conv = "str")              // 主键 ID，创建时可以不传
+    1: optional i64 id (api.js_conv = "str")              // 主键 ID，创建时可以不传
     2: optional i32 appID                                 // schema 所在的空间 ID，创建时可以不传
-    3: optional i64 spaceID (agw.js_conv = "str")         // schema 所在的空间 ID，创建时可以不传
-    4: optional i64 datasetID (agw.js_conv = "str")       // 数据集 ID，创建时可以不传
+    3: optional i64 spaceID (api.js_conv = "str")         // schema 所在的空间 ID，创建时可以不传
+    4: optional i64 datasetID (api.js_conv = "str")       // 数据集 ID，创建时可以不传
     10: optional list<FieldSchema> fields                 // 数据集列约束
     11: optional bool immutable                           // 是否不允许编辑
 
     /* 通用信息 */
     100: optional string createdBy
-    101: optional i64 createdAt (agw.js_conv = "str")
+    101: optional i64 createdAt (api.js_conv = "str")
     102: optional string updatedBy
-    103: optional i64 updatedAt (agw.js_conv = "str")
-    104: optional i64 updateVersion (agw.js_conv = "str")
+    103: optional i64 updatedAt (api.js_conv = "str")
+    104: optional i64 updateVersion (api.js_conv = "str")
 }
 
 enum FieldStatus {
@@ -239,20 +239,20 @@ struct TagFieldConfig {
 }
 
 struct MultiModalSpec {
-    1: optional i64 maxFileCount (agw.js_conv = "str") // 文件数量上限
-    2: optional i64 maxFileSize (agw.js_conv = "str")  // 文件大小上限
+    1: optional i64 maxFileCount (api.js_conv = "str") // 文件数量上限
+    2: optional i64 maxFileSize (api.js_conv = "str")  // 文件大小上限
     3: optional list<string> supportedFormats          // 文件格式
-    4: optional i32 maxPartCount (agw.js_conv = "str") // 多模态节点总数上限
+    4: optional i32 maxPartCount (api.js_conv = "str") // 多模态节点总数上限
 }
 
 // DatasetItem 数据内容
 struct DatasetItem {
-    1: optional i64 id (agw.js_conv = "str")                            // 主键 ID，创建时可以不传
+    1: optional i64 id (api.js_conv = "str")                            // 主键 ID，创建时可以不传
     2: optional i32 appID                                               // 冗余 app ID，创建时可以不传
-    3: optional i64 spaceID (agw.js_conv = "str")                       // 冗余 space ID，创建时可以不传
-    4: optional i64 datasetID (agw.js_conv = "str")                     // 所属的 data ID，创建时可以不传
-    5: optional i64 schemaID (agw.js_conv = "str")                      // 插入时对应的 schema ID，后端根据 req 参数中的 datasetID 自动填充
-    6: optional i64 itemID (agw.js_conv = "str")                        // 数据在当前数据集内的唯一 ID，不随版本发生改变
+    3: optional i64 spaceID (api.js_conv = "str")                       // 冗余 space ID，创建时可以不传
+    4: optional i64 datasetID (api.js_conv = "str")                     // 所属的 data ID，创建时可以不传
+    5: optional i64 schemaID (api.js_conv = "str")                      // 插入时对应的 schema ID，后端根据 req 参数中的 datasetID 自动填充
+    6: optional i64 itemID (api.js_conv = "str")                        // 数据在当前数据集内的唯一 ID，不随版本发生改变
     10: optional string itemKey (vt.max_size = "255")                   // 数据插入的幂等 key
     11: optional list<FieldData> data (vt.elem.not_nil = "true")        // 数据内容
     12: optional list<ItemData> repeatedData (vt.elem.not_nil = "true") // 多轮数据内容，与 data 互斥
@@ -260,16 +260,16 @@ struct DatasetItem {
 
     /* 通用信息 */
     100: optional string createdBy
-    101: optional i64 createdAt (agw.js_conv = "str")
+    101: optional i64 createdAt (api.js_conv = "str")
     102: optional string updatedBy
-    103: optional i64 updatedAt (agw.js_conv = "str")
+    103: optional i64 updatedAt (api.js_conv = "str")
 
     /* DTO 专用字段 */
     150: optional bool dataOmitted                                      // 数据（data 或 repeatedData）是否省略。列表查询 item 时，特长的数据内容不予返回，可通过单独 Item 接口获取内容
 }
 
 struct ItemData {
-    1: optional i64 id (agw.js_conv = "str")
+    1: optional i64 id (api.js_conv = "str")
     2: optional list<FieldData> data
 }
 
@@ -324,7 +324,7 @@ struct FileUploadToken {
 struct CreateDatasetItemOutput {
     1: optional i32 itemIndex                    // item 在 BatchCreateDatasetItemsReq.items 中的索引
     2: optional string itemKey
-    3: optional i64 itemID (agw.js_conv = "str")
+    3: optional i64 itemID (api.js_conv = "str")
     4: optional bool isNewItem                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 }
 
@@ -392,18 +392,18 @@ struct ItemSource {
     1: required LineageSourceType type
     2: optional TrackedItem trackedItem              // 源 item 信息，可以为空
     3: optional TrackedJobType jobType               // 任务类型，根据该字段区分数据导入任务/数据回流任务/...
-    4: optional i64 jobID (agw.js_conv = "str")      // item 关联的任务 id，为 0 表示无相应任务(例如数据是通过克隆另一数据行产生的)
+    4: optional i64 jobID (api.js_conv = "str")      // item 关联的任务 id，为 0 表示无相应任务(例如数据是通过克隆另一数据行产生的)
     5: optional TrackedDataset dataset               // type = Dataset 时，从该字段获取数据集具体信息
     6: optional TrackedFile file                     // type = FileStorage 时，从该字段获取文件信息
     7: optional TrackedTraceSpan span                // type = DataReflow 时，从该字段获取 span 信息
-    51: optional i64 createdAt (agw.js_conv = "str")
+    51: optional i64 createdAt (api.js_conv = "str")
 }
 
 struct TrackedItem {
-    1: optional i64 spaceID (agw.js_conv = "str")
-    2: optional i64 datasetID (agw.js_conv = "str")
-    3: optional i64 itemID (agw.js_conv = "str")
-    4: optional i64 versionID (agw.js_conv = "str") // 版本号提交后的版本 id，为 0 表示为草稿版本
+    1: optional i64 spaceID (api.js_conv = "str")
+    2: optional i64 datasetID (api.js_conv = "str")
+    3: optional i64 itemID (api.js_conv = "str")
+    4: optional i64 versionID (api.js_conv = "str") // 版本号提交后的版本 id，为 0 表示为草稿版本
     5: optional string version                      // 版本号（三段式）
 }
 
@@ -427,6 +427,6 @@ struct TrackedTraceSpan {
 }
 
 struct UpdateDatasetItemOutput {
-    1: optional i64 itemID (agw.js_conv = "str")
+    1: optional i64 itemID (api.js_conv = "str")
     2: optional string itemKey
 }

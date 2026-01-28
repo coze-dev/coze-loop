@@ -6,9 +6,18 @@ include "../ml_flow/data/datasetv2job.thrift"
 include "../ml_flow/data/filter.thrift"
 include "../ml_flow/data/datasetv2similarity.thrift"
 
+typedef ListDatasetItemsReq SearchDatasetItemsReq
+typedef ListDatasetItemsResp SearchDatasetItemsResp
+typedef ListDatasetVersionsReq SearchDatasetVersionsReq
+typedef ListDatasetVersionsResp SearchDatasetVersionsResp
+typedef ListDatasetItemsByVersionReq SearchDatasetItemsByVersionReq
+typedef ListDatasetItemsByVersionResp SearchDatasetItemsByVersionResp
+typedef ListDatasetIOJobsOfDatasetReq SearchDatasetIOJobsOfDatasetReq
+typedef ListDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDatasetResp
+
 struct CreateDatasetReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: optional i32 appID (agw.js_conv = "str")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: optional i32 appID (api.js_conv = "str")
     3: required string name (vt.min_size = "1", vt.max_size = "255")
     4: optional string description (vt.max_size = "2048")
     5: optional datasetv2.DatasetCategory category (vt.defined_only = "true")
@@ -24,13 +33,13 @@ struct CreateDatasetReq {
 }
 
 struct CreateDatasetResp {
-    1: optional i64 datasetID (agw.js_conv = "str")
+    1: optional i64 datasetID (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct UpdateDatasetReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional string name (vt.max_size = "255")
     4: optional string description (vt.max_size = "2048")
     255: optional base.Base base
@@ -41,8 +50,8 @@ struct UpdateDatasetResp {
 }
 
 struct DeleteDatasetReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     255: optional base.Base base
 }
 
@@ -51,8 +60,8 @@ struct DeleteDatasetResp {
 }
 
 struct GetDatasetReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     10: optional bool withDeleted                                                        // 数据集已删除时是否返回
     255: optional base.Base base
 }
@@ -63,8 +72,8 @@ struct GetDatasetResp {
 }
 
 struct BatchGetDatasetsReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required list<i64> datasetIDs (agw.js_conv = "str", vt.max_size = "100")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required list<i64> datasetIDs (api.js_conv = "str", vt.max_size = "100")
     10: optional bool withDeleted
     255: optional base.Base base
 }
@@ -75,8 +84,8 @@ struct BatchGetDatasetsResp {
 }
 
 struct SearchDatasetsReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: optional list<i64> datasetIDs (agw.js_conv = "str")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: optional list<i64> datasetIDs (api.js_conv = "str")
     3: optional datasetv2.DatasetCategory category
     4: optional string name (vt.max_size = "255")             // 支持模糊搜索
     5: optional list<string> createdBys
@@ -96,12 +105,12 @@ struct SearchDatasetsResp {
 
     /* pagination */
     100: optional string nextCursor
-    101: optional i64 total (agw.js_conv = "str")
+    101: optional i64 total (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct SignUploadFileTokenReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
     2: optional datasetv2.StorageProvider storage (vt.not_nil = "true", vt.defined_only = "true") // 支持 ImageX, TOS
     3: optional string fileName
     10: optional string imageXServiceID                                                           // 本次需要上传到的 serviceID
@@ -119,8 +128,8 @@ struct SignUploadFileTokenResp {
 }
 
 struct ImportDatasetReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional datasetv2job.DatasetIOFile file (vt.not_nil = "true")
     4: optional list<datasetv2job.FieldMapping> fieldMappings (vt.min_size = "1")        // 待外场前端修复后再加上 vt.elem.skip = "false"
     5: optional datasetv2job.DatasetIOJobOption option
@@ -130,13 +139,13 @@ struct ImportDatasetReq {
 }
 
 struct ImportDatasetResp {
-    1: optional i64 jobID (agw.js_conv = "str")
+    1: optional i64 jobID (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct CreateDatasetWithImportReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: optional i32 appID (agw.js_conv = "str")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: optional i32 appID (api.js_conv = "str")
     3: optional datasetv2job.SourceType sourceType (vt.defined_only = "true")
     4: required datasetv2job.DatasetIOEndpoint source
     5: optional list<datasetv2job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
@@ -151,15 +160,15 @@ struct CreateDatasetWithImportReq {
 }
 
 struct CreateDatasetWithImportResp {
-    1: optional i64 datasetID (agw.js_conv = "str")
-    2: optional i64 jobID (agw.js_conv = "str")
+    1: optional i64 datasetID (api.js_conv = "str")
+    2: optional i64 jobID (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct ExportDatasetReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: optional i64 versionID (agw.js_conv = "str")                                      // 需要导出的数据集版本 id，为 0 表示导出草稿版本
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: optional i64 versionID (api.js_conv = "str")                                      // 需要导出的数据集版本 id，为 0 表示导出草稿版本
     4: required datasetv2job.SourceType targetType (vt.defined_only = "true")
     5: required datasetv2job.DatasetIOEndpoint target                                    // 此处填写一个文件夹，会将对应的文件生成到该文件夹下
     6: optional datasetv2job.WriteMode writeMode                                         // 覆盖还是追加
@@ -174,14 +183,14 @@ struct ExportDatasetReq {
 }
 
 struct ExportDatasetResp {
-    1: optional i64 jobID (agw.js_conv = "str")
+    1: optional i64 jobID (api.js_conv = "str")
 
     /*base*/
     255: optional base.BaseResp baseResp
 }
 
 struct ParseImportSourceFileReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
     2: optional datasetv2job.DatasetIOFile file (vt.not_nil = "true")                // 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析
 
     /*base*/
@@ -194,7 +203,7 @@ struct ConflictField {
 }
 
 struct ParseImportSourceFileResp {
-    1: optional i64 bytes (agw.js_conv = "str")       // 文件大小，单位为 byte
+    1: optional i64 bytes (api.js_conv = "str")       // 文件大小，单位为 byte
     2: optional list<datasetv2.FieldSchema> fields    // 列名和类型，有多文件的话会取并集返回。如果文件中的列定义存在冲突，此处不返回解析结果，具体冲突详情通过 conflicts 返回
     3: optional list<ConflictField> conflicts         // 冲突详情。key: 列名，val：冲突详情
     4: optional list<string> filesWithAmbiguousColumn // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
@@ -204,12 +213,12 @@ struct ParseImportSourceFileResp {
 }
 
 struct CreateItemDeduplicateJobReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
     2: required i64 datasetID (vt.gt = "0")
     3: optional datasetv2job.DatasetIOFile file (vt.not_nil = "true")
     4: optional list<datasetv2job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
     5: optional datasetv2job.DatasetIOJobOption option
-    6: optional i64 jobID (agw.js_conv = "str")                                                           // 任务id，重入时用
+    6: optional i64 jobID (api.js_conv = "str")                                                           // 任务id，重入时用
     7: optional string fieldKey                                                                           // 根据哪一列去重
     8: optional datasetv2similarity.SimilarityAlgorithm similarityAlgorithm                               // 去重算法
     9: optional i64 threshold                                                                             // 阈值
@@ -219,13 +228,13 @@ struct CreateItemDeduplicateJobReq {
 }
 
 struct CreateItemDeduplicateJobResp {
-    1: required i64 jobID (agw.js_conv = "str"), // 任务id，前端后续用这个id去获取 待确认列表
+    1: required i64 jobID (api.js_conv = "str"), // 任务id，前端后续用这个id去获取 待确认列表
     255: optional base.BaseResp baseResp
 }
 
 struct GetItemDeduplicateJobReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 jobID (agw.js_conv = "str", api.path = "jobID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 jobID (api.js_conv = "str", api.path = "jobID", vt.gt = "0")
     3: optional datasetv2job.ImportConfirmType confirmType
     100: optional i32 page (vt.gt = "0")
     101: optional i32 pageSize (vt.gt = "0", vt.le = "200")
@@ -238,8 +247,8 @@ struct GetItemDeduplicateJobResp {
 }
 
 struct ConfirmItemDeduplicateReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 jobID (agw.js_conv = "str", api.path = "jobID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 jobID (api.js_conv = "str", api.path = "jobID", vt.gt = "0")
     3: required list<ConfirmItemPair> pairs,                                        // 批量确认
 
     /*base*/
@@ -256,8 +265,8 @@ struct ConfirmItemDeduplicateResp {
 }
 
 struct GetDatasetIOJobReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 jobID (agw.js_conv = "str", api.path = "jobID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 jobID (api.js_conv = "str", api.path = "jobID", vt.gt = "0")
     255: optional base.Base base
 }
 
@@ -267,8 +276,8 @@ struct GetDatasetIOJobResp {
 }
 
 struct ListDatasetIOJobsOfDatasetReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional list<datasetv2job.JobType> types
     4: optional list<datasetv2job.JobStatus> statuses
     255: optional base.Base base
@@ -280,8 +289,8 @@ struct ListDatasetIOJobsOfDatasetResp {
 }
 
 struct CancelDatasetIOJobReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required i64 jobID (agw.js_conv = "str", api.path = "jobID", vt.gt = "0")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required i64 jobID (api.js_conv = "str", api.path = "jobID", vt.gt = "0")
     255: optional base.Base base
 }
 
@@ -290,8 +299,8 @@ struct CancelDatasetIOJobResp {
 }
 
 struct ListDatasetVersionsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional string versionLike    // 根据版本号模糊匹配
     4: optional list<string> versions // 根据版本号精确匹配
 
@@ -308,13 +317,13 @@ struct ListDatasetVersionsResp {
 
     /* pagination */
     100: optional string nextCursor
-    101: optional i64 total (agw.js_conv = "str")
+    101: optional i64 total (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct GetDatasetVersionReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 versionID (agw.js_conv = "str", api.path = "versionID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 versionID (api.js_conv = "str", api.path = "versionID", vt.gt = "0")
     10: optional bool withDeleted                                                        // 是否返回已删除的数据，默认不返回
     255: optional base.Base base
 }
@@ -331,8 +340,8 @@ struct VersionedDataset {
 }
 
 struct BatchGetVersionedDatasetsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required list<i64> versionIDs (agw.js_conv = "str", vt.max_size = "100")
+    1: optional i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required list<i64> versionIDs (api.js_conv = "str", vt.max_size = "100")
     10: optional bool withDeleted                                                    // 是否返回已删除的数据，默认不返回
     255: optional base.Base base
 }
@@ -343,21 +352,21 @@ struct BatchGetVersionedDatasetsResp {
 }
 
 struct CreateDatasetVersionReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: required string version (vt.min_size = "1", vt.max_size = "128")                  // 展示的版本号，SemVer2 三段式，需要大于上一版本
     4: optional string desc (vt.max_size = "2048")
     255: optional base.Base base
 }
 
 struct CreateDatasetVersionResp {
-    1: optional i64 id (agw.js_conv = "str")
+    1: optional i64 id (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct UpdateDatasetVersionReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required i64 versionID (agw.js_conv = "str", api.path = "versionID", vt.gt = "0")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required i64 versionID (api.js_conv = "str", api.path = "versionID", vt.gt = "0")
     10: optional string desc (vt.max_size = "2048")
     255: optional base.Base base
 }
@@ -367,8 +376,8 @@ struct UpdateDatasetVersionResp {
 }
 
 struct UpdateDatasetSchemaReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     // fieldSchema.key 为空时：插入新的一列
     // fieldSchema.key 不为空时：更新对应的列
     // 使用示例参考：https://bytedance.larkoffice.com/wiki/BEbMwdYDQinYFckYbHVcW3DfnZx#doxcnCEi007nKCLwZ4o84nVivle
@@ -381,8 +390,8 @@ struct UpdateDatasetSchemaResp {
 }
 
 struct GetDatasetSchemaReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     10: optional bool withDeleted                                                        // 是否获取已经删除的列，默认不返回
     255: optional base.Base base
 }
@@ -393,8 +402,8 @@ struct GetDatasetSchemaResp {
 }
 
 struct BatchCreateDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional list<datasetv2.DatasetItem> items (vt.min_size = "1", vt.max_size = "100", vt.elem.skip = "false")
     10: optional bool skipInvalidItems                                                                             // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     11: optional bool allowPartialAdd                                                                              // 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
@@ -402,7 +411,7 @@ struct BatchCreateDatasetItemsReq {
 }
 
 struct BatchCreateDatasetItemsResp {
-    1: optional map<i32, i64> addedItems (agw.js_conv = "str") // key: item 在 items 中的索引; Deprecated 使用 itemOutputs，信息更全面
+    1: optional map<i32, i64> addedItems (api.js_conv = "str") // key: item 在 items 中的索引; Deprecated 使用 itemOutputs，信息更全面
     2: optional list<datasetv2.ItemErrorGroup> errors
     3: optional list<datasetv2.CreateDatasetItemOutput> itemOutputs
     /* base */
@@ -410,9 +419,9 @@ struct BatchCreateDatasetItemsResp {
 }
 
 struct ValidateDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
     2: optional list<datasetv2.DatasetItem> items (vt.min_size = "1", vt.max_size = "500", vt.elem.skip = "false")
-    3: optional i64 datasetID (agw.js_conv = "str")                                                                // 添加到已有数据集时提供
+    3: optional i64 datasetID (api.js_conv = "str")                                                                // 添加到已有数据集时提供
     4: optional datasetv2.DatasetCategory datasetCategory (vt.defined_only = "true")                               // 新建数据集并添加数据时提供
     5: optional list<datasetv2.FieldSchema> datasetFields (vt.elem.skip = "false")                                 // 新建数据集并添加数据时，必须提供；添加到已有数据集时，如非空，则覆盖已有 schema 用于校验
     10: optional bool ignoreCurrentItemCount                                                                       // 添加到已有数据集时，现有数据条数，做容量校验时不做考虑，仅考虑提供 items 数量是否超限
@@ -427,9 +436,9 @@ struct ValidateDatasetItemsResp {
 }
 
 struct UpdateDatasetItemReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 itemID (agw.js_conv = "str", api.path = "itemID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 itemID (api.js_conv = "str", api.path = "itemID", vt.gt = "0")
     4: optional list<datasetv2.FieldData> data (vt.elem.skip = "false")                  // 单轮数据内容，当数据集为单轮时，写入此处的值
     5: optional list<datasetv2.ItemData> repeatedData (vt.elem.skip = "false")           // 多轮对话数据内容，当数据集为多轮对话时，写入此处的值
     255: optional base.Base base
@@ -440,9 +449,9 @@ struct UpdateDatasetItemResp {
 }
 
 struct DeleteDatasetItemReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 itemID (agw.js_conv = "str", api.path = "itemID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 itemID (api.js_conv = "str", api.path = "itemID", vt.gt = "0")
     255: optional base.Base base
 }
 
@@ -451,9 +460,9 @@ struct DeleteDatasetItemResp {
 }
 
 struct BatchDeleteDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: optional list<i64> itemIDs (agw.js_conv = "str", vt.min_size = "1") // 要删除的 item 列表，最多 100 个，在后端接口中校验
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: optional list<i64> itemIDs (api.js_conv = "str", vt.min_size = "1") // 要删除的 item 列表，最多 100 个，在后端接口中校验
     255: optional base.Base base
 }
 
@@ -462,8 +471,8 @@ struct BatchDeleteDatasetItemsResp {
 }
 
 struct ListDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
 
     /* pagination */
     100: optional i32 page (vt.gt = "0")
@@ -479,15 +488,15 @@ struct ListDatasetItemsResp {
 
     /* pagination */
     100: optional string nextCursor
-    101: optional i64 total (agw.js_conv = "str")
-    102: optional i64 filterTotal (agw.js_conv = "str")
+    101: optional i64 total (api.js_conv = "str")
+    102: optional i64 filterTotal (api.js_conv = "str")
     255: optional base.BaseResp baseResp
 }
 
 struct ListDatasetItemsByVersionReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 versionID (agw.js_conv = "str", api.path = "versionID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 versionID (api.js_conv = "str", api.path = "versionID", vt.gt = "0")
 
     /* pagination */
     100: optional i32 page (vt.gt = "0")
@@ -502,16 +511,16 @@ struct ListDatasetItemsByVersionResp {
     1: optional list<datasetv2.DatasetItem> items
 
     /* pagination */
-    100: optional string nextCursor (agw.js_conv = "str"),
+    100: optional string nextCursor (api.js_conv = "str"),
     101: optional i64 total
     102: optional i64 filterTotal
     255: optional base.BaseResp baseResp
 }
 
 struct GetDatasetItemReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 itemID (agw.js_conv = "str", api.path = "itemID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 itemID (api.js_conv = "str", api.path = "itemID", vt.gt = "0")
     255: optional base.Base base
 }
 
@@ -521,9 +530,9 @@ struct GetDatasetItemResp {
 }
 
 struct BatchGetDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required list<i64> itemIDs (agw.js_conv = "str", vt.max_size = "100")
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required list<i64> itemIDs (api.js_conv = "str", vt.max_size = "100")
     255: optional base.Base base
 }
 
@@ -533,10 +542,10 @@ struct BatchGetDatasetItemsResp {
 }
 
 struct BatchGetDatasetItemsByVersionReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 versionID (agw.js_conv = "str", api.path = "versionID", vt.gt = "0")
-    4: required list<i64> itemIDs (agw.js_conv = "str", vt.max_size = "100")
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 versionID (api.js_conv = "str", api.path = "versionID", vt.gt = "0")
+    4: required list<i64> itemIDs (api.js_conv = "str", vt.max_size = "100")
     255: optional base.Base base
 }
 
@@ -546,20 +555,20 @@ struct BatchGetDatasetItemsByVersionResp {
 }
 
 struct CreateDatasetItemReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional string itemKey (vt.max_size = "255")                                                     // 数据插入的幂等 key，前端创建时可以不传
     4: optional list<datasetv2.FieldData> data (vt.elem.not_nil = "true", vt.elem.skip = "false")        // 数据内容
     5: optional list<datasetv2.ItemData> repeatedData (vt.elem.not_nil = "true", vt.elem.skip = "false") // 多轮数据内容，与 data 互斥
     10: optional bool keepLineage                                                                        // 如果有来源 item，可以通过该字段指定是否保留与克隆的源 item 的血缘关系
-    11: optional i64 sourceItemID (agw.js_conv = "str", vt.gt = "0")                                     // 源 item id，在 keepLineage 为 true 时必填
-    12: optional i64 sourceDatasetID (agw.js_conv = "str", vt.gt = "0")                                  // 源 item id，在 keepLineage 为 true 时填写，如果为 0 默认与当前 dataset 一致。
-    13: optional i64 sourceDatasetVersionID (agw.js_conv = "str", vt.gt = "0")                           // 源 item 版本，在 keepLineage 为 true 时填写，如果为 0 默认为源数据集的草稿版本。
+    11: optional i64 sourceItemID (api.js_conv = "str", vt.gt = "0")                                     // 源 item id，在 keepLineage 为 true 时必填
+    12: optional i64 sourceDatasetID (api.js_conv = "str", vt.gt = "0")                                  // 源 item id，在 keepLineage 为 true 时填写，如果为 0 默认与当前 dataset 一致。
+    13: optional i64 sourceDatasetVersionID (api.js_conv = "str", vt.gt = "0")                           // 源 item 版本，在 keepLineage 为 true 时填写，如果为 0 默认为源数据集的草稿版本。
     255: optional base.Base base
 }
 
 struct CreateDatasetItemResp {
-    1: optional i64 itemID (agw.js_conv = "str")
+    1: optional i64 itemID (api.js_conv = "str")
     2: optional datasetv2.ItemErrorGroup error
     3: optional string itemKey
     4: optional bool isNewItem                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
@@ -567,9 +576,9 @@ struct CreateDatasetItemResp {
 }
 
 struct GetDatasetItemSourceReq {
-    1: required i64 spaceID (agw.js_conv = "str", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 id (agw.js_conv = "str", api.path = "id", vt.gt = "0")               // item 的主键 id
+    1: required i64 spaceID (api.js_conv = "str", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 id (api.js_conv = "str", api.path = "id", vt.gt = "0")               // item 的主键 id
     255: optional base.Base base
 }
 
@@ -579,9 +588,9 @@ struct GetDatasetItemSourceResp {
 }
 
 struct GetDatasetItemDeepSourcesReq {
-    1: required i64 spaceID (agw.js_conv = "str", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 id (agw.js_conv = "str", api.path = "id", vt.gt = "0")               // item 的主键 id
+    1: required i64 spaceID (api.js_conv = "str", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 id (api.js_conv = "str", api.path = "id", vt.gt = "0")               // item 的主键 id
     255: optional base.Base base
 }
 
@@ -592,7 +601,7 @@ struct GetDatasetItemDeepSourcesResp {
 
 struct FieldOptions {
     1: optional list<i32> i32FieldOption (agw.key = "i32")
-    2: optional list<i64> i64FieldOption (agw.js_conv = "str" agw.key = "i64")
+    2: optional list<i64> i64FieldOption (api.js_conv = "str" agw.key = "i64")
     3: optional list<double> f64FieldOption (agw.key = "f64")
     4: optional list<string> stringFieldOption (agw.key = "string")
     5: optional list<ObjectFieldOption> objFieldOption (agw.key = "obj")
@@ -604,8 +613,8 @@ struct ObjectFieldOption {
 }
 
 struct BatchUpdateDatasetItemsReq {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.not_nil = "true", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
     3: optional list<datasetv2.DatasetItem> items (vt.min_size = "1", vt.max_size = "100", vt.elem.skip = "false") // 通过 item ID 或 itemKey 指定需要更新的 item
     10: optional bool skipInvalidItems // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     255: optional base.Base base
@@ -647,8 +656,8 @@ struct GetFieldsMetaInfoResponse {
 }
 
 struct ClearDatasetItemRequest {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "dataset_id", vt.gt = "0")
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "dataset_id", vt.gt = "0")
     255: optional base.Base Base
 }
 
@@ -657,11 +666,11 @@ struct ClearDatasetItemResponse {
 }
 
 struct GetDatasetItemFieldRequest {
-    1: optional i64 spaceID (agw.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: required i64 itemPK (agw.js_conv = "str", api.path = "itemPK", vt.gt = "0") // item 的主键ID，即 item.ID 这一字段
+    1: optional i64 spaceID (api.js_conv = "str", vt.gt = "0", vt.not_nil = "true")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: required i64 itemPK (api.js_conv = "str", api.path = "itemPK", vt.gt = "0") // item 的主键ID，即 item.ID 这一字段
     4: required string fieldName // 列名
-    5: optional i64 turnID (agw.js_conv = "str") // 当 item 为多轮时，必须提供
+    5: optional i64 turnID (api.js_conv = "str") // 当 item 为多轮时，必须提供
     255: optional base.Base Base
 }
 
@@ -676,9 +685,9 @@ struct DatasetItemWithSource {
 }
 
 struct QueryFieldDistributeRequest {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: required i64 datasetID (agw.js_conv = "str", api.path = "datasetID", vt.gt = "0")
-    3: optional i64 datasetVersion (agw.js_conv = "str"),
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: required i64 datasetID (api.js_conv = "str", api.path = "datasetID", vt.gt = "0")
+    3: optional i64 datasetVersion (api.js_conv = "str"),
     4: optional list<string> fieldKeys                                                   // 按照列洞察的时候，列的字段
     255: optional base.Base base
 }
@@ -698,8 +707,8 @@ struct QueryFieldDistributeResponse {
 }
 
 struct ListDatasetImportTemplateReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: optional i64 datasetID (agw.js_conv = "str", vt.gt = "0")
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: optional i64 datasetID (api.js_conv = "str", vt.gt = "0")
     3: optional datasetv2.DatasetCategory category (vt.defined_only = "true")
     255: optional base.Base base
 }
@@ -725,8 +734,8 @@ struct UploadAttachmentDetail {
 }
 
 struct BatchUploadDatasetAttachmentsReq {
-    1: required i64 spaceID (agw.js_conv = "str", api.path = "spaceID", vt.gt = "0")
-    2: optional i64 datasetID (agw.js_conv = "str", vt.gt = "0")                             // 对应的数据集 id，用于获取多模态配置
+    1: required i64 spaceID (api.js_conv = "str", api.path = "spaceID", vt.gt = "0")
+    2: optional i64 datasetID (api.js_conv = "str", vt.gt = "0")                             // 对应的数据集 id，用于获取多模态配置
     3: optional datasetv2.ContentType contentType                                            // 上传的附件类型
 
     /* 待上传的附件，根据 mime 自动解析文件后缀 */
@@ -738,15 +747,6 @@ struct BatchUploadDatasetAttachmentsResp {
     1: optional list<UploadAttachmentDetail> details // 成功上传的附件
     255: optional base.Base base
 }
-
-typedef ListDatasetItemsReq SearchDatasetItemsReq
-typedef ListDatasetItemsResp SearchDatasetItemsResp
-typedef ListDatasetVersionsReq SearchDatasetVersionsReq
-typedef ListDatasetVersionsResp SearchDatasetVersionsResp
-typedef ListDatasetItemsByVersionReq SearchDatasetItemsByVersionReq
-typedef ListDatasetItemsByVersionResp SearchDatasetItemsByVersionResp
-typedef ListDatasetIOJobsOfDatasetReq SearchDatasetIOJobsOfDatasetReq
-typedef ListDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDatasetResp
 
 service DatasetServiceV2 {
 
@@ -765,28 +765,28 @@ service DatasetServiceV2 {
     // 批量获取数据集
     BatchGetDatasetsResp BatchGetDatasets(1: BatchGetDatasetsReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/datasets/batch_get")
     // 将外部 url 上传到内部存储
-    BatchUploadDatasetAttachmentsResp BatchUploadDatasetAttachments(1: BatchUploadDatasetAttachmentsReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/datasets/attachements/batch_upload", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    BatchUploadDatasetAttachmentsResp BatchUploadDatasetAttachments(1: BatchUploadDatasetAttachmentsReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/datasets/attachements/batch_upload", api.tag = 'volc-agentkit', api.category = 'mlflow', api.top_timeout = '30000')
     // 获取数据集上传模板（目前仅返回固定内容，不根据列配置生成）
-    ListDatasetImportTemplateResp ListDatasetImportTemplate(1: ListDatasetImportTemplateReq req) (api.get = "/api/ml_flow/v2/spaces/:spaceID/import_templates", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    ListDatasetImportTemplateResp ListDatasetImportTemplate(1: ListDatasetImportTemplateReq req) (api.get = "/api/ml_flow/v2/spaces/:spaceID/import_templates", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
 
     /* Dataset IO Job */
-    SignUploadFileTokenResp SignUploadFileToken(1: SignUploadFileTokenReq req) (api.get = "/api/ml_flow/v2/files/upload_token", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    SignUploadFileTokenResp SignUploadFileToken(1: SignUploadFileTokenReq req) (api.get = "/api/ml_flow/v2/files/upload_token", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 导入数据
-    ImportDatasetResp ImportDataset(1: ImportDatasetReq req) (api.post = "/api/ml_flow/v2/datasets/:datasetID/import", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    ImportDatasetResp ImportDataset(1: ImportDatasetReq req) (api.post = "/api/ml_flow/v2/datasets/:datasetID/import", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 从数据集导入数据
     CreateDatasetWithImportResp CreateDatasetWithImport(1: CreateDatasetWithImportReq req) (api.post = "/api/ml_flow/v2/datasets/create_with_import")
     // 任务(导入、导出、转换)详情
-    GetDatasetIOJobResp GetDatasetIOJob(1: GetDatasetIOJobReq req) (api.get = "/api/ml_flow/v2/dataset_io_jobs/:jobID", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    GetDatasetIOJobResp GetDatasetIOJob(1: GetDatasetIOJobReq req) (api.get = "/api/ml_flow/v2/dataset_io_jobs/:jobID", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 数据集任务列表，用于获取当前数据集的导入任务
     ListDatasetIOJobsOfDatasetResp ListDatasetIOJobsOfDataset(1: ListDatasetIOJobsOfDatasetReq req) (api.get = "/api/ml_flow/v2/datasets/:datasetID/io_jobs")
     // 数据集任务列表，用于获取当前数据集的导入任务(POST 方法，便于传参)
-    SearchDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDataset(1: SearchDatasetIOJobsOfDatasetReq req) (api.post = "/api/ml_flow/v2/datasets/:datasetID/io_jobs/search", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    SearchDatasetIOJobsOfDatasetResp SearchDatasetIOJobsOfDataset(1: SearchDatasetIOJobsOfDatasetReq req) (api.post = "/api/ml_flow/v2/datasets/:datasetID/io_jobs/search", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 取消一个任务
-    CancelDatasetIOJobResp CancelDatasetIOJob(1: CancelDatasetIOJobReq req) (api.put = "/api/ml_flow/v2/spaces/:spaceID/dataset_io_jobs/:jobID/cancel", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    CancelDatasetIOJobResp CancelDatasetIOJob(1: CancelDatasetIOJobReq req) (api.put = "/api/ml_flow/v2/spaces/:spaceID/dataset_io_jobs/:jobID/cancel", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 导出数据
-    ExportDatasetResp ExportDataset(1: ExportDatasetReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/datasets/:datasetID/export", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    ExportDatasetResp ExportDataset(1: ExportDatasetReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/datasets/:datasetID/export", api.tag = 'volc-agentkit', api.top_timeout = '3000', api.category = 'mlflow')
     // 解析源文件
-    ParseImportSourceFileResp ParseImportSourceFile(1: ParseImportSourceFileReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/parse_import_source_file", api.tag = 'volc-agentkit', api.category = 'mlflow')
+    ParseImportSourceFileResp ParseImportSourceFile(1: ParseImportSourceFileReq req) (api.post = "/api/ml_flow/v2/spaces/:spaceID/parse_import_source_file", api.tag = 'volc-agentkit', api.category = 'mlflow', api.top_timeout = '30000')
 
     /* Dataset Version */
 

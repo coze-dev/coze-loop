@@ -48,7 +48,7 @@ struct Filter {
 
 struct FieldOptions {
     1: optional list<i32> i32FieldOption (agw.key = "i32")
-    2: optional list<i64> i64FieldOption (agw.js_conv = "str" agw.key = "i64")
+    2: optional list<i64> i64FieldOption (api.js_conv = "str" agw.key = "i64")
     3: optional list<double> f64FieldOption (agw.key = "f64")
     4: optional list<string> stringFieldOption (agw.key = "string")
     5: optional list<ObjectFieldOption> objFieldOption (agw.key = "obj")
