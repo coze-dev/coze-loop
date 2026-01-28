@@ -101,6 +101,14 @@ struct MGetUserInfoResponse {
     255: base.BaseResp  BaseResp
 }
 
+struct QueryUserInfoResponse {
+    1: optional list<user.UserInfoDetail> user_infos // 用户信息列表
+    2: optional string page_token // 分页Token
+    3: optional bool has_more // 是否还有下一页
+
+    255: optional base.BaseResp  BaseResp
+}
+
 service UserService {
     // 用户注册相关接口
     UserRegisterResponse Register(1: UserRegisterRequest request) (api.post = "/api/foundation/v1/users/register")
