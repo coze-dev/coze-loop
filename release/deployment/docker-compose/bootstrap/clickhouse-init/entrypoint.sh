@@ -46,12 +46,15 @@ i=1
 # shellcheck disable=SC2010
 for file in $(ls /coze-loop-clickhouse-init/bootstrap/init-sql | grep '\.sql$'); do
   echo "+ init #$i: < $file"
-  clickhouse-client \
+  # Avoid ClickHouse exit 62 (Empty query): multiquery parses ";\n" at EOF as an empty statement.
+  # Replace trailing "; <whitespace>" with "; SELECT 1" so the last statement is never empty.
+  sed '$ s/;[[:space:]]*$/; SELECT 1/' "/coze-loop-clickhouse-init/bootstrap/init-sql/${file}" \
+  | clickhouse-client \
     --host=coze-loop-clickhouse \
     -u "${COZE_LOOP_CLICKHOUSE_USER}" \
     --password="${COZE_LOOP_CLICKHOUSE_PASSWORD}" \
     --database="${COZE_LOOP_CLICKHOUSE_DATABASE}" \
-    < "/coze-loop-clickhouse-init/bootstrap/init-sql/${file}"
+    --multiquery
   i=$((i + 1))
 done
 

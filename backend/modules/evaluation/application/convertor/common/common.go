@@ -378,7 +378,7 @@ func ConvertModelConfigDTO2DO(config *commondto.ModelConfig) *commonentity.Model
 	}
 
 	return &commonentity.ModelConfig{
-		ModelID:        config.GetModelID(),
+		ModelID:        config.ModelID,
 		ModelName:      gptr.Indirect(config.ModelName),
 		Temperature:    config.Temperature,
 		MaxTokens:      config.MaxTokens,
@@ -395,7 +395,7 @@ func ConvertModelConfigDO2DTO(config *commonentity.ModelConfig) *commondto.Model
 	}
 
 	dto := &commondto.ModelConfig{
-		ModelID:        gptr.Of(config.ModelID),
+		ModelID:        config.ModelID,
 		ModelName:      gptr.Of(config.ModelName),
 		Temperature:    config.Temperature,
 		MaxTokens:      config.MaxTokens,
@@ -403,8 +403,8 @@ func ConvertModelConfigDO2DTO(config *commonentity.ModelConfig) *commondto.Model
 		Protocol:       config.Protocol,
 		Identification: config.Identification,
 	}
-	if config.ModelID > 0 {
-		dto.ModelID = gptr.Of(config.ModelID)
+	if config.GetModelID() > 0 {
+		dto.ModelID = config.ModelID
 	} else if config.ProviderModelID != nil && len(gptr.Indirect(config.ProviderModelID)) > 0 {
 		pModelID, err := strconv.ParseInt(gptr.Indirect(config.ProviderModelID), 10, 64)
 		if err != nil {

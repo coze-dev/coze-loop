@@ -273,7 +273,7 @@ type FunctionCall struct {
 }
 
 type ModelConfig struct {
-	ModelID        int64          `json:"model_id"`
+	ModelID        *int64         `json:"model_id"`
 	ModelName      string         `json:"model_name"`
 	MaxTokens      *int32         `json:"max_tokens,omitempty"`
 	Temperature    *float64       `json:"temperature,omitempty"`
@@ -285,6 +285,13 @@ type ModelConfig struct {
 	ProviderModelID *string `json:"provider_model_id,omitempty" jsonschema:"-"`
 
 	JSONExt *string `json:"json_ext,omitempty"`
+}
+
+func (m *ModelConfig) GetModelID() int64 {
+	if m != nil && m.ModelID != nil {
+		return *m.ModelID
+	}
+	return 0
 }
 
 type Reply struct {

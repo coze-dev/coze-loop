@@ -452,7 +452,7 @@ func TestEvaluator_GetPromptTemplateKey(t *testing.T) {
 func TestEvaluator_GetModelConfig(t *testing.T) {
 	t.Parallel()
 	modelConfig := &ModelConfig{
-		ModelID:   123,
+		ModelID:   gptr.Of(int64(123)),
 		ModelName: "test_model",
 	}
 
@@ -1661,7 +1661,7 @@ func TestPromptEvaluatorVersion_GetPromptTemplateKey(t *testing.T) {
 }
 
 func TestPromptEvaluatorVersion_GetModelConfig(t *testing.T) {
-	mc := &ModelConfig{ModelID: 123}
+	mc := &ModelConfig{ModelID: gptr.Of(int64(123))}
 	ver := &PromptEvaluatorVersion{ModelConfig: mc}
 	assert.Equal(t, mc, ver.GetModelConfig())
 }
@@ -1698,7 +1698,7 @@ func TestPromptEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 	assert.Error(t, ver.ValidateBaseInfo())
 
 	// message list 为空
-	ver = &PromptEvaluatorVersion{ModelConfig: &ModelConfig{ModelID: 1}}
+	ver = &PromptEvaluatorVersion{ModelConfig: &ModelConfig{ModelID: gptr.Of(int64(1))}}
 	assert.Error(t, ver.ValidateBaseInfo())
 
 	// model config 为空
@@ -1710,6 +1710,6 @@ func TestPromptEvaluatorVersion_ValidateBaseInfo(t *testing.T) {
 	assert.Error(t, ver.ValidateBaseInfo())
 
 	// 正常
-	ver = &PromptEvaluatorVersion{MessageList: []*Message{{Role: RoleUser}}, ModelConfig: &ModelConfig{ModelID: 1}}
+	ver = &PromptEvaluatorVersion{MessageList: []*Message{{Role: RoleUser}}, ModelConfig: &ModelConfig{ModelID: gptr.Of(int64(1))}}
 	assert.NoError(t, ver.ValidateBaseInfo())
 }

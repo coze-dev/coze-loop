@@ -4848,7 +4848,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft(t *testing.T) {
 				{Role: entity.RoleSystem, Content: &entity.Content{Text: gptr.Of("old content")}},
 			},
 			ModelConfig: &entity.ModelConfig{
-				ModelID: int64(1),
+				ModelID: gptr.Of(int64(1)),
 			},
 		},
 	}
