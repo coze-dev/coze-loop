@@ -5,6 +5,26 @@ include "../../../coze/loop/llm/coze.loop.llm.manage.thrift"
 include "../../../coze/loop/llm/domain/manage.thrift"
 include "../../../coze/loop/llm/domain/common.thrift"
 
+struct Model {
+    1: optional manage.Model openModel
+    2: optional Series series // model series
+    3: optional string icon // model icon url
+    4: optional list<string> tags // model tags
+    5: optional StatusDetail detail_status
+}
+
+struct Series {
+    1: optional string name // series name
+    2: optional string icon // series icon url
+    3: optional string vendor // vendor name
+}
+
+struct StatusDetail {
+    1: optional bool is_new_model
+    2: optional bool is_advanced_model
+}
+
+
 struct ListModelsRequest {
     1: optional i64 workspace_id (api.js_conv = 'true', vt.not_nil = 'true', vt.gt = '0', go.tag = 'json:"workspace_id"', api.query = 'WorkspaceId')
     2: optional common.Scenario scenario
@@ -28,7 +48,7 @@ struct GetModelRequest {
 }
 
 struct ListModelsResponse {
-    1: optional list<manage.Model> models
+    1: optional list<Model> models
     127: optional bool has_more
     128: optional string next_page_token
     129: optional i32 total
@@ -37,7 +57,7 @@ struct ListModelsResponse {
 }
 
 struct GetModelResponse {
-    1: optional manage.Model model
+    1: optional Model model
 
     255: base.BaseResp BaseResp
 }
@@ -51,5 +71,4 @@ service LLMCommercialService {
     GetModelResponse GetModel(1: GetModelRequest req) (
         api.post = '/api/llm/v1/GetModel', api.category = 'loopmodel', api.tag = 'volc-agentkit-gen,volc-agentkit-patched', api.top_operation_type = 'query', api.top_is_auth = 'true', api.top_timeout = '1000'
     )
-
 }
