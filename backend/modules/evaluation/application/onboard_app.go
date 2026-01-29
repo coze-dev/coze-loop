@@ -15,13 +15,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
-	expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	evaluation_set_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
-	conf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -229,10 +229,9 @@ func (o *OnboardApplicationImpl) findExistingEvaluationSetByName(ctx context.Con
 		pageToken   *string
 		versions    []*entity.EvaluationSetVersion
 		nextCursor  *string
-		err         error
 	)
 	verPageSize := int32(50)
-	pageNum := int32(1)
+	pageNum = int32(1)
 	for {
 		verParam := &entity.ListEvaluationSetVersionsParam{
 			SpaceID:         workspaceID,
@@ -470,11 +469,11 @@ func (o *OnboardApplicationImpl) findExistingEvaluatorVersion(ctx context.Contex
 		},
 	}
 	listReq := &entity.ListEvaluatorRequest{
-		SpaceID:    workspaceID,
-		SearchName: cfg.Name,
-		PageSize:   1,
-		PageNum:    1,
-		OrderBys:   orderBys,
+		SpaceID:     workspaceID,
+		SearchName:  cfg.Name,
+		PageSize:    1,
+		PageNum:     1,
+		OrderBys:    orderBys,
 		WithVersion: false,
 	}
 	evals, _, err := o.evaluatorService.ListEvaluator(ctx, listReq)
