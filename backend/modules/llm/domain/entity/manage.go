@@ -391,6 +391,10 @@ type Family string
 const (
 	FamilyUndefined Family = "undefined"
 	FamilySeed      Family = "seed"
+	FamilyGLM       Family = "glm"
+	FamilyKimi      Family = "kimi"
+	FamilyDeepSeek  Family = "deepseek"
+	FamilyDoubao    Family = "doubao"
 )
 
 type Series struct {

@@ -108,6 +108,8 @@ const (
 
 	FamilyInternVl3 = "intern_vl3"
 
+	FamilyDeepseek = "deepseek"
+
 	ProviderUndefined = "undefined"
 
 	ProviderMaas = "maas"

@@ -254,6 +254,7 @@ const Family family_deepseek_r1 = "deepseek_r1"
 const Family family_kimi = "kimi"
 const Family family_seedream = "seedream"
 const Family family_intern_vl3 = "intern_vl3"
+const Family family_deepseek = "deepseek"
 
 
 typedef string Provider (ts.enum="true")
