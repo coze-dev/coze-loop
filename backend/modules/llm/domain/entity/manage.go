@@ -156,6 +156,26 @@ type Ability struct {
 	Thinking          bool               `json:"thinking" mapstructure:"thinking"`
 }
 
+func (a *Ability) GetAbilityEnums() []AbilityEnum {
+	var resp []AbilityEnum
+	if a == nil {
+		return resp
+	}
+	if a.FunctionCall {
+		resp = append(resp, AbilityEnumFunctionCall)
+	}
+	if a.JsonMode {
+		resp = append(resp, AbilityEnumJsonMode)
+	}
+	if a.MultiModal {
+		resp = append(resp, AbilityEnumMultiModal)
+	}
+	if a.Thinking {
+		resp = append(resp, AbilityEnumThinking)
+	}
+	return resp
+}
+
 type AbilityMultiModal struct {
 	Image        bool          `json:"image" yaml:"image" mapstructure:"image"`
 	AbilityImage *AbilityImage `json:"ability_image" yaml:"ability_image" mapstructure:"ability_image"`
@@ -451,4 +471,5 @@ const (
 	AbilityEnumFunctionCall AbilityEnum = "function_call"
 	AbilityEnumMultiModal   AbilityEnum = "multi_modal"
 	AbilityEnumJsonMode     AbilityEnum = "json_mode"
+	AbilityEnumThinking     AbilityEnum = "thinking"
 )
