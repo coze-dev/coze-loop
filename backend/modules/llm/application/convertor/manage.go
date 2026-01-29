@@ -82,6 +82,8 @@ func FamilyDO2DTO(v entity.Family) manage.Family {
 		return manage.FamilyKimi
 	case entity.FamilyDeepSeek:
 		return manage.FamilyDeepseek
+	case entity.FamilyDoubao:
+		return manage.FamilyDoubao
 	default:
 		return manage.FamilyUndefined
 	}
@@ -97,6 +99,8 @@ func FamilyDTO2DO(val manage.Family) entity.Family {
 		return entity.FamilyGLM
 	case manage.FamilyKimi:
 		return entity.FamilyKimi
+	case manage.FamilyDoubao:
+		return entity.FamilyDoubao
 	default:
 		return entity.FamilyUndefined
 	}
