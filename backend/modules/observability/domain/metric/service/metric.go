@@ -251,6 +251,11 @@ func (m *MetricsService) QueryMetrics(ctx context.Context, req *QueryMetricsReq)
 	if len(req.MetricsNames) == 0 {
 		return &QueryMetricsResp{}, nil
 	}
+	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
+	val := qCfg.SpaceConfigs[strconv.FormatInt(req.WorkspaceID, 10)]
+	if val != nil && val.DisableQuery {
+		return &QueryMetricsResp{}, nil
+	}
 	for _, metricName := range req.MetricsNames {
 		mVal, ok := m.metricDefMap[metricName]
 		if !ok {

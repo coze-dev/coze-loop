@@ -227,6 +227,37 @@ func TestMetricsService_QueryMetrics(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 	})
+
+	t.Run("query disabled", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups:       map[string]*entity.MetricGroup{},
+			DrillDownObjects:   map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{},
+		}
+
+		traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+			SpaceConfigs: map[string]*config.SpaceConfig{
+				"1": {DisableQuery: true},
+			},
+		}).AnyTimes()
+
+		svc, err := NewMetricsService(repomocks.NewMockIMetricRepo(ctrl), nil, tenantmocks.NewMockITenantProvider(ctrl), traceServicemocks.NewMockTraceFilterProcessorBuilder(ctrl), traceConfigMock, pMetrics)
+		assert.NoError(t, err)
+
+		resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+			PlatformType: loop_span.PlatformType("loop"),
+			WorkspaceID:  1,
+			MetricsNames: []string{"metric_a"},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Empty(t, resp.Metrics)
+	})
 }
 
 type testMetricDefinition struct {
