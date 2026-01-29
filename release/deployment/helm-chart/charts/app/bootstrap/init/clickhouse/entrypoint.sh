@@ -51,6 +51,7 @@ for file in $(ls /coze-loop-clickhouse-init/bootstrap/init-sql | grep '\.sql$');
     -u "${COZE_LOOP_CLICKHOUSE_USER}" \
     --password="${COZE_LOOP_CLICKHOUSE_PASSWORD}" \
     --database="${COZE_LOOP_CLICKHOUSE_DATABASE}" \
+    --multiquery \
     < "/coze-loop-clickhouse-init/bootstrap/init-sql/${file}"
   i=$((i + 1))
 done
