@@ -60,10 +60,12 @@ func main() {
 	if err := initTracer(handler); err != nil {
 		panic(err)
 	}
-	consumerWorkers := MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler)
-	if err := registry.NewConsumerRegistry(c.mqFactory).Register(consumerWorkers).StartAll(ctx); err != nil {
+
+	registry := registry.NewConsumerRegistry(c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler))
+	if err := registry.StartAll(ctx); err != nil {
 		panic(err)
 	}
+	defer func() { _ = registry.StopAll(context.Background()) }()
 
 	api.Start(handler)
 }
