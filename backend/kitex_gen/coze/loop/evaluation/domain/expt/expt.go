@@ -10170,9 +10170,12 @@ func (p *ExptColumnEvalTarget) Field2DeepEqual(src []*ColumnEvalTarget) bool {
 }
 
 type ColumnEvalTarget struct {
-	Name        *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description *string `thrift:"description,2,optional" frugal:"2,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	Label       *string `thrift:"label,3,optional" frugal:"3,optional,string" form:"label" json:"label,omitempty" query:"label"`
+	Name        *string             `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description *string             `thrift:"description,2,optional" frugal:"2,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	Label       *string             `thrift:"label,3,optional" frugal:"3,optional,string" form:"label" json:"label,omitempty" query:"label"`
+	ContentType *common.ContentType `thrift:"content_type,4,optional" frugal:"4,optional,string" form:"content_type" json:"content_type,omitempty" query:"content_type"`
+	TextSchema  *string             `thrift:"text_schema,5,optional" frugal:"5,optional,string" form:"text_schema" json:"text_schema,omitempty" query:"text_schema"`
+	SchemaKey   *dataset.SchemaKey  `thrift:"schema_key,6,optional" frugal:"6,optional,SchemaKey" form:"schema_key" json:"schema_key,omitempty" query:"schema_key"`
 }
 
 func NewColumnEvalTarget() *ColumnEvalTarget {
@@ -10217,6 +10220,42 @@ func (p *ColumnEvalTarget) GetLabel() (v string) {
 	}
 	return *p.Label
 }
+
+var ColumnEvalTarget_ContentType_DEFAULT common.ContentType
+
+func (p *ColumnEvalTarget) GetContentType() (v common.ContentType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetContentType() {
+		return ColumnEvalTarget_ContentType_DEFAULT
+	}
+	return *p.ContentType
+}
+
+var ColumnEvalTarget_TextSchema_DEFAULT string
+
+func (p *ColumnEvalTarget) GetTextSchema() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTextSchema() {
+		return ColumnEvalTarget_TextSchema_DEFAULT
+	}
+	return *p.TextSchema
+}
+
+var ColumnEvalTarget_SchemaKey_DEFAULT dataset.SchemaKey
+
+func (p *ColumnEvalTarget) GetSchemaKey() (v dataset.SchemaKey) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSchemaKey() {
+		return ColumnEvalTarget_SchemaKey_DEFAULT
+	}
+	return *p.SchemaKey
+}
 func (p *ColumnEvalTarget) SetName(val *string) {
 	p.Name = val
 }
@@ -10226,11 +10265,23 @@ func (p *ColumnEvalTarget) SetDescription(val *string) {
 func (p *ColumnEvalTarget) SetLabel(val *string) {
 	p.Label = val
 }
+func (p *ColumnEvalTarget) SetContentType(val *common.ContentType) {
+	p.ContentType = val
+}
+func (p *ColumnEvalTarget) SetTextSchema(val *string) {
+	p.TextSchema = val
+}
+func (p *ColumnEvalTarget) SetSchemaKey(val *dataset.SchemaKey) {
+	p.SchemaKey = val
+}
 
 var fieldIDToName_ColumnEvalTarget = map[int16]string{
 	1: "name",
 	2: "description",
 	3: "label",
+	4: "content_type",
+	5: "text_schema",
+	6: "schema_key",
 }
 
 func (p *ColumnEvalTarget) IsSetName() bool {
@@ -10243,6 +10294,18 @@ func (p *ColumnEvalTarget) IsSetDescription() bool {
 
 func (p *ColumnEvalTarget) IsSetLabel() bool {
 	return p.Label != nil
+}
+
+func (p *ColumnEvalTarget) IsSetContentType() bool {
+	return p.ContentType != nil
+}
+
+func (p *ColumnEvalTarget) IsSetTextSchema() bool {
+	return p.TextSchema != nil
+}
+
+func (p *ColumnEvalTarget) IsSetSchemaKey() bool {
+	return p.SchemaKey != nil
 }
 
 func (p *ColumnEvalTarget) Read(iprot thrift.TProtocol) (err error) {
@@ -10282,6 +10345,30 @@ func (p *ColumnEvalTarget) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10349,6 +10436,40 @@ func (p *ColumnEvalTarget) ReadField3(iprot thrift.TProtocol) error {
 	p.Label = _field
 	return nil
 }
+func (p *ColumnEvalTarget) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *common.ContentType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ContentType = _field
+	return nil
+}
+func (p *ColumnEvalTarget) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TextSchema = _field
+	return nil
+}
+func (p *ColumnEvalTarget) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *dataset.SchemaKey
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset.SchemaKey(v)
+		_field = &tmp
+	}
+	p.SchemaKey = _field
+	return nil
+}
 
 func (p *ColumnEvalTarget) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -10366,6 +10487,18 @@ func (p *ColumnEvalTarget) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -10440,6 +10573,60 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ColumnEvalTarget) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetContentType() {
+		if err = oprot.WriteFieldBegin("content_type", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ContentType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ColumnEvalTarget) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTextSchema() {
+		if err = oprot.WriteFieldBegin("text_schema", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TextSchema); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ColumnEvalTarget) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSchemaKey() {
+		if err = oprot.WriteFieldBegin("schema_key", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SchemaKey)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ColumnEvalTarget) String() string {
 	if p == nil {
@@ -10462,6 +10649,15 @@ func (p *ColumnEvalTarget) DeepEqual(ano *ColumnEvalTarget) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Label) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ContentType) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.TextSchema) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.SchemaKey) {
 		return false
 	}
 	return true
@@ -10499,6 +10695,42 @@ func (p *ColumnEvalTarget) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Label, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvalTarget) Field4DeepEqual(src *common.ContentType) bool {
+
+	if p.ContentType == src {
+		return true
+	} else if p.ContentType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ContentType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvalTarget) Field5DeepEqual(src *string) bool {
+
+	if p.TextSchema == src {
+		return true
+	} else if p.TextSchema == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TextSchema, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnEvalTarget) Field6DeepEqual(src *dataset.SchemaKey) bool {
+
+	if p.SchemaKey == src {
+		return true
+	} else if p.SchemaKey == nil || src == nil {
+		return false
+	}
+	if *p.SchemaKey != *src {
 		return false
 	}
 	return true

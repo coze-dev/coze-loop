@@ -664,7 +664,19 @@ func formatMultiPartData(data *entity.Content) string {
 				url = fmt.Sprintf("<ref_image_url:%s>\n", *content.Image.URL)
 			}
 			builder.WriteString(url)
-		case entity.ContentTypeAudio, entity.ContentTypeMultipart:
+		case entity.ContentTypeAudio:
+			url := ""
+			if content.Audio != nil && content.Audio.URL != nil {
+				url = fmt.Sprintf("<ref_audio_url:%s>\n", *content.Audio.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeVideo:
+			url := ""
+			if content.Video != nil && content.Video.URL != nil {
+				url = fmt.Sprintf("<ref_video_url:%s>\n", *content.Video.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeMultipart:
 			continue
 		default:
 			continue

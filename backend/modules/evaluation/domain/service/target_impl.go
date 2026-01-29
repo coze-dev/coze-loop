@@ -732,6 +732,22 @@ func toTraceParts(ctx context.Context, content *entity.Content) []*tracespec.Mod
 			},
 			Type: tracespec.ModelMessagePartType(content.GetContentType()),
 		}}
+	case entity.ContentTypeAudio:
+		return []*tracespec.ModelMessagePart{{
+			AudioURL: &tracespec.ModelAudioURL{
+				Name: gptr.Indirect(content.Audio.Name),
+				URL:  gptr.Indirect(content.Audio.URL),
+			},
+			Type: tracespec.ModelMessagePartTypeAudio,
+		}}
+	case entity.ContentTypeVideo:
+		return []*tracespec.ModelMessagePart{{
+			VideoURL: &tracespec.ModelVideoURL{
+				Name: gptr.Indirect(content.Video.Name),
+				URL:  gptr.Indirect(content.Video.URL),
+			},
+			Type: tracespec.ModelMessagePartTypeVideo,
+		}}
 	case entity.ContentTypeMultipart:
 		parts := make([]*tracespec.ModelMessagePart, 0, len(content.MultiPart))
 		for _, sub := range content.MultiPart {

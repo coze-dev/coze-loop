@@ -142,6 +142,8 @@ struct Experiment {
     // 三元组信息
     31: optional TargetFieldMapping target_field_mapping
     32: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    33: optional eval_set.EvaluationSet eval_set
+    34: optional eval_target.EvalTarget eval_target
 
     // 统计信息
     50: optional ExperimentStatistics expt_stats
@@ -179,6 +181,9 @@ struct ColumnEvalTarget {
     1: optional string name
     2: optional string description
     3: optional string label
+    4: optional common.ContentType content_type
+    5: optional string text_schema
+    6: optional eval_set.SchemaKey schema_key
 }
 
 // 目标输出结果

@@ -809,4 +809,7 @@ type ColumnEvalTarget struct {
 	Desc        string
 	Label       *string
 	DisplayName string
+	ContentType *ContentType
+	TextSchema  *string
+	SchemaKey   *SchemaKey
 }

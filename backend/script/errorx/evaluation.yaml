@@ -465,3 +465,9 @@ error_code:
     message: unsupported custom rpc evaluator
     description: the custom rpc evaluator is not supported, check if the configuration is correct
     no_affect_stability: true
+
+  - name: CustomEvalTargetRunFailed
+    code: 5067
+    message: custom eval target run failed
+    description: the custom eval target run failed, check if the configuration is correct
+    no_affect_stability: true
