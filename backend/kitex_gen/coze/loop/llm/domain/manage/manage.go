@@ -4,9 +4,10 @@ package manage
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
-	"strings"
 )
 
 const (
