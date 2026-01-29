@@ -53,6 +53,8 @@ enum EvalTargetType {
     CozeWorkflow = 4
     VolcengineAgent = 5 // 火山智能体
     CustomRPCServer = 6 // 自定义RPC服务 for内场
+
+    VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
 }
 
 // Agent协议类型
