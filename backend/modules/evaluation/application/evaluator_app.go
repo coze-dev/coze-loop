@@ -1255,7 +1255,7 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 	logs.CtxInfo(ctx, "DebugEvaluator transformURIsToURLs request: %v, uriToContentMap: %v, uriToContentAudioMap: %v, uriToContentVideoMap: %v",
 		json.Jsonify(inputFields), json.Jsonify(uriToContentMap), json.Jsonify(uriToContentAudioMap), json.Jsonify(uriToContentVideoMap))
 
-	if len(uriToContentMap) == 0 {
+	if len(uriToContentMap) == 0 && len(uriToContentAudioMap) == 0 && len(uriToContentVideoMap) == 0 {
 		return nil
 	}
 
