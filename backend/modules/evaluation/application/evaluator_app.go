@@ -1048,7 +1048,6 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 			return nil, err
 		}
 	}
-	logs.CtxInfo(ctx, "DebugEvaluator request: %v,", json.Jsonify(request))
 
 	dto := &evaluatordto.Evaluator{
 		WorkspaceID:   gptr.Of(request.WorkspaceID),
@@ -1252,9 +1251,6 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 	e.collectAudioURIs(inputFields, uriToContentAudioMap)
 	uriToContentVideoMap := make(map[string][]*evaluatorcommon.Video)
 	e.collectVideoURIs(inputFields, uriToContentVideoMap)
-	logs.CtxInfo(ctx, "DebugEvaluator transformURIsToURLs request: %v, uriToContentMap: %v, uriToContentAudioMap: %v, uriToContentVideoMap: %v",
-		json.Jsonify(inputFields), json.Jsonify(uriToContentMap), json.Jsonify(uriToContentAudioMap), json.Jsonify(uriToContentVideoMap))
-
 	if len(uriToContentMap) == 0 && len(uriToContentAudioMap) == 0 && len(uriToContentVideoMap) == 0 {
 		return nil
 	}
@@ -1275,7 +1271,6 @@ func (e *EvaluatorHandlerImpl) transformURIsToURLs(ctx context.Context, inputFie
 	if err != nil {
 		return errorx.NewByCode(errno.FileURLRetrieveFailedCode, errorx.WithExtraMsg(err.Error()))
 	}
-	logs.CtxInfo(ctx, "DebugEvaluator transformURIsToURLs urlMap: %v", json.Jsonify(urlMap))
 
 	// 回填URL到原始数据
 	e.fillURLs(uriToContentMap, urlMap)

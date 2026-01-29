@@ -175,10 +175,10 @@ func ContentToSpanParts(parts []*commonentity.Content) []*tracespec.ModelMessage
 			}
 		case commonentity.ContentTypeAudio:
 			partSpan.Type = tracespec.ModelMessagePartTypeAudio
-			if part.Image != nil {
+			if part.Audio != nil {
 				partSpan.AudioURL = &tracespec.ModelAudioURL{
-					URL:  gptr.Indirect(part.Image.URL),
-					Name: gptr.Indirect(part.Image.Name),
+					URL:  gptr.Indirect(part.Audio.URL),
+					Name: gptr.Indirect(part.Audio.Name),
 				}
 			}
 		case commonentity.ContentTypeVideo:
