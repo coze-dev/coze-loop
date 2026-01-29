@@ -366,6 +366,19 @@ func ParamSchemaDO2DTO(ps *entity.ParamSchema) *manage.ParamSchema {
 		Max:          ptr.Of(ps.Max),
 		DefaultValue: ptr.Of(ps.DefaultValue),
 		Options:      ParamOptionsDO2DTO(ps.Options),
+		Properties:   gslice.Map(ps.Properties, ParamSchemaDO2DTO),
+		Jsonpath:     ptr.Of(ps.JsonPath),
+		Reaction:     ReactionDO2DTO(ps.Reaction),
+	}
+}
+
+func ReactionDO2DTO(r *entity.Reaction) *manage.Reaction {
+	if r == nil {
+		return nil
+	}
+	return &manage.Reaction{
+		Dependency: ptr.Of(r.Dependency),
+		Visible:    ptr.Of(r.Visible),
 	}
 }
 

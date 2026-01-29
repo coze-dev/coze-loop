@@ -340,7 +340,7 @@ type ParamSchema struct {
 	Options      []*ParamOption `json:"options" yaml:"options" mapstructure:"options"`
 	Properties   []*ParamSchema `json:"properties" mapstructrue:"properties"`
 	JsonPath     string         `json:"json_path" mapstructrue:"json_path"`
-	Reaction     Reaction       `json:"reaction" mapstructrue:"reaction"`
+	Reaction     *Reaction      `json:"reaction" mapstructrue:"reaction"`
 }
 
 type Reaction struct {
