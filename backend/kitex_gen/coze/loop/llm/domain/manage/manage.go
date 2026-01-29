@@ -4,10 +4,9 @@ package manage
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
+	"strings"
 )
 
 const (
@@ -36,6 +35,112 @@ const (
 	ParamTypeBoolean = "boolean"
 
 	ParamTypeString = "string"
+
+	ParamTypeVoid = "void"
+
+	ParamTypeObject = "object"
+
+	FamilyUndefined = "undefined"
+
+	FamilyGpt = "gpt"
+
+	FamilySeed = "seed"
+
+	FamilyGemini = "gemini"
+
+	FamilyClaude = "claude"
+
+	FamilyErnie = "ernie"
+
+	FamilyBaichuan = "baichuan"
+
+	FamilyQwen = "qwen"
+
+	FamilyGlm = "glm"
+
+	FamilySkylark = "skylark"
+
+	FamilyMoonshot = "moonshot"
+
+	FamilyMinimax = "minimax"
+
+	FamilyDoubao = "doubao"
+
+	FamilyBaichuan2 = "baichuan2"
+
+	FamilyDeepseekv2 = "deepseekv2"
+
+	FamilyDeepseekCoderV2 = "deepseek_coder_v2"
+
+	FamilyDeepseekCoder = "deepseek_coder"
+
+	FamilyInternalm25 = "internalm2_5"
+
+	FamilyQwen2 = "qwen2"
+
+	FamilyQwen25 = "qwen2.5"
+
+	FamilyQwen25Coder = "qwen2.5_coder"
+
+	FamilyMiniCpm = "mini_cpm"
+
+	FamilyMiniCpm3 = "mini_cpm_3"
+
+	FamilyChatGlm3 = "chat_glm_3"
+
+	FamilyMistra = "mistral"
+
+	FamilyGemma = "gemma"
+
+	FamilyGemma2 = "gemma_2"
+
+	FamilyInternVl2 = "intern_vl2"
+
+	FamilyInternVl25 = "intern_vl2.5"
+
+	FamilyDeepseekV3 = "deepseek_v3"
+
+	FamilyDeepseekR1 = "deepseek_r1"
+
+	FamilyKimi = "kimi"
+
+	FamilySeedream = "seedream"
+
+	FamilyInternVl3 = "intern_vl3"
+
+	FamilyDeepseek = "deepseek"
+
+	ProviderUndefined = "undefined"
+
+	ProviderMaas = "maas"
+
+	VisibleModeDefault = "default"
+
+	VisibleModeSpecified = "specified"
+
+	VisibleModeUndefined = "undefined"
+
+	VisibleModeAll = "all"
+
+	ModelStatusUndefined = "undefined"
+
+	ModelStatusAvailable = "available"
+
+	ModelStatusUnavailable = "unavailable"
+
+	InterfaceCategoryUndefined = "undefined"
+
+	InterfaceCategoryChatCompletionAPI = "chat_completion_api"
+
+	InterfaceCategoryResponseAPI = "response_api"
+
+	AbilityUndefined = "undefined"
+
+	AbilityJSONMode = "json_mode"
+
+	AbilityFunctionCall = "function_call"
+
+	AbilityMultiModal_ = "multi_modal"
 
 	VideoFormatUndefined = "undefined"
 
