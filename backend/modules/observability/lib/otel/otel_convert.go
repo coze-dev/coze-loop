@@ -25,6 +25,8 @@ import (
 
 // FieldConfMap Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
+// For AttributeKey and AttributeKeyPrefix, the field at the head has higher priority, and result will be returned once a match is found.
+// FOr Events, the fields have same priority, and result will be fixed by all fields.
 // Other types of configurations need to be manually processed in the code.
 var (
 	FieldConfMap = map[string]FieldConf{
@@ -96,6 +98,7 @@ var (
 				openInferenceAttributeModelInputMessages,
 				openInferenceAttributeToolInput,
 				string(semconv1_27_0.GenAIPromptKey),
+				string(semconv.GenAIInputMessagesKey),
 			},
 			EventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
 			DataType:  dataTypeString,
@@ -122,6 +125,7 @@ var (
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,
 				string(semconv1_27_0.GenAICompletionKey),
+				string(semconv.GenAIOutputMessagesKey),
 			},
 			EventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
 			DataType:  dataTypeString,
@@ -677,7 +681,7 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 					}
 				}
 			}
-		case openInferenceAttributeModelInputMessages: // openInference(or litellm) input message
+		case openInferenceAttributeModelInputMessages, string(semconv.GenAIInputMessagesKey): // openInference(or litellm) or openTelemetry input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
 				continue
@@ -696,7 +700,7 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 					continue
 				}
 			}
-		case openInferenceAttributeModelOutputMessages: // openInference output message
+		case openInferenceAttributeModelOutputMessages, string(semconv.GenAIOutputMessagesKey): // openInference(or litellm) or openTelemetry output message
 			resObject, err := open_inference.ConvertToModelOutput(srcAttrAggrRes)
 			if err == nil {
 				toBeMarshalObject = resObject
