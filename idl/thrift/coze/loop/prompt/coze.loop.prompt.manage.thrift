@@ -10,36 +10,36 @@ service PromptManageService {
 // --------------- Prompt管理 --------------- //
 
     // 增
-    CreatePromptResponse CreatePrompt(1: CreatePromptRequest request) (api.post = '/api/prompt/v1/prompts')
-    ClonePromptResponse ClonePrompt(1: ClonePromptRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/clone')
+    CreatePromptResponse CreatePrompt(1: CreatePromptRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts', api.op_type = 'create', api.tag = 'volc-agentkit')
+    ClonePromptResponse ClonePrompt(1: ClonePromptRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/clone', api.op_type = 'create', api.tag = 'volc-agentkit')
 
     // 删
-    DeletePromptResponse DeletePrompt(1: DeletePromptRequest request) (api.delete = '/api/prompt/v1/prompts/:prompt_id')
+    DeletePromptResponse DeletePrompt(1: DeletePromptRequest request) (api.category="prompt_manage", api.delete = '/api/prompt/v1/prompts/:prompt_id', api.op_type = 'delete', api.tag = 'volc-agentkit')
 
     // 查
-    GetPromptResponse GetPrompt(1: GetPromptRequest request) (api.get = '/api/prompt/v1/prompts/:prompt_id')
+    GetPromptResponse GetPrompt(1: GetPromptRequest request) (api.category="prompt_manage", api.get = '/api/prompt/v1/prompts/:prompt_id', api.op_type = 'query', api.tag = 'volc-agentkit')
     BatchGetPromptResponse BatchGetPrompt(1: BatchGetPromptRequest request)
-    ListPromptResponse ListPrompt(1: ListPromptRequest request) (api.post = '/api/prompt/v1/prompts/list')
+    ListPromptResponse ListPrompt(1: ListPromptRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/list', api.op_type = 'list', api.tag = 'volc-agentkit')
     // 查询片段的引用记录
     ListParentPromptResponse ListParentPrompt (1: ListParentPromptRequest request) (api.post = '/api/prompt/v1/prompts/list_parent')
 
     // 改
-    UpdatePromptResponse UpdatePrompt(1: UpdatePromptRequest request) (api.put = '/api/prompt/v1/prompts/:prompt_id')
-    SaveDraftResponse SaveDraft(1: SaveDraftRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/save')
+    UpdatePromptResponse UpdatePrompt(1: UpdatePromptRequest request) (api.category="prompt_manage", api.put = '/api/prompt/v1/prompts/:prompt_id', api.op_type = 'update', api.tag = 'volc-agentkit')
+    SaveDraftResponse SaveDraft(1: SaveDraftRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/save', api.op_type = 'update', api.tag = 'volc-agentkit')
 
 // --------------- Label管理 --------------- //
 
     // Label管理
-    CreateLabelResponse CreateLabel(1:CreateLabelRequest request) (api.post = '/api/prompt/v1/labels')
-    ListLabelResponse ListLabel(1:ListLabelRequest request) (api.post = '/api/prompt/v1/labels/list')
-    BatchGetLabelResponse BatchGetLabel(1:BatchGetLabelRequest request) (api.post = '/api/prompt/v1/labels/batch_get')
+    CreateLabelResponse CreateLabel(1:CreateLabelRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/labels', api.op_type = 'label', api.tag = 'volc-agentkit')
+    ListLabelResponse ListLabel(1:ListLabelRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/labels/list', api.op_type = 'list', api.tag = 'volc-agentkit')
+    BatchGetLabelResponse BatchGetLabel(1:BatchGetLabelRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/labels/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit')
 
 // --------------- Prompt版本管理 --------------- //
 
-    ListCommitResponse ListCommit(1: ListCommitRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/commits/list')
-    CommitDraftResponse CommitDraft(1: CommitDraftRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/commit')
-    RevertDraftFromCommitResponse RevertDraftFromCommit(1: RevertDraftFromCommitRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/revert_from_commit')
-    UpdateCommitLabelsResponse UpdateCommitLabels(1:UpdateCommitLabelsRequest request) (api.post = '/api/prompt/v1/prompts/:prompt_id/commits/:commit_version/labels_update')
+    ListCommitResponse ListCommit(1: ListCommitRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/commits/list', api.op_type = 'list', api.tag = 'volc-agentkit')
+    CommitDraftResponse CommitDraft(1: CommitDraftRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/commit', api.op_type = 'create', api.tag = 'volc-agentkit')
+    RevertDraftFromCommitResponse RevertDraftFromCommit(1: RevertDraftFromCommitRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/drafts/revert_from_commit', api.op_type = 'update', api.tag = 'volc-agentkit')
+    UpdateCommitLabelsResponse UpdateCommitLabels(1:UpdateCommitLabelsRequest request) (api.category="prompt_manage", api.post = '/api/prompt/v1/prompts/:prompt_id/commits/:commit_version/labels_update', api.op_type = 'label', api.tag = 'volc-agentkit')
 
 }
 

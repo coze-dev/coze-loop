@@ -4,10 +4,10 @@ include "../../../base.thrift"
 include "./domain/prompt.thrift"
 
 service PromptDebugService {
-    DebugStreamingResponse DebugStreaming(1: DebugStreamingRequest req) (api.post='/api/prompt/v1/prompts/:prompt_id/debug_streaming', streaming.mode='server')
-    SaveDebugContextResponse SaveDebugContext(1: SaveDebugContextRequest req) (api.post='/api/prompt/v1/prompts/:prompt_id/debug_context/save')
-    GetDebugContextResponse GetDebugContext(1: GetDebugContextRequest req) (api.get='/api/prompt/v1/prompts/:prompt_id/debug_context/get')
-    ListDebugHistoryResponse ListDebugHistory(1: ListDebugHistoryRequest req) (api.get='/api/prompt/v1/prompts/:prompt_id/debug_history/list')
+    DebugStreamingResponse DebugStreaming(1: DebugStreamingRequest req) (api.category="prompt_debug", api.post='/api/prompt/v1/prompts/:prompt_id/debug_streaming', api.op_type = 'query', api.tag = 'volc-agentkit', streaming.mode='server')
+    SaveDebugContextResponse SaveDebugContext(1: SaveDebugContextRequest req) (api.category="prompt_debug", api.post='/api/prompt/v1/prompts/:prompt_id/debug_context/save', api.op_type = 'update', api.tag = 'volc-agentkit')
+    GetDebugContextResponse GetDebugContext(1: GetDebugContextRequest req) (api.category="prompt_debug", api.get='/api/prompt/v1/prompts/:prompt_id/debug_context/get', api.op_type = 'query', api.tag = 'volc-agentkit')
+    ListDebugHistoryResponse ListDebugHistory(1: ListDebugHistoryRequest req) (api.category="prompt_debug", api.get='/api/prompt/v1/prompts/:prompt_id/debug_history/list', api.op_type = 'list', api.tag = 'volc-agentkit')
 }
 
 struct DebugStreamingRequest {
