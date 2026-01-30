@@ -213,6 +213,7 @@ func (s *Span) IsResponseAPISpan() bool {
 	v, ok := s.SystemTagsString[consts.KeyPreviousResponseID]
 	return ok && v != ""
 }
+
 func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 	// Normalize func for Response API String|List Message structure
 	normalizeMessages := func(v interface{}, role string, t string) ([]interface{}, bool) {

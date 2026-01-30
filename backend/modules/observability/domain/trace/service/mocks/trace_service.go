@@ -338,6 +338,20 @@ func (mr *MockITraceServiceMockRecorder) ListTrajectory(ctx, req any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTrajectory", reflect.TypeOf((*MockITraceService)(nil).ListTrajectory), ctx, req)
 }
 
+// MergeHistoryMessagesByRespIDBatch mocks base method.
+func (m *MockITraceService) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MergeHistoryMessagesByRespIDBatch", ctx, spans, platformType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MergeHistoryMessagesByRespIDBatch indicates an expected call of MergeHistoryMessagesByRespIDBatch.
+func (mr *MockITraceServiceMockRecorder) MergeHistoryMessagesByRespIDBatch(ctx, spans, platformType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MergeHistoryMessagesByRespIDBatch", reflect.TypeOf((*MockITraceService)(nil).MergeHistoryMessagesByRespIDBatch), ctx, spans, platformType)
+}
+
 // SearchTraceOApi mocks base method.
 func (m *MockITraceService) SearchTraceOApi(ctx context.Context, req *service.SearchTraceOApiReq) (*service.SearchTraceOApiResp, error) {
 	m.ctrl.T.Helper()

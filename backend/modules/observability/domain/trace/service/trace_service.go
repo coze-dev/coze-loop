@@ -870,6 +870,7 @@ func (r *TraceServiceImpl) MergeHistoryMessagesByRespIDBatch(ctx context.Context
 	}
 	return nil
 }
+
 func spanList2ListPreSpanBatchReq(spanList []*loop_span.Span, platformType loop_span.PlatformType) *ListPreSpanBatchReq {
 	if len(spanList) == 0 {
 		return nil
