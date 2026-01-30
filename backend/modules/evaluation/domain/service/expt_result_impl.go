@@ -634,10 +634,14 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 		if info, ok := versionID2TargetInfo[expt.TargetVersionID]; ok {
 			if info.EvalTargetVersion != nil {
 				for _, s := range info.EvalTargetVersion.OutputSchema {
+					lable := consts.ReportColumnLabelEvalTargetActualOutput
+					if gptr.Indirect(s.Key) != consts.ReportColumnNameEvalTargetActualOutput {
+						lable = consts.ReportColumnLabelEvalTargetExtOutput
+					}
 					c := &entity.ColumnEvalTarget{
 						Name:       gptr.Indirect(s.Key),
 						TextSchema: s.JsonSchema,
-						Label:      gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
+						Label:      gptr.Of(lable),
 					}
 					if len(s.SupportContentTypes) > 0 {
 						// 评测对象字段类型就一个，所以这里取第一个就可以

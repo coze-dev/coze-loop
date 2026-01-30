@@ -44,6 +44,7 @@ const (
 const (
 	ReportColumnNameEvalTargetActualOutput  = expt.ColumnEvalTargetNameActualOutput
 	ReportColumnLabelEvalTargetActualOutput = "实际输出"
+	ReportColumnLabelEvalTargetExtOutput    = "自定义输出"
 
 	ReportColumnNameEvalTargetTrajectory  = expt.ColumnEvalTargetNameTrajectory
 	ReportColumnLabelEvalTargetTrajectory = "轨迹"
