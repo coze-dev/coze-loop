@@ -5,10 +5,14 @@ package loop_span
 
 import (
 	"context"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/consts"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -453,6 +457,285 @@ func TestGetFieldValue_SystemTags(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestSpan_MergeHistoryContext(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("merge input and output history messages", func(t *testing.T) {
+		span := &Span{
+			Input: `{"messages":[{"role":"user","content":"cur1"},{"role":"assistant","content":"cur2"}]}`,
+		}
+		history := []*Span{
+			{Input: `{"messages":[{"role":"system","content":"hist_in1"}]}`},
+			{Output: `{"choices":[{"role":"assistant","content":"hist_out1"}]}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["messages"].([]interface{})
+		assert.Equal(t, 4, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		second, _ := msgs[1].(map[string]interface{})
+		third, _ := msgs[2].(map[string]interface{})
+		fourth, _ := msgs[3].(map[string]interface{})
+		assert.Equal(t, "system", first["role"])
+		assert.Equal(t, "assistant", second["role"])
+		assert.Equal(t, "user", third["role"])
+		assert.Equal(t, "assistant", fourth["role"])
+	})
+
+	t.Run("merge response api input/output string into wrappers", func(t *testing.T) {
+		span := &Span{
+			Input: `{"input":"cur_in"}`,
+		}
+		history := []*Span{
+			{Input: `{"input":"hist_in"}`},
+			{Output: `{"output":"hist_out"}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["messages"].([]interface{})
+		assert.Equal(t, 3, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		second, _ := msgs[1].(map[string]interface{})
+		third, _ := msgs[2].(map[string]interface{})
+		assert.Equal(t, "user", first["role"])
+		assert.Equal(t, "hist_in", first["content"])
+		assert.Equal(t, "assistant", second["role"])
+		assert.Equal(t, "hist_out", second["content"])
+		assert.Equal(t, "user", third["role"])
+		assert.Equal(t, "cur_in", third["content"])
+	})
+
+	t.Run("merge response api input/output list into messages", func(t *testing.T) {
+		span := &Span{
+			Input: `{"messages":[{"role":"user","content":"cur"}]}`,
+		}
+		history := []*Span{
+			{Input: `{"input":[{"role":"user","content":"hist_in"}]}`},
+			{Output: `{"output":[{"role":"assistant","content":"hist_out"}]}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["messages"].([]interface{})
+		assert.Equal(t, 3, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		second, _ := msgs[1].(map[string]interface{})
+		third, _ := msgs[2].(map[string]interface{})
+		assert.Equal(t, "user", first["role"])
+		assert.Equal(t, "assistant", second["role"])
+		assert.Equal(t, "user", third["role"])
+	})
+
+	t.Run("current messages fallback to input when messages is not array", func(t *testing.T) {
+		span := &Span{
+			Input: `{"messages":"bad","input":"cur_in"}`,
+		}
+		history := []*Span{
+			{Input: `{"messages":"bad","input":"hist_in"}`},
+			{Output: `{"choices":"bad","output":"hist_out"}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["messages"].([]interface{})
+		assert.Equal(t, 3, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		second, _ := msgs[1].(map[string]interface{})
+		third, _ := msgs[2].(map[string]interface{})
+		assert.Equal(t, "user", first["role"])
+		assert.Equal(t, "hist_in", first["content"])
+		assert.Equal(t, "assistant", second["role"])
+		assert.Equal(t, "hist_out", second["content"])
+		assert.Equal(t, "user", third["role"])
+		assert.Equal(t, "cur_in", third["content"])
+	})
+
+	t.Run("empty current input string returns early", func(t *testing.T) {
+		orig := `{"input":""}`
+		span := &Span{Input: orig}
+		history := []*Span{
+			{Input: `{"input":"hist_in"}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		assert.Equal(t, orig, span.Input)
+	})
+
+	t.Run("no messages and no input returns early", func(t *testing.T) {
+		orig := `{"foo":"bar"}`
+		span := &Span{Input: orig}
+		history := []*Span{
+			{Input: `{"messages":[{"role":"system","content":"h"}]}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		assert.Equal(t, orig, span.Input)
+	})
+
+	t.Run("no history messages keeps input unchanged", func(t *testing.T) {
+		orig := `{"messages":[{"role":"user","content":"cur"}]}`
+		span := &Span{Input: orig}
+		history := []*Span{
+			{Input: `{"no_messages":[]}`},
+			{Output: `{"info":"x"}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		assert.Equal(t, orig, span.Input)
+	})
+
+	t.Run("invalid current input leaves unchanged", func(t *testing.T) {
+		span := &Span{Input: `not-json`}
+		history := []*Span{
+			{Input: `{"messages":[{"role":"system","content":"h"}]}`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		assert.Equal(t, `not-json`, span.Input)
+	})
+
+	t.Run("invalid history json is skipped", func(t *testing.T) {
+		span := &Span{Input: `{"messages":[{"role":"user","content":"cur"}]}`}
+		history := []*Span{
+			{Input: `{"messages":[{"role":"system","content":"h1"}]}`},
+			{Output: `{"messages": "not-array"}`},
+			{Input: `{"messages":[{"role":"assistant","content":"h2"}]}`},
+			{Output: `bad-json`},
+		}
+		span.MergeHistoryContext(ctx, history)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["messages"].([]interface{})
+		assert.Equal(t, 3, len(msgs))
+	})
+
+	t.Run("empty history does nothing", func(t *testing.T) {
+		orig := `{"messages":[{"role":"user","content":"cur"}]}`
+		span := &Span{Input: orig}
+		span.MergeHistoryContext(ctx, nil)
+		assert.Equal(t, orig, span.Input)
+	})
+
+	t.Run("helper methods in span.go", func(t *testing.T) {
+		span := &Span{
+			SpanID:      "0000000000000001",
+			TraceID:     "00000000000000000000000000000001",
+			WorkspaceID: "1",
+			StartTime:   time.Now().UnixMicro(),
+			SpanType:    SpanTypeModel,
+			SystemTagsString: map[string]string{
+				consts.KeyPreviousResponseID: "prev",
+				SpanFieldTenant:              "tenant1",
+			},
+		}
+		assert.True(t, span.IsResponseAPISpan())
+		assert.Equal(t, "tenant1", span.GetTenant())
+
+		span2 := &Span{SpanType: SpanTypePrompt}
+		assert.False(t, span2.IsResponseAPISpan())
+		span3 := &Span{SpanType: SpanTypeModel}
+		assert.False(t, span3.IsResponseAPISpan())
+		span4 := &Span{SpanType: SpanTypeModel, SystemTagsString: map[string]string{consts.KeyPreviousResponseID: ""}}
+		assert.False(t, span4.IsResponseAPISpan())
+	})
+
+	t.Run("AddAutoEvalAnnotation and SpanList helpers", func(t *testing.T) {
+		span := &Span{
+			SpanID:      "0000000000000001",
+			TraceID:     "00000000000000000000000000000001",
+			WorkspaceID: "1",
+			StartTime:   time.Now().UnixMicro(),
+		}
+		anno, err := span.AddAutoEvalAnnotation(1, 2, 3, 0.5, "reason", "user1")
+		assert.NoError(t, err)
+		assert.NotNil(t, anno)
+		assert.Equal(t, AnnotationTypeAutoEvaluate, anno.AnnotationType)
+		assert.Equal(t, 1, len(span.Annotations))
+
+		spans := SpanList{
+			{SpanType: SpanTypePrompt, StartTime: 2},
+			{SpanType: SpanTypeModel, StartTime: 3, TagsLong: map[string]int64{SpanFieldInputTokens: 10, SpanFieldOutputTokens: 20}},
+			{SpanType: SpanTypeLLMCall, StartTime: 1, TagsLong: map[string]int64{SpanFieldInputTokens: 1, SpanFieldOutputTokens: 2}},
+		}
+		in, out, err := spans.Stat(ctx)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(11), in)
+		assert.Equal(t, int64(22), out)
+
+		filtered := spans.FilterSpans(GetModelSpansFilter())
+		assert.Equal(t, 2, len(filtered))
+
+		spans.SortByStartTime(false)
+		assert.Equal(t, int64(1), spans[0].StartTime)
+		spans.SortByStartTime(true)
+		assert.Equal(t, int64(3), spans[0].StartTime)
+
+		uniq := SpanList{
+			{SpanID: "a", TraceID: "t"},
+			{SpanID: "a", TraceID: "t"},
+			{SpanID: "b", TraceID: "t"},
+		}.Uniq()
+		assert.Equal(t, 2, len(uniq))
+	})
+
+	t.Run("field and tag helpers", func(t *testing.T) {
+		type sample struct {
+			Str   string  `json:"str"`
+			Bool  bool    `json:"bool"`
+			I64   int64   `json:"i64"`
+			F64   float64 `json:"f64"`
+			Ptr   *string `json:"ptr"`
+			Bad   int     `json:"bad"`
+			NoTag string
+		}
+
+		s := &sample{}
+		fields := NewStruct(s).Fields()
+		assert.GreaterOrEqual(t, len(fields), 1)
+
+		var ptrField *Field
+		var badField *Field
+		var noTagField *Field
+		for _, f := range fields {
+			if f.Name() == "Ptr" {
+				ptrField = f
+			}
+			if f.Name() == "Bad" {
+				badField = f
+			}
+			if f.Name() == "NoTag" {
+				noTagField = f
+			}
+			alias, err := f.TagJson()
+			if f.Name() == "Bad" {
+				assert.NoError(t, err)
+				assert.NotEmpty(t, alias)
+			}
+		}
+		assert.NotNil(t, noTagField)
+		_, err := noTagField.TagJson()
+		assert.Error(t, err)
+
+		assert.NotNil(t, ptrField)
+		assert.Equal(t, reflect.Ptr, ptrField.Kind())
+		assert.NoError(t, ptrField.Set("x"))
+		assert.NotNil(t, s.Ptr)
+		assert.Equal(t, "x", *s.Ptr)
+		vt, err := ptrField.ValueType()
+		assert.NoError(t, err)
+		assert.Equal(t, TagValueTypeString, vt)
+
+		assert.NotNil(t, badField)
+		_, err = badField.ValueType()
+		assert.Error(t, err)
+
+		assert.Equal(t, "Bool", TagValueTypeBool.String())
+		assert.Equal(t, "I64", TagValueTypeInt64.String())
+		assert.Equal(t, "F64", TagValueTypeFloat64.String())
+		assert.Equal(t, "String", TagValueTypeString.String())
+		assert.Equal(t, "<UNSET>", TagValueTypeUnknown.String())
+	})
 }
 
 // TestSizeofSpans tests the SizeofSpans function

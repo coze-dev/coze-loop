@@ -21,14 +21,15 @@ import (
 )
 
 type spanSubscriber struct {
-	taskID      int64
-	t           *entity.ObservabilityTask
-	tr          *entity.TaskRun
-	processor   taskexe.Processor
-	tenants     []string
-	taskRepo    repo.ITaskRepo
-	runType     entity.TaskRunType
-	buildHelper service.TraceFilterProcessorBuilder
+	taskID       int64
+	t            *entity.ObservabilityTask
+	tr           *entity.TaskRun
+	processor    taskexe.Processor
+	tenants      []string
+	taskRepo     repo.ITaskRepo
+	runType      entity.TaskRunType
+	buildHelper  service.TraceFilterProcessorBuilder
+	traceService service.ITraceService
 }
 
 // Sampled determines whether a span is sampled based on the sampling rate; the sample size will be validated during flush.
@@ -209,6 +210,14 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	}
 	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
 	logs.CtxDebug(ctx, "invoke processor, trigger: %v", trigger)
+	// New Data 在这里处理
+	// Back fill 在前置批量处理
+	if s.runType == entity.TaskRunTypeNewData {
+		err := s.traceService.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, s.t.GetPlatformType())
+		if err != nil {
+			return err
+		}
+	}
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {
 		logs.CtxWarn(ctx, "invoke processor failed, trace_id=%s, span_id=%s, err: %v", span.TraceID, span.SpanID, err)

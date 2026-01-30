@@ -4714,3 +4714,541 @@ func TestTraceServiceImpl_checkGetPreSpanAuth_Comprehensive(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
+	type fields struct {
+		traceRepo      repo.ITraceRepo
+		buildHelper    TraceFilterProcessorBuilder
+		tenantProvider tenant.ITenantProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *ListPreSpanBatchReq
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *ListPreSpanBatchResp
+		wantErr      bool
+	}{
+		{
+			name: "empty items - should return empty results",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID:  1,
+					StartTime:    time.Now().UnixMilli(),
+					Items:        []*ListPreSpanItem{},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "single item - successful query",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+				// Mock GetTenantsByPlatformType
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return([]string{"tenant1"}, nil)
+
+				// Mock GetPreSpanIDs
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{
+						PreRespID: "prev-resp-1",
+					}).
+					Return([]string{"span-0"}, []string{"resp-0"}, nil)
+
+				// Mock ListSpans - will be called in batchGetPreSpan
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-0",
+									keyPreviousResponseID: "",
+								},
+							},
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-1",
+									keyPreviousResponseID: "prev-resp-1",
+								},
+							},
+						},
+					}, nil).
+					AnyTimes()
+
+				return fields{
+					traceRepo:      mockRepo,
+					buildHelper:    mockBuilder,
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "prev-resp-1",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-1",
+						PreviousResponseID: "prev-resp-1",
+						Spans: loop_span.SpanList{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-0",
+									keyPreviousResponseID: "",
+								},
+							},
+						},
+						Error: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple items - all successful",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return([]string{"tenant1"}, nil)
+
+				// Mock GetPreSpanIDs for item 1
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{
+						PreRespID: "prev-resp-1",
+					}).
+					Return([]string{"span-0"}, []string{"resp-0"}, nil)
+
+				// Mock GetPreSpanIDs for item 2
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{
+						PreRespID: "prev-resp-2",
+					}).
+					Return([]string{"span-10"}, []string{"resp-10"}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-1",
+									keyPreviousResponseID: "prev-resp-1",
+								},
+							},
+							{
+								SpanID:      "span-10",
+								TraceID:     "trace-2",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-10",
+								},
+							},
+							{
+								SpanID:      "span-2",
+								TraceID:     "trace-2",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-2",
+									keyPreviousResponseID: "prev-resp-2",
+								},
+							},
+						},
+					}, nil).
+					AnyTimes()
+
+				return fields{
+					traceRepo:      mockRepo,
+					buildHelper:    mockBuilder,
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "prev-resp-1",
+						},
+						{
+							TraceID:            "trace-2",
+							SpanID:             "span-2",
+							PreviousResponseID: "prev-resp-2",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-1",
+						PreviousResponseID: "prev-resp-1",
+						Spans: loop_span.SpanList{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+						},
+						Error: nil,
+					},
+					{
+						TraceID:            "trace-2",
+						SpanID:             "span-2",
+						PreviousResponseID: "prev-resp-2",
+						Spans: loop_span.SpanList{
+							{
+								SpanID:      "span-10",
+								TraceID:     "trace-2",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-10",
+								},
+							},
+						},
+						Error: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "tenant provider error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode))
+
+				return fields{
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "prev-resp-1",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r := &TraceServiceImpl{
+				traceRepo:      fields.traceRepo,
+				buildHelper:    fields.buildHelper,
+				tenantProvider: fields.tenantProvider,
+			}
+			got, err := r.ListPreSpanBatch(tt.args.ctx, tt.args.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, got)
+			assert.Equal(t, len(tt.want.Results), len(got.Results))
+			for i, wantResult := range tt.want.Results {
+				gotResult := got.Results[i]
+				assert.Equal(t, wantResult.TraceID, gotResult.TraceID)
+				assert.Equal(t, wantResult.SpanID, gotResult.SpanID)
+				assert.Equal(t, wantResult.PreviousResponseID, gotResult.PreviousResponseID)
+				if wantResult.Error != nil {
+					assert.Error(t, gotResult.Error)
+				} else {
+					assert.NoError(t, gotResult.Error)
+					assert.Equal(t, len(wantResult.Spans), len(gotResult.Spans))
+				}
+			}
+		})
+	}
+}
+
+func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("empty spans - noop", func(t *testing.T) {
+		r := &TraceServiceImpl{}
+		err := r.MergeHistoryMessagesByRespIDBatch(ctx, nil, loop_span.PlatformCozeLoop)
+		assert.NoError(t, err)
+	})
+
+	t.Run("non model spans - noop", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+		mockRepo := repomocks.NewMockITraceRepo(ctrl)
+		mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+		mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+		r := &TraceServiceImpl{
+			traceRepo:      mockRepo,
+			buildHelper:    mockBuilder,
+			tenantProvider: mockTenantProvider,
+		}
+
+		span := &loop_span.Span{
+			SpanID:   "span-1",
+			TraceID:  "trace-1",
+			SpanType: loop_span.SpanTypePrompt,
+			Input:    `{"messages":[{"role":"user","content":"cur"}]}`,
+			SystemTagsString: map[string]string{
+				keyPreviousResponseID: "prev-resp-1",
+			},
+		}
+		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
+		assert.NoError(t, err)
+		assert.Equal(t, `{"messages":[{"role":"user","content":"cur"}]}`, span.Input)
+	})
+
+	t.Run("merge history messages successfully", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := repomocks.NewMockITraceRepo(ctrl)
+		mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+		mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+		mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+		mockTenantProvider.EXPECT().
+			GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+			Return([]string{"tenant1"}, nil)
+
+		mockRepo.EXPECT().
+			GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{PreRespID: "prev-resp-1"}).
+			Return([]string{"span-0"}, []string{"resp-0"}, nil)
+
+		mockRepo.EXPECT().
+			ListSpans(gomock.Any(), gomock.Any()).
+			Return(&repo.ListSpansResult{
+				Spans: []*loop_span.Span{
+					{
+						SpanID:      "span-0",
+						TraceID:     "trace-1",
+						WorkspaceID: "1",
+						Input:       `{"messages":[{"role":"system","content":"hist_in"}]}`,
+						Output:      `{"choices":[{"role":"assistant","content":"hist_out"}]}`,
+						SystemTagsString: map[string]string{
+							keyResponseID: "resp-0",
+						},
+					},
+					{
+						SpanID:      "span-1",
+						TraceID:     "trace-1",
+						WorkspaceID: "1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp-1",
+							keyPreviousResponseID: "prev-resp-1",
+						},
+					},
+				},
+			}, nil).
+			AnyTimes()
+
+		r := &TraceServiceImpl{
+			traceRepo:      mockRepo,
+			buildHelper:    mockBuilder,
+			tenantProvider: mockTenantProvider,
+		}
+
+		span := &loop_span.Span{
+			StartTime:   time.Now().UnixMilli(),
+			WorkspaceID: "1",
+			SpanID:      "span-1",
+			TraceID:     "trace-1",
+			SpanType:    loop_span.SpanTypeModel,
+			Input:       `{"messages":[{"role":"user","content":"cur"}]}`,
+			SystemTagsString: map[string]string{
+				keyPreviousResponseID: "prev-resp-1",
+			},
+		}
+
+		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
+		assert.NoError(t, err)
+
+		var m map[string]interface{}
+		assert.NoError(t, json.Unmarshal([]byte(span.Input), &m))
+		msgs, ok := m["messages"].([]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, 3, len(msgs))
+	})
+
+	t.Run("ListPreSpanBatch returns error - should return error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := repomocks.NewMockITraceRepo(ctrl)
+		mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+		mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+		mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+		mockTenantProvider.EXPECT().
+			GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+			Return(nil, fmt.Errorf("tenant error"))
+
+		r := &TraceServiceImpl{
+			traceRepo:      mockRepo,
+			buildHelper:    mockBuilder,
+			tenantProvider: mockTenantProvider,
+		}
+
+		span := &loop_span.Span{
+			StartTime:   time.Now().UnixMilli(),
+			WorkspaceID: "1",
+			SpanID:      "span-1",
+			TraceID:     "trace-1",
+			SpanType:    loop_span.SpanTypeModel,
+			Input:       `{"messages":[{"role":"user","content":"cur"}]}`,
+			SystemTagsString: map[string]string{
+				keyPreviousResponseID: "prev-resp-1",
+			},
+		}
+
+		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
+		assert.Error(t, err)
+	})
+
+	t.Run("per item error - should skip merge and return nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := repomocks.NewMockITraceRepo(ctrl)
+		mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+		mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+		mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+		mockTenantProvider.EXPECT().
+			GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+			Return([]string{"tenant1"}, nil)
+
+		mockRepo.EXPECT().
+			GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{PreRespID: "prev-resp-1"}).
+			Return([]string{"span-0"}, []string{"resp-0"}, nil)
+
+		mockRepo.EXPECT().
+			ListSpans(gomock.Any(), gomock.Any()).
+			Return(&repo.ListSpansResult{
+				Spans: []*loop_span.Span{
+					{
+						SpanID:      "span-0",
+						TraceID:     "trace-1",
+						WorkspaceID: "1",
+						Input:       `{"messages":[{"role":"system","content":"hist_in"}]}`,
+						Output:      `{"choices":[{"role":"assistant","content":"hist_out"}]}`,
+						SystemTagsString: map[string]string{
+							keyResponseID: "resp-0",
+						},
+					},
+					{
+						SpanID:      "span-1",
+						TraceID:     "trace-1",
+						WorkspaceID: "1",
+						SystemTagsString: map[string]string{
+							keyResponseID:         "resp-1",
+							keyPreviousResponseID: "mismatch",
+						},
+					},
+				},
+			}, nil).
+			AnyTimes()
+
+		r := &TraceServiceImpl{
+			traceRepo:      mockRepo,
+			buildHelper:    mockBuilder,
+			tenantProvider: mockTenantProvider,
+		}
+
+		orig := `{"messages":[{"role":"user","content":"cur"}]}`
+		span := &loop_span.Span{
+			StartTime:   time.Now().UnixMilli(),
+			WorkspaceID: "1",
+			SpanID:      "span-1",
+			TraceID:     "trace-1",
+			SpanType:    loop_span.SpanTypeModel,
+			Input:       orig,
+			SystemTagsString: map[string]string{
+				keyPreviousResponseID: "prev-resp-1",
+			},
+		}
+
+		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
+		assert.NoError(t, err)
+		assert.Equal(t, orig, span.Input)
+	})
+}

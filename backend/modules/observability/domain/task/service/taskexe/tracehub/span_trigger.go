@@ -91,13 +91,14 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			return nil, err
 		}
 		subscribers = append(subscribers, &spanSubscriber{
-			taskID:      taskDO.ID,
-			t:           taskDO,
-			processor:   proc,
-			taskRepo:    h.taskRepo,
-			runType:     entity.TaskRunTypeNewData,
-			buildHelper: h.buildHelper,
-			tenants:     tenants,
+			taskID:       taskDO.ID,
+			t:            taskDO,
+			processor:    proc,
+			taskRepo:     h.taskRepo,
+			runType:      entity.TaskRunTypeNewData,
+			buildHelper:  h.buildHelper,
+			tenants:      tenants,
+			traceService: h.traceService,
 		})
 	}
 

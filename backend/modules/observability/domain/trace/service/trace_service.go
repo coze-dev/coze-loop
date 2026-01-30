@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bytedance/gg/gslice"
+
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -73,6 +75,32 @@ type ListPreSpanReq struct {
 
 type ListPreSpanResp struct {
 	Spans loop_span.SpanList
+}
+
+type ListPreSpanBatchReq struct {
+	WorkspaceID           int64
+	ThirdPartyWorkspaceID string
+	StartTime             int64 // ms
+	Items                 []*ListPreSpanItem
+	PlatformType          loop_span.PlatformType
+}
+
+type ListPreSpanItem struct {
+	TraceID            string
+	SpanID             string
+	PreviousResponseID string
+}
+
+type ListPreSpanBatchResp struct {
+	Results []*ListPreSpanResult
+}
+
+type ListPreSpanResult struct {
+	TraceID            string
+	SpanID             string
+	PreviousResponseID string
+	Spans              loop_span.SpanList
+	Error              error
 }
 
 type GetTraceReq struct {
@@ -358,6 +386,7 @@ type IAnnotationEvent interface {
 type ITraceService interface {
 	ListSpans(ctx context.Context, req *ListSpansReq) (*ListSpansResp, error)
 	ListPreSpan(ctx context.Context, req *ListPreSpanReq) (r *ListPreSpanResp, err error)
+	ListPreSpanBatch(ctx context.Context, req *ListPreSpanBatchReq) (*ListPreSpanBatchResp, error)
 	GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error)
 	SearchTraceOApi(ctx context.Context, req *SearchTraceOApiReq) (*SearchTraceOApiResp, error)
 	ListSpansOApi(ctx context.Context, req *ListSpansOApiReq) (*ListSpansOApiResp, error)
@@ -380,6 +409,7 @@ type ITraceService interface {
 	ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error)
 	GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64,
 		platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
+	MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error
 }
 
 func NewTraceServiceImpl(
@@ -610,6 +640,254 @@ func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, r
 	}
 
 	return orderSpans
+}
+
+// ListPreSpanBatch batch version of ListPreSpan, processes multiple previous_response_id in one call.
+// It optimizes by fetching all required spans in batch and reusing processors.
+func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpanBatchReq) (*ListPreSpanBatchResp, error) {
+	if len(req.Items) == 0 {
+		return &ListPreSpanBatchResp{Results: []*ListPreSpanResult{}}, nil
+	}
+
+	// Step 1: Get tenants (shared across all items)
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 2: Batch get all pre span IDs from redis
+	spanIDsInfo, err := r.batchGetPreSpanIDsFromRedis(ctx, req.Items)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 3: Collect all unique span IDs to query
+	allSpanIDs := r.collectAllSpanIDs(spanIDsInfo, req.Items)
+	// Step 4: Batch query all spans from ClickHouse
+	allSpans, err := r.batchGetPreSpan(ctx, allSpanIDs, tenants, req.StartTime)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+
+	// Step 5: Apply span processors once for all spans
+	processedSpans, err := r.applyProcessors(ctx, allSpans, req)
+	if err != nil {
+		return nil, err
+	}
+
+	// Step 6: Build span map for quick lookup
+	allSpanMap := r.buildSpanMap(processedSpans)
+
+	// Step 7: Process each item individually (auth check, ordering)
+	results := r.processEachItem(ctx, req, tenants, spanIDsInfo, allSpanMap)
+
+	return &ListPreSpanBatchResp{Results: results}, nil
+}
+
+// batchGetPreSpanIDsFromRedis fetches pre span IDs from Redis for all items
+func (r *TraceServiceImpl) batchGetPreSpanIDsFromRedis(
+	ctx context.Context,
+	items []*ListPreSpanItem,
+) (map[string]*preSpanIDsInfo, error) {
+	result := make(map[string]*preSpanIDsInfo, len(items))
+
+	for _, item := range items {
+		if item.PreviousResponseID == "" {
+			continue
+		}
+
+		preAndCurrentSpanIDs, respIDByOrder, err := r.traceRepo.GetPreSpanIDs(ctx, &repo.GetPreSpanIDsParam{
+			PreRespID: item.PreviousResponseID,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		// Add current span ID for querying together
+		preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, item.SpanID)
+
+		result[item.PreviousResponseID] = &preSpanIDsInfo{
+			spanIDs:       preAndCurrentSpanIDs,
+			respIDByOrder: respIDByOrder,
+		}
+	}
+
+	return result, nil
+}
+
+// collectAllSpanIDs collects all unique span IDs that need to be queried
+func (r *TraceServiceImpl) collectAllSpanIDs(
+	spanIDsInfo map[string]*preSpanIDsInfo,
+	items []*ListPreSpanItem,
+) []string {
+	spanIDSet := make(map[string]struct{})
+
+	// Add span IDs from Redis results
+	for _, info := range spanIDsInfo {
+		for _, spanID := range info.spanIDs {
+			spanIDSet[spanID] = struct{}{}
+		}
+	}
+	allSpanIDs := make([]string, 0, len(spanIDSet))
+	for spanID := range spanIDSet {
+		allSpanIDs = append(allSpanIDs, spanID)
+	}
+
+	return allSpanIDs
+}
+
+// applyProcessors applies span processors to all spans at once
+func (r *TraceServiceImpl) applyProcessors(
+	ctx context.Context,
+	spans []*loop_span.Span,
+	req *ListPreSpanBatchReq,
+) ([]*loop_span.Span, error) {
+	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
+		WorkspaceId:    req.WorkspaceID,
+		PlatformType:   req.PlatformType,
+		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
+		QueryEndTime:   req.StartTime,
+	})
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+
+	processedSpans := spans
+	for _, p := range processors {
+		processedSpans, err = p.Transform(ctx, processedSpans)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return processedSpans, nil
+}
+
+// buildSpanMap creates a map for quick span lookup by span_id
+func (r *TraceServiceImpl) buildSpanMap(spans []*loop_span.Span) map[string]*loop_span.Span {
+	spanMap := make(map[string]*loop_span.Span, len(spans))
+	for _, span := range spans {
+		if span != nil {
+			spanMap[span.SpanID] = span
+		}
+	}
+	return spanMap
+}
+
+// processEachItem processes each request item individually
+func (r *TraceServiceImpl) processEachItem(
+	ctx context.Context,
+	req *ListPreSpanBatchReq,
+	tenants []string,
+	spanIDsInfo map[string]*preSpanIDsInfo,
+	spanMap map[string]*loop_span.Span,
+) []*ListPreSpanResult {
+	results := make([]*ListPreSpanResult, 0, len(req.Items))
+
+	for _, item := range req.Items {
+		result := &ListPreSpanResult{
+			TraceID:            item.TraceID,
+			SpanID:             item.SpanID,
+			PreviousResponseID: item.PreviousResponseID,
+		}
+
+		// Get span IDs info for this item
+		info, exists := spanIDsInfo[item.PreviousResponseID]
+		if !exists {
+			result.Error = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
+				errorx.WithExtraMsg("previous_response_id not found in redis"))
+			results = append(results, result)
+			continue
+		}
+
+		// Collect spans for this item
+		preAndCurrentSpans := make([]*loop_span.Span, 0, len(info.spanIDs))
+		for _, spanID := range info.spanIDs {
+			if span, ok := spanMap[spanID]; ok {
+				preAndCurrentSpans = append(preAndCurrentSpans, span)
+			}
+		}
+
+		// Auth check
+		itemReq := &ListPreSpanReq{
+			WorkspaceID:           req.WorkspaceID,
+			ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+			StartTime:             req.StartTime,
+			TraceID:               item.TraceID,
+			SpanID:                item.SpanID,
+			PreviousResponseID:    item.PreviousResponseID,
+			PlatformType:          req.PlatformType,
+		}
+		if err := r.checkGetPreSpanAuth(ctx, itemReq, tenants, preAndCurrentSpans); err != nil {
+			result.Error = err
+			results = append(results, result)
+			continue
+		}
+
+		// Order spans
+		orderSpans := r.orderPreSpans(preAndCurrentSpans, info.respIDByOrder)
+		result.Spans = orderSpans
+
+		results = append(results, result)
+	}
+
+	return results
+}
+
+// preSpanIDsInfo holds the span IDs and their order for a single previous_response_id
+type preSpanIDsInfo struct {
+	spanIDs       []string
+	respIDByOrder []string
+}
+
+func (r *TraceServiceImpl) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
+	spansWithRespID := gslice.Filter(spans, func(span *loop_span.Span) bool {
+		if span.SpanType != loop_span.SpanTypeModel {
+			return false
+		}
+		if span.SystemTagsString == nil {
+			return false
+		}
+		v, ok := span.SystemTagsString[keyPreviousResponseID]
+		return ok && v != ""
+	})
+	if len(spansWithRespID) > 0 {
+		spanResp, err := r.ListPreSpanBatch(ctx, spanList2ListPreSpanBatchReq(spansWithRespID, platformType))
+		if err != nil {
+			return err
+		}
+		spanIdMap := gslice.ToMap(spanResp.Results, func(t *ListPreSpanResult) (string, *ListPreSpanResult) {
+			return t.SpanID, t
+		})
+		for _, span := range spansWithRespID {
+			preResult, ok := spanIdMap[span.SpanID]
+			if !ok || preResult.Error != nil {
+				continue
+			}
+
+			span.MergeHistoryContext(ctx, preResult.Spans)
+		}
+	}
+	return nil
+}
+func spanList2ListPreSpanBatchReq(spanList []*loop_span.Span, platformType loop_span.PlatformType) *ListPreSpanBatchReq {
+	if len(spanList) == 0 {
+		return nil
+	}
+	workspaceId, _ := strconv.Atoi(spanList[0].WorkspaceID)
+	return &ListPreSpanBatchReq{
+		WorkspaceID:           int64(workspaceId),
+		ThirdPartyWorkspaceID: "",
+		StartTime:             spanList[0].StartTime,
+		Items: gslice.Map(spanList, func(span *loop_span.Span) *ListPreSpanItem {
+			return &ListPreSpanItem{
+				TraceID:            span.TraceID,
+				SpanID:             span.SpanID,
+				PreviousResponseID: span.SystemTagsString[keyPreviousResponseID],
+			}
+		}),
+		PlatformType: platformType,
+	}
 }
 
 func (r *TraceServiceImpl) ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (*ListTrajectoryResponse, error) {

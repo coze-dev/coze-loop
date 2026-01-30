@@ -12,6 +12,8 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/consts"
+
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -193,6 +195,92 @@ func (s *Span) GetCustomTags() map[string]string {
 		ret[tag.GetKey()] = tagStr
 	}
 	return ret
+}
+
+type StringWrapper struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Type    string `json:"type"`
+}
+
+func (s *Span) IsResponseAPISpan() bool {
+	if s.SpanType != SpanTypeModel {
+		return false
+	}
+	if s.SystemTagsString == nil {
+		return false
+	}
+	v, ok := s.SystemTagsString[consts.KeyPreviousResponseID]
+	return ok && v != ""
+}
+func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
+	// Normalize func for Response API String|List Message structure
+	normalizeMessages := func(v interface{}, role string, t string) ([]interface{}, bool) {
+		switch vv := v.(type) {
+		case []interface{}:
+			return vv, true
+		case string:
+			if vv == "" {
+				return nil, false
+			}
+			return []interface{}{StringWrapper{Role: role, Content: vv, Type: t}}, true
+		default:
+			return nil, false
+		}
+	}
+
+	var currentInputMap map[string]interface{}
+	if err := sonic.UnmarshalString(s.Input, &currentInputMap); err != nil {
+		logs.CtxWarn(ctx, "fail to trans input %s into map", s.Input)
+		return
+	}
+
+	// current span messages
+	var currentMessages []interface{}
+	if msgs, ok := currentInputMap["messages"].([]interface{}); ok {
+		currentMessages = msgs
+	} else if msgs, ok := normalizeMessages(currentInputMap["input"], "user", "message"); ok {
+		currentMessages = msgs
+	} else {
+		return
+	}
+
+	var historyMessages []interface{}
+	for _, preSpan := range historySpans {
+		if preSpan.Input != "" {
+			var inputMap map[string]interface{}
+			if err := sonic.UnmarshalString(preSpan.Input, &inputMap); err == nil {
+				if msgs, ok := inputMap["messages"].([]interface{}); ok {
+					historyMessages = append(historyMessages, msgs...)
+				} else if msgs, ok := normalizeMessages(inputMap["input"], "user", "message"); ok {
+					historyMessages = append(historyMessages, msgs...)
+				}
+			}
+		}
+		if preSpan.Output != "" {
+			var outputMap map[string]interface{}
+			if err := sonic.UnmarshalString(preSpan.Output, &outputMap); err == nil {
+				if msgs, ok := outputMap["choices"].([]interface{}); ok {
+					historyMessages = append(historyMessages, msgs...)
+				} else if msgs, ok := normalizeMessages(outputMap["output"], "assistant", "message"); ok {
+					historyMessages = append(historyMessages, msgs...)
+				}
+			}
+		}
+	}
+
+	if len(historyMessages) == 0 {
+		return
+	}
+
+	currentInputMap["messages"] = append(historyMessages, currentMessages...)
+
+	newInput, err := sonic.Marshal(currentInputMap)
+	if err != nil {
+		logs.CtxWarn(ctx, "fail to marshal new input, err:%v", err)
+		return
+	}
+	s.Input = string(newInput)
 }
 
 func (s *Span) getTags() []*Tag {

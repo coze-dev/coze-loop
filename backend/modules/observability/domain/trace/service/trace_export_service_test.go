@@ -32,7 +32,8 @@ import (
 
 type stubTraceService struct {
 	ITraceService
-	getTrajectoriesFunc func(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
+	getTrajectoriesFunc                   func(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
+	mergeHistoryMessagesByRespIDBatchFunc func(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error
 }
 
 func (m *stubTraceService) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
@@ -40,6 +41,13 @@ func (m *stubTraceService) GetTrajectories(ctx context.Context, workspaceID int6
 		return m.getTrajectoriesFunc(ctx, workspaceID, traceIDs, startTime, endTime, platformType)
 	}
 	return nil, nil
+}
+
+func (m *stubTraceService) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
+	if m.mergeHistoryMessagesByRespIDBatchFunc != nil {
+		return m.mergeHistoryMessagesByRespIDBatchFunc(ctx, spans, platformType)
+	}
+	return nil
 }
 
 func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
@@ -119,7 +127,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
-					traceService:          nil,
+					traceService:          &stubTraceService{},
 				}
 			},
 			args: args{
@@ -201,6 +209,9 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -1001,6 +1012,9 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -1779,6 +1793,9 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -1927,6 +1944,9 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
