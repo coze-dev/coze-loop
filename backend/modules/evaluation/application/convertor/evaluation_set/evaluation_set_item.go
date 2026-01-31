@@ -82,6 +82,7 @@ func FieldDataDTO2DO(dto *eval_set.FieldData) *entity.FieldData {
 		Key:     gptr.Indirect(dto.Key),
 		Name:    gptr.Indirect(dto.Name),
 		Content: common.ConvertContentDTO2DO(dto.Content),
+		TraceID: gptr.Indirect(dto.TraceID),
 	}
 }
 
@@ -149,10 +150,11 @@ func FieldDataDO2DTO(do *entity.FieldData) *eval_set.FieldData {
 	if do == nil {
 		return nil
 	}
-	return &eval_set.FieldData{
+	return &eval_set.FieldData {
 		Key:     gptr.Of(do.Key),
 		Name:    gptr.Of(do.Name),
 		Content: common.ConvertContentDO2DTO(do.Content),
+		TraceID: gptr.Of(do.TraceID),
 	}
 }
 
