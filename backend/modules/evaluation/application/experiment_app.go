@@ -1644,8 +1644,8 @@ func (e *experimentApplication) GetExptResultExportRecord(ctx context.Context, r
 	}
 
 	return &expt.GetExptResultExportRecordResponse{
-		ExptResultExportRecord: experiment.ExportRecordDO2DTO(record),
-		BaseResp:               base.NewBaseResp(),
+		ExptResultExportRecords: experiment.ExportRecordDO2DTO(record),
+		BaseResp:                base.NewBaseResp(),
 	}, nil
 }
 

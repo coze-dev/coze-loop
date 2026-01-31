@@ -27843,8 +27843,8 @@ func (p *GetExptResultExportRecordRequest) Field255DeepEqual(src *base.Base) boo
 }
 
 type GetExptResultExportRecordResponse struct {
-	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
-	BaseResp               *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptResultExportRecords *expt.ExptResultExportRecord `thrift:"expt_result_export_records,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
+	BaseResp                *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExptResultExportRecordResponse() *GetExptResultExportRecordResponse {
@@ -27854,16 +27854,16 @@ func NewGetExptResultExportRecordResponse() *GetExptResultExportRecordResponse {
 func (p *GetExptResultExportRecordResponse) InitDefault() {
 }
 
-var GetExptResultExportRecordResponse_ExptResultExportRecord_DEFAULT *expt.ExptResultExportRecord
+var GetExptResultExportRecordResponse_ExptResultExportRecords_DEFAULT *expt.ExptResultExportRecord
 
-func (p *GetExptResultExportRecordResponse) GetExptResultExportRecord() (v *expt.ExptResultExportRecord) {
+func (p *GetExptResultExportRecordResponse) GetExptResultExportRecords() (v *expt.ExptResultExportRecord) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptResultExportRecord() {
-		return GetExptResultExportRecordResponse_ExptResultExportRecord_DEFAULT
+	if !p.IsSetExptResultExportRecords() {
+		return GetExptResultExportRecordResponse_ExptResultExportRecords_DEFAULT
 	}
-	return p.ExptResultExportRecord
+	return p.ExptResultExportRecords
 }
 
 var GetExptResultExportRecordResponse_BaseResp_DEFAULT *base.BaseResp
@@ -27877,20 +27877,20 @@ func (p *GetExptResultExportRecordResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *GetExptResultExportRecordResponse) SetExptResultExportRecord(val *expt.ExptResultExportRecord) {
-	p.ExptResultExportRecord = val
+func (p *GetExptResultExportRecordResponse) SetExptResultExportRecords(val *expt.ExptResultExportRecord) {
+	p.ExptResultExportRecords = val
 }
 func (p *GetExptResultExportRecordResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetExptResultExportRecordResponse = map[int16]string{
-	1:   "expt_result_export_record",
+	1:   "expt_result_export_records",
 	255: "BaseResp",
 }
 
-func (p *GetExptResultExportRecordResponse) IsSetExptResultExportRecord() bool {
-	return p.ExptResultExportRecord != nil
+func (p *GetExptResultExportRecordResponse) IsSetExptResultExportRecords() bool {
+	return p.ExptResultExportRecords != nil
 }
 
 func (p *GetExptResultExportRecordResponse) IsSetBaseResp() bool {
@@ -27965,7 +27965,7 @@ func (p *GetExptResultExportRecordResponse) ReadField1(iprot thrift.TProtocol) e
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.ExptResultExportRecord = _field
+	p.ExptResultExportRecords = _field
 	return nil
 }
 func (p *GetExptResultExportRecordResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -28010,11 +28010,11 @@ WriteStructEndError:
 }
 
 func (p *GetExptResultExportRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptResultExportRecord() {
-		if err = oprot.WriteFieldBegin("expt_result_export_record", thrift.STRUCT, 1); err != nil {
+	if p.IsSetExptResultExportRecords() {
+		if err = oprot.WriteFieldBegin("expt_result_export_records", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.ExptResultExportRecord.Write(oprot); err != nil {
+		if err := p.ExptResultExportRecords.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -28058,7 +28058,7 @@ func (p *GetExptResultExportRecordResponse) DeepEqual(ano *GetExptResultExportRe
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptResultExportRecord) {
+	if !p.Field1DeepEqual(ano.ExptResultExportRecords) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -28069,7 +28069,7 @@ func (p *GetExptResultExportRecordResponse) DeepEqual(ano *GetExptResultExportRe
 
 func (p *GetExptResultExportRecordResponse) Field1DeepEqual(src *expt.ExptResultExportRecord) bool {
 
-	if !p.ExptResultExportRecord.DeepEqual(src) {
+	if !p.ExptResultExportRecords.DeepEqual(src) {
 		return false
 	}
 	return true

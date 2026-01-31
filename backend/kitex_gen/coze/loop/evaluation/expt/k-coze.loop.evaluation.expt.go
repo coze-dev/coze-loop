@@ -20478,7 +20478,7 @@ func (p *GetExptResultExportRecordResponse) FastReadField1(buf []byte) (int, err
 	} else {
 		offset += l
 	}
-	p.ExptResultExportRecord = _field
+	p.ExptResultExportRecords = _field
 	return offset, nil
 }
 
@@ -20520,9 +20520,9 @@ func (p *GetExptResultExportRecordResponse) BLength() int {
 
 func (p *GetExptResultExportRecordResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetExptResultExportRecord() {
+	if p.IsSetExptResultExportRecords() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-		offset += p.ExptResultExportRecord.FastWriteNocopy(buf[offset:], w)
+		offset += p.ExptResultExportRecords.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -20536,9 +20536,9 @@ func (p *GetExptResultExportRecordResponse) fastWriteField255(buf []byte, w thri
 
 func (p *GetExptResultExportRecordResponse) field1Length() int {
 	l := 0
-	if p.IsSetExptResultExportRecord() {
+	if p.IsSetExptResultExportRecords() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.ExptResultExportRecord.BLength()
+		l += p.ExptResultExportRecords.BLength()
 	}
 	return l
 }
@@ -20556,14 +20556,14 @@ func (p *GetExptResultExportRecordResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _exptResultExportRecord *expt.ExptResultExportRecord
-	if src.ExptResultExportRecord != nil {
-		_exptResultExportRecord = &expt.ExptResultExportRecord{}
-		if err := _exptResultExportRecord.DeepCopy(src.ExptResultExportRecord); err != nil {
+	var _exptResultExportRecords *expt.ExptResultExportRecord
+	if src.ExptResultExportRecords != nil {
+		_exptResultExportRecords = &expt.ExptResultExportRecord{}
+		if err := _exptResultExportRecords.DeepCopy(src.ExptResultExportRecords); err != nil {
 			return err
 		}
 	}
-	p.ExptResultExportRecord = _exptResultExportRecord
+	p.ExptResultExportRecords = _exptResultExportRecords
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
