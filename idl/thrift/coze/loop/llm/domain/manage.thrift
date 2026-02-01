@@ -18,6 +18,7 @@ struct Model {
     13: optional string icon // 模型图标
     14: optional list<string> tags //模型标签
     15: optional ModelStatus status // 模型状态
+    16: optional string original_model_url // 模型跳转链接
 
     100: optional string created_by
     101: optional i64 created_at
