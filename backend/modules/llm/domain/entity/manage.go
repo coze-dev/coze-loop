@@ -19,17 +19,18 @@ type Model struct {
 
 	Ability *Ability `json:"ability" yaml:"ability" mapstructure:"ability"` // 模型能力
 
-	Frame           Frame                        `json:"frame" yaml:"frame" mapstructure:"frame"`                                  // 该模型使用的外部框架，目前只支持eino
-	Protocol        Protocol                     `json:"protocol" yaml:"protocol" mapstructure:"protocol"`                         // 该模型的协议类型，如ark/deepseek/openai等
-	ProtocolConfig  *ProtocolConfig              `json:"protocol_config" yaml:"protocol_config" mapstructure:"protocol_config"`    // 该模型的协议配置
-	ScenarioConfigs map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
-	ParamConfig     *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
-	Identification  string                       `json:"identification" yaml:"identification"`
-	Series          *Series                      `json:"series" yaml:"series"`
-	Visibility      *Visibility                  `json:"visibility" yaml:"visibility"`
-	Icon            string                       `json:"icon" yaml:"icon" mapstructure:"icon"`       // 模型图标
-	Tags            []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`       //模型标签
-	Status          ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"` // 模型状态
+	Frame            Frame                        `json:"frame" yaml:"frame" mapstructure:"frame"`                                  // 该模型使用的外部框架，目前只支持eino
+	Protocol         Protocol                     `json:"protocol" yaml:"protocol" mapstructure:"protocol"`                         // 该模型的协议类型，如ark/deepseek/openai等
+	ProtocolConfig   *ProtocolConfig              `json:"protocol_config" yaml:"protocol_config" mapstructure:"protocol_config"`    // 该模型的协议配置
+	ScenarioConfigs  map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
+	ParamConfig      *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
+	Identification   string                       `json:"identification" yaml:"identification"`
+	Series           *Series                      `json:"series" yaml:"series"`
+	Visibility       *Visibility                  `json:"visibility" yaml:"visibility"`
+	Icon             string                       `json:"icon" yaml:"icon" mapstructure:"icon"`                                           // 模型图标
+	Tags             []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`                                           //模型标签
+	Status           ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"`                                     // 模型状态
+	OriginalModelURL string                       `json:"original_model_url" yaml:"original_model_url" mapstructure:"original_model_url"` // 模型跳转链接
 
 	CreatedBy string `json:"created_by" yaml:"created_by" mapstructure:"created_by"` // 创建人
 	CreatedAt int64  `json:"created_at" yaml:"created_at" mapstructure:"created_at"` // 创建时间

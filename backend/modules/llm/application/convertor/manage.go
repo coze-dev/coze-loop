@@ -30,21 +30,22 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 		pc = ProtocolConfigDO2DTO(model.ProtocolConfig)
 	}
 	resp := &manage.Model{
-		ModelID:         ptr.Of(model.ID),
-		WorkspaceID:     ptr.Of(model.WorkspaceID),
-		Name:            ptr.Of(model.Name),
-		Desc:            ptr.Of(model.Desc),
-		Ability:         AbilityDO2DTO(model.Ability),
-		Protocol:        ptr.Of(manage.Protocol(model.Protocol)),
-		ProtocolConfig:  pc,
-		Identification:  ptr.Of(model.Identification),
-		Icon:            ptr.Of(model.Icon),
-		Status:          ptr.Of(ModelStatusDO2DTO(model.Status)),
-		Tags:            model.Tags,
-		Series:          SeriesDO2DTO(model.Series),
-		Visibility:      VisibilityDO2DTO(model.Visibility),
-		ScenarioConfigs: ScenarioConfigMapDO2DTO(model.ScenarioConfigs),
-		ParamConfig:     ParamConfigDO2DTO(model.ParamConfig),
+		ModelID:          ptr.Of(model.ID),
+		WorkspaceID:      ptr.Of(model.WorkspaceID),
+		Name:             ptr.Of(model.Name),
+		Desc:             ptr.Of(model.Desc),
+		Ability:          AbilityDO2DTO(model.Ability),
+		Protocol:         ptr.Of(manage.Protocol(model.Protocol)),
+		ProtocolConfig:   pc,
+		Identification:   ptr.Of(model.Identification),
+		Icon:             ptr.Of(model.Icon),
+		Status:           ptr.Of(ModelStatusDO2DTO(model.Status)),
+		Tags:             model.Tags,
+		Series:           SeriesDO2DTO(model.Series),
+		Visibility:       VisibilityDO2DTO(model.Visibility),
+		ScenarioConfigs:  ScenarioConfigMapDO2DTO(model.ScenarioConfigs),
+		ParamConfig:      ParamConfigDO2DTO(model.ParamConfig),
+		OriginalModelURL: ptr.Of(model.OriginalModelURL),
 	}
 	if gvalue.IsNotZero(model.CreatedAt) {
 		resp.CreatedAt = gptr.Of(model.CreatedAt)
