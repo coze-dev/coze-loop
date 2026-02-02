@@ -566,10 +566,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		}
 	}
 
-	exptDo.Status = status
-	exptDo.EndAt = got.EndAt
+	got.Status = status
+	got.EndAt = exptDo.EndAt
 	// 增加PostHook,后续放到MQ里
-	err = e.afterCompleteExpt(ctx, exptDo)
+	err = e.afterCompleteExpt(ctx, got)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
 	}
