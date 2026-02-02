@@ -619,9 +619,9 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-		//param[consts.ExptEventNotifyTerminatedUser] =
+		// TODO
+		param[consts.ExptEventNotifyTerminatedUser] = ""
 		cardID = consts.ExptEventNotifyTerminatedCardID
-
 	case entity.ExptStatus_Pending:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
