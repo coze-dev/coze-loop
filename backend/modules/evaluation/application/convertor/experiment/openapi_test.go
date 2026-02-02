@@ -865,3 +865,103 @@ func TestOpenAPIScoreDistributionDO2DTO(t *testing.T) {
 		assert.Len(t, convertedWithNil.ScoreDistributionItems, 2)
 	}
 }
+
+func TestOpenAPIEvalTargetDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	// Case 1: nil input
+	assert.Nil(t, OpenAPIEvalTargetDO2DTO(nil))
+
+	// Case 2: valid input with version and base info
+	targetDO := &entity.EvalTarget{
+		ID:             1,
+		SourceTargetID: "2",
+		EvalTargetType: entity.EvalTargetTypeCozeBot,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  10,
+			TargetID:            1,
+			SourceTargetVersion: "v1",
+			InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("input")}},
+			OutputSchema:        []*entity.ArgsSchema{{Key: gptr.Of("output")}},
+			BaseInfo:            &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")}},
+		},
+		BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")}},
+	}
+
+	got := OpenAPIEvalTargetDO2DTO(targetDO)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, targetDO.ID, gptr.Indirect(got.ID))
+		assert.Equal(t, targetDO.SourceTargetID, gptr.Indirect(got.SourceTargetID))
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCozeBot, gptr.Indirect(got.EvalTargetType))
+		if assert.NotNil(t, got.EvalTargetVersion) {
+			assert.Equal(t, targetDO.EvalTargetVersion.ID, gptr.Indirect(got.EvalTargetVersion.ID))
+			assert.Equal(t, targetDO.EvalTargetVersion.TargetID, gptr.Indirect(got.EvalTargetVersion.TargetID))
+			assert.Equal(t, targetDO.EvalTargetVersion.SourceTargetVersion, gptr.Indirect(got.EvalTargetVersion.SourceTargetVersion))
+			if assert.NotNil(t, got.EvalTargetVersion.EvalTargetContent) {
+				assert.Len(t, got.EvalTargetVersion.EvalTargetContent.InputSchemas, 1)
+				assert.Len(t, got.EvalTargetVersion.EvalTargetContent.OutputSchemas, 1)
+			}
+		}
+		if assert.NotNil(t, got.BaseInfo) {
+			assert.Equal(t, "user1", got.BaseInfo.CreatedBy.GetUserID())
+		}
+	}
+
+	// Case 3: input with Prompt type
+	promptTargetDO := &entity.EvalTarget{
+		ID:             3,
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID: 30,
+			Prompt: &entity.LoopPrompt{
+				PromptID:     300,
+				Version:      "v3",
+				Name:         "prompt-3",
+				PromptKey:    "key-3",
+				SubmitStatus: entity.SubmitStatus_Submitted,
+				Description:  "desc-3",
+			},
+		},
+	}
+
+	gotPrompt := OpenAPIEvalTargetDO2DTO(promptTargetDO)
+	if assert.NotNil(t, gotPrompt) {
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCozeLoopPrompt, gptr.Indirect(gotPrompt.EvalTargetType))
+		if assert.NotNil(t, gotPrompt.EvalTargetVersion) && assert.NotNil(t, gotPrompt.EvalTargetVersion.EvalTargetContent) {
+			promptDTO := gotPrompt.EvalTargetVersion.EvalTargetContent.Prompt
+			if assert.NotNil(t, promptDTO) {
+				assert.Equal(t, int64(300), gptr.Indirect(promptDTO.PromptID))
+				assert.Equal(t, "v3", gptr.Indirect(promptDTO.Version))
+				assert.Equal(t, openapiEvalTarget.SubmitStatusSubmitted, gptr.Indirect(promptDTO.SubmitStatus))
+			}
+		}
+	}
+
+	// Case 4: input with CustomRPCServer type
+	rpcTargetDO := &entity.EvalTarget{
+		ID:             4,
+		EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID: 40,
+			CustomRPCServer: &entity.CustomRPCServer{
+				ID:             400,
+				ServerName:     "rpc-server",
+				AccessProtocol: entity.AccessProtocolRPC,
+				Regions:        []entity.Region{entity.RegionCN},
+			},
+		},
+	}
+
+	gotRPC := OpenAPIEvalTargetDO2DTO(rpcTargetDO)
+	if assert.NotNil(t, gotRPC) {
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCustomRPCServer, gptr.Indirect(gotRPC.EvalTargetType))
+		if assert.NotNil(t, gotRPC.EvalTargetVersion) && assert.NotNil(t, gotRPC.EvalTargetVersion.EvalTargetContent) {
+			rpcDTO := gotRPC.EvalTargetVersion.EvalTargetContent.CustomRPCServer
+			if assert.NotNil(t, rpcDTO) {
+				assert.Equal(t, int64(400), gptr.Indirect(rpcDTO.ID))
+				assert.Equal(t, "rpc-server", gptr.Indirect(rpcDTO.ServerName))
+				assert.Equal(t, openapiEvalTarget.AccessProtocolRPC, openapiEvalTarget.AccessProtocol(gptr.Indirect(rpcDTO.AccessProtocol)))
+			}
+		}
+	}
+}

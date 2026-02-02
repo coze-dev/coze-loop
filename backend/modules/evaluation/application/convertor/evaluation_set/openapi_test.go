@@ -396,6 +396,18 @@ func TestOpenAPIItemConversions(t *testing.T) {
 		ContentType: ptr[common.ContentType](common.ContentTypeText),
 		Text:        ptr("part"),
 	}
+	multipartContent1 := &common.Content{
+		ContentType: ptr[common.ContentType](common.ContentTypeAudio),
+		Audio: &common.Audio{
+			Name: &imageName,
+		},
+	}
+	multipartContent2 := &common.Content{
+		ContentType: ptr[common.ContentType](common.ContentTypeVideo),
+		Video: &common.Video{
+			Name: &imageName,
+		},
+	}
 
 	contentDTO := &common.Content{
 		ContentType: ptr[common.ContentType](common.ContentTypeMultiPart),
@@ -405,7 +417,7 @@ func TestOpenAPIItemConversions(t *testing.T) {
 			URL:      &imageURL,
 			ThumbURL: &thumbURL,
 		},
-		MultiPart: []*common.Content{multipartContent},
+		MultiPart: []*common.Content{multipartContent, multipartContent1, multipartContent2},
 	}
 
 	turnDTO := &openapi_eval_set.Turn{
@@ -437,6 +449,18 @@ func TestOpenAPIItemConversions(t *testing.T) {
 			{
 				ContentType: ptr(entity.ContentTypeText),
 				Text:        ptr("part"),
+			},
+			{
+				ContentType: ptr(entity.ContentTypeAudio),
+				Audio: &entity.Audio{
+					Name: &imageName,
+				},
+			},
+			{
+				ContentType: ptr(entity.ContentTypeVideo),
+				Video: &entity.Video{
+					Name: &imageName,
+				},
 			},
 		},
 	}

@@ -617,18 +617,6 @@ func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
 	}
 }
 
-func ConvertVideoDO2DTO(video *entity.Audio) *common.Audio {
-	if video == nil {
-		return nil
-	}
-	return &common.Audio{
-		Format: video.Format,
-		URL:    video.URL,
-		Name:   video.Name,
-		URI:    video.URI,
-	}
-}
-
 func OpenAPIItemErrorGroupDO2DTOs(dos []*entity.ItemErrorGroup) []*openapi_eval_set.ItemErrorGroup {
 	if dos == nil {
 		return nil
