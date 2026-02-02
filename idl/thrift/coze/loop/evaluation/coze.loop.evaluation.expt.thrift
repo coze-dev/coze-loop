@@ -470,7 +470,7 @@ struct ListExperimentTemplatesResponse {
 
 struct CheckExperimentTemplateNameRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required string name (api.body='name', api.js_conv='true', go.tag='json:"name"')
+    2: required string name (api.body='name')
     3: optional i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
 
     255: optional base.Base Base
