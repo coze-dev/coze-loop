@@ -290,6 +290,10 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
+	if e.sendExptNotify(ctx, expt) != nil {
+		logs.CtxWarn(ctx, "[Run] sendExptNotify failed, expt_id: %v, error: %v", exptID, err)
+	}
+
 	return nil
 }
 
@@ -579,6 +583,12 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}
+
+	return e.sendExptNotify(ctx, expt)
+}
+
+func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
+
 	param := map[string]string{
 		"expt_name":  expt.Name,
 		"space_id":   strconv.FormatInt(expt.SpaceID, 10),
@@ -593,9 +603,12 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 	case entity.ExptStatus_Failed:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
-	case entity.ExptStatus_Terminated:
-		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
-		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
+	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
+	case entity.ExptStatus_Processing, entity.ExptStatus_Pending:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
 	default:
 		return errors.New("invalid expt status")
 	}

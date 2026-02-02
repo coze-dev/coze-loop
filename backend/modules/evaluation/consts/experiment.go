@@ -46,11 +46,13 @@ const (
 	ExptEventNotifyTitleSuccess    = "已成功执行"
 	ExptEventNotifyTitleFailed     = "执行失败"
 	ExptEventNotifyTitleTerminated = "执行已被终止"
+	ExptEventNotifyTitleStarting   = "开始执行"
 
 	ExptEventNotifyTitleColor           = "title_color"
 	ExptEventNotifyTitleColorSuccess    = "green"
 	ExptEventNotifyTitleColorFailed     = "red"
-	ExptEventNotifyTitleColorTerminated = "yellow"
+	ExptEventNotifyTitleColorTerminated = "orange"
+	ExptEventNotifyTitleColorStarting   = "yellow"
 )
 
 const (
