@@ -580,7 +580,6 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 }
 
 func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
-
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}

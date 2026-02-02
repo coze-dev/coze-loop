@@ -1409,6 +1409,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -1500,6 +1502,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -1570,6 +1574,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -1639,6 +1645,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantErr: false,
 		},
@@ -1713,6 +1721,8 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
 			},
 			wantErr: false,
 		},

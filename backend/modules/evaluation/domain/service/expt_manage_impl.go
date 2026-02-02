@@ -6,14 +6,12 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -23,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -522,10 +521,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
 	for _, tupleIDs := range tupleIDs {
-		//cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
-		//for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
+		// cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
+		// for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
 		//	cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
-		//}
+		// }
 		tuple := &entity.ExptTuple{
 			EvalSet: evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
 			// Evaluators: cevaluators,
@@ -547,10 +546,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 }
 
 func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experiment) *entity.ExptTupleID {
-	//evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
-	//for _, ref := range expt.EvaluatorVersionRef {
+	// evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
+	// for _, ref := range expt.EvaluatorVersionRef {
 	//	evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
-	//}
+	// }
 
 	exptTupleID := &entity.ExptTupleID{
 		VersionedEvalSetID: &entity.VersionedEvalSetID{

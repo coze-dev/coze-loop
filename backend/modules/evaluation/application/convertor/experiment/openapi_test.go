@@ -960,7 +960,7 @@ func TestOpenAPIEvalTargetDO2DTO(t *testing.T) {
 			if assert.NotNil(t, rpcDTO) {
 				assert.Equal(t, int64(400), gptr.Indirect(rpcDTO.ID))
 				assert.Equal(t, "rpc-server", gptr.Indirect(rpcDTO.ServerName))
-				assert.Equal(t, openapiEvalTarget.AccessProtocolRPC, openapiEvalTarget.AccessProtocol(gptr.Indirect(rpcDTO.AccessProtocol)))
+				assert.Equal(t, openapiEvalTarget.AccessProtocolRPC, gptr.Indirect(rpcDTO.AccessProtocol))
 			}
 		}
 	}

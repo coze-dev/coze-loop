@@ -667,7 +667,8 @@ func TestContentToSpanParts(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			name: "audio part",
 			parts: []*commonentity.Content{
 				{
@@ -687,7 +688,8 @@ func TestContentToSpanParts(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			name: "video part",
 			parts: []*commonentity.Content{
 				{
