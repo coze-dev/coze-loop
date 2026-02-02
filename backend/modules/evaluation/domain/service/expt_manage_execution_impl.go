@@ -588,7 +588,6 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 }
 
 func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
-
 	param := map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
