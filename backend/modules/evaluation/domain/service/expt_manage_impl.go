@@ -60,6 +60,7 @@ func NewExptManager(
 	templateRepo repo.IExptTemplateRepo,
 	templateManager IExptTemplateManager,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -87,6 +88,7 @@ func NewExptManager(
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
 		notifyRPCAdapter:            notifyRPCAdapter,
+		userProvider:                userProvider,
 	}
 }
 
@@ -116,6 +118,7 @@ type ExptMangerImpl struct {
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
 	notifyRPCAdapter            rpc.INotifyRPCAdapter
+	userProvider                rpc.IUserProvider
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {

@@ -15,6 +15,7 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/samber/lo"
 
+	_ "github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -588,6 +589,9 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 }
 
 func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
+
+	logs.CtxInfo(ctx, "sendExptNotify, expt: %v", expt)
+
 	param := map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
@@ -609,14 +613,23 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-	case entity.ExptStatus_Processing, entity.ExptStatus_Pending:
+	case entity.ExptStatus_Pending:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
 	default:
-		return errors.New("invalid expt status")
+		return errors.New("invalid sendExptNotify status")
 	}
 
-	return e.notifyRPCAdapter.SendMessageCard(ctx, expt.CreatedBy, consts.ExptEventNotifyCardID, param)
+	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
+	if err != nil {
+		return err
+	}
+
+	if len(userInfos) != 1 || userInfos[0] == nil {
+		return nil
+	}
+
+	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), consts.ExptEventNotifyCardID, param)
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {
