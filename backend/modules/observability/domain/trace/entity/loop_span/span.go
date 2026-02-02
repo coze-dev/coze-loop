@@ -255,6 +255,8 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 					historyMessages = append(historyMessages, msgs...)
 				} else if msgs, ok := normalizeMessages(inputMap["input"], "user", "message"); ok {
 					historyMessages = append(historyMessages, msgs...)
+				} else {
+					logs.CtxWarn(ctx, "fail to fill input %s into input map", s.Input)
 				}
 			}
 		}
@@ -265,6 +267,8 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 					historyMessages = append(historyMessages, msgs...)
 				} else if msgs, ok := normalizeMessages(outputMap["output"], "assistant", "message"); ok {
 					historyMessages = append(historyMessages, msgs...)
+				} else {
+					logs.CtxWarn(ctx, "fail to fill output %s into output map", s.Output)
 				}
 			}
 		}

@@ -660,7 +660,7 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
-
+	logs.CtxInfo(ctx, "Got span from redis: %v", spanIDsInfo)
 	// Step 3: Collect all unique span IDs to query
 	allSpanIDs := r.collectAllSpanIDs(spanIDsInfo, req.Items)
 	// Step 4: Batch query all spans from ClickHouse
@@ -854,6 +854,7 @@ func (r *TraceServiceImpl) MergeHistoryMessagesByRespIDBatch(ctx context.Context
 	if len(spansWithRespID) > 0 {
 		spanResp, err := r.ListPreSpanBatch(ctx, spanList2ListPreSpanBatchReq(spansWithRespID, platformType))
 		if err != nil {
+			logs.CtxError(ctx, "MergeHistoryMessagesByRespIDBatch ListPreSpanBatch fail, err:%v", err)
 			return err
 		}
 		spanIdMap := gslice.ToMap(spanResp.Results, func(t *ListPreSpanResult) (string, *ListPreSpanResult) {
