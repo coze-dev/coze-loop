@@ -127,7 +127,7 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		return nil
 	}
-	_, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
+	addedItems, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
 		WorkspaceID:     workspaceID,
 		EvaluationSetID: taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
 		Items: []*eval_set.EvaluationSetItem{
@@ -170,6 +170,11 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 			}
 		}
 		return err
+	}
+	if addedItems <= 0 {
+		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		return nil
 	}
 	return nil
 }

@@ -658,6 +658,7 @@ func (e *ExptTemplateManagerImpl) resolveAndFillEvaluatorVersionIDs(
 		}
 		for _, ev := range evs {
 			if ev != nil {
+				// 预置评估器允许跨空间复用，这里不做 SpaceID 校验
 				id2Builtin[ev.ID] = ev
 			}
 		}
@@ -672,6 +673,13 @@ func (e *ExptTemplateManagerImpl) resolveAndFillEvaluatorVersionIDs(
 		for _, ev := range evs {
 			if ev == nil {
 				continue
+			}
+			// 非预置评估器必须与模板 SpaceID 一致，防止绑定其他空间的评估器
+			if !ev.Builtin && ev.GetSpaceID() != spaceID {
+				return errorx.NewByCode(
+					errno.EvaluatorVersionNotFoundCode,
+					errorx.WithExtraMsg(fmt.Sprintf("evaluator %d version %s does not belong to workspace %d", ev.ID, ev.GetVersion(), spaceID)),
+				)
 			}
 			key := fmt.Sprintf("%d#%s", ev.ID, ev.GetVersion())
 			pair2Eval[key] = ev
