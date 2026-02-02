@@ -6,6 +6,7 @@ package redis
 import (
 	"context"
 	"errors"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -69,6 +70,6 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 			break
 		}
 	}
-
+	logs.CtxInfo(ctx, "Get by resp id %s, res %v", respID, preRespID)
 	return preSpanIDs, respIDByOrder, nil
 }
