@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"testing"
 
 	"go.uber.org/mock/gomock"
@@ -976,6 +977,7 @@ func TestNewExptManager(t *testing.T) {
 	mockExptAggrResultService := svcMocks.NewMockExptAggrResultService(ctrl)
 	mockTemplateRepo := repoMocks.NewMockIExptTemplateRepo(ctrl)
 	mockTemplateManager := svcMocks.NewMockIExptTemplateManager(ctrl)
+	mockNotify := mocks.NewMockINotifyRPCAdapter(ctrl)
 
 	mgr := NewExptManager(
 		mockExptResultService,
@@ -1001,6 +1003,7 @@ func TestNewExptManager(t *testing.T) {
 		mockExptAggrResultService,
 		mockTemplateRepo,
 		mockTemplateManager,
+		mockNotify,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)
