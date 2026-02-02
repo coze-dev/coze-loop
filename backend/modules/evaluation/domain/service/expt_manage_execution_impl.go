@@ -575,9 +575,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
 	return e.notifyRPCAdapter.SendMessageCard(ctx, expt.CreatedBy, consts.ExptEventNotifyCardID, map[string]string{
-		"expt_name": expt.Name,
-		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
-		"expt_id":   strconv.FormatInt(expt.ID, 10)})
+		consts.ExptEventNotifyStatus: strconv.FormatInt(int64(expt.Status), 10),
+		"expt_name":                  expt.Name,
+		"space_id":                   strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":                    strconv.FormatInt(expt.ID, 10)})
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {

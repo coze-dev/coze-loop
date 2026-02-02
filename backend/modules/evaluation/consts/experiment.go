@@ -41,6 +41,10 @@ const (
 	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
 
 	ExptEventNotifyCardID = "AAqvJsfSSLQtN"
+
+	ExptEventNotifyStatus     = "expt_status"
+	ExptEventNotifyTitle      = "title"
+	ExptEventNotifyTitleColor = "title_color"
 )
 
 const (
