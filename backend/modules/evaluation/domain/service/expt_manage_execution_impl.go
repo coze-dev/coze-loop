@@ -590,11 +590,15 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
 
 	param := map[string]string{
-		"expt_name":  expt.Name,
-		"space_id":   strconv.FormatInt(expt.SpaceID, 10),
-		"expt_id":    strconv.FormatInt(expt.ID, 10),
-		"start_time": expt.StartAt.Format(time.DateTime),
-		"end_time":   expt.EndAt.Format(time.DateTime),
+		"expt_name": expt.Name,
+		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":   strconv.FormatInt(expt.ID, 10),
+	}
+	if expt.StartAt != nil {
+		param["start_time"] = expt.StartAt.Format(time.DateTime)
+	}
+	if expt.EndAt != nil {
+		param["end_time"] = expt.EndAt.Format(time.DateTime)
 	}
 	switch expt.Status {
 	case entity.ExptStatus_Success:
