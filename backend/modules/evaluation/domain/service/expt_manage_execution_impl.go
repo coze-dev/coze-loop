@@ -559,10 +559,25 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		}
 	}
 
+	exptDo.Status = status
+	exptDo.EndAt = got.EndAt
+	// 增加PostHook,后续放到MQ里
+	err = e.afterCompleteExpt(ctx, exptDo)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
+	}
+
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	return nil
+}
+
+func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
+	return e.notifyRPCAdapter.SendMessageCard(ctx, expt.CreatedBy, consts.ExptEventNotifyCardID, map[string]string{
+		"expt_name": expt.Name,
+		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":   strconv.FormatInt(expt.ID, 10)})
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {

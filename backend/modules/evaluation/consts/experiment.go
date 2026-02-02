@@ -39,6 +39,8 @@ const (
 
 const (
 	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
+
+	ExptEventNotifyCardID = "AAqvJsfSSLQtN"
 )
 
 const (

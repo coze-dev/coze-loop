@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"strconv"
 	"strings"
 	"time"
@@ -59,6 +60,7 @@ func NewExptManager(
 	exptAggrResultService ExptAggrResultService,
 	templateRepo repo.IExptTemplateRepo,
 	templateManager IExptTemplateManager,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -85,6 +87,7 @@ func NewExptManager(
 		exptAggrResultService:       exptAggrResultService,
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
+		notifyRPCAdapter:            notifyRPCAdapter,
 	}
 }
 
@@ -113,6 +116,7 @@ type ExptMangerImpl struct {
 	benefitService              benefit.IBenefitService
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
+	notifyRPCAdapter            rpc.INotifyRPCAdapter
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
