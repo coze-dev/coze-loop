@@ -90,6 +90,17 @@ func (p *PromptDetail) IsValid() error {
 			return fmt.Errorf("field ModelConfig not valid, %w", err)
 		}
 	}
+	if p.McpConfig != nil {
+		if err := p.McpConfig.IsValid(); err != nil {
+			return fmt.Errorf("field McpConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *McpConfig) IsValid() error {
+	return nil
+}
+func (p *McpServerCombine) IsValid() error {
 	return nil
 }
 func (p *PromptTemplate) IsValid() error {
@@ -118,6 +129,14 @@ func (p *ToolChoiceSpecification) IsValid() error {
 	return nil
 }
 func (p *ModelConfig) IsValid() error {
+	if p.Thinking != nil {
+		if err := p.Thinking.IsValid(); err != nil {
+			return fmt.Errorf("field Thinking not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ThinkingConfig) IsValid() error {
 	return nil
 }
 func (p *ParamConfigValue) IsValid() error {

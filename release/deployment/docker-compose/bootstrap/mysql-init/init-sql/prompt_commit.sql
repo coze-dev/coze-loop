@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `prompt_commit`
     `tools`            longtext COLLATE utf8mb4_general_ci COMMENT 'tools',
     `tool_call_config` text COLLATE utf8mb4_general_ci COMMENT 'tool调用配置',
     `metadata`         text COLLATE utf8mb4_general_ci COMMENT '模板元信息',
+    `mcp_config`       text COLLATE utf8mb4_general_ci COMMENT 'mcp config info',
     `version`          varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '版本',
     `base_version`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '来源版本',
     `committed_by`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '提交人',
