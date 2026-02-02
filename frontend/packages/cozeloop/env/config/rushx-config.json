@@ -1,6 +1,0 @@
-{
-  "$schema": "../../../../rushx-config.schema.json",
-  "dupCheck": {
-    "ignoreGlobPatterns": ["src/**", "i18n/**"]
-  }
-}

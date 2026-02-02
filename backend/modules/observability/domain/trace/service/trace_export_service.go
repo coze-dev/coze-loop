@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -145,8 +146,10 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 			return item.TraceID
 		})
 
-		trajectoryMap, err = r.traceService.GetTrajectories(ctx, req.WorkspaceID, traceIDs, req.StartTime,
-			req.EndTime, req.PlatformType)
+		// 前端传入的是当前span时间，不能直接使用。改为和ListTrajectory逻辑一致。
+		finalStartTime := r.traceConfig.GetTraceDataMaxDurationDay(ctx, lo.ToPtr(string(req.PlatformType)))
+		trajectoryMap, err = r.traceService.GetTrajectories(ctx, req.WorkspaceID, traceIDs, finalStartTime,
+			time.Now().UnixMilli(), req.PlatformType)
 		if err != nil {
 			return resp, err
 		}
@@ -304,7 +307,9 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 		},
 		StartAt: startTime,
 		EndAt:   endTime,
-		Limit:   int32(len(sids)),
+		// May have duplicate Spans
+		// wider limit to avoid emit
+		Limit: int32(len(sids)) * 2,
 	})
 	if err != nil {
 		return nil, err

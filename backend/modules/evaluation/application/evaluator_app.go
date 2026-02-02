@@ -34,6 +34,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -54,6 +55,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	benefitService benefit.IBenefitService,
 	fileProvider rpc.IFileProvider,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
+	exptResultService service.ExptResultService,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                    idgen,
@@ -68,6 +70,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		benefitService:           benefitService,
 		fileProvider:             fileProvider,
 		evaluatorSourceServices:  evaluatorSourceServices,
+		exptResultService:        exptResultService,
 	}
 	return handler
 }
@@ -86,6 +89,7 @@ type EvaluatorHandlerImpl struct {
 	benefitService           benefit.IBenefitService
 	fileProvider             rpc.IFileProvider
 	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
+	exptResultService        service.ExptResultService
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -983,8 +987,20 @@ func buildRunEvaluatorRequest(evaluatorName string, request *evaluatorservice.Ru
 		ExperimentRunID:    request.GetExperimentRunID(),
 		ItemID:             request.GetItemID(),
 		TurnID:             request.GetTurnID(),
+		EvaluatorRunConf:   evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(request.GetEvaluatorRunConf()),
 	}
 	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
+	if request.IsSetEvaluatorRunConf() && request.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+
 	srvReq.InputData = inputData
 	return srvReq
 }
@@ -999,6 +1015,12 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 	})
 	if err != nil {
 		return nil, err
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
@@ -1039,7 +1061,18 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 		return nil, err
 	}
 	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
-	outputData, err := e.evaluatorService.DebugEvaluator(ctx, do, inputData, request.WorkspaceID)
+	evaluatorRunConf := evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(request.GetEvaluatorRunConf())
+	if request.IsSetEvaluatorRunConf() && request.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+	outputData, err := e.evaluatorService.DebugEvaluator(ctx, do, inputData, evaluatorRunConf, request.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -1100,10 +1133,16 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorRecord(ctx context.Context, reques
 		return nil, errorx.NewByCode(errno.RiskContentDetectedCode)
 	}
 	correctionDO := evaluatorconvertor.ConvertCorrectionDTO2DO(request.GetCorrection())
+	// 对修正分数进行四舍五入到两位小数
+	if correctionDO != nil && correctionDO.Score != nil {
+		roundedScore := utils.RoundScoreToTwoDecimals(*correctionDO.Score)
+		correctionDO.Score = &roundedScore
+	}
 	err = e.evaluatorRecordService.CorrectEvaluatorRecord(ctx, evaluatorRecord, correctionDO)
 	if err != nil {
 		return nil, err
 	}
+
 	return &evaluatorservice.UpdateEvaluatorRecordResponse{
 		Record: evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord),
 	}, nil
@@ -1335,6 +1374,12 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 	if err != nil {
 		return nil, err
 	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
+		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 
@@ -1378,12 +1423,15 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 		return nil, err
 	}
 
+	// 构建运行配置
+	evaluatorRunConf := evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(request.GetEvaluatorRunConf())
+
 	// 并发调试处理
-	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData, request.WorkspaceID)
+	return e.batchDebugWithConcurrency(ctx, evaluatorDO, request.InputData, evaluatorRunConf, request.WorkspaceID)
 }
 
 // batchDebugWithConcurrency 使用并发池进行批量调试
-func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData, exptSpaceID int64) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
+func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, evaluatorDO *entity.Evaluator, inputDataList []*evaluatordto.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*evaluatorservice.BatchDebugEvaluatorResponse, error) {
 	// 创建并发池，并发度为10
 	pool, err := goroutine.NewPool(10)
 	if err != nil {
@@ -1402,9 +1450,18 @@ func (e *EvaluatorHandlerImpl) batchDebugWithConcurrency(ctx context.Context, ev
 		pool.Add(func() error {
 			// 转换输入数据
 			inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(currentInputData)
+			if evaluatorRunConf != nil && evaluatorRunConf.EvaluatorRuntimeParam != nil && evaluatorRunConf.EvaluatorRuntimeParam.JSONValue != nil {
+				if inputDataDO == nil {
+					inputDataDO = &entity.EvaluatorInputData{}
+				}
+				if inputDataDO.Ext == nil {
+					inputDataDO.Ext = make(map[string]string)
+				}
+				inputDataDO.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = ptr.From(evaluatorRunConf.EvaluatorRuntimeParam.JSONValue)
+			}
 
 			// 调用单个评估器调试逻辑
-			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO, exptSpaceID)
+			outputDataDO, debugErr := e.evaluatorService.DebugEvaluator(ctx, evaluatorDO, inputDataDO, evaluatorRunConf, exptSpaceID)
 
 			// 保护结果收集过程
 			mutex.Lock()
@@ -1688,7 +1745,7 @@ func (e *EvaluatorHandlerImpl) DebugBuiltinEvaluator(ctx context.Context, reques
 
 	// 2) 调用调试逻辑
 	inputDataDO := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
-	outputDataDO, err := e.evaluatorService.DebugEvaluator(ctx, builtinEvaluatorDO, inputDataDO, request.WorkspaceID)
+	outputDataDO, err := e.evaluatorService.DebugEvaluator(ctx, builtinEvaluatorDO, inputDataDO, nil, request.WorkspaceID) // 预置评估器无运行配置
 	if err != nil {
 		return nil, err
 	}

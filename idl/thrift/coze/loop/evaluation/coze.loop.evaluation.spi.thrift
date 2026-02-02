@@ -116,6 +116,10 @@ struct InvokeCustomEvaluator {
 // the input data structure for custom evaluator
 struct InvokeEvaluatorInputData {
     1: optional map<string, Content> input_fields    // key-value structure of input variables required by the evaluator
+    2: optional map<string, Content> evaluate_dataset_fields      // key-value structure of dataset variables required by the evaluator
+    3: optional map<string, Content> evaluate_target_output_fields // key-value structure of target output variables required by the evaluator
+
+    20: optional map<string, string> ext // dynamic fields for inject parameters
 }
 
 // the output data structure for custom evaluator

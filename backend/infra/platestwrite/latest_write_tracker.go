@@ -141,6 +141,7 @@ const (
 	ResourceTypeTarget        ResourceType = "eval_target"
 	ResourceTypeTargetVersion ResourceType = "eval_target_version"
 	ResourceTypeEvaluator     ResourceType = "evaluator"
+	ResourceTypeExptTemplate  ResourceType = "expt_template"
 
 	ResourceTypeExptInsightAnalysisRecord   ResourceType = "expt_insight_analysis_record"
 	ResourceTypeExptInsightAnalysisFeedback ResourceType = "expt_insight_analysis_feedback"

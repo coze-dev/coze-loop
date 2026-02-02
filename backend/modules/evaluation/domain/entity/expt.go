@@ -108,6 +108,8 @@ type Experiment struct {
 
 	Stats           *ExptStats
 	AggregateResult *ExptAggregateResult
+
+	ExptTemplateMeta *ExptTemplateMeta // 关联的实验模板基础信息（仅在查询时按需填充，包含模板 ID）
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
@@ -191,6 +193,7 @@ type TargetIngressConf struct {
 type EvaluatorsConf struct {
 	EvaluatorConcurNum *int
 	EvaluatorConf      []*EvaluatorConf
+	EnableScoreWeight  bool
 }
 
 func (e *EvaluatorsConf) Valid(ctx context.Context) error {
@@ -224,7 +227,11 @@ func (e *EvaluatorsConf) GetEvaluatorConcurNum() int {
 
 type EvaluatorConf struct {
 	EvaluatorVersionID int64
+	EvaluatorID        int64  // 评估器ID（用于匹配回填 evaluator_version_id）
+	Version            string // 评估器版本号（用于匹配回填 evaluator_version_id）
 	IngressConf        *EvaluatorIngressConf
+	RunConf            *EvaluatorRunConfig
+	ScoreWeight        *float64
 }
 
 func (e *EvaluatorConf) Valid(ctx context.Context) error {

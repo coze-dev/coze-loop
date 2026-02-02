@@ -30,6 +30,13 @@ struct CreateExperimentRequest {
     32: optional expt.SourceType source_type (api.body = 'source_type')
     33: optional string source_id (api.body = 'source_id')
 
+    40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+
+    // 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
+    41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
+    42: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
+    43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -64,6 +71,9 @@ struct SubmitExperimentRequest {
     33: optional string source_id (api.body = 'source_id')
 
     40: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (api.body = 'evaluator_id_version_list') // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
+    // 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
+    41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
+    42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -219,6 +229,8 @@ struct BatchGetExperimentResultRequest {
 
     30: optional bool use_accelerator (api.query="use_accelerator", go.tag='json:"use_accelerator"')
 
+    40: optional bool full_trajectory (api.query="full_trajectory", go.tag='json:"full_trajectory"') // 是否包含轨迹
+
     255: optional base.Base Base
 }
 
@@ -337,6 +349,135 @@ struct ListExperimentStatsRequest {
 struct ListExperimentStatsResponse {
     1: optional list<expt.ExptStatsInfo> expt_stats_infos
     2: optional i32 total
+
+    255: base.BaseResp BaseResp
+}
+
+// =========================
+// 实验模板相关接口
+// =========================
+
+struct CreateExperimentTemplateRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+
+    // 模板结构，与 ExptTemplate 保持一致
+    10: optional expt.ExptTemplateMeta meta (api.body = 'meta')
+    11: optional expt.ExptTuple triple_config (api.body = 'triple_config')
+    12: optional expt.ExptFieldMapping field_mapping_config (api.body = 'field_mapping_config')
+
+    // 创建评估对象参数（不在 ExptTemplate 结构中，保留在顶层）
+    20: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+
+    // 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层）
+    21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
+    // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
+    22: optional string schedule_cron (api.body = 'schedule_cron')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct CreateExperimentTemplateResponse {
+    1: optional expt.ExptTemplate experiment_template
+
+    255: base.BaseResp BaseResp
+}
+
+struct BatchGetExperimentTemplateRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required list<i64> template_ids (api.body='template_ids', api.js_conv='true', go.tag='json:"template_ids"')
+
+    255: optional base.Base Base
+}
+
+struct BatchGetExperimentTemplateResponse {
+    1: optional list<expt.ExptTemplate> experiment_templates
+
+    255: base.BaseResp BaseResp
+}
+
+struct UpdateExperimentTemplateMetaRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    10: optional expt.ExptTemplateMeta meta (api.body = 'meta')
+
+    255: optional base.Base Base
+}
+
+struct UpdateExperimentTemplateMetaResponse {
+    1: optional expt.ExptTemplateMeta meta
+
+    255: base.BaseResp BaseResp
+}
+
+
+struct UpdateExperimentTemplateRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 template_id (api.path='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    // 模板结构，与 ExptTemplate 保持一致
+    // 注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置
+    10: optional expt.ExptTemplateMeta meta (api.body = 'meta')
+    11: optional expt.ExptTuple triple_config (api.body = 'triple_config')
+    12: optional expt.ExptFieldMapping field_mapping_config (api.body = 'field_mapping_config')
+
+    // 创建评估对象参数（不在 ExptTemplate 结构中，保留在顶层）
+    20: optional coze.loop.evaluation.eval_target.CreateEvalTargetParam create_eval_target_param (api.body = 'create_eval_target_param')
+
+    // 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层）
+    21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
+    // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
+    22: optional string schedule_cron (api.body = 'schedule_cron')
+
+    255: optional base.Base Base
+}
+
+struct UpdateExperimentTemplateResponse {
+    1: optional expt.ExptTemplate experiment_template
+
+    255: base.BaseResp BaseResp
+}
+
+struct DeleteExperimentTemplateRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required i64 template_id (api.path='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    255: optional base.Base Base
+}
+
+struct DeleteExperimentTemplateResponse {
+    255: base.BaseResp BaseResp
+}
+
+struct ListExperimentTemplatesRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: optional i32 page_number (api.body='page_number')
+    3: optional i32 page_size (api.body='page_size')
+
+    20: optional expt.ExperimentTemplateFilter filter_option (api.body = 'filter_option')
+    21: optional list<common.OrderBy> order_bys (api.body = 'order_bys')
+
+    255: optional base.Base Base
+}
+
+struct ListExperimentTemplatesResponse {
+    1: optional list<expt.ExptTemplate> experiment_templates (api.body = 'experiment_templates')
+    2: optional i32 total (api.body = 'total')
+
+    255: base.BaseResp BaseResp
+}
+
+struct CheckExperimentTemplateNameRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+    2: required string name (api.body='name', api.js_conv='true', go.tag='json:"name"')
+    3: optional i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
+
+    255: optional base.Base Base
+}
+
+struct CheckExperimentTemplateNameResponse {
+    1: optional bool is_available (api.body = 'is_available')
 
     255: base.BaseResp BaseResp
 }
@@ -643,5 +784,14 @@ service ExperimentService {
     FeedbackExptInsightAnalysisReportResponse FeedbackExptInsightAnalysisReport(1: FeedbackExptInsightAnalysisReportRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback")
     ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
     GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
+
+    // 实验模板
+    CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates')
+    BatchGetExperimentTemplateResponse BatchGetExperimentTemplate(1: BatchGetExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates/batch_get')
+    UpdateExperimentTemplateMetaResponse UpdateExperimentTemplateMeta(1: UpdateExperimentTemplateMetaRequest req) (api.post = '/api/evaluation/v1/experiment_templates/update_meta')
+    UpdateExperimentTemplateResponse UpdateExperimentTemplate(1: UpdateExperimentTemplateRequest req) (api.patch = '/api/evaluation/v1/experiment_templates/:template_id') // 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置）
+    DeleteExperimentTemplateResponse DeleteExperimentTemplate(1: DeleteExperimentTemplateRequest req) (api.delete = '/api/evaluation/v1/experiment_templates/:template_id')
+    ListExperimentTemplatesResponse ListExperimentTemplates(1: ListExperimentTemplatesRequest req) (api.post = '/api/evaluation/v1/experiment_templates/list')
+    CheckExperimentTemplateNameResponse CheckExperimentTemplateName(1: CheckExperimentTemplateNameRequest req) (api.post = '/api/evaluation/v1/experiment_templates/check_name')
 }
 

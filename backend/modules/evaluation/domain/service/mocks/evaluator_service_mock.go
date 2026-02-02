@@ -132,18 +132,18 @@ func (mr *MockEvaluatorServiceMockRecorder) CreateEvaluator(ctx, evaluator, cid 
 }
 
 // DebugEvaluator mocks base method.
-func (m *MockEvaluatorService) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+func (m *MockEvaluatorService) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DebugEvaluator", ctx, evaluatorDO, inputData, exptSpaceID)
+	ret := m.ctrl.Call(m, "DebugEvaluator", ctx, evaluatorDO, inputData, evaluatorRunConf, exptSpaceID)
 	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // DebugEvaluator indicates an expected call of DebugEvaluator.
-func (mr *MockEvaluatorServiceMockRecorder) DebugEvaluator(ctx, evaluatorDO, inputData, exptSpaceID any) *gomock.Call {
+func (mr *MockEvaluatorServiceMockRecorder) DebugEvaluator(ctx, evaluatorDO, inputData, evaluatorRunConf, exptSpaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).DebugEvaluator), ctx, evaluatorDO, inputData, exptSpaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DebugEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).DebugEvaluator), ctx, evaluatorDO, inputData, evaluatorRunConf, exptSpaceID)
 }
 
 // DeleteEvaluator mocks base method.

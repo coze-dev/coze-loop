@@ -1,0 +1,131 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable no-descending-specificity */
+.app-container {
+  padding: 20px;
+
+  .select-container {
+    margin-bottom: 20px;
+
+    .parameter-select {
+      cursor: pointer;
+      width: 100%;
+    }
+  }
+}
+
+.content-container {
+  display: flex;
+  gap: 40px;
+  min-width: 600px;
+  padding: 16px;
+}
+
+.left-panel {
+  overflow-y: auto;
+  width: 232px;
+  height: 216px;
+  padding: 4px;
+}
+
+.right-panel {
+  overflow-y: auto;
+  width: 231px;
+  height: 216px;
+  padding: 4px;
+}
+
+.group-section {
+  margin-bottom: 24px;
+}
+
+.group-title {
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: var(--coz-fg-secondary);
+}
+
+.group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-item {
+  cursor: pointer;
+
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  padding: 6px 8px;
+
+  border-radius: 4px;
+
+  &:hover {
+    background-color: var(--coz-bg-fill);
+  }
+
+  &.selected {
+    background-color: var(--coz-bg-fill-active);
+  }
+}
+
+.check-icon {
+  color: var(--coz-fg-primary);
+}
+
+.option-label {
+  flex: 1;
+  color: var(--coz-fg-primary);
+}
+
+.type-badge {
+  padding: 2px 6px;
+
+  font-size: 12px;
+  color: var(--coz-fg-secondary);
+
+  background-color: var(--coz-bg-fill);
+  border-radius: 4px;
+}
+
+.select-container {
+  width: 100%;
+}
+
+.search-container {
+  margin-bottom: 16px;
+
+  .search-input {
+    width: 100%;
+
+    &:hover {
+      border-color: var(--semi-color-primary);
+    }
+  }
+}
+
+
+
+// Input样式调整
+.semi-input-wrapper {
+  &:hover {
+    border-color: var(--semi-color-primary);
+  }
+}
+
+// Popover样式调整
+.semi-popover-content {
+  padding: 0;
+}
+
+// 添加背景色和边框
+.semi-popover {
+  background-color: var(--semi-color-bg-0);
+  border: 1px solid var(--semi-color-border);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 15%);
+}

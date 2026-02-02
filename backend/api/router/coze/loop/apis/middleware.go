@@ -1770,7 +1770,17 @@ func _pre_spanMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
+func _experiment_templatesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _listprespanoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _createexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1780,12 +1790,27 @@ func _createevaluationsetwithimportMw(handler *apis.APIHandler) []app.HandlerFun
 	return nil
 }
 
+func _listexperimenttemplatesMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _insight_analysis_records0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
+func _deleteexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _insight_analysis_record_id0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -1801,6 +1826,26 @@ func _parseimportsourcefileMw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _calculateexperimentaggrresultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchgetexperimenttemplateMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _updateexperimenttemplatemetaMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _checkexperimenttemplatenameMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

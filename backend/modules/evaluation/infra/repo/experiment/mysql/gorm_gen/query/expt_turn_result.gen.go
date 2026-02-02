@@ -39,6 +39,7 @@ func newExptTurnResult(db *gorm.DB, opts ...gen.DOOption) exptTurnResult {
 	_exptTurnResult.LogID = field.NewString(tableName, "log_id")
 	_exptTurnResult.TargetResultID = field.NewInt64(tableName, "target_result_id")
 	_exptTurnResult.ErrMsg = field.NewBytes(tableName, "err_msg")
+	_exptTurnResult.WeightedScore = field.NewFloat64(tableName, "weighted_score")
 	_exptTurnResult.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTurnResult.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTurnResult.DeletedAt = field.NewField(tableName, "deleted_at")
@@ -53,21 +54,22 @@ type exptTurnResult struct {
 	exptTurnResultDo exptTurnResultDo
 
 	ALL            field.Asterisk
-	ID             field.Int64  // id
-	SpaceID        field.Int64  // 空间 id
-	ExptID         field.Int64  // 实验 id
-	ExptRunID      field.Int64  // 实验运行 id
-	ItemID         field.Int64  // item_id
-	TurnID         field.Int64  // turn_id
-	TurnIdx        field.Int32  // turn 序号
-	Status         field.Int32  // 状态
-	TraceID        field.Int64  // trace_id
-	LogID          field.String // 日志 id
-	TargetResultID field.Int64  // target_result_id
-	ErrMsg         field.Bytes  // 错误信息
-	CreatedAt      field.Time   // 创建时间
-	UpdatedAt      field.Time   // 更新时间
-	DeletedAt      field.Field  // 删除时间
+	ID             field.Int64   // id
+	SpaceID        field.Int64   // 空间 id
+	ExptID         field.Int64   // 实验 id
+	ExptRunID      field.Int64   // 实验运行 id
+	ItemID         field.Int64   // item_id
+	TurnID         field.Int64   // turn_id
+	TurnIdx        field.Int32   // turn 序号
+	Status         field.Int32   // 状态
+	TraceID        field.Int64   // trace_id
+	LogID          field.String  // 日志 id
+	TargetResultID field.Int64   // target_result_id
+	ErrMsg         field.Bytes   // 错误信息
+	WeightedScore  field.Float64 // 加权汇总得分
+	CreatedAt      field.Time    // 创建时间
+	UpdatedAt      field.Time    // 更新时间
+	DeletedAt      field.Field   // 删除时间
 
 	fieldMap map[string]field.Expr
 }
@@ -96,6 +98,7 @@ func (e *exptTurnResult) updateTableName(table string) *exptTurnResult {
 	e.LogID = field.NewString(table, "log_id")
 	e.TargetResultID = field.NewInt64(table, "target_result_id")
 	e.ErrMsg = field.NewBytes(table, "err_msg")
+	e.WeightedScore = field.NewFloat64(table, "weighted_score")
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
@@ -127,7 +130,7 @@ func (e *exptTurnResult) GetFieldByName(fieldName string) (field.OrderExpr, bool
 }
 
 func (e *exptTurnResult) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 15)
+	e.fieldMap = make(map[string]field.Expr, 16)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["expt_id"] = e.ExptID
@@ -140,6 +143,7 @@ func (e *exptTurnResult) fillFieldMap() {
 	e.fieldMap["log_id"] = e.LogID
 	e.fieldMap["target_result_id"] = e.TargetResultID
 	e.fieldMap["err_msg"] = e.ErrMsg
+	e.fieldMap["weighted_score"] = e.WeightedScore
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt

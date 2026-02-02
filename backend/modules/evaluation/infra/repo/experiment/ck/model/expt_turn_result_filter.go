@@ -23,6 +23,7 @@ type ExptTurnResultFilter struct {
 	EvaluatorScoreKey8      *float64  `gorm:"column:evaluator_score_key_8"`
 	EvaluatorScoreKey9      *float64  `gorm:"column:evaluator_score_key_9"`
 	EvaluatorScoreKey10     *float64  `gorm:"column:evaluator_score_key_10"`
+	EvaluatorWeightedScore  *float64  `gorm:"column:evaluator_weighted_score"`
 	EvaluatorScoreCorrected int32     `gorm:"column:evaluator_score_corrected"`
 	EvalSetVersionID        string    `gorm:"column:eval_set_version_id"`
 	CreatedDate             time.Time `gorm:"column:created_date"`

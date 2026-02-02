@@ -116,7 +116,7 @@ func (m *MetricsService) buildTraverseMetrics(ctx context.Context, req *Traverse
 				continue
 			}
 			for _, metricDef := range metricGroup.MetricDefinitions {
-				if !m.shouldTraverseMetric(metricDef.Name(), req.MetricsNames) {
+				if !m.shouldTraverseMetric(metricDef, req.MetricsNames) {
 					continue
 				}
 				metrics := []entity.IMetricDefinition{metricDef}
@@ -201,8 +201,10 @@ func (m *MetricsService) parseStartDate(startDate string) (int64, int64, error) 
 	return startAt.UnixMilli(), endAt.UnixMilli(), nil
 }
 
-func (m *MetricsService) shouldTraverseMetric(metricName string, reqMetrics []string) bool {
-	if len(reqMetrics) != 0 && !lo.Contains(reqMetrics, metricName) {
+func (m *MetricsService) shouldTraverseMetric(metricDef entity.IMetricDefinition, reqMetrics []string) bool {
+	if len(reqMetrics) != 0 && !lo.Contains(reqMetrics, metricDef.Name()) {
+		return false
+	} else if metricDef.OExpression().MetricName != "" { // rely on other metric, no need to offline calculate
 		return false
 	}
 	return true

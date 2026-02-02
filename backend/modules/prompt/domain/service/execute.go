@@ -25,14 +25,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
-	loopslices "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/coze-dev/coze-loop/backend/pkg/traceutil"
 )
 
 const (
-	maxIterations = 8
-	maxDuration   = 8 * time.Minute
+	maxIterations = 50
+	maxDuration   = 30 * time.Minute
 )
 
 type ExecuteParam struct {
@@ -40,9 +39,10 @@ type ExecuteParam struct {
 	Messages     []*entity.Message
 	VariableVals []*entity.VariableVal
 
-	MockTools     []*entity.MockTool
-	SingleStep    bool
-	DebugTraceKey string
+	MockTools         []*entity.MockTool
+	SingleStep        bool
+	DebugTraceKey     string
+	ResponseAPIConfig *entity.ResponseAPIConfig
 
 	Scenario       entity.Scenario
 	DisableTracing bool
@@ -86,13 +86,48 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		if err != nil {
 			return nil, err
 		}
-		aggregatedReply, err = p.doStreamingIteration(ctx, param, replyItemWrapper)
+
+		// Execute iteration with tracing and tool result processing
+		var toolResultMap map[string]string
+		runAgentStep := func() (reply *entity.Reply, err error) {
+			iterCtx := ctx
+			var span cozeloop.Span
+			if !param.DisableTracing {
+				iterCtx, span = p.startSequenceSpan(iterCtx, param.Prompt, param.Messages, param.VariableVals)
+				defer func() {
+					p.finishSequenceSpan(iterCtx, span, reply, err)
+				}()
+			}
+
+			iterCtx, reply, err = p.doStreamingIteration(iterCtx, param, replyItemWrapper)
+			if err != nil {
+				return nil, err
+			}
+			if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
+				tokenUsage.InputTokens += reply.Item.TokenUsage.InputTokens
+				tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
+			}
+
+			toolResultMap, err = p.toolResultsCollector.CollectToolResults(iterCtx, CollectToolResultsParam{
+				Prompt:           param.Prompt,
+				MockTools:        param.MockTools,
+				Reply:            reply,
+				ResultStream:     param.ResultStream,
+				ReplyItemWrapper: replyItemWrapper,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if !param.DisableTracing && reply != nil && reply.Item != nil {
+				p.reportToolSpan(iterCtx, param.Prompt, toolResultMap, reply.Item)
+			}
+
+			return reply, nil
+		}
+
+		aggregatedReply, err = runAgentStep()
 		if err != nil {
 			return nil, err
-		}
-		if aggregatedReply != nil && aggregatedReply.Item != nil && aggregatedReply.Item.TokenUsage != nil {
-			tokenUsage.InputTokens += aggregatedReply.Item.TokenUsage.InputTokens
-			tokenUsage.OutputTokens += aggregatedReply.Item.TokenUsage.OutputTokens
 		}
 
 		if !shouldContinue(param.SingleStep, startTime, debugStep, aggregatedReply) {
@@ -100,7 +135,7 @@ func (p *PromptServiceImpl) ExecuteStreaming(ctx context.Context, param ExecuteS
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = reorganizeContexts(param.Messages, param.MockTools, aggregatedReply)
+		param.Messages, err = p.reorganizeContexts(param.Messages, toolResultMap, aggregatedReply)
 		if err != nil {
 			return nil, err
 		}
@@ -130,13 +165,49 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		if err != nil {
 			return nil, err
 		}
-		reply, err = p.doIteration(ctx, param, replyItemWrapper)
+
+		// Execute iteration with tracing and tool result processing
+		var toolResultMap map[string]string
+		runAgentStep := func() (iterReply *entity.Reply, err error) {
+			iterCtx := ctx
+			var span cozeloop.Span
+			if !param.DisableTracing {
+				iterCtx, span = p.startSequenceSpan(iterCtx, param.Prompt, param.Messages, param.VariableVals)
+				defer func() {
+					p.finishSequenceSpan(iterCtx, span, iterReply, err)
+				}()
+			}
+
+			iterCtx, iterReply, err = p.doIteration(iterCtx, param, replyItemWrapper)
+			if err != nil {
+				return nil, err
+			}
+			if iterReply != nil && iterReply.Item != nil && iterReply.Item.TokenUsage != nil {
+				tokenUsage.InputTokens += iterReply.Item.TokenUsage.InputTokens
+				tokenUsage.OutputTokens += iterReply.Item.TokenUsage.OutputTokens
+			}
+
+			// Process tool results and get tool result map
+			toolResultMap, err = p.toolResultsCollector.CollectToolResults(iterCtx, CollectToolResultsParam{
+				Prompt:    param.Prompt,
+				MockTools: param.MockTools,
+				Reply:     iterReply,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			// Report tool trace
+			if !param.DisableTracing && iterReply != nil && iterReply.Item != nil {
+				p.reportToolSpan(iterCtx, param.Prompt, toolResultMap, iterReply.Item)
+			}
+
+			return iterReply, nil
+		}
+
+		reply, err = runAgentStep()
 		if err != nil {
 			return nil, err
-		}
-		if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
-			tokenUsage.InputTokens += reply.Item.TokenUsage.InputTokens
-			tokenUsage.OutputTokens += reply.Item.TokenUsage.OutputTokens
 		}
 
 		if !shouldContinue(param.SingleStep, startTime, debugStep, reply) {
@@ -144,7 +215,7 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 		}
 		debugStep++
 		// 多轮执行需要重新编排上下文
-		param.Messages, err = reorganizeContexts(param.Messages, param.MockTools, reply)
+		param.Messages, err = p.reorganizeContexts(param.Messages, toolResultMap, reply)
 		if err != nil {
 			return nil, err
 		}
@@ -155,18 +226,11 @@ func (p *PromptServiceImpl) Execute(ctx context.Context, param ExecuteParam) (re
 	return reply, nil
 }
 
-func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
-	var span cozeloop.Span
-	if !param.DisableTracing {
-		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-		defer func() {
-			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-		}()
-	}
+func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param ExecuteStreamingParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (newCtx context.Context, aggregatedReply *entity.Reply, err error) {
 	var llmCallParam rpc.LLMCallParam
-	llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
+	newCtx, llmCallParam, err = p.prepareLLMCallParam(ctx, param.ExecuteParam)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
 	var aggregatedResult *entity.ReplyItem
 
@@ -200,40 +264,25 @@ func (p *PromptServiceImpl) doStreamingIteration(ctx context.Context, param Exec
 	select { //nolint:staticcheck
 	case err = <-errChan:
 		if err != nil {
-			return nil, err
+			return newCtx, nil, err
 		}
 	}
 
-	if !param.DisableTracing {
-		// report tool call span
-		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
-	}
-	return replyItemWrapper(aggregatedResult), nil
+	return newCtx, replyItemWrapper(aggregatedResult), nil
 }
 
-func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (aggregatedReply *entity.Reply, err error) {
-	var span cozeloop.Span
-	if !param.DisableTracing {
-		ctx, span = p.startSequenceSpan(ctx, param.Prompt, param.Messages, param.VariableVals)
-		defer func() {
-			p.finishSequenceSpan(ctx, span, aggregatedReply, err)
-		}()
-	}
+func (p *PromptServiceImpl) doIteration(ctx context.Context, param ExecuteParam, replyItemWrapper func(v *entity.ReplyItem) *entity.Reply) (newCtx context.Context, aggregatedReply *entity.Reply, err error) {
 	var llmCallParam rpc.LLMCallParam
-	llmCallParam, err = p.prepareLLMCallParam(ctx, param)
+	newCtx, llmCallParam, err = p.prepareLLMCallParam(ctx, param)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
 	var aggregatedResult *entity.ReplyItem
 	aggregatedResult, err = p.llm.Call(ctx, llmCallParam)
 	if err != nil {
-		return nil, err
+		return newCtx, nil, err
 	}
-	if !param.DisableTracing {
-		// tool call处理
-		p.reportToolSpan(ctx, param.Prompt, param.MockTools, aggregatedResult)
-	}
-	return replyItemWrapper(aggregatedResult), nil
+	return newCtx, replyItemWrapper(aggregatedResult), nil
 }
 
 func getReplyItemWrapper(debugID int64, debugStep int32) (func(v *entity.ReplyItem) *entity.Reply, error) {
@@ -278,7 +327,7 @@ func (p *PromptServiceImpl) getDebugIDAndStep(ctx context.Context, singleStepDeb
 	return traceID, traceStep, nil
 }
 
-func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.Prompt, mockTools []*entity.MockTool, result *entity.ReplyItem) {
+func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.Prompt, toolResultMap map[string]string, result *entity.ReplyItem) {
 	if result == nil || result.Message == nil || len(result.Message.ToolCalls) == 0 {
 		return
 	}
@@ -289,51 +338,22 @@ func (p *PromptServiceImpl) reportToolSpan(ctx context.Context, prompt *entity.P
 		promptKey = prompt.PromptKey
 		version = prompt.GetVersion()
 	}
-	mockToolResponseMap := loopslices.ToMap(mockTools, func(m *entity.MockTool) (string, string) {
-		if m == nil {
-			return "", ""
-		}
-		return m.Name, m.MockResponse
-	})
 	for _, toolCall := range result.Message.ToolCalls {
 		if toolCall != nil && toolCall.FunctionCall != nil {
 			var span looptracer.Span
 			ctx, span = looptracer.GetTracer().StartSpan(ctx, toolCall.FunctionCall.Name, tracespec.VToolSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
+			toolCallId := toolCall.ID
+			name := toolCall.FunctionCall.Name
+			signature := toolCall.Signature
+			toolResultKey := toolCallId + name + ptr.From(signature)
 			if span != nil {
 				span.SetPrompt(ctx, loopentity.Prompt{PromptKey: promptKey, Version: version})
 				span.SetInput(ctx, toolCall.FunctionCall.Arguments)
-				span.SetOutput(ctx, mockToolResponseMap[toolCall.FunctionCall.Name])
+				span.SetOutput(ctx, toolResultMap[toolResultKey])
 				span.Finish(ctx)
 			}
 		}
 	}
-}
-
-func reorganizeContexts(contexts []*entity.Message, mockTools []*entity.MockTool, reply *entity.Reply) ([]*entity.Message, error) {
-	newContexts := slices.Clone(contexts)
-	if reply == nil || reply.Item == nil || reply.Item.Message == nil {
-		return newContexts, nil
-	}
-	newContexts = append(newContexts, reply.Item.Message)
-	if len(reply.Item.Message.ToolCalls) > 0 {
-		// 如果有工具调用，则需要mock response
-		mockToolResponseMap := loopslices.ToMap(mockTools, func(m *entity.MockTool) (string, string) {
-			if m == nil {
-				return "", ""
-			}
-			return m.Name, m.MockResponse
-		})
-		for _, toolCall := range reply.Item.Message.ToolCalls {
-			if toolCall.FunctionCall != nil {
-				newContexts = append(newContexts, &entity.Message{
-					Role:       entity.RoleTool,
-					ToolCallID: ptr.Of(toolCall.ID),
-					Content:    ptr.Of(mockToolResponseMap[toolCall.FunctionCall.Name]),
-				})
-			}
-		}
-	}
-	return newContexts, nil
 }
 
 func (p *PromptServiceImpl) startSequenceSpan(ctx context.Context, prompt *entity.Prompt, messages []*entity.Message, variableVals []*entity.VariableVal) (context.Context, cozeloop.Span) {
@@ -378,34 +398,19 @@ func (p *PromptServiceImpl) finishSequenceSpan(ctx context.Context, span cozeloo
 	span.Finish(ctx)
 }
 
-func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param ExecuteParam) (rpc.LLMCallParam, error) {
+func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param ExecuteParam) (context.Context, rpc.LLMCallParam, error) {
 	// format messages using the formatter interface
 	messages, err := p.formatter.FormatPrompt(ctx, param.Prompt, param.Messages, param.VariableVals)
 	if err != nil {
-		return rpc.LLMCallParam{}, err
+		return ctx, rpc.LLMCallParam{}, err
 	}
-	// call llm
-	promptDetail := param.Prompt.GetPromptDetail()
-	var tools []*entity.Tool
-	var toolCallConfig *entity.ToolCallConfig
-	if promptDetail != nil {
-		if promptDetail.ToolCallConfig != nil && promptDetail.ToolCallConfig.ToolChoice != entity.ToolChoiceTypeNone {
-			tools = promptDetail.Tools
-			toolCallConfig = promptDetail.ToolCallConfig
-		}
-	}
-	// Validate tool choice specification
-	if toolCallConfig != nil && toolCallConfig.ToolChoice == entity.ToolChoiceTypeSpecific {
-		// When tool choice is specific, must be in single step mode
-		if !param.SingleStep {
-			return rpc.LLMCallParam{}, errorx.New("tool choice specific must be used with single step mode to avoid infinite loops")
-		}
-		// ToolChoiceSpecification must not be empty
-		if toolCallConfig.ToolChoiceSpecification == nil {
-			return rpc.LLMCallParam{}, errorx.New("tool_choice_specification must not be empty when tool choice is specific")
-		}
+	// get tool configuration using the tool config provider interface
+	ctx, tools, toolCallConfig, err := p.toolConfigProvider.GetToolConfig(ctx, param.Prompt, param.SingleStep)
+	if err != nil {
+		return ctx, rpc.LLMCallParam{}, err
 	}
 	var modelConfig *entity.ModelConfig
+	promptDetail := param.Prompt.GetPromptDetail()
 	if promptDetail != nil {
 		modelConfig = promptDetail.ModelConfig
 	}
@@ -413,17 +418,18 @@ func (p *PromptServiceImpl) prepareLLMCallParam(ctx context.Context, param Execu
 	if userIDStr, ok := session.UserIDInCtx(ctx); ok {
 		userID = ptr.Of(userIDStr)
 	}
-	return rpc.LLMCallParam{
-		SpaceID:        param.Prompt.SpaceID,
-		PromptID:       param.Prompt.ID,
-		PromptKey:      param.Prompt.PromptKey,
-		PromptVersion:  param.Prompt.GetVersion(),
-		Scenario:       param.Scenario,
-		UserID:         userID,
-		Messages:       messages,
-		Tools:          tools,
-		ToolCallConfig: toolCallConfig,
-		ModelConfig:    modelConfig,
+	return ctx, rpc.LLMCallParam{
+		SpaceID:           param.Prompt.SpaceID,
+		PromptID:          param.Prompt.ID,
+		PromptKey:         param.Prompt.PromptKey,
+		PromptVersion:     param.Prompt.GetVersion(),
+		Scenario:          param.Scenario,
+		UserID:            userID,
+		Messages:          messages,
+		Tools:             tools,
+		ToolCallConfig:    toolCallConfig,
+		ModelConfig:       modelConfig,
+		ResponseAPIConfig: param.ResponseAPIConfig,
 	}, nil
 }
 
@@ -467,4 +473,31 @@ func shouldContinue(singleStep bool, startTime time.Time, currentStep int32, las
 		return false
 	}
 	return len(lastStepAggregatedReply.Item.Message.ToolCalls) > 0
+}
+
+// reorganizeContexts reorganizes the message contexts after each iteration
+func (p *PromptServiceImpl) reorganizeContexts(messages []*entity.Message, toolResultMap map[string]string, reply *entity.Reply) ([]*entity.Message, error) {
+	newContexts := slices.Clone(messages)
+	if reply == nil || reply.Item == nil || reply.Item.Message == nil {
+		return newContexts, nil
+	}
+	newContexts = append(newContexts, reply.Item.Message)
+	if len(reply.Item.Message.ToolCalls) > 0 {
+		// 如果有工具调用，则使用 ToolResultMap 填充 tool response
+		for _, toolCall := range reply.Item.Message.ToolCalls {
+			if toolCall.FunctionCall != nil {
+				toolCallId := toolCall.ID
+				name := toolCall.FunctionCall.Name
+				signature := toolCall.Signature
+				toolResultKey := toolCallId + name + ptr.From(signature)
+				toolResult := toolResultMap[toolResultKey]
+				newContexts = append(newContexts, &entity.Message{
+					Role:       entity.RoleTool,
+					ToolCallID: ptr.Of(toolCall.ID),
+					Content:    ptr.Of(toolResult),
+				})
+			}
+		}
+	}
+	return newContexts, nil
 }

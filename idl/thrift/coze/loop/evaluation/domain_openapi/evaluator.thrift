@@ -116,3 +116,8 @@ struct EvaluatorRecord {
 
     100: optional common.BaseInfo base_info
 }
+
+struct EvaluatorRunConfig {
+    1: optional string env
+    2: optional common.RuntimeParam evaluator_runtime_param
+}

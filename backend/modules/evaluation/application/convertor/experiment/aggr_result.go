@@ -36,6 +36,12 @@ func ExptAggregateResultDOToDTO(data *entity.ExptAggregateResult) *domain_expt.E
 	if data.UpdateTime != nil {
 		res.UpdateTime = gptr.Of(gptr.Indirect(data.UpdateTime).Unix())
 	}
+
+	// 转换加权结果：一组 AggregatorResult_
+	if len(data.WeightedResults) > 0 {
+		res.WeightedResults = AggregatorResultDOsToDTOs(data.WeightedResults)
+	}
+
 	return res
 }
 
