@@ -398,7 +398,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	// set attributes
 	calOtherAttribute(ctx, span, tagsString, tagsLong, tagsDouble, tagsBool)
 	// set runtime
-	calRuntime(systemTagsString, resourceScopeSpan)
+	calRuntime(systemTagsString, tagsString, resourceScopeSpan)
 
 	result := &LoopSpan{
 		StartTime:        startTimeUnixNanoInt64 / 1000,
@@ -544,12 +544,19 @@ func calOtherAttribute(ctx context.Context, span *Span, tagsString map[string]st
 	}
 }
 
-func calRuntime(systemTagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) {
-	systemTagsString[tracespec.Runtime_] = getRuntime(resourceScopeSpan)
+func calRuntime(systemTagsString map[string]string, tagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) {
+	systemTagsString[tracespec.Runtime_] = getRuntime(tagsString, resourceScopeSpan)
 }
 
-func getRuntime(resourceScopeSpan *ResourceScopeSpan) string {
-	runtime := processRuntime(resourceScopeSpan)
+func getRuntime(tagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) string {
+	if len(tagsString) > 0 {
+		if runtime, ok := tagsString[otelAttributeSystemRuntime]; ok && len(runtime) > 0 {
+			delete(tagsString, otelAttributeSystemRuntime)
+			return runtime
+		}
+	}
+
+	runtime := processRuntimeByScope(resourceScopeSpan)
 	marshalString, err := sonic.MarshalString(runtime)
 	if err != nil {
 		return "" // unexpected
@@ -558,7 +565,7 @@ func getRuntime(resourceScopeSpan *ResourceScopeSpan) string {
 	return marshalString
 }
 
-func processRuntime(resourceScopeSpan *ResourceScopeSpan) *tracespec.Runtime {
+func processRuntimeByScope(resourceScopeSpan *ResourceScopeSpan) *tracespec.Runtime {
 	res := &tracespec.Runtime{
 		Library:      tracespec.VLibOpentelemetry,
 		Scene:        "",

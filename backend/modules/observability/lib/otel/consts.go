@@ -35,6 +35,9 @@ const (
 	otelAttributePromptKey      = "cozeloop.prompt_key"
 	otelAttributePromptVersion  = "cozeloop.prompt_version"
 	otelAttributePromptProvider = "cozeloop.prompt_provider"
+
+	// system
+	otelAttributeSystemRuntime = "cozeloop.system_tag_runtime"
 )
 
 // openinference attribute key
