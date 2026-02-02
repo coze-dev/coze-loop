@@ -42,9 +42,15 @@ const (
 
 	ExptEventNotifyCardID = "AAqvJsfSSLQtN"
 
-	ExptEventNotifyStatus     = "expt_status"
-	ExptEventNotifyTitle      = "title"
-	ExptEventNotifyTitleColor = "title_color"
+	ExptEventNotifyTitle           = "title"
+	ExptEventNotifyTitleSuccess    = "已成功执行"
+	ExptEventNotifyTitleFailed     = "执行失败"
+	ExptEventNotifyTitleTerminated = "执行已被终止"
+
+	ExptEventNotifyTitleColor           = "title_color"
+	ExptEventNotifyTitleColorSuccess    = "green"
+	ExptEventNotifyTitleColorFailed     = "red"
+	ExptEventNotifyTitleColorTerminated = "yellow"
 )
 
 const (

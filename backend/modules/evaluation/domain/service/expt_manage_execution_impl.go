@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -574,11 +575,32 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 }
 
 func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
-	return e.notifyRPCAdapter.SendMessageCard(ctx, expt.CreatedBy, consts.ExptEventNotifyCardID, map[string]string{
-		consts.ExptEventNotifyStatus: strconv.FormatInt(int64(expt.Status), 10),
-		"expt_name":                  expt.Name,
-		"space_id":                   strconv.FormatInt(expt.SpaceID, 10),
-		"expt_id":                    strconv.FormatInt(expt.ID, 10)})
+
+	if !entity.IsExptFinished(expt.Status) {
+		return nil
+	}
+	param := map[string]string{
+		"expt_name":  expt.Name,
+		"space_id":   strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":    strconv.FormatInt(expt.ID, 10),
+		"start_time": expt.StartAt.Format(time.DateTime),
+		"end_time":   expt.EndAt.Format(time.DateTime),
+	}
+	switch expt.Status {
+	case entity.ExptStatus_Success:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess
+	case entity.ExptStatus_Failed:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
+	case entity.ExptStatus_Terminated:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
+	default:
+		return errors.New("invalid expt status")
+	}
+
+	return e.notifyRPCAdapter.SendMessageCard(ctx, expt.CreatedBy, consts.ExptEventNotifyCardID, param)
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {
