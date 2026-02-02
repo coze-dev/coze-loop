@@ -383,6 +383,7 @@ func TestBaseInfoAndUserInfoConversions(t *testing.T) {
 	assert.Nil(t, OpenAPIUserInfoDO2DTO(nil))
 }
 
+// TestOpenAPIItemConversions tests the conversion between EvaluationSetItem DO and DTO.
 func TestOpenAPIItemConversions(t *testing.T) {
 	t.Parallel()
 
