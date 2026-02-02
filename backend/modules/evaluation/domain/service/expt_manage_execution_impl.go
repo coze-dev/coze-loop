@@ -290,7 +290,8 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
-	if e.sendExptNotify(ctx, expt) != nil {
+	err = e.sendExptNotify(ctx, expt)
+	if err != nil {
 		logs.CtxWarn(ctx, "[Run] sendExptNotify failed, expt_id: %v, error: %v", exptID, err)
 	}
 
