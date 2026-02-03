@@ -303,6 +303,7 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 	if rawSpan != nil {
 		span := rawSpan.RawSpanConvertToLoopSpan()
 		if span != nil {
+			t.ensurePreviousResponseID(ctx, span)
 			if err := t.tracehubSvc.SpanTrigger(ctx, span); err != nil {
 				logs.CtxError(ctx, "SpanTrigger err:%v", err)
 				// span trigger 失败，不处理
