@@ -81,6 +81,7 @@ type ListPreSpanBatchReq struct {
 	WorkspaceID           int64
 	ThirdPartyWorkspaceID string
 	StartTime             int64 // ms
+	EndTime               int64
 	Items                 []*ListPreSpanItem
 	PlatformType          loop_span.PlatformType
 }
@@ -472,7 +473,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, req.SpanID) // for select current span together
 
 	// batch select from ck
-	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, tenants, req.StartTime)
+	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, tenants, req.StartTime-timeutil.Day2MillSec(30), req.StartTime+1)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -506,7 +507,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	return &ListPreSpanResp{Spans: orderSpans}, nil
 }
 
-func (r *TraceServiceImpl) batchGetPreSpan(ctx context.Context, spanIDs []string, tenants []string, startTime int64) ([]*loop_span.Span, error) {
+func (r *TraceServiceImpl) batchGetPreSpan(ctx context.Context, spanIDs []string, tenants []string, startTime int64, endTime int64) ([]*loop_span.Span, error) {
 	batchNum := 100
 	batchPreSpan := make([][]string, 0)
 	oneBatchPreSpan := make([]string, 0)
@@ -534,8 +535,8 @@ func (r *TraceServiceImpl) batchGetPreSpan(ctx context.Context, spanIDs []string
 					},
 				},
 			},
-			StartAt: startTime - timeutil.Day2MillSec(30), // past 30 days
-			EndAt:   startTime + 1,
+			StartAt: startTime,
+			EndAt:   endTime,
 			Limit:   200,
 		})
 		if err != nil {
@@ -664,7 +665,7 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	// Step 3: Collect all unique span IDs to query
 	allSpanIDs := r.collectAllSpanIDs(spanIDsInfo, req.Items)
 	// Step 4: Batch query all spans from ClickHouse
-	allSpans, err := r.batchGetPreSpan(ctx, allSpanIDs, tenants, req.StartTime)
+	allSpans, err := r.batchGetPreSpan(ctx, allSpanIDs, tenants, req.StartTime-timeutil.Day2MillSec(30), req.EndTime+1)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}
@@ -877,10 +878,17 @@ func spanList2ListPreSpanBatchReq(spanList []*loop_span.Span, platformType loop_
 		return nil
 	}
 	workspaceId, _ := strconv.Atoi(spanList[0].WorkspaceID)
+	startTime := gslice.Min(gslice.Map(spanList, func(span *loop_span.Span) int64 {
+		return span.StartTime
+	}))
+	endTime := gslice.Max(gslice.Map(spanList, func(span *loop_span.Span) int64 {
+		return span.StartTime
+	}))
 	return &ListPreSpanBatchReq{
 		WorkspaceID:           int64(workspaceId),
 		ThirdPartyWorkspaceID: "",
-		StartTime:             spanList[0].StartTime,
+		StartTime:             startTime.Value() / 1000, // us to ms
+		EndTime:               endTime.Value() / 1000,
 		Items: gslice.Map(spanList, func(span *loop_span.Span) *ListPreSpanItem {
 			return &ListPreSpanItem{
 				TraceID:            span.TraceID,
@@ -1178,7 +1186,7 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 	preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, req.SpanID) // for select current span together
 
 	// batch select from ck
-	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, req.Tenants, req.StartTime)
+	preAndCurrentSpans, err := r.batchGetPreSpan(ctx, preAndCurrentSpanIDs, req.Tenants, req.StartTime-timeutil.Day2MillSec(30), req.StartTime+1)
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
 	}

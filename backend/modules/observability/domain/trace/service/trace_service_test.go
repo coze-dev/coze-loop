@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"strconv"
 	"testing"
 	"time"
@@ -4160,7 +4161,7 @@ func TestTraceServiceImpl_batchGetPreSpanFromCk(t *testing.T) {
 			r := &TraceServiceImpl{
 				traceRepo: fields.traceRepo,
 			}
-			got, err := r.batchGetPreSpan(tt.args.ctx, tt.args.spanIDs, tt.args.tenants, tt.args.startTime)
+			got, err := r.batchGetPreSpan(tt.args.ctx, tt.args.spanIDs, tt.args.tenants, tt.args.startTime-timeutil.Day2MillSec(30), tt.args.startTime+1)
 			assert.Equal(t, tt.wantErr, err != nil)
 			if !tt.wantErr {
 				assert.Equal(t, len(tt.want), len(got))
