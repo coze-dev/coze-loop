@@ -90,6 +90,7 @@ type ListPreSpanItem struct {
 	TraceID            string
 	SpanID             string
 	PreviousResponseID string
+	CurrentSpan        *loop_span.Span
 }
 
 type ListPreSpanBatchResp struct {
@@ -647,7 +648,6 @@ func (r *TraceServiceImpl) orderPreSpans(ctx context.Context, preAndCurrentSpans
 }
 
 // ListPreSpanBatch batch version of ListPreSpan, processes multiple previous_response_id in one call.
-// It optimizes by fetching all required spans in batch and reusing processors.
 func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpanBatchReq) (*ListPreSpanBatchResp, error) {
 	if len(req.Items) == 0 {
 		return &ListPreSpanBatchResp{Results: []*ListPreSpanResult{}}, nil
@@ -681,6 +681,13 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	logs.CtxInfo(ctx, "processed spans: %v", tconv.ToJSONString(ctx, processedSpans))
 	// Step 6: Build span map for quick lookup
 	allSpanMap := r.buildSpanMap(processedSpans)
+
+	// Step 6.1: Add current spans from request items (for New Data scenario where span is not yet in CK)
+	for _, item := range req.Items {
+		if item.CurrentSpan != nil {
+			allSpanMap[item.CurrentSpan.SpanID] = item.CurrentSpan
+		}
+	}
 
 	// Step 7: Process each item individually (auth check, ordering)
 	results := r.processEachItem(ctx, req, tenants, spanIDsInfo, allSpanMap)
@@ -918,6 +925,7 @@ func spanList2ListPreSpanBatchReq(spanList []*loop_span.Span, platformType loop_
 				TraceID:            span.TraceID,
 				SpanID:             span.SpanID,
 				PreviousResponseID: span.SystemTagsString[keyPreviousResponseID],
+				CurrentSpan:        span,
 			}
 		}),
 		PlatformType: platformType,

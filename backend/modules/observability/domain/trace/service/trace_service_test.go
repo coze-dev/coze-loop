@@ -6,10 +6,11 @@ package service
 import (
 	"context"
 	"fmt"
-	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 	"strconv"
 	"testing"
 	"time"
+
+	timeutil "github.com/coze-dev/coze-loop/backend/pkg/time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
@@ -5185,7 +5186,7 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("per item error - should skip merge and return nil", func(t *testing.T) {
+	t.Run("current span from request overrides CK data - should merge successfully", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -5250,6 +5251,6 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 
 		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
 		assert.NoError(t, err)
-		assert.Equal(t, orig, span.Input)
+		assert.Equal(t, `{"messages":[{"role":"system","content":"hist_in"},{"role":"assistant","content":"hist_out"},{"role":"user","content":"cur"}]}`, span.Input)
 	})
 }
