@@ -12646,7 +12646,7 @@ func (p *BatchGetExperimentAggrResultRequest) Field255DeepEqual(src *base.Base) 
 }
 
 type BatchGetExperimentAggrResultResponse struct {
-	ExptAggregateResults []*expt.ExptAggregateResult_ `thrift:"expt_aggregate_results,1,optional" frugal:"1,optional,list<expt.ExptAggregateResult_>" form:"expt_aggregate_result" json:"expt_aggregate_result,omitempty"`
+	ExptAggregateResult_ []*expt.ExptAggregateResult_ `thrift:"expt_aggregate_result,1,optional" frugal:"1,optional,list<expt.ExptAggregateResult_>" form:"expt_aggregate_result" json:"expt_aggregate_result,omitempty"`
 	BaseResp             *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -12657,16 +12657,16 @@ func NewBatchGetExperimentAggrResultResponse() *BatchGetExperimentAggrResultResp
 func (p *BatchGetExperimentAggrResultResponse) InitDefault() {
 }
 
-var BatchGetExperimentAggrResultResponse_ExptAggregateResults_DEFAULT []*expt.ExptAggregateResult_
+var BatchGetExperimentAggrResultResponse_ExptAggregateResult__DEFAULT []*expt.ExptAggregateResult_
 
-func (p *BatchGetExperimentAggrResultResponse) GetExptAggregateResults() (v []*expt.ExptAggregateResult_) {
+func (p *BatchGetExperimentAggrResultResponse) GetExptAggregateResult_() (v []*expt.ExptAggregateResult_) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptAggregateResults() {
-		return BatchGetExperimentAggrResultResponse_ExptAggregateResults_DEFAULT
+	if !p.IsSetExptAggregateResult_() {
+		return BatchGetExperimentAggrResultResponse_ExptAggregateResult__DEFAULT
 	}
-	return p.ExptAggregateResults
+	return p.ExptAggregateResult_
 }
 
 var BatchGetExperimentAggrResultResponse_BaseResp_DEFAULT *base.BaseResp
@@ -12680,20 +12680,20 @@ func (p *BatchGetExperimentAggrResultResponse) GetBaseResp() (v *base.BaseResp) 
 	}
 	return p.BaseResp
 }
-func (p *BatchGetExperimentAggrResultResponse) SetExptAggregateResults(val []*expt.ExptAggregateResult_) {
-	p.ExptAggregateResults = val
+func (p *BatchGetExperimentAggrResultResponse) SetExptAggregateResult_(val []*expt.ExptAggregateResult_) {
+	p.ExptAggregateResult_ = val
 }
 func (p *BatchGetExperimentAggrResultResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_BatchGetExperimentAggrResultResponse = map[int16]string{
-	1:   "expt_aggregate_results",
+	1:   "expt_aggregate_result",
 	255: "BaseResp",
 }
 
-func (p *BatchGetExperimentAggrResultResponse) IsSetExptAggregateResults() bool {
-	return p.ExptAggregateResults != nil
+func (p *BatchGetExperimentAggrResultResponse) IsSetExptAggregateResult_() bool {
+	return p.ExptAggregateResult_ != nil
 }
 
 func (p *BatchGetExperimentAggrResultResponse) IsSetBaseResp() bool {
@@ -12783,7 +12783,7 @@ func (p *BatchGetExperimentAggrResultResponse) ReadField1(iprot thrift.TProtocol
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ExptAggregateResults = _field
+	p.ExptAggregateResult_ = _field
 	return nil
 }
 func (p *BatchGetExperimentAggrResultResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -12828,14 +12828,14 @@ WriteStructEndError:
 }
 
 func (p *BatchGetExperimentAggrResultResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptAggregateResults() {
-		if err = oprot.WriteFieldBegin("expt_aggregate_results", thrift.LIST, 1); err != nil {
+	if p.IsSetExptAggregateResult_() {
+		if err = oprot.WriteFieldBegin("expt_aggregate_result", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptAggregateResults)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptAggregateResult_)); err != nil {
 			return err
 		}
-		for _, v := range p.ExptAggregateResults {
+		for _, v := range p.ExptAggregateResult_ {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -12884,7 +12884,7 @@ func (p *BatchGetExperimentAggrResultResponse) DeepEqual(ano *BatchGetExperiment
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptAggregateResults) {
+	if !p.Field1DeepEqual(ano.ExptAggregateResult_) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -12895,10 +12895,10 @@ func (p *BatchGetExperimentAggrResultResponse) DeepEqual(ano *BatchGetExperiment
 
 func (p *BatchGetExperimentAggrResultResponse) Field1DeepEqual(src []*expt.ExptAggregateResult_) bool {
 
-	if len(p.ExptAggregateResults) != len(src) {
+	if len(p.ExptAggregateResult_) != len(src) {
 		return false
 	}
-	for i, v := range p.ExptAggregateResults {
+	for i, v := range p.ExptAggregateResult_ {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

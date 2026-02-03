@@ -260,7 +260,7 @@ struct BatchGetExperimentAggrResultRequest {
 }
 
 struct BatchGetExperimentAggrResultResponse {
-    1: optional list<expt.ExptAggregateResult> expt_aggregate_results (api.body = 'expt_aggregate_result')
+    1: optional list<expt.ExptAggregateResult> expt_aggregate_result (api.body = 'expt_aggregate_result')
 
     255: base.BaseResp BaseResp
 }

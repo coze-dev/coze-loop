@@ -9412,7 +9412,7 @@ func (p *BatchGetExperimentAggrResultResponse) FastReadField1(buf []byte) (int, 
 
 		_field = append(_field, _elem)
 	}
-	p.ExptAggregateResults = _field
+	p.ExptAggregateResult_ = _field
 	return offset, nil
 }
 
@@ -9454,12 +9454,12 @@ func (p *BatchGetExperimentAggrResultResponse) BLength() int {
 
 func (p *BatchGetExperimentAggrResultResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetExptAggregateResults() {
+	if p.IsSetExptAggregateResult_() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
-		for _, v := range p.ExptAggregateResults {
+		for _, v := range p.ExptAggregateResult_ {
 			length++
 			offset += v.FastWriteNocopy(buf[offset:], w)
 		}
@@ -9477,10 +9477,10 @@ func (p *BatchGetExperimentAggrResultResponse) fastWriteField255(buf []byte, w t
 
 func (p *BatchGetExperimentAggrResultResponse) field1Length() int {
 	l := 0
-	if p.IsSetExptAggregateResults() {
+	if p.IsSetExptAggregateResult_() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.ExptAggregateResults {
+		for _, v := range p.ExptAggregateResult_ {
 			_ = v
 			l += v.BLength()
 		}
@@ -9501,9 +9501,9 @@ func (p *BatchGetExperimentAggrResultResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.ExptAggregateResults != nil {
-		p.ExptAggregateResults = make([]*expt.ExptAggregateResult_, 0, len(src.ExptAggregateResults))
-		for _, elem := range src.ExptAggregateResults {
+	if src.ExptAggregateResult_ != nil {
+		p.ExptAggregateResult_ = make([]*expt.ExptAggregateResult_, 0, len(src.ExptAggregateResult_))
+		for _, elem := range src.ExptAggregateResult_ {
 			var _elem *expt.ExptAggregateResult_
 			if elem != nil {
 				_elem = &expt.ExptAggregateResult_{}
@@ -9512,7 +9512,7 @@ func (p *BatchGetExperimentAggrResultResponse) DeepCopy(s interface{}) error {
 				}
 			}
 
-			p.ExptAggregateResults = append(p.ExptAggregateResults, _elem)
+			p.ExptAggregateResult_ = append(p.ExptAggregateResult_, _elem)
 		}
 	}
 

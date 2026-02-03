@@ -1169,7 +1169,7 @@ func (e *experimentApplication) BatchGetExperimentAggrResult_(ctx context.Contex
 	}
 
 	return &expt.BatchGetExperimentAggrResultResponse{
-		ExptAggregateResults: exptAggregateResultDTOs,
+		ExptAggregateResult_: exptAggregateResultDTOs,
 	}, nil
 }
 

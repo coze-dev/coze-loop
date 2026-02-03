@@ -3908,7 +3908,7 @@ func TestExperimentApplication_BatchGetExperimentAggrResult_(t *testing.T) {
 			},
 
 			wantResp: &exptpb.BatchGetExperimentAggrResultResponse{
-				ExptAggregateResults: []*expt.ExptAggregateResult_{
+				ExptAggregateResult_: []*expt.ExptAggregateResult_{
 					{
 						ExperimentID: validExptID,
 						EvaluatorResults: map[int64]*expt.EvaluatorAggregateResult_{
