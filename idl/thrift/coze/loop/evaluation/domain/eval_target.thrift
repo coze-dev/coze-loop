@@ -127,6 +127,7 @@ struct VolcengineAgent {
     11: optional string description  // DTO使用，不存数据库
     12: optional list<VolcengineAgentEndpoint> volcengine_agent_endpoints // DTO使用，不存数据库
     13: optional VolcengineAgentProtocol protocol // 注册协议
+    14: optional string runtime_id
 
     100: optional common.BaseInfo base_info
 }

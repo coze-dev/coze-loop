@@ -72,6 +72,8 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgent"
 	case EvalTargetTypeCustomRPCServer:
 		return "CustomRPCServer"
+	case EvalTargetTypeVolcengineAgentAgentkit:
+		return "VolcengineAgentKit"
 	}
 	return "<UNSET>"
 }

@@ -186,6 +186,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				VolcengineAgentEndpoints: endpoints,
 				Protocol:                 gptr.Of(gptr.Indirect(targetVersionDO.VolcengineAgent.Protocol)),
 				BaseInfo:                 commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.VolcengineAgent.BaseInfo),
+				RuntimeID:                targetVersionDO.VolcengineAgent.RuntimeID,
 			}
 		}
 	case do.EvalTargetTypeCustomRPCServer:
