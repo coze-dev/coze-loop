@@ -67,15 +67,15 @@ func (app *PromptManageApplicationImpl) ListParentPrompt(ctx context.Context, re
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
 	}
 
-	// 权限检查
-	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionLoopPromptRead)
-	if err != nil {
-		return r, err
-	}
-
 	// 参数验证
 	if request.GetPromptID() <= 0 {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Prompt ID is required"))
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.MCheckPromptPermission(ctx, request.GetWorkspaceID(), []int64{request.GetPromptID()}, consts.ActionLoopPromptRead)
+	if err != nil {
+		return r, err
 	}
 
 	// 调用repository层查询父prompt
