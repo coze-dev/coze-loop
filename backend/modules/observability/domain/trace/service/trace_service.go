@@ -675,14 +675,14 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Processed spans: %+v", processedSpans)
+	logs.CtxInfo(ctx, "Processed spans: %+v", tconv.ToJSONString(ctx, processedSpans))
 
 	// Step 6: Build span map for quick lookup
 	allSpanMap := r.buildSpanMap(processedSpans)
 
 	// Step 7: Process each item individually (auth check, ordering)
 	results := r.processEachItem(ctx, req, tenants, spanIDsInfo, allSpanMap)
-	logs.CtxInfo(ctx, "ListPreSpanBatchResp: %+v", results)
+	logs.CtxInfo(ctx, "ListPreSpanBatchResp: %+v", tconv.ToJSONString(ctx, results))
 	return &ListPreSpanBatchResp{Results: results}, nil
 }
 

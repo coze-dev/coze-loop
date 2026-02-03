@@ -235,7 +235,7 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		logs.CtxWarn(ctx, "fail to trans input %s into map", s.Input)
 		return
 	}
-
+	logs.CtxInfo(ctx, "start to merge history context")
 	// current span messages
 	var currentMessages []interface{}
 	if msgs, ok := currentInputMap["messages"].([]interface{}); ok {
@@ -285,6 +285,7 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		logs.CtxWarn(ctx, "fail to marshal new input, err:%v", err)
 		return
 	}
+	logs.CtxInfo(ctx, "New input: %v", string(newInput))
 	s.Input = string(newInput)
 }
 
