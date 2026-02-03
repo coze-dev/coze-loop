@@ -105,6 +105,7 @@ struct ModelConfig {
     5: optional double top_p
     6: optional manage.Protocol protocol
     7: optional string identification
+    8: optional bool preset_model
 
     50: optional string json_ext
 }
