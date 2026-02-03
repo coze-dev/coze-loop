@@ -21598,7 +21598,7 @@ func (p *ListExperimentTemplatesResponse) Field255DeepEqual(src *base.BaseResp) 
 
 type CheckExperimentTemplateNameRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	Name        string     `thrift:"name,2,required" frugal:"2,required,string" json:"name" form:"name,required" `
+	Name        string     `thrift:"name,2,required" frugal:"2,required,string" form:"name,required" json:"name,required"`
 	TemplateID  *int64     `thrift:"template_id,3,optional" frugal:"3,optional,i64" json:"template_id" form:"template_id" `
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
