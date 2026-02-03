@@ -385,6 +385,7 @@ func ConvertModelConfigDTO2DO(config *commondto.ModelConfig) *commonentity.Model
 		TopP:           config.TopP,
 		Protocol:       config.Protocol,
 		Identification: config.Identification,
+		PresetModel:    config.PresetModel,
 	}
 }
 
@@ -402,6 +403,7 @@ func ConvertModelConfigDO2DTO(config *commonentity.ModelConfig) *commondto.Model
 		TopP:           config.TopP,
 		Protocol:       config.Protocol,
 		Identification: config.Identification,
+		PresetModel:    config.PresetModel,
 	}
 	if config.GetModelID() > 0 {
 		dto.ModelID = config.ModelID

@@ -43,6 +43,7 @@ func ModelConfigDO2DTO(modelConfig *commonentity.ModelConfig, toolCallConfig *co
 		ToolChoice:     toolChoice,
 		Protocol:       modelConfig.Protocol,
 		Identification: modelConfig.Identification,
+		PresetModel:    modelConfig.PresetModel,
 	}
 }
 

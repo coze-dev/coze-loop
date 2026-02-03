@@ -281,6 +281,7 @@ type ModelConfig struct {
 	ToolChoice     ToolChoiceType `json:"tool_choice" jsonschema:"-"`
 	Protocol       *string        `json:"protocol,omitempty"`
 	Identification *string        `json:"identification,omitempty"`
+	PresetModel    *bool          `json:"preset_model,omitempty"`
 
 	ProviderModelID *string `json:"provider_model_id,omitempty" jsonschema:"-"`
 
