@@ -308,7 +308,10 @@ func (h *TraceHubServiceImpl) combineFilters(filters ...*loop_span.FilterFields)
 
 // fetchSpans paginates span data
 func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.ListSpansParam, sub *spanSubscriber) ([]*loop_span.Span, string, error) {
-	result, err := h.traceRepo.ListSpans(ctx, listParam)
+	// 默认 30s to 60s 减少超时报错情况
+	listCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	result, err := h.traceRepo.ListSpans(listCtx, listParam)
 	if err != nil {
 		logs.CtxError(ctx, "List spans failed, parma=%v, err=%v", listParam, err)
 		return nil, "", err

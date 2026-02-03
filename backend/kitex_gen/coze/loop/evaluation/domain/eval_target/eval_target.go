@@ -51,6 +51,8 @@ const (
 	EvalTargetType_VolcengineAgent EvalTargetType = 5
 	// 自定义RPC服务 for内场
 	EvalTargetType_CustomRPCServer EvalTargetType = 6
+	// 火山智能体Agentkit
+	EvalTargetType_VolcengineAgentAgentkit EvalTargetType = 7
 )
 
 func (p EvalTargetType) String() string {
@@ -67,6 +69,8 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgent"
 	case EvalTargetType_CustomRPCServer:
 		return "CustomRPCServer"
+	case EvalTargetType_VolcengineAgentAgentkit:
+		return "VolcengineAgentAgentkit"
 	}
 	return "<UNSET>"
 }
@@ -85,6 +89,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_VolcengineAgent, nil
 	case "CustomRPCServer":
 		return EvalTargetType_CustomRPCServer, nil
+	case "VolcengineAgentAgentkit":
+		return EvalTargetType_VolcengineAgentAgentkit, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }

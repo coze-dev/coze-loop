@@ -18,6 +18,8 @@ struct Model {
     13: optional string icon // 模型图标
     14: optional list<string> tags //模型标签
     15: optional ModelStatus status // 模型状态
+    16: optional string original_model_url // 模型跳转链接
+    17: optional bool preset_model // 是否为预置模型
 
     100: optional string created_by
     101: optional i64 created_at
@@ -254,6 +256,7 @@ const Family family_deepseek_r1 = "deepseek_r1"
 const Family family_kimi = "kimi"
 const Family family_seedream = "seedream"
 const Family family_intern_vl3 = "intern_vl3"
+const Family family_deepseek = "deepseek"
 
 
 typedef string Provider (ts.enum="true")

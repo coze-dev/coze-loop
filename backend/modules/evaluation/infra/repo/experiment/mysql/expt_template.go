@@ -67,7 +67,7 @@ func (d *exptTemplateDAOImpl) GetByID(ctx context.Context, id int64) (*model.Exp
 func (d *exptTemplateDAOImpl) GetByName(ctx context.Context, name string, spaceID int64) (*model.ExptTemplate, error) {
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplate
 	result, err := q.WithContext(ctx).
-		Where(q.SpaceID.Eq(spaceID), q.Name.Eq(name)).
+		Where(q.SpaceID.Eq(spaceID), q.Name.Eq(name), q.DeletedAt.IsNull()).
 		First()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

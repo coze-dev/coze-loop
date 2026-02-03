@@ -4200,6 +4200,7 @@ type ModelConfig struct {
 	TopP           *float64         `thrift:"top_p,5,optional" frugal:"5,optional,double" form:"top_p" json:"top_p,omitempty" query:"top_p"`
 	Protocol       *manage.Protocol `thrift:"protocol,6,optional" frugal:"6,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
 	Identification *string          `thrift:"identification,7,optional" frugal:"7,optional,string" form:"identification" json:"identification,omitempty" query:"identification"`
+	PresetModel    *bool            `thrift:"preset_model,8,optional" frugal:"8,optional,bool" form:"preset_model" json:"preset_model,omitempty" query:"preset_model"`
 	JSONExt        *string          `thrift:"json_ext,50,optional" frugal:"50,optional,string" form:"json_ext" json:"json_ext,omitempty" query:"json_ext"`
 }
 
@@ -4294,6 +4295,18 @@ func (p *ModelConfig) GetIdentification() (v string) {
 	return *p.Identification
 }
 
+var ModelConfig_PresetModel_DEFAULT bool
+
+func (p *ModelConfig) GetPresetModel() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPresetModel() {
+		return ModelConfig_PresetModel_DEFAULT
+	}
+	return *p.PresetModel
+}
+
 var ModelConfig_JSONExt_DEFAULT string
 
 func (p *ModelConfig) GetJSONExt() (v string) {
@@ -4326,6 +4339,9 @@ func (p *ModelConfig) SetProtocol(val *manage.Protocol) {
 func (p *ModelConfig) SetIdentification(val *string) {
 	p.Identification = val
 }
+func (p *ModelConfig) SetPresetModel(val *bool) {
+	p.PresetModel = val
+}
 func (p *ModelConfig) SetJSONExt(val *string) {
 	p.JSONExt = val
 }
@@ -4338,6 +4354,7 @@ var fieldIDToName_ModelConfig = map[int16]string{
 	5:  "top_p",
 	6:  "protocol",
 	7:  "identification",
+	8:  "preset_model",
 	50: "json_ext",
 }
 
@@ -4367,6 +4384,10 @@ func (p *ModelConfig) IsSetProtocol() bool {
 
 func (p *ModelConfig) IsSetIdentification() bool {
 	return p.Identification != nil
+}
+
+func (p *ModelConfig) IsSetPresetModel() bool {
+	return p.PresetModel != nil
 }
 
 func (p *ModelConfig) IsSetJSONExt() bool {
@@ -4442,6 +4463,14 @@ func (p *ModelConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4561,6 +4590,17 @@ func (p *ModelConfig) ReadField7(iprot thrift.TProtocol) error {
 	p.Identification = _field
 	return nil
 }
+func (p *ModelConfig) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PresetModel = _field
+	return nil
+}
 func (p *ModelConfig) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -4605,6 +4645,10 @@ func (p *ModelConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -4755,6 +4799,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *ModelConfig) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPresetModel() {
+		if err = oprot.WriteFieldBegin("preset_model", thrift.BOOL, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.PresetModel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 func (p *ModelConfig) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetJSONExt() {
 		if err = oprot.WriteFieldBegin("json_ext", thrift.STRING, 50); err != nil {
@@ -4807,6 +4869,9 @@ func (p *ModelConfig) DeepEqual(ano *ModelConfig) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.Identification) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.PresetModel) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.JSONExt) {
@@ -4895,6 +4960,18 @@ func (p *ModelConfig) Field7DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Identification, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ModelConfig) Field8DeepEqual(src *bool) bool {
+
+	if p.PresetModel == src {
+		return true
+	} else if p.PresetModel == nil || src == nil {
+		return false
+	}
+	if *p.PresetModel != *src {
 		return false
 	}
 	return true

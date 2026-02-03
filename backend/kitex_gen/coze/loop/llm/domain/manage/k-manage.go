@@ -254,6 +254,34 @@ func (p *Model) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 16:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField16(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 17:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField17(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField100(buf[offset:])
@@ -557,6 +585,34 @@ func (p *Model) FastReadField15(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Model) FastReadField16(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OriginalModelURL = _field
+	return offset, nil
+}
+
+func (p *Model) FastReadField17(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PresetModel = _field
+	return offset, nil
+}
+
 func (p *Model) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -622,6 +678,7 @@ func (p *Model) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField17(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -637,6 +694,7 @@ func (p *Model) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
+		offset += p.fastWriteField16(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField102(buf[offset:], w)
 	}
@@ -662,6 +720,8 @@ func (p *Model) BLength() int {
 		l += p.field13Length()
 		l += p.field14Length()
 		l += p.field15Length()
+		l += p.field16Length()
+		l += p.field17Length()
 		l += p.field100Length()
 		l += p.field101Length()
 		l += p.field102Length()
@@ -817,6 +877,24 @@ func (p *Model) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetStatus() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 15)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Status)
+	}
+	return offset
+}
+
+func (p *Model) fastWriteField16(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOriginalModelURL() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 16)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OriginalModelURL)
+	}
+	return offset
+}
+
+func (p *Model) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPresetModel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 17)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.PresetModel)
 	}
 	return offset
 }
@@ -1002,6 +1080,24 @@ func (p *Model) field15Length() int {
 	return l
 }
 
+func (p *Model) field16Length() int {
+	l := 0
+	if p.IsSetOriginalModelURL() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.OriginalModelURL)
+	}
+	return l
+}
+
+func (p *Model) field17Length() int {
+	l := 0
+	if p.IsSetPresetModel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *Model) field100Length() int {
 	l := 0
 	if p.IsSetCreatedBy() {
@@ -1168,6 +1264,19 @@ func (p *Model) DeepCopy(s interface{}) error {
 	if src.Status != nil {
 		tmp := *src.Status
 		p.Status = &tmp
+	}
+
+	if src.OriginalModelURL != nil {
+		var tmp string
+		if *src.OriginalModelURL != "" {
+			tmp = kutils.StringDeepCopy(*src.OriginalModelURL)
+		}
+		p.OriginalModelURL = &tmp
+	}
+
+	if src.PresetModel != nil {
+		tmp := *src.PresetModel
+		p.PresetModel = &tmp
 	}
 
 	if src.CreatedBy != nil {

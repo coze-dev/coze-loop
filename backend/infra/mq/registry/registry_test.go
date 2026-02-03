@@ -106,6 +106,69 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 	}
 }
 
+func TestDefaultConsumerRegistry_StopAll(t *testing.T) {
+	t.Run("no consumers", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		registry := NewConsumerRegistry(factory)
+		err := registry.StopAll(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("successfully stop all consumers", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		workers := []mq.IConsumerWorker{
+			mocks.NewMockIConsumerWorker(ctrl),
+			mocks.NewMockIConsumerWorker(ctrl),
+		}
+		consumers := []*mocks.MockIConsumer{
+			mocks.NewMockIConsumer(ctrl),
+			mocks.NewMockIConsumer(ctrl),
+		}
+		cfg := &mq.ConsumerConfig{}
+		for i := range workers {
+			workers[i].(*mocks.MockIConsumerWorker).EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+			factory.EXPECT().NewConsumer(gomock.Any()).Return(consumers[i], nil)
+			consumers[i].EXPECT().RegisterHandler(gomock.Any())
+			consumers[i].EXPECT().Start().Return(nil)
+		}
+		registry := NewConsumerRegistry(factory).Register(workers)
+		err := registry.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		// StopAll 按逆序关闭，先关 consumers[1] 再关 consumers[0]
+		consumers[1].EXPECT().Close().Return(nil)
+		consumers[0].EXPECT().Close().Return(nil)
+		err = registry.StopAll(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("context cancelled during stop", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		worker := mocks.NewMockIConsumerWorker(ctrl)
+		consumer := mocks.NewMockIConsumer(ctrl)
+		cfg := &mq.ConsumerConfig{}
+		worker.EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+		factory.EXPECT().NewConsumer(gomock.Any()).Return(consumer, nil)
+		consumer.EXPECT().RegisterHandler(gomock.Any())
+		consumer.EXPECT().Start().Return(nil)
+		registry := NewConsumerRegistry(factory).Register([]mq.IConsumerWorker{worker})
+		err := registry.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err = registry.StopAll(ctx)
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, context.Canceled))
+	})
+}
+
 func TestSafeConsumerHandlerDecorator_HandleMessage(t *testing.T) {
 	tests := []struct {
 		name          string

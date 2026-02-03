@@ -363,6 +363,7 @@ func ExportRecordDO2DTO(from *entity.ExptResultExportRecord) *domain_expt.ExptRe
 			},
 		},
 		URL:     from.URL,
+		URL_:    from.URL,
 		Expired: ptr.Of(from.Expired),
 	}
 

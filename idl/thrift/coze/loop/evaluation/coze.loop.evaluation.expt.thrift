@@ -260,7 +260,7 @@ struct BatchGetExperimentAggrResultRequest {
 }
 
 struct BatchGetExperimentAggrResultResponse {
-    1: optional list<expt.ExptAggregateResult> expt_aggregate_results (api.body = 'expt_aggregate_result')
+    1: optional list<expt.ExptAggregateResult> expt_aggregate_result (api.body = 'expt_aggregate_result')
 
     255: base.BaseResp BaseResp
 }
@@ -470,7 +470,7 @@ struct ListExperimentTemplatesResponse {
 
 struct CheckExperimentTemplateNameRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    2: required string name (api.body='name', api.js_conv='true', go.tag='json:"name"')
+    2: required string name (api.body='name')
     3: optional i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
 
     255: optional base.Base Base
@@ -604,7 +604,7 @@ struct GetExptResultExportRecordRequest {
 }
 
 struct GetExptResultExportRecordResponse {
-    1: optional expt.ExptResultExportRecord expt_result_export_record (api.body = "expt_result_export_records")
+    1: optional expt.ExptResultExportRecord expt_result_export_records (api.body = "expt_result_export_records")
 
     255: base.BaseResp BaseResp
 }
@@ -819,12 +819,26 @@ service ExperimentService {
     GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
 
     // 实验模板
-    CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates')
-    BatchGetExperimentTemplateResponse BatchGetExperimentTemplate(1: BatchGetExperimentTemplateRequest req) (api.post = '/api/evaluation/v1/experiment_templates/batch_get')
-    UpdateExperimentTemplateMetaResponse UpdateExperimentTemplateMeta(1: UpdateExperimentTemplateMetaRequest req) (api.post = '/api/evaluation/v1/experiment_templates/update_meta')
-    UpdateExperimentTemplateResponse UpdateExperimentTemplate(1: UpdateExperimentTemplateRequest req) (api.patch = '/api/evaluation/v1/experiment_templates/:template_id') // 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置）
-    DeleteExperimentTemplateResponse DeleteExperimentTemplate(1: DeleteExperimentTemplateRequest req) (api.delete = '/api/evaluation/v1/experiment_templates/:template_id')
-    ListExperimentTemplatesResponse ListExperimentTemplates(1: ListExperimentTemplatesRequest req) (api.post = '/api/evaluation/v1/experiment_templates/list')
-    CheckExperimentTemplateNameResponse CheckExperimentTemplateName(1: CheckExperimentTemplateNameRequest req) (api.post = '/api/evaluation/v1/experiment_templates/check_name')
+    CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (
+        api.post = '/api/evaluation/v1/experiment_templates', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+    BatchGetExperimentTemplateResponse BatchGetExperimentTemplate(1: BatchGetExperimentTemplateRequest req) (
+        api.post = '/api/evaluation/v1/experiment_templates/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+    UpdateExperimentTemplateMetaResponse UpdateExperimentTemplateMeta(1: UpdateExperimentTemplateMetaRequest req) (
+        api.post = '/api/evaluation/v1/experiment_templates/update_meta', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+    UpdateExperimentTemplateResponse UpdateExperimentTemplate(1: UpdateExperimentTemplateRequest req) (
+        api.patch = '/api/evaluation/v1/experiment_templates/:template_id', api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    ) // 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置）
+    DeleteExperimentTemplateResponse DeleteExperimentTemplate(1: DeleteExperimentTemplateRequest req) (
+        api.delete = '/api/evaluation/v1/experiment_templates/:template_id', api.op_type = 'delete', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+    ListExperimentTemplatesResponse ListExperimentTemplates(1: ListExperimentTemplatesRequest req) (
+        api.post = '/api/evaluation/v1/experiment_templates/list', api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
+    CheckExperimentTemplateNameResponse CheckExperimentTemplateName(1: CheckExperimentTemplateNameRequest req) (
+        api.post = '/api/evaluation/v1/experiment_templates/check_name', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
 }
 

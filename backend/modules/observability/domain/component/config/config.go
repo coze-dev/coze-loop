@@ -114,8 +114,13 @@ type ConsumerListening struct {
 }
 
 type MetricQueryConfig struct {
-	SupportOffline       bool `mapstructure:"support_offline" json:"support_offline"`
-	OfflineCriticalPoint int  `mapstructure:"offline_critical_point" json:"offline_critical_point"`
+	SupportOffline       bool                    `mapstructure:"support_offline" json:"support_offline"`
+	OfflineCriticalPoint int                     `mapstructure:"offline_critical_point" json:"offline_critical_point"`
+	SpaceConfigs         map[string]*SpaceConfig `mapstructure:"space_configs" json:"space_configs"`
+}
+
+type SpaceConfig struct {
+	DisableQuery bool `mapstructure:"disable_query" json:"disable_query"`
 }
 
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig

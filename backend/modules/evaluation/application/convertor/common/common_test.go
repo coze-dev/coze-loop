@@ -1146,7 +1146,7 @@ func TestConvertModelConfigDTO2DO(t *testing.T) {
 				TopP:        gptr.Of(0.9),
 			},
 			expected: &commonentity.ModelConfig{
-				ModelID:     123,
+				ModelID:     gptr.Of(int64(123)),
 				ModelName:   "gpt-4",
 				Temperature: gptr.Of(0.7),
 				MaxTokens:   gptr.Of(int32(2048)),
@@ -1159,7 +1159,7 @@ func TestConvertModelConfigDTO2DO(t *testing.T) {
 				ModelID: gptr.Of(int64(456)),
 			},
 			expected: &commonentity.ModelConfig{
-				ModelID: 456,
+				ModelID: gptr.Of(int64(456)),
 			},
 		},
 	}
@@ -1189,7 +1189,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "complete model config with model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:     123,
+				ModelID:     gptr.Of(int64(123)),
 				ModelName:   "gpt-4",
 				Temperature: gptr.Of(0.7),
 				MaxTokens:   gptr.Of(int32(2048)),
@@ -1206,7 +1206,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "model config with provider model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:         0,
+				ModelID:         gptr.Of(int64(0)),
 				ProviderModelID: gptr.Of("456"),
 				ModelName:       "claude-3",
 				Temperature:     gptr.Of(0.5),
@@ -1220,7 +1220,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "model config with invalid provider model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:         0,
+				ModelID:         gptr.Of(int64(0)),
 				ProviderModelID: gptr.Of("invalid"),
 				ModelName:       "claude-3",
 			},

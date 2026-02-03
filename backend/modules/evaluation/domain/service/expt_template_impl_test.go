@@ -501,11 +501,13 @@ func TestExptTemplateManagerImpl_Update_WithCreateEvalTarget(t *testing.T) {
 					pev.SetID(101)
 					pev.SetEvaluatorID(1)
 					pev.SetVersion("v1")
-					evaluators = append(evaluators, &entity.Evaluator{
+					ev := &entity.Evaluator{
 						ID:                     1,
 						EvaluatorType:          entity.EvaluatorTypePrompt,
 						PromptEvaluatorVersion: pev,
-					})
+					}
+					ev.SetSpaceID(spaceID) // 设置 SpaceID 以通过 workspace 校验
+					evaluators = append(evaluators, ev)
 				}
 			}
 			return evaluators, nil
@@ -983,6 +985,7 @@ func TestExptTemplateManagerImpl_resolveAndFillEvaluatorVersionIDs_Normal(t *tes
 	}
 	ev.PromptEvaluatorVersion.SetID(101)
 	ev.PromptEvaluatorVersion.SetVersion("v1")
+	ev.SetSpaceID(spaceID) // 设置 SpaceID 以通过 workspace 校验
 
 	normalPairs := [][2]interface{}{
 		{int64(1), "v1"},
