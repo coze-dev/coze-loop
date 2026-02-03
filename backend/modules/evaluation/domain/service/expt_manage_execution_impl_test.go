@@ -22,6 +22,7 @@ import (
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -503,6 +504,9 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 					AnyTimes()
 				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
+				mgr.userProvider.(*rpcmocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},

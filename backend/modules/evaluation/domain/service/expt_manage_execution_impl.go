@@ -589,7 +589,6 @@ func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Exp
 }
 
 func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
-
 	logs.CtxInfo(ctx, "sendExptNotify, expt: %v", expt)
 
 	param := map[string]string{

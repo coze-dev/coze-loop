@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 
 	"go.uber.org/mock/gomock"
 
@@ -59,6 +60,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		templateRepo:                repoMocks.NewMockIExptTemplateRepo(ctrl),
 		templateManager:             svcMocks.NewMockIExptTemplateManager(ctrl),
 		notifyRPCAdapter:            mocks.NewMockINotifyRPCAdapter(ctrl),
+		userProvider:                rpcmocks.NewMockIUserProvider(ctrl),
 	}
 }
 
