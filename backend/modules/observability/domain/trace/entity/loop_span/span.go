@@ -285,7 +285,6 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		logs.CtxWarn(ctx, "fail to marshal new input, err:%v", err)
 		return
 	}
-	logs.CtxInfo(ctx, "New input: %v", string(newInput))
 	s.Input = string(newInput)
 }
 

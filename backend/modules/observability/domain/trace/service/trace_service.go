@@ -661,7 +661,7 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Got span from redis: %v", tconv.ToJSONString(ctx, spanIDsInfo))
+	logs.CtxInfo(ctx, "Got span from redis info: %v", tconv.ToJSONString(ctx, spanIDsInfo))
 	// Step 3: Collect all unique span IDs to query
 	allSpanIDs := r.collectAllSpanIDs(spanIDsInfo, req.Items)
 	// Step 4: Batch query all spans from ClickHouse
@@ -675,43 +675,49 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Processed spans: %+v", tconv.ToJSONString(ctx, processedSpans))
-
 	// Step 6: Build span map for quick lookup
 	allSpanMap := r.buildSpanMap(processedSpans)
 
 	// Step 7: Process each item individually (auth check, ordering)
 	results := r.processEachItem(ctx, req, tenants, spanIDsInfo, allSpanMap)
-	logs.CtxInfo(ctx, "ListPreSpanBatchResp: %+v", tconv.ToJSONString(ctx, results))
 	return &ListPreSpanBatchResp{Results: results}, nil
 }
 
 // batchGetPreSpanIDsFromRedis fetches pre span IDs from Redis for all items
+// Returns a map keyed by SpanID (not PreviousResponseID) to handle multiple spans sharing the same PreviousResponseID
 func (r *TraceServiceImpl) batchGetPreSpanIDsFromRedis(
 	ctx context.Context,
 	items []*ListPreSpanItem,
 ) (map[string]*preSpanIDsInfo, error) {
 	result := make(map[string]*preSpanIDsInfo, len(items))
+	preRespIDCache := make(map[string]*preSpanIDsInfo)
 
 	for _, item := range items {
 		if item.PreviousResponseID == "" {
 			continue
 		}
 
-		preAndCurrentSpanIDs, respIDByOrder, err := r.traceRepo.GetPreSpanIDs(ctx, &repo.GetPreSpanIDsParam{
+		if cached, ok := preRespIDCache[item.PreviousResponseID]; ok {
+			result[item.SpanID] = &preSpanIDsInfo{
+				PreSpanIDs:    cached.PreSpanIDs,
+				RespIDByOrder: cached.RespIDByOrder,
+			}
+			continue
+		}
+
+		preSpanIDs, respIDByOrder, err := r.traceRepo.GetPreSpanIDs(ctx, &repo.GetPreSpanIDsParam{
 			PreRespID: item.PreviousResponseID,
 		})
 		if err != nil {
 			return nil, err
 		}
 
-		// Add current span ID for querying together
-		preAndCurrentSpanIDs = append(preAndCurrentSpanIDs, item.SpanID)
-
-		result[item.PreviousResponseID] = &preSpanIDsInfo{
-			spanIDs:       preAndCurrentSpanIDs,
-			respIDByOrder: respIDByOrder,
+		info := &preSpanIDsInfo{
+			PreSpanIDs:    preSpanIDs,
+			RespIDByOrder: respIDByOrder,
 		}
+		preRespIDCache[item.PreviousResponseID] = info
+		result[item.SpanID] = info
 	}
 
 	return result, nil
@@ -724,12 +730,18 @@ func (r *TraceServiceImpl) collectAllSpanIDs(
 ) []string {
 	spanIDSet := make(map[string]struct{})
 
-	// Add span IDs from Redis results
+	// Add current span IDs from items
+	for _, item := range items {
+		spanIDSet[item.SpanID] = struct{}{}
+	}
+
+	// Add pre span IDs from Redis results
 	for _, info := range spanIDsInfo {
-		for _, spanID := range info.spanIDs {
+		for _, spanID := range info.PreSpanIDs {
 			spanIDSet[spanID] = struct{}{}
 		}
 	}
+
 	allSpanIDs := make([]string, 0, len(spanIDSet))
 	for spanID := range spanIDSet {
 		allSpanIDs = append(allSpanIDs, spanID)
@@ -793,21 +805,25 @@ func (r *TraceServiceImpl) processEachItem(
 			PreviousResponseID: item.PreviousResponseID,
 		}
 
-		// Get span IDs info for this item
-		info, exists := spanIDsInfo[item.PreviousResponseID]
+		// Get span IDs info for this item (now keyed by SpanID)
+		info, exists := spanIDsInfo[item.SpanID]
 		if !exists {
 			result.Error = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
-				errorx.WithExtraMsg("previous_response_id not found in redis"))
+				errorx.WithExtraMsg("span_id not found in redis lookup"))
 			results = append(results, result)
 			continue
 		}
 
-		// Collect spans for this item
-		preAndCurrentSpans := make([]*loop_span.Span, 0, len(info.spanIDs))
-		for _, spanID := range info.spanIDs {
+		// Collect pre spans + current span for this item
+		// Note: current span is needed for checkGetPreSpanAuth, but will be filtered out by orderPreSpans
+		preAndCurrentSpans := make([]*loop_span.Span, 0, len(info.PreSpanIDs)+1)
+		for _, spanID := range info.PreSpanIDs {
 			if span, ok := spanMap[spanID]; ok {
 				preAndCurrentSpans = append(preAndCurrentSpans, span)
 			}
+		}
+		if currentSpan, ok := spanMap[item.SpanID]; ok {
+			preAndCurrentSpans = append(preAndCurrentSpans, currentSpan)
 		}
 
 		// Auth check
@@ -827,7 +843,7 @@ func (r *TraceServiceImpl) processEachItem(
 		}
 
 		// Order spans
-		orderSpans := r.orderPreSpans(preAndCurrentSpans, info.respIDByOrder)
+		orderSpans := r.orderPreSpans(preAndCurrentSpans, info.RespIDByOrder)
 		result.Spans = orderSpans
 
 		results = append(results, result)
@@ -836,10 +852,10 @@ func (r *TraceServiceImpl) processEachItem(
 	return results
 }
 
-// preSpanIDsInfo holds the span IDs and their order for a single previous_response_id
+// preSpanIDsInfo holds the pre span IDs and their order for a single previous_response_id
 type preSpanIDsInfo struct {
-	spanIDs       []string
-	respIDByOrder []string
+	PreSpanIDs    []string
+	RespIDByOrder []string
 }
 
 func (r *TraceServiceImpl) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
