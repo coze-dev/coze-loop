@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/templates"
@@ -374,15 +376,16 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 		result["content_type"] = string(entity.ContentTypeText) // 默认为Text
 	}
 
-	// 设置具体内容
-	if content.Text != nil {
+	switch gptr.Indirect(content.ContentType) {
+	case entity.ContentTypeText:
 		result["text"] = *content.Text
-	} else if content.Image != nil {
+	case entity.ContentTypeImage:
 		result["image"] = content.Image
-	} else if content.Audio != nil {
+	case entity.ContentTypeAudio:
 		result["audio"] = content.Audio
-	} else if len(content.MultiPart) > 0 {
-		// 对于MultiPart内容，递归转换每个部分
+	case entity.ContentTypeVideo:
+		result["video"] = content.Video
+	case entity.ContentTypeMultipart:
 		multiPartData := make([]map[string]interface{}, 0, len(content.MultiPart))
 		for _, part := range content.MultiPart {
 			if partData := b.convertContentToMockFormat(part); partData != nil {
