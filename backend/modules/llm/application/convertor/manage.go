@@ -46,6 +46,7 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 		ScenarioConfigs:  ScenarioConfigMapDO2DTO(model.ScenarioConfigs),
 		ParamConfig:      ParamConfigDO2DTO(model.ParamConfig),
 		OriginalModelURL: ptr.Of(model.OriginalModelURL),
+		PresetModel:      ptr.Of(model.PresetModel),
 	}
 	if gvalue.IsNotZero(model.CreatedAt) {
 		resp.CreatedAt = gptr.Of(model.CreatedAt)

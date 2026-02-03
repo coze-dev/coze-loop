@@ -31,6 +31,7 @@ type Model struct {
 	Tags             []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`                                           //模型标签
 	Status           ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"`                                     // 模型状态
 	OriginalModelURL string                       `json:"original_model_url" yaml:"original_model_url" mapstructure:"original_model_url"` // 模型跳转链接
+	PresetModel      bool                         `json:"preset_model" yaml:"preset_model" mapstructure:"preset_model"`                   // 是否为预置模型
 
 	CreatedBy string `json:"created_by" yaml:"created_by" mapstructure:"created_by"` // 创建人
 	CreatedAt int64  `json:"created_at" yaml:"created_at" mapstructure:"created_at"` // 创建时间
