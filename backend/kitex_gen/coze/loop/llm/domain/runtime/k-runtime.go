@@ -216,6 +216,20 @@ func (p *ModelConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 13:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField13(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField100(buf[offset:])
@@ -444,6 +458,20 @@ func (p *ModelConfig) FastReadField12(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ModelConfig) FastReadField13(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PresetModel = _field
+	return offset, nil
+}
+
 func (p *ModelConfig) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -497,6 +525,7 @@ func (p *ModelConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
@@ -524,6 +553,7 @@ func (p *ModelConfig) BLength() int {
 		l += p.field10Length()
 		l += p.field11Length()
 		l += p.field12Length()
+		l += p.field13Length()
 		l += p.field100Length()
 		l += p.field101Length()
 	}
@@ -640,6 +670,15 @@ func (p *ModelConfig) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetProtocol() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 12)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Protocol)
+	}
+	return offset
+}
+
+func (p *ModelConfig) fastWriteField13(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPresetModel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 13)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.PresetModel)
 	}
 	return offset
 }
@@ -779,6 +818,15 @@ func (p *ModelConfig) field12Length() int {
 	return l
 }
 
+func (p *ModelConfig) field13Length() int {
+	l := 0
+	if p.IsSetPresetModel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ModelConfig) field100Length() int {
 	l := 0
 	if p.IsSetParamConfigValues() {
@@ -875,6 +923,11 @@ func (p *ModelConfig) DeepCopy(s interface{}) error {
 	if src.Protocol != nil {
 		tmp := *src.Protocol
 		p.Protocol = &tmp
+	}
+
+	if src.PresetModel != nil {
+		tmp := *src.PresetModel
+		p.PresetModel = &tmp
 	}
 
 	if src.ParamConfigValues != nil {
