@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
@@ -23,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/tracehub"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	tracerepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/consts"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -327,6 +329,7 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 		if loopSpan != nil {
 			loopSpan.StartTime = loopSpan.StartTime / 1000
 			loopSpan.Annotations = append(loopSpan.Annotations, annotations...)
+			t.ensurePreviousResponseID(ctx, loopSpan)
 			if err := t.tracehubSvc.SpanTrigger(ctx, loopSpan); err != nil {
 				logs.CtxError(ctx, "SpanTrigger err:%v", err)
 				// span trigger 失败，不处理
@@ -336,6 +339,30 @@ func (t *TaskApplication) SpanTrigger(ctx context.Context, rawSpan *entity.RawSp
 	}
 
 	return nil
+}
+
+func (t *TaskApplication) ensurePreviousResponseID(ctx context.Context, span *loop_span.Span) {
+	if span.SpanType != loop_span.SpanTypeModel {
+		return
+	}
+	if span.SystemTagsString == nil {
+		span.SystemTagsString = make(map[string]string)
+	}
+	if _, ok := span.SystemTagsString[consts.KeyPreviousResponseID]; ok {
+		return
+	}
+	if span.Input == "" {
+		return
+	}
+	var inputMap map[string]interface{}
+	if err := sonic.UnmarshalString(span.Input, &inputMap); err != nil {
+		logs.CtxWarn(ctx, "fail to unmarshal input for previous_response_id extraction: %v", err)
+		return
+	}
+	if prevRespID, ok := inputMap[consts.KeyPreviousResponseID].(string); ok && prevRespID != "" {
+		span.SystemTagsString[consts.KeyPreviousResponseID] = prevRespID
+		logs.CtxInfo(ctx, "extracted previous_response_id from input: %s", prevRespID)
+	}
 }
 
 func (t *TaskApplication) AutoEvalCallback(ctx context.Context, event *entity.AutoEvalEvent) error {
