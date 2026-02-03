@@ -236,15 +236,6 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		return
 	}
 	logs.CtxInfo(ctx, "start to merge history context")
-	// current span messages
-	var currentMessages []interface{}
-	if msgs, ok := currentInputMap["messages"].([]interface{}); ok {
-		currentMessages = msgs
-	} else if msgs, ok := normalizeMessages(currentInputMap["input"], "user", "message"); ok {
-		currentMessages = msgs
-	} else {
-		return
-	}
 
 	var historyMessages []interface{}
 	for _, preSpan := range historySpans {
@@ -278,7 +269,14 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		return
 	}
 
-	currentInputMap["messages"] = append(historyMessages, currentMessages...)
+	// fill into current span input map
+	if msgs, ok := currentInputMap["messages"].([]interface{}); ok {
+		currentInputMap["messages"] = append(historyMessages, msgs...)
+	} else if msgs, ok := normalizeMessages(currentInputMap["input"], "user", "message"); ok {
+		currentInputMap["input"] = append(historyMessages, msgs...)
+	} else {
+		return
+	}
 
 	newInput, err := sonic.Marshal(currentInputMap)
 	if err != nil {
