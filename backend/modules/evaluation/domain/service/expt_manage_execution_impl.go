@@ -607,8 +607,6 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	} else {
 		param["end_time"] = "-"
 	}
-	cardID := consts.ExptEventNotifyCardID
-
 	switch expt.Status {
 	case entity.ExptStatus_Success:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
@@ -619,9 +617,6 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-		// TODO
-		param[consts.ExptEventNotifyTerminatedUser] = ""
-		cardID = consts.ExptEventNotifyTerminatedCardID
 	case entity.ExptStatus_Pending:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
@@ -637,7 +632,7 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	if len(userInfos) != 1 || userInfos[0] == nil {
 		return nil
 	}
-
+	cardID := consts.ExptEventNotifyCardID
 	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
 }
 

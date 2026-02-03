@@ -40,8 +40,7 @@ const (
 const (
 	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
 
-	ExptEventNotifyCardID           = "AAqvJsfSSLQtN"
-	ExptEventNotifyTerminatedCardID = "AAq2fx2rVilOw"
+	ExptEventNotifyCardID = "AAqvJsfSSLQtN"
 
 	ExptEventNotifyTitle           = "title"
 	ExptEventNotifyTitleSuccess    = "已成功执行"
@@ -55,7 +54,8 @@ const (
 	ExptEventNotifyTitleColorTerminated = "orange"
 	ExptEventNotifyTitleColorStarting   = "yellow"
 
-	ExptEventNotifyTerminatedUser = "terminated_user"
+	ExptEventNotifyTerminatedCardID = "AAq2fx2rVilOw"
+	ExptEventNotifyTerminatedUser   = "terminated_user"
 )
 
 const (
