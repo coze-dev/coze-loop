@@ -378,7 +378,7 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 
 	switch gptr.Indirect(content.ContentType) {
 	case entity.ContentTypeText:
-		result["text"] = *content.Text
+		result["text"] = gptr.Indirect(content.Text)
 	case entity.ContentTypeImage:
 		result["image"] = content.Image
 	case entity.ContentTypeAudio:
@@ -393,6 +393,8 @@ func (b *PythonCodeBuilder) convertContentToMockFormat(content *entity.Content) 
 			}
 		}
 		result["multi_part"] = multiPartData
+	default:
+		result["text"] = gptr.Indirect(content.Text)
 	}
 
 	return result
