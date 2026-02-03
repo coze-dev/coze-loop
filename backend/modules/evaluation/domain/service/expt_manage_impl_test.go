@@ -980,7 +980,7 @@ func TestNewExptManager(t *testing.T) {
 	mockTemplateRepo := repoMocks.NewMockIExptTemplateRepo(ctrl)
 	mockTemplateManager := svcMocks.NewMockIExptTemplateManager(ctrl)
 	mockNotify := mocks.NewMockINotifyRPCAdapter(ctrl)
-
+	mockUser := mocks.NewMockIUserProvider(ctrl)
 	mgr := NewExptManager(
 		mockExptResultService,
 		mockExptRepo,
@@ -1006,6 +1006,7 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateRepo,
 		mockTemplateManager,
 		mockNotify,
+		mockUser,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)
