@@ -502,7 +502,7 @@ func (r *TraceServiceImpl) ListPreSpan(ctx context.Context, req *ListPreSpanReq)
 	}
 
 	// order SpanList: remove duplicate span_id, and remove current span
-	orderSpans := r.orderPreSpans(preAndCurrentSpans, respIDByOrder)
+	orderSpans := r.orderPreSpans(ctx, preAndCurrentSpans, respIDByOrder)
 
 	return &ListPreSpanResp{Spans: orderSpans}, nil
 }
@@ -626,11 +626,14 @@ func (r *TraceServiceImpl) checkGetPreSpanAuth(ctx context.Context, req *ListPre
 	return nil
 }
 
-func (r *TraceServiceImpl) orderPreSpans(preAndCurrentSpans []*loop_span.Span, respIDByOrder []string) loop_span.SpanList {
+func (r *TraceServiceImpl) orderPreSpans(ctx context.Context, preAndCurrentSpans []*loop_span.Span, respIDByOrder []string) loop_span.SpanList {
 	respIDSpanMap := make(map[string]*loop_span.Span)
 	for _, span := range preAndCurrentSpans {
 		if respID, ok := span.SystemTagsString[keyResponseID]; ok {
+			logs.CtxInfo(ctx, "response id: %v", respID)
 			respIDSpanMap[respID] = span
+		} else {
+			logs.CtxInfo(ctx, "No key response id")
 		}
 	}
 	orderSpans := make(loop_span.SpanList, 0, len(respIDByOrder))
@@ -812,6 +815,7 @@ func (r *TraceServiceImpl) processEachItem(
 		if !exists {
 			result.Error = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode,
 				errorx.WithExtraMsg("span_id not found in redis lookup"))
+			logs.CtxWarn(ctx, "Span id not found in redis lookup: %v", item.SpanID)
 			results = append(results, result)
 			continue
 		}
@@ -840,12 +844,13 @@ func (r *TraceServiceImpl) processEachItem(
 		}
 		if err := r.checkGetPreSpanAuth(ctx, itemReq, tenants, preAndCurrentSpans); err != nil {
 			result.Error = err
+			logs.CtxWarn(ctx, "CheckGetPreSpanAuth failed: %v", err)
 			results = append(results, result)
 			continue
 		}
 
 		// Order spans
-		orderSpans := r.orderPreSpans(preAndCurrentSpans, info.RespIDByOrder)
+		orderSpans := r.orderPreSpans(ctx, preAndCurrentSpans, info.RespIDByOrder)
 		result.Spans = orderSpans
 
 		results = append(results, result)
@@ -1243,7 +1248,7 @@ func (r *TraceServiceImpl) ListPreSpanOApi(ctx context.Context, req *ListPreSpan
 	}
 
 	// order SpanList: remove duplicate span_id, and remove current span
-	orderSpans := r.orderPreSpans(preAndCurrentSpans, respIDByOrder)
+	orderSpans := r.orderPreSpans(ctx, preAndCurrentSpans, respIDByOrder)
 
 	return &ListPreSpanOApiResp{
 		Spans: orderSpans,
