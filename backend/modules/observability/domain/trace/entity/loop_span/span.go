@@ -235,6 +235,16 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		logs.CtxWarn(ctx, "fail to trans input %s into map", s.Input)
 		return
 	}
+
+	if s.SystemTagsString == nil {
+		s.SystemTagsString = make(map[string]string)
+	}
+	// 同一个 span 命中多个 subscriber 幂等
+	if s.SystemTagsString["_history_merged"] == "true" {
+		logs.CtxInfo(ctx, "history context already merged, skip")
+		return
+	}
+
 	logs.CtxInfo(ctx, "start to merge history context")
 
 	var historyMessages []interface{}
@@ -284,6 +294,7 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 		return
 	}
 	s.Input = string(newInput)
+	s.SystemTagsString["_history_merged"] = "true"
 }
 
 func (s *Span) getTags() []*Tag {
