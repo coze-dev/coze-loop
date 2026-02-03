@@ -661,7 +661,7 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Got span from redis: %v", spanIDsInfo)
+	logs.CtxInfo(ctx, "Got span from redis: %v", tconv.ToJSONString(ctx, spanIDsInfo))
 	// Step 3: Collect all unique span IDs to query
 	allSpanIDs := r.collectAllSpanIDs(spanIDsInfo, req.Items)
 	// Step 4: Batch query all spans from ClickHouse
@@ -675,13 +675,14 @@ func (r *TraceServiceImpl) ListPreSpanBatch(ctx context.Context, req *ListPreSpa
 	if err != nil {
 		return nil, err
 	}
+	logs.CtxInfo(ctx, "Processed spans: %+v", processedSpans)
 
 	// Step 6: Build span map for quick lookup
 	allSpanMap := r.buildSpanMap(processedSpans)
 
 	// Step 7: Process each item individually (auth check, ordering)
 	results := r.processEachItem(ctx, req, tenants, spanIDsInfo, allSpanMap)
-
+	logs.CtxInfo(ctx, "ListPreSpanBatchResp: %+v", results)
 	return &ListPreSpanBatchResp{Results: results}, nil
 }
 
@@ -747,7 +748,7 @@ func (r *TraceServiceImpl) applyProcessors(
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
 		QueryStartTime: req.StartTime - timeutil.Day2MillSec(30), // past 30 days
-		QueryEndTime:   req.StartTime,
+		QueryEndTime:   req.EndTime,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
