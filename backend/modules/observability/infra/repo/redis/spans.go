@@ -60,6 +60,7 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 		if spanID != "" {
 			preSpanIDs = append(preSpanIDs, spanID) // do not need order, only for select from db
 		}
+		// 时间升序
 		respIDByOrder = append([]string{preRespID}, respIDByOrder...) // need order, for order SpanList
 		preRespID = redisValue.PreviousResponseID
 
@@ -68,6 +69,5 @@ func (s SpansRedisDaoImpl) GetPreSpans(ctx context.Context, respID string) (span
 			break
 		}
 	}
-
 	return preSpanIDs, respIDByOrder, nil
 }

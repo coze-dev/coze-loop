@@ -166,7 +166,10 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 	if err := r.clearDataset(ctx, datasetID, req); err != nil {
 		return resp, err
 	}
-
+	err = r.traceService.MergeHistoryMessagesByRespIDBatch(ctx, spans, req.PlatformType)
+	if err != nil {
+		return resp, err
+	}
 	successItems, errorGroups, err := r.addToDataset(ctx, spans, req.FieldMappings, req.WorkspaceID, dataset, trajectoryMap)
 	if err != nil {
 		return resp, err
@@ -204,12 +207,18 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 		return resp, err
 	}
 
+	err = r.traceService.MergeHistoryMessagesByRespIDBatch(ctx, spans, req.PlatformType)
+	if err != nil {
+		return resp, err
+	}
+
 	successItems, failedItems, allItems := r.buildDatasetItems(ctx, spans, req.FieldMappings, req.WorkspaceID, dataset, nil)
 
 	var ignoreCurrentCount *bool
 	if !req.Config.IsNewDataset && req.ExportType == ExportType_Overwrite {
 		ignoreCurrentCount = lo.ToPtr(true)
 	}
+
 	addSuccess, errorGroups, err := r.getDatasetProvider(dataset.DatasetCategory).ValidateDatasetItems(ctx, dataset, successItems, ignoreCurrentCount)
 	if err != nil {
 		return resp, err

@@ -87,7 +87,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_Success(t *testing.T) {
 	resp, err := r.ListPreSpanOApi(context.Background(), req)
 	assert.NoError(t, err)
 	if assert.NotNil(t, resp) {
-		// 顺序应按 respIDByOrder：resp-2 在前、resp-1 在后
+		// 顺序应按 RespIDByOrder：resp-2 在前、resp-1 在后
 		got := make([]string, 0, len(resp.Spans))
 		for _, s := range resp.Spans {
 			got = append(got, s.SpanID)
