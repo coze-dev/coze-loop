@@ -5837,6 +5837,25 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 
 		err := r.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, loop_span.PlatformCozeLoop)
 		assert.NoError(t, err)
-		// assert.Equal(t, `{"messages":[{"role":"system","content":"hist_in"},{"role":"assistant","content":"hist_out"},{"role":"user","content":"cur"}]}`, span.Input)
+
+		var inputMap map[string]interface{}
+		err = json.Unmarshal([]byte(span.Input), &inputMap)
+		assert.NoError(t, err)
+
+		msgs, ok := inputMap["messages"].([]interface{})
+		assert.True(t, ok)
+		assert.Equal(t, 3, len(msgs))
+
+		msg0, _ := msgs[0].(map[string]interface{})
+		assert.Equal(t, "system", msg0["role"])
+		assert.Equal(t, "hist_in", msg0["content"])
+
+		msg1, _ := msgs[1].(map[string]interface{})
+		assert.Equal(t, "assistant", msg1["role"])
+		assert.Equal(t, "hist_out", msg1["content"])
+
+		msg2, _ := msgs[2].(map[string]interface{})
+		assert.Equal(t, "user", msg2["role"])
+		assert.Equal(t, "cur", msg2["content"])
 	})
 }
