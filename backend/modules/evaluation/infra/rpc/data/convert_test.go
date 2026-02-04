@@ -918,3 +918,214 @@ func TestToSchemaKey(t *testing.T) {
 		})
 	}
 }
+
+func TestConvert2DatasetMultiModalSpec(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		input    *entity.MultiModalSpec
+		expected *dataset.MultiModalSpec
+	}{
+		{
+			name:     "nil_input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "normal_case",
+			input: &entity.MultiModalSpec{
+				MaxFileCount:     10,
+				MaxFileSize:      1024,
+				SupportedFormats: []string{"jpg", "png"},
+				MaxPartCount:     5,
+				MaxFileSizeByType: map[entity.ContentType]int64{
+					entity.ContentTypeImage: 512,
+				},
+				SupportedFormatsByType: map[entity.ContentType][]string{
+					entity.ContentTypeImage: {"jpg", "png"},
+				},
+			},
+			expected: &dataset.MultiModalSpec{
+				MaxFileCount:     gptr.Of(int64(10)),
+				MaxFileSize:      gptr.Of(int64(1024)),
+				SupportedFormats: []string{"jpg", "png"},
+				MaxPartCount:     gptr.Of(int32(5)),
+				MaxFileSizeByType: map[dataset.ContentType]int64{
+					dataset.ContentType_Image: 512,
+				},
+				SupportedFormatsByType: map[dataset.ContentType][]string{
+					dataset.ContentType_Image: {"jpg", "png"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convert2DatasetMultiModalSpec(ctx, tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestConvert2EvaluationSetMultiModalSpec(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		input    *dataset.MultiModalSpec
+		expected *entity.MultiModalSpec
+	}{
+		{
+			name:     "nil_input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "normal_case",
+			input: &dataset.MultiModalSpec{
+				MaxFileCount:     gptr.Of(int64(5)),
+				MaxFileSize:      gptr.Of(int64(2048)),
+				SupportedFormats: []string{"mp4", "mov"},
+				MaxPartCount:     gptr.Of(int32(3)),
+				MaxFileSizeByType: map[dataset.ContentType]int64{
+					dataset.ContentType_Video: 1024,
+				},
+				SupportedFormatsByType: map[dataset.ContentType][]string{
+					dataset.ContentType_Video: {"mp4", "mov"},
+				},
+			},
+			expected: &entity.MultiModalSpec{
+				MaxFileCount:     5,
+				MaxFileSize:      2048,
+				SupportedFormats: []string{"mp4", "mov"},
+				MaxPartCount:     3,
+				MaxFileSizeByType: map[entity.ContentType]int64{
+					entity.ContentTypeVideo: 1024,
+				},
+				SupportedFormatsByType: map[entity.ContentType][]string{
+					entity.ContentTypeVideo: {"mp4", "mov"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convert2EvaluationSetMultiModalSpec(ctx, tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestConvertObjectStorageToVideo(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name     string
+		input    []*dataset.ObjectStorage
+		expected *entity.Video
+	}{
+		{
+			name:     "nil_attachments",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:     "empty_attachments",
+			input:    []*dataset.ObjectStorage{},
+			expected: nil,
+		},
+		{
+			name: "valid_video_attachment",
+			input: []*dataset.ObjectStorage{
+				{
+					Name:     gptr.Of("test.mp4"),
+					URL:      gptr.Of("https://example.com/test.mp4"),
+					URI:      gptr.Of("tos://bucket/test.mp4"),
+					ThumbURL: gptr.Of("https://example.com/thumb.jpg"),
+					Provider: gptr.Of(dataset.StorageProvider_TOS),
+				},
+			},
+			expected: &entity.Video{
+				Name:            gptr.Of("test.mp4"),
+				URL:             gptr.Of("https://example.com/test.mp4"),
+				URI:             gptr.Of("tos://bucket/test.mp4"),
+				ThumbURL:        gptr.Of("https://example.com/thumb.jpg"),
+				StorageProvider: gptr.Of(entity.StorageProvider_TOS),
+			},
+		},
+		{
+			name: "case_insensitive_extension",
+			input: []*dataset.ObjectStorage{
+				{
+					Name: gptr.Of("MOVIE.AVI"),
+					URL:  gptr.Of("https://example.com/movie.avi"),
+				},
+			},
+			expected: &entity.Video{
+				Name: gptr.Of("MOVIE.AVI"),
+				URL:  gptr.Of("https://example.com/movie.avi"),
+			},
+		},
+		{
+			name: "invalid_extension",
+			input: []*dataset.ObjectStorage{
+				{
+					Name: gptr.Of("notes.txt"),
+					URL:  gptr.Of("https://example.com/notes.txt"),
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "mixed_attachments",
+			input: []*dataset.ObjectStorage{
+				{
+					Name: gptr.Of("image.jpg"),
+					URL:  gptr.Of("https://example.com/image.jpg"),
+				},
+				{
+					Name: gptr.Of("video.mp4"),
+					URL:  gptr.Of("https://example.com/video.mp4"),
+				},
+			},
+			expected: &entity.Video{
+				Name: gptr.Of("video.mp4"),
+				URL:  gptr.Of("https://example.com/video.mp4"),
+			},
+		},
+		{
+			name: "nil_and_valid_attachments",
+			input: []*dataset.ObjectStorage{
+				nil,
+				{
+					Name: gptr.Of("valid.mp4"),
+					URL:  gptr.Of("https://example.com/valid.mp4"),
+				},
+			},
+			expected: &entity.Video{
+				Name: gptr.Of("valid.mp4"),
+				URL:  gptr.Of("https://example.com/valid.mp4"),
+			},
+		},
+		{
+			name: "attachment_with_nil_name",
+			input: []*dataset.ObjectStorage{
+				{
+					Name: nil,
+					URL:  gptr.Of("https://example.com/no-name"),
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convertObjectStorageToVideo(ctx, tt.input)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
