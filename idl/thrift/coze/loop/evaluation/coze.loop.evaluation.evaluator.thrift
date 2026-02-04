@@ -531,10 +531,10 @@ service EvaluatorService {
         api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/run", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
     )// evaluator 运行
     DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (
-        api.post="/api/evaluation/v1/evaluators/debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+        api.post="/api/evaluation/v1/evaluators/debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
     )// evaluator 调试
     BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (
-        api.post="/api/evaluation/v1/evaluators/batch_debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+        api.post="/api/evaluation/v1/evaluators/batch_debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
     )// evaluator 调试
 
     // 评估器执行结果
