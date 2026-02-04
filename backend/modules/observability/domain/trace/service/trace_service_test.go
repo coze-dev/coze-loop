@@ -5005,6 +5005,253 @@ func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "span_id not found in redis lookup - should return per item error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return([]string{"tenant1"}, nil)
+
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), gomock.Any()).
+					Return(nil, nil, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{Spans: []*loop_span.Span{}}, nil).
+					AnyTimes()
+
+				return fields{
+					traceRepo:      mockRepo,
+					buildHelper:    mockBuilder,
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "prev-resp-1",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-1",
+						PreviousResponseID: "prev-resp-1",
+						Error:              errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth check failed - previous_response_id mismatch should return per item error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return([]string{"tenant1"}, nil)
+
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{
+						PreRespID: "prev-resp-1",
+					}).
+					Return([]string{"span-0"}, []string{"resp-0"}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-1",
+									keyPreviousResponseID: "wrong-prev-resp",
+								},
+							},
+						},
+					}, nil).
+					AnyTimes()
+
+				return fields{
+					traceRepo:      mockRepo,
+					buildHelper:    mockBuilder,
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "prev-resp-1",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-1",
+						PreviousResponseID: "prev-resp-1",
+						Error:              errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "multiple items with same previous_response_id - should hit local cache",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
+				mockFilterFactory := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockBuilder := NewTraceFilterProcessorBuilder(mockFilterFactory, nil, nil, nil, nil, nil, nil)
+
+				mockTenantProvider.EXPECT().
+					GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return([]string{"tenant1"}, nil)
+
+				mockRepo.EXPECT().
+					GetPreSpanIDs(gomock.Any(), &repo.GetPreSpanIDsParam{
+						PreRespID: "shared-prev-resp",
+					}).
+					Return([]string{"span-0"}, []string{"resp-0"}, nil).
+					Times(1)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-1",
+									keyPreviousResponseID: "shared-prev-resp",
+								},
+							},
+							{
+								SpanID:      "span-2",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID:         "resp-2",
+									keyPreviousResponseID: "shared-prev-resp",
+								},
+							},
+						},
+					}, nil).
+					AnyTimes()
+
+				return fields{
+					traceRepo:      mockRepo,
+					buildHelper:    mockBuilder,
+					tenantProvider: mockTenantProvider,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListPreSpanBatchReq{
+					WorkspaceID: 1,
+					StartTime:   time.Now().UnixMilli(),
+					Items: []*ListPreSpanItem{
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-1",
+							PreviousResponseID: "shared-prev-resp",
+						},
+						{
+							TraceID:            "trace-1",
+							SpanID:             "span-2",
+							PreviousResponseID: "shared-prev-resp",
+						},
+					},
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			want: &ListPreSpanBatchResp{
+				Results: []*ListPreSpanResult{
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-1",
+						PreviousResponseID: "shared-prev-resp",
+						Spans: loop_span.SpanList{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+						},
+						Error: nil,
+					},
+					{
+						TraceID:            "trace-1",
+						SpanID:             "span-2",
+						PreviousResponseID: "shared-prev-resp",
+						Spans: loop_span.SpanList{
+							{
+								SpanID:      "span-0",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+								SystemTagsString: map[string]string{
+									keyResponseID: "resp-0",
+								},
+							},
+						},
+						Error: nil,
+					},
+				},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
