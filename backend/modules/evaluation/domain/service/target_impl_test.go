@@ -1139,6 +1139,28 @@ func TestToTraceParts(t *testing.T) {
 			wantLen: 1,
 		},
 		{
+			name: "audio",
+			content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeAudio),
+				Audio: &entity.Audio{
+					Name: gptr.Of("img"),
+					URL:  gptr.Of("http://img"),
+				},
+			},
+			wantLen: 1,
+		},
+		{
+			name: "video",
+			content: &entity.Content{
+				ContentType: gptr.Of(entity.ContentTypeVideo),
+				Video: &entity.Video{
+					Name: gptr.Of("img"),
+					URL:  gptr.Of("http://img"),
+				},
+			},
+			wantLen: 1,
+		},
+		{
 			name: "multipart",
 			content: &entity.Content{
 				ContentType: &multipartType,
