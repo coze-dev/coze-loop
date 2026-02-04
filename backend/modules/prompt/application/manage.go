@@ -535,12 +535,6 @@ func (app *PromptManageApplicationImpl) SaveDraft(ctx context.Context, request *
 	savingPromptDTO.PromptDraft.DraftInfo.UserID = ptr.Of(userID)
 	savingPromptDO := convertor.PromptDTO2DO(savingPromptDTO)
 
-	// 审核
-	err = app.auditRPCProvider.AuditPrompt(ctx, savingPromptDO)
-	if err != nil {
-		return r, err
-	}
-
 	// save draft
 	draftInfoDO, err := app.promptService.SaveDraft(ctx, savingPromptDO)
 	if err != nil {
@@ -567,7 +561,9 @@ func (app *PromptManageApplicationImpl) CommitDraft(ctx context.Context, request
 
 	// prompt
 	getPromptParam := repo.GetPromptParam{
-		PromptID: request.GetPromptID(),
+		PromptID:  request.GetPromptID(),
+		UserID:    userID,
+		WithDraft: true,
 	}
 	promptDO, err := app.manageRepo.GetPrompt(ctx, getPromptParam)
 	if err != nil {
@@ -576,6 +572,12 @@ func (app *PromptManageApplicationImpl) CommitDraft(ctx context.Context, request
 
 	// 权限
 	err = app.authRPCProvider.MCheckPromptPermission(ctx, promptDO.SpaceID, []int64{request.GetPromptID()}, consts.ActionLoopPromptEdit)
+	if err != nil {
+		return r, err
+	}
+
+	// 审核
+	err = app.auditRPCProvider.AuditPrompt(ctx, promptDO)
 	if err != nil {
 		return r, err
 	}
