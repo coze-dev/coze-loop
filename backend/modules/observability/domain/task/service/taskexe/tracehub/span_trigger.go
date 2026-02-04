@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"time"
 
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
-
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -21,7 +19,6 @@ import (
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-	logs.CtxInfo(ctx, "Start to trigger span: %v ", tconv.ToJSONString(ctx, span))
 	// 1. perform initial filtering based on space_id
 	// 1.1 Filter out spans that do not belong to any space or bot
 	cacheInfo := h.localCache.LoadTaskCache(ctx)
