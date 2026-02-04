@@ -2950,6 +2950,341 @@ func TestTraceServiceImpl_ListSpansOApi(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "list spans successfully with valid request",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockFilter := filtermocks.NewMockFilter(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(mockFilter, nil)
+
+				mockFilter.EXPECT().
+					BuildBasicSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, true, nil)
+
+				mockFilter.EXPECT().
+					BuildALLSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "123",
+								StartTime:   1640995200000,
+							},
+							{
+								SpanID:      "span-2",
+								TraceID:     "trace-1",
+								WorkspaceID: "123",
+								StartTime:   1640995300000,
+							},
+						},
+						PageToken: "next-token",
+						HasMore:   true,
+					}, nil)
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					traceRepo:   mockRepo,
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID: 123,
+					Tenants:     []string{"tenant1"},
+					StartTime:   1640995200000,
+					EndTime:     1640995800000,
+					Filters: &loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{
+							{
+								FieldName: "span_type",
+								FieldType: loop_span.FieldTypeString,
+								Values:    []string{"model"},
+								QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+							},
+						},
+					},
+					Limit:        100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &ListSpansOApiResp{
+				Spans: loop_span.SpanList{
+					{
+						SpanID:      "span-1",
+						TraceID:     "trace-1",
+						WorkspaceID: "123",
+						StartTime:   1640995200000,
+					},
+					{
+						SpanID:      "span-2",
+						TraceID:     "trace-1",
+						WorkspaceID: "123",
+						StartTime:   1640995300000,
+					},
+				},
+				NextPageToken: "next-token",
+				HasMore:       true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "list spans returns empty when builtin filter returns nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockFilter := filtermocks.NewMockFilter(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(mockFilter, nil)
+
+				mockFilter.EXPECT().
+					BuildBasicSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, false, nil)
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID:  123,
+					Tenants:      []string{"tenant1"},
+					StartTime:    1640995200000,
+					EndTime:      1640995800000,
+					Limit:        100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &ListSpansOApiResp{
+				Spans: loop_span.SpanList{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "list spans failed due to platform filter error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode))
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID:  123,
+					Tenants:      []string{"tenant1"},
+					StartTime:    1640995200000,
+					EndTime:      1640995800000,
+					Limit:        100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "list spans failed due to repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockFilter := filtermocks.NewMockFilter(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(mockFilter, nil)
+
+				mockFilter.EXPECT().
+					BuildBasicSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, true, nil)
+
+				mockFilter.EXPECT().
+					BuildALLSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(nil, errorx.NewByCode(obErrorx.CommercialCommonInternalErrorCodeCode))
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					traceRepo:   mockRepo,
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID:  123,
+					Tenants:      []string{"tenant1"},
+					StartTime:    1640995200000,
+					EndTime:      1640995800000,
+					Limit:        100,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "list spans with pagination",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockFilter := filtermocks.NewMockFilter(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(mockFilter, nil)
+
+				mockFilter.EXPECT().
+					BuildBasicSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, true, nil)
+
+				mockFilter.EXPECT().
+					BuildALLSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-3",
+								TraceID:     "trace-1",
+								WorkspaceID: "123",
+								StartTime:   1640995400000,
+							},
+						},
+						PageToken: "page-token-2",
+						HasMore:   false,
+					}, nil)
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					traceRepo:   mockRepo,
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID:     123,
+					Tenants:         []string{"tenant1"},
+					StartTime:       1640995200000,
+					EndTime:         1640995800000,
+					Limit:           10,
+					DescByStartTime: true,
+					PageToken:       "page-token-1",
+					PlatformType:    loop_span.PlatformCozeLoop,
+					SpanListType:    loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &ListSpansOApiResp{
+				Spans: loop_span.SpanList{
+					{
+						SpanID:      "span-3",
+						TraceID:     "trace-1",
+						WorkspaceID: "123",
+						StartTime:   1640995400000,
+					},
+				},
+				NextPageToken: "page-token-2",
+				HasMore:       false,
+			},
+			wantErr: false,
+		},
+		{
+			name: "list spans with third party workspace id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockRepo := repomocks.NewMockITraceRepo(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				mockFilter := filtermocks.NewMockFilter(ctrl)
+
+				filterFactoryMock.EXPECT().
+					GetFilter(gomock.Any(), loop_span.PlatformCozeLoop).
+					Return(mockFilter, nil)
+
+				mockFilter.EXPECT().
+					BuildBasicSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, true, nil)
+
+				mockFilter.EXPECT().
+					BuildALLSpanFilter(gomock.Any(), gomock.Any()).
+					Return([]*loop_span.FilterField{}, nil)
+
+				mockRepo.EXPECT().
+					ListSpans(gomock.Any(), gomock.Any()).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "123",
+								StartTime:   1640995200000,
+							},
+						},
+						HasMore: false,
+					}, nil)
+
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+				return fields{
+					traceRepo:   mockRepo,
+					buildHelper: buildHelper,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansOApiReq{
+					WorkspaceID:           123,
+					ThirdPartyWorkspaceID: "third-party-ws-1",
+					Tenants:               []string{"tenant1"},
+					StartTime:             1640995200000,
+					EndTime:               1640995800000,
+					Limit:                 100,
+					PlatformType:          loop_span.PlatformCozeLoop,
+					SpanListType:          loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &ListSpansOApiResp{
+				Spans: loop_span.SpanList{
+					{
+						SpanID:      "span-1",
+						TraceID:     "trace-1",
+						WorkspaceID: "123",
+						StartTime:   1640995200000,
+					},
+				},
+				NextPageToken: "",
+				HasMore:       false,
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -5006,7 +5341,7 @@ func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "span_id not found in redis lookup - should return per item error",
+			name: "span_id not found in redis lookup - empty previous_response_id should return per item error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockRepo := repomocks.NewMockITraceRepo(ctrl)
 				mockTenantProvider := tenantmocks.NewMockITenantProvider(ctrl)
@@ -5018,12 +5353,16 @@ func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
 					Return([]string{"tenant1"}, nil)
 
 				mockRepo.EXPECT().
-					GetPreSpanIDs(gomock.Any(), gomock.Any()).
-					Return(nil, nil, nil)
-
-				mockRepo.EXPECT().
 					ListSpans(gomock.Any(), gomock.Any()).
-					Return(&repo.ListSpansResult{Spans: []*loop_span.Span{}}, nil).
+					Return(&repo.ListSpansResult{
+						Spans: []*loop_span.Span{
+							{
+								SpanID:      "span-1",
+								TraceID:     "trace-1",
+								WorkspaceID: "1",
+							},
+						},
+					}, nil).
 					AnyTimes()
 
 				return fields{
@@ -5041,7 +5380,7 @@ func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
 						{
 							TraceID:            "trace-1",
 							SpanID:             "span-1",
-							PreviousResponseID: "prev-resp-1",
+							PreviousResponseID: "",
 						},
 					},
 					PlatformType: loop_span.PlatformCozeLoop,
@@ -5052,7 +5391,7 @@ func TestTraceServiceImpl_ListPreSpanBatch(t *testing.T) {
 					{
 						TraceID:            "trace-1",
 						SpanID:             "span-1",
-						PreviousResponseID: "prev-resp-1",
+						PreviousResponseID: "",
 						Error:              errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode),
 					},
 				},
