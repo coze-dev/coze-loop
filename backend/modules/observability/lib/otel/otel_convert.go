@@ -26,7 +26,7 @@ import (
 // FieldConfMap Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
 // For AttributeKey and AttributeKeyPrefix, the field at the head has higher priority, and result will be returned once a match is found.
-// FOr Events, the fields have same priority, and result will be fixed by all fields.
+// For Events, the fields have same priority, and result will be fixed by all fields.
 // Other types of configurations need to be manually processed in the code.
 var (
 	FieldConfMap = map[string]FieldConf{
@@ -93,6 +93,7 @@ var (
 				springAIAttributeToolInput,
 				otelAttributeInput,
 				apmInput,
+				otelAttributeToolInput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelInputMessages,
@@ -121,6 +122,7 @@ var (
 				springAIAttributeToolOutput,
 				otelAttributeOutput,
 				apmOutput,
+				otelAttributeToolOutput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,

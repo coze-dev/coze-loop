@@ -86,6 +86,9 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				}
 				typ, _ := mcContent["type"]
 				text, _ := mcContent["text"]
+				if text == nil {
+					text, _ = mcContent["content"]
+				}
 				image, _ := mcContent["image_url"]
 				part := map[string]interface{}{}
 				switch typ {

@@ -101,6 +101,9 @@ const (
 // otel attribute key
 const (
 	otelAttributeModelInputTools = "gen_ai.tool.definitions" // model tools
+
+	otelAttributeToolInput  = "gen_ai.tool.call.arguments" // tool input
+	otelAttributeToolOutput = "gen_ai.tool.call.result"
 )
 
 var otelMessageEventNameMap = []string{
