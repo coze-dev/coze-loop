@@ -173,9 +173,14 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
 	proc := &stubProcessor{invokeErr: errors.New("invoke fail")}
 
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, traceService: mockTraceService}
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
 
 	now := time.Now()
 	sampler := &entity.Sampler{
@@ -202,12 +207,13 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 		RunEndAt:    now.Add(time.Minute),
 	}
 	sub := &spanSubscriber{
-		taskID:    1,
-		t:         taskDO,
-		tr:        taskRun,
-		processor: proc,
-		runType:   entity.TaskRunTypeNewData,
-		taskRepo:  mockRepo,
+		taskID:       1,
+		t:            taskDO,
+		tr:           taskRun,
+		processor:    proc,
+		traceService: mockTraceService,
+		runType:      entity.TaskRunTypeNewData,
+		taskRepo:     mockRepo,
 	}
 
 	spanRun := &entity.TaskRun{
@@ -310,12 +316,14 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:       mockTaskRepo,
 		traceRepo:      mockTraceRepo,
 		tenantProvider: mockTenant,
 		buildHelper:    mockBuilder,
+		traceService:   mockTraceService,
 	}
 
 	now := time.Now()
@@ -329,6 +337,10 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
 	mockBuilder.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil).Times(2)
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(2)
 
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
 		switch param.PageToken {
@@ -370,12 +382,14 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:       mockTaskRepo,
 		traceRepo:      mockTraceRepo,
 		tenantProvider: mockTenant,
 		buildHelper:    mockBuilder,
+		traceService:   mockTraceService,
 	}
 
 	now := time.Now()
@@ -390,6 +404,10 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	filterMock.EXPECT().BuildRootSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, nil)
 	mockBuilder.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor(nil), nil)
 	mockTenant.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).Return([]string{"tenant"}, nil)
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
 
 	mockTraceRepo.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
 		require.Equal(t, "tenant", param.Tenants[0])
@@ -470,7 +488,8 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo}
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo, traceService: mockTraceService}
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
@@ -480,6 +499,10 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
 	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(1)
 
 	// 调用flushSpans，然后手动调用OnTaskFinished来触发finish错误
 	err, _ := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)

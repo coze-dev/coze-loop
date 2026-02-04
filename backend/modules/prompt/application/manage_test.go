@@ -2479,7 +2479,6 @@ func TestPromptManageApplicationImpl_SaveDraft(t *testing.T) {
 	type fields struct {
 		manageRepo    repo.IManageRepo
 		authProvider  rpc.IAuthProvider
-		auditProvider rpc.IAuditProvider
 		promptService service.IPromptService
 	}
 	type args struct {
@@ -2527,14 +2526,12 @@ func TestPromptManageApplicationImpl_SaveDraft(t *testing.T) {
 				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 3}).Return(&entity.Prompt{ID: 3, SpaceID: 30}, nil)
 				auth := mocks.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(30), []int64{int64(3)}, consts.ActionLoopPromptEdit).Return(nil)
-				audit := mocks.NewMockIAuditProvider(ctrl)
-				audit.EXPECT().AuditPrompt(gomock.Any(), gomock.Any()).Return(nil)
 				promptSvc := servicemocks.NewMockIPromptService(ctrl)
 				promptSvc.EXPECT().SaveDraft(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, promptDO *entity.Prompt) (*entity.DraftInfo, error) {
 					assert.Equal(t, "user", promptDO.PromptDraft.DraftInfo.UserID)
 					return &entity.DraftInfo{UserID: "user", IsModified: true}, nil
 				})
-				return fields{manageRepo: repoMock, authProvider: auth, auditProvider: audit, promptService: promptSvc}
+				return fields{manageRepo: repoMock, authProvider: auth, promptService: promptSvc}
 			},
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
@@ -2559,10 +2556,9 @@ func TestPromptManageApplicationImpl_SaveDraft(t *testing.T) {
 
 			tFields := caseData.fieldsGetter(ctrl)
 			app := &PromptManageApplicationImpl{
-				manageRepo:       tFields.manageRepo,
-				authRPCProvider:  tFields.authProvider,
-				auditRPCProvider: tFields.auditProvider,
-				promptService:    tFields.promptService,
+				manageRepo:      tFields.manageRepo,
+				authRPCProvider: tFields.authProvider,
+				promptService:   tFields.promptService,
 			}
 
 			resp, err := app.SaveDraft(caseData.args.ctx, caseData.args.request)
@@ -2582,6 +2578,7 @@ func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 	type fields struct {
 		manageRepo    repo.IManageRepo
 		authProvider  rpc.IAuthProvider
+		auditProvider rpc.IAuditProvider
 		promptService service.IPromptService
 	}
 	type args struct {
@@ -2604,10 +2601,32 @@ func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 			wantErr: invalidVersionErr,
 		},
 		{
+			name: "audit error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 4, WithDraft: true, UserID: "user"}).Return(&entity.Prompt{ID: 4, SpaceID: 40}, nil)
+				auth := mocks.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(40), []int64{int64(4)}, consts.ActionLoopPromptEdit).Return(nil)
+				audit := mocks.NewMockIAuditProvider(ctrl)
+				audit.EXPECT().AuditPrompt(gomock.Any(), gomock.Any()).Return(errorx.New("audit error"))
+				return fields{manageRepo: repoMock, authProvider: auth, auditProvider: audit}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
+				request: &manage.CommitDraftRequest{
+					PromptID:          ptr.Of(int64(4)),
+					CommitVersion:     ptr.Of("1.0.0"),
+					CommitDescription: ptr.Of("desc"),
+					LabelKeys:         []string{"label"},
+				},
+			},
+			wantErr: errorx.New("audit error"),
+		},
+		{
 			name: "success",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockIManageRepo(ctrl)
-				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 4}).Return(&entity.Prompt{ID: 4, SpaceID: 40}, nil)
+				repoMock.EXPECT().GetPrompt(gomock.Any(), repo.GetPromptParam{PromptID: 4, WithDraft: true, UserID: "user"}).Return(&entity.Prompt{ID: 4, SpaceID: 40}, nil)
 				repoMock.EXPECT().CommitDraft(gomock.Any(), repo.CommitDraftParam{
 					PromptID:          4,
 					UserID:            "user",
@@ -2617,9 +2636,11 @@ func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 				}).Return(nil)
 				auth := mocks.NewMockIAuthProvider(ctrl)
 				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(40), []int64{int64(4)}, consts.ActionLoopPromptEdit).Return(nil)
+				audit := mocks.NewMockIAuditProvider(ctrl)
+				audit.EXPECT().AuditPrompt(gomock.Any(), gomock.Any()).Return(nil)
 				promptSvc := servicemocks.NewMockIPromptService(ctrl)
 				promptSvc.EXPECT().ValidateLabelsExist(gomock.Any(), int64(40), []string{"label"}).Return(nil)
-				return fields{manageRepo: repoMock, authProvider: auth, promptService: promptSvc}
+				return fields{manageRepo: repoMock, authProvider: auth, auditProvider: audit, promptService: promptSvc}
 			},
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
@@ -2643,9 +2664,10 @@ func TestPromptManageApplicationImpl_CommitDraft(t *testing.T) {
 
 			tFields := caseData.fieldsGetter(ctrl)
 			app := &PromptManageApplicationImpl{
-				manageRepo:      tFields.manageRepo,
-				authRPCProvider: tFields.authProvider,
-				promptService:   tFields.promptService,
+				manageRepo:       tFields.manageRepo,
+				authRPCProvider:  tFields.authProvider,
+				auditRPCProvider: tFields.auditProvider,
+				promptService:    tFields.promptService,
 			}
 
 			resp, err := app.CommitDraft(caseData.args.ctx, caseData.args.request)

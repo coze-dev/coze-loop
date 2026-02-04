@@ -411,6 +411,10 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		}
 
 		batch := spans[i:end]
+		err = h.traceService.MergeHistoryMessagesByRespIDBatch(ctx, spans, sub.t.GetPlatformType())
+		if err != nil {
+			return err, false
+		}
 		err, shouldFinish = h.processBatchSpans(ctx, batch, sub)
 		if err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
