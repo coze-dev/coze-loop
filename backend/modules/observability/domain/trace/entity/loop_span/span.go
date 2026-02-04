@@ -297,29 +297,6 @@ func (s *Span) IsModelSpan() bool {
 	return s.SpanType == SpanTypeModel
 }
 
-func (s *Span) EnsurePreviousResponseID(ctx context.Context) {
-	if !s.IsModelSpan() {
-		return
-	}
-	if s.SystemTagsString == nil {
-		s.SystemTagsString = make(map[string]string)
-	}
-	if _, ok := s.SystemTagsString[SpanFieldKeyPreviousResponseID]; ok {
-		return
-	}
-	if s.Input == "" {
-		return
-	}
-	var inputMap map[string]interface{}
-	if err := sonic.UnmarshalString(s.Input, &inputMap); err != nil {
-		return
-	}
-	if prevRespID, ok := inputMap[SpanFieldKeyPreviousResponseID].(string); ok && prevRespID != "" {
-		s.SystemTagsString[SpanFieldKeyPreviousResponseID] = prevRespID
-		logs.CtxInfo(ctx, "extracted previous_response_id from input: %s", prevRespID)
-	}
-}
-
 func (s *Span) getTags() []*Tag {
 	tags := make([]*Tag, 0)
 	for k, v := range s.TagsString {

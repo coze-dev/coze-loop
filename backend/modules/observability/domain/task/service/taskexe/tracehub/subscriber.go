@@ -213,7 +213,6 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	// New Data 在这里处理
 	// Back fill 在前置批量处理
 	if s.runType == entity.TaskRunTypeNewData {
-		span.EnsurePreviousResponseID(ctx)
 		err := s.traceService.MergeHistoryMessagesByRespIDBatch(ctx, []*loop_span.Span{span}, s.t.GetPlatformType())
 		if err != nil {
 			logs.CtxError(ctx, "merge history messages failed, task_id=%d, span_id=%s err: %v", s.t.ID, span.SpanID, err)
