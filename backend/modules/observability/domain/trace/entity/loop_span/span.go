@@ -12,8 +12,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/consts"
-
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
@@ -57,6 +55,8 @@ const (
 	SpanFieldUserID                  = "user_id"
 	SpanFieldPromptKey               = "prompt_key"
 	SpanFieldTenant                  = "tenant"
+	SpanFieldKeyPreviousResponseID   = "previous_response_id"
+	SpanFieldKeyResponseID           = "response_id"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"
@@ -210,7 +210,7 @@ func (s *Span) IsResponseAPISpan() bool {
 	if s.SystemTagsString == nil {
 		return false
 	}
-	v, ok := s.SystemTagsString[consts.KeyPreviousResponseID]
+	v, ok := s.SystemTagsString[SpanFieldKeyPreviousResponseID]
 	return ok && v != ""
 }
 
@@ -256,8 +256,6 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 					historyMessages = append(historyMessages, msgs...)
 				} else if msgs, ok := normalizeMessages(inputMap["input"], "user", "message"); ok {
 					historyMessages = append(historyMessages, msgs...)
-				} else {
-					logs.CtxWarn(ctx, "fail to fill input %s into input map", s.Input)
 				}
 			}
 		}
@@ -268,8 +266,6 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 					historyMessages = append(historyMessages, msgs...)
 				} else if msgs, ok := normalizeMessages(outputMap["output"], "assistant", "message"); ok {
 					historyMessages = append(historyMessages, msgs...)
-				} else {
-					logs.CtxWarn(ctx, "fail to fill output %s into output map", s.Output)
 				}
 			}
 		}
@@ -285,7 +281,7 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 	} else if msgs, ok := normalizeMessages(currentInputMap["input"], "user", "message"); ok {
 		currentInputMap["input"] = append(historyMessages, msgs...)
 	} else {
-		return
+		currentInputMap["input"] = historyMessages
 	}
 
 	newInput, err := sonic.Marshal(currentInputMap)
@@ -295,6 +291,33 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 	}
 	s.Input = string(newInput)
 	s.SystemTagsString["_history_merged"] = "true"
+}
+
+func (s *Span) IsModelSpan() bool {
+	return s.SpanType == SpanTypeModel
+}
+
+func (s *Span) EnsurePreviousResponseID(ctx context.Context) {
+	if !s.IsModelSpan() {
+		return
+	}
+	if s.SystemTagsString == nil {
+		s.SystemTagsString = make(map[string]string)
+	}
+	if _, ok := s.SystemTagsString[SpanFieldKeyPreviousResponseID]; ok {
+		return
+	}
+	if s.Input == "" {
+		return
+	}
+	var inputMap map[string]interface{}
+	if err := sonic.UnmarshalString(s.Input, &inputMap); err != nil {
+		return
+	}
+	if prevRespID, ok := inputMap[SpanFieldKeyPreviousResponseID].(string); ok && prevRespID != "" {
+		s.SystemTagsString[SpanFieldKeyPreviousResponseID] = prevRespID
+		logs.CtxInfo(ctx, "extracted previous_response_id from input: %s", prevRespID)
+	}
 }
 
 func (s *Span) getTags() []*Tag {

@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 
 	"github.com/stretchr/testify/assert"
@@ -497,7 +496,7 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 		span.MergeHistoryContext(ctx, history)
 		var m map[string]interface{}
 		_ = json.Unmarshal([]byte(span.Input), &m)
-		msgs, _ := m["messages"].([]interface{})
+		msgs, _ := m["input"].([]interface{})
 		assert.Equal(t, 3, len(msgs))
 		first, _ := msgs[0].(map[string]interface{})
 		second, _ := msgs[1].(map[string]interface{})
@@ -542,7 +541,7 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 		span.MergeHistoryContext(ctx, history)
 		var m map[string]interface{}
 		_ = json.Unmarshal([]byte(span.Input), &m)
-		msgs, _ := m["messages"].([]interface{})
+		msgs, _ := m["input"].([]interface{})
 		assert.Equal(t, 3, len(msgs))
 		first, _ := msgs[0].(map[string]interface{})
 		second, _ := msgs[1].(map[string]interface{})
@@ -555,24 +554,35 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 		assert.Equal(t, "cur_in", third["content"])
 	})
 
-	t.Run("empty current input string returns early", func(t *testing.T) {
-		orig := `{"input":""}`
-		span := &Span{Input: orig}
+	t.Run("empty current input string merges history to input", func(t *testing.T) {
+		span := &Span{Input: `{"input":""}`}
 		history := []*Span{
 			{Input: `{"input":"hist_in"}`},
 		}
 		span.MergeHistoryContext(ctx, history)
-		assert.Equal(t, orig, span.Input)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["input"].([]interface{})
+		assert.Equal(t, 1, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		assert.Equal(t, "user", first["role"])
+		assert.Equal(t, "hist_in", first["content"])
 	})
 
-	t.Run("no messages and no input returns early", func(t *testing.T) {
-		orig := `{"foo":"bar"}`
-		span := &Span{Input: orig}
+	t.Run("no messages and no input merges history to input", func(t *testing.T) {
+		span := &Span{Input: `{"foo":"bar"}`}
 		history := []*Span{
 			{Input: `{"messages":[{"role":"system","content":"h"}]}`},
 		}
 		span.MergeHistoryContext(ctx, history)
-		assert.Equal(t, orig, span.Input)
+		var m map[string]interface{}
+		_ = json.Unmarshal([]byte(span.Input), &m)
+		msgs, _ := m["input"].([]interface{})
+		assert.Equal(t, 1, len(msgs))
+		first, _ := msgs[0].(map[string]interface{})
+		assert.Equal(t, "system", first["role"])
+		assert.Equal(t, "h", first["content"])
+		assert.Equal(t, "bar", m["foo"])
 	})
 
 	t.Run("no history messages keeps input unchanged", func(t *testing.T) {
@@ -625,8 +635,8 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 			StartTime:   time.Now().UnixMicro(),
 			SpanType:    SpanTypeModel,
 			SystemTagsString: map[string]string{
-				consts.KeyPreviousResponseID: "prev",
-				SpanFieldTenant:              "tenant1",
+				SpanFieldKeyPreviousResponseID: "prev",
+				SpanFieldTenant:                "tenant1",
 			},
 		}
 		assert.True(t, span.IsResponseAPISpan())
@@ -636,7 +646,7 @@ func TestSpan_MergeHistoryContext(t *testing.T) {
 		assert.False(t, span2.IsResponseAPISpan())
 		span3 := &Span{SpanType: SpanTypeModel}
 		assert.False(t, span3.IsResponseAPISpan())
-		span4 := &Span{SpanType: SpanTypeModel, SystemTagsString: map[string]string{consts.KeyPreviousResponseID: ""}}
+		span4 := &Span{SpanType: SpanTypeModel, SystemTagsString: map[string]string{SpanFieldKeyPreviousResponseID: ""}}
 		assert.False(t, span4.IsResponseAPISpan())
 	})
 

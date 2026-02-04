@@ -874,7 +874,7 @@ type preSpanIDsInfo struct {
 
 func (r *TraceServiceImpl) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
 	spansWithRespID := gslice.Filter(spans, func(span *loop_span.Span) bool {
-		if span.SpanType != loop_span.SpanTypeModel {
+		if !span.IsModelSpan() {
 			return false
 		}
 		if span.SystemTagsString == nil {

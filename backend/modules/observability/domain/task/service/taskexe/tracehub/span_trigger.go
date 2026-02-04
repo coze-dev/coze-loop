@@ -6,8 +6,9 @@ package tracehub
 import (
 	"context"
 	"fmt"
-	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"time"
+
+	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
