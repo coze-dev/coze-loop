@@ -66,6 +66,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockFilter := span_filter_mocks.NewMockFilter(ctrl)
 	configLoader := config_mocks.NewMockITraceConfig(ctrl)
 	tenantProvider := tenant_mocks.NewMockITenantProvider(ctrl)
+	mockTraceService := trace_service_mocks.NewMockITraceService(ctrl)
 
 	now := time.Now()
 	workspaceID := int64(1)
@@ -119,6 +120,10 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 	mockFilter.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), gomock.Any()).Return(mockFilter, nil).AnyTimes()
 	tenantProvider.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformDefault, gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
 
 	spanRun := &entity.TaskRun{
 		ID:          201,
@@ -145,6 +150,7 @@ func TestTraceHubServiceImpl_SpanTriggerDispatchError(t *testing.T) {
 		localCache:     NewLocalCache(),
 		config:         configLoader,
 		tenantProvider: tenantProvider,
+		traceService:   mockTraceService,
 	}
 	impl.localCache.taskCache.Store("ObjListWithTask", TaskCacheInfo{WorkspaceIDs: []string{"space-1"}, Tasks: []*entity.ObservabilityTask{taskDO}})
 
