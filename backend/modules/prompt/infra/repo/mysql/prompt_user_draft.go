@@ -168,16 +168,17 @@ func (d *PromptUserDraftDAOImpl) Update(ctx context.Context, promptDraftPO *mode
 	q := query.Use(d.db.NewSession(ctx, opts...))
 	_, err = q.PromptUserDraft.WithContext(ctx).Where(q.PromptUserDraft.ID.Eq(promptDraftPO.ID)).
 		Updates(map[string]interface{}{
-			q.PromptUserDraft.Messages.ColumnName().String():       promptDraftPO.Messages,
-			q.PromptUserDraft.ModelConfig.ColumnName().String():    promptDraftPO.ModelConfig,
-			q.PromptUserDraft.BaseVersion.ColumnName().String():    promptDraftPO.BaseVersion,
-			q.PromptUserDraft.Tools.ColumnName().String():          promptDraftPO.Tools,
-			q.PromptUserDraft.ToolCallConfig.ColumnName().String(): promptDraftPO.ToolCallConfig,
-			q.PromptUserDraft.TemplateType.ColumnName().String():   promptDraftPO.TemplateType,
-			q.PromptUserDraft.VariableDefs.ColumnName().String():   promptDraftPO.VariableDefs,
-			q.PromptUserDraft.Metadata.ColumnName().String():       promptDraftPO.Metadata,
-			q.PromptUserDraft.IsDraftEdited.ColumnName().String():  promptDraftPO.IsDraftEdited,
-			q.PromptUserDraft.HasSnippets.ColumnName().String():    promptDraftPO.HasSnippets,
+			q.PromptUserDraft.Messages.ColumnName().String():        promptDraftPO.Messages,
+			q.PromptUserDraft.ModelConfig.ColumnName().String():     promptDraftPO.ModelConfig,
+			q.PromptUserDraft.BaseVersion.ColumnName().String():     promptDraftPO.BaseVersion,
+			q.PromptUserDraft.Tools.ColumnName().String():           promptDraftPO.Tools,
+			q.PromptUserDraft.ToolCallConfig.ColumnName().String():  promptDraftPO.ToolCallConfig,
+			q.PromptUserDraft.TemplateType.ColumnName().String():    promptDraftPO.TemplateType,
+			q.PromptUserDraft.VariableDefs.ColumnName().String():    promptDraftPO.VariableDefs,
+			q.PromptUserDraft.Metadata.ColumnName().String():        promptDraftPO.Metadata,
+			q.PromptUserDraft.IsDraftEdited.ColumnName().String():   promptDraftPO.IsDraftEdited,
+			q.PromptUserDraft.HasSnippets.ColumnName().String():     promptDraftPO.HasSnippets,
+			q.PromptUserDraft.EncryptMessages.ColumnName().String(): promptDraftPO.EncryptMessages,
 		})
 	if err != nil {
 		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
