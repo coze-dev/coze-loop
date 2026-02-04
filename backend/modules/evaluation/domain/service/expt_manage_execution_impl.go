@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -513,12 +514,26 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 		switch status {
 		case entity.ExptStatus_Terminated:
+			terminatedItemIDSet := make(map[int64]bool)
 			for _, chunk := range gslice.Chunk(incompleteTurnIDs, 30) {
 				if err := e.terminateItemTurns(ctx, exptID, chunk, spaceID, session); err != nil {
 					logs.CtxWarn(ctx, "terminateItemTurns fail, err: %v", err)
 					continue
 				}
+				// 收集被终止的 itemIDs
+				for _, itemTurnID := range chunk {
+					terminatedItemIDSet[itemTurnID.ItemID] = true
+				}
 				time.Sleep(time.Millisecond * 50)
+			}
+			// 在实验行状态更新完成后，更新 ExptTurnResultFilter
+			if len(terminatedItemIDSet) > 0 {
+				terminatedItemIDs := maps.ToSlice(terminatedItemIDSet, func(k int64, v bool) int64 {
+					return k
+				})
+				if err := e.exptResultService.UpsertExptTurnResultFilter(ctx, spaceID, exptID, terminatedItemIDs); err != nil {
+					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
+				}
 			}
 		default:
 		}
