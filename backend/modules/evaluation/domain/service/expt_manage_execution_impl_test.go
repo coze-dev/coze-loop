@@ -21,6 +21,7 @@ import (
 	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	eventsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -500,6 +501,11 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1406,6 +1412,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1468,6 +1479,25 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					}, int64(789), gomock.Any()).
 					Return(nil)
 
+				// Mock UpsertExptTurnResultFilter after terminateItemTurns
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().
+					UpsertExptTurnResultFilter(ctx, int64(789), int64(123), gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ int64, itemIDs []int64) error {
+						// Verify that itemIDs contains 10 and 20 (order may vary)
+						if len(itemIDs) != 2 {
+							return fmt.Errorf("expected 2 itemIDs, got %d", len(itemIDs))
+						}
+						itemIDSet := make(map[int64]bool)
+						for _, id := range itemIDs {
+							itemIDSet[id] = true
+						}
+						if !itemIDSet[10] || !itemIDSet[20] {
+							return fmt.Errorf("expected itemIDs [10, 20], got %v", itemIDs)
+						}
+						return nil
+					})
+
 				// Mock stats update
 				mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
 					EXPECT().
@@ -1497,6 +1527,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1567,6 +1602,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1636,6 +1676,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1710,6 +1755,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+					{UserID: gptr.Of("test_user")},
+				}, nil)
 			},
 			wantErr: false,
 		},

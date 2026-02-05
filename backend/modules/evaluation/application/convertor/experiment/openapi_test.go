@@ -865,3 +865,189 @@ func TestOpenAPIScoreDistributionDO2DTO(t *testing.T) {
 		assert.Len(t, convertedWithNil.ScoreDistributionItems, 2)
 	}
 }
+
+func TestOpenAPIEvalTargetDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	// Case 1: nil input
+	assert.Nil(t, OpenAPIEvalTargetDO2DTO(nil))
+
+	// Case 2: valid input with version and base info
+	targetDO := &entity.EvalTarget{
+		ID:             1,
+		SourceTargetID: "2",
+		EvalTargetType: entity.EvalTargetTypeCozeBot,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  10,
+			TargetID:            1,
+			SourceTargetVersion: "v1",
+			InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("input")}},
+			OutputSchema:        []*entity.ArgsSchema{{Key: gptr.Of("output")}},
+			BaseInfo:            &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")}},
+		},
+		BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")}},
+	}
+
+	got := OpenAPIEvalTargetDO2DTO(targetDO)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, targetDO.ID, gptr.Indirect(got.ID))
+		assert.Equal(t, targetDO.SourceTargetID, gptr.Indirect(got.SourceTargetID))
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCozeBot, gptr.Indirect(got.EvalTargetType))
+		if assert.NotNil(t, got.EvalTargetVersion) {
+			assert.Equal(t, targetDO.EvalTargetVersion.ID, gptr.Indirect(got.EvalTargetVersion.ID))
+			assert.Equal(t, targetDO.EvalTargetVersion.TargetID, gptr.Indirect(got.EvalTargetVersion.TargetID))
+			assert.Equal(t, targetDO.EvalTargetVersion.SourceTargetVersion, gptr.Indirect(got.EvalTargetVersion.SourceTargetVersion))
+			if assert.NotNil(t, got.EvalTargetVersion.EvalTargetContent) {
+				assert.Len(t, got.EvalTargetVersion.EvalTargetContent.InputSchemas, 1)
+				assert.Len(t, got.EvalTargetVersion.EvalTargetContent.OutputSchemas, 1)
+			}
+		}
+		if assert.NotNil(t, got.BaseInfo) {
+			assert.Equal(t, "user1", got.BaseInfo.CreatedBy.GetUserID())
+		}
+	}
+
+	// Case 3: input with Prompt type
+	promptTargetDO := &entity.EvalTarget{
+		ID:             3,
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID: 30,
+			Prompt: &entity.LoopPrompt{
+				PromptID:     300,
+				Version:      "v3",
+				Name:         "prompt-3",
+				PromptKey:    "key-3",
+				SubmitStatus: entity.SubmitStatus_Submitted,
+				Description:  "desc-3",
+			},
+		},
+	}
+
+	gotPrompt := OpenAPIEvalTargetDO2DTO(promptTargetDO)
+	if assert.NotNil(t, gotPrompt) {
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCozeLoopPrompt, gptr.Indirect(gotPrompt.EvalTargetType))
+		if assert.NotNil(t, gotPrompt.EvalTargetVersion) && assert.NotNil(t, gotPrompt.EvalTargetVersion.EvalTargetContent) {
+			promptDTO := gotPrompt.EvalTargetVersion.EvalTargetContent.Prompt
+			if assert.NotNil(t, promptDTO) {
+				assert.Equal(t, int64(300), gptr.Indirect(promptDTO.PromptID))
+				assert.Equal(t, "v3", gptr.Indirect(promptDTO.Version))
+				assert.Equal(t, openapiEvalTarget.SubmitStatusSubmitted, gptr.Indirect(promptDTO.SubmitStatus))
+			}
+		}
+	}
+
+	// Case 4: input with CustomRPCServer type
+	rpcTargetDO := &entity.EvalTarget{
+		ID:             4,
+		EvalTargetType: entity.EvalTargetTypeCustomRPCServer,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID: 40,
+			CustomRPCServer: &entity.CustomRPCServer{
+				ID:             400,
+				ServerName:     "rpc-server",
+				AccessProtocol: entity.AccessProtocolRPC,
+				Regions:        []entity.Region{entity.RegionCN},
+			},
+		},
+	}
+
+	gotRPC := OpenAPIEvalTargetDO2DTO(rpcTargetDO)
+	if assert.NotNil(t, gotRPC) {
+		assert.Equal(t, openapiEvalTarget.EvalTargetTypeCustomRPCServer, gptr.Indirect(gotRPC.EvalTargetType))
+		if assert.NotNil(t, gotRPC.EvalTargetVersion) && assert.NotNil(t, gotRPC.EvalTargetVersion.EvalTargetContent) {
+			rpcDTO := gotRPC.EvalTargetVersion.EvalTargetContent.CustomRPCServer
+			if assert.NotNil(t, rpcDTO) {
+				assert.Equal(t, int64(400), gptr.Indirect(rpcDTO.ID))
+				assert.Equal(t, "rpc-server", gptr.Indirect(rpcDTO.ServerName))
+				assert.Equal(t, openapiEvalTarget.AccessProtocolRPC, gptr.Indirect(rpcDTO.AccessProtocol))
+			}
+		}
+	}
+}
+
+func TestMapEntitySubmitStatusToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		input  entity.SubmitStatus
+		expect openapiEvalTarget.SubmitStatus
+	}{
+		{"unsubmit", entity.SubmitStatus_UnSubmit, openapiEvalTarget.SubmitStatusUnSubmit},
+		{"submitted", entity.SubmitStatus_Submitted, openapiEvalTarget.SubmitStatusSubmitted},
+		{"unknown", entity.SubmitStatus(999), ""},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got := mapEntitySubmitStatusToOpenAPI(tt.input)
+			assert.Equal(t, tt.expect, got)
+		})
+	}
+}
+
+func TestConvertEntityEvalTargetTypeToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		input  entity.EvalTargetType
+		expect openapiEvalTarget.EvalTargetType
+	}{
+		{"coze_bot", entity.EvalTargetTypeCozeBot, openapiEvalTarget.EvalTargetTypeCozeBot},
+		{"loop_prompt", entity.EvalTargetTypeLoopPrompt, openapiEvalTarget.EvalTargetTypeCozeLoopPrompt},
+		{"loop_trace", entity.EvalTargetTypeLoopTrace, openapiEvalTarget.EvalTargetTypeTrace},
+		{"workflow", entity.EvalTargetTypeCozeWorkflow, openapiEvalTarget.EvalTargetTypeCozeWorkflow},
+		{"volcengine", entity.EvalTargetTypeVolcengineAgent, openapiEvalTarget.EvalTargetTypeVolcengineAgent},
+		{"rpc_server", entity.EvalTargetTypeCustomRPCServer, openapiEvalTarget.EvalTargetTypeCustomRPCServer},
+		{"unknown", entity.EvalTargetType(999), ""},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got := convertEntityEvalTargetTypeToOpenAPI(tt.input)
+			assert.Equal(t, tt.expect, got)
+		})
+	}
+}
+
+func TestOpenAPIHTTPInfoDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIHTTPInfoDO2DTO(nil))
+
+	do := &entity.HTTPInfo{
+		Method: "POST",
+		Path:   "/api/v1/invoke",
+	}
+
+	got := OpenAPIHTTPInfoDO2DTO(do)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "POST", got.GetMethod())
+		assert.Equal(t, "/api/v1/invoke", got.GetPath())
+	}
+}
+
+func TestOpenAPICustomEvalTargetDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPICustomEvalTargetDO2DTO(nil))
+
+	do := &entity.CustomEvalTarget{
+		ID:        gptr.Of("123"),
+		Name:      gptr.Of("custom-target"),
+		AvatarURL: gptr.Of("http://avatar.url"),
+		Ext:       map[string]string{"foo": "bar"},
+	}
+
+	got := OpenAPICustomEvalTargetDO2DTO(do)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "123", got.GetID())
+		assert.Equal(t, "custom-target", got.GetName())
+		assert.Equal(t, "http://avatar.url", got.GetAvatarURL())
+		assert.Equal(t, map[string]string{"foo": "bar"}, got.GetExt())
+	}
+}

@@ -67,12 +67,14 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 		modelMsg["reasoning_content"] = c
 	}
 
-	// contents
+	// contents or parts
 	var contents []interface{}
-	if c, ok := msg["contents"].([]interface{}); ok && len(c) > 0 {
-		contents = c
-	} else if c, ok := msg["content"].([]interface{}); ok && len(c) > 0 {
-		contents = c
+	partsKey := []string{"contents", "content", "parts"}
+	for _, key := range partsKey {
+		if parts, ok := msg[key].([]interface{}); ok && len(parts) > 0 {
+			contents = parts
+			break
+		}
 	}
 	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
@@ -84,6 +86,9 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				}
 				typ, _ := mcContent["type"]
 				text, _ := mcContent["text"]
+				if text == nil {
+					text, _ = mcContent["content"]
+				}
 				image, _ := mcContent["image_url"]
 				part := map[string]interface{}{}
 				switch typ {

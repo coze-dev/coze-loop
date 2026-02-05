@@ -51,6 +51,7 @@ typedef string ContentType(ts.enum="true")
 const ContentType ContentType_Text = "Text" // 空间
 const ContentType ContentType_Image = "Image"
 const ContentType ContentType_Audio = "Audio"
+const ContentType ContentType_Video = "Video"
 const ContentType ContentType_MultiPart = "MultiPart"
 
 struct Session {

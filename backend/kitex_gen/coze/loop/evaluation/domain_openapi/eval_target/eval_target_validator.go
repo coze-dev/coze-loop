@@ -24,6 +24,45 @@ var (
 func (p *CustomEvalTarget) IsValid() error {
 	return nil
 }
+func (p *EvalTarget) IsValid() error {
+	if p.EvalTargetVersion != nil {
+		if err := p.EvalTargetVersion.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTargetVersion not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvalTargetVersion) IsValid() error {
+	if p.EvalTargetContent != nil {
+		if err := p.EvalTargetContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTargetContent not valid, %w", err)
+		}
+	}
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *EvalTargetContent) IsValid() error {
+	if p.Prompt != nil {
+		if err := p.Prompt.IsValid(); err != nil {
+			return fmt.Errorf("field Prompt not valid, %w", err)
+		}
+	}
+	if p.CustomRPCServer != nil {
+		if err := p.CustomRPCServer.IsValid(); err != nil {
+			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *EvalTargetRecord) IsValid() error {
 	if p.EvalTargetOutputData != nil {
 		if err := p.EvalTargetOutputData.IsValid(); err != nil {
@@ -54,5 +93,34 @@ func (p *EvalTargetUsage) IsValid() error {
 	return nil
 }
 func (p *EvalTargetRunError) IsValid() error {
+	return nil
+}
+func (p *EvalPrompt) IsValid() error {
+	return nil
+}
+func (p *CustomRPCServer) IsValid() error {
+	if p.InvokeHTTPInfo != nil {
+		if err := p.InvokeHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field InvokeHTTPInfo not valid, %w", err)
+		}
+	}
+	if p.AsyncInvokeHTTPInfo != nil {
+		if err := p.AsyncInvokeHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field AsyncInvokeHTTPInfo not valid, %w", err)
+		}
+	}
+	if p.SearchHTTPInfo != nil {
+		if err := p.SearchHTTPInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SearchHTTPInfo not valid, %w", err)
+		}
+	}
+	if p.CustomEvalTarget != nil {
+		if err := p.CustomEvalTarget.IsValid(); err != nil {
+			return fmt.Errorf("field CustomEvalTarget not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *HTTPInfo) IsValid() error {
 	return nil
 }

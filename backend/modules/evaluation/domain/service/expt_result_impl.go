@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
@@ -26,7 +28,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -351,7 +352,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts, param.FullTrajectory)
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, spaceID, sortedExpts, param.FullTrajectory)
 	if err != nil {
 		return nil, err
 	}
@@ -587,10 +588,10 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 }
 
 var (
-	columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
-		Name:  consts.ReportColumnNameEvalTargetActualOutput,
-		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
-	}
+	// columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
+	// 	Name:  consts.ReportColumnNameEvalTargetActualOutput,
+	// 	Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
+	// }
 	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
@@ -603,13 +604,53 @@ var (
 	}
 )
 
-func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spaceID int64, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
+	// 查询评估对象信息
+	versionIDs := make([]int64, 0)
+	for _, expt := range expts {
+		if expt.ContainsEvalTarget() {
+			versionIDs = append(versionIDs, expt.TargetVersionID)
+		}
+	}
+	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
+	if len(versionIDs) > 0 {
+		targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
+		if err != nil {
+			return nil, err
+		}
+		for _, info := range targetInfos {
+			if info.EvalTargetVersion == nil {
+				continue
+			}
+			versionID2TargetInfo[info.EvalTargetVersion.ID] = info
+		}
+	}
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		if !expt.ContainsEvalTarget() {
 			continue
 		}
-		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
+		columns := make([]*entity.ColumnEvalTarget, 0)
+		if info, ok := versionID2TargetInfo[expt.TargetVersionID]; ok {
+			if info.EvalTargetVersion != nil {
+				for _, s := range info.EvalTargetVersion.OutputSchema {
+					lable := consts.ReportColumnLabelEvalTargetActualOutput
+					if gptr.Indirect(s.Key) != consts.ReportColumnNameEvalTargetActualOutput {
+						lable = consts.ReportColumnLabelEvalTargetExtOutput
+					}
+					c := &entity.ColumnEvalTarget{
+						Name:       gptr.Indirect(s.Key),
+						TextSchema: s.JsonSchema,
+						Label:      gptr.Of(lable),
+					}
+					if len(s.SupportContentTypes) > 0 {
+						// 评测对象字段类型就一个，所以这里取第一个就可以
+						c.ContentType = gptr.Of(s.SupportContentTypes[0])
+					}
+					columns = append(columns, c)
+				}
+			}
+		}
 		// 当 fullTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
 		if expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)

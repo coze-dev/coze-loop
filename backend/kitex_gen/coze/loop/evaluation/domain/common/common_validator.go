@@ -32,6 +32,11 @@ func (p *Content) IsValid() error {
 			return fmt.Errorf("field Audio not valid, %w", err)
 		}
 	}
+	if p.Video != nil {
+		if err := p.Video.IsValid(); err != nil {
+			return fmt.Errorf("field Video not valid, %w", err)
+		}
+	}
 	if p.FullContent != nil {
 		if err := p.FullContent.IsValid(); err != nil {
 			return fmt.Errorf("field FullContent not valid, %w", err)
@@ -42,7 +47,20 @@ func (p *Content) IsValid() error {
 func (p *AudioContent) IsValid() error {
 	return nil
 }
+func (p *Video) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
+	return nil
+}
 func (p *Audio) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
 	return nil
 }
 func (p *Image) IsValid() error {

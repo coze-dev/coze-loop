@@ -355,6 +355,10 @@ const (
 	UnsupportedCustomRPCEvaluatorCode              = 601205066 // the custom rpc evaluator is not supported, check if the configuration is correct
 	unsupportedCustomRPCEvaluatorMessage           = "unsupported custom rpc evaluator"
 	unsupportedCustomRPCEvaluatorNoAffectStability = true
+
+	CustomEvalTargetRunFailedCode              = 601205067 // the custom eval target run failed, check if the configuration is correct
+	customEvalTargetRunFailedMessage           = "custom eval target run failed"
+	customEvalTargetRunFailedNoAffectStability = true
 )
 
 func init() {
@@ -879,6 +883,12 @@ func init() {
 		UnsupportedCustomRPCEvaluatorCode,
 		unsupportedCustomRPCEvaluatorMessage,
 		code.WithAffectStability(!unsupportedCustomRPCEvaluatorNoAffectStability),
+	)
+
+	code.Register(
+		CustomEvalTargetRunFailedCode,
+		customEvalTargetRunFailedMessage,
+		code.WithAffectStability(!customEvalTargetRunFailedNoAffectStability),
 	)
 
 }
