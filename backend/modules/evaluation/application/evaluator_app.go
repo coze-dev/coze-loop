@@ -1875,13 +1875,109 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *e
 }
 
 func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evaluatorservice.AsyncRunEvaluatorRequest) (r *evaluatorservice.AsyncRunEvaluatorResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+	}
+	if !evaluatorDO.Builtin {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	resp, err := e.evaluatorService.AsyncRunEvaluator(ctx, buildAsyncRunEvaluatorRequest(evaluatorDO.Name, req))
+	if err != nil {
+		return nil, err
+	}
+	return &evaluatorservice.AsyncRunEvaluatorResponse{
+		InvokeID: gptr.Of(resp.InvokeID),
+	}, nil
+}
+
+func buildAsyncRunEvaluatorRequest(evaluatorName string, request *evaluatorservice.AsyncRunEvaluatorRequest) *entity.AsyncRunEvaluatorRequest {
+	srvReq := &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            request.WorkspaceID,
+		Name:               evaluatorName,
+		EvaluatorVersionID: request.EvaluatorVersionID,
+		ExperimentID:       request.GetExperimentID(),
+		ExperimentRunID:    request.GetExperimentRunID(),
+		ItemID:             request.GetItemID(),
+		TurnID:             request.GetTurnID(),
+		EvaluatorRunConf:   evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(request.GetEvaluatorRunConf()),
+	}
+	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
+	if request.IsSetEvaluatorRunConf() && request.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+	srvReq.InputData = inputData
+	return srvReq
 }
 
 func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
-	//TODO implement me
-	panic("implement me")
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if req.InputData != nil {
+		err = e.transformURIsToURLs(ctx, req.InputData.InputFields)
+		if err != nil {
+			logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+			return nil, err
+		}
+	}
+	dto := &evaluatordto.Evaluator{
+		WorkspaceID:   gptr.Of(req.WorkspaceID),
+		EvaluatorType: gptr.Of(req.EvaluatorType),
+		CurrentVersion: &evaluatordto.EvaluatorVersion{
+			EvaluatorContent: req.EvaluatorContent,
+		},
+	}
+	do, err := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	if err != nil {
+		return nil, err
+	}
+	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(req.GetInputData())
+	evaluatorRunConf := evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(req.GetEvaluatorRunConf())
+	if req.IsSetEvaluatorRunConf() && req.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		req.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = req.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+	resp, err := e.evaluatorService.AsyncDebugEvaluator(ctx, &entity.AsyncDebugEvaluatorRequest{
+		SpaceID:          req.WorkspaceID,
+		EvaluatorDO:      do,
+		InputData:        inputData,
+		EvaluatorRunConf: evaluatorRunConf,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &evaluatorservice.AsyncDebugEvaluatorResponse{
+		InvokeID: gptr.Of(resp.InvokeID),
+	}, nil
 }
 
 func (e *EvaluatorHandlerImpl) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultRequest) (r *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {

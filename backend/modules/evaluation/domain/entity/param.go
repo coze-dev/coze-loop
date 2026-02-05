@@ -216,6 +216,34 @@ type RunEvaluatorRequest struct {
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
 }
 
+type AsyncRunEvaluatorRequest struct {
+	SpaceID            int64               `json:"space_id"`
+	Name               string              `json:"name"`
+	EvaluatorVersionID int64               `json:"evaluator_version_id"`
+	InputData          *EvaluatorInputData `json:"input_data"`
+	ExperimentID       int64               `json:"experiment_id,omitempty"`
+	ExperimentRunID    int64               `json:"experiment_run_id,omitempty"`
+	ItemID             int64               `json:"item_id,omitempty"`
+	TurnID             int64               `json:"turn_id,omitempty"`
+	Ext                map[string]string   `json:"ext,omitempty"`
+	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+}
+
+type AsyncRunEvaluatorResponse struct {
+	InvokeID int64 `json:"invoke_id"`
+}
+
+type AsyncDebugEvaluatorRequest struct {
+	SpaceID          int64               `json:"space_id"`
+	EvaluatorDO      *Evaluator          `json:"evaluator_do"`
+	InputData        *EvaluatorInputData `json:"input_data"`
+	EvaluatorRunConf *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+}
+
+type AsyncDebugEvaluatorResponse struct {
+	InvokeID int64 `json:"invoke_id"`
+}
+
 type CreateExptParam struct {
 	WorkspaceID         int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	EvalSetVersionID    int64   `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `

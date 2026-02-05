@@ -31,8 +31,12 @@ type EvaluatorService interface {
 	DeleteEvaluator(ctx context.Context, evaluatorIDs []int64, userID string) error
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
+	// AsyncRunEvaluator Agent evaluator_version 异步运行
+	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.AsyncRunEvaluatorResponse, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID
 	DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error)
+	// AsyncDebugEvaluator Agent evaluator_version 异步调试
+	AsyncDebugEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error)
 	// GetBuiltinEvaluator 根据 evaluatorID 查询元信息，若为预置评估器则按 builtin_visible_version 组装返回
 	// 非预置评估器则返回nil
 	GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error)

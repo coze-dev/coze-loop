@@ -691,6 +691,80 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	return recordDO, nil
 }
 
+// AsyncRunEvaluator Agent evaluator_version 异步运行
+func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.AsyncRunEvaluatorResponse, error) {
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
+	if err != nil {
+		return nil, err
+	}
+	if len(evaluatorDOList) == 0 {
+		return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
+	}
+	evaluatorDO := evaluatorDOList[0]
+	if evaluatorDO.EvaluatorType != entity.EvaluatorTypeAgent {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("async run only supports Agent evaluator type"))
+	}
+	if !evaluatorDO.Builtin {
+		if evaluatorDO.SpaceID != request.SpaceID {
+			return nil, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version not found in current space"))
+		}
+	}
+	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	if allow := e.plainRateLimiter.AllowInvokeWithKeyLimit(ctx, fmt.Sprintf("async_run_evaluator:%v", evaluatorDO.ID), evaluatorDO.GetRateLimit()); !allow {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to evaluator-level rate limit"))
+	}
+	invokeID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
+	if !ok {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
+	}
+	err = evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	if err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d", invokeID, request.EvaluatorVersionID, request.SpaceID)
+	return &entity.AsyncRunEvaluatorResponse{
+		InvokeID: invokeID,
+	}, nil
+}
+
+// AsyncDebugEvaluator Agent evaluator_version 异步调试
+func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+	evaluatorDO := request.EvaluatorDO
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode, errorx.WithExtraMsg("evaluator is nil"))
+	}
+	if evaluatorDO.EvaluatorType != entity.EvaluatorTypeAgent {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("async debug only supports Agent evaluator type"))
+	}
+	if allow := e.limiter.AllowInvoke(ctx, request.SpaceID); !allow {
+		return nil, errorx.NewByCode(errno.EvaluatorQPSLimitCode, errorx.WithExtraMsg("evaluator throttled due to space-level rate limit"))
+	}
+	invokeID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
+	if !ok {
+		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
+	}
+	err = evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	if err != nil {
+		logs.CtxError(ctx, "[AsyncDebugEvaluator] AsyncDebug fail, invokeID: %d, err: %v", invokeID, err)
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "[AsyncDebugEvaluator] invokeID: %d, spaceID: %d", invokeID, request.SpaceID)
+	return &entity.AsyncDebugEvaluatorResponse{
+		InvokeID: invokeID,
+	}, nil
+}
+
 // DebugEvaluator 调试 evaluator_version
 func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {
