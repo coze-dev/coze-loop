@@ -37,6 +37,8 @@ type EvaluatorService interface {
 	DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error)
 	// AsyncDebugEvaluator Agent evaluator_version 异步调试
 	AsyncDebugEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error)
+	// GetAsyncDebugEvaluatorInvokeResult 获取异步调试结果
+	GetAsyncDebugEvaluatorInvokeResult(ctx context.Context, request *entity.GetAsyncDebugEvaluatorInvokeResultRequest) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error)
 	// GetBuiltinEvaluator 根据 evaluatorID 查询元信息，若为预置评估器则按 builtin_visible_version 组装返回
 	// 非预置评估器则返回nil
 	GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error)

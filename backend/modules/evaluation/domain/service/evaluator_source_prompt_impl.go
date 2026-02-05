@@ -668,8 +668,16 @@ func (p *EvaluatorSourcePromptServiceImpl) AsyncRun(ctx context.Context, evaluat
 	return errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async run"))
 }
 
+func (p *EvaluatorSourcePromptServiceImpl) GetAsyncRunResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
+	return nil, entity.EvaluatorRunStatusFail, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async run"))
+}
+
 func (p *EvaluatorSourcePromptServiceImpl) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) error {
 	return errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async debug"))
+}
+
+func (p *EvaluatorSourcePromptServiceImpl) GetAsyncDebugResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
+	return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async debug"))
 }
 
 func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {

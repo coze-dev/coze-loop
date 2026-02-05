@@ -244,6 +244,19 @@ type AsyncDebugEvaluatorResponse struct {
 	InvokeID int64 `json:"invoke_id"`
 }
 
+type GetAsyncDebugEvaluatorInvokeResultRequest struct {
+	SpaceID  int64 `json:"space_id"`
+	InvokeID int64 `json:"invoke_id"`
+}
+
+type GetAsyncDebugEvaluatorInvokeResultResponse struct {
+	SpaceID      int64                `json:"space_id"`
+	Status       EvaluatorRunStatus   `json:"status"`
+	OutputData   *EvaluatorOutputData `json:"output_data,omitempty"`
+	EvaluatorDO  *Evaluator           `json:"evaluator_do,omitempty"`
+	InputData    *EvaluatorInputData  `json:"input_data,omitempty"`
+}
+
 type CreateExptParam struct {
 	WorkspaceID         int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	EvalSetVersionID    int64   `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
