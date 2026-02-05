@@ -62,9 +62,10 @@ type EvaluatorRunError struct {
 type EvaluatorRunStatus int64
 
 const (
-	EvaluatorRunStatusUnknown EvaluatorRunStatus = 0
-	EvaluatorRunStatusSuccess EvaluatorRunStatus = 1
-	EvaluatorRunStatusFail    EvaluatorRunStatus = 2
+	EvaluatorRunStatusUnknown       EvaluatorRunStatus = 0
+	EvaluatorRunStatusSuccess       EvaluatorRunStatus = 1
+	EvaluatorRunStatusFail          EvaluatorRunStatus = 2
+	EvaluatorRunStatusAsyncInvoking EvaluatorRunStatus = 3
 )
 
 func (e *EvaluatorRecord) GetBaseInfo() *BaseInfo {

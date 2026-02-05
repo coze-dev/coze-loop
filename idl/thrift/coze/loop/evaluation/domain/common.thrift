@@ -121,3 +121,14 @@ struct RateLimit {
     2: optional i32 burst
     3: optional string period
 }
+
+typedef string AgentType(ts.enum="true")
+const AgentType AgentType_Vibe = "vibe"
+
+struct AgentConfig {
+    1: optional AgentType agent_type // Agent type
+}
+
+struct SkillConfig {
+    1: optional i64 skill_id // skill id
+}

@@ -127,6 +127,8 @@ struct InvokeEvaluatorOutputData {
     1: optional InvokeEvaluatorResult evaluator_result
     2: optional InvokeEvaluatorUsage evaluator_usage
     3: optional InvokeEvaluatorRunError evaluator_run_error
+
+    12: optional EvaluatorExtraOutputContent extra_output
 }
 
 // the result data structure for custom evaluator
@@ -145,6 +147,16 @@ struct InvokeEvaluatorUsage {
 struct InvokeEvaluatorRunError {
     1: optional i32 code
     2: optional string message
+}
+
+typedef string EvaluatorExtraOutputType(ts.enum="true")
+const EvaluatorExtraOutputType EvaluatorExtraOutputType_HTML = "html"
+const EvaluatorExtraOutputType EvaluatorExtraOutputType_Markdown = "markdown"
+
+struct EvaluatorExtraOutputContent {
+    1: optional EvaluatorExtraOutputType output_type
+    2: optional string html_url
+    3: optional string markdown_url
 }
 
 // invoke custom evaluator request

@@ -436,3 +436,15 @@ type RuntimeParam struct {
 	JSONValue *string `json:"json_value,omitempty"`
 	JSONDemo  *string `json:"json_demo,omitempty"`
 }
+
+type AgentType string
+
+const AgentType_Vibe AgentType = "vibe"
+
+type AgentConfig struct {
+	AgentType AgentType `json:"agent_type,omitempty"` // Agent type, e.g. Claude Code, OpenCode, etc., for future extension
+}
+
+type SkillConfig struct {
+	SkillID int64 `json:"skill_id,omitempty"` // skill id
+}
