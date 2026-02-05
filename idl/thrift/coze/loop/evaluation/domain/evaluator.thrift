@@ -285,11 +285,10 @@ typedef string EvaluatorExtraOutputType(ts.enum="true")
 const EvaluatorExtraOutputType EvaluatorExtraOutputType_HTML = "html"
 const EvaluatorExtraOutputType EvaluatorExtraOutputType_Markdown = "markdown"
 
-
 struct EvaluatorExtraOutputContent {
     1: optional EvaluatorExtraOutputType output_type
-    2: optional string html_url
-    3: optional string markdown_url
+    2: optional string uri
+    3: optional string url
 }
 
 struct EvaluatorInputData {

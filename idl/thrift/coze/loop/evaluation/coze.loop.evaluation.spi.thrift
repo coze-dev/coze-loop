@@ -168,8 +168,8 @@ const EvaluatorExtraOutputType EvaluatorExtraOutputType_Markdown = "markdown"
 
 struct EvaluatorExtraOutputContent {
     1: optional EvaluatorExtraOutputType output_type
-    2: optional string html_url
-    3: optional string markdown_url
+    2: optional string uri
+    3: optional string url
 }
 
 // invoke custom evaluator request
