@@ -55,6 +55,8 @@ const (
 	SpanFieldUserID                  = "user_id"
 	SpanFieldPromptKey               = "prompt_key"
 	SpanFieldTenant                  = "tenant"
+	SpanFieldKeyPreviousResponseID   = "previous_response_id"
+	SpanFieldKeyResponseID           = "response_id"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"
@@ -193,6 +195,106 @@ func (s *Span) GetCustomTags() map[string]string {
 		ret[tag.GetKey()] = tagStr
 	}
 	return ret
+}
+
+type StringWrapper struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Type    string `json:"type"`
+}
+
+func (s *Span) IsResponseAPISpan() bool {
+	if s.SpanType != SpanTypeModel {
+		return false
+	}
+	if s.SystemTagsString == nil {
+		return false
+	}
+	v, ok := s.SystemTagsString[SpanFieldKeyPreviousResponseID]
+	return ok && v != ""
+}
+
+func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
+	// Normalize func for Response API String|List Message structure
+	normalizeMessages := func(v interface{}, role string, t string) ([]interface{}, bool) {
+		switch vv := v.(type) {
+		case []interface{}:
+			return vv, true
+		case string:
+			if vv == "" {
+				return nil, false
+			}
+			return []interface{}{StringWrapper{Role: role, Content: vv, Type: t}}, true
+		default:
+			return nil, false
+		}
+	}
+
+	var currentInputMap map[string]interface{}
+	if err := sonic.UnmarshalString(s.Input, &currentInputMap); err != nil {
+		logs.CtxWarn(ctx, "fail to trans input %s into map", s.Input)
+		return
+	}
+
+	if s.SystemTagsString == nil {
+		s.SystemTagsString = make(map[string]string)
+	}
+	// 同一个 span 命中多个 subscriber 幂等
+	if s.SystemTagsString["_history_merged"] == "true" {
+		logs.CtxInfo(ctx, "history context already merged, skip")
+		return
+	}
+
+	logs.CtxInfo(ctx, "start to merge history context")
+
+	var historyMessages []interface{}
+	for _, preSpan := range historySpans {
+		if preSpan.Input != "" {
+			var inputMap map[string]interface{}
+			if err := sonic.UnmarshalString(preSpan.Input, &inputMap); err == nil {
+				if msgs, ok := inputMap["messages"].([]interface{}); ok {
+					historyMessages = append(historyMessages, msgs...)
+				} else if msgs, ok := normalizeMessages(inputMap["input"], "user", "message"); ok {
+					historyMessages = append(historyMessages, msgs...)
+				}
+			}
+		}
+		if preSpan.Output != "" {
+			var outputMap map[string]interface{}
+			if err := sonic.UnmarshalString(preSpan.Output, &outputMap); err == nil {
+				if msgs, ok := outputMap["choices"].([]interface{}); ok {
+					historyMessages = append(historyMessages, msgs...)
+				} else if msgs, ok := normalizeMessages(outputMap["output"], "assistant", "message"); ok {
+					historyMessages = append(historyMessages, msgs...)
+				}
+			}
+		}
+	}
+
+	if len(historyMessages) == 0 {
+		return
+	}
+
+	// fill into current span input map
+	if msgs, ok := currentInputMap["messages"].([]interface{}); ok {
+		currentInputMap["messages"] = append(historyMessages, msgs...)
+	} else if msgs, ok := normalizeMessages(currentInputMap["input"], "user", "message"); ok {
+		currentInputMap["input"] = append(historyMessages, msgs...)
+	} else {
+		currentInputMap["input"] = historyMessages
+	}
+
+	newInput, err := sonic.Marshal(currentInputMap)
+	if err != nil {
+		logs.CtxWarn(ctx, "fail to marshal new input, err:%v", err)
+		return
+	}
+	s.Input = string(newInput)
+	s.SystemTagsString["_history_merged"] = "true"
+}
+
+func (s *Span) IsModelSpan() bool {
+	return s.SpanType == SpanTypeModel
 }
 
 func (s *Span) getTags() []*Tag {

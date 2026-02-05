@@ -462,6 +462,7 @@ func InitTaskApplication(
 	configFactory conf.IConfigLoaderFactory,
 	benefit benefit.IBenefitService,
 	ckDb ck.Provider,
+	meter metrics.Meter,
 	redis redis.Cmdable,
 	mqFactory mq.IFactory,
 	userClient userservice.Client,
