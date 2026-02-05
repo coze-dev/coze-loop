@@ -371,17 +371,6 @@ struct SubmitExperimentEvalTargetParam {
     8: optional string env  // 有环境限制需要填充这个字段
 }
 
-// 创建评估目标参数
-struct CreateEvalTargetParam {
-    1: optional string source_target_id (api.body="source_target_id")
-    2: optional string source_target_version (api.body="source_target_version")
-    3: optional eval_target.EvalTargetType eval_target_type (api.body="eval_target_type")
-    4: optional eval_target.CozeBotInfoType bot_info_type (api.body="bot_info_type")
-    5: optional string bot_publish_version (api.body="bot_publish_version") // 如果是发布版本则需要填充这个字段
-    6: optional eval_target.CustomEvalTarget custom_eval_target (api.body="custom_eval_target") // type=6,并且有搜索对象，搜索结果信息通过这个字段透传
-    7: optional eval_target.Region region (api.body="region")   // 有区域限制需要填充这个字段
-    8: optional string env (api.body="env")  // 有环境限制需要填充这个字段
-}
 
 struct SubmitExperimentOApiResponse {
     1: optional i32 code
@@ -771,7 +760,7 @@ struct CreateExptTemplateOApiRequest {
     2: optional experiment.ExptTemplateMeta meta (api.body="meta")
     3: optional experiment.ExptTuple triple_config (api.body="triple_config")
     4: optional experiment.ExptFieldMapping field_mapping_config (api.body="field_mapping_config")
-    20: optional CreateEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
+    20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
 
     255: optional base.Base Base
@@ -837,7 +826,7 @@ struct UpdateExptTemplateOApiRequest {
     3: optional experiment.ExptTemplateMeta meta (api.body="meta")
     4: optional experiment.ExptTuple triple_config (api.body="triple_config")
     5: optional experiment.ExptFieldMapping field_mapping_config (api.body="field_mapping_config")
-    20: optional CreateEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
+    20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
 
     255: optional base.Base Base

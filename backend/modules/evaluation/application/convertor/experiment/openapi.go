@@ -1413,7 +1413,7 @@ func OpenAPIExptTemplateDO2DTOs(templates []*entity.ExptTemplate) []*openapiExpe
 func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequest) (*entity.CreateExptTemplateParam, error) {
 	param := &entity.CreateExptTemplateParam{
 		SpaceID:               req.GetWorkspaceID(),
-		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.CreateEvalTargetParam),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
 	}
 
 	if req.GetMeta() != nil {
@@ -1494,7 +1494,7 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 	param := &entity.UpdateExptTemplateParam{
 		TemplateID:            req.GetTemplateID(),
 		SpaceID:               req.GetWorkspaceID(),
-		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.CreateEvalTargetParam),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
 	}
 
 	if req.GetMeta() != nil {
@@ -1596,7 +1596,7 @@ func OpenAPIExptTypeDTO2DO(t *openapiExperiment.ExperimentType) entity.ExptType 
 	}
 }
 
-func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.CreateEvalTargetParam) *entity.CreateEvalTargetParam {
+func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEvalTargetParam) *entity.CreateEvalTargetParam {
 	if param == nil {
 		return nil
 	}

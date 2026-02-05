@@ -17067,723 +17067,6 @@ func (p *SubmitExperimentEvalTargetParam) Field8DeepEqual(src *string) bool {
 	return true
 }
 
-// 创建评估目标参数
-type CreateEvalTargetParam struct {
-	SourceTargetID      *string                      `thrift:"source_target_id,1,optional" frugal:"1,optional,string" form:"source_target_id" json:"source_target_id,omitempty"`
-	SourceTargetVersion *string                      `thrift:"source_target_version,2,optional" frugal:"2,optional,string" form:"source_target_version" json:"source_target_version,omitempty"`
-	EvalTargetType      *eval_target.EvalTargetType  `thrift:"eval_target_type,3,optional" frugal:"3,optional,string" form:"eval_target_type" json:"eval_target_type,omitempty"`
-	BotInfoType         *eval_target.CozeBotInfoType `thrift:"bot_info_type,4,optional" frugal:"4,optional,string" form:"bot_info_type" json:"bot_info_type,omitempty"`
-	// 如果是发布版本则需要填充这个字段
-	BotPublishVersion *string `thrift:"bot_publish_version,5,optional" frugal:"5,optional,string" form:"bot_publish_version" json:"bot_publish_version,omitempty"`
-	// type=6,并且有搜索对象，搜索结果信息通过这个字段透传
-	CustomEvalTarget *eval_target.CustomEvalTarget `thrift:"custom_eval_target,6,optional" frugal:"6,optional,eval_target.CustomEvalTarget" form:"custom_eval_target" json:"custom_eval_target,omitempty"`
-	// 有区域限制需要填充这个字段
-	Region *eval_target.Region `thrift:"region,7,optional" frugal:"7,optional,string" form:"region" json:"region,omitempty"`
-	// 有环境限制需要填充这个字段
-	Env *string `thrift:"env,8,optional" frugal:"8,optional,string" form:"env" json:"env,omitempty"`
-}
-
-func NewCreateEvalTargetParam() *CreateEvalTargetParam {
-	return &CreateEvalTargetParam{}
-}
-
-func (p *CreateEvalTargetParam) InitDefault() {
-}
-
-var CreateEvalTargetParam_SourceTargetID_DEFAULT string
-
-func (p *CreateEvalTargetParam) GetSourceTargetID() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSourceTargetID() {
-		return CreateEvalTargetParam_SourceTargetID_DEFAULT
-	}
-	return *p.SourceTargetID
-}
-
-var CreateEvalTargetParam_SourceTargetVersion_DEFAULT string
-
-func (p *CreateEvalTargetParam) GetSourceTargetVersion() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSourceTargetVersion() {
-		return CreateEvalTargetParam_SourceTargetVersion_DEFAULT
-	}
-	return *p.SourceTargetVersion
-}
-
-var CreateEvalTargetParam_EvalTargetType_DEFAULT eval_target.EvalTargetType
-
-func (p *CreateEvalTargetParam) GetEvalTargetType() (v eval_target.EvalTargetType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEvalTargetType() {
-		return CreateEvalTargetParam_EvalTargetType_DEFAULT
-	}
-	return *p.EvalTargetType
-}
-
-var CreateEvalTargetParam_BotInfoType_DEFAULT eval_target.CozeBotInfoType
-
-func (p *CreateEvalTargetParam) GetBotInfoType() (v eval_target.CozeBotInfoType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetBotInfoType() {
-		return CreateEvalTargetParam_BotInfoType_DEFAULT
-	}
-	return *p.BotInfoType
-}
-
-var CreateEvalTargetParam_BotPublishVersion_DEFAULT string
-
-func (p *CreateEvalTargetParam) GetBotPublishVersion() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetBotPublishVersion() {
-		return CreateEvalTargetParam_BotPublishVersion_DEFAULT
-	}
-	return *p.BotPublishVersion
-}
-
-var CreateEvalTargetParam_CustomEvalTarget_DEFAULT *eval_target.CustomEvalTarget
-
-func (p *CreateEvalTargetParam) GetCustomEvalTarget() (v *eval_target.CustomEvalTarget) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetCustomEvalTarget() {
-		return CreateEvalTargetParam_CustomEvalTarget_DEFAULT
-	}
-	return p.CustomEvalTarget
-}
-
-var CreateEvalTargetParam_Region_DEFAULT eval_target.Region
-
-func (p *CreateEvalTargetParam) GetRegion() (v eval_target.Region) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetRegion() {
-		return CreateEvalTargetParam_Region_DEFAULT
-	}
-	return *p.Region
-}
-
-var CreateEvalTargetParam_Env_DEFAULT string
-
-func (p *CreateEvalTargetParam) GetEnv() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetEnv() {
-		return CreateEvalTargetParam_Env_DEFAULT
-	}
-	return *p.Env
-}
-func (p *CreateEvalTargetParam) SetSourceTargetID(val *string) {
-	p.SourceTargetID = val
-}
-func (p *CreateEvalTargetParam) SetSourceTargetVersion(val *string) {
-	p.SourceTargetVersion = val
-}
-func (p *CreateEvalTargetParam) SetEvalTargetType(val *eval_target.EvalTargetType) {
-	p.EvalTargetType = val
-}
-func (p *CreateEvalTargetParam) SetBotInfoType(val *eval_target.CozeBotInfoType) {
-	p.BotInfoType = val
-}
-func (p *CreateEvalTargetParam) SetBotPublishVersion(val *string) {
-	p.BotPublishVersion = val
-}
-func (p *CreateEvalTargetParam) SetCustomEvalTarget(val *eval_target.CustomEvalTarget) {
-	p.CustomEvalTarget = val
-}
-func (p *CreateEvalTargetParam) SetRegion(val *eval_target.Region) {
-	p.Region = val
-}
-func (p *CreateEvalTargetParam) SetEnv(val *string) {
-	p.Env = val
-}
-
-var fieldIDToName_CreateEvalTargetParam = map[int16]string{
-	1: "source_target_id",
-	2: "source_target_version",
-	3: "eval_target_type",
-	4: "bot_info_type",
-	5: "bot_publish_version",
-	6: "custom_eval_target",
-	7: "region",
-	8: "env",
-}
-
-func (p *CreateEvalTargetParam) IsSetSourceTargetID() bool {
-	return p.SourceTargetID != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetSourceTargetVersion() bool {
-	return p.SourceTargetVersion != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetEvalTargetType() bool {
-	return p.EvalTargetType != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetBotInfoType() bool {
-	return p.BotInfoType != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetBotPublishVersion() bool {
-	return p.BotPublishVersion != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetCustomEvalTarget() bool {
-	return p.CustomEvalTarget != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetRegion() bool {
-	return p.Region != nil
-}
-
-func (p *CreateEvalTargetParam) IsSetEnv() bool {
-	return p.Env != nil
-}
-
-func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
-	var fieldTypeId thrift.TType
-	var fieldId int16
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 7:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField7(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 8:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField8(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CreateEvalTargetParam[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-}
-
-func (p *CreateEvalTargetParam) ReadField1(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.SourceTargetID = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.SourceTargetVersion = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *eval_target.EvalTargetType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.EvalTargetType = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *eval_target.CozeBotInfoType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.BotInfoType = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField5(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.BotPublishVersion = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField6(iprot thrift.TProtocol) error {
-	_field := eval_target.NewCustomEvalTarget()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.CustomEvalTarget = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField7(iprot thrift.TProtocol) error {
-
-	var _field *eval_target.Region
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Region = _field
-	return nil
-}
-func (p *CreateEvalTargetParam) ReadField8(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Env = _field
-	return nil
-}
-
-func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("CreateEvalTargetParam"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
-			goto WriteFieldError
-		}
-		if err = p.writeField7(oprot); err != nil {
-			fieldId = 7
-			goto WriteFieldError
-		}
-		if err = p.writeField8(oprot); err != nil {
-			fieldId = 8
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *CreateEvalTargetParam) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSourceTargetID() {
-		if err = oprot.WriteFieldBegin("source_target_id", thrift.STRING, 1); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.SourceTargetID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSourceTargetVersion() {
-		if err = oprot.WriteFieldBegin("source_target_version", thrift.STRING, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.SourceTargetVersion); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvalTargetType() {
-		if err = oprot.WriteFieldBegin("eval_target_type", thrift.STRING, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.EvalTargetType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBotInfoType() {
-		if err = oprot.WriteFieldBegin("bot_info_type", thrift.STRING, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.BotInfoType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetBotPublishVersion() {
-		if err = oprot.WriteFieldBegin("bot_publish_version", thrift.STRING, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.BotPublishVersion); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCustomEvalTarget() {
-		if err = oprot.WriteFieldBegin("custom_eval_target", thrift.STRUCT, 6); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.CustomEvalTarget.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetRegion() {
-		if err = oprot.WriteFieldBegin("region", thrift.STRING, 7); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.Region); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
-}
-func (p *CreateEvalTargetParam) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEnv() {
-		if err = oprot.WriteFieldBegin("env", thrift.STRING, 8); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.Env); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
-}
-
-func (p *CreateEvalTargetParam) String() string {
-	if p == nil {
-		return "<nil>"
-	}
-	return fmt.Sprintf("CreateEvalTargetParam(%+v)", *p)
-
-}
-
-func (p *CreateEvalTargetParam) DeepEqual(ano *CreateEvalTargetParam) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
-	}
-	if !p.Field1DeepEqual(ano.SourceTargetID) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.SourceTargetVersion) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.EvalTargetType) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.BotInfoType) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.BotPublishVersion) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.CustomEvalTarget) {
-		return false
-	}
-	if !p.Field7DeepEqual(ano.Region) {
-		return false
-	}
-	if !p.Field8DeepEqual(ano.Env) {
-		return false
-	}
-	return true
-}
-
-func (p *CreateEvalTargetParam) Field1DeepEqual(src *string) bool {
-
-	if p.SourceTargetID == src {
-		return true
-	} else if p.SourceTargetID == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.SourceTargetID, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field2DeepEqual(src *string) bool {
-
-	if p.SourceTargetVersion == src {
-		return true
-	} else if p.SourceTargetVersion == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.SourceTargetVersion, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field3DeepEqual(src *eval_target.EvalTargetType) bool {
-
-	if p.EvalTargetType == src {
-		return true
-	} else if p.EvalTargetType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.EvalTargetType, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field4DeepEqual(src *eval_target.CozeBotInfoType) bool {
-
-	if p.BotInfoType == src {
-		return true
-	} else if p.BotInfoType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.BotInfoType, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field5DeepEqual(src *string) bool {
-
-	if p.BotPublishVersion == src {
-		return true
-	} else if p.BotPublishVersion == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.BotPublishVersion, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field6DeepEqual(src *eval_target.CustomEvalTarget) bool {
-
-	if !p.CustomEvalTarget.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field7DeepEqual(src *eval_target.Region) bool {
-
-	if p.Region == src {
-		return true
-	} else if p.Region == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Region, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreateEvalTargetParam) Field8DeepEqual(src *string) bool {
-
-	if p.Env == src {
-		return true
-	} else if p.Env == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Env, *src) != 0 {
-		return false
-	}
-	return true
-}
-
 type SubmitExperimentOApiResponse struct {
 	Code     *int32                       `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
 	Msg      *string                      `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
@@ -35988,13 +35271,13 @@ func (p *ValidateEvaluatorOpenAPIData) Field3DeepEqual(src *evaluator.EvaluatorO
 // ===============================
 // 4.1 创建实验模板
 type CreateExptTemplateOApiRequest struct {
-	WorkspaceID                *int64                       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	Meta                       *experiment.ExptTemplateMeta `thrift:"meta,2,optional" frugal:"2,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
-	TripleConfig               *experiment.ExptTuple        `thrift:"triple_config,3,optional" frugal:"3,optional,experiment.ExptTuple" form:"triple_config" json:"triple_config,omitempty"`
-	FieldMappingConfig         *experiment.ExptFieldMapping `thrift:"field_mapping_config,4,optional" frugal:"4,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
-	CreateEvalTargetParam      *CreateEvalTargetParam       `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,CreateEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
-	DefaultEvaluatorsConcurNum *int32                       `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
-	Base                       *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID                *int64                           `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	Meta                       *experiment.ExptTemplateMeta     `thrift:"meta,2,optional" frugal:"2,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
+	TripleConfig               *experiment.ExptTuple            `thrift:"triple_config,3,optional" frugal:"3,optional,experiment.ExptTuple" form:"triple_config" json:"triple_config,omitempty"`
+	FieldMappingConfig         *experiment.ExptFieldMapping     `thrift:"field_mapping_config,4,optional" frugal:"4,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
+	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
+	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
+	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExptTemplateOApiRequest() *CreateExptTemplateOApiRequest {
@@ -36052,9 +35335,9 @@ func (p *CreateExptTemplateOApiRequest) GetFieldMappingConfig() (v *experiment.E
 	return p.FieldMappingConfig
 }
 
-var CreateExptTemplateOApiRequest_CreateEvalTargetParam_DEFAULT *CreateEvalTargetParam
+var CreateExptTemplateOApiRequest_CreateEvalTargetParam_DEFAULT *SubmitExperimentEvalTargetParam
 
-func (p *CreateExptTemplateOApiRequest) GetCreateEvalTargetParam() (v *CreateEvalTargetParam) {
+func (p *CreateExptTemplateOApiRequest) GetCreateEvalTargetParam() (v *SubmitExperimentEvalTargetParam) {
 	if p == nil {
 		return
 	}
@@ -36099,7 +35382,7 @@ func (p *CreateExptTemplateOApiRequest) SetTripleConfig(val *experiment.ExptTupl
 func (p *CreateExptTemplateOApiRequest) SetFieldMappingConfig(val *experiment.ExptFieldMapping) {
 	p.FieldMappingConfig = val
 }
-func (p *CreateExptTemplateOApiRequest) SetCreateEvalTargetParam(val *CreateEvalTargetParam) {
+func (p *CreateExptTemplateOApiRequest) SetCreateEvalTargetParam(val *SubmitExperimentEvalTargetParam) {
 	p.CreateEvalTargetParam = val
 }
 func (p *CreateExptTemplateOApiRequest) SetDefaultEvaluatorsConcurNum(val *int32) {
@@ -36286,7 +35569,7 @@ func (p *CreateExptTemplateOApiRequest) ReadField4(iprot thrift.TProtocol) error
 	return nil
 }
 func (p *CreateExptTemplateOApiRequest) ReadField20(iprot thrift.TProtocol) error {
-	_field := NewCreateEvalTargetParam()
+	_field := NewSubmitExperimentEvalTargetParam()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -36563,7 +35846,7 @@ func (p *CreateExptTemplateOApiRequest) Field4DeepEqual(src *experiment.ExptFiel
 	}
 	return true
 }
-func (p *CreateExptTemplateOApiRequest) Field20DeepEqual(src *CreateEvalTargetParam) bool {
+func (p *CreateExptTemplateOApiRequest) Field20DeepEqual(src *SubmitExperimentEvalTargetParam) bool {
 
 	if !p.CreateEvalTargetParam.DeepEqual(src) {
 		return false
@@ -39068,14 +38351,14 @@ func (p *UpdateExptTemplateMetaOpenAPIData) Field1DeepEqual(src *experiment.Expt
 
 // 4.4 更新实验模板
 type UpdateExptTemplateOApiRequest struct {
-	TemplateID                 *int64                       `thrift:"template_id,1,optional" frugal:"1,optional,i64" json:"template_id" path:"template_id" `
-	WorkspaceID                *int64                       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
-	Meta                       *experiment.ExptTemplateMeta `thrift:"meta,3,optional" frugal:"3,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
-	TripleConfig               *experiment.ExptTuple        `thrift:"triple_config,4,optional" frugal:"4,optional,experiment.ExptTuple" form:"triple_config" json:"triple_config,omitempty"`
-	FieldMappingConfig         *experiment.ExptFieldMapping `thrift:"field_mapping_config,5,optional" frugal:"5,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
-	CreateEvalTargetParam      *CreateEvalTargetParam       `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,CreateEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
-	DefaultEvaluatorsConcurNum *int32                       `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
-	Base                       *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	TemplateID                 *int64                           `thrift:"template_id,1,optional" frugal:"1,optional,i64" json:"template_id" path:"template_id" `
+	WorkspaceID                *int64                           `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	Meta                       *experiment.ExptTemplateMeta     `thrift:"meta,3,optional" frugal:"3,optional,experiment.ExptTemplateMeta" form:"meta" json:"meta,omitempty"`
+	TripleConfig               *experiment.ExptTuple            `thrift:"triple_config,4,optional" frugal:"4,optional,experiment.ExptTuple" form:"triple_config" json:"triple_config,omitempty"`
+	FieldMappingConfig         *experiment.ExptFieldMapping     `thrift:"field_mapping_config,5,optional" frugal:"5,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
+	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
+	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
+	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExptTemplateOApiRequest() *UpdateExptTemplateOApiRequest {
@@ -39145,9 +38428,9 @@ func (p *UpdateExptTemplateOApiRequest) GetFieldMappingConfig() (v *experiment.E
 	return p.FieldMappingConfig
 }
 
-var UpdateExptTemplateOApiRequest_CreateEvalTargetParam_DEFAULT *CreateEvalTargetParam
+var UpdateExptTemplateOApiRequest_CreateEvalTargetParam_DEFAULT *SubmitExperimentEvalTargetParam
 
-func (p *UpdateExptTemplateOApiRequest) GetCreateEvalTargetParam() (v *CreateEvalTargetParam) {
+func (p *UpdateExptTemplateOApiRequest) GetCreateEvalTargetParam() (v *SubmitExperimentEvalTargetParam) {
 	if p == nil {
 		return
 	}
@@ -39195,7 +38478,7 @@ func (p *UpdateExptTemplateOApiRequest) SetTripleConfig(val *experiment.ExptTupl
 func (p *UpdateExptTemplateOApiRequest) SetFieldMappingConfig(val *experiment.ExptFieldMapping) {
 	p.FieldMappingConfig = val
 }
-func (p *UpdateExptTemplateOApiRequest) SetCreateEvalTargetParam(val *CreateEvalTargetParam) {
+func (p *UpdateExptTemplateOApiRequest) SetCreateEvalTargetParam(val *SubmitExperimentEvalTargetParam) {
 	p.CreateEvalTargetParam = val
 }
 func (p *UpdateExptTemplateOApiRequest) SetDefaultEvaluatorsConcurNum(val *int32) {
@@ -39406,7 +38689,7 @@ func (p *UpdateExptTemplateOApiRequest) ReadField5(iprot thrift.TProtocol) error
 	return nil
 }
 func (p *UpdateExptTemplateOApiRequest) ReadField20(iprot thrift.TProtocol) error {
-	_field := NewCreateEvalTargetParam()
+	_field := NewSubmitExperimentEvalTargetParam()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -39720,7 +39003,7 @@ func (p *UpdateExptTemplateOApiRequest) Field5DeepEqual(src *experiment.ExptFiel
 	}
 	return true
 }
-func (p *UpdateExptTemplateOApiRequest) Field20DeepEqual(src *CreateEvalTargetParam) bool {
+func (p *UpdateExptTemplateOApiRequest) Field20DeepEqual(src *SubmitExperimentEvalTargetParam) bool {
 
 	if !p.CreateEvalTargetParam.DeepEqual(src) {
 		return false
