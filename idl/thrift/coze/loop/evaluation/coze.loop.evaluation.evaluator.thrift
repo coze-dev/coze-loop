@@ -559,7 +559,7 @@ service EvaluatorService {
     DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug")// evaluator 调试
     BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/batch_debug")// evaluator 调试
     AsyncDebugEvaluatorResponse AsyncDebugEvaluator(1: AsyncDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/async_debug")// evaluator 异步调试
-    GetAsyncDebugEvaluatorInvokeResultResponse GetAsyncDebugEvaluatorInvokeResult(1: GetAsyncDebugEvaluatorInvokeResultRequest req) (api.get="/api/evaluation/v1/evaluators/async_debug/:invoke_id")// 获取evaluator 异步调试结果
+    GetAsyncDebugEvaluatorInvokeResultResponse GetAsyncDebugEvaluatorInvokeResult(1: GetAsyncDebugEvaluatorInvokeResultRequest req) (api.get="/api/evaluation/v1/evaluators/async_debug/result/:invoke_id")// 获取evaluator 异步调试结果
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
