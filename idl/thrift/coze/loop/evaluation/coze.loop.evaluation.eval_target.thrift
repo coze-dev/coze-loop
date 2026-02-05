@@ -315,5 +315,7 @@ service EvalTargetService {
     AsyncDebugEvalTargetResponse AsyncDebugEvalTarget(1: AsyncDebugEvalTargetRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/async_debug")
 
     // mock输出数据
-    MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output")
+    MockEvalTargetOutputResponse MockEvalTargetOutput(1: MockEvalTargetOutputRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/mock_output", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
 }
