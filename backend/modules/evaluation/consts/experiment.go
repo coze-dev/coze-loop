@@ -39,11 +39,29 @@ const (
 
 const (
 	InsightAnalysisNotifyCardID = "AAq9DvIYd2qHu"
+
+	ExptEventNotifyCardID = "AAqvJsfSSLQtN"
+
+	ExptEventNotifyTitle           = "title"
+	ExptEventNotifyTitleSuccess    = "已成功执行"
+	ExptEventNotifyTitleFailed     = "执行失败"
+	ExptEventNotifyTitleTerminated = "执行已被终止"
+	ExptEventNotifyTitleStarting   = "开始执行"
+
+	ExptEventNotifyTitleColor           = "title_color"
+	ExptEventNotifyTitleColorSuccess    = "green"
+	ExptEventNotifyTitleColorFailed     = "red"
+	ExptEventNotifyTitleColorTerminated = "orange"
+	ExptEventNotifyTitleColorStarting   = "yellow"
+
+	ExptEventNotifyTerminatedCardID = "AAq2fx2rVilOw"
+	ExptEventNotifyTerminatedUser   = "terminated_user"
 )
 
 const (
 	ReportColumnNameEvalTargetActualOutput  = expt.ColumnEvalTargetNameActualOutput
 	ReportColumnLabelEvalTargetActualOutput = "实际输出"
+	ReportColumnLabelEvalTargetExtOutput    = "自定义输出"
 
 	ReportColumnNameEvalTargetTrajectory  = expt.ColumnEvalTargetNameTrajectory
 	ReportColumnLabelEvalTargetTrajectory = "轨迹"

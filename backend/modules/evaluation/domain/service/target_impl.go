@@ -725,12 +725,43 @@ func toTraceParts(ctx context.Context, content *entity.Content) []*tracespec.Mod
 			Type: tracespec.ModelMessagePartType(content.GetContentType()),
 		}}
 	case entity.ContentTypeImage:
+		var name, url string
+		if content.Image != nil {
+			name = gptr.Indirect(content.Image.Name)
+			url = gptr.Indirect(content.Image.URL)
+		}
 		return []*tracespec.ModelMessagePart{{
 			ImageURL: &tracespec.ModelImageURL{
-				Name: gptr.Indirect(content.Image.Name),
-				URL:  gptr.Indirect(content.Image.URL),
+				Name: name,
+				URL:  url,
 			},
 			Type: tracespec.ModelMessagePartType(content.GetContentType()),
+		}}
+	case entity.ContentTypeAudio:
+		var name, url string
+		if content.Audio != nil {
+			name = gptr.Indirect(content.Audio.Name)
+			url = gptr.Indirect(content.Audio.URL)
+		}
+		return []*tracespec.ModelMessagePart{{
+			AudioURL: &tracespec.ModelAudioURL{
+				Name: name,
+				URL:  url,
+			},
+			Type: tracespec.ModelMessagePartTypeAudio,
+		}}
+	case entity.ContentTypeVideo:
+		var name, url string
+		if content.Video != nil {
+			name = gptr.Indirect(content.Video.Name)
+			url = gptr.Indirect(content.Video.URL)
+		}
+		return []*tracespec.ModelMessagePart{{
+			VideoURL: &tracespec.ModelVideoURL{
+				Name: name,
+				URL:  url,
+			},
+			Type: tracespec.ModelMessagePartTypeVideo,
 		}}
 	case entity.ContentTypeMultipart:
 		parts := make([]*tracespec.ModelMessagePart, 0, len(content.MultiPart))

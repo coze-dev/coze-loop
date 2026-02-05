@@ -1233,3 +1233,86 @@ func Test_toContentStr(t *testing.T) {
 		})
 	}
 }
+
+func Test_formatMultiPartData(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *entity.Content
+		expected string
+	}{
+		{
+			name: "empty_multipart",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart:   []*entity.Content{},
+			},
+			expected: "",
+		},
+		{
+			name: "mixed_content",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeText),
+						Text:        ptr.Of("Hello"),
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeImage),
+						Image: &entity.Image{
+							URL: ptr.Of("http://image.png"),
+						},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeAudio),
+						Audio: &entity.Audio{
+							URL: ptr.Of("http://audio.mp3"),
+						},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeVideo),
+						Video: &entity.Video{
+							URL: ptr.Of("http://video.mp4"),
+						},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeMultipart), // Should be skipped
+						MultiPart:   []*entity.Content{},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentType("unknown")), // Should be skipped
+					},
+				},
+			},
+			expected: "Hello\n<ref_image_url:http://image.png>\n<ref_audio_url:http://audio.mp3>\n<ref_video_url:http://video.mp4>\n",
+		},
+		{
+			name: "content_without_urls",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeImage),
+						Image:       &entity.Image{},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeAudio),
+						Audio:       &entity.Audio{},
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeVideo),
+						Video:       &entity.Video{},
+					},
+				},
+			},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatMultiPartData(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

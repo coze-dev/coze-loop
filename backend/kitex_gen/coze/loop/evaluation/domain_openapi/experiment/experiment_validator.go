@@ -75,6 +75,16 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field TargetFieldMapping not valid, %w", err)
 		}
 	}
+	if p.EvalSet != nil {
+		if err := p.EvalSet.IsValid(); err != nil {
+			return fmt.Errorf("field EvalSet not valid, %w", err)
+		}
+	}
+	if p.EvalTarget != nil {
+		if err := p.EvalTarget.IsValid(); err != nil {
+			return fmt.Errorf("field EvalTarget not valid, %w", err)
+		}
+	}
 	if p.ExptStats != nil {
 		if err := p.ExptStats.IsValid(); err != nil {
 			return fmt.Errorf("field ExptStats not valid, %w", err)
