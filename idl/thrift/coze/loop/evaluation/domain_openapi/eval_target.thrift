@@ -48,6 +48,7 @@ struct CustomEvalTarget {
 struct EvalTarget {
     // 基本信息
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')  // 一个对象的唯一标识
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"') // 空间ID
     3: optional string source_target_id  // 源对象ID，例如prompt ID
     4: optional EvalTargetType eval_target_type  // 评测对象类型
 
@@ -61,6 +62,7 @@ struct EvalTarget {
 struct EvalTargetVersion {
     // 基本信息
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"') // 版本唯一标识
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')  // 空间ID
     3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"') // 对象唯一标识
     4: optional string source_target_version  // 源对象版本，例如prompt是0.0.1，bot是版本号12233等
     5: optional EvalTargetContent eval_target_content  // 目标对象内容
