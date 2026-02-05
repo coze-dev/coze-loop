@@ -30,6 +30,26 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+type stubTraceService struct {
+	ITraceService
+	getTrajectoriesFunc                   func(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
+	mergeHistoryMessagesByRespIDBatchFunc func(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error
+}
+
+func (m *stubTraceService) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+	if m.getTrajectoriesFunc != nil {
+		return m.getTrajectoriesFunc(ctx, workspaceID, traceIDs, startTime, endTime, platformType)
+	}
+	return nil, nil
+}
+
+func (m *stubTraceService) MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error {
+	if m.mergeHistoryMessagesByRespIDBatchFunc != nil {
+		return m.mergeHistoryMessagesByRespIDBatchFunc(ctx, spans, platformType)
+	}
+	return nil
+}
+
 func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 	type fields struct {
 		traceRepo             repo.ITraceRepo
@@ -40,6 +60,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
 		buildHelper           TraceFilterProcessorBuilder
+		traceService          ITraceService
 	}
 	type args struct {
 		ctx context.Context
@@ -106,6 +127,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          &stubTraceService{},
 				}
 			},
 			args: args{
@@ -160,6 +182,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -186,6 +209,9 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -195,6 +221,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
 				buildHelper:           fields.buildHelper,
+				traceService:          fields.traceService,
 			}
 
 			got, err := r.ExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -448,6 +475,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
 		buildHelper           TraceFilterProcessorBuilder
+		traceService          ITraceService
 	}
 	type args struct {
 		ctx context.Context
@@ -511,6 +539,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -606,6 +635,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -702,6 +732,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -771,6 +802,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -815,6 +847,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -872,6 +905,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -935,6 +969,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -977,6 +1012,9 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -986,6 +1024,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
 				buildHelper:           fields.buildHelper,
+				traceService:          fields.traceService,
 			}
 
 			got, err := r.PreviewExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -1009,6 +1048,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
 		buildHelper           TraceFilterProcessorBuilder
+		traceService          ITraceService
 	}
 	type args struct {
 		ctx context.Context
@@ -1052,6 +1092,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1140,6 +1181,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1218,6 +1260,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1310,6 +1353,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1408,6 +1452,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1507,6 +1552,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1606,6 +1652,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1642,6 +1689,102 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "export traces to dataset with trajectory successfully",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				datasetProviderMock := rpcmocks.NewMockIDatasetProvider(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
+				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				traceServiceStub := &stubTraceService{}
+
+				adaptor := NewDatasetServiceAdaptor()
+				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							TraceID:     "trace-1",
+							SpanID:      "span-1",
+							WorkspaceID: "123",
+						},
+					},
+				}, nil)
+
+				// Trajectory logic mocks
+				confMock.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(7 * 24 * 3600 * 1000))
+				traceServiceStub.getTrajectoriesFunc = func(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+					return map[string]*loop_span.Trajectory{
+						"trace-1": {
+							ID: ptr.Of("trace-1"),
+							AgentSteps: []*loop_span.AgentStep{
+								{ID: ptr.Of("node-1"), Name: ptr.Of("node-1")},
+							},
+						},
+					}, nil
+				}
+
+				datasetProviderMock.EXPECT().CreateDataset(gomock.Any(), gomock.Any()).Return(int64(100), nil)
+				datasetProviderMock.EXPECT().GetDataset(gomock.Any(), int64(123), int64(100), entity.DatasetCategory_General).Return(&entity.Dataset{
+					ID:              100,
+					Name:            "test-dataset",
+					DatasetCategory: entity.DatasetCategory_General,
+					DatasetVersion: entity.DatasetVersion{
+						DatasetSchema: entity.DatasetSchema{
+							FieldSchemas: []entity.FieldSchema{
+								{Name: "trajectory", Key: ptr.Of("trajectory")},
+							},
+						},
+					},
+				}, nil)
+				datasetProviderMock.EXPECT().AddDatasetItems(gomock.Any(), int64(100), entity.DatasetCategory_General, gomock.Any()).Return([]*entity.DatasetItem{
+					{SpanID: "span-1", DatasetID: 100},
+				}, []entity.ItemErrorGroup{}, nil)
+
+				return fields{
+					traceRepo:             repoMock,
+					traceConfig:           confMock,
+					traceProducer:         traceProducerMock,
+					annotationProducer:    annotationProducerMock,
+					metrics:               metricsMock,
+					tenantProvider:        tenantMock,
+					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
+					traceService:          traceServiceStub,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExportTracesToDatasetRequest{
+					WorkspaceID:  123,
+					SpanIds:      []SpanID{{TraceID: "trace-1", SpanID: "span-1"}},
+					Category:     entity.DatasetCategory_General,
+					Config:       DatasetConfig{IsNewDataset: true, DatasetName: ptr.Of("test-dataset"), DatasetSchema: entity.DatasetSchema{FieldSchemas: []entity.FieldSchema{{Name: "trajectory"}}}},
+					StartTime:    time.Now().Unix() - 3600,
+					EndTime:      time.Now().Unix(),
+					PlatformType: loop_span.PlatformCozeLoop,
+					ExportType:   ExportType_Append,
+					FieldMappings: []entity.FieldMapping{
+						{
+							FieldSchema: entity.FieldSchema{Name: "trajectory", SchemaKey: entity.SchemaKey_Trajectory},
+						},
+					},
+				},
+			},
+			want: &ExportTracesToDatasetResponse{
+				SuccessCount: 1,
+				DatasetID:    100,
+				DatasetName:  "test-dataset",
+				Errors:       []entity.ItemErrorGroup{},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -1650,6 +1793,9 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -1659,6 +1805,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
 				buildHelper:           fields.buildHelper,
+				traceService:          fields.traceService,
 			}
 
 			got, err := r.ExportTracesToDataset(tt.args.ctx, tt.args.req)
@@ -1682,6 +1829,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 		tenantProvider        tenant.ITenantProvider
 		DatasetServiceAdaptor *DatasetServiceAdaptor
 		buildHelper           TraceFilterProcessorBuilder
+		traceService          ITraceService
 	}
 	type args struct {
 		ctx context.Context
@@ -1744,6 +1892,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 					tenantProvider:        tenantMock,
 					DatasetServiceAdaptor: adaptor,
 					buildHelper:           buildHelper,
+					traceService:          nil,
 				}
 			},
 			args: args{
@@ -1795,6 +1944,9 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 			defer ctrl.Finish()
 
 			fields := tt.fieldsGetter(ctrl)
+			if fields.traceService == nil {
+				fields.traceService = &stubTraceService{}
+			}
 			r := &TraceExportServiceImpl{
 				traceRepo:             fields.traceRepo,
 				traceConfig:           fields.traceConfig,
@@ -1804,6 +1956,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 				tenantProvider:        fields.tenantProvider,
 				DatasetServiceAdaptor: fields.DatasetServiceAdaptor,
 				buildHelper:           fields.buildHelper,
+				traceService:          fields.traceService,
 			}
 
 			got, err := r.PreviewExportTracesToDataset(tt.args.ctx, tt.args.req)

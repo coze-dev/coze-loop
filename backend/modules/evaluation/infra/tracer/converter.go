@@ -20,6 +20,8 @@ const (
 	ChatMessagePartTypeText        ChatMessagePartType = "text"
 	ChatMessagePartTypeImageBinary ChatMessagePartType = "image_binary"
 	ChatMessagePartTypeImageURL    ChatMessagePartType = "image_url"
+	ChatMessagePartTypeAudioURL    ChatMessagePartType = "audio_url"
+	ChatMessagePartTypeVideoURL    ChatMessagePartType = "video_url"
 )
 
 func ConvertPrompt2Ob(originMessages []*commonentity.Message, variables []*tracespec.PromptArgument) *tracespec.PromptInput {
@@ -81,6 +83,10 @@ func ConvertContent2Ob(content *commonentity.Content) *tracespec.ModelMessagePar
 		contentType = string(ChatMessagePartTypeText)
 	case commonentity.ContentTypeImage:
 		contentType = string(ChatMessagePartTypeImageURL)
+	case commonentity.ContentTypeAudio:
+		contentType = string(ChatMessagePartTypeAudioURL)
+	case commonentity.ContentTypeVideo:
+		contentType = string(ChatMessagePartTypeVideoURL)
 	case commonentity.ContentTypeMultipartVariable:
 		contentType = string(commonentity.ContentTypeMultipartVariable)
 	default:
@@ -97,7 +103,18 @@ func ConvertContent2Ob(content *commonentity.Content) *tracespec.ModelMessagePar
 			Detail: "",
 		}
 	}
-
+	if content.Audio != nil {
+		part.AudioURL = &tracespec.ModelAudioURL{
+			Name: gptr.Indirect(content.Audio.Name),
+			URL:  gptr.Indirect(content.Audio.URL),
+		}
+	}
+	if content.Video != nil {
+		part.VideoURL = &tracespec.ModelVideoURL{
+			Name: gptr.Indirect(content.Video.Name),
+			URL:  gptr.Indirect(content.Video.URL),
+		}
+	}
 	return part
 }
 
@@ -156,6 +173,22 @@ func ContentToSpanParts(parts []*commonentity.Content) []*tracespec.ModelMessage
 				partSpan.ImageURL = &tracespec.ModelImageURL{
 					URL:  gptr.Indirect(part.Image.URL),
 					Name: gptr.Indirect(part.Image.Name),
+				}
+			}
+		case commonentity.ContentTypeAudio:
+			partSpan.Type = tracespec.ModelMessagePartTypeAudio
+			if part.Audio != nil {
+				partSpan.AudioURL = &tracespec.ModelAudioURL{
+					URL:  gptr.Indirect(part.Audio.URL),
+					Name: gptr.Indirect(part.Audio.Name),
+				}
+			}
+		case commonentity.ContentTypeVideo:
+			partSpan.Type = tracespec.ModelMessagePartTypeVideo
+			if part.Video != nil {
+				partSpan.VideoURL = &tracespec.ModelVideoURL{
+					URL:  gptr.Indirect(part.Video.URL),
+					Name: gptr.Indirect(part.Video.Name),
 				}
 			}
 		}

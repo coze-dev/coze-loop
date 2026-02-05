@@ -35,7 +35,7 @@ require (
 	github.com/cloudwego/kitex v0.15.2
 	github.com/coocood/freecache v1.2.4
 	github.com/coreos/go-semver v0.3.0
-	github.com/coze-dev/cozeloop-go/spec v0.1.8-0.20251230075410-959169a15cd0
+	github.com/coze-dev/cozeloop-go/spec v0.1.8
 	github.com/deatil/go-encoding v1.0.3003
 	github.com/dimchansky/utfbom v1.1.1
 	github.com/dolthub/go-mysql-server v0.18.0

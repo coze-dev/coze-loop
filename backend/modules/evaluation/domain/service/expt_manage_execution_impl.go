@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -23,6 +24,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -289,6 +292,11 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
+	err = e.sendExptNotify(ctx, expt)
+	if err != nil {
+		logs.CtxWarn(ctx, "[Run] sendExptNotify failed, expt_id: %v, error: %v", exptID, err)
+	}
+
 	return nil
 }
 
@@ -506,12 +514,26 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 		switch status {
 		case entity.ExptStatus_Terminated:
+			terminatedItemIDSet := make(map[int64]bool)
 			for _, chunk := range gslice.Chunk(incompleteTurnIDs, 30) {
 				if err := e.terminateItemTurns(ctx, exptID, chunk, spaceID, session); err != nil {
 					logs.CtxWarn(ctx, "terminateItemTurns fail, err: %v", err)
 					continue
 				}
+				// 收集被终止的 itemIDs
+				for _, itemTurnID := range chunk {
+					terminatedItemIDSet[itemTurnID.ItemID] = true
+				}
 				time.Sleep(time.Millisecond * 50)
+			}
+			// 在实验行状态更新完成后，更新 ExptTurnResultFilter
+			if len(terminatedItemIDSet) > 0 {
+				terminatedItemIDs := maps.ToSlice(terminatedItemIDSet, func(k int64, v bool) int64 {
+					return k
+				})
+				if err := e.exptResultService.UpsertExptTurnResultFilter(ctx, spaceID, exptID, terminatedItemIDs); err != nil {
+					logs.CtxWarn(ctx, "UpsertExptTurnResultFilter fail after terminateItemTurns, expt_id: %v, err: %v", exptID, err)
+				}
 			}
 		default:
 		}
@@ -528,6 +550,15 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	}
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
+	}
+
+	// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
+	if got.ExptTemplateMeta != nil && got.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0); err != nil {
+			// 记录错误但不影响主流程
+			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in CompleteExpt, template_id: %v, expt_id: %v, err: %v",
+				got.ExptTemplateMeta.ID, exptID, err)
+		}
 	}
 
 	if err := NewQuotaService(e.quotaRepo, e.configer).ReleaseExptRun(ctx, exptID, spaceID, session); err != nil {
@@ -550,10 +581,73 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		}
 	}
 
+	got.Status = status
+	got.EndAt = exptDo.EndAt
+	// 增加PostHook,后续放到MQ里
+	err = e.afterCompleteExpt(ctx, got)
+	if err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
+	}
+
 	e.mtr.EmitExptExecResult(spaceID, int64(got.ExptType), int64(status), gptr.Indirect(got.StartAt))
 	logs.CtxInfo(ctx, "[ExptEval] CompleteExpt success, expt_id: %v, status: %v, stats: %v", exptID, status, json.Jsonify(stats))
 
 	return nil
+}
+
+func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
+	if !entity.IsExptFinished(expt.Status) {
+		return nil
+	}
+
+	return e.sendExptNotify(ctx, expt)
+}
+
+func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
+	logs.CtxInfo(ctx, "sendExptNotify, expt: %v", expt)
+
+	param := map[string]string{
+		"expt_name": expt.Name,
+		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":   strconv.FormatInt(expt.ID, 10),
+	}
+	if expt.StartAt != nil {
+		param["start_time"] = expt.StartAt.Format(time.DateTime)
+	} else {
+		param["start_time"] = "-"
+	}
+	if expt.EndAt != nil {
+		param["end_time"] = expt.EndAt.Format(time.DateTime)
+	} else {
+		param["end_time"] = "-"
+	}
+	switch expt.Status {
+	case entity.ExptStatus_Success:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess
+	case entity.ExptStatus_Failed:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
+	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
+	case entity.ExptStatus_Pending:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
+	default:
+		return errors.New("invalid sendExptNotify status")
+	}
+
+	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
+	if err != nil {
+		return err
+	}
+
+	if len(userInfos) != 1 || userInfos[0] == nil {
+		return nil
+	}
+	cardID := consts.ExptEventNotifyCardID
+	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {

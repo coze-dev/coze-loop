@@ -457,6 +457,11 @@ func (p *SubmitExperimentEvalSetParam) IsValid() error {
 	return nil
 }
 func (p *SubmitExperimentEvaluatorParam) IsValid() error {
+	if p.RunConfig != nil {
+		if err := p.RunConfig.IsValid(); err != nil {
+			return fmt.Errorf("field RunConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentEvalTargetParam) IsValid() error {

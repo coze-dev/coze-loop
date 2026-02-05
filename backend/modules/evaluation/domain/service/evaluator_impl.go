@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -599,6 +600,26 @@ func (e *EvaluatorServiceImpl) makeSubmitIdemKey(cid string) string {
 	return consts.IdemKeySubmitEvaluator + cid
 }
 
+// roundEvaluatorOutputScore 统一处理评估器输出数据中的分数，保留两位小数
+func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
+	if outputData == nil {
+		return
+	}
+	if outputData.EvaluatorResult == nil {
+		return
+	}
+	// 处理原始分数
+	if outputData.EvaluatorResult.Score != nil {
+		roundedScore := utils.RoundScoreToTwoDecimals(*outputData.EvaluatorResult.Score)
+		outputData.EvaluatorResult.Score = &roundedScore
+	}
+	// 处理修正分数
+	if outputData.EvaluatorResult.Correction != nil && outputData.EvaluatorResult.Correction.Score != nil {
+		roundedScore := utils.RoundScoreToTwoDecimals(*outputData.EvaluatorResult.Correction.Score)
+		outputData.EvaluatorResult.Correction.Score = &roundedScore
+	}
+}
+
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	// 使用 BatchGetEvaluatorByVersionID 查询，不传 spaceID，允许查询所有空间的 evaluator
@@ -630,7 +651,9 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	if err = evaluatorSourceService.PreHandle(ctx, evaluatorDO); err != nil {
 		return nil, err
 	}
-	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.SpaceID, request.DisableTracing)
+	outputData, runStatus, traceID := evaluatorSourceService.Run(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, request.DisableTracing)
+	// 统一处理评估器输出数据中的分数，保留两位小数
+	roundEvaluatorOutputScore(outputData)
 	if runStatus == entity.EvaluatorRunStatusFail {
 		logs.CtxWarn(ctx, "[RunEvaluator] Run fail, exptID: %d, exptRunID: %d, itemID: %d, turnID: %d, evaluatorVersionID: %d, traceID: %s, err: %v", request.ExperimentID, request.ExperimentRunID, request.ItemID, request.TurnID, request.EvaluatorVersionID, traceID, outputData.EvaluatorRunError)
 	}
@@ -669,7 +692,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 }
 
 // DebugEvaluator 调试 evaluator_version
-func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
+func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {
 		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
 	}
@@ -689,7 +712,13 @@ func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *
 	}
 	// 3. 执行Debug
 	// exptSpaceID 目前不影响执行路径，预留透传用途
-	return evaluatorSourceService.Debug(ctx, evaluatorDO, inputData, exptSpaceID)
+	outputData, err := evaluatorSourceService.Debug(ctx, evaluatorDO, inputData, evaluatorRunConf, exptSpaceID)
+	if err != nil {
+		return nil, err
+	}
+	// 调试场景也统一对输出分数保留两位小数
+	roundEvaluatorOutputScore(outputData)
+	return outputData, nil
 }
 
 func (e *EvaluatorServiceImpl) CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error) {

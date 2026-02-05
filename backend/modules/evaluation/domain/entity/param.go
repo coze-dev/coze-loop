@@ -159,6 +159,7 @@ func WithEnv(env *string) Option {
 }
 
 type ExecuteEvalTargetParam struct {
+	ExptID              int64
 	TargetID            int64
 	VersionID           int64
 	SourceTargetID      string
@@ -212,6 +213,7 @@ type RunEvaluatorRequest struct {
 	TurnID             int64               `json:"turn_id,omitempty"`
 	Ext                map[string]string   `json:"ext,omitempty"`
 	DisableTracing     bool                `json:"disable_tracing,omitempty"`
+	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
 }
 
 type CreateExptParam struct {
@@ -232,6 +234,7 @@ type CreateExptParam struct {
 	MaxAliveTime          int64                  `thrift:"max_alive_time,31,optional" frugal:"31,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty"`
 	SourceType            SourceType             `thrift:"source_type,32,optional" frugal:"32,optional,SourceType" form:"source_type" json:"source_type,omitempty"`
 	SourceID              string                 `thrift:"source_id,33,optional" frugal:"33,optional,string" form:"source_id" json:"source_id,omitempty"`
+	ExptTemplateID        int64                  `thrift:"expt_template_id,34,optional" frugal:"34,optional,i64" form:"expt_template_id" json:"expt_template_id,omitempty"`
 
 	ExptConf *EvaluationConfiguration
 }

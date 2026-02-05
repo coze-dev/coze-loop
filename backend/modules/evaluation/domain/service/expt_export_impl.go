@@ -378,6 +378,7 @@ const (
 	columnNameStatus        = "status"
 	columnNameLogID         = "logID"
 	columnNameTargetTraceID = "targetTraceID"
+	columnNameWeightedScore = "weightedScore"
 )
 
 func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
@@ -404,6 +405,11 @@ func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 
 		columns = append(columns, getColumnNameEvaluator(ptr.From(colEvaluator.Name), ptr.From(colEvaluator.Version)))
 		columns = append(columns, getColumnNameEvaluatorReason(ptr.From(colEvaluator.Name), ptr.From(colEvaluator.Version)))
+	}
+
+	// 加权得分列（如果有评估器，则添加加权得分列）
+	if len(e.colEvaluators) > 0 {
+		columns = append(columns, columnNameWeightedScore)
 	}
 
 	// colAnnotations
@@ -519,6 +525,15 @@ func (e *exportCSVHelper) buildRows(ctx context.Context) ([][]string, error) {
 				evaluatorRecord := evaluatorRecords[colEvaluator.EvaluatorVersionID]
 				rowData = append(rowData, getEvaluatorScore(evaluatorRecord))
 				rowData = append(rowData, getEvaluatorReason(evaluatorRecord))
+			}
+
+			// 加权得分（如果有评估器，则添加加权得分数据）
+			if len(e.colEvaluators) > 0 {
+				weightedScore := ""
+				if payload.EvaluatorOutput != nil && payload.EvaluatorOutput.WeightedScore != nil {
+					weightedScore = strconv.FormatFloat(*payload.EvaluatorOutput.WeightedScore, 'f', 2, 64)
+				}
+				rowData = append(rowData, weightedScore)
 			}
 
 			// 标注结果，按Annotation的顺序排序
@@ -649,7 +664,19 @@ func formatMultiPartData(data *entity.Content) string {
 				url = fmt.Sprintf("<ref_image_url:%s>\n", *content.Image.URL)
 			}
 			builder.WriteString(url)
-		case entity.ContentTypeAudio, entity.ContentTypeMultipart:
+		case entity.ContentTypeAudio:
+			url := ""
+			if content.Audio != nil && content.Audio.URL != nil {
+				url = fmt.Sprintf("<ref_audio_url:%s>\n", *content.Audio.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeVideo:
+			url := ""
+			if content.Video != nil && content.Video.URL != nil {
+				url = fmt.Sprintf("<ref_video_url:%s>\n", *content.Video.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeMultipart:
 			continue
 		default:
 			continue

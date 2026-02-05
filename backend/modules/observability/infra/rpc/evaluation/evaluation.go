@@ -6,6 +6,9 @@ package evaluation
 import (
 	"context"
 
+	"github.com/bytedance/gg/gslice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -83,7 +86,10 @@ func (e *EvaluationProvider) InvokeExperiment(ctx context.Context, param *rpc.In
 		// 其他非 BizStatus 错误保留原始错误作为 cause，并包装为通用 RPC 错误
 		return 0, errorx.WrapByCode(err, obErrorx.CommonRPCErrorCode)
 	}
-	return int64(len(resp.GetAddedItems())), nil
+	realAddedItems := gslice.Filter(resp.ItemOutputs, func(output *dataset.CreateDatasetItemOutput) bool {
+		return output.GetIsNewItem()
+	})
+	return int64(len(realAddedItems)), nil
 }
 
 func (e *EvaluationProvider) FinishExperiment(ctx context.Context, param *rpc.FinishExperimentReq) (err error) {

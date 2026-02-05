@@ -11,8 +11,9 @@ import (
 type Literal string
 
 const (
-	TextLiteral  Literal = "text"
-	ImageLiteral Literal = "image"
+	TextLiteral     Literal = "text"
+	ImageLiteral    Literal = "image"
+	ImageUrlLiteral Literal = "image_url"
 )
 
 type ModelMessagePartType string
@@ -66,12 +67,14 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 		modelMsg["reasoning_content"] = c
 	}
 
-	// contents
+	// contents or parts
 	var contents []interface{}
-	if c, ok := msg["contents"].([]interface{}); ok && len(c) > 0 {
-		contents = c
-	} else if c, ok := msg["content"].([]interface{}); ok && len(c) > 0 {
-		contents = c
+	partsKey := []string{"contents", "content", "parts"}
+	for _, key := range partsKey {
+		if parts, ok := msg[key].([]interface{}); ok && len(parts) > 0 {
+			contents = parts
+			break
+		}
 	}
 	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
@@ -83,13 +86,16 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				}
 				typ, _ := mcContent["type"]
 				text, _ := mcContent["text"]
+				if text == nil {
+					text, _ = mcContent["content"]
+				}
 				image, _ := mcContent["image_url"]
 				part := map[string]interface{}{}
 				switch typ {
 				case string(TextLiteral):
 					part["type"] = string(ModelMessagePartTypeText)
 					part["text"] = text
-				case string(ImageLiteral):
+				case string(ImageLiteral), string(ImageUrlLiteral):
 					part["type"] = string(ModelMessagePartTypeImage)
 					imageMap, ok := image.(map[string]interface{})
 					if ok {
@@ -114,16 +120,17 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				// get tool_call
 				toolCall, ok := tc["tool_call"].(map[string]interface{})
 				if !ok {
-					continue
+					toolCall = tc // maybe no tool_call key, it has been a raw tool_call
 				}
 				// get function from tool_call
 				function, ok := toolCall["function"].(map[string]interface{})
 				if !ok {
 					continue
 				}
-
+				id, _ := toolCall["id"]
 				modelCall := map[string]interface{}{
 					"type": "function",
+					"id":   id,
 					"function": map[string]interface{}{
 						"name": function["name"],
 					},

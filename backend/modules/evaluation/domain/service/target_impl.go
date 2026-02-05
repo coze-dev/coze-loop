@@ -342,6 +342,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		return nil, err
 	}
 	outputData, runStatus, err = e.typedOperators[evalTargetDO.EvalTargetType].Execute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      evalTargetDO.SourceTargetID,
@@ -428,6 +429,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	ctx = looptracer.GetTracer().Inject(ctx)
 
 	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
 		SourceTargetID:      target.SourceTargetID,
@@ -594,11 +596,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return err
 	}
 
-	//traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
-	//if err != nil {
+	// traceID, err := e.emitTargetTrace(logs.SetLogID(ctx, record.LogID), record, param.Session)
+	// if err != nil {
 	//	logs.CtxError(ctx, "emitTargetTrace fail, target_id: %v, target_version_id: %v, record_id: %v, err: %v",
 	//		record.TargetID, record.TargetVersionID, record.ID, err)
-	//}
+	// }
 
 	recordTrajectory := func() error {
 		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
@@ -723,12 +725,43 @@ func toTraceParts(ctx context.Context, content *entity.Content) []*tracespec.Mod
 			Type: tracespec.ModelMessagePartType(content.GetContentType()),
 		}}
 	case entity.ContentTypeImage:
+		var name, url string
+		if content.Image != nil {
+			name = gptr.Indirect(content.Image.Name)
+			url = gptr.Indirect(content.Image.URL)
+		}
 		return []*tracespec.ModelMessagePart{{
 			ImageURL: &tracespec.ModelImageURL{
-				Name: gptr.Indirect(content.Image.Name),
-				URL:  gptr.Indirect(content.Image.URL),
+				Name: name,
+				URL:  url,
 			},
 			Type: tracespec.ModelMessagePartType(content.GetContentType()),
+		}}
+	case entity.ContentTypeAudio:
+		var name, url string
+		if content.Audio != nil {
+			name = gptr.Indirect(content.Audio.Name)
+			url = gptr.Indirect(content.Audio.URL)
+		}
+		return []*tracespec.ModelMessagePart{{
+			AudioURL: &tracespec.ModelAudioURL{
+				Name: name,
+				URL:  url,
+			},
+			Type: tracespec.ModelMessagePartTypeAudio,
+		}}
+	case entity.ContentTypeVideo:
+		var name, url string
+		if content.Video != nil {
+			name = gptr.Indirect(content.Video.Name)
+			url = gptr.Indirect(content.Video.URL)
+		}
+		return []*tracespec.ModelMessagePart{{
+			VideoURL: &tracespec.ModelVideoURL{
+				Name: name,
+				URL:  url,
+			},
+			Type: tracespec.ModelMessagePartTypeVideo,
 		}}
 	case entity.ContentTypeMultipart:
 		parts := make([]*tracespec.ModelMessagePart, 0, len(content.MultiPart))

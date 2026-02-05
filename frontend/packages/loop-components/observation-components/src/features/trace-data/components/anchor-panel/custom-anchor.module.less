@@ -1,0 +1,29 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+/* stylelint-disable order/properties-order */
+.custom-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.anchor-link {
+  padding: 8px 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-color-text-2, #42464E);
+  font-size: 13px;
+  line-height: 22px;
+  position: relative;
+  border-left: 2px solid transparent;
+
+
+
+  &.active {
+    color: rgba(var(--coze-up-brand-9));
+    background-color: var(--coz-bg-primary);
+    border-left-color: rgb(var(--coze-up-brand-9));
+    font-weight: 500;
+  }
+}

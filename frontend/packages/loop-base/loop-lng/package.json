@@ -1,0 +1,19 @@
+{
+  "name": "@cozeloop/loop-lng",
+  "version": "0.0.1",
+  "author": "wangziqiang.carl@bytedance.com",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "exit 0",
+    "lint": "eslint ./ --cache --quiet",
+    "test": "exit 0",
+    "test:cov": "exit 0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@coze-arch/eslint-config": "workspace:*",
+    "@coze-arch/ts-config": "workspace:*",
+    "@types/node": "^18",
+    "@types/react": "18.2.37"
+  }
+}

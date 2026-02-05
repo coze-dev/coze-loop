@@ -1,8 +1,0 @@
-[
-  // 可使用 @vitest/coverage-v8 替代
-  ["@vitest/coverage-c8", null, "请使用 @vitest/coverage-v8"],
-  "husky",
-  "lint-staged",
-  "jest",
-  ["jsdom", null, "请使用 happy-dom 代替"]
-]

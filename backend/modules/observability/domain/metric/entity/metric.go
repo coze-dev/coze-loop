@@ -82,6 +82,7 @@ const (
 
 	// Service 服务调用指标
 	MetricNameServiceTraceCount         = "service_trace_count"
+	MetricNameServiceUniqTrace          = "service_uniq_trace"
 	MetricNameServiceTraceErrorCount    = "service_trace_error_count"
 	MetricNameServiceTraceSuccessCount  = "service_trace_success_count"
 	MetricNameServiceSpanCount          = "service_span_count"
@@ -135,7 +136,7 @@ type Expression struct {
 // offline expression
 type OExpression struct {
 	AggrType   MetricOExpressionType
-	MetricName string // 如果需要需要使用其他指标进行聚合
+	MetricName string // 如果需要需要使用其他指标进行聚合, 使用的时候需要注意一些匹配性
 }
 
 type IMetricDefinition interface {

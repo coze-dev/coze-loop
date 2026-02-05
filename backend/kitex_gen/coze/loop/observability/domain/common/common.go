@@ -39,6 +39,8 @@ const (
 
 	PlatformTypeInnerCozeBot = "inner_coze_bot"
 
+	PlatformTypeTraceDetail = "trace_detail"
+
 	SpanListTypeRootSpan = "root_span"
 
 	SpanListTypeAllSpan = "all_span"
@@ -50,6 +52,8 @@ const (
 	ContentTypeImage = "Image"
 
 	ContentTypeAudio = "Audio"
+
+	ContentTypeVideo = "Video"
 
 	ContentTypeMultiPart = "MultiPart"
 )

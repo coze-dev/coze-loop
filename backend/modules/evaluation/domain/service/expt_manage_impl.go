@@ -12,7 +12,6 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -22,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -57,6 +57,10 @@ func NewExptManager(
 	evaluatorService EvaluatorService,
 	benefitService benefit.IBenefitService,
 	exptAggrResultService ExptAggrResultService,
+	templateRepo repo.IExptTemplateRepo,
+	templateManager IExptTemplateManager,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -81,6 +85,10 @@ func NewExptManager(
 		evaluatorService:            evaluatorService,
 		benefitService:              benefitService,
 		exptAggrResultService:       exptAggrResultService,
+		templateRepo:                templateRepo,
+		templateManager:             templateManager,
+		notifyRPCAdapter:            notifyRPCAdapter,
+		userProvider:                userProvider,
 	}
 }
 
@@ -107,6 +115,10 @@ type ExptMangerImpl struct {
 	evalTargetService           IEvalTargetService
 	evaluatorService            EvaluatorService
 	benefitService              benefit.IBenefitService
+	templateRepo                repo.IExptTemplateRepo
+	templateManager             IExptTemplateManager
+	notifyRPCAdapter            rpc.INotifyRPCAdapter
+	userProvider                rpc.IUserProvider
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -137,6 +149,11 @@ func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceI
 func (e *ExptMangerImpl) GetDetail(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.Experiment, error) {
 	expt, err := e.Get(ctx, exptID, spaceID, session)
 	if err != nil {
+		return nil, err
+	}
+
+	// 填充 ExptTemplateMeta
+	if err := e.fillExptTemplates(ctx, []*entity.Experiment{expt}, spaceID); err != nil {
 		return nil, err
 	}
 
@@ -186,7 +203,72 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		}
 	}
 
+	// 填充关联的实验模板基础信息
+	if err := e.fillExptTemplates(ctx, expts, spaceID); err != nil {
+		return nil, err
+	}
+
 	return expts, nil
+}
+
+// fillExptTemplates 为实验列表按需补充关联模板的基础信息（名称、描述等）
+func (e *ExptMangerImpl) fillExptTemplates(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	if len(expts) == 0 || e.templateRepo == nil {
+		return nil
+	}
+
+	idSet := make(map[int64]struct{})
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateMeta == nil || ex.ExptTemplateMeta.ID == 0 {
+			continue
+		}
+		idSet[ex.ExptTemplateMeta.ID] = struct{}{}
+	}
+	if len(idSet) == 0 {
+		return nil
+	}
+
+	templateIDs := make([]int64, 0, len(idSet))
+	for id := range idSet {
+		templateIDs = append(templateIDs, id)
+	}
+
+	templates, err := e.templateRepo.MGetByID(ctx, templateIDs, spaceID)
+	if err != nil {
+		return err
+	}
+	if len(templates) == 0 {
+		// 如果一个模板都查不到（例如都被软删除），将所有带模板 ID 的实验的 ExptTemplateMeta 置为 nil
+		for _, ex := range expts {
+			if ex == nil || ex.ExptTemplateMeta == nil || ex.ExptTemplateMeta.ID == 0 {
+				continue
+			}
+			ex.ExptTemplateMeta = nil
+		}
+		return nil
+	}
+
+	templateMap := gslice.ToMap(templates, func(t *entity.ExptTemplate) (int64, *entity.ExptTemplate) {
+		if t == nil {
+			return 0, nil
+		}
+		return t.GetID(), t
+	})
+
+	for _, ex := range expts {
+		if ex == nil || ex.ExptTemplateMeta == nil || ex.ExptTemplateMeta.ID == 0 {
+			continue
+		}
+		if tpl, ok := templateMap[ex.ExptTemplateMeta.ID]; ok {
+			// 只回填模板的 Meta 到 Experiment.ExptTemplateMeta，避免在 Experiment 上挂完整模板对象
+			ex.ExptTemplateMeta = tpl.Meta
+		} else {
+			// 如果模板在数据库中查不到了（已被删除），将 ExptTemplateMeta 设置为 nil
+			ex.ExptTemplateMeta = nil
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (pass bool, err error) {
@@ -201,7 +283,32 @@ func (e *ExptMangerImpl) CheckName(ctx context.Context, name string, spaceID int
 }
 
 func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) error {
-	return e.exptRepo.MDelete(ctx, exptIDs, spaceID)
+	logs.CtxInfo(ctx, "batch delete expts, expt_ids: %v", exptIDs)
+
+	// 先获取实验信息，用于判断是否关联模板
+	expts, err := e.exptRepo.MGetByID(ctx, exptIDs, spaceID)
+	if err != nil {
+		return err
+	}
+
+	// 批量删除实验
+	if err := e.exptRepo.MDelete(ctx, exptIDs, spaceID); err != nil {
+		return err
+	}
+
+	// 针对每个实验，如果关联了模板，则更新模板的 ExptInfo（删除实验，数量 -1）
+	for _, expt := range expts {
+		if expt == nil || expt.ExptTemplateMeta == nil || expt.ExptTemplateMeta.ID <= 0 || e.templateManager == nil {
+			continue
+		}
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, expt.ID, expt.Status, -1); err != nil {
+			// 记录错误但不影响主流程
+			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in MDelete, template_id: %v, expt_id: %v, err: %v",
+				expt.ExptTemplateMeta.ID, expt.ID, err)
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
@@ -417,10 +524,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
 	for _, tupleIDs := range tupleIDs {
-		//cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
-		//for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
+		// cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
+		// for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
 		//	cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
-		//}
+		// }
 		tuple := &entity.ExptTuple{
 			EvalSet: evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
 			// Evaluators: cevaluators,
@@ -442,10 +549,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 }
 
 func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experiment) *entity.ExptTupleID {
-	//evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
-	//for _, ref := range expt.EvaluatorVersionRef {
+	// evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
+	// for _, ref := range expt.EvaluatorVersionRef {
 	//	evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
-	//}
+	// }
 
 	exptTupleID := &entity.ExptTupleID{
 		VersionedEvalSetID: &entity.VersionedEvalSetID{
@@ -558,6 +665,24 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
+	}
+
+	// 如果提供了模板 ID，设置 ExptTemplateMeta
+	if req.ExptTemplateID > 0 {
+		do.ExptTemplateMeta = &entity.ExptTemplateMeta{
+			ID: req.ExptTemplateID,
+		}
+	}
+
+	// 根据 EvaluatorConf.ScoreWeight 设置实验是否启用分数权重
+	if do.EvalConf != nil && do.EvalConf.ConnectorConf.EvaluatorsConf != nil {
+		do.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
+		for _, ec := range do.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+				do.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
+				break
+			}
+		}
 	}
 
 	if !req.CreateEvalTargetParam.IsNull() {
@@ -705,7 +830,28 @@ func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, se
 
 func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, session *entity.Session) error {
 	logs.CtxInfo(ctx, "delete expt, expt_id: %v", exptID)
-	return e.exptRepo.Delete(ctx, exptID, spaceID)
+
+	// 先获取实验信息，用于判断是否关联模板
+	expt, err := e.exptRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return err
+	}
+
+	// 删除实验
+	if err := e.exptRepo.Delete(ctx, exptID, spaceID); err != nil {
+		return err
+	}
+
+	// 如果实验关联了模板，更新模板的 ExptInfo（删除实验，数量 -1）
+	if expt != nil && expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1); err != nil {
+			// 记录错误但不影响主流程
+			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in Delete, template_id: %v, expt_id: %v, err: %v",
+				expt.ExptTemplateMeta.ID, exptID, err)
+		}
+	}
+
+	return nil
 }
 
 func (e *ExptMangerImpl) Clone(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {

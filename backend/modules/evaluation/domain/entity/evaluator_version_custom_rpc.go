@@ -19,8 +19,23 @@ import (
 type EvaluatorAccessProtocol = string
 
 const (
-	EvaluatorAccessProtocolRPC = "rpc"
+	EvaluatorAccessProtocolRPC         EvaluatorAccessProtocol = "rpc"
+	EvaluatorAccessProtocolRPCOld      EvaluatorAccessProtocol = "rpc_old"
+	EvaluatorAccessProtocolFaasHTTP    EvaluatorAccessProtocol = "faas_http"
+	EvaluatorAccessProtocolFaasHTTPOld EvaluatorAccessProtocol = "faas_http_old"
 )
+
+type EvaluatorHTTPMethod = string
+
+const (
+	EvaluatorHTTPMethodGet  EvaluatorHTTPMethod = "get"
+	EvaluatorHTTPMethodPost EvaluatorHTTPMethod = "post"
+)
+
+type EvaluatorHTTPInfo struct {
+	Method *EvaluatorHTTPMethod `json:"method,omitempty"`
+	Path   *string              `json:"path,omitempty"`
+}
 
 type CustomRPCEvaluatorVersion struct {
 	// standard EvaluatorVersion layer attributes
@@ -41,8 +56,12 @@ type CustomRPCEvaluatorVersion struct {
 	AccessProtocol        EvaluatorAccessProtocol `json:"access_protocol"`         // custom protocol
 	ServiceName           *string                 `json:"service_name"`
 	Cluster               *string                 `json:"cluster"`
-	Timeout               *int64                  `json:"timeout"` // timeout duration in milliseconds(ms)
+	InvokeHTTPInfo        *EvaluatorHTTPInfo      `json:"invoke_http_info,omitempty"` // invoke http info
+	Timeout               *int64                  `json:"timeout"`                    // timeout duration in milliseconds(ms)
 	RateLimit             *RateLimit              `json:"rate_limit,omitempty"`
+
+	// extra fields
+	Ext map[string]string `json:"ext,omitempty"`
 }
 
 func (do *CustomRPCEvaluatorVersion) SetID(id int64) {
@@ -121,9 +140,6 @@ func (do *CustomRPCEvaluatorVersion) ValidateInput(input *EvaluatorInputData) er
 func (do *CustomRPCEvaluatorVersion) ValidateBaseInfo() error {
 	if do == nil {
 		return errorx.NewByCode(errno.EvaluatorNotExistCode, errorx.WithExtraMsg("evaluator_version is nil"))
-	}
-	if do.ProviderEvaluatorCode == nil || lo.IsEmpty(*do.ProviderEvaluatorCode) {
-		return errorx.NewByCode(errno.InvalidProviderEvaluatorCodeCode, errorx.WithExtraMsg("provider_evaluator_code is empty"))
 	}
 	if lo.IsEmpty(do.AccessProtocol) {
 		return errorx.NewByCode(errno.InvalidAccessProtocolCode, errorx.WithExtraMsg("access_protocol is empty"))

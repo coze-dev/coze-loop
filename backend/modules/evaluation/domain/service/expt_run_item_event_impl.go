@@ -204,7 +204,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*30)
+		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*60)
 		if err != nil {
 			return err
 		}
@@ -460,6 +460,10 @@ type ExptRecordEvalModeFailRetry struct {
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
+		return nil
+	}
+
 	itemTurnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, eiec.Event.ExptID, eiec.Event.EvalSetItemID, eiec.Event.SpaceID, eiec.Event.Session)
 	if err != nil {
 		return err
@@ -476,6 +480,7 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.ID = ids[idx]
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
+		runLog.ErrMsg = ""
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
 	}
 

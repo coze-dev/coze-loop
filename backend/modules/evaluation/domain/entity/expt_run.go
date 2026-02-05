@@ -398,14 +398,15 @@ func (e *ExptItemEvalCtx) GetRecordEvalLogID(ctx context.Context) (logID string)
 func (e *ExptItemEvalCtx) GetTurnEvalLogID(ctx context.Context, turnID int64) (logID string) {
 	turnRunLog := e.GetExistTurnResultRunLog(turnID)
 
-	defer func() {
-		logs.CtxInfo(ctx, "GetTurnEvalLogID with log_id: %v", logID)
-	}()
+	defer func() { logs.CtxInfo(ctx, "GetTurnEvalLogID with log_id: %v", logID) }()
 
-	if turnRunLog == nil || len(turnRunLog.LogID) == 0 {
+	if turnRunLog == nil {
 		return logs.NewLogID()
 	}
 
+	if len(turnRunLog.LogID) == 0 {
+		turnRunLog.LogID = logs.NewLogID()
+	}
 	return turnRunLog.LogID
 }
 

@@ -159,8 +159,9 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 		return nil
 	}
 	spansMap := make(map[string][]*span.InputSpan)
+	claim := o.auth.GetClaim(ctx)
 	for i := range spans {
-		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]})
+		workspaceID := o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{spans[i]}, claim)
 		if workspaceID == "" {
 			continue
 		}
@@ -234,7 +235,7 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 	if err != nil {
 		return nil, err
 	}
-	spansMap := unpackSpace(req.WorkspaceID, reqSpanProto)
+	spansMap := o.unpackOtelSpace(ctx, req.WorkspaceID, reqSpanProto)
 	partialFailSpanNumber := 0
 	partialErrMessage := ""
 	for workspaceId, otelSpans := range spansMap {
@@ -337,16 +338,16 @@ func ungzip(contentEncoding string, data []byte) ([]byte, error) {
 	return uncompressedData.Bytes(), nil
 }
 
-func unpackSpace(outerSpaceID string, reqSpanProto *otel.ExportTraceServiceRequest) map[string][]*otel.ResourceScopeSpan {
+func (o *OpenAPIApplication) unpackOtelSpace(ctx context.Context, outerSpaceID string, reqSpanProto *otel.ExportTraceServiceRequest) map[string][]*otel.ResourceScopeSpan {
 	if reqSpanProto == nil {
 		return nil
 	}
 	spansMap := make(map[string][]*otel.ResourceScopeSpan)
 	for _, resourceSpans := range reqSpanProto.ResourceSpans {
 		for _, scopeSpans := range resourceSpans.ScopeSpans {
-			for _, span := range scopeSpans.Spans {
+			for _, scopeSpan := range scopeSpans.Spans {
 				spaceID := ""
-				for _, attribute := range span.Attributes {
+				for _, attribute := range scopeSpan.Attributes {
 					if attribute.Key == otel.OtelAttributeWorkSpaceID {
 						spaceID = attribute.Value.GetStringValue()
 						break
@@ -355,13 +356,17 @@ func unpackSpace(outerSpaceID string, reqSpanProto *otel.ExportTraceServiceReque
 				if spaceID == "" {
 					spaceID = outerSpaceID
 				}
+				if spaceID == "" {
+					claim := o.auth.GetClaim(ctx)
+					spaceID = o.workspace.GetIngestWorkSpaceID(ctx, []*span.InputSpan{o.convertOtelTag2InputSpan(scopeSpan)}, claim)
+				}
 				if spansMap[spaceID] == nil {
 					spansMap[spaceID] = make([]*otel.ResourceScopeSpan, 0)
 				}
 				spansMap[spaceID] = append(spansMap[spaceID], &otel.ResourceScopeSpan{
 					Resource: resourceSpans.Resource,
 					Scope:    scopeSpans.Scope,
-					Span:     span,
+					Span:     scopeSpan,
 				})
 
 			}
@@ -369,6 +374,22 @@ func unpackSpace(outerSpaceID string, reqSpanProto *otel.ExportTraceServiceReque
 	}
 
 	return spansMap
+}
+
+func (o *OpenAPIApplication) convertOtelTag2InputSpan(scopeSpan *otel.Span) *span.InputSpan {
+	if scopeSpan == nil {
+		return nil
+	}
+	tags := make(map[string]string, 0)
+	for _, attribute := range scopeSpan.Attributes {
+		if attribute.Value.IsStringValue() {
+			tags[attribute.Key] = attribute.Value.GetStringValue()
+		}
+	}
+
+	return &span.InputSpan{
+		TagsString: tags,
+	}
 }
 
 func unmarshalOtelSpan(spanSrc []byte, contentType string) (*otel.ExportTraceServiceRequest, error) {

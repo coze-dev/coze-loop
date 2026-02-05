@@ -197,6 +197,7 @@ func ConvertContentDO2DTO(content *commonentity.Content) *commondto.Content {
 		Image:            ConvertImageDO2DTO(content.Image),
 		MultiPart:        multiPart,
 		Audio:            ConvertAudioDO2DTO(content.Audio),
+		Video:            ConvertVideoDO2DTO(content.Video),
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
 		FullContentBytes: content.FullContentBytes,
@@ -506,4 +507,24 @@ func ConvertRateLimitDTO2DO(limit *commondto.RateLimit) (*commonentity.RateLimit
 		Burst:  limit.Burst,
 		Period: period,
 	}, nil
+}
+
+func ConvertRuntimeParamDTO2DO(dto *commondto.RuntimeParam) *commonentity.RuntimeParam {
+	if dto == nil {
+		return nil
+	}
+	return &commonentity.RuntimeParam{
+		JSONValue: dto.JSONValue,
+		JSONDemo:  dto.JSONDemo,
+	}
+}
+
+func ConvertRuntimeParamDO2DTO(do *commonentity.RuntimeParam) *commondto.RuntimeParam {
+	if do == nil {
+		return nil
+	}
+	return &commondto.RuntimeParam{
+		JSONValue: do.JSONValue,
+		JSONDemo:  do.JSONDemo,
+	}
 }

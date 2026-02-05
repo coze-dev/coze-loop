@@ -18,7 +18,7 @@ import (
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
-	openapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 
 	domainCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domaindoEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -418,6 +418,13 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf, experiment.Evaluators); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
+	}
+
+	if experiment.Target != nil {
+		result.EvalTarget = OpenAPIEvalTargetDO2DTO(experiment.Target)
+	}
+	if experiment.EvalSet != nil && experiment.ExptType != entity.ExptType_Online {
+		result.EvalSet = evalsetopenapi.OpenAPIEvaluationSetDO2DTO(experiment.EvalSet)
 	}
 
 	return result
@@ -1136,5 +1143,182 @@ func TargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *domainExpt.
 		InputTokens:     AggregatorResultDOsToDTOs(result.InputTokensAggrResults),
 		OutputTokens:    AggregatorResultDOsToDTOs(result.OutputTokensAggrResults),
 		TotalTokens:     AggregatorResultDOsToDTOs(result.TotalTokensAggrResults),
+	}
+}
+
+func OpenAPIEvaluatorParamsDTO2Domain(dtos []*openapi.SubmitExperimentEvaluatorParam) []*domainEvaluator.EvaluatorIDVersionItem {
+	if len(dtos) == 0 {
+		return nil
+	}
+	dos := make([]*domainEvaluator.EvaluatorIDVersionItem, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		dos = append(dos, OpenAPIEvaluatorParamDTO2Domain(dto))
+	}
+	return dos
+}
+
+func OpenAPIEvaluatorParamDTO2Domain(dto *openapi.SubmitExperimentEvaluatorParam) *domainEvaluator.EvaluatorIDVersionItem {
+	if dto == nil {
+		return nil
+	}
+
+	return &domainEvaluator.EvaluatorIDVersionItem{
+		EvaluatorID: dto.EvaluatorID,
+		Version:     dto.Version,
+		RunConfig:   OpenAPIEvaluatorRunConfigDTO2Domain(dto.RunConfig),
+	}
+}
+
+func OpenAPIEvaluatorRunConfigDTO2Domain(dto *openapiEvaluator.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
+	if dto == nil {
+		return nil
+	}
+	return &domainEvaluator.EvaluatorRunConfig{
+		Env:                   dto.Env,
+		EvaluatorRuntimeParam: OpenAPIRuntimeParamDTO2Domain(dto.EvaluatorRuntimeParam),
+	}
+}
+
+func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.EvalTarget {
+	if targetDO == nil {
+		return nil
+	}
+
+	targetDTO := &openapiEvalTarget.EvalTarget{
+		ID:             gptr.Of(targetDO.ID),
+		SourceTargetID: gptr.Of(targetDO.SourceTargetID),
+	}
+	if targetDO.EvalTargetType != 0 {
+		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(targetDO.EvalTargetType))
+	}
+	if targetDO.EvalTargetVersion != nil {
+		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, targetDO.EvalTargetType)
+	}
+	targetDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(targetDO.BaseInfo)
+	return targetDTO
+}
+
+func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ entity.EvalTargetType) *openapiEvalTarget.EvalTargetVersion {
+	if versionDO == nil {
+		return nil
+	}
+
+	versionDTO := &openapiEvalTarget.EvalTargetVersion{
+		ID:                  gptr.Of(versionDO.ID),
+		TargetID:            gptr.Of(versionDO.TargetID),
+		SourceTargetVersion: gptr.Of(versionDO.SourceTargetVersion),
+	}
+
+	contentDTO := &openapiEvalTarget.EvalTargetContent{
+		InputSchemas:  common.OpenAPIArgsSchemaDO2DTOs(versionDO.InputSchema),
+		OutputSchemas: common.OpenAPIArgsSchemaDO2DTOs(versionDO.OutputSchema),
+	}
+	if versionDO.RuntimeParamDemo != nil {
+		contentDTO.RuntimeParamJSONDemo = versionDO.RuntimeParamDemo
+	}
+
+	switch typ {
+	case entity.EvalTargetTypeLoopPrompt:
+		if versionDO.Prompt != nil {
+			contentDTO.Prompt = &openapiEvalTarget.EvalPrompt{
+				PromptID:     gptr.Of(versionDO.Prompt.PromptID),
+				Version:      gptr.Of(versionDO.Prompt.Version),
+				Name:         gptr.Of(versionDO.Prompt.Name),
+				PromptKey:    gptr.Of(versionDO.Prompt.PromptKey),
+				SubmitStatus: gptr.Of(mapEntitySubmitStatusToOpenAPI(versionDO.Prompt.SubmitStatus)),
+				Description:  gptr.Of(versionDO.Prompt.Description),
+			}
+		}
+	case entity.EvalTargetTypeCustomRPCServer:
+		if versionDO.CustomRPCServer != nil {
+			contentDTO.CustomRPCServer = OpenAPICustomRPCServerDO2DTO(versionDO.CustomRPCServer)
+		}
+	}
+
+	versionDTO.EvalTargetContent = contentDTO
+	versionDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(versionDO.BaseInfo)
+
+	return versionDTO
+}
+
+func mapEntitySubmitStatusToOpenAPI(status entity.SubmitStatus) openapiEvalTarget.SubmitStatus {
+	switch status {
+	case entity.SubmitStatus_UnSubmit:
+		return openapiEvalTarget.SubmitStatusUnSubmit
+	case entity.SubmitStatus_Submitted:
+		return openapiEvalTarget.SubmitStatusSubmitted
+	default:
+		return ""
+	}
+}
+
+func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEvalTarget.EvalTargetType {
+	switch typ {
+	case entity.EvalTargetTypeCozeBot:
+		return openapiEvalTarget.EvalTargetTypeCozeBot
+	case entity.EvalTargetTypeLoopPrompt:
+		return openapiEvalTarget.EvalTargetTypeCozeLoopPrompt
+	case entity.EvalTargetTypeLoopTrace:
+		return openapiEvalTarget.EvalTargetTypeTrace
+	case entity.EvalTargetTypeCozeWorkflow:
+		return openapiEvalTarget.EvalTargetTypeCozeWorkflow
+	case entity.EvalTargetTypeVolcengineAgent:
+		return openapiEvalTarget.EvalTargetTypeVolcengineAgent
+	case entity.EvalTargetTypeCustomRPCServer:
+		return openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	default:
+		return ""
+	}
+}
+
+func OpenAPICustomRPCServerDO2DTO(do *entity.CustomRPCServer) *openapiEvalTarget.CustomRPCServer {
+	if do == nil {
+		return nil
+	}
+	res := &openapiEvalTarget.CustomRPCServer{
+		ID:                  gptr.Of(do.ID),
+		Name:                gptr.Of(do.Name),
+		Description:         gptr.Of(do.Description),
+		ServerName:          gptr.Of(do.ServerName),
+		AccessProtocol:      gptr.Of(do.AccessProtocol),
+		Cluster:             gptr.Of(do.Cluster),
+		InvokeHTTPInfo:      OpenAPIHTTPInfoDO2DTO(do.InvokeHTTPInfo),
+		AsyncInvokeHTTPInfo: OpenAPIHTTPInfoDO2DTO(do.AsyncInvokeHTTPInfo),
+		NeedSearchTarget:    do.NeedSearchTarget,
+		SearchHTTPInfo:      OpenAPIHTTPInfoDO2DTO(do.SearchHTTPInfo),
+		CustomEvalTarget:    OpenAPICustomEvalTargetDO2DTO(do.CustomEvalTarget),
+		IsAsync:             do.IsAsync,
+		ExecRegion:          gptr.Of(do.ExecRegion),
+		ExecEnv:             do.ExecEnv,
+		Timeout:             do.Timeout,
+		AsyncTimeout:        do.AsyncTimeout,
+		Ext:                 do.Ext,
+	}
+	res.Regions = append(res.Regions, do.Regions...)
+	return res
+}
+
+func OpenAPIHTTPInfoDO2DTO(do *entity.HTTPInfo) *openapiEvalTarget.HTTPInfo {
+	if do == nil {
+		return nil
+	}
+	return &openapiEvalTarget.HTTPInfo{
+		Method: gptr.Of(do.Method),
+		Path:   gptr.Of(do.Path),
+	}
+}
+
+func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarget.CustomEvalTarget {
+	if do == nil {
+		return nil
+	}
+	return &openapiEvalTarget.CustomEvalTarget{
+		ID:        do.ID,
+		Name:      do.Name,
+		AvatarURL: do.AvatarURL,
+		Ext:       do.Ext,
 	}
 }

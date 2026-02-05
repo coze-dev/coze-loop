@@ -220,6 +220,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 
 	var targetRecord *entity.EvalTargetRecord
 	etc := &entity.ExecuteTargetCtx{
+		ExperimentID:    gptr.Of(etec.Event.ExptID),
 		ExperimentRunID: gptr.Of(etec.Event.ExptRunID),
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,
@@ -328,7 +329,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, fmt.Errorf("expt's evaluator conf not found, evaluator_version_id: %d", versionID)
 		}
 
-		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields)
+		inputData, err := e.buildEvaluatorInputData(ctx, spaceID, ev.EvaluatorType, ec, turn, targetFields, ev.GetInputSchemas(), etec.Ext)
 		if err != nil {
 			return nil, err
 		}
@@ -347,6 +348,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 				ItemID:             item.ItemID,
 				TurnID:             turn.ID,
 				Ext:                etec.Ext,
+				EvaluatorRunConf:   ec.RunConf,
 			})
 			if err != nil {
 				return err
@@ -369,13 +371,13 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
-	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content,
+	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
 ) (*entity.EvaluatorInputData, error) {
 	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, ec.IngressConf.EvalSetAdapter.FieldConfs, evalSetTurn)
 	if err != nil {
 		return nil, err
 	}
-	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields)
+	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields, evaluatorType, inputSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -385,6 +387,17 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	case entity.EvaluatorTypeCode:
 		res.EvaluateDatasetFields = fromEvalSet
 		res.EvaluateTargetOutputFields = fromTarget
+	case entity.EvaluatorTypeCustomRPC:
+		if len(inputSchemas) == 0 { // 无input_schemas的自定义服务评估器
+			res.EvaluateDatasetFields = fromEvalSet
+			res.EvaluateTargetOutputFields = fromTarget
+		} else { // 有input_schemas的自定义服务评估器
+			for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+				for key, content := range fieldCnt {
+					res.InputFields[key] = content
+				}
+			}
+		}
 	default:
 		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 			for key, content := range fieldCnt {
@@ -392,13 +405,19 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 			}
 		}
 	}
+
+	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf)
+
 	return res, nil
 }
 
 // buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
-	sourceFields map[string]*entity.Content,
+	sourceFields map[string]*entity.Content, evaluatorType entity.EvaluatorType, inputSchemas []*entity.ArgsSchema,
 ) (map[string]*entity.Content, error) {
+	if evaluatorType == entity.EvaluatorTypeCode || (evaluatorType == entity.EvaluatorTypeCustomRPC && len(inputSchemas) == 0) {
+		return sourceFields, nil
+	}
 	result := make(map[string]*entity.Content)
 
 	for _, fc := range fieldConfs {
@@ -486,4 +505,16 @@ func (e *DefaultExptTurnEvaluationImpl) getContentByJsonPath(content *entity.Con
 		ContentType: ptr.Of(entity.ContentTypeText),
 		Text:        ptr.Of(text),
 	}, nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[string]string, runConf *entity.EvaluatorRunConfig) map[string]string {
+	builtExt := gmap.Clone(ext)
+	if builtExt == nil {
+		builtExt = make(map[string]string)
+	}
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		builtExt[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	return builtExt
 }

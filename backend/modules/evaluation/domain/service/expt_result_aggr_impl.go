@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
@@ -213,10 +214,23 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 			ExperimentID: experimentID,
 			FieldType:    int32(entity.FieldType_EvaluatorScore),
 			FieldKey:     strconv.FormatInt(evaluatorVersionID, 10),
-			Score:        averageScore,
+			Score:        utils.RoundScoreToTwoDecimals(averageScore),
 			AggrResult:   aggrResultBytes,
 			Version:      0,
 		})
+	}
+
+	// 追加"加权得分"聚合指标（FieldType_WeightedScore）：
+	// 基于行级 WeightedScore 做聚合（加权评分的聚合），而不是对各评估器聚合结果再加权。
+	experiment, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
+	if err == nil && experiment != nil &&
+		experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+		if weightedAggr, err := e.createWeightedScoreAggrResult(ctx, spaceID, experimentID); err != nil {
+			return err
+		} else if weightedAggr != nil {
+			aggrResults = append(aggrResults, weightedAggr)
+		}
 	}
 
 	targetAggrResults, err := tmag.buildAggrResult(spaceID, experimentID)
@@ -261,6 +275,79 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 	}
 
 	return nil
+}
+
+// createWeightedScoreAggrResult 基于行级 WeightedScore 计算聚合指标
+// 只统计成功的轮次（TurnRunState_Success）
+func (e *ExptAggrResultServiceImpl) createWeightedScoreAggrResult(ctx context.Context, spaceID, experimentID int64) (*entity.ExptAggrResult, error) {
+	const (
+		limit  = int64(500)
+		maxTry = 10000
+	)
+
+	aggGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
+	var (
+		cursor  int64
+		hasData bool
+	)
+
+	for i := 0; i < maxTry; i++ {
+		turnResults, nextCursor, err := e.exptTurnResultRepo.ScanTurnResults(
+			ctx,
+			experimentID,
+			[]int32{int32(entity.TurnRunState_Success)},
+			cursor,
+			limit,
+			spaceID,
+		)
+		if err != nil {
+			return nil, err
+		}
+		if len(turnResults) == 0 {
+			break
+		}
+
+		for _, tr := range turnResults {
+			if tr.WeightedScore != nil {
+				aggGroup.Append(*tr.WeightedScore)
+				hasData = true
+			}
+		}
+
+		if nextCursor == 0 || nextCursor == cursor {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	if !hasData {
+		return nil, nil
+	}
+
+	aggrResult := aggGroup.Result()
+	var averageScore float64
+	for _, r := range aggrResult.AggregatorResults {
+		if r.AggregatorType == entity.Average {
+			averageScore = r.GetScore()
+			break
+		}
+	}
+
+	aggrBytes, err := json.Marshal(aggrResult)
+	if err != nil {
+		return nil, err
+	}
+
+	return &entity.ExptAggrResult{
+		SpaceID:      spaceID,
+		ExperimentID: experimentID,
+		FieldType:    int32(entity.FieldType_WeightedScore),
+		// 约定 FieldKey 为 experimentID
+		FieldKey:   strconv.FormatInt(experimentID, 10),
+		Score:      utils.RoundScoreToTwoDecimals(averageScore),
+		AggrResult: aggrBytes,
+		Version:    0,
+	}, nil
 }
 
 func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, param *entity.UpdateExptAggrResultParam) (err error) {
@@ -351,13 +438,54 @@ func (e *ExptAggrResultServiceImpl) updateExptAggrResult(ctx context.Context, pa
 		ExperimentID: param.ExperimentID,
 		FieldType:    int32(entity.FieldType_EvaluatorScore),
 		FieldKey:     strconv.FormatInt(evaluatorVersionID, 10),
-		Score:        averageScore,
+		Score:        utils.RoundScoreToTwoDecimals(averageScore),
 		AggrResult:   aggrResultBytes,
+		Version:      version,
 	}
 
 	err = e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, exptAggrResults, version)
 	if err != nil {
 		return err
+	}
+
+	// 如果实验启用了加权得分，也需要更新加权分数的聚合结果
+	experiment, err := e.experimentRepo.GetByID(ctx, param.ExperimentID, param.SpaceID)
+	if err == nil && experiment != nil &&
+		experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+		// 更新加权分数的聚合结果
+		weightedAggr, err := e.createWeightedScoreAggrResult(ctx, param.SpaceID, param.ExperimentID)
+		if err != nil {
+			logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+			// 不返回错误，避免影响主流程
+		} else if weightedAggr != nil {
+			// 检查加权分数的聚合结果是否已存在
+			_, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
+			if err != nil {
+				statusErr, ok := errorx.FromStatusError(err)
+				if ok && statusErr.Code() == errno.ResourceNotFoundCode {
+					// 如果不存在，创建新的聚合结果
+					if err := e.exptAggrResultRepo.BatchCreateExptAggrResult(ctx, []*entity.ExptAggrResult{weightedAggr}); err != nil {
+						logs.CtxError(ctx, "Failed to create weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+					}
+				} else {
+					logs.CtxError(ctx, "Failed to get weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+				}
+			} else {
+				// 如果已存在，更新聚合结果
+				version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
+				if err != nil {
+					logs.CtxError(ctx, "Failed to update version for weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+				} else {
+					weightedAggr.Version = version
+					if err := e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, weightedAggr, version); err != nil {
+						logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+					} else {
+						logs.CtxInfo(ctx, "update weighted score aggr result success, exptID: %d", param.ExperimentID)
+					}
+				}
+			}
+		}
 	}
 
 	logs.CtxInfo(ctx, "update expt aggr result success, exptID: %d", param.ExperimentID)
@@ -433,6 +561,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			TargetID:        versionedTargetIDMap[exptID].TargetID,
 			TargetVersionID: versionedTargetIDMap[exptID].VersionID,
 		}
+		var weightedResults []*entity.AggregatorResult
 
 		var latestUpdateAt *time.Time
 		for _, fieldResult := range exptResult {
@@ -467,13 +596,11 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				if err != nil {
 					return nil, fmt.Errorf("failed to parse evaluator version id from field key %s, err: %v", fieldResult.FieldKey, err)
 				}
-
 				aggregateResultDO := entity.AggregateResult{}
 				err = json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO)
 				if err != nil {
 					return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
 				}
-
 				evaluator, ok := versionID2Evaluator[evaluatorVersionID]
 				if !ok {
 					return nil, fmt.Errorf("failed to get evaluator by version_id %d", evaluatorVersionID)
@@ -487,6 +614,12 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 					Version:            gptr.Of(evaluator.GetVersion()),
 				}
 				evaluatorResults[evaluatorVersionID] = &evaluatorAggrResult
+			case int32(entity.FieldType_WeightedScore):
+				aggregateResultDO := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &aggregateResultDO); err != nil {
+					return nil, fmt.Errorf("json.Unmarshal(%s) failed, err: %v", fieldResult.AggrResult, err)
+				}
+				weightedResults = aggregateResultDO.AggregatorResults
 			case int32(entity.FieldType_TargetLatency):
 				ar := entity.AggregateResult{}
 				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
@@ -520,16 +653,85 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			}
 		}
 
-		results = append(results, &entity.ExptAggregateResult{
+		exptAgg := &entity.ExptAggregateResult{
 			ExperimentID:      exptID,
 			EvaluatorResults:  evaluatorResults,
 			AnnotationResults: annotationResults,
 			TargetResults:     targetResults,
 			UpdateTime:        latestUpdateAt,
-		})
+		}
+		if len(weightedResults) > 0 {
+			exptAgg.WeightedResults = weightedResults
+		}
+		results = append(results, exptAgg)
 	}
 
 	return results, nil
+}
+
+// calculateWeightedAggregateResults 计算所有数值型聚合指标（如 avg、p99 等）的加权结果
+// 约定：对任意 AggregatorType，只要其 Data.Value 为数值类型（Double），则参与加权计算：
+//
+//	weighted_value = Σ(value_i * weight_i) / Σ(weight_i)
+func (e *ExptAggrResultServiceImpl) calculateWeightedAggregateResults(
+	evaluatorResults map[int64]*entity.EvaluatorAggregateResult,
+	weights map[int64]float64,
+) []*entity.AggregatorResult {
+	if len(evaluatorResults) == 0 || len(weights) == 0 {
+		return nil
+	}
+
+	// aggregatorType -> (sum(value_i * w_i), sum(w_i))
+	type aggAcc struct {
+		sumWeighted float64
+		sumWeight   float64
+	}
+	accMap := make(map[entity.AggregatorType]*aggAcc)
+
+	for evaluatorVersionID, result := range evaluatorResults {
+		weight, ok := weights[evaluatorVersionID]
+		if !ok || weight <= 0 {
+			continue
+		}
+
+		for _, aggr := range result.AggregatorResults {
+			if aggr == nil || aggr.Data == nil || aggr.Data.Value == nil {
+				continue
+			}
+
+			v := *aggr.Data.Value
+			if _, ok := accMap[aggr.AggregatorType]; !ok {
+				accMap[aggr.AggregatorType] = &aggAcc{}
+			}
+			acc := accMap[aggr.AggregatorType]
+			acc.sumWeighted += v * weight
+			acc.sumWeight += weight
+		}
+	}
+
+	if len(accMap) == 0 {
+		return nil
+	}
+
+	weightedResults := make([]*entity.AggregatorResult, 0, len(accMap))
+	for aggType, acc := range accMap {
+		if acc.sumWeight <= 0 {
+			continue
+		}
+		value := acc.sumWeighted / acc.sumWeight
+		weightedResults = append(weightedResults, &entity.AggregatorResult{
+			AggregatorType: aggType,
+			Data: &entity.AggregateData{
+				DataType: entity.Double,
+				Value:    &value,
+			},
+		})
+	}
+
+	if len(weightedResults) == 0 {
+		return nil
+	}
+	return weightedResults
 }
 
 func (e *ExptAggrResultServiceImpl) batchGetTagInfoByExperimentIDs(ctx context.Context, spaceID int64, exptIDs []int64) (map[int64]*entity.TagInfo, error) {
@@ -561,6 +763,30 @@ func (e *ExptAggrResultServiceImpl) CreateAnnotationAggrResult(ctx context.Conte
 
 	if param.FieldType != entity.FieldType_Annotation {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid field type"))
+	}
+
+	// 检查 ExptAggrResult 记录是否已存在，如果存在则走 Update 逻辑
+	exptAggrRes, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_Annotation), param.FieldKey)
+	if err == nil && exptAggrRes != nil {
+		// 记录已存在，转换为 UpdateExptAggrResultParam 并调用 UpdateAnnotationAggrResult
+		logs.CtxInfo(ctx, "create annotation aggr result already exists, updating, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+		updateParam := &entity.UpdateExptAggrResultParam{
+			SpaceID:      param.SpaceID,
+			ExperimentID: param.ExperimentID,
+			FieldType:    param.FieldType,
+			FieldKey:     param.FieldKey,
+		}
+		return e.UpdateAnnotationAggrResult(ctx, updateParam)
+	}
+
+	// 如果错误不是 ResourceNotFound，则返回错误
+	statusErr, ok := errorx.FromStatusError(err)
+	if ok && statusErr.Code() == errno.ResourceNotFoundCode {
+		// 记录不存在，继续原有的 create 逻辑
+		logs.CtxInfo(ctx, "create annotation aggr result doesn't exist, experiment_id: %d, field_type: %s, field_key: %s", param.ExperimentID, param.FieldType, param.FieldKey)
+	} else {
+		// 其他错误，直接返回
+		return err
 	}
 
 	tagKeyID, err := strconv.ParseInt(param.FieldKey, 10, 64)
@@ -665,7 +891,7 @@ func (e *ExptAggrResultServiceImpl) createContinuousNumberExptAggrResult(ctx con
 		FieldKey:     param.FieldKey,
 		AggrResult:   aggrResultBytes,
 		Version:      0,
-		Score:        averageScore,
+		Score:        utils.RoundScoreToTwoDecimals(averageScore),
 	}
 
 	err = e.exptAggrResultRepo.CreateExptAggrResult(ctx, exptAggrResult)
@@ -808,8 +1034,9 @@ func (e *ExptAggrResultServiceImpl) updateContinuousNumberExptAggrResult(ctx con
 		ExperimentID: param.ExperimentID,
 		FieldType:    int32(entity.FieldType_Annotation),
 		FieldKey:     param.FieldKey,
-		Score:        averageScore,
+		Score:        utils.RoundScoreToTwoDecimals(averageScore),
 		AggrResult:   aggrResultBytes,
+		Version:      version,
 	}
 
 	err = e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, exptAggrResults, version)
@@ -838,6 +1065,7 @@ func (e *ExptAggrResultServiceImpl) updateCategoricalExptAggrResult(ctx context.
 		FieldType:    int32(entity.FieldType_Annotation),
 		FieldKey:     param.FieldKey,
 		AggrResult:   aggrResultBytes,
+		Version:      version,
 	}
 
 	err = e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, exptAggrResult, version)
@@ -867,6 +1095,7 @@ func (e *ExptAggrResultServiceImpl) updateBooleanExptAggrResult(ctx context.Cont
 		FieldType:    int32(entity.FieldType_Annotation),
 		FieldKey:     param.FieldKey,
 		AggrResult:   aggrResultBytes,
+		Version:      version,
 	}
 
 	err = e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, exptAggrResults, version)
@@ -928,7 +1157,7 @@ func (t *targetMtrAggrGroup) buildAggrResult(spaceID, exptID int64) ([]*entity.E
 			ExperimentID: exptID,
 			FieldType:    int32(fieldType),
 			FieldKey:     fieldKey,
-			Score:        averageScore,
+			Score:        utils.RoundScoreToTwoDecimals(averageScore),
 			AggrResult:   aggrResultBytes,
 		})
 		return nil

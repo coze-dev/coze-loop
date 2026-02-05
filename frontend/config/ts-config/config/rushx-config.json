@@ -1,5 +1,4 @@
 {
-  "$schema": "../../../rushx-config.schema.json",
   "packageAudit": {
     "enable": true,
     "rules": [

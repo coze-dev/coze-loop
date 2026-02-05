@@ -5,6 +5,7 @@ package tracehub
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -14,12 +15,57 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/hashicorp/go-multierror"
-	"github.com/pkg/errors"
+	pkgerrors "github.com/pkg/errors"
 )
+
+const (
+	taskRunCreateLockKeyTemplate = "observability:task_run:create:%d:%s:%d:%d"
+	taskRunCreateLockTTL         = 30 * time.Second
+)
+
+var errSkipSubscriber = errors.New("skip subscriber")
+
+func calcTaskRunEndAt(t *entity.ObservabilityTask, runStartAt int64) int64 {
+	if !t.Sampler.IsCycle {
+		return t.EffectiveTime.EndAt
+	}
+	switch t.Sampler.CycleTimeUnit {
+	case entity.TimeUnitDay:
+		return runStartAt + t.Sampler.CycleInterval*24*time.Hour.Milliseconds()
+	case entity.TimeUnitWeek:
+		return runStartAt + t.Sampler.CycleInterval*7*24*time.Hour.Milliseconds()
+	default:
+		return runStartAt + t.Sampler.CycleInterval*10*time.Minute.Milliseconds()
+	}
+}
+
+func (h *TraceHubServiceImpl) withTaskRunCreateLock(
+	ctx context.Context,
+	taskID int64,
+	runType entity.TaskRunType,
+	runStartAt int64,
+	runEndAt int64,
+	fn func() error,
+) error {
+	if h.locker == nil {
+		return fn()
+	}
+	key := fmt.Sprintf(taskRunCreateLockKeyTemplate, taskID, runType, runStartAt, runEndAt)
+	locked, err := h.locker.Lock(ctx, key, taskRunCreateLockTTL)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return nil
+	}
+	defer func() {
+		_, _ = h.locker.Unlock(key)
+	}()
+	return fn()
+}
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-
 	// 1. perform initial filtering based on space_id
 	// 1.1 Filter out spans that do not belong to any space or bot
 	cacheInfo := h.localCache.LoadTaskCache(ctx)
@@ -66,7 +112,6 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		logs.CtxError(ctx, "Failed to get consumer listening config, err: %v", err)
 		return nil, err
 	}
-
 	var subscribers []*spanSubscriber
 	taskDOs, err := h.listNonFinalTaskByRedis(ctx, span.WorkspaceID)
 	if err != nil {
@@ -77,22 +122,35 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		if !cfg.IsAllSpace && !gslice.Contains(cfg.SpaceList, taskDO.WorkspaceID) {
 			continue
 		}
+
 		if taskDO.EffectiveTime == nil || taskDO.EffectiveTime.StartAt == 0 {
 			continue
 		}
+
+		if taskDO.TaskStatus == entity.TaskStatusPending {
+			continue
+		}
+
 		if span.StartTime < taskDO.EffectiveTime.StartAt {
 			logs.CtxInfo(ctx, "span start time is before task cycle start time, trace_id=%s, span_id=%s", span.TraceID, span.SpanID)
 			continue
 		}
 
 		proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
+		tenants, err := h.getTenants(ctx, taskDO.GetPlatformType())
+		if err != nil {
+			logs.CtxError(ctx, "Failed to get tenants, err: %v", err)
+			return nil, err
+		}
 		subscribers = append(subscribers, &spanSubscriber{
-			taskID:      taskDO.ID,
-			t:           taskDO,
-			processor:   proc,
-			taskRepo:    h.taskRepo,
-			runType:     entity.TaskRunTypeNewData,
-			buildHelper: h.buildHelper,
+			taskID:       taskDO.ID,
+			t:            taskDO,
+			processor:    proc,
+			taskRepo:     h.taskRepo,
+			runType:      entity.TaskRunTypeNewData,
+			buildHelper:  h.buildHelper,
+			tenants:      tenants,
+			traceService: h.traceService,
 		})
 	}
 
@@ -105,7 +163,7 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 		ok, err := s.Match(ctx, span)
 		logs.CtxInfo(ctx, "Match span, task_id=%d, trace_id=%s, span_id=%s, ok=%v, err=%v", s.taskID, span.TraceID, span.SpanID, ok, err)
 		if err != nil {
-			merr = multierror.Append(merr, errors.WithMessagef(err, "match span,task_id=%d, trace_id=%s, span_id=%s", s.taskID, span.TraceID, span.SpanID))
+			merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "match span,task_id=%d, trace_id=%s, span_id=%s", s.taskID, span.TraceID, span.SpanID))
 			continue
 		}
 		if ok {
@@ -123,56 +181,65 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubscriber) error {
 	merr := &multierror.Error{}
 	for _, sub := range subs {
-		// First step: lock for task status change
-		// Task run status
 		var runStartAt, runEndAt int64
 		if sub.t.TaskStatus == entity.TaskStatusUnstarted {
-			logs.CtxWarn(ctx, "task is unstarted, need sub.Creative")
 			runStartAt = sub.t.EffectiveTime.StartAt
-			if !sub.t.Sampler.IsCycle {
-				runEndAt = sub.t.EffectiveTime.EndAt
-			} else {
-				switch sub.t.Sampler.CycleTimeUnit {
-				case entity.TimeUnitDay:
-					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*24*time.Hour.Milliseconds()
-				case entity.TimeUnitWeek:
-					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*7*24*time.Hour.Milliseconds()
-				default:
-					runEndAt = runStartAt + (sub.t.Sampler.CycleInterval)*10*time.Minute.Milliseconds()
+			runEndAt = calcTaskRunEndAt(sub.t, runStartAt)
+			if err := h.withTaskRunCreateLock(ctx, sub.taskID, sub.runType, runStartAt, runEndAt, func() error {
+				taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, &sub.t.WorkspaceID, sub.taskID)
+				if err != nil {
+					return err
 				}
-			}
-			if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
-				merr = multierror.Append(merr, errors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
-				continue
-			}
-			if err := sub.processor.OnTaskUpdated(ctx, sub.t, entity.TaskStatusRunning); err != nil {
-				logs.CtxWarn(ctx, "OnTaskUpdated, task_id=%d, err=%v", sub.taskID, err)
+				if taskRunConfig != nil &&
+					taskRunConfig.RunStartAt.UnixMilli() == runStartAt &&
+					taskRunConfig.RunEndAt.UnixMilli() == runEndAt {
+					if sub.t.TaskStatus != entity.TaskStatusUnstarted {
+						return nil
+					}
+					sub.t.TaskStatus = entity.TaskStatusRunning
+					if err := sub.processor.OnTaskUpdated(ctx, sub.t, entity.TaskStatusRunning); err != nil {
+						logs.CtxWarn(ctx, "sub.processor.OnTaskUpdated err:%v", err)
+						return errSkipSubscriber
+					}
+					return nil
+				}
+				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
+					return err
+				}
+				if err := sub.processor.OnTaskUpdated(ctx, sub.t, entity.TaskStatusRunning); err != nil {
+					logs.CtxWarn(ctx, "sub.processor.OnTaskUpdated err:%v", err)
+					return errSkipSubscriber
+				}
+				sub.t.TaskStatus = entity.TaskStatusRunning
+				return nil
+			}); err != nil {
+				if errors.Is(err, errSkipSubscriber) {
+					continue
+				}
+				merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "task is unstarted, need sub.Creative,creative processor, task_id=%d", sub.taskID))
 				continue
 			}
 		}
-		// Fetch the corresponding task config
+
 		taskRunConfig, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, &sub.t.WorkspaceID, sub.taskID)
 		if err != nil {
 			logs.CtxWarn(ctx, "GetLatestNewDataTaskRun, task_id=%d, err=%v", sub.taskID, err)
 			continue
 		}
 		if taskRunConfig == nil {
-			logs.CtxWarn(ctx, "task run config not found, task_id=%d", sub.taskID)
 			runStartAt = sub.t.EffectiveTime.StartAt
-			if !sub.t.Sampler.IsCycle {
-				runEndAt = sub.t.EffectiveTime.EndAt
-			} else {
-				switch sub.t.Sampler.CycleTimeUnit {
-				case entity.TimeUnitDay:
-					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*24*time.Hour.Milliseconds()
-				case entity.TimeUnitWeek:
-					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*7*24*time.Hour.Milliseconds()
-				default:
-					runEndAt = runStartAt + sub.t.Sampler.CycleInterval*10*time.Minute.Milliseconds()
+			runEndAt = calcTaskRunEndAt(sub.t, runStartAt)
+			if err = h.withTaskRunCreateLock(ctx, sub.taskID, sub.runType, runStartAt, runEndAt, func() error {
+				existing, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, &sub.t.WorkspaceID, sub.taskID)
+				if err != nil {
+					return err
 				}
-			}
-			if err = sub.Creative(ctx, runStartAt, runEndAt); err != nil {
-				merr = multierror.Append(merr, errors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
+				if existing != nil {
+					return nil
+				}
+				return sub.Creative(ctx, runStartAt, runEndAt)
+			}); err != nil {
+				merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "task run config not found,creative processor, task_id=%d", sub.taskID))
 			}
 			continue
 		}
@@ -187,7 +254,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 				IsFinish: true,
 			}); err != nil {
 				logs.CtxWarn(ctx, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID)
-				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+				merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
 		}
@@ -205,7 +272,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 				TaskRun:  taskRunConfig,
 				IsFinish: true,
 			}); err != nil {
-				merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+				merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 				continue
 			}
 		}
@@ -219,13 +286,24 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
-					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+					merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
 				runStartAt = taskRunConfig.RunEndAt.UnixMilli()
 				runEndAt = taskRunConfig.RunEndAt.UnixMilli() + (taskRunConfig.RunEndAt.UnixMilli() - taskRunConfig.RunStartAt.UnixMilli())
-				if err := sub.Creative(ctx, runStartAt, runEndAt); err != nil {
-					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(cycleEndTime) creative processor, task_id=%d", sub.taskID))
+				if err := h.withTaskRunCreateLock(ctx, sub.taskID, sub.runType, runStartAt, runEndAt, func() error {
+					existing, err := h.taskRepo.GetLatestNewDataTaskRun(ctx, &sub.t.WorkspaceID, sub.taskID)
+					if err != nil {
+						return err
+					}
+					if existing != nil &&
+						existing.RunStartAt.UnixMilli() == runStartAt &&
+						existing.RunEndAt.UnixMilli() == runEndAt {
+						return nil
+					}
+					return sub.Creative(ctx, runStartAt, runEndAt)
+				}); err != nil {
+					merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "time.Now().After(cycleEndTime) creative processor, task_id=%d", sub.taskID))
 					continue
 				}
 			}
@@ -237,7 +315,7 @@ func (h *TraceHubServiceImpl) preDispatch(ctx context.Context, subs []*spanSubsc
 					TaskRun:  taskRunConfig,
 					IsFinish: false,
 				}); err != nil {
-					merr = multierror.Append(merr, errors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
+					merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "time.Now().After(endTime) Finish processor, task_id=%d", sub.taskID))
 					continue
 				}
 			}
@@ -253,7 +331,7 @@ func (h *TraceHubServiceImpl) dispatch(ctx context.Context, span *loop_span.Span
 			continue
 		}
 		if err := sub.AddSpan(ctx, span); err != nil {
-			merr = multierror.Append(merr, errors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
+			merr = multierror.Append(merr, pkgerrors.WithMessagef(err, "add span to subscriber, log_id=%s, trace_id=%s, span_id=%s, task_id=%d",
 				span.LogID, span.TraceID, span.SpanID, sub.taskID))
 		} else {
 			logs.CtxInfo(ctx, "add span to subscriber, task_id=%d, log_id=%s, trace_id=%s, span_id=%s", sub.taskID,

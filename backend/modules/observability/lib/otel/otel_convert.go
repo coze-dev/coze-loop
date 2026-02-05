@@ -14,6 +14,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/litellm"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_inference"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel/open_telemetry"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 
@@ -24,6 +25,8 @@ import (
 
 // FieldConfMap Field configuration, supports configuring data sources and export methods for fields, currently supports attribute, event, is_tag, data_type
 // Among them, attributes and events support configuring multiple, while tags and datatypes only support configuring one.
+// For AttributeKey and AttributeKeyPrefix, the field at the head has higher priority, and result will be returned once a match is found.
+// For Events, the fields have same priority, and result will be fixed by all fields.
 // Other types of configurations need to be manually processed in the code.
 var (
 	FieldConfMap = map[string]FieldConf{
@@ -67,6 +70,11 @@ var (
 			IsTag:     true,
 			DataType:  dataTypeString,
 		},
+		"status_code": {
+			AttributeKey: []string{otelAttributeStatusCode},
+			IsTag:        false,
+			DataType:     dataTypeInt64,
+		},
 		"psm": {
 			AttributeKey: []string{"service.name"},
 			IsTag:        false,
@@ -85,11 +93,13 @@ var (
 				springAIAttributeToolInput,
 				otelAttributeInput,
 				apmInput,
+				otelAttributeToolInput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelInputMessages,
 				openInferenceAttributeToolInput,
 				string(semconv1_27_0.GenAIPromptKey),
+				string(semconv.GenAIInputMessagesKey),
 			},
 			EventName: []string{otelEventModelSystemMessage, otelEventModelUserMessage, otelEventModelToolMessage, otelEventModelAssistantMessage, otelSpringAIEventModelPrompt},
 			DataType:  dataTypeString,
@@ -112,10 +122,12 @@ var (
 				springAIAttributeToolOutput,
 				otelAttributeOutput,
 				apmOutput,
+				otelAttributeToolOutput,
 			},
 			AttributeKeyPrefix: []string{
 				openInferenceAttributeModelOutputMessages,
 				string(semconv1_27_0.GenAICompletionKey),
+				string(semconv.GenAIOutputMessagesKey),
 			},
 			EventName: []string{otelEventModelChoice, otelSpringAIEventModelCompletion},
 			DataType:  dataTypeString,
@@ -342,6 +354,11 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 			}
 			if conf.IsTag {
 				tagsLong[fieldKey] = value
+			} else {
+				switch fieldKey {
+				case "status_code":
+					statusCode = int32(value)
+				}
 			}
 		case dataTypeBool:
 			value, ok := srcValue.(bool)
@@ -383,7 +400,7 @@ func OtelSpanConvertToSendSpan(ctx context.Context, spaceID string, resourceScop
 	// set attributes
 	calOtherAttribute(ctx, span, tagsString, tagsLong, tagsDouble, tagsBool)
 	// set runtime
-	calRuntime(systemTagsString, resourceScopeSpan)
+	calRuntime(systemTagsString, tagsString, resourceScopeSpan)
 
 	result := &LoopSpan{
 		StartTime:        startTimeUnixNanoInt64 / 1000,
@@ -529,12 +546,19 @@ func calOtherAttribute(ctx context.Context, span *Span, tagsString map[string]st
 	}
 }
 
-func calRuntime(systemTagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) {
-	systemTagsString[tracespec.Runtime_] = getRuntime(resourceScopeSpan)
+func calRuntime(systemTagsString map[string]string, tagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) {
+	systemTagsString[tracespec.Runtime_] = getRuntime(tagsString, resourceScopeSpan)
 }
 
-func getRuntime(resourceScopeSpan *ResourceScopeSpan) string {
-	runtime := processRuntime(resourceScopeSpan)
+func getRuntime(tagsString map[string]string, resourceScopeSpan *ResourceScopeSpan) string {
+	if len(tagsString) > 0 {
+		if runtime, ok := tagsString[otelAttributeSystemRuntime]; ok && len(runtime) > 0 {
+			delete(tagsString, otelAttributeSystemRuntime)
+			return runtime
+		}
+	}
+
+	runtime := processRuntimeByScope(resourceScopeSpan)
 	marshalString, err := sonic.MarshalString(runtime)
 	if err != nil {
 		return "" // unexpected
@@ -543,7 +567,7 @@ func getRuntime(resourceScopeSpan *ResourceScopeSpan) string {
 	return marshalString
 }
 
-func processRuntime(resourceScopeSpan *ResourceScopeSpan) *tracespec.Runtime {
+func processRuntimeByScope(resourceScopeSpan *ResourceScopeSpan) *tracespec.Runtime {
 	res := &tracespec.Runtime{
 		Library:      tracespec.VLibOpentelemetry,
 		Scene:        "",
@@ -666,18 +690,26 @@ func processAttributePrefix(ctx context.Context, fieldKey string, conf FieldConf
 					}
 				}
 			}
-		case openInferenceAttributeModelInputMessages: // openInference(or litellm) input message
+		case openInferenceAttributeModelInputMessages, string(semconv.GenAIInputMessagesKey): // openInference(or litellm) or openTelemetry input message
 			srcInput, err := open_inference.ConvertToModelInput(srcAttrAggrRes)
 			if err != nil {
 				continue
 			}
 			// pack tools
 			srcTools := aggregateAttributesByPrefix(attributeMap, openInferenceAttributeModelInputTools)
-			toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
-			if err != nil {
-				continue
+			if srcTools != nil { // openInference tools
+				toBeMarshalObject, err = open_inference.AddTools2ModelInput(srcInput, srcTools)
+				if err != nil {
+					continue
+				}
+			} else { // otel tools
+				srcTools = aggregateAttributesByPrefix(attributeMap, otelAttributeModelInputTools)
+				toBeMarshalObject, err = open_telemetry.AddTools2ModelInput(srcInput, srcTools)
+				if err != nil {
+					continue
+				}
 			}
-		case openInferenceAttributeModelOutputMessages: // openInference output message
+		case openInferenceAttributeModelOutputMessages, string(semconv.GenAIOutputMessagesKey): // openInference(or litellm) or openTelemetry output message
 			resObject, err := open_inference.ConvertToModelOutput(srcAttrAggrRes)
 			if err == nil {
 				toBeMarshalObject = resObject
