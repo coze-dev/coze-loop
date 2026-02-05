@@ -150,7 +150,7 @@ func FieldDataDO2DTO(do *entity.FieldData) *eval_set.FieldData {
 	if do == nil {
 		return nil
 	}
-	return &eval_set.FieldData {
+	return &eval_set.FieldData{
 		Key:     gptr.Of(do.Key),
 		Name:    gptr.Of(do.Name),
 		Content: common.ConvertContentDO2DTO(do.Content),
