@@ -358,6 +358,9 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 		if output.ActualOutput != nil {
 			outputFields[consts.OutputSchemaKey] = ToSPIContentDO(output.ActualOutput)
 		}
+		for k, v := range output.ExtOutput {
+			outputFields[k] = ToSPIContentDO(v)
+		}
 
 		var evalTargetUsage *entity.EvalTargetUsage
 		if usage != nil && (usage.InputTokens != nil || usage.OutputTokens != nil) {
