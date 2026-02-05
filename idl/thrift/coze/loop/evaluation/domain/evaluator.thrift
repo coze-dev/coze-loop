@@ -7,6 +7,7 @@ enum EvaluatorType {
     Prompt = 1
     Code = 2
     CustomRPC = 3
+    Agent = 4
 }
 
 typedef string LanguageType(ts.enum="true")
