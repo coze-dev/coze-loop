@@ -572,7 +572,7 @@ service EvaluatorService {
 
     // 调试预置评估器
     DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (
-        api.post="/api/evaluation/v1/evaluators/debug_builtin", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+        api.post="/api/evaluation/v1/evaluators/debug_builtin", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
     )// 调试预置评估器
 
     // 更新预置评估器tag
