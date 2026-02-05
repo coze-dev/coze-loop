@@ -442,7 +442,7 @@ type AgentType string
 const AgentType_Vibe AgentType = "vibe"
 
 type AgentConfig struct {
-	AgentType AgentType `json:"agent_type,omitempty"` // Agent type, e.g. Claude Code, OpenCode, etc., for future extension
+	AgentType AgentType `json:"agent_type,omitempty"`
 }
 
 type SkillConfig struct {
