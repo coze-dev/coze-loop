@@ -1036,7 +1036,7 @@ func TestProcessRuntime(t *testing.T) {
 					panic(r) // Re-panic if unexpected
 				}
 			}()
-			result := processRuntime(tt.resourceScopeSpan)
+			result := processRuntimeByScope(tt.resourceScopeSpan)
 			tt.validate(t, result)
 		})
 	}
@@ -1093,7 +1093,7 @@ func TestGetRuntime(t *testing.T) {
 					panic(r) // Re-panic if unexpected
 				}
 			}()
-			result := getRuntime(tt.resourceScopeSpan)
+			result := getRuntime(nil, tt.resourceScopeSpan)
 			tt.validate(t, result)
 		})
 	}
@@ -1149,7 +1149,7 @@ func TestCalRuntime(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			calRuntime(tt.systemTagsString, tt.resourceScopeSpan)
+			calRuntime(tt.systemTagsString, nil, tt.resourceScopeSpan)
 			tt.validate(t, tt.systemTagsString)
 		})
 	}
