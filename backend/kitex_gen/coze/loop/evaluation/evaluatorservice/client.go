@@ -27,8 +27,11 @@ type Client interface {
 	GetTemplateInfo(ctx context.Context, request *evaluator.GetTemplateInfoRequest, callOptions ...callopt.Option) (r *evaluator.GetTemplateInfoResponse, err error)
 	GetDefaultPromptEvaluatorTools(ctx context.Context, req *evaluator.GetDefaultPromptEvaluatorToolsRequest, callOptions ...callopt.Option) (r *evaluator.GetDefaultPromptEvaluatorToolsResponse, err error)
 	RunEvaluator(ctx context.Context, req *evaluator.RunEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.RunEvaluatorResponse, err error)
+	AsyncRunEvaluator(ctx context.Context, req *evaluator.AsyncRunEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncRunEvaluatorResponse, err error)
 	DebugEvaluator(ctx context.Context, req *evaluator.DebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugEvaluatorResponse, err error)
 	BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.BatchDebugEvaluatorResponse, err error)
+	AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncDebugEvaluatorResponse, err error)
+	GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error)
 	UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error)
 	GetEvaluatorRecord(ctx context.Context, req *evaluator.GetEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.GetEvaluatorRecordResponse, err error)
 	BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.BatchGetEvaluatorRecordsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorRecordsResponse, err error)
@@ -152,6 +155,11 @@ func (p *kEvaluatorServiceClient) RunEvaluator(ctx context.Context, req *evaluat
 	return p.kClient.RunEvaluator(ctx, req)
 }
 
+func (p *kEvaluatorServiceClient) AsyncRunEvaluator(ctx context.Context, req *evaluator.AsyncRunEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncRunEvaluatorResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AsyncRunEvaluator(ctx, req)
+}
+
 func (p *kEvaluatorServiceClient) DebugEvaluator(ctx context.Context, req *evaluator.DebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugEvaluatorResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.DebugEvaluator(ctx, req)
@@ -160,6 +168,16 @@ func (p *kEvaluatorServiceClient) DebugEvaluator(ctx context.Context, req *evalu
 func (p *kEvaluatorServiceClient) BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.BatchDebugEvaluatorResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchDebugEvaluator(ctx, req)
+}
+
+func (p *kEvaluatorServiceClient) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncDebugEvaluatorResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.AsyncDebugEvaluator(ctx, req)
+}
+
+func (p *kEvaluatorServiceClient) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAsyncDebugEvaluatorInvokeResult_(ctx, req)
 }
 
 func (p *kEvaluatorServiceClient) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error) {

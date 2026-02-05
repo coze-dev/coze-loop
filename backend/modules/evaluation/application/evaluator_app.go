@@ -1795,6 +1795,21 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *e
 	}, nil
 }
 
+func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evaluatorservice.AsyncRunEvaluatorRequest) (r *evaluatorservice.AsyncRunEvaluatorResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (e *EvaluatorHandlerImpl) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultRequest) (r *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func convertListEvaluatorTagType(tagType evaluatordto.EvaluatorTagType) entity.EvaluatorTagKeyType {
 	switch tagType {
 	case evaluatordto.EvaluatorTagTypeTemplate:

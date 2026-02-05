@@ -125,6 +125,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"AsyncRunEvaluator": kitex.NewMethodInfo(
+		asyncRunEvaluatorHandler,
+		newEvaluatorServiceAsyncRunEvaluatorArgs,
+		newEvaluatorServiceAsyncRunEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"DebugEvaluator": kitex.NewMethodInfo(
 		debugEvaluatorHandler,
 		newEvaluatorServiceDebugEvaluatorArgs,
@@ -136,6 +143,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		batchDebugEvaluatorHandler,
 		newEvaluatorServiceBatchDebugEvaluatorArgs,
 		newEvaluatorServiceBatchDebugEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"AsyncDebugEvaluator": kitex.NewMethodInfo(
+		asyncDebugEvaluatorHandler,
+		newEvaluatorServiceAsyncDebugEvaluatorArgs,
+		newEvaluatorServiceAsyncDebugEvaluatorResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetAsyncDebugEvaluatorInvokeResult": kitex.NewMethodInfo(
+		getAsyncDebugEvaluatorInvokeResult_Handler,
+		newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs,
+		newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -560,6 +581,25 @@ func newEvaluatorServiceRunEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceRunEvaluatorResult()
 }
 
+func asyncRunEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceAsyncRunEvaluatorArgs)
+	realResult := result.(*evaluator.EvaluatorServiceAsyncRunEvaluatorResult)
+	success, err := handler.(evaluator.EvaluatorService).AsyncRunEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceAsyncRunEvaluatorArgs() interface{} {
+	return evaluator.NewEvaluatorServiceAsyncRunEvaluatorArgs()
+}
+
+func newEvaluatorServiceAsyncRunEvaluatorResult() interface{} {
+	return evaluator.NewEvaluatorServiceAsyncRunEvaluatorResult()
+}
+
 func debugEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*evaluator.EvaluatorServiceDebugEvaluatorArgs)
 	realResult := result.(*evaluator.EvaluatorServiceDebugEvaluatorResult)
@@ -596,6 +636,44 @@ func newEvaluatorServiceBatchDebugEvaluatorArgs() interface{} {
 
 func newEvaluatorServiceBatchDebugEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceBatchDebugEvaluatorResult()
+}
+
+func asyncDebugEvaluatorHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceAsyncDebugEvaluatorArgs)
+	realResult := result.(*evaluator.EvaluatorServiceAsyncDebugEvaluatorResult)
+	success, err := handler.(evaluator.EvaluatorService).AsyncDebugEvaluator(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceAsyncDebugEvaluatorArgs() interface{} {
+	return evaluator.NewEvaluatorServiceAsyncDebugEvaluatorArgs()
+}
+
+func newEvaluatorServiceAsyncDebugEvaluatorResult() interface{} {
+	return evaluator.NewEvaluatorServiceAsyncDebugEvaluatorResult()
+}
+
+func getAsyncDebugEvaluatorInvokeResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs)
+	realResult := result.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult)
+	success, err := handler.(evaluator.EvaluatorService).GetAsyncDebugEvaluatorInvokeResult_(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs() interface{} {
+	return evaluator.NewEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs()
+}
+
+func newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult() interface{} {
+	return evaluator.NewEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult()
 }
 
 func updateEvaluatorRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -998,6 +1076,16 @@ func (p *kClient) RunEvaluator(ctx context.Context, req *evaluator.RunEvaluatorR
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) AsyncRunEvaluator(ctx context.Context, req *evaluator.AsyncRunEvaluatorRequest) (r *evaluator.AsyncRunEvaluatorResponse, err error) {
+	var _args evaluator.EvaluatorServiceAsyncRunEvaluatorArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceAsyncRunEvaluatorResult
+	if err = p.c.Call(ctx, "AsyncRunEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) DebugEvaluator(ctx context.Context, req *evaluator.DebugEvaluatorRequest) (r *evaluator.DebugEvaluatorResponse, err error) {
 	var _args evaluator.EvaluatorServiceDebugEvaluatorArgs
 	_args.Req = req
@@ -1013,6 +1101,26 @@ func (p *kClient) BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchD
 	_args.Req = req
 	var _result evaluator.EvaluatorServiceBatchDebugEvaluatorResult
 	if err = p.c.Call(ctx, "BatchDebugEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest) (r *evaluator.AsyncDebugEvaluatorResponse, err error) {
+	var _args evaluator.EvaluatorServiceAsyncDebugEvaluatorArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceAsyncDebugEvaluatorResult
+	if err = p.c.Call(ctx, "AsyncDebugEvaluator", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
+	var _args evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs
+	_args.Req = req
+	var _result evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult
+	if err = p.c.Call(ctx, "GetAsyncDebugEvaluatorInvokeResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -152,6 +152,12 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_template.PATCH("/:evaluator_template_id", append(_updateevaluatortemplateMw(handler), apis.UpdateEvaluatorTemplate)...)
 				_v11.POST("/evaluators", append(_evaluatorsMw(handler), apis.CreateEvaluator)...)
 				_evaluators := _v11.Group("/evaluators", _evaluatorsMw(handler)...)
+				_evaluators.POST("/async_debug", append(_async_debugMw(handler), apis.AsyncDebugEvaluator)...)
+				_async_debug := _evaluators.Group("/async_debug", _async_debugMw(handler)...)
+				{
+					_result := _async_debug.Group("/result", _resultMw(handler)...)
+					_result.GET("/:invoke_id", append(_getasyncdebugevaluatorinvokeresultMw(handler), apis.GetAsyncDebugEvaluatorInvokeResult)...)
+				}
 				_evaluators.POST("/batch_debug", append(_batchdebugevaluatorMw(handler), apis.BatchDebugEvaluator)...)
 				_evaluators.POST("/check_name", append(_checkevaluatornameMw(handler), apis.CheckEvaluatorName)...)
 				_evaluators.POST("/debug", append(_debugevaluatorMw(handler), apis.DebugEvaluator)...)
@@ -213,6 +219,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_evaluators_versions.POST("/batch_get", append(_batchgetevaluatorversionsMw(handler), apis.BatchGetEvaluatorVersions)...)
 					_evaluators_versions.GET("/:evaluator_version_id", append(_evaluator_version_idMw(handler), apis.GetEvaluatorVersion)...)
 					_evaluator_version_id := _evaluators_versions.Group("/:evaluator_version_id", _evaluator_version_idMw(handler)...)
+					_evaluator_version_id.POST("/async_run", append(_asyncrunevaluatorMw(handler), apis.AsyncRunEvaluator)...)
 					_evaluator_version_id.POST("/run", append(_runevaluatorMw(handler), apis.RunEvaluator)...)
 				}
 				{
@@ -454,6 +461,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+				{
+					_evaluators1 := _evaluation0.Group("/evaluators", _evaluators1Mw(handler)...)
+					_evaluators1.POST("/result", append(_reportevaluatorinvokeresultMw(handler), apis.ReportEvaluatorInvokeResult)...)
+				}
 			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
