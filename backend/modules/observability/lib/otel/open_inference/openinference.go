@@ -11,9 +11,11 @@ import (
 type Literal string
 
 const (
-	TextLiteral     Literal = "text"
-	ImageLiteral    Literal = "image"
-	ImageUrlLiteral Literal = "image_url"
+	TextLiteral      Literal = "text"
+	ImageLiteral     Literal = "image"
+	ImageUrlLiteral  Literal = "image_url"
+	ReasoningLiteral Literal = "reasoning"
+	ToolCallLiteral  Literal = "tool_call"
 )
 
 type ModelMessagePartType string
@@ -78,6 +80,7 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 	}
 	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
+		toolCalls := make([]interface{}, 0)
 		for _, content := range contents {
 			if mc, ok := content.(map[string]interface{}); ok {
 				mcContent, ok := mc["message_content"].(map[string]interface{})
@@ -102,10 +105,28 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 						url, _ := imageMap["url"]
 						part["image_url"] = map[string]interface{}{"url": url}
 					}
+				case string(ReasoningLiteral):
+					modelMsg["reasoning_content"] = text
+				case string(ToolCallLiteral):
+					toolCallId, _ := mcContent["id"]
+					toolCallName, _ := mcContent["name"]
+					toolCallArguments, _ := mcContent["arguments"]
+					modelCall := map[string]interface{}{
+						"type": "function",
+						"id":   toolCallId,
+						"function": map[string]interface{}{
+							"name":      toolCallName,
+							"arguments": toolCallArguments,
+						},
+					}
+					toolCalls = append(toolCalls, modelCall)
 				default:
 				}
 				parts = append(parts, part)
 			}
+		}
+		if len(toolCalls) > 0 {
+			modelMsg["tool_calls"] = toolCalls
 		}
 		if len(parts) > 0 {
 			modelMsg["parts"] = parts
