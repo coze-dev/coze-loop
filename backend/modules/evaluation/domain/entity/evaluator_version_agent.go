@@ -34,9 +34,6 @@ type AgentEvaluatorVersion struct {
 	ModelConfig  *ModelConfig                `json:"model_config,omitempty"`  // model config for agent
 	SkillConfigs []*SkillConfig              `json:"skill_configs,omitempty"` // skill configs for agent
 	PromptConfig *AgentEvaluatorPromptConfig `json:"prompt_config,omitempty"` // agent prompt config for agent
-
-	// extra fields
-	Ext map[string]string `json:"ext,omitempty"`
 }
 
 type AgentEvaluatorPromptConfig struct {
