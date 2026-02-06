@@ -51,6 +51,7 @@ type CreateExperimentRequest struct {
 	EnableWeightedScore   *bool             `thrift:"enable_weighted_score,41,optional" frugal:"41,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
 	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,42,optional" frugal:"42,optional,map<i64:double>" json:"evaluator_score_weights" form:"evaluator_score_weights" `
 	ExptTemplateID        *int64            `thrift:"expt_template_id,43,optional" frugal:"43,optional,i64" json:"expt_template_id" form:"expt_template_id" `
+	ItemRetryNum          *int32            `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 	Session               *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -321,6 +322,18 @@ func (p *CreateExperimentRequest) GetExptTemplateID() (v int64) {
 	return *p.ExptTemplateID
 }
 
+var CreateExperimentRequest_ItemRetryNum_DEFAULT int32
+
+func (p *CreateExperimentRequest) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return CreateExperimentRequest_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -410,6 +423,9 @@ func (p *CreateExperimentRequest) SetEvaluatorScoreWeights(val map[int64]float64
 func (p *CreateExperimentRequest) SetExptTemplateID(val *int64) {
 	p.ExptTemplateID = val
 }
+func (p *CreateExperimentRequest) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -440,6 +456,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	41:  "enable_weighted_score",
 	42:  "evaluator_score_weights",
 	43:  "expt_template_id",
+	45:  "item_retry_num",
 	200: "session",
 	255: "Base",
 }
@@ -526,6 +543,10 @@ func (p *CreateExperimentRequest) IsSetEvaluatorScoreWeights() bool {
 
 func (p *CreateExperimentRequest) IsSetExptTemplateID() bool {
 	return p.ExptTemplateID != nil
+}
+
+func (p *CreateExperimentRequest) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -727,6 +748,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 43:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField43(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 45:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField45(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1072,6 +1101,17 @@ func (p *CreateExperimentRequest) ReadField43(iprot thrift.TProtocol) error {
 	p.ExptTemplateID = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField45(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -1181,6 +1221,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField43(oprot); err != nil {
 			fieldId = 43
+			goto WriteFieldError
+		}
+		if err = p.writeField45(oprot); err != nil {
+			fieldId = 45
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -1638,6 +1682,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField45(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 45); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -1753,6 +1815,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field43DeepEqual(ano.ExptTemplateID) {
+		return false
+	}
+	if !p.Field45DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -2008,6 +2073,18 @@ func (p *CreateExperimentRequest) Field43DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExptTemplateID != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field45DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true
@@ -2291,6 +2368,7 @@ type SubmitExperimentRequest struct {
 	// 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
 	EnableWeightedScore *bool             `thrift:"enable_weighted_score,41,optional" frugal:"41,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
 	ExptTemplateID      *int64            `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
+	ItemRetryNum        *int32            `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session             *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2550,6 +2628,18 @@ func (p *SubmitExperimentRequest) GetExptTemplateID() (v int64) {
 	return *p.ExptTemplateID
 }
 
+var SubmitExperimentRequest_ItemRetryNum_DEFAULT int32
+
+func (p *SubmitExperimentRequest) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return SubmitExperimentRequest_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -2648,6 +2738,9 @@ func (p *SubmitExperimentRequest) SetEnableWeightedScore(val *bool) {
 func (p *SubmitExperimentRequest) SetExptTemplateID(val *int64) {
 	p.ExptTemplateID = val
 }
+func (p *SubmitExperimentRequest) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -2680,6 +2773,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	40:  "evaluator_id_version_list",
 	41:  "enable_weighted_score",
 	42:  "expt_template_id",
+	45:  "item_retry_num",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -2763,6 +2857,10 @@ func (p *SubmitExperimentRequest) IsSetEnableWeightedScore() bool {
 
 func (p *SubmitExperimentRequest) IsSetExptTemplateID() bool {
 	return p.ExptTemplateID != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -2960,6 +3058,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 42:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField42(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 45:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField45(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3284,6 +3390,17 @@ func (p *SubmitExperimentRequest) ReadField42(iprot thrift.TProtocol) error {
 	p.ExptTemplateID = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField45(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -3418,6 +3535,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField42(oprot); err != nil {
 			fieldId = 42
+			goto WriteFieldError
+		}
+		if err = p.writeField45(oprot); err != nil {
+			fieldId = 45
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -3850,6 +3971,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 42 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField45(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 45); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -3991,6 +4130,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field42DeepEqual(ano.ExptTemplateID) {
+		return false
+	}
+	if !p.Field45DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -4236,6 +4378,18 @@ func (p *SubmitExperimentRequest) Field42DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ExptTemplateID != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field45DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true
@@ -17024,6 +17178,7 @@ type CreateExperimentTemplateRequest struct {
 	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	// 调度配置（不在 ExptTemplate 结构中，保留在顶层）
 	ScheduleCron *string         `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
+	ItemRetryNum *int32          `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17114,6 +17269,18 @@ func (p *CreateExperimentTemplateRequest) GetScheduleCron() (v string) {
 	return *p.ScheduleCron
 }
 
+var CreateExperimentTemplateRequest_ItemRetryNum_DEFAULT int32
+
+func (p *CreateExperimentTemplateRequest) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return CreateExperimentTemplateRequest_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
+
 var CreateExperimentTemplateRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentTemplateRequest) GetSession() (v *common.Session) {
@@ -17158,6 +17325,9 @@ func (p *CreateExperimentTemplateRequest) SetDefaultEvaluatorsConcurNum(val *int
 func (p *CreateExperimentTemplateRequest) SetScheduleCron(val *string) {
 	p.ScheduleCron = val
 }
+func (p *CreateExperimentTemplateRequest) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 func (p *CreateExperimentTemplateRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -17173,6 +17343,7 @@ var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
 	20:  "create_eval_target_param",
 	21:  "default_evaluators_concur_num",
 	22:  "schedule_cron",
+	45:  "item_retry_num",
 	200: "session",
 	255: "Base",
 }
@@ -17199,6 +17370,10 @@ func (p *CreateExperimentTemplateRequest) IsSetDefaultEvaluatorsConcurNum() bool
 
 func (p *CreateExperimentTemplateRequest) IsSetScheduleCron() bool {
 	return p.ScheduleCron != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetSession() bool {
@@ -17280,6 +17455,14 @@ func (p *CreateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 22:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 45:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField45(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17401,6 +17584,17 @@ func (p *CreateExperimentTemplateRequest) ReadField22(iprot thrift.TProtocol) er
 	p.ScheduleCron = _field
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) ReadField45(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 func (p *CreateExperimentTemplateRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -17450,6 +17644,10 @@ func (p *CreateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField45(oprot); err != nil {
+			fieldId = 45
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -17602,6 +17800,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *CreateExperimentTemplateRequest) writeField45(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 45); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
+}
 func (p *CreateExperimentTemplateRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -17674,6 +17890,9 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 	if !p.Field22DeepEqual(ano.ScheduleCron) {
 		return false
 	}
+	if !p.Field45DeepEqual(ano.ItemRetryNum) {
+		return false
+	}
 	if !p.Field200DeepEqual(ano.Session) {
 		return false
 	}
@@ -17738,6 +17957,18 @@ func (p *CreateExperimentTemplateRequest) Field22DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ScheduleCron, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentTemplateRequest) Field45DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true
