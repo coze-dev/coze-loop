@@ -216,4 +216,3 @@ func TestFunctionDTO2DO(t *testing.T) {
 func TestTokenUsageDTO2DO(t *testing.T) {
 	assert.Nil(t, TokenUsageDTO2DO(nil))
 }
-

@@ -181,11 +181,11 @@ func TestEvalTargetVersionDO2PO(t *testing.T) {
 		{
 			name: "CozeWorkflow类型的版本转换",
 			do: &entity.EvalTargetVersion{
-				ID:                  1,
-				EvalTargetType:      entity.EvalTargetTypeCozeWorkflow,
-				CozeWorkflow:        &entity.CozeWorkflow{ID: "wf1"},
-				InputSchema:         []*entity.ArgsSchema{{Key: gptr.Of("in")}},
-				OutputSchema:        []*entity.ArgsSchema{{Key: gptr.Of("out")}},
+				ID:             1,
+				EvalTargetType: entity.EvalTargetTypeCozeWorkflow,
+				CozeWorkflow:   &entity.CozeWorkflow{ID: "wf1"},
+				InputSchema:    []*entity.ArgsSchema{{Key: gptr.Of("in")}},
+				OutputSchema:   []*entity.ArgsSchema{{Key: gptr.Of("out")}},
 			},
 			expectError: false,
 			checkResult: func(t *testing.T, po *model.TargetVersion) {
@@ -197,9 +197,9 @@ func TestEvalTargetVersionDO2PO(t *testing.T) {
 		{
 			name: "VolcengineAgentAgentkit类型的版本转换",
 			do: &entity.EvalTargetVersion{
-				ID:                  1,
-				EvalTargetType:      entity.EvalTargetTypeVolcengineAgentAgentkit,
-				VolcengineAgent:     &entity.VolcengineAgent{Name: "agent"},
+				ID:              1,
+				EvalTargetType:  entity.EvalTargetTypeVolcengineAgentAgentkit,
+				VolcengineAgent: &entity.VolcengineAgent{Name: "agent"},
 			},
 			expectError: false,
 			checkResult: func(t *testing.T, po *model.TargetVersion) {

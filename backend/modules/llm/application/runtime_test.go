@@ -20,13 +20,13 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity"
+	entitymocks "github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/domain/service"
 	llmservicemocks "github.com/coze-dev/coze-loop/backend/modules/llm/domain/service/mocks"
 	llm_errorx "github.com/coze-dev/coze-loop/backend/modules/llm/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
-	entitymocks "github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity/mocks"
 	"github.com/pkg/errors"
 )
 
@@ -306,8 +306,7 @@ func Test_runtimeApp_validateChatReq(t *testing.T) {
 	}
 }
 
-type mockChatStreamServer struct {
-}
+type mockChatStreamServer struct{}
 
 func (m *mockChatStreamServer) Send(ctx context.Context, resp *runtime.ChatResponse) error {
 	return nil

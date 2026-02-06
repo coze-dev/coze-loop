@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
-	"go.uber.org/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"

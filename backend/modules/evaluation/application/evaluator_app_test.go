@@ -1398,7 +1398,6 @@ func TestEvaluatorHandlerImpl_CheckEvaluatorName(t *testing.T) {
 	}
 }
 
-
 func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

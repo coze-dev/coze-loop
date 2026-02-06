@@ -28,7 +28,7 @@ type Model struct {
 	Series           *Series                      `json:"series" yaml:"series"`
 	Visibility       *Visibility                  `json:"visibility" yaml:"visibility"`
 	Icon             string                       `json:"icon" yaml:"icon" mapstructure:"icon"`                                           // 模型图标
-	Tags             []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`                                           //模型标签
+	Tags             []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`                                           // 模型标签
 	Status           ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"`                                     // 模型状态
 	OriginalModelURL string                       `json:"original_model_url" yaml:"original_model_url" mapstructure:"original_model_url"` // 模型跳转链接
 	PresetModel      bool                         `json:"preset_model" yaml:"preset_model" mapstructure:"preset_model"`                   // 是否为预置模型

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/tag"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -266,7 +265,7 @@ func TestTagValueDO2DtO(t *testing.T) {
 
 	assert.Equal(t, from.TagValueId, *got.TagValueID)
 	assert.Equal(t, from.TagValueName, *got.TagValueName)
-	assert.Equal(t, tag.TagStatus(from.Status), *got.Status)
+	assert.Equal(t, from.Status, *got.Status)
 }
 
 func TestExptColumnAnnotationDO2DTOs(t *testing.T) {
