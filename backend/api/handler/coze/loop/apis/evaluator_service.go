@@ -212,3 +212,51 @@ func UpdateBuiltinEvaluatorTags(ctx context.Context, c *app.RequestContext) {
 func GetTemplateV2(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvaluatorSvc.GetTemplateV2)
 }
+
+// AsyncRunEvaluator .
+// @router /api/evaluation/v1/evaluators_versions/:evaluator_version_id/async_run [POST]
+func AsyncRunEvaluator(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.AsyncRunEvaluatorRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.AsyncRunEvaluatorResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// AsyncDebugEvaluator .
+// @router /api/evaluation/v1/evaluators/async_debug [POST]
+func AsyncDebugEvaluator(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.AsyncDebugEvaluatorRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.AsyncDebugEvaluatorResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetAsyncDebugEvaluatorInvokeResult .
+// @router /api/evaluation/v1/evaluators/async_debug/result/:invoke_id [GET]
+func GetAsyncDebugEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req evaluator.GetAsyncDebugEvaluatorInvokeResultRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(evaluator.GetAsyncDebugEvaluatorInvokeResultResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

@@ -165,6 +165,11 @@ func (p *InvokeEvaluatorOutputData) IsValid() error {
 			return fmt.Errorf("field EvaluatorRunError not valid, %w", err)
 		}
 	}
+	if p.ExtraOutput != nil {
+		if err := p.ExtraOutput.IsValid(); err != nil {
+			return fmt.Errorf("field ExtraOutput not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *InvokeEvaluatorResult_) IsValid() error {
@@ -174,6 +179,9 @@ func (p *InvokeEvaluatorUsage) IsValid() error {
 	return nil
 }
 func (p *InvokeEvaluatorRunError) IsValid() error {
+	return nil
+}
+func (p *EvaluatorExtraOutputContent) IsValid() error {
 	return nil
 }
 func (p *InvokeEvaluatorRequest) IsValid() error {

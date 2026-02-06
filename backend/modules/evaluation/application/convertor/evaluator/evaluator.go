@@ -53,6 +53,8 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.
 				return nil, err
 			}
 			evaluatorDO.CustomRPCEvaluatorVersion = customRPCEvaluatorVersion
+		case evaluatordto.EvaluatorType_Agent:
+			evaluatorDO.AgentEvaluatorVersion = ConvertAgentEvaluatorVersionDTO2DO(evaluatorDO.ID, evaluatorDO.SpaceID, evaluatorDTO.GetCurrentVersion())
 		}
 	}
 	return evaluatorDO, nil
@@ -112,6 +114,11 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 	case evaluatordo.EvaluatorTypeCustomRPC:
 		if do.CustomRPCEvaluatorVersion != nil {
 			versionDTO := ConvertCustomRPCEvaluatorVersionDO2DTO(do.CustomRPCEvaluatorVersion)
+			dto.CurrentVersion = versionDTO
+		}
+	case evaluatordo.EvaluatorTypeAgent:
+		if do.AgentEvaluatorVersion != nil {
+			versionDTO := ConvertAgentEvaluatorVersionDO2DTO(do.AgentEvaluatorVersion)
 			dto.CurrentVersion = versionDTO
 		}
 	}
@@ -322,6 +329,35 @@ func ConvertEvaluatorContent2DO(content *evaluatordto.EvaluatorContent, evaluato
 		}
 
 		evaluator.CustomRPCEvaluatorVersion = customRPCVersion
+
+	case evaluatordto.EvaluatorType_Agent:
+		if content.AgentEvaluator == nil {
+			return nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("agent evaluator content is nil"))
+		}
+
+		agentVersion := &evaluatordo.AgentEvaluatorVersion{
+			EvaluatorType: evaluatordo.EvaluatorTypeAgent,
+			AgentConfig:   ConvertAgentConfigDTO2DO(content.AgentEvaluator.AgentConfig),
+			ModelConfig:   commonconvertor.ConvertModelConfigDTO2DO(content.AgentEvaluator.ModelConfig),
+			SkillConfigs:  ConvertSkillConfigsDTO2DO(content.AgentEvaluator.SkillConfigs),
+			PromptConfig:  ConvertAgentEvaluatorPromptConfigDTO2DO(content.AgentEvaluator.PromptConfig),
+		}
+
+		if len(content.InputSchemas) > 0 {
+			agentVersion.InputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.InputSchemas))
+			for _, schema := range content.InputSchemas {
+				agentVersion.InputSchemas = append(agentVersion.InputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		if len(content.OutputSchemas) > 0 {
+			agentVersion.OutputSchemas = make([]*evaluatordo.ArgsSchema, 0, len(content.OutputSchemas))
+			for _, schema := range content.OutputSchemas {
+				agentVersion.OutputSchemas = append(agentVersion.OutputSchemas, commonconvertor.ConvertArgsSchemaDTO2DO(schema))
+			}
+		}
+
+		evaluator.AgentEvaluatorVersion = agentVersion
 
 	default:
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("unsupported evaluator type"))
@@ -570,4 +606,141 @@ func ConvertEvaluatorRunConfDO2DTO(do *evaluatordo.EvaluatorRunConfig) *evaluato
 		Env:                   do.Env,
 		EvaluatorRuntimeParam: commonconvertor.ConvertRuntimeParamDO2DTO(do.EvaluatorRuntimeParam),
 	}
+}
+
+func ConvertAgentEvaluatorVersionDTO2DO(evaluatorID, spaceID int64, dto *evaluatordto.EvaluatorVersion) *evaluatordo.AgentEvaluatorVersion {
+	if dto == nil || dto.EvaluatorContent == nil || dto.EvaluatorContent.AgentEvaluator == nil {
+		return nil
+	}
+	agentEvaluator := dto.EvaluatorContent.AgentEvaluator
+	agentEvaluatorVersion := &evaluatordo.AgentEvaluatorVersion{
+		ID:            dto.GetID(),
+		SpaceID:       spaceID,
+		EvaluatorType: evaluatordo.EvaluatorTypeAgent,
+		EvaluatorID:   evaluatorID,
+		Description:   dto.GetDescription(),
+		Version:       dto.GetVersion(),
+		BaseInfo:      commonconvertor.ConvertBaseInfoDTO2DO(dto.GetBaseInfo()),
+		AgentConfig:   ConvertAgentConfigDTO2DO(agentEvaluator.AgentConfig),
+		ModelConfig:   commonconvertor.ConvertModelConfigDTO2DO(agentEvaluator.ModelConfig),
+		SkillConfigs:  ConvertSkillConfigsDTO2DO(agentEvaluator.SkillConfigs),
+		PromptConfig:  ConvertAgentEvaluatorPromptConfigDTO2DO(agentEvaluator.PromptConfig),
+	}
+	if dto.EvaluatorContent != nil {
+		agentEvaluatorVersion.InputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.InputSchemas)
+		agentEvaluatorVersion.OutputSchemas = commonconvertor.ConvertArgsSchemaListDTO2DO(dto.EvaluatorContent.OutputSchemas)
+	}
+	return agentEvaluatorVersion
+}
+
+func ConvertAgentEvaluatorVersionDO2DTO(do *evaluatordo.AgentEvaluatorVersion) *evaluatordto.EvaluatorVersion {
+	if do == nil {
+		return nil
+	}
+	return &evaluatordto.EvaluatorVersion{
+		ID:          gptr.Of(do.ID),
+		Version:     gptr.Of(do.Version),
+		Description: gptr.Of(do.Description),
+		BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
+		EvaluatorContent: &evaluatordto.EvaluatorContent{
+			InputSchemas:  commonconvertor.ConvertArgsSchemaListDO2DTO(do.InputSchemas),
+			OutputSchemas: commonconvertor.ConvertArgsSchemaListDO2DTO(do.OutputSchemas),
+			AgentEvaluator: &evaluatordto.AgentEvaluator{
+				AgentConfig:  ConvertAgentConfigDO2DTO(do.AgentConfig),
+				ModelConfig:  commonconvertor.ConvertModelConfigDO2DTO(do.ModelConfig),
+				SkillConfigs: ConvertSkillConfigsDO2DTO(do.SkillConfigs),
+				PromptConfig: ConvertAgentEvaluatorPromptConfigDO2DTO(do.PromptConfig),
+			},
+		},
+	}
+}
+
+func ConvertAgentConfigDTO2DO(dto *commondto.AgentConfig) *evaluatordo.AgentConfig {
+	if dto == nil {
+		return nil
+	}
+	return &evaluatordo.AgentConfig{
+		AgentType: evaluatordo.AgentType(dto.GetAgentType()),
+	}
+}
+
+func ConvertAgentConfigDO2DTO(do *evaluatordo.AgentConfig) *commondto.AgentConfig {
+	if do == nil {
+		return nil
+	}
+	return &commondto.AgentConfig{
+		AgentType: (*commondto.AgentType)(gptr.Of(string(do.AgentType))),
+	}
+}
+
+func ConvertSkillConfigsDTO2DO(dtos []*commondto.SkillConfig) []*evaluatordo.SkillConfig {
+	if dtos == nil {
+		return nil
+	}
+	dos := make([]*evaluatordo.SkillConfig, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto != nil {
+			dos = append(dos, &evaluatordo.SkillConfig{
+				SkillID: dto.GetSkillID(),
+			})
+		}
+	}
+	return dos
+}
+
+func ConvertSkillConfigsDO2DTO(dos []*evaluatordo.SkillConfig) []*commondto.SkillConfig {
+	if dos == nil {
+		return nil
+	}
+	dtos := make([]*commondto.SkillConfig, 0, len(dos))
+	for _, do := range dos {
+		if do != nil {
+			dtos = append(dtos, &commondto.SkillConfig{
+				SkillID: gptr.Of(do.SkillID),
+			})
+		}
+	}
+	return dtos
+}
+
+func ConvertAgentEvaluatorPromptConfigDTO2DO(dto *evaluatordto.AgentEvaluatorPromptConfig) *evaluatordo.AgentEvaluatorPromptConfig {
+	if dto == nil {
+		return nil
+	}
+	do := &evaluatordo.AgentEvaluatorPromptConfig{}
+	if len(dto.MessageList) > 0 {
+		do.MessageList = make([]*evaluatordo.Message, 0, len(dto.MessageList))
+		for _, msg := range dto.MessageList {
+			do.MessageList = append(do.MessageList, commonconvertor.ConvertMessageDTO2DO(msg))
+		}
+	}
+	if dto.OutputRules != nil {
+		do.OutputRules = &evaluatordo.AgentEvaluatorPromptConfigOutputRules{
+			ScorePrompt:       commonconvertor.ConvertMessageDTO2DO(dto.OutputRules.ScorePrompt),
+			ReasoningPrompt:   commonconvertor.ConvertMessageDTO2DO(dto.OutputRules.ReasoningPrompt),
+			ExtraOutputPrompt: commonconvertor.ConvertMessageDTO2DO(dto.OutputRules.ExtraOutputPrompt),
+		}
+	}
+	return do
+}
+
+func ConvertAgentEvaluatorPromptConfigDO2DTO(do *evaluatordo.AgentEvaluatorPromptConfig) *evaluatordto.AgentEvaluatorPromptConfig {
+	if do == nil {
+		return nil
+	}
+	dto := &evaluatordto.AgentEvaluatorPromptConfig{}
+	if len(do.MessageList) > 0 {
+		dto.MessageList = make([]*commondto.Message, 0, len(do.MessageList))
+		for _, msg := range do.MessageList {
+			dto.MessageList = append(dto.MessageList, commonconvertor.ConvertMessageDO2DTO(msg))
+		}
+	}
+	if do.OutputRules != nil {
+		dto.OutputRules = &evaluatordto.AgentEvaluatorPromptConfigOutputRules{
+			ScorePrompt:       commonconvertor.ConvertMessageDO2DTO(do.OutputRules.ScorePrompt),
+			ReasoningPrompt:   commonconvertor.ConvertMessageDO2DTO(do.OutputRules.ReasoningPrompt),
+			ExtraOutputPrompt: commonconvertor.ConvertMessageDO2DTO(do.OutputRules.ExtraOutputPrompt),
+		}
+	}
+	return dto
 }

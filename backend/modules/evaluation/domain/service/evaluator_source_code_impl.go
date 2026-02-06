@@ -457,6 +457,22 @@ func (c *EvaluatorSourceCodeServiceImpl) createErrorOutputFromError(err error, s
 	}, entity.EvaluatorRunStatusFail
 }
 
+func (c *EvaluatorSourceCodeServiceImpl) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) error {
+	return errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("code evaluator does not support async run"))
+}
+
+func (c *EvaluatorSourceCodeServiceImpl) GetAsyncRunResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
+	return nil, entity.EvaluatorRunStatusFail, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("code evaluator does not support async run"))
+}
+
+func (c *EvaluatorSourceCodeServiceImpl) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) error {
+	return errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("code evaluator does not support async debug"))
+}
+
+func (c *EvaluatorSourceCodeServiceImpl) GetAsyncDebugResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
+	return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("code evaluator does not support async debug"))
+}
+
 // Debug 调试Code评估器
 func (c *EvaluatorSourceCodeServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 调试模式下直接调用Run方法
