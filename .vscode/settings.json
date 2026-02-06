@@ -182,10 +182,13 @@
   "[svg]": {
     "editor.defaultFormatter": "jock.svg"
   },
-  "[xml]": {
-    "editor.defaultFormatter": "mblode.pretty-formatter"
-  },
-  "[sql]": {
-    "editor.defaultFormatter": "adpyke.vscode-sql-formatter"
-  }
+  "cSpell.dictionaries": ["project-words"],
+  "cSpell.dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "${workspaceRoot}/.vscode/project-words.txt",
+      "description": "Words used in this project",
+      "addWords": true
+    }
+  ]
 }

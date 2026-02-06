@@ -973,3 +973,28 @@ func (app *PromptManageApplicationImpl) UpdateCommitLabels(ctx context.Context, 
 
 	return r, nil
 }
+
+func (app *PromptManageApplicationImpl) BatchGetPromptBasic(ctx context.Context, request *manage.BatchGetPromptBasicRequest) (r *manage.BatchGetPromptBasicResponse, err error) {
+	r = manage.NewBatchGetPromptBasicResponse()
+	// 用户
+	userID, ok := session.UserIDInCtx(ctx)
+	if !ok || lo.IsEmpty(userID) {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
+	}
+
+	// 权限检查
+	err = app.authRPCProvider.MCheckPromptPermission(ctx, request.GetWorkspaceID(), request.GetPromptIds(), consts.ActionLoopPromptRead)
+	if err != nil {
+		return r, err
+	}
+
+	// 调用domain层服务查询PromptBasic列表
+	promptBasics, err := app.manageRepo.BatchGetPromptBasic(ctx, request.GetPromptIds())
+	if err != nil {
+		return r, err
+	}
+	// 转换结果
+	r.Prompts = convertor.BatchPromptDO2DTO(maps.Values(promptBasics))
+
+	return r, nil
+}

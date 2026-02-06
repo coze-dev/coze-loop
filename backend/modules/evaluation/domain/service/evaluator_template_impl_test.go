@@ -163,6 +163,128 @@ func TestEvaluatorTemplateServiceImpl_CreateEvaluatorTemplate(t *testing.T) {
 			description:     "用户ID缺失应该返回错误",
 		},
 		{
+			name: "失败 - 描述长度超过500",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				Description:   string(make([]byte, 501)), // 501个字符
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{},
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "描述长度超过500应该返回错误",
+		},
+		{
+			name: "失败 - Benchmark长度超过100",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{},
+				},
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark: gptr.Of(string(make([]byte, 101))), // 101个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "Benchmark长度超过100应该返回错误",
+		},
+		{
+			name: "失败 - Vendor长度超过100",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{},
+				},
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Vendor: gptr.Of(string(make([]byte, 101))), // 101个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "Vendor长度超过100应该返回错误",
+		},
+		{
+			name: "失败 - VendorURL长度超过500",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{},
+				},
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					VendorURL: gptr.Of(string(make([]byte, 501))), // 501个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "VendorURL长度超过500应该返回错误",
+		},
+		{
+			name: "失败 - UserManualURL长度超过500",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{},
+				},
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					UserManualURL: gptr.Of(string(make([]byte, 501))), // 501个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "UserManualURL长度超过500应该返回错误",
+		},
+		{
+			name: "成功 - 创建带EvaluatorInfo的模板",
+			req: &entity.CreateEvaluatorTemplateRequest{
+				SpaceID:       100,
+				Name:          "Test Template",
+				Description:   "Test Description",
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{
+						{
+							Content: &entity.Content{
+								Text: gptr.Of("Test prompt"),
+							},
+						},
+					},
+				},
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark:     gptr.Of("benchmark1"),
+					Vendor:        gptr.Of("vendor1"),
+					VendorURL:     gptr.Of("https://vendor.com"),
+					UserManualURL: gptr.Of("https://manual.com"),
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				mockRepo.EXPECT().
+					CreateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						template.ID = 1
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功创建带EvaluatorInfo的评估器模板",
+		},
+		{
 			name: "失败 - repo创建错误",
 			req: &entity.CreateEvaluatorTemplateRequest{
 				SpaceID:       100,
@@ -359,6 +481,248 @@ func TestEvaluatorTemplateServiceImpl_UpdateEvaluatorTemplate(t *testing.T) {
 			expectedError:   true,
 			expectedErrCode: errno.CommonInternalErrorCode,
 			description:     "获取模板错误应该返回内部错误",
+		},
+		{
+			name: "失败 - 描述长度超过500",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID:          1,
+				Description: gptr.Of(string(make([]byte, 501))), // 501个字符
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "描述长度超过500应该返回错误",
+		},
+		{
+			name: "失败 - Benchmark长度超过100",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark: gptr.Of(string(make([]byte, 101))), // 101个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "Benchmark长度超过100应该返回错误",
+		},
+		{
+			name: "失败 - Vendor长度超过100",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Vendor: gptr.Of(string(make([]byte, 101))), // 101个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "Vendor长度超过100应该返回错误",
+		},
+		{
+			name: "失败 - VendorURL长度超过500",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					VendorURL: gptr.Of(string(make([]byte, 501))), // 501个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "VendorURL长度超过500应该返回错误",
+		},
+		{
+			name: "失败 - UserManualURL长度超过500",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					UserManualURL: gptr.Of(string(make([]byte, 501))), // 501个字符
+				},
+			},
+			mockSetup:       func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {},
+			expectedError:   true,
+			expectedErrCode: errno.CommonInvalidParamCode,
+			description:     "UserManualURL长度超过500应该返回错误",
+		},
+		{
+			name: "成功 - 部分更新EvaluatorInfo字段",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark: gptr.Of("new_benchmark"),
+					// 只更新Benchmark，其他字段不更新
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				existingTemplate := &entity.EvaluatorTemplate{
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
+					BaseInfo: &entity.BaseInfo{},
+					EvaluatorInfo: &entity.EvaluatorInfo{
+						Benchmark:     gptr.Of("old_benchmark"),
+						Vendor:        gptr.Of("old_vendor"),
+						VendorURL:     gptr.Of("https://old-vendor.com"),
+						UserManualURL: gptr.Of("https://old-manual.com"),
+					},
+				}
+				mockRepo.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
+					Return(existingTemplate, nil)
+
+				mockRepo.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						// 验证只更新了Benchmark，其他字段保留
+						assert.Equal(t, "new_benchmark", *template.EvaluatorInfo.Benchmark)
+						assert.Equal(t, "old_vendor", *template.EvaluatorInfo.Vendor)
+						assert.Equal(t, "https://old-vendor.com", *template.EvaluatorInfo.VendorURL)
+						assert.Equal(t, "https://old-manual.com", *template.EvaluatorInfo.UserManualURL)
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功部分更新EvaluatorInfo字段，保留未更新字段",
+		},
+		{
+			name: "成功 - 更新EvaluatorInfo到nil模板",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				EvaluatorInfo: &entity.EvaluatorInfo{
+					Benchmark: gptr.Of("new_benchmark"),
+					Vendor:    gptr.Of("new_vendor"),
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				existingTemplate := &entity.EvaluatorTemplate{
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
+					BaseInfo: &entity.BaseInfo{},
+					// EvaluatorInfo为nil
+				}
+				mockRepo.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
+					Return(existingTemplate, nil)
+
+				mockRepo.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						// 验证EvaluatorInfo被创建并设置
+						assert.NotNil(t, template.EvaluatorInfo)
+						assert.Equal(t, "new_benchmark", *template.EvaluatorInfo.Benchmark)
+						assert.Equal(t, "new_vendor", *template.EvaluatorInfo.Vendor)
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功为nil EvaluatorInfo创建并设置字段",
+		},
+		{
+			name: "成功 - 更新PromptEvaluatorContent",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				PromptEvaluatorContent: &entity.PromptEvaluatorContent{
+					MessageList: []*entity.Message{
+						{
+							Content: &entity.Content{
+								Text: gptr.Of("Updated prompt"),
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				existingTemplate := &entity.EvaluatorTemplate{
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
+					BaseInfo: &entity.BaseInfo{},
+				}
+				mockRepo.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
+					Return(existingTemplate, nil)
+
+				mockRepo.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						assert.NotNil(t, template.PromptEvaluatorContent)
+						assert.Len(t, template.PromptEvaluatorContent.MessageList, 1)
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功更新PromptEvaluatorContent",
+		},
+		{
+			name: "成功 - 更新CodeEvaluatorContent",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID: 1,
+				CodeEvaluatorContent: &entity.CodeEvaluatorContent{
+					Lang2CodeContent: map[entity.LanguageType]string{
+						entity.LanguageTypePython: "def updated(): pass",
+					},
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				existingTemplate := &entity.EvaluatorTemplate{
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
+					BaseInfo: &entity.BaseInfo{},
+				}
+				mockRepo.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
+					Return(existingTemplate, nil)
+
+				mockRepo.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						assert.NotNil(t, template.CodeEvaluatorContent)
+						assert.NotEmpty(t, template.CodeEvaluatorContent.Lang2CodeContent)
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功更新CodeEvaluatorContent",
+		},
+		{
+			name: "成功 - 更新其他字段（InputSchemas、OutputSchemas等）",
+			req: &entity.UpdateEvaluatorTemplateRequest{
+				ID:                 1,
+				InputSchemas:       []*entity.ArgsSchema{{Key: gptr.Of("input1")}},
+				OutputSchemas:      []*entity.ArgsSchema{{Key: gptr.Of("output1")}},
+				ReceiveChatHistory: gptr.Of(true),
+				Tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+					entity.EvaluatorTagLangType_Zh: {
+						entity.EvaluatorTagKey_Category: {"tag1", "tag2"},
+					},
+				},
+			},
+			mockSetup: func(mockRepo *repomocks.MockEvaluatorTemplateRepo) {
+				existingTemplate := &entity.EvaluatorTemplate{
+					ID:       1,
+					SpaceID:  100,
+					Name:     "Original Template",
+					BaseInfo: &entity.BaseInfo{},
+				}
+				mockRepo.EXPECT().
+					GetEvaluatorTemplate(gomock.Any(), int64(1), false).
+					Return(existingTemplate, nil)
+
+				mockRepo.EXPECT().
+					UpdateEvaluatorTemplate(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, template *entity.EvaluatorTemplate) (*entity.EvaluatorTemplate, error) {
+						assert.Len(t, template.InputSchemas, 1)
+						assert.Len(t, template.OutputSchemas, 1)
+						assert.True(t, *template.ReceiveChatHistory)
+						assert.NotNil(t, template.Tags)
+						return template, nil
+					})
+			},
+			expectedError: false,
+			description:   "成功更新其他字段",
 		},
 		{
 			name: "失败 - 更新模板错误",

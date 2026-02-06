@@ -1,0 +1,67 @@
+{
+  "extends": "@coze-arch/ts-config/tsconfig.web.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "useUnknownInCatchVariables": false,
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strictNullChecks": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "tsBuildInfoFile": "dist/tsconfig.build.tsbuildinfo"
+  },
+  "include": ["./src", "./src/**/*.json"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    {
+      "path": "../biz-components/tsconfig.build.json"
+    },
+    {
+      "path": "../biz-hooks/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/eslint-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/stylelint-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/ts-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../../config/vitest-config/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/api-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/base-hooks/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/bot-typings/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/components/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/env/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/guard/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/i18n/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/logger/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/tea/tsconfig.build.json"
+    },
+    {
+      "path": "../../loop-base/toolkit/tsconfig.build.json"
+    }
+  ]
+}

@@ -11,8 +11,9 @@ import (
 type Literal string
 
 const (
-	TextLiteral  Literal = "text"
-	ImageLiteral Literal = "image"
+	TextLiteral     Literal = "text"
+	ImageLiteral    Literal = "image"
+	ImageUrlLiteral Literal = "image_url"
 )
 
 type ModelMessagePartType string
@@ -89,7 +90,7 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				case string(TextLiteral):
 					part["type"] = string(ModelMessagePartTypeText)
 					part["text"] = text
-				case string(ImageLiteral):
+				case string(ImageLiteral), string(ImageUrlLiteral):
 					part["type"] = string(ModelMessagePartTypeImage)
 					imageMap, ok := image.(map[string]interface{})
 					if ok {
@@ -114,16 +115,17 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				// get tool_call
 				toolCall, ok := tc["tool_call"].(map[string]interface{})
 				if !ok {
-					continue
+					toolCall = tc // maybe no tool_call key, it has been a raw tool_call
 				}
 				// get function from tool_call
 				function, ok := toolCall["function"].(map[string]interface{})
 				if !ok {
 					continue
 				}
-
+				id, _ := toolCall["id"]
 				modelCall := map[string]interface{}{
 					"type": "function",
+					"id":   id,
 					"function": map[string]interface{}{
 						"name": function["name"],
 					},

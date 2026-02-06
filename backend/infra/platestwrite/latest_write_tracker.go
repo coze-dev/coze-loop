@@ -131,12 +131,17 @@ const (
 	ResourceTypePromptCommitLabelMapping ResourceType = "prompt_commit_label_mapping"
 	ResourceTypeCozeloopOptimizeTask     ResourceType = "cozeloop_optimize_task" // 外场智能优化
 	ResourceTypePromptRelation           ResourceType = "prompt_relation"
+	ResourceTypePromptRelease            ResourceType = "prompt_release"
+	ResourceTypeReleaseTask              ResourceType = "release_task"
+	ResourceTypeReleaseSubtask           ResourceType = "release_subtask"
+	ResourceTypeReleaseTaskResource      ResourceType = "release_task_resource"
 
 	ResourceTypeExperiment    ResourceType = "experiment"
 	ResourceTypeEvalSet       ResourceType = "eval_set"
 	ResourceTypeTarget        ResourceType = "eval_target"
 	ResourceTypeTargetVersion ResourceType = "eval_target_version"
 	ResourceTypeEvaluator     ResourceType = "evaluator"
+	ResourceTypeExptTemplate  ResourceType = "expt_template"
 
 	ResourceTypeExptInsightAnalysisRecord   ResourceType = "expt_insight_analysis_record"
 	ResourceTypeExptInsightAnalysisFeedback ResourceType = "expt_insight_analysis_feedback"

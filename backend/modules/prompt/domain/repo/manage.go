@@ -23,6 +23,7 @@ type IManageRepo interface {
 	CommitDraft(ctx context.Context, param CommitDraftParam) (err error)
 	ListCommitInfo(ctx context.Context, param ListCommitInfoParam) (result *ListCommitResult, err error)
 	MGetVersionsByPromptID(ctx context.Context, promptID int64) (versions []string, err error)
+	BatchGetPromptBasic(ctx context.Context, promptIDs []int64) (promptDOMap map[int64]*entity.Prompt, err error)
 }
 
 type GetPromptParam struct {

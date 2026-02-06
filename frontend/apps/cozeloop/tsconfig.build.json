@@ -34,64 +34,64 @@
       "path": "../../config/vitest-config/tsconfig.build.json"
     },
     {
-      "path": "../../packages/arch/bot-flags/tsconfig.build.json"
+      "path": "../../packages/loop-base/account/tsconfig.build.json"
     },
     {
-      "path": "../../packages/arch/bot-md-box-adapter/tsconfig.build.json"
+      "path": "../../packages/loop-base/api-schema/tsconfig.build.json"
     },
     {
-      "path": "../../packages/arch/logger/tsconfig.build.json"
+      "path": "../../packages/loop-base/base-hooks/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/account/tsconfig.build.json"
+      "path": "../../packages/loop-base/bot-flags/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/api-schema/tsconfig.build.json"
+      "path": "../../packages/loop-base/bot-md-box-adapter/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/auth-pages/tsconfig.build.json"
+      "path": "../../packages/loop-base/components/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/base-hooks/tsconfig.build.json"
+      "path": "../../packages/loop-base/guard/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/biz-hooks/tsconfig.build.json"
+      "path": "../../packages/loop-base/i18n/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/components/tsconfig.build.json"
+      "path": "../../packages/loop-base/logger/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/evaluate-pages/tsconfig.build.json"
+      "path": "../../packages/loop-base/stores/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/guard/tsconfig.build.json"
+      "path": "../../packages/loop-base/tea/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/i18n/tsconfig.build.json"
+      "path": "../../packages/loop-base/toolkit/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/observation-pages/tsconfig.build.json"
+      "path": "../../packages/loop-components/biz-hooks/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/prompt-pages/tsconfig.build.json"
+      "path": "../../packages/loop-config/rsbuild-config/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/rsbuild-config/tsconfig.build.json"
+      "path": "../../packages/loop-config/tailwind-config/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/stores/tsconfig.build.json"
+      "path": "../../packages/loop-pages/auth-pages/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/tag-pages/tsconfig.build.json"
+      "path": "../../packages/loop-pages/evaluate-pages/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/tailwind-config/tsconfig.build.json"
+      "path": "../../packages/loop-pages/observation-pages/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/tea/tsconfig.build.json"
+      "path": "../../packages/loop-pages/prompt-pages/tsconfig.build.json"
     },
     {
-      "path": "../../packages/cozeloop/toolkit/tsconfig.build.json"
+      "path": "../../packages/loop-pages/tag-pages/tsconfig.build.json"
     }
   ]
 }

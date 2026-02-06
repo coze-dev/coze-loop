@@ -38,6 +38,8 @@ import (
 var (
 	promptDomainSet = wire.NewSet(
 		service.NewPromptFormatter,
+		service.NewToolConfigProvider,
+		service.NewToolResultsCollector,
 		service.NewPromptService,
 		repo.NewManageRepo,
 		repo.NewLabelRepo,
@@ -137,6 +139,7 @@ func InitPromptOpenAPIApplication(
 	llmClient llmruntimeservice.Client,
 	authClient authservice.Client,
 	fileClient fileservice.Client,
+	userClient userservice.Client,
 ) (openapi.PromptOpenAPIService, error) {
 	wire.Build(openAPISet)
 	return nil, nil

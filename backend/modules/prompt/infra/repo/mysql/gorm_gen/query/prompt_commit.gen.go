@@ -38,6 +38,7 @@ func newPromptCommit(db *gorm.DB, opts ...gen.DOOption) promptCommit {
 	_promptCommit.Tools = field.NewString(tableName, "tools")
 	_promptCommit.ToolCallConfig = field.NewString(tableName, "tool_call_config")
 	_promptCommit.Metadata = field.NewString(tableName, "metadata")
+	_promptCommit.McpConfig = field.NewString(tableName, "mcp_config")
 	_promptCommit.Version = field.NewString(tableName, "version")
 	_promptCommit.BaseVersion = field.NewString(tableName, "base_version")
 	_promptCommit.CommittedBy = field.NewString(tableName, "committed_by")
@@ -69,6 +70,7 @@ type promptCommit struct {
 	Tools           field.String // tools
 	ToolCallConfig  field.String // tool调用配置
 	Metadata        field.String // 模板元信息
+	McpConfig       field.String // mcp config info
 	Version         field.String // 版本
 	BaseVersion     field.String // 来源版本
 	CommittedBy     field.String // 提交人
@@ -105,6 +107,7 @@ func (p *promptCommit) updateTableName(table string) *promptCommit {
 	p.Tools = field.NewString(table, "tools")
 	p.ToolCallConfig = field.NewString(table, "tool_call_config")
 	p.Metadata = field.NewString(table, "metadata")
+	p.McpConfig = field.NewString(table, "mcp_config")
 	p.Version = field.NewString(table, "version")
 	p.BaseVersion = field.NewString(table, "base_version")
 	p.CommittedBy = field.NewString(table, "committed_by")
@@ -142,7 +145,7 @@ func (p *promptCommit) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (p *promptCommit) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 20)
+	p.fieldMap = make(map[string]field.Expr, 21)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -154,6 +157,7 @@ func (p *promptCommit) fillFieldMap() {
 	p.fieldMap["tools"] = p.Tools
 	p.fieldMap["tool_call_config"] = p.ToolCallConfig
 	p.fieldMap["metadata"] = p.Metadata
+	p.fieldMap["mcp_config"] = p.McpConfig
 	p.fieldMap["version"] = p.Version
 	p.fieldMap["base_version"] = p.BaseVersion
 	p.fieldMap["committed_by"] = p.CommittedBy

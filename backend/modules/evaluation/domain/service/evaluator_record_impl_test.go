@@ -66,8 +66,8 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 					},
 					Ext: map[string]string{"key": "value"},
 				},
+				// 这里不设置 Score，避免触发加权得分重算逻辑，专注于基础校验
 				correctionDO: &entity.Correction{
-					Score:   gptr.Of(0.9),
 					Explain: "Looks good",
 				},
 			},
@@ -104,8 +104,8 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 					ExperimentID:       201,
 					EvaluatorVersionID: 301,
 				},
+				// 同样不设置 Score，避免触发加权得分重算逻辑
 				correctionDO: &entity.Correction{
-					Score:   gptr.Of(0.8),
 					Explain: "Needs improvement",
 				},
 			},
@@ -162,7 +162,8 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 					ExperimentID:       202,
 					EvaluatorVersionID: 302,
 				},
-				correctionDO: &entity.Correction{Score: gptr.Of(0.7)},
+				// 不设置 Score，避免触发加权得分重算逻辑
+				correctionDO: &entity.Correction{Explain: "aggr error"},
 			},
 			prepareMock: func(t *testing.T, f *fields, args args) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -192,7 +193,8 @@ func TestEvaluatorRecordServiceImpl_CorrectEvaluatorRecord(t *testing.T) {
 					EvaluatorVersionID: 303,
 					BaseInfo:           &entity.BaseInfo{CreatedAt: gptr.Of(time.Now().Add(-time.Hour).UnixMilli())},
 				},
-				correctionDO: &entity.Correction{Score: gptr.Of(0.6)},
+				// 不设置 Score，避免触发加权得分重算逻辑
+				correctionDO: &entity.Correction{},
 			},
 			prepareMock: func(t *testing.T, f *fields, args args) {
 				f.mockEvaluatorRecordRepo.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil).Times(1)
@@ -264,6 +266,7 @@ func TestNewEvaluatorRecordServiceImpl(t *testing.T) {
 	mockUserInfoService := userinfo_mocks.NewMockUserInfoService(ctrl)
 
 	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+	mockExptTurnResultRepo := repo_mocks.NewMockIExptTurnResultRepo(ctrl)
 
 	service := NewEvaluatorRecordServiceImpl(
 		mockIdgen,
@@ -272,6 +275,7 @@ func TestNewEvaluatorRecordServiceImpl(t *testing.T) {
 		mockEvaluatorEventPublisher,
 		mockUserInfoService,
 		mockExptRepo,
+		mockExptTurnResultRepo,
 	)
 	assert.NotNil(t, service)
 }
@@ -333,5 +337,285 @@ func TestEvaluatorRecordServiceImpl_BatchGetEvaluatorRecord(t *testing.T) {
 		result, err := s.BatchGetEvaluatorRecord(ctx, []int64{3, 4}, true)
 		assert.Error(t, err)
 		assert.Nil(t, result)
+	})
+}
+
+func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	mockEvaluatorRecordRepo := repo_mocks.NewMockIEvaluatorRecordRepo(ctrl)
+	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+	mockExptTurnResultRepo := repo_mocks.NewMockIExptTurnResultRepo(ctrl)
+
+	s := &EvaluatorRecordServiceImpl{
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		exptRepo:            mockExptRepo,
+		exptTurnResultRepo:  mockExptTurnResultRepo,
+	}
+
+	spaceID := int64(100)
+	exptID := int64(1)
+	itemID := int64(10)
+	turnID := int64(20)
+	evaluatorRecordID := int64(101)
+
+	t.Run("成功重新计算加权得分", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:                 evaluatorRecordID,
+			SpaceID:            spaceID,
+			ExperimentID:       exptID,
+			ItemID:             itemID,
+			TurnID:             turnID,
+			EvaluatorVersionID: 201,
+		}
+
+		turnResult := &entity.ExptTurnResult{
+			ID:      1,
+			SpaceID: spaceID,
+			ExptID:  exptID,
+			ItemID:  itemID,
+			TurnID:  turnID,
+		}
+
+		scoreWeight := 0.6
+		expt := &entity.Experiment{
+			ID:      exptID,
+			SpaceID: spaceID,
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EnableScoreWeight: true,
+						EvaluatorConf: []*entity.EvaluatorConf{
+							{
+								EvaluatorVersionID: 201,
+								ScoreWeight:        &scoreWeight,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		refs := []*entity.ExptTurnEvaluatorResultRef{
+			{
+				ExptTurnResultID:  1,
+				EvaluatorResultID: evaluatorRecordID,
+			},
+		}
+
+		score := 0.8
+		records := []*entity.EvaluatorRecord{
+			{
+				ID:                 evaluatorRecordID,
+				EvaluatorVersionID: 201,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: &score,
+					},
+				},
+			},
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
+		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return(refs, nil)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{evaluatorRecordID}, false).Return(records, nil)
+		mockExptTurnResultRepo.EXPECT().UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
+	})
+
+	t.Run("turnResult为nil，直接返回", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(nil, nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
+	})
+
+	t.Run("获取turnResult失败", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(nil, errors.New("db error"))
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.Error(t, err)
+	})
+
+	t.Run("实验未启用加权得分，直接返回", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		turnResult := &entity.ExptTurnResult{
+			ID:      1,
+			SpaceID: spaceID,
+			ExptID:  exptID,
+			ItemID:  itemID,
+			TurnID:  turnID,
+		}
+
+		expt := &entity.Experiment{
+			ID:      exptID,
+			SpaceID: spaceID,
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EnableScoreWeight: false,
+					},
+				},
+			},
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
+		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
+	})
+
+	t.Run("实验配置为nil，直接返回", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		turnResult := &entity.ExptTurnResult{
+			ID:      1,
+			SpaceID: spaceID,
+			ExptID:  exptID,
+			ItemID:  itemID,
+			TurnID:  turnID,
+		}
+
+		expt := &entity.Experiment{
+			ID:       exptID,
+			SpaceID:  spaceID,
+			EvalConf: nil,
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
+		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
+	})
+
+	t.Run("没有评估器结果引用，直接返回", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		turnResult := &entity.ExptTurnResult{
+			ID:      1,
+			SpaceID: spaceID,
+			ExptID:  exptID,
+			ItemID:  itemID,
+			TurnID:  turnID,
+		}
+
+		scoreWeight := 0.6
+		expt := &entity.Experiment{
+			ID:      exptID,
+			SpaceID: spaceID,
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EnableScoreWeight: true,
+						EvaluatorConf: []*entity.EvaluatorConf{
+							{
+								EvaluatorVersionID: 201,
+								ScoreWeight:        &scoreWeight,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
+		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return([]*entity.ExptTurnEvaluatorResultRef{}, nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
+	})
+
+	t.Run("评估器结果ID为0，跳过", func(t *testing.T) {
+		rec := &entity.EvaluatorRecord{
+			ID:           evaluatorRecordID,
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			ItemID:       itemID,
+			TurnID:       turnID,
+		}
+
+		turnResult := &entity.ExptTurnResult{
+			ID:      1,
+			SpaceID: spaceID,
+			ExptID:  exptID,
+			ItemID:  itemID,
+			TurnID:  turnID,
+		}
+
+		scoreWeight := 0.6
+		expt := &entity.Experiment{
+			ID:      exptID,
+			SpaceID: spaceID,
+			EvalConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EnableScoreWeight: true,
+						EvaluatorConf: []*entity.EvaluatorConf{
+							{
+								EvaluatorVersionID: 201,
+								ScoreWeight:        &scoreWeight,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		refs := []*entity.ExptTurnEvaluatorResultRef{
+			{
+				ExptTurnResultID:  1,
+				EvaluatorResultID: 0, // 无效ID
+			},
+		}
+
+		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
+		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return(refs, nil)
+
+		err := s.recalculateWeightedScoreForTurn(ctx, rec)
+		assert.NoError(t, err)
 	})
 }

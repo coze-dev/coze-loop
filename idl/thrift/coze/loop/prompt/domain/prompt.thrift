@@ -65,8 +65,22 @@ struct PromptDetail {
     2: optional list<Tool> tools
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
+    5: optional McpConfig mcp_config
 
     255: optional map<string, string> ext_infos
+}
+
+struct McpConfig {
+    1: optional bool is_mcp_call_auto_retry
+    2: optional list<McpServerCombine> mcp_servers
+}
+
+struct McpServerCombine {
+    1: optional i64 mcp_server_id
+    2: optional i64 access_point_id
+    3: optional list<string> disabled_tools
+    4: optional list<string> enabled_tools
+    5: optional bool is_enabled_tools
 }
 
 struct PromptTemplate {
@@ -125,8 +139,28 @@ struct ModelConfig {
     7: optional double frequency_penalty
     8: optional bool json_mode
     9: optional string extra
+    10: optional ThinkingConfig thinking
 
     100: optional list<ParamConfigValue> param_config_values
+}
+
+struct ThinkingConfig {
+     1: optional i64 budget_tokens (agw.key="budget_tokens") // thinking内容的最大输出token
+     2: optional ThinkingOption thinking_option (agw.key="thinking_option")
+     3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
+}
+
+enum ReasoningEffort {
+    Minimal = 1
+    Low = 2
+    Medium = 3
+    High = 4
+}
+
+enum ThinkingOption {
+    Disabled = 1
+    Enabled = 2
+    Auto = 3
 }
 
 struct ParamConfigValue {
@@ -147,6 +181,8 @@ struct Message {
     4: optional list<ContentPart> parts
     5: optional string tool_call_id
     6: optional list<ToolCall> tool_calls
+    7: optional bool skip_render // 是否跳过渲染
+    8: optional string signature // gemini3 thought_signature
 
     100: optional map<string, string> metadata
 }
@@ -164,6 +200,7 @@ struct ContentPart {
     3: optional ImageURL image_url
     4: optional VideoURL video_url
     5: optional MediaConfig media_config
+    6: optional string signature // gemini3 thought_signature
 }
 
 typedef string ContentType (ts.enum="true")
@@ -191,6 +228,7 @@ struct ToolCall {
     2: optional string id
     3: optional ToolType type
     4: optional FunctionCall function_call
+    5: optional string signature // gemini3 thought_signature
 }
 
 struct FunctionCall {
@@ -264,6 +302,7 @@ struct DebugMessage {
     4: optional list<ContentPart> parts
     5: optional string tool_call_id
     6: optional list<DebugToolCall> tool_calls
+    7: optional string signature // gemini3 thought_signature
 
     101: optional string debug_id
     102: optional i64 input_tokens (api.js_conv="true", go.tag='json:"input_tokens"')

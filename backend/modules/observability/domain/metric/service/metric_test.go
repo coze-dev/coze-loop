@@ -227,6 +227,37 @@ func TestMetricsService_QueryMetrics(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, resp)
 	})
+
+	t.Run("query disabled", func(t *testing.T) {
+		t.Parallel()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups:       map[string]*entity.MetricGroup{},
+			DrillDownObjects:   map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{},
+		}
+
+		traceConfigMock.EXPECT().GetMetricQueryConfig(gomock.Any()).Return(&config.MetricQueryConfig{
+			SpaceConfigs: map[string]*config.SpaceConfig{
+				"1": {DisableQuery: true},
+			},
+		}).AnyTimes()
+
+		svc, err := NewMetricsService(repomocks.NewMockIMetricRepo(ctrl), nil, tenantmocks.NewMockITenantProvider(ctrl), traceServicemocks.NewMockTraceFilterProcessorBuilder(ctrl), traceConfigMock, pMetrics)
+		assert.NoError(t, err)
+
+		resp, err := svc.QueryMetrics(context.Background(), &QueryMetricsReq{
+			PlatformType: loop_span.PlatformType("loop"),
+			WorkspaceID:  1,
+			MetricsNames: []string{"metric_a"},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Empty(t, resp.Metrics)
+	})
 }
 
 type testMetricDefinition struct {
@@ -262,8 +293,7 @@ func (d *testMetricDefinition) GroupBy() []*entity.Dimension {
 
 func (d *testMetricDefinition) OExpression() *entity.OExpression {
 	return &entity.OExpression{
-		AggrType:   entity.MetricOfflineAggrTypeSum,
-		MetricName: d.name,
+		AggrType: entity.MetricOfflineAggrTypeSum,
 	}
 }
 
@@ -582,4 +612,64 @@ func (d *testCompoundMetricDefinition) GetMetrics() []entity.IMetricDefinition {
 
 func (d *testCompoundMetricDefinition) Operator() entity.MetricOperator {
 	return d.operator
+}
+
+func TestGetMetricGroupBy(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+		metricDef := &testMetricDefinition{
+			name:       "metric_valid",
+			metricType: entity.MetricTypeSummary,
+			groupBy: []*entity.Dimension{
+				{Alias: "dim1"},
+				{Alias: "dim2"},
+			},
+		}
+
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{
+				"metric_valid": metricDef,
+			},
+		}
+
+		keys, err := svc.GetMetricGroupBy("metric_valid")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"dim1", "dim2"}, keys)
+	})
+
+	t.Run("metric not found", func(t *testing.T) {
+		t.Parallel()
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{},
+		}
+
+		keys, err := svc.GetMetricGroupBy("unknown_metric")
+		assert.Error(t, err)
+		assert.Nil(t, keys)
+		assert.Contains(t, err.Error(), "metric definition unknown_metric not found")
+	})
+
+	t.Run("groupby dimension has no alias", func(t *testing.T) {
+		t.Parallel()
+		metricDef := &testMetricDefinition{
+			name:       "metric_invalid_alias",
+			metricType: entity.MetricTypeSummary,
+			groupBy: []*entity.Dimension{
+				{Alias: ""}, // No alias
+			},
+		}
+
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{
+				"metric_invalid_alias": metricDef,
+			},
+		}
+
+		keys, err := svc.GetMetricGroupBy("metric_invalid_alias")
+		assert.Error(t, err)
+		assert.Nil(t, keys)
+		assert.Contains(t, err.Error(), "groupby dimension has no alias")
+	})
 }

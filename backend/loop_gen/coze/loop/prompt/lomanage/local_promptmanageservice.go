@@ -178,6 +178,27 @@ func (l *LocalPromptManageService) ListParentPrompt(ctx context.Context, request
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalPromptManageService) BatchGetPromptBasic(ctx context.Context, request *manage.BatchGetPromptBasicRequest, callOptions ...callopt.Option) (*manage.BatchGetPromptBasicResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.PromptManageServiceBatchGetPromptBasicArgs)
+		result := out.(*manage.PromptManageServiceBatchGetPromptBasicResult)
+		resp, err := l.impl.BatchGetPromptBasic(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.PromptManageServiceBatchGetPromptBasicArgs{Request: request}
+	result := &manage.PromptManageServiceBatchGetPromptBasicResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetPromptBasic")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // UpdatePrompt
 // 改
 func (l *LocalPromptManageService) UpdatePrompt(ctx context.Context, request *manage.UpdatePromptRequest, callOptions ...callopt.Option) (*manage.UpdatePromptResponse, error) {

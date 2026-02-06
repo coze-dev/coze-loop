@@ -33,6 +33,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	NewExptResultExportService,
 	NewInsightAnalysisService,
 	NewSchedulerModeFactory,
+	NewExptTemplateManager,
 	NewEvaluationAnalysisService,
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,

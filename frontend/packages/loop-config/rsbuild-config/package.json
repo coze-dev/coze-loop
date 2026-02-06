@@ -1,0 +1,42 @@
+{
+  "name": "@cozeloop/rsbuild-config",
+  "version": "0.0.1",
+  "description": "Rsbuild config for cozeloop",
+  "author": "qihai@bytedance.com",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "exit 0",
+    "lint": "eslint ./ --cache",
+    "test": "exit 0",
+    "test:cov": "exit 0"
+  },
+  "dependencies": {
+    "@coze-studio/bot-env-adapter": "workspace:*",
+    "@cozeloop/i18n-adapter": "workspace:*"
+  },
+  "devDependencies": {
+    "@coze-arch/eslint-config": "workspace:*",
+    "@coze-arch/pkg-root-webpack-plugin": "workspace:*",
+    "@coze-arch/postcss-plugin": "workspace:*",
+    "@coze-arch/semi-theme-hand01": "0.0.6-alpha.346d77",
+    "@coze-arch/subspace-resolve-plugin": "workspace:*",
+    "@coze-arch/ts-config": "workspace:*",
+    "@coze-arch/vitest-config": "workspace:*",
+    "@douyinfe/semi-rspack-plugin": "2.90.10",
+    "@rsbuild/core": "~1.1.0",
+    "@rsbuild/plugin-less": "~1.1.0",
+    "@rsbuild/plugin-react": "~1.1.0",
+    "@rsbuild/plugin-sass": "~1.1.0",
+    "@rsbuild/plugin-svgr": "~1.0.6",
+    "@rspack/core": ">=0.7",
+    "@types/node": "^18",
+    "@vitest/coverage-v8": "~3.0.5",
+    "react": "~18.2.0",
+    "react-dom": "~18.2.0",
+    "tailwindcss": "~3.3.3",
+    "tsconfig-paths": "4.1.0",
+    "typescript": "~5.8.2",
+    "vitest": "~3.0.5",
+    "webpack": "~5.91.0"
+  }
+}

@@ -6,12 +6,14 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc/mocks"
@@ -21,6 +23,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
@@ -227,23 +231,35 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsCollector: NewToolResultsCollector(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 			gotFormattedMessages, err := p.FormatPrompt(tt.args.ctx, tt.args.prompt, tt.args.messages, tt.args.variableVals)
 
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if tt.wantErr == nil {
-				assert.Equal(t, tt.wantFormattedMessages, gotFormattedMessages)
+				assert.Equal(t, normalizeSkipRender(tt.wantFormattedMessages), normalizeSkipRender(gotFormattedMessages))
 			}
 		})
 	}
+}
+
+func normalizeSkipRender(messages []*entity.Message) []*entity.Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
@@ -251,7 +267,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -267,7 +285,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -333,9 +353,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -534,9 +556,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -922,14 +946,16 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsCollector: NewToolResultsCollector(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 
 			gotReply, err := p.Execute(tt.args.ctx, tt.args.param)
@@ -947,6 +973,11 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 	t.Parallel()
 	extra := ptr.Of(`{"foo":"bar"}`)
+	responseAPIConfig := &entity.ResponseAPIConfig{
+		PreviousResponseID: ptr.Of("prev-id"),
+		EnableCaching:      ptr.Of(true),
+		SessionID:          ptr.Of("session-123"),
+	}
 	prompt := &entity.Prompt{
 		ID:        1,
 		SpaceID:   42,
@@ -974,7 +1005,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		},
 	}
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 	param := ExecuteParam{
 		Prompt: prompt,
@@ -984,21 +1017,25 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 				Content: ptr.Of("Hi"),
 			},
 		},
-		VariableVals: nil,
-		Scenario:     entity.ScenarioPromptDebug,
+		VariableVals:      nil,
+		Scenario:          entity.ScenarioPromptDebug,
+		ResponseAPIConfig: responseAPIConfig,
 	}
-	got, err := svc.prepareLLMCallParam(context.Background(), param)
+	_, got, err := svc.prepareLLMCallParam(context.Background(), param)
 	assert.NoError(t, err)
 	if assert.NotNil(t, got.ModelConfig) {
 		assert.Equal(t, extra, got.ModelConfig.Extra)
 		assert.Equal(t, prompt.PromptCommit.PromptDetail.ModelConfig.Extra, got.ModelConfig.Extra)
 	}
+	assert.Equal(t, responseAPIConfig, got.ResponseAPIConfig)
 }
 
 func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	t.Parallel()
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 
 	tests := []struct {
@@ -1252,7 +1289,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
+			_, got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
@@ -1268,3 +1305,148 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestPromptServiceImpl_reorganizeContexts_ToolResultMap(t *testing.T) {
+	t.Parallel()
+
+	p := &PromptServiceImpl{}
+	reply := &entity.Reply{
+		Item: &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("assistant"),
+				ToolCalls: []*entity.ToolCall{
+					{
+						ID: "call_1",
+						FunctionCall: &entity.FunctionCall{
+							Name:      "tool_a",
+							Arguments: ptr.Of(`{"k":"v"}`),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := p.reorganizeContexts(
+		[]*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("user")}},
+		map[string]string{"tool_a": "tool output"},
+		reply,
+	)
+	assert.NoError(t, err)
+	assert.Len(t, got, 3)
+	assert.Equal(t, entity.RoleUser, got[0].Role)
+	assert.Equal(t, entity.RoleAssistant, got[1].Role)
+	assert.Equal(t, entity.RoleTool, got[2].Role)
+	assert.Equal(t, ptr.Of("call_1"), got[2].ToolCallID)
+	assert.Equal(t, ptr.Of("tool output"), got[2].Content)
+}
+
+func TestPromptServiceImpl_reportToolSpan_UsesToolResultMap(t *testing.T) {
+	t.Parallel()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	p := &PromptServiceImpl{}
+	prompt := &entity.Prompt{
+		SpaceID:   42,
+		PromptKey: "pk",
+		PromptCommit: &entity.PromptCommit{
+			CommitInfo: &entity.CommitInfo{Version: "v1"},
+		},
+	}
+	args := ptr.Of(`{"a":1}`)
+	replyItem := &entity.ReplyItem{
+		Message: &entity.Message{
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID: "call_1",
+					FunctionCall: &entity.FunctionCall{
+						Name:      "tool_a",
+						Arguments: args,
+					},
+				},
+			},
+		},
+	}
+
+	p.reportToolSpan(context.Background(), prompt, map[string]string{"tool_a": "tool output"}, replyItem)
+
+	if assert.Len(t, recorder.spans, 1) {
+		assert.Equal(t, "tool output", recorder.spans[0].output)
+		assert.Same(t, args, recorder.spans[0].input)
+		assert.Equal(t, loopentity.Prompt{PromptKey: "pk", Version: "v1"}, recorder.spans[0].prompt)
+		assert.True(t, recorder.spans[0].finished)
+	}
+}
+
+type recordingTracer struct {
+	spans []*recordingSpan
+}
+
+func (r *recordingTracer) StartSpan(ctx context.Context, name, spanType string, _ ...looptracer.StartSpanOption) (context.Context, looptracer.Span) {
+	span := &recordingSpan{name: name, spanType: spanType, startTime: time.Now()}
+	r.spans = append(r.spans, span)
+	return ctx, span
+}
+
+func (r *recordingTracer) GetSpanFromContext(ctx context.Context) looptracer.Span { return nil }
+func (r *recordingTracer) Flush(ctx context.Context)                              {}
+func (r *recordingTracer) Inject(ctx context.Context) context.Context             { return ctx }
+func (r *recordingTracer) InjectW3CTraceContext(ctx context.Context) map[string]string {
+	return map[string]string{}
+}
+
+type recordingSpan struct {
+	name      string
+	spanType  string
+	startTime time.Time
+
+	input    any
+	output   any
+	prompt   loopentity.Prompt
+	finished bool
+}
+
+func (s *recordingSpan) SetServiceName(ctx context.Context, serviceName string) {}
+func (s *recordingSpan) SetLogID(ctx context.Context, logID string)             {}
+func (s *recordingSpan) SetFinishTime(finishTime time.Time)                     {}
+func (s *recordingSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+}
+func (s *recordingSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {}
+func (s *recordingSpan) GetSpanID() string                                          { return "" }
+func (s *recordingSpan) GetTraceID() string                                         { return "" }
+func (s *recordingSpan) GetBaggage() map[string]string                              { return nil }
+func (s *recordingSpan) SetInput(ctx context.Context, input interface{})            { s.input = input }
+func (s *recordingSpan) SetOutput(ctx context.Context, output interface{})          { s.output = output }
+func (s *recordingSpan) SetError(ctx context.Context, err error)                    {}
+func (s *recordingSpan) SetStatusCode(ctx context.Context, code int)                {}
+func (s *recordingSpan) SetUserID(ctx context.Context, userID string)               {}
+func (s *recordingSpan) SetUserIDBaggage(ctx context.Context, userID string)        {}
+func (s *recordingSpan) SetMessageID(ctx context.Context, messageID string)         {}
+func (s *recordingSpan) SetMessageIDBaggage(ctx context.Context, messageID string)  {}
+func (s *recordingSpan) SetThreadID(ctx context.Context, threadID string)           {}
+func (s *recordingSpan) SetThreadIDBaggage(ctx context.Context, threadID string)    {}
+func (s *recordingSpan) SetPrompt(ctx context.Context, prompt loopentity.Prompt)    { s.prompt = prompt }
+func (s *recordingSpan) SetModelProvider(ctx context.Context, modelProvider string) {
+}
+func (s *recordingSpan) SetModelName(ctx context.Context, modelName string) {}
+func (s *recordingSpan) SetModelCallOptions(ctx context.Context, callOptions interface{}) {
+}
+func (s *recordingSpan) SetInputTokens(ctx context.Context, inputTokens int) {}
+func (s *recordingSpan) SetOutputTokens(ctx context.Context, outputTokens int) {
+}
+
+func (s *recordingSpan) SetStartTimeFirstResp(ctx context.Context, startTimeFirstResp int64) {
+}
+func (s *recordingSpan) SetRuntime(ctx context.Context, runtime tracespec.Runtime) {}
+func (s *recordingSpan) SetTags(ctx context.Context, tagKVs map[string]interface{}) {
+}
+func (s *recordingSpan) SetBaggage(ctx context.Context, baggageItems map[string]string) {}
+func (s *recordingSpan) Finish(ctx context.Context)                                     { s.finished = true }
+func (s *recordingSpan) GetStartTime() time.Time                                        { return s.startTime }
+func (s *recordingSpan) ToHeader() (map[string]string, error)                           { return map[string]string{}, nil }
+func (s *recordingSpan) SetCallType(callType string)                                    {}

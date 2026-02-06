@@ -176,6 +176,7 @@ func (d *PromptUserDraftDAOImpl) Update(ctx context.Context, promptDraftPO *mode
 			q.PromptUserDraft.TemplateType.ColumnName().String():    promptDraftPO.TemplateType,
 			q.PromptUserDraft.VariableDefs.ColumnName().String():    promptDraftPO.VariableDefs,
 			q.PromptUserDraft.Metadata.ColumnName().String():        promptDraftPO.Metadata,
+			q.PromptUserDraft.McpConfig.ColumnName().String():       promptDraftPO.McpConfig,
 			q.PromptUserDraft.IsDraftEdited.ColumnName().String():   promptDraftPO.IsDraftEdited,
 			q.PromptUserDraft.HasSnippets.ColumnName().String():     promptDraftPO.HasSnippets,
 			q.PromptUserDraft.EncryptMessages.ColumnName().String(): promptDraftPO.EncryptMessages,

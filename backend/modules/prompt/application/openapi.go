@@ -21,6 +21,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
@@ -30,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
+	promptmetrics "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -47,7 +49,12 @@ func NewPromptOpenAPIApplication(
 	auth rpc.IAuthProvider,
 	factory limiter.IRateLimiterFactory,
 	collector collector.ICollectorProvider,
+	meter metrics.Meter,
+	user rpc.IUserProvider,
 ) (openapi.PromptOpenAPIService, error) {
+	// Initialize PaaS metrics (global instance)
+	promptmetrics.NewPromptPaasMetrics(meter)
+
 	return &PromptOpenAPIApplicationImpl{
 		promptService:    promptService,
 		promptManageRepo: promptManageRepo,
@@ -55,6 +62,7 @@ func NewPromptOpenAPIApplication(
 		auth:             auth,
 		rateLimiter:      factory.NewRateLimiter(),
 		collector:        collector,
+		user:             user,
 	}, nil
 }
 
@@ -65,6 +73,7 @@ type PromptOpenAPIApplicationImpl struct {
 	auth             rpc.IAuthProvider
 	rateLimiter      limiter.IRateLimiter
 	collector        collector.ICollectorProvider
+	user             rpc.IUserProvider
 }
 
 func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
@@ -127,6 +136,7 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 }
 
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
 	if req.GetWorkspaceID() == 0 {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
@@ -135,6 +145,9 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 		if err != nil {
 			logs.CtxError(ctx, "openapi get prompts failed, err=%v", err)
 		}
+		promptmetrics.WithPaasStatus(ctx, err)
+		promptmetrics.WithPaasMethod(ctx, "BatchGetPromptByPromptKey")
+		promptmetrics.EmitPaasMetric(ctx)
 	}()
 
 	// 限流检查
@@ -209,11 +222,20 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		}
 		commitVersion := promptKeyCommitVersionMap[queryParam]
 
-		mgetParams = append(mgetParams, repo.GetPromptParam{
-			PromptID:      promptKeyIDMap[query.GetPromptKey()],
-			WithCommit:    true,
-			CommitVersion: commitVersion,
-		})
+		// 根据 commitVersion 类型构建参数
+		param := repo.GetPromptParam{
+			PromptID: promptKeyIDMap[query.GetPromptKey()],
+		}
+		if commitVersion != consts.PromptPersonalDraftVersion {
+			param.WithCommit = true
+			param.CommitVersion = commitVersion
+		} else {
+			param.WithDraft = true
+			if userID, ok := p.user.GetUserIdInCtx(ctx); ok {
+				param.UserID = userID
+			}
+		}
+		mgetParams = append(mgetParams, param)
 	}
 
 	// 获取prompt详细信息
@@ -397,6 +419,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 		return promptDO, nil, err
 	}
 
+	// 应用自定义覆盖参数（深拷贝以避免缓存污染）
+	promptDO, err = p.applyCustomOverrides(promptDO, req)
+	if err != nil {
+		return promptDO, nil, err
+	}
+
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
@@ -404,11 +432,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 
 	// 执行prompt
 	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{
-		Prompt:       promptDO,
-		Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-		VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-		SingleStep:   true,                 // PTaaS不支持非单步模式
-		Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+		Prompt:            promptDO,
+		Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+		ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+		SingleStep:        true,                 // PTaaS不支持非单步模式
+		Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 	})
 	if err != nil {
 		return promptDO, nil, err
@@ -498,6 +527,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		return promptDO, nil, err
 	}
 
+	// 应用自定义覆盖参数（深拷贝以避免缓存污染）
+	promptDO, err = p.applyCustomOverrides(promptDO, req)
+	if err != nil {
+		return promptDO, nil, err
+	}
+
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
@@ -529,11 +564,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 		localAggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
-				Prompt:       promptDO,
-				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-				VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-				SingleStep:   true,                 // PTaaS不支持非单步模式
-				Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+				Prompt:            promptDO,
+				Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+				VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+				ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+				SingleStep:        true,                 // PTaaS不支持非单步模式
+				Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 			},
 			ResultStream: resultStream,
 		})
@@ -777,5 +813,73 @@ func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// applyCustomOverrides 应用自定义覆盖参数到prompt（深拷贝避免缓存污染）
+func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Prompt, req *openapi.ExecuteRequest) (*entity.Prompt, error) {
+	if promptDO == nil || req == nil {
+		return promptDO, nil
+	}
+
+	// 检查是否需要应用任何自定义覆盖
+	needsOverride := req.CustomTools != nil || req.CustomToolCallConfig != nil || req.CustomModelConfig != nil
+	if !needsOverride {
+		return promptDO, nil
+	}
+
+	// 确保PromptCommit存在
+	if promptDO.PromptCommit == nil {
+		return promptDO, nil
+	}
+
+	// 确保PromptDetail存在
+	if promptDO.PromptCommit.PromptDetail == nil {
+		return promptDO, nil
+	}
+
+	// 深拷贝以避免缓存污染
+	clonedPrompt := promptDO.Clone()
+	if clonedPrompt == nil {
+		return nil, errors.New("failed to clone prompt")
+	}
+
+	// 覆盖自定义工具
+	if req.CustomTools != nil {
+		customTools := convertor.OpenAPIBatchToolDTO2DO(req.CustomTools)
+		clonedPrompt.PromptCommit.PromptDetail.Tools = customTools
+	}
+
+	// 覆盖自定义工具调用配置
+	if req.CustomToolCallConfig != nil {
+		customToolCallConfig := convertor.OpenAPIToolCallConfigDTO2DO(req.CustomToolCallConfig)
+		clonedPrompt.PromptCommit.PromptDetail.ToolCallConfig = customToolCallConfig
+	}
+
+	// 覆盖自定义模型配置（带验证）
+	if req.CustomModelConfig != nil {
+		err := p.validateAndApplyCustomModelConfig(clonedPrompt, req.CustomModelConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return clonedPrompt, nil
+}
+
+// validateAndApplyCustomModelConfig 验证并应用自定义模型配置（全量覆盖）
+func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *openapi.ModelConfig) error {
+	if customModelConfig == nil {
+		return nil
+	}
+
+	// 如果没有提供ModelID，当作用户没传自定义模型配置，直接返回
+	if !customModelConfig.IsSetModelID() || customModelConfig.GetModelID() == 0 {
+		return nil
+	}
+
+	// 全量替换模型配置
+	customModelConfigDO := convertor.OpenAPIModelConfigDTO2DO(customModelConfig)
+	promptDO.PromptCommit.PromptDetail.ModelConfig = customModelConfigDO
 	return nil
 }
