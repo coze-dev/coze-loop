@@ -3,7 +3,11 @@
 
 package entity
 
-import "time"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
 type Message struct {
 	Role             Role   `json:"role"`
@@ -238,4 +242,26 @@ const (
 
 type ResponseFormat struct {
 	Type ResponseFormatType `json:"type,omitempty"`
+}
+
+type ParamValue struct {
+	Name      string    `json:"name"`
+	ParamType ParamType `json:"param_type"`
+	Value     string    `json:"value"`
+	JsonPath  string    `json:"json_path"`
+}
+
+func (p *ParamValue) GetValue() (any, error) {
+	switch p.ParamType {
+	case ParamTypeBoolean:
+		return strconv.ParseBool(p.Value)
+	case ParamTypeFloat:
+		return strconv.ParseFloat(p.Value, 64)
+	case ParamTypeInt:
+		return strconv.ParseInt(p.Value, 10, 64)
+	case ParamTypeString:
+		return p.Value, nil
+	default:
+		return nil, fmt.Errorf("unsupported param type: %s", p.ParamType)
+	}
 }

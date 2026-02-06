@@ -4,8 +4,12 @@
 package convertor
 
 import (
+	"github.com/bytedance/gg/gptr"
+	"github.com/bytedance/gg/gslice"
+	"github.com/bytedance/gg/gvalue"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
+	manage2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/modules/llm/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
@@ -25,7 +29,7 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 	if !mask {
 		pc = ProtocolConfigDO2DTO(model.ProtocolConfig)
 	}
-	return &manage.Model{
+	resp := &manage.Model{
 		ModelID:         ptr.Of(model.ID),
 		WorkspaceID:     ptr.Of(model.WorkspaceID),
 		Name:            ptr.Of(model.Name),
@@ -33,8 +37,113 @@ func ModelDO2DTO(model *entity.Model, mask bool) *manage.Model {
 		Ability:         AbilityDO2DTO(model.Ability),
 		Protocol:        ptr.Of(manage.Protocol(model.Protocol)),
 		ProtocolConfig:  pc,
+		Identification:  ptr.Of(model.Identification),
+		Icon:            ptr.Of(model.Icon),
+		Status:          ptr.Of(ModelStatusDO2DTO(model.Status)),
+		Tags:            model.Tags,
+		Series:          SeriesDO2DTO(model.Series),
+		Visibility:      VisibilityDO2DTO(model.Visibility),
 		ScenarioConfigs: ScenarioConfigMapDO2DTO(model.ScenarioConfigs),
 		ParamConfig:     ParamConfigDO2DTO(model.ParamConfig),
+	}
+	if gvalue.IsNotZero(model.CreatedAt) {
+		resp.CreatedAt = gptr.Of(model.CreatedAt)
+	}
+	if gvalue.IsNotZero(model.UpdatedAt) {
+		resp.UpdatedAt = gptr.Of(model.UpdatedAt)
+	}
+	if gvalue.IsNotZero(model.CreatedBy) {
+		resp.CreatedBy = gptr.Of(model.CreatedBy)
+	}
+	if gvalue.IsNotZero(model.UpdatedBy) {
+		resp.UpdatedBy = gptr.Of(model.UpdatedBy)
+	}
+	return resp
+}
+
+func SeriesDO2DTO(v *entity.Series) *manage.Series {
+	if v == nil {
+		return nil
+	}
+	return &manage.Series{
+		Name:   ptr.Of(v.Name),
+		Icon:   ptr.Of(v.Icon),
+		Family: ptr.Of(FamilyDO2DTO(v.Family)),
+	}
+}
+
+func FamilyDO2DTO(v entity.Family) manage.Family {
+	switch v {
+	case entity.FamilySeed:
+		return manage.FamilySeed
+	case entity.FamilyGLM:
+		return manage.FamilyGlm
+	case entity.FamilyKimi:
+		return manage.FamilyKimi
+	case entity.FamilyDeepSeek:
+		return manage.FamilyDeepseek
+	default:
+		return manage.FamilyUndefined
+	}
+}
+
+func FamilyDTO2DO(val manage.Family) entity.Family {
+	switch val {
+	case manage.FamilySeed:
+		return entity.FamilySeed
+	case manage.FamilyDeepseek:
+		return entity.FamilyDeepSeek
+	case manage.FamilyGlm:
+		return entity.FamilyGLM
+	case manage.FamilyKimi:
+		return entity.FamilyKimi
+	default:
+		return entity.FamilyUndefined
+	}
+}
+
+func VisibilityDO2DTO(v *entity.Visibility) *manage.Visibility {
+	if v == nil {
+		return nil
+	}
+	return &manage.Visibility{
+		Mode:     ptr.Of(VisibleModelDO2DTO(v.Mode)),
+		SpaceIDs: v.SpaceIDs,
+	}
+}
+
+func VisibleModelDO2DTO(v entity.VisibleMode) manage.VisibleMode {
+	switch v {
+	case entity.VisibleModelAll:
+		return manage.VisibleModeAll
+	case entity.VisibleModelSpecified:
+		return manage.VisibleModeSpecified
+	case entity.VisibleModelDefault:
+		return manage.VisibleModeDefault
+	default:
+		return manage.VisibleModeUndefined
+	}
+}
+
+func ModelStatusDO2DTO(status entity.ModelStatus) manage.ModelStatus {
+	switch status {
+	case entity.ModelStatusDisabled:
+		return manage.ModelStatusUnavailable
+	case entity.ModelStatusEnabled:
+		return manage.ModelStatusAvailable
+	default:
+		return manage.ModelStatusUndefined
+	}
+}
+
+func ModelStatusDTO2DO(val manage.ModelStatus) entity.ModelStatus {
+	switch val {
+	case manage.ModelStatusUnavailable:
+		return entity.ModelStatusDisabled
+	case manage.ModelStatusAvailable:
+		return entity.ModelStatusEnabled
+	default:
+		return entity.ModelStatusUndefined
 	}
 }
 
@@ -269,6 +378,19 @@ func ParamSchemaDO2DTO(ps *entity.ParamSchema) *manage.ParamSchema {
 		Max:          ptr.Of(ps.Max),
 		DefaultValue: ptr.Of(ps.DefaultValue),
 		Options:      ParamOptionsDO2DTO(ps.Options),
+		Properties:   gslice.Map(ps.Properties, ParamSchemaDO2DTO),
+		Jsonpath:     ptr.Of(ps.JsonPath),
+		Reaction:     ReactionDO2DTO(ps.Reaction),
+	}
+}
+
+func ReactionDO2DTO(r *entity.Reaction) *manage.Reaction {
+	if r == nil {
+		return nil
+	}
+	return &manage.Reaction{
+		Dependency: ptr.Of(r.Dependency),
+		Visible:    ptr.Of(r.Visible),
 	}
 }
 
@@ -285,5 +407,30 @@ func ParamOptionDO2DTO(o *entity.ParamOption) *manage.ParamOption {
 	return &manage.ParamOption{
 		Value: ptr.Of(o.Value),
 		Label: ptr.Of(o.Label),
+	}
+}
+
+func AbilityEnumDTO2DO(val manage.AbilityEnum) entity.AbilityEnum {
+	switch val {
+	case manage.AbilityJSONMode:
+		return entity.AbilityEnumJsonMode
+	case manage.AbilityFunctionCall:
+		return entity.AbilityEnumFunctionCall
+	case manage.AbilityMultiModal_:
+		return entity.AbilityEnumMultiModal
+	default:
+		return entity.AbilityEnumUndefined
+	}
+}
+
+func ListModelsFilterDTO2DO(val *manage2.Filter) *entity.ListModelsFilter {
+	if val == nil {
+		return nil
+	}
+	return &entity.ListModelsFilter{
+		NameLike:      val.NameLike,
+		Families:      gslice.Map(val.Families, FamilyDTO2DO),
+		ModelStatuses: gslice.Map(val.Statuses, ModelStatusDTO2DO),
+		Abilities:     gslice.Map(val.Abilities, AbilityEnumDTO2DO),
 	}
 }

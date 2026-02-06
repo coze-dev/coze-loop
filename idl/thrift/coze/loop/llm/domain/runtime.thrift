@@ -14,9 +14,12 @@ struct ModelConfig {
     8: optional i32 top_k
     9: optional double presence_penalty
     10: optional double frequency_penalty
+    11: optional string identification
+    12: optional manage.Protocol protocol // 模型提供方
 
     // 与ParamSchema对应
     100: optional list<ParamConfigValue> param_config_values
+    101: optional string extra
 }
 
 struct ParamConfigValue {

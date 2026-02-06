@@ -76,7 +76,7 @@ func (r *runtimeApp) Chat(ctx context.Context, req *runtime.ChatRequest) (resp *
 	if err != nil {
 		return resp, errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil)
+	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil, nil)
 	var respMsg *entity.Message
 	// 5. start span
 	var span looptracer.Span
@@ -136,7 +136,7 @@ func (r *runtimeApp) ChatStream(ctx context.Context, req *runtime.ChatRequest, s
 	if err != nil {
 		return errorx.NewByCode(llm_errorx.RequestNotValidCode, errorx.WithExtraMsg(err.Error()))
 	}
-	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil)
+	options := convertor.ModelAndTools2OptionDOs(req.GetModelConfig(), req.GetTools(), nil, nil)
 	// 4. start trace
 	var span looptracer.Span
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, model.Name, tracespec.VModelSpanType, looptracer.WithSpanWorkspaceID(strconv.FormatInt(req.GetBizParam().GetWorkspaceID(), 10)))

@@ -10,7 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
-func ModelAndTools2OptionDOs(modelCfg *druntime.ModelConfig, tools []*druntime.Tool, parameters map[string]string) []entity.Option {
+func ModelAndTools2OptionDOs(modelCfg *druntime.ModelConfig, tools []*druntime.Tool, parameters map[string]string, paramValues map[string]*entity.ParamValue) []entity.Option {
 	var opts []entity.Option
 	if modelCfg != nil {
 		if modelCfg.Temperature != nil {
@@ -49,6 +49,9 @@ func ModelAndTools2OptionDOs(modelCfg *druntime.ModelConfig, tools []*druntime.T
 	}
 	if parameters != nil {
 		opts = append(opts, entity.WithParameters(parameters))
+	}
+	if paramValues != nil {
+		opts = append(opts, entity.WithParamValues(paramValues))
 	}
 	return opts
 }
