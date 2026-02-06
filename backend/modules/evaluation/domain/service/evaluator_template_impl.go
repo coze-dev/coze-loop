@@ -237,7 +237,7 @@ func (s *EvaluatorTemplateServiceImpl) ListEvaluatorTemplate(ctx context.Context
 	// 调用repo层查询
 	repoResp, err := s.templateRepo.ListEvaluatorTemplate(ctx, repoReq)
 	if err != nil {
-		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+		return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
 	}
 
 	// 计算总页数

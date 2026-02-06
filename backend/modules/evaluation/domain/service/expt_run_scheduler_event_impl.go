@@ -282,7 +282,11 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, event: %v", event.ExptID, event)
 
-	time.Sleep(time.Second * 3)
+	select {
+	case <-time.After(time.Second * 3):
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 	return mode.NextTick(ctx, event, nextTick)
 }
 

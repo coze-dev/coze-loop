@@ -22457,9 +22457,11 @@ type ExptResultExportRecord struct {
 	BaseInfo        *common.BaseInfo `thrift:"base_info,5,optional" frugal:"5,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 	StartTime       *int64           `thrift:"start_time,6,optional" frugal:"6,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
 	EndTime         *int64           `thrift:"end_time,7,optional" frugal:"7,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
-	URL             *string          `thrift:"URL,8,optional" frugal:"8,optional,string" form:"URL" json:"URL,omitempty" query:"URL"`
-	Expired         *bool            `thrift:"expired,9,optional" frugal:"9,optional,bool" form:"expired" json:"expired,omitempty" query:"expired"`
-	Error           *RunError        `thrift:"error,10,optional" frugal:"10,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
+	// deprecated, cause not match snake name
+	URL     *string   `thrift:"URL,8,optional" frugal:"8,optional,string" form:"URL" json:"URL,omitempty" query:"URL"`
+	Expired *bool     `thrift:"expired,9,optional" frugal:"9,optional,bool" form:"expired" json:"expired,omitempty" query:"expired"`
+	Error   *RunError `thrift:"error,10,optional" frugal:"10,optional,RunError" form:"error" json:"error,omitempty" query:"error"`
+	URL_    *string   `thrift:"url,11,optional" frugal:"11,optional,string" form:"url" json:"url,omitempty" query:"url"`
 }
 
 func NewExptResultExportRecord() *ExptResultExportRecord {
@@ -22568,6 +22570,18 @@ func (p *ExptResultExportRecord) GetError() (v *RunError) {
 	}
 	return p.Error
 }
+
+var ExptResultExportRecord_URL__DEFAULT string
+
+func (p *ExptResultExportRecord) GetURL_() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetURL_() {
+		return ExptResultExportRecord_URL__DEFAULT
+	}
+	return *p.URL_
+}
 func (p *ExptResultExportRecord) SetExportID(val int64) {
 	p.ExportID = val
 }
@@ -22598,6 +22612,9 @@ func (p *ExptResultExportRecord) SetExpired(val *bool) {
 func (p *ExptResultExportRecord) SetError(val *RunError) {
 	p.Error = val
 }
+func (p *ExptResultExportRecord) SetURL_(val *string) {
+	p.URL_ = val
+}
 
 var fieldIDToName_ExptResultExportRecord = map[int16]string{
 	1:  "export_id",
@@ -22610,6 +22627,7 @@ var fieldIDToName_ExptResultExportRecord = map[int16]string{
 	8:  "URL",
 	9:  "expired",
 	10: "error",
+	11: "url",
 }
 
 func (p *ExptResultExportRecord) IsSetBaseInfo() bool {
@@ -22634,6 +22652,10 @@ func (p *ExptResultExportRecord) IsSetExpired() bool {
 
 func (p *ExptResultExportRecord) IsSetError() bool {
 	return p.Error != nil
+}
+
+func (p *ExptResultExportRecord) IsSetURL_() bool {
+	return p.URL_ != nil
 }
 
 func (p *ExptResultExportRecord) Read(iprot thrift.TProtocol) (err error) {
@@ -22737,6 +22759,14 @@ func (p *ExptResultExportRecord) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22896,6 +22926,17 @@ func (p *ExptResultExportRecord) ReadField10(iprot thrift.TProtocol) error {
 	p.Error = _field
 	return nil
 }
+func (p *ExptResultExportRecord) ReadField11(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.URL_ = _field
+	return nil
+}
 
 func (p *ExptResultExportRecord) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22941,6 +22982,10 @@ func (p *ExptResultExportRecord) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -23133,6 +23178,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *ExptResultExportRecord) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURL_() {
+		if err = oprot.WriteFieldBegin("url", thrift.STRING, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URL_); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *ExptResultExportRecord) String() string {
 	if p == nil {
@@ -23176,6 +23239,9 @@ func (p *ExptResultExportRecord) DeepEqual(ano *ExptResultExportRecord) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.Error) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.URL_) {
 		return false
 	}
 	return true
@@ -23267,6 +23333,18 @@ func (p *ExptResultExportRecord) Field9DeepEqual(src *bool) bool {
 func (p *ExptResultExportRecord) Field10DeepEqual(src *RunError) bool {
 
 	if !p.Error.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptResultExportRecord) Field11DeepEqual(src *string) bool {
+
+	if p.URL_ == src {
+		return true
+	} else if p.URL_ == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.URL_, *src) != 0 {
 		return false
 	}
 	return true

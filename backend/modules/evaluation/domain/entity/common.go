@@ -286,16 +286,26 @@ type FunctionCall struct {
 }
 
 type ModelConfig struct {
-	ModelID     int64          `json:"model_id"`
-	ModelName   string         `json:"model_name"`
-	MaxTokens   *int32         `json:"max_tokens,omitempty"`
-	Temperature *float64       `json:"temperature,omitempty"`
-	TopP        *float64       `json:"top_p,omitempty"`
-	ToolChoice  ToolChoiceType `json:"tool_choice" jsonschema:"-"`
+	ModelID        *int64         `json:"model_id"`
+	ModelName      string         `json:"model_name"`
+	MaxTokens      *int32         `json:"max_tokens,omitempty"`
+	Temperature    *float64       `json:"temperature,omitempty"`
+	TopP           *float64       `json:"top_p,omitempty"`
+	ToolChoice     ToolChoiceType `json:"tool_choice" jsonschema:"-"`
+	Protocol       *string        `json:"protocol,omitempty"`
+	Identification *string        `json:"identification,omitempty"`
+	PresetModel    *bool          `json:"preset_model,omitempty"`
 
 	ProviderModelID *string `json:"provider_model_id,omitempty" jsonschema:"-"`
 
 	JSONExt *string `json:"json_ext,omitempty"`
+}
+
+func (m *ModelConfig) GetModelID() int64 {
+	if m != nil && m.ModelID != nil {
+		return *m.ModelID
+	}
+	return 0
 }
 
 type Reply struct {

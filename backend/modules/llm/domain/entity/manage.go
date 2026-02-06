@@ -7,9 +7,8 @@ import (
 	"strconv"
 
 	"github.com/bytedance/sonic"
-	"github.com/pkg/errors"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/pkg/errors"
 )
 
 type Model struct {
@@ -20,11 +19,24 @@ type Model struct {
 
 	Ability *Ability `json:"ability" yaml:"ability" mapstructure:"ability"` // 模型能力
 
-	Frame           Frame                        `json:"frame" yaml:"frame" mapstructure:"frame"`                                  // 该模型使用的外部框架，目前只支持eino
-	Protocol        Protocol                     `json:"protocol" yaml:"protocol" mapstructure:"protocol"`                         // 该模型的协议类型，如ark/deepseek/openai等
-	ProtocolConfig  *ProtocolConfig              `json:"protocol_config" yaml:"protocol_config" mapstructure:"protocol_config"`    // 该模型的协议配置
-	ScenarioConfigs map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
-	ParamConfig     *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
+	Frame            Frame                        `json:"frame" yaml:"frame" mapstructure:"frame"`                                  // 该模型使用的外部框架，目前只支持eino
+	Protocol         Protocol                     `json:"protocol" yaml:"protocol" mapstructure:"protocol"`                         // 该模型的协议类型，如ark/deepseek/openai等
+	ProtocolConfig   *ProtocolConfig              `json:"protocol_config" yaml:"protocol_config" mapstructure:"protocol_config"`    // 该模型的协议配置
+	ScenarioConfigs  map[Scenario]*ScenarioConfig `json:"scenario_configs" yaml:"scenario_configs" mapstructure:"scenario_configs"` // 该模型的场景配置
+	ParamConfig      *ParamConfig                 `json:"param_config" yaml:"param_config" mapstructure:"param_config"`             // 该模型的参数配置
+	Identification   string                       `json:"identification" yaml:"identification"`
+	Series           *Series                      `json:"series" yaml:"series"`
+	Visibility       *Visibility                  `json:"visibility" yaml:"visibility"`
+	Icon             string                       `json:"icon" yaml:"icon" mapstructure:"icon"`                                           // 模型图标
+	Tags             []string                     `json:"tags" yaml:"tags" mapstructure:"tags"`                                           // 模型标签
+	Status           ModelStatus                  `json:"status" yaml:"status" mapstructure:"status"`                                     // 模型状态
+	OriginalModelURL string                       `json:"original_model_url" yaml:"original_model_url" mapstructure:"original_model_url"` // 模型跳转链接
+	PresetModel      bool                         `json:"preset_model" yaml:"preset_model" mapstructure:"preset_model"`                   // 是否为预置模型
+
+	CreatedBy string `json:"created_by" yaml:"created_by" mapstructure:"created_by"` // 创建人
+	CreatedAt int64  `json:"created_at" yaml:"created_at" mapstructure:"created_at"` // 创建时间
+	UpdatedBy string `json:"updated_by" yaml:"updated_by" mapstructure:"updated_by"` // 更新人
+	UpdatedAt int64  `json:"updated_at" yaml:"updated_at" mapstructure:"updated_at"` // 更新时间
 }
 
 func (m *Model) Valid() error {
@@ -143,6 +155,27 @@ type Ability struct {
 	JsonMode          bool               `json:"json_mode" yaml:"json_mode" mapstructure:"json_mode"`
 	MultiModal        bool               `json:"multi_modal" yaml:"multi_modal" mapstructure:"multi_modal"`
 	AbilityMultiModal *AbilityMultiModal `json:"ability_multi_modal" yaml:"ability_multi_modal" mapstructure:"ability_multi_modal"`
+	Thinking          bool               `json:"thinking" mapstructure:"thinking"`
+}
+
+func (a *Ability) GetAbilityEnums() []AbilityEnum {
+	var resp []AbilityEnum
+	if a == nil {
+		return resp
+	}
+	if a.FunctionCall {
+		resp = append(resp, AbilityEnumFunctionCall)
+	}
+	if a.JsonMode {
+		resp = append(resp, AbilityEnumJsonMode)
+	}
+	if a.MultiModal {
+		resp = append(resp, AbilityEnumMultiModal)
+	}
+	if a.Thinking {
+		resp = append(resp, AbilityEnumThinking)
+	}
+	return resp
 }
 
 type AbilityMultiModal struct {
@@ -327,6 +360,14 @@ type ParamSchema struct {
 	Max          string         `json:"max" yaml:"max" mapstructure:"max"`
 	DefaultValue string         `json:"default_value" yaml:"default_value" mapstructure:"default_value"`
 	Options      []*ParamOption `json:"options" yaml:"options" mapstructure:"options"`
+	Properties   []*ParamSchema `json:"properties" mapstructrue:"properties"`
+	JsonPath     string         `json:"json_path" mapstructrue:"json_path"`
+	Reaction     *Reaction      `json:"reaction" mapstructrue:"reaction"`
+}
+
+type Reaction struct {
+	Dependency string `json:"dependency"`
+	Visible    string `json:"visible"`
 }
 
 type ParamOption struct {
@@ -341,6 +382,8 @@ const (
 	ParamTypeInt     ParamType = "int"
 	ParamTypeBoolean ParamType = "boolean"
 	ParamTypeString  ParamType = "string"
+	ParamTypeVoid    ParamType = "void"
+	ParamTypeObject  ParamType = "object"
 )
 
 type Frame string
@@ -353,16 +396,34 @@ const (
 type Protocol string
 
 const (
-	ProtocolArk      Protocol = "ark"
-	ProtocolOpenAI   Protocol = "openai"
-	ProtocolDeepseek Protocol = "deepseek"
-	ProtocolClaude   Protocol = "claude"
-	ProtocolOllama   Protocol = "ollama"
-	ProtocolGemini   Protocol = "gemini"
-	ProtocolQwen     Protocol = "qwen"
-	ProtocolQianfan  Protocol = "qianfan"
-	ProtocolArkBot   Protocol = "arkbot"
+	ProtocolUndefined Protocol = "undefined"
+	ProtocolArk       Protocol = "ark"
+	ProtocolOpenAI    Protocol = "openai"
+	ProtocolDeepseek  Protocol = "deepseek"
+	ProtocolClaude    Protocol = "claude"
+	ProtocolOllama    Protocol = "ollama"
+	ProtocolGemini    Protocol = "gemini"
+	ProtocolQwen      Protocol = "qwen"
+	ProtocolQianfan   Protocol = "qianfan"
+	ProtocolArkBot    Protocol = "arkbot"
 )
+
+type Family string
+
+const (
+	FamilyUndefined Family = "undefined"
+	FamilySeed      Family = "seed"
+	FamilyGLM       Family = "glm"
+	FamilyKimi      Family = "kimi"
+	FamilyDeepSeek  Family = "deepseek"
+	FamilyDoubao    Family = "doubao"
+)
+
+type Series struct {
+	Name   string `json:"name"`
+	Icon   string `json:"icon"`
+	Family Family `json:"family"`
+}
 
 type ListModelReq struct {
 	WorkspaceID *int64
@@ -375,3 +436,42 @@ type GetModelReq struct {
 	WorkspaceID *int64
 	ModelID     int64
 }
+
+type VisibleMode string
+
+const (
+	VisibleModeUndefined  VisibleMode = "undefined"
+	VisibleModelAll       VisibleMode = "all"
+	VisibleModelSpecified VisibleMode = "specified"
+	VisibleModelDefault   VisibleMode = "default"
+)
+
+type Visibility struct {
+	Mode     VisibleMode `json:"mode"`
+	SpaceIDs []int64     `json:"space_ids"` // model为specified时有效
+}
+
+type ModelStatus string
+
+const (
+	ModelStatusUndefined ModelStatus = "undefined"
+	ModelStatusEnabled   ModelStatus = "enabled"
+	ModelStatusDisabled  ModelStatus = "disabled"
+)
+
+type ListModelsFilter struct {
+	NameLike      *string       `json:"name_like,omitempty"`
+	Families      []Family      `json:"families,omitempty"`
+	ModelStatuses []ModelStatus `json:"model_statuses,omitempty"`
+	Abilities     []AbilityEnum `json:"abilities,omitempty"`
+}
+
+type AbilityEnum string
+
+const (
+	AbilityEnumUndefined    AbilityEnum = "undefined"
+	AbilityEnumFunctionCall AbilityEnum = "function_call"
+	AbilityEnumMultiModal   AbilityEnum = "multi_modal"
+	AbilityEnumJsonMode     AbilityEnum = "json_mode"
+	AbilityEnumThinking     AbilityEnum = "thinking"
+)

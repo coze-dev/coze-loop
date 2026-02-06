@@ -12646,7 +12646,7 @@ func (p *BatchGetExperimentAggrResultRequest) Field255DeepEqual(src *base.Base) 
 }
 
 type BatchGetExperimentAggrResultResponse struct {
-	ExptAggregateResults []*expt.ExptAggregateResult_ `thrift:"expt_aggregate_results,1,optional" frugal:"1,optional,list<expt.ExptAggregateResult_>" form:"expt_aggregate_result" json:"expt_aggregate_result,omitempty"`
+	ExptAggregateResult_ []*expt.ExptAggregateResult_ `thrift:"expt_aggregate_result,1,optional" frugal:"1,optional,list<expt.ExptAggregateResult_>" form:"expt_aggregate_result" json:"expt_aggregate_result,omitempty"`
 	BaseResp             *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -12657,16 +12657,16 @@ func NewBatchGetExperimentAggrResultResponse() *BatchGetExperimentAggrResultResp
 func (p *BatchGetExperimentAggrResultResponse) InitDefault() {
 }
 
-var BatchGetExperimentAggrResultResponse_ExptAggregateResults_DEFAULT []*expt.ExptAggregateResult_
+var BatchGetExperimentAggrResultResponse_ExptAggregateResult__DEFAULT []*expt.ExptAggregateResult_
 
-func (p *BatchGetExperimentAggrResultResponse) GetExptAggregateResults() (v []*expt.ExptAggregateResult_) {
+func (p *BatchGetExperimentAggrResultResponse) GetExptAggregateResult_() (v []*expt.ExptAggregateResult_) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptAggregateResults() {
-		return BatchGetExperimentAggrResultResponse_ExptAggregateResults_DEFAULT
+	if !p.IsSetExptAggregateResult_() {
+		return BatchGetExperimentAggrResultResponse_ExptAggregateResult__DEFAULT
 	}
-	return p.ExptAggregateResults
+	return p.ExptAggregateResult_
 }
 
 var BatchGetExperimentAggrResultResponse_BaseResp_DEFAULT *base.BaseResp
@@ -12680,20 +12680,20 @@ func (p *BatchGetExperimentAggrResultResponse) GetBaseResp() (v *base.BaseResp) 
 	}
 	return p.BaseResp
 }
-func (p *BatchGetExperimentAggrResultResponse) SetExptAggregateResults(val []*expt.ExptAggregateResult_) {
-	p.ExptAggregateResults = val
+func (p *BatchGetExperimentAggrResultResponse) SetExptAggregateResult_(val []*expt.ExptAggregateResult_) {
+	p.ExptAggregateResult_ = val
 }
 func (p *BatchGetExperimentAggrResultResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_BatchGetExperimentAggrResultResponse = map[int16]string{
-	1:   "expt_aggregate_results",
+	1:   "expt_aggregate_result",
 	255: "BaseResp",
 }
 
-func (p *BatchGetExperimentAggrResultResponse) IsSetExptAggregateResults() bool {
-	return p.ExptAggregateResults != nil
+func (p *BatchGetExperimentAggrResultResponse) IsSetExptAggregateResult_() bool {
+	return p.ExptAggregateResult_ != nil
 }
 
 func (p *BatchGetExperimentAggrResultResponse) IsSetBaseResp() bool {
@@ -12783,7 +12783,7 @@ func (p *BatchGetExperimentAggrResultResponse) ReadField1(iprot thrift.TProtocol
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.ExptAggregateResults = _field
+	p.ExptAggregateResult_ = _field
 	return nil
 }
 func (p *BatchGetExperimentAggrResultResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -12828,14 +12828,14 @@ WriteStructEndError:
 }
 
 func (p *BatchGetExperimentAggrResultResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptAggregateResults() {
-		if err = oprot.WriteFieldBegin("expt_aggregate_results", thrift.LIST, 1); err != nil {
+	if p.IsSetExptAggregateResult_() {
+		if err = oprot.WriteFieldBegin("expt_aggregate_result", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptAggregateResults)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.ExptAggregateResult_)); err != nil {
 			return err
 		}
-		for _, v := range p.ExptAggregateResults {
+		for _, v := range p.ExptAggregateResult_ {
 			if err := v.Write(oprot); err != nil {
 				return err
 			}
@@ -12884,7 +12884,7 @@ func (p *BatchGetExperimentAggrResultResponse) DeepEqual(ano *BatchGetExperiment
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptAggregateResults) {
+	if !p.Field1DeepEqual(ano.ExptAggregateResult_) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -12895,10 +12895,10 @@ func (p *BatchGetExperimentAggrResultResponse) DeepEqual(ano *BatchGetExperiment
 
 func (p *BatchGetExperimentAggrResultResponse) Field1DeepEqual(src []*expt.ExptAggregateResult_) bool {
 
-	if len(p.ExptAggregateResults) != len(src) {
+	if len(p.ExptAggregateResult_) != len(src) {
 		return false
 	}
-	for i, v := range p.ExptAggregateResults {
+	for i, v := range p.ExptAggregateResult_ {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
@@ -21598,7 +21598,7 @@ func (p *ListExperimentTemplatesResponse) Field255DeepEqual(src *base.BaseResp) 
 
 type CheckExperimentTemplateNameRequest struct {
 	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	Name        string     `thrift:"name,2,required" frugal:"2,required,string" json:"name" form:"name,required" `
+	Name        string     `thrift:"name,2,required" frugal:"2,required,string" form:"name,required" json:"name,required"`
 	TemplateID  *int64     `thrift:"template_id,3,optional" frugal:"3,optional,i64" json:"template_id" form:"template_id" `
 	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -27843,8 +27843,8 @@ func (p *GetExptResultExportRecordRequest) Field255DeepEqual(src *base.Base) boo
 }
 
 type GetExptResultExportRecordResponse struct {
-	ExptResultExportRecord *expt.ExptResultExportRecord `thrift:"expt_result_export_record,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
-	BaseResp               *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+	ExptResultExportRecords *expt.ExptResultExportRecord `thrift:"expt_result_export_records,1,optional" frugal:"1,optional,expt.ExptResultExportRecord" form:"expt_result_export_records" json:"expt_result_export_records,omitempty"`
+	BaseResp                *base.BaseResp               `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
 func NewGetExptResultExportRecordResponse() *GetExptResultExportRecordResponse {
@@ -27854,16 +27854,16 @@ func NewGetExptResultExportRecordResponse() *GetExptResultExportRecordResponse {
 func (p *GetExptResultExportRecordResponse) InitDefault() {
 }
 
-var GetExptResultExportRecordResponse_ExptResultExportRecord_DEFAULT *expt.ExptResultExportRecord
+var GetExptResultExportRecordResponse_ExptResultExportRecords_DEFAULT *expt.ExptResultExportRecord
 
-func (p *GetExptResultExportRecordResponse) GetExptResultExportRecord() (v *expt.ExptResultExportRecord) {
+func (p *GetExptResultExportRecordResponse) GetExptResultExportRecords() (v *expt.ExptResultExportRecord) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExptResultExportRecord() {
-		return GetExptResultExportRecordResponse_ExptResultExportRecord_DEFAULT
+	if !p.IsSetExptResultExportRecords() {
+		return GetExptResultExportRecordResponse_ExptResultExportRecords_DEFAULT
 	}
-	return p.ExptResultExportRecord
+	return p.ExptResultExportRecords
 }
 
 var GetExptResultExportRecordResponse_BaseResp_DEFAULT *base.BaseResp
@@ -27877,20 +27877,20 @@ func (p *GetExptResultExportRecordResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *GetExptResultExportRecordResponse) SetExptResultExportRecord(val *expt.ExptResultExportRecord) {
-	p.ExptResultExportRecord = val
+func (p *GetExptResultExportRecordResponse) SetExptResultExportRecords(val *expt.ExptResultExportRecord) {
+	p.ExptResultExportRecords = val
 }
 func (p *GetExptResultExportRecordResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_GetExptResultExportRecordResponse = map[int16]string{
-	1:   "expt_result_export_record",
+	1:   "expt_result_export_records",
 	255: "BaseResp",
 }
 
-func (p *GetExptResultExportRecordResponse) IsSetExptResultExportRecord() bool {
-	return p.ExptResultExportRecord != nil
+func (p *GetExptResultExportRecordResponse) IsSetExptResultExportRecords() bool {
+	return p.ExptResultExportRecords != nil
 }
 
 func (p *GetExptResultExportRecordResponse) IsSetBaseResp() bool {
@@ -27965,7 +27965,7 @@ func (p *GetExptResultExportRecordResponse) ReadField1(iprot thrift.TProtocol) e
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.ExptResultExportRecord = _field
+	p.ExptResultExportRecords = _field
 	return nil
 }
 func (p *GetExptResultExportRecordResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -28010,11 +28010,11 @@ WriteStructEndError:
 }
 
 func (p *GetExptResultExportRecordResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExptResultExportRecord() {
-		if err = oprot.WriteFieldBegin("expt_result_export_record", thrift.STRUCT, 1); err != nil {
+	if p.IsSetExptResultExportRecords() {
+		if err = oprot.WriteFieldBegin("expt_result_export_records", thrift.STRUCT, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.ExptResultExportRecord.Write(oprot); err != nil {
+		if err := p.ExptResultExportRecords.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -28058,7 +28058,7 @@ func (p *GetExptResultExportRecordResponse) DeepEqual(ano *GetExptResultExportRe
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ExptResultExportRecord) {
+	if !p.Field1DeepEqual(ano.ExptResultExportRecords) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -28069,7 +28069,7 @@ func (p *GetExptResultExportRecordResponse) DeepEqual(ano *GetExptResultExportRe
 
 func (p *GetExptResultExportRecordResponse) Field1DeepEqual(src *expt.ExptResultExportRecord) bool {
 
-	if !p.ExptResultExportRecord.DeepEqual(src) {
+	if !p.ExptResultExportRecords.DeepEqual(src) {
 		return false
 	}
 	return true

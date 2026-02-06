@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -60,12 +62,21 @@ func main() {
 	if err := initTracer(handler); err != nil {
 		panic(err)
 	}
-	consumerWorkers := MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler)
-	if err := registry.NewConsumerRegistry(c.mqFactory).Register(consumerWorkers).StartAll(ctx); err != nil {
+
+	signalCtx, signalCancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer signalCancel()
+
+	r := registry.NewConsumerRegistryWithShutdown(signalCtx, c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler))
+	if err := r.StartAll(ctx); err != nil {
 		panic(err)
 	}
 
-	api.Start(handler)
+	go api.Start(handler)
+	<-signalCtx.Done()
+
+	stopCtx, stopCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer stopCancel()
+	_ = r.StopAll(stopCtx)
 }
 
 type ComponentConfig struct {
