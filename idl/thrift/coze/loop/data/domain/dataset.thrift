@@ -233,6 +233,7 @@ struct FieldData {
     5: optional list<ObjectStorage> attachments // 外部存储信息
     6: optional FieldDisplayFormat format       // 数据的渲染格式
     7: optional list<FieldData> parts           // 图文混排时，图文内容
+    8: optional string trace_id                 // 关联的 trace ID
 }
 
 struct ObjectStorage {
