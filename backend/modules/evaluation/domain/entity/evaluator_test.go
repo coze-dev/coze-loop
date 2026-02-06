@@ -599,7 +599,7 @@ func TestEvaluator_ValidateBaseInfo(t *testing.T) {
 				EvaluatorType: EvaluatorTypePrompt,
 				PromptEvaluatorVersion: &PromptEvaluatorVersion{
 					MessageList: []*Message{{Role: RoleUser}},
-					ModelConfig: &ModelConfig{ModelID: 123},
+					ModelConfig: &ModelConfig{ModelID: gptr.Of(int64(123))},
 				},
 			},
 			expectErr: false,
