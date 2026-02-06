@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/hooks"
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -41,12 +42,14 @@ type ListCommitParam struct {
 type PromptCommitDAOImpl struct {
 	db           db.Provider
 	writeTracker platestwrite.ILatestWriteTracker
+	hook         hooks.IPromptCommitHook
 }
 
-func NewPromptCommitDAO(db db.Provider, redisCli redis.Cmdable) IPromptCommitDAO {
+func NewPromptCommitDAO(db db.Provider, redisCli redis.Cmdable, hook hooks.IPromptCommitHook) IPromptCommitDAO {
 	return &PromptCommitDAOImpl{
 		db:           db,
 		writeTracker: platestwrite.NewLatestWriteTracker(redisCli),
+		hook:         hook,
 	}
 }
 
@@ -62,6 +65,9 @@ func (d *PromptCommitDAOImpl) Create(ctx context.Context, promptCommitPO *model.
 	q := query.Use(d.db.NewSession(ctx, opts...)).WithContext(ctx)
 	promptCommitPO.CreatedAt = timeNow
 	promptCommitPO.UpdatedAt = timeNow
+	if err := d.hook.BeforeSave(ctx, promptCommitPO); err != nil {
+		return errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
 	err = q.PromptCommit.Create(promptCommitPO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrDuplicatedKey) {
@@ -90,6 +96,9 @@ func (d *PromptCommitDAOImpl) Get(ctx context.Context, promptID int64, commitVer
 	if len(promptCommitPOs) <= 0 {
 		return nil, nil
 	}
+	if err := d.hook.AfterFind(ctx, promptCommitPOs); err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
 	return promptCommitPOs[0], nil
 }
 
@@ -110,6 +119,9 @@ func (d *PromptCommitDAOImpl) MGet(ctx context.Context, pairs []PromptIDCommitVe
 	}
 	if len(promptCommitPOs) <= 0 {
 		return nil, nil
+	}
+	if err := d.hook.AfterFind(ctx, promptCommitPOs); err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
 	pairCommitPOMap = make(map[PromptIDCommitVersionPair]*model.PromptCommit)
 	for _, po := range promptCommitPOs {
@@ -153,6 +165,9 @@ func (d *PromptCommitDAOImpl) List(ctx context.Context, param ListCommitParam, o
 	if len(commitPOs) <= 0 {
 		return nil, nil
 	}
+	if err := d.hook.AfterFind(ctx, commitPOs); err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
 	return commitPOs, nil
 }
 
@@ -174,6 +189,9 @@ func (d *PromptCommitDAOImpl) MGetVersionsByPromptID(ctx context.Context, prompt
 	}
 	if len(commitPOs) == 0 {
 		return nil, nil
+	}
+	if err := d.hook.AfterFind(ctx, commitPOs); err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
 	}
 	versions = make([]string, 0, len(commitPOs))
 	for _, po := range commitPOs {

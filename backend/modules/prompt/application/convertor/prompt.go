@@ -101,6 +101,7 @@ func PromptBasicDTO2DO(dto *prompt.PromptBasic) *entity.PromptBasic {
 		UpdatedBy:     dto.GetUpdatedBy(),
 		CreatedAt:     time.UnixMilli(dto.GetCreatedAt()),
 		UpdatedAt:     time.UnixMilli(dto.GetUpdatedAt()),
+		SecurityLevel: SecurityLevelDTO2DO(dto.GetSecurityLevel()),
 	}
 }
 
@@ -194,6 +195,21 @@ func PromptTypeDTO2DO(dto prompt.PromptType) entity.PromptType {
 		return entity.PromptTypeSnippet
 	default:
 		return entity.PromptTypeNormal
+	}
+}
+
+func SecurityLevelDTO2DO(dto prompt.SecurityLevel) entity.SecurityLevel {
+	switch dto {
+	case prompt.SecurityLevelL1:
+		return entity.SecurityLevelL1
+	case prompt.SecurityLevelL2:
+		return entity.SecurityLevelL2
+	case prompt.SecurityLevelL3:
+		return entity.SecurityLevelL3
+	case prompt.SecurityLevelL4:
+		return entity.SecurityLevelL4
+	default:
+		return entity.SecurityLevelL3
 	}
 }
 
@@ -923,7 +939,8 @@ func PromptBasicDO2DTO(do *entity.PromptBasic) *prompt.PromptBasic {
 			}
 			return ptr.Of(do.LatestCommittedAt.UnixMilli())
 		}(),
-		PromptType: ptr.Of(PromptTypeDO2DTO(do.PromptType)),
+		PromptType:    ptr.Of(PromptTypeDO2DTO(do.PromptType)),
+		SecurityLevel: SecurityLevelDO2DTO(do.SecurityLevel),
 	}
 }
 
@@ -935,6 +952,21 @@ func PromptTypeDO2DTO(do entity.PromptType) prompt.PromptType {
 		return prompt.PromptTypeSnippet
 	default:
 		return prompt.PromptTypeNormal
+	}
+}
+
+func SecurityLevelDO2DTO(level entity.SecurityLevel) *prompt.SecurityLevel {
+	switch level {
+	case entity.SecurityLevelL1:
+		return ptr.Of(prompt.SecurityLevelL1)
+	case entity.SecurityLevelL2:
+		return ptr.Of(prompt.SecurityLevelL2)
+	case entity.SecurityLevelL3:
+		return ptr.Of(prompt.SecurityLevelL3)
+	case entity.SecurityLevelL4:
+		return ptr.Of(prompt.SecurityLevelL4)
+	default:
+		return ptr.Of(prompt.SecurityLevelL3)
 	}
 }
 

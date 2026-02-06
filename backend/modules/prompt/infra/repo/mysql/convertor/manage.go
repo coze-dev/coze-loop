@@ -80,6 +80,7 @@ func BasicPO2DO(promptPO *model.PromptBasic) *entity.PromptBasic {
 		CreatedAt:         promptPO.CreatedAt,
 		UpdatedAt:         promptPO.UpdatedAt,
 		LatestCommittedAt: promptPO.LatestCommitTime,
+		SecurityLevel:     entity.SecurityLevel(promptPO.SecurityLevel),
 	}
 }
 
@@ -149,6 +150,7 @@ func PromptDO2BasicPO(do *entity.Prompt) *model.PromptBasic {
 		CreatedAt:     do.PromptBasic.CreatedAt,
 		UpdatedAt:     do.PromptBasic.UpdatedAt,
 		PromptType:    PromptTypeDO2PO(do.PromptBasic.PromptType),
+		SecurityLevel: string(do.PromptBasic.SecurityLevel),
 	}
 }
 

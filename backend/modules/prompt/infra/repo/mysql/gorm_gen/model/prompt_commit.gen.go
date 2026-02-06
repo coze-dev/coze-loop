@@ -12,26 +12,27 @@ const TableNamePromptCommit = "prompt_commit"
 
 // PromptCommit Commit表
 type PromptCommit struct {
-	ID             int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;autoIncrement:true;comment:主键ID" json:"id"`                                                                   // 主键ID
-	SpaceID        int64     `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间ID" json:"space_id"`                                                                            // 空间ID
-	PromptID       int64     `gorm:"column:prompt_id;type:bigint(20) unsigned;not null;uniqueIndex:uniq_prompt_id_version,priority:1;comment:Prompt ID" json:"prompt_id"`                       // Prompt ID
-	PromptKey      string    `gorm:"column:prompt_key;type:varchar(128);not null;index:idx_prompt_key_version,priority:1;comment:Prompt key" json:"prompt_key"`                                 // Prompt key
-	TemplateType   *string   `gorm:"column:template_type;type:varchar(64);default:normal;comment:模版类型" json:"template_type"`                                                                    // 模版类型
-	Messages       *string   `gorm:"column:messages;type:longtext;comment:托管消息列表" json:"messages"`                                                                                              // 托管消息列表
-	ModelConfig    *string   `gorm:"column:model_config;type:text;comment:模型配置" json:"model_config"`                                                                                            // 模型配置
-	VariableDefs   *string   `gorm:"column:variable_defs;type:text;comment:变量定义" json:"variable_defs"`                                                                                          // 变量定义
-	Tools          *string   `gorm:"column:tools;type:longtext;comment:tools" json:"tools"`                                                                                                     // tools
-	ToolCallConfig *string   `gorm:"column:tool_call_config;type:text;comment:tool调用配置" json:"tool_call_config"`                                                                                // tool调用配置
-	Metadata       *string   `gorm:"column:metadata;type:text;comment:模板元信息" json:"metadata"`                                                                                                   // 模板元信息
-	McpConfig      *string   `gorm:"column:mcp_config;type:text;comment:mcp config info" json:"mcp_config"`                                                                                     // mcp config info
-	Version        string    `gorm:"column:version;type:varchar(128);not null;uniqueIndex:uniq_prompt_id_version,priority:2;index:idx_prompt_key_version,priority:2;comment:版本" json:"version"` // 版本
-	BaseVersion    string    `gorm:"column:base_version;type:varchar(128);not null;comment:来源版本" json:"base_version"`                                                                           // 来源版本
-	CommittedBy    string    `gorm:"column:committed_by;type:varchar(128);not null;comment:提交人" json:"committed_by"`                                                                            // 提交人
-	Description    *string   `gorm:"column:description;type:text;comment:提交版本描述" json:"description"`                                                                                            // 提交版本描述
-	ExtInfo        *string   `gorm:"column:ext_info;type:text;comment:扩展字段" json:"ext_info"`                                                                                                    // 扩展字段
-	CreatedAt      time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                         // 创建时间
-	UpdatedAt      time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                         // 更新时间
-	HasSnippets    bool      `gorm:"column:has_snippets;type:tinyint(1);not null;comment:是否包含prompt片段" json:"has_snippets"`                                                                     // 是否包含prompt片段
+	ID              int64     `gorm:"column:id;type:bigint(20) unsigned;primaryKey;autoIncrement:true;comment:主键ID" json:"id"`                                                                   // 主键ID
+	SpaceID         int64     `gorm:"column:space_id;type:bigint(20) unsigned;not null;comment:空间ID" json:"space_id"`                                                                            // 空间ID
+	PromptID        int64     `gorm:"column:prompt_id;type:bigint(20) unsigned;not null;uniqueIndex:uniq_prompt_id_version,priority:1;comment:Prompt ID" json:"prompt_id"`                       // Prompt ID
+	PromptKey       string    `gorm:"column:prompt_key;type:varchar(128);not null;index:idx_prompt_key_version,priority:1;comment:Prompt key" json:"prompt_key"`                                 // Prompt key
+	TemplateType    *string   `gorm:"column:template_type;type:varchar(64);default:normal;comment:模版类型" json:"template_type"`                                                                    // 模版类型
+	Messages        *string   `gorm:"column:messages;type:longtext;comment:托管消息列表" json:"messages"`                                                                                              // 托管消息列表
+	ModelConfig     *string   `gorm:"column:model_config;type:text;comment:模型配置" json:"model_config"`                                                                                            // 模型配置
+	VariableDefs    *string   `gorm:"column:variable_defs;type:text;comment:变量定义" json:"variable_defs"`                                                                                          // 变量定义
+	Tools           *string   `gorm:"column:tools;type:longtext;comment:tools" json:"tools"`                                                                                                     // tools
+	ToolCallConfig  *string   `gorm:"column:tool_call_config;type:text;comment:tool调用配置" json:"tool_call_config"`                                                                                // tool调用配置
+	Metadata        *string   `gorm:"column:metadata;type:text;comment:模板元信息" json:"metadata"`                                                                                                   // 模板元信息
+	McpConfig       *string   `gorm:"column:mcp_config;type:text;comment:mcp config info" json:"mcp_config"`                                                                                     // mcp config info
+	Version         string    `gorm:"column:version;type:varchar(128);not null;uniqueIndex:uniq_prompt_id_version,priority:2;index:idx_prompt_key_version,priority:2;comment:版本" json:"version"` // 版本
+	BaseVersion     string    `gorm:"column:base_version;type:varchar(128);not null;comment:来源版本" json:"base_version"`                                                                           // 来源版本
+	CommittedBy     string    `gorm:"column:committed_by;type:varchar(128);not null;comment:提交人" json:"committed_by"`                                                                            // 提交人
+	Description     *string   `gorm:"column:description;type:text;comment:提交版本描述" json:"description"`                                                                                            // 提交版本描述
+	ExtInfo         *string   `gorm:"column:ext_info;type:text;comment:扩展字段" json:"ext_info"`                                                                                                    // 扩展字段
+	CreatedAt       time.Time `gorm:"column:created_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"`                                                         // 创建时间
+	UpdatedAt       time.Time `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                         // 更新时间
+	HasSnippets     bool      `gorm:"column:has_snippets;type:tinyint(1);not null;comment:是否包含prompt片段" json:"has_snippets"`                                                                     // 是否包含prompt片段
+	EncryptMessages *string   `gorm:"column:encrypt_messages;type:longtext;comment:encrypt message list" json:"encrypt_messages"`                                                                // encrypt message list
 }
 
 // TableName PromptCommit's table name
