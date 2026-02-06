@@ -7,7 +7,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
 
 	"github.com/bytedance/gg/gptr"
@@ -17,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -104,35 +104,20 @@ func getBasicEvaluationSetSchema(basicColumns []string) (*dataset0.DatasetSchema
 	return evaluationSetSchema, fromEvalSet
 }
 
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-// convertDatasetSchemaDTO2DO 转换数据集模式
 func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSchema {
 	if schema == nil {
 		return entity.DatasetSchema{}
 	}
-
-	result := entity.DatasetSchema{}
-
+	result := trace.ConvertDatasetSchemaDTO2DO(schema)
 	if schema.IsSetFieldSchemas() {
 		fieldSchemas := schema.GetFieldSchemas()
-		result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
+		// result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
 		for i, fs := range fieldSchemas {
 			key := fs.GetKey()
 			if key == "" {
 				key = fs.GetName()
 			}
-			name := fs.GetName()
-			description := fs.GetDescription()
-			textSchema := fs.GetTextSchema()
-			schemaKey := fs.GetSchemaKey()
-			result.FieldSchemas[i] = entity.FieldSchema{
-				Key:         &key,
-				Name:        name,
-				Description: description,
-				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
-				TextSchema:  textSchema,
-				SchemaKey:   entity.SchemaKey(schemaKey),
-			}
+			result.FieldSchemas[i].Key = &key
 		}
 	}
 
