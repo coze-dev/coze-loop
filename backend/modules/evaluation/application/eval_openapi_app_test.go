@@ -18,6 +18,7 @@ import (
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
+	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
@@ -3967,6 +3968,177 @@ func TestEvalOpenAPIApplication_BatchGetExptTemplatesOApi(t *testing.T) {
 			if tc.req != nil {
 				assert.True(t, metric.called)
 				assert.Equal(t, tc.req.GetWorkspaceID(), metric.spaceID)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_UpdateExptTemplateMetaOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(1001)
+	templateID := int64(2002)
+
+	tests := []struct {
+		name    string
+		req     *openapi.UpdateExptTemplateMetaOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager)
+		wantErr int32
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "template not found",
+			req: &openapi.UpdateExptTemplateMetaOApiRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				TemplateID:  gptr.Of(templateID),
+				Meta: &openapiExperiment.ExptTemplateMeta{
+					Name: gptr.Of("new name"),
+				},
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager) {
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth failed",
+			req: &openapi.UpdateExptTemplateMetaOApiRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				TemplateID:  gptr.Of(templateID),
+				Meta: &openapiExperiment.ExptTemplateMeta{
+					Name: gptr.Of("new name"),
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager) {
+				ownerID := gptr.Of("owner")
+				template := &entity.ExptTemplate{
+					Meta: &entity.ExptTemplateMeta{
+						ID:          templateID,
+						WorkspaceID: workspaceID,
+					},
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: ownerID},
+					},
+				}
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(template, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "update failed",
+			req: &openapi.UpdateExptTemplateMetaOApiRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				TemplateID:  gptr.Of(templateID),
+				Meta: &openapiExperiment.ExptTemplateMeta{
+					Name: gptr.Of("new name"),
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager) {
+				ownerID := gptr.Of("owner")
+				template := &entity.ExptTemplate{
+					Meta: &entity.ExptTemplateMeta{
+						ID:          templateID,
+						WorkspaceID: workspaceID,
+					},
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: ownerID},
+					},
+				}
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(template, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().UpdateMeta(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("update failed"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req: &openapi.UpdateExptTemplateMetaOApiRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				TemplateID:  gptr.Of(templateID),
+				Meta: &openapiExperiment.ExptTemplateMeta{
+					Name:        gptr.Of("new name"),
+					Description: gptr.Of("new desc"),
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager) {
+				ownerID := gptr.Of("owner")
+				template := &entity.ExptTemplate{
+					Meta: &entity.ExptTemplateMeta{
+						ID:          templateID,
+						WorkspaceID: workspaceID,
+						Name:        "old name",
+						Desc:        "old desc",
+					},
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: ownerID},
+					},
+				}
+				updatedTemplate := &entity.ExptTemplate{
+					Meta: &entity.ExptTemplateMeta{
+						ID:          templateID,
+						WorkspaceID: workspaceID,
+						Name:        "new name",
+						Desc:        "new desc",
+					},
+				}
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(template, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().UpdateMeta(gomock.Any(), gomock.Any(), gomock.Any()).Return(updatedTemplate, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			templateMgr := servicemocks.NewMockIExptTemplateManager(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:              auth,
+				exptTemplateManager: templateMgr,
+				metric:            metric,
+			}
+
+			if tc.name == "nil request" {
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				templateMgr.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				templateMgr.EXPECT().UpdateMeta(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			} else {
+				tc.setup(auth, templateMgr)
+			}
+
+			resp, err := app.UpdateExptTemplateMetaOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, tc.req.GetWorkspaceID(), metric.spaceID)
+				assert.Equal(t, tc.req.GetTemplateID(), metric.evaluationSetID)
 			}
 		})
 	}
