@@ -9,9 +9,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -194,20 +193,6 @@ func CorrectEvaluatorRecordOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/evaluator_records/batch_get [POST]
 func BatchGetEvaluatorRecordsOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchGetEvaluatorRecordsOApi)
-}
-
-// ValidateEvaluatorOApi .
-// @router /v1/loop/evaluation/evaluators/validate [POST]
-func ValidateEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ValidateEvaluatorOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-	resp := new(openapi0.ValidateEvaluatorOApiResponse)
-	c.JSON(consts.StatusOK, resp)
 }
 
 // CreateExptTemplateOApi .

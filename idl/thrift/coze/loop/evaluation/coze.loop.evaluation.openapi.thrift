@@ -726,24 +726,6 @@ struct BatchGetEvaluatorRecordsOpenAPIData {
     1: optional list<evaluator.EvaluatorRecord> records (api.body="records")
 }
 
-// 3.13 验证评估器
-struct ValidateEvaluatorOApiRequest {
-    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    2: optional evaluator.EvaluatorContent evaluator_content (api.body="evaluator_content")
-    3: optional evaluator.EvaluatorType evaluator_type (api.body="evaluator_type")
-    4: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
-
-    255: optional base.Base Base
-}
-
-struct ValidateEvaluatorOApiResponse {
-    1: optional i32 code
-    2: optional string msg
-    3: optional ValidateEvaluatorOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
 struct ValidateEvaluatorOpenAPIData {
     1: optional bool valid (api.body="valid")
     2: optional string error_message (api.body="error_message")

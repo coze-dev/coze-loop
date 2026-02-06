@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
@@ -1070,7 +1070,7 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorsOApi(ctx context.Context, req
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
@@ -1351,7 +1351,7 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorVersionsOApi(ctx context.Conte
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
@@ -1518,11 +1518,11 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorRecordsOApi(ctx context.Contex
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
 
-	// 批量查询评估记录，需要对所在的实验有读权限。简单起见，这里按空间鉴权
+	// 批量查询评估记录，与非 OpenAPI 接口一致，按空间 listLoopEvaluator 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopExperiment"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
@@ -1540,49 +1540,6 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorRecordsOApi(ctx context.Contex
 	}, nil
 }
 
-func (e *EvalOpenAPIApplication) ValidateEvaluatorOApi(ctx context.Context, req *openapi.ValidateEvaluatorOApiRequest) (r *openapi.ValidateEvaluatorOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
-		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	evalType := evaluator_convertor.OpenAPIEvaluatorTypeDTO2DO(req.EvaluatorType)
-	evaluator, err := evaluator_convertor.OpenAPIEvaluatorContentDTO2DO(req.EvaluatorContent, evalType)
-	if err != nil {
-		return nil, err
-	}
-
-	output, err := e.evaluatorService.DebugEvaluator(ctx, evaluator, evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData), nil, req.GetWorkspaceID())
-	if err != nil {
-		return &openapi.ValidateEvaluatorOApiResponse{
-			Data: &openapi.ValidateEvaluatorOpenAPIData{
-				Valid:        gptr.Of(false),
-				ErrorMessage: gptr.Of(err.Error()),
-			},
-		}, nil
-	}
-
-	return &openapi.ValidateEvaluatorOApiResponse{
-		Data: &openapi.ValidateEvaluatorOpenAPIData{
-			Valid:               gptr.Of(true),
-			EvaluatorOutputData: evaluator_convertor.OpenAPIEvaluatorOutputDataDO2DTO(output),
-		},
-	}, nil
-}
-
 func (e *EvalOpenAPIApplication) CreateExptTemplateOApi(ctx context.Context, req *openapi.CreateExptTemplateOApiRequest) (r *openapi.CreateExptTemplateOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -1596,7 +1553,7 @@ func (e *EvalOpenAPIApplication) CreateExptTemplateOApi(ctx context.Context, req
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopExptTemplate"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
@@ -1633,7 +1590,7 @@ func (e *EvalOpenAPIApplication) BatchGetExptTemplatesOApi(ctx context.Context, 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopExptTemplate"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
@@ -1820,7 +1777,7 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
 		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopExptTemplate"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
