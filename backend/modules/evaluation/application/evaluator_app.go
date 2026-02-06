@@ -1040,6 +1040,11 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 		return nil, errorx.NewByCode(errno.EvaluatorBenefitDenyCode)
 	}
 
+	// 检查uri是否正确
+	err = e.checkURIs(ctx, request.InputData.InputFields)
+	if err != nil {
+		return nil, err
+	}
 	// URI转换处理
 	if request.InputData != nil {
 		err = e.transformURIsToURLs(ctx, request.InputData.InputFields)
@@ -1236,6 +1241,40 @@ func (e *EvaluatorHandlerImpl) CheckEvaluatorName(ctx context.Context, request *
 	return &evaluatorservice.CheckEvaluatorNameResponse{
 		Pass: gptr.Of(true),
 	}, nil
+}
+
+func (e *EvaluatorHandlerImpl) checkURIs(ctx context.Context, inputFields map[string]*evaluatorcommon.Content) error {
+	for _, field := range inputFields {
+		switch gptr.Indirect(field.ContentType) {
+		case evaluatorcommon.ContentTypeMultiPart:
+			return e.checkURIEmpty(ctx, field.MultiPart)
+		default:
+			continue
+		}
+	}
+	return nil
+}
+
+func (e *EvaluatorHandlerImpl) checkURIEmpty(ctx context.Context, inputFields []*evaluatorcommon.Content) error {
+	for _, field := range inputFields {
+		switch gptr.Indirect(field.ContentType) {
+		case evaluatorcommon.ContentTypeImage:
+			if field.GetImage() != nil && field.GetImage().GetURI() == "" {
+				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("image URI is empty"))
+			}
+		case evaluatorcommon.ContentTypeAudio:
+			if field.GetAudio() != nil && field.GetAudio().GetURI() == "" {
+				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("audio URI is empty"))
+			}
+		case evaluatorcommon.ContentTypeVideo:
+			if field.GetVideo() != nil && field.GetVideo().GetURI() == "" {
+				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("video URI is empty"))
+			}
+		default:
+			continue
+		}
+	}
+	return nil
 }
 
 // transformURIsToURLs 将InputFields中的URI转换为URL
