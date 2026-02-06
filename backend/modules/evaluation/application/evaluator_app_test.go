@@ -2038,6 +2038,132 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 			},
 		},
 		{
+			name: "测试音频和视频 URI 收集逻辑",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				handler := &EvaluatorHandlerImpl{}
+
+				t.Run("collectAudioURIsFromContent", func(t *testing.T) {
+					uriToAudioMap := make(map[string][]*common.Audio)
+
+					// 1. Nil content
+					handler.collectAudioURIsFromContent(nil, uriToAudioMap)
+					assert.Empty(t, uriToAudioMap)
+
+					// 2. Content type is not Audio
+					handler.collectAudioURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeText),
+						Text:        gptr.Of("test"),
+					}, uriToAudioMap)
+					assert.Empty(t, uriToAudioMap)
+
+					// 3. Content type is Audio with valid URI
+					audio1 := &common.Audio{URI: gptr.Of("audio-uri-1")}
+					handler.collectAudioURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeAudio),
+						Audio:       audio1,
+					}, uriToAudioMap)
+					assert.Len(t, uriToAudioMap, 1)
+					assert.Equal(t, audio1, uriToAudioMap["audio-uri-1"][0])
+
+					// 4. Content type is MultiPart with nested Audio
+					audio2 := &common.Audio{URI: gptr.Of("audio-uri-2")}
+					handler.collectAudioURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeMultiPart),
+						MultiPart: []*common.Content{
+							{
+								ContentType: gptr.Of(common.ContentTypeAudio),
+								Audio:       audio2,
+							},
+						},
+					}, uriToAudioMap)
+					assert.Len(t, uriToAudioMap, 2)
+					assert.Equal(t, audio2, uriToAudioMap["audio-uri-2"][0])
+				})
+
+				t.Run("collectVideoURIsFromContent", func(t *testing.T) {
+					uriToVideoMap := make(map[string][]*common.Video)
+
+					// 1. Nil content
+					handler.collectVideoURIsFromContent(nil, uriToVideoMap)
+					assert.Empty(t, uriToVideoMap)
+
+					// 2. Content type is not Video
+					handler.collectVideoURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeText),
+						Text:        gptr.Of("test"),
+					}, uriToVideoMap)
+					assert.Empty(t, uriToVideoMap)
+
+					// 3. Content type is Video with valid URI
+					video1 := &common.Video{URI: gptr.Of("video-uri-1")}
+					handler.collectVideoURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeVideo),
+						Video:       video1,
+					}, uriToVideoMap)
+					assert.Len(t, uriToVideoMap, 1)
+					assert.Equal(t, video1, uriToVideoMap["video-uri-1"][0])
+
+					// 4. Content type is MultiPart with nested Video
+					video2 := &common.Video{URI: gptr.Of("video-uri-2")}
+					handler.collectVideoURIsFromContent(&common.Content{
+						ContentType: gptr.Of(common.ContentTypeMultiPart),
+						MultiPart: []*common.Content{
+							{
+								ContentType: gptr.Of(common.ContentTypeVideo),
+								Video:       video2,
+							},
+						},
+					}, uriToVideoMap)
+					assert.Len(t, uriToVideoMap, 2)
+					assert.Equal(t, video2, uriToVideoMap["video-uri-2"][0])
+				})
+			},
+		},
+		{
+			name: "测试音频和视频 URL 填充逻辑",
+			testFunc: func(t *testing.T) {
+				t.Parallel()
+
+				handler := &EvaluatorHandlerImpl{}
+
+				t.Run("fillAudioURLs", func(t *testing.T) {
+					audio1 := &common.Audio{URI: gptr.Of("audio-uri-1")}
+					audio2 := &common.Audio{URI: gptr.Of("audio-uri-2")}
+					uriToAudioMap := map[string][]*common.Audio{
+						"audio-uri-1": {audio1},
+						"audio-uri-2": {audio2},
+					}
+					urlMap := map[string]string{
+						"audio-uri-1": "https://example.com/audio1.mp3",
+					}
+
+					handler.fillAudioURLs(uriToAudioMap, urlMap)
+
+					assert.Equal(t, "https://example.com/audio1.mp3", *audio1.URL)
+					assert.Nil(t, audio2.URL)
+				})
+
+				t.Run("fillVideoURLs", func(t *testing.T) {
+					video1 := &common.Video{URI: gptr.Of("video-uri-1")}
+					video2 := &common.Video{URI: gptr.Of("video-uri-2")}
+					uriToVideoMap := map[string][]*common.Video{
+						"video-uri-1": {video1},
+						"video-uri-2": {video2},
+					}
+					urlMap := map[string]string{
+						"video-uri-1": "https://example.com/video1.mp4",
+					}
+
+					handler.fillVideoURLs(uriToVideoMap, urlMap)
+
+					assert.Equal(t, "https://example.com/video1.mp4", *video1.URL)
+					assert.Nil(t, video2.URL)
+				})
+			},
+		},
+		{
 			name: "复杂业务流程端到端测试",
 			testFunc: func(t *testing.T) {
 				t.Parallel()

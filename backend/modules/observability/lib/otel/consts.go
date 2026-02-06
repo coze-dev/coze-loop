@@ -21,6 +21,7 @@ const (
 	otelAttributeInput       = "cozeloop.input"
 	otelAttributeOutput      = "cozeloop.output"
 	otelAttributeLogID       = "cozeloop.logid"
+	otelAttributeStatusCode  = "cozeloop.status_code"
 
 	apmInput  = "gen_ai.input"
 	apmOutput = "gen_ai.output"
@@ -34,6 +35,9 @@ const (
 	otelAttributePromptKey      = "cozeloop.prompt_key"
 	otelAttributePromptVersion  = "cozeloop.prompt_version"
 	otelAttributePromptProvider = "cozeloop.prompt_provider"
+
+	// system
+	otelAttributeSystemRuntime = "cozeloop.system_tag_runtime"
 )
 
 // openinference attribute key
@@ -96,7 +100,10 @@ const (
 
 // otel attribute key
 const (
-	otelAttributeModelInputTools = "gen_ai.tool.definitions"
+	otelAttributeModelInputTools = "gen_ai.tool.definitions" // model tools
+
+	otelAttributeToolInput  = "gen_ai.tool.call.arguments" // tool input
+	otelAttributeToolOutput = "gen_ai.tool.call.result"
 )
 
 var otelMessageEventNameMap = []string{

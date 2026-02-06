@@ -27,6 +27,16 @@ func (p *Content) IsValid() error {
 			return fmt.Errorf("field Image not valid, %w", err)
 		}
 	}
+	if p.Video != nil {
+		if err := p.Video.IsValid(); err != nil {
+			return fmt.Errorf("field Video not valid, %w", err)
+		}
+	}
+	if p.Audio != nil {
+		if err := p.Audio.IsValid(); err != nil {
+			return fmt.Errorf("field Audio not valid, %w", err)
+		}
+	}
 	if p.FullContent != nil {
 		if err := p.FullContent.IsValid(); err != nil {
 			return fmt.Errorf("field FullContent not valid, %w", err)
@@ -38,6 +48,9 @@ func (p *ObjectStorage) IsValid() error {
 	return nil
 }
 func (p *Image) IsValid() error {
+	return nil
+}
+func (p *Video) IsValid() error {
 	return nil
 }
 func (p *Audio) IsValid() error {

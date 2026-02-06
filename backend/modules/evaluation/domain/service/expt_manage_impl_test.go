@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"go.uber.org/mock/gomock"
 
 	"github.com/bytedance/gg/gptr"
@@ -56,6 +57,8 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		benefitService:              benefitMocks.NewMockIBenefitService(ctrl),
 		templateRepo:                repoMocks.NewMockIExptTemplateRepo(ctrl),
 		templateManager:             svcMocks.NewMockIExptTemplateManager(ctrl),
+		notifyRPCAdapter:            mocks.NewMockINotifyRPCAdapter(ctrl),
+		userProvider:                mocks.NewMockIUserProvider(ctrl),
 	}
 }
 
@@ -976,7 +979,8 @@ func TestNewExptManager(t *testing.T) {
 	mockExptAggrResultService := svcMocks.NewMockExptAggrResultService(ctrl)
 	mockTemplateRepo := repoMocks.NewMockIExptTemplateRepo(ctrl)
 	mockTemplateManager := svcMocks.NewMockIExptTemplateManager(ctrl)
-
+	mockNotify := mocks.NewMockINotifyRPCAdapter(ctrl)
+	mockUser := mocks.NewMockIUserProvider(ctrl)
 	mgr := NewExptManager(
 		mockExptResultService,
 		mockExptRepo,
@@ -1001,6 +1005,8 @@ func TestNewExptManager(t *testing.T) {
 		mockExptAggrResultService,
 		mockTemplateRepo,
 		mockTemplateManager,
+		mockNotify,
+		mockUser,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

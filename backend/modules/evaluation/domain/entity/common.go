@@ -17,6 +17,7 @@ const (
 	ContentTypeText  ContentType = "Text"
 	ContentTypeImage ContentType = "Image"
 	ContentTypeAudio ContentType = "Audio"
+	ContentTypeVideo ContentType = "Video"
 
 	ContentTypeMultipart         ContentType = "MultiPart"
 	ContentTypeMultipartVariable ContentType = "multi_part_variable"
@@ -24,6 +25,14 @@ const (
 
 // Image 图片结构体
 type Image struct {
+	Name            *string          `json:"name,omitempty"`
+	URL             *string          `json:"url,omitempty"`
+	URI             *string          `json:"uri,omitempty"`
+	ThumbURL        *string          `json:"thumb_url,omitempty"`
+	StorageProvider *StorageProvider `json:"storage_provider,omitempty"`
+}
+
+type Video struct {
 	Name            *string          `json:"name,omitempty"`
 	URL             *string          `json:"url,omitempty"`
 	URI             *string          `json:"uri,omitempty"`
@@ -39,6 +48,7 @@ type Content struct {
 	Image            *Image              `json:"image,omitempty"`
 	MultiPart        []*Content          `json:"multi_part,omitempty"`
 	Audio            *Audio              `json:"audio,omitempty"`
+	Video            *Video              `json:"video,omitempty"`
 	ContentOmitted   *bool               `json:"content_omitted,omitempty"`
 	FullContent      *ObjectStorage      `json:"full_content,omitempty"`       // 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效)
 	FullContentBytes *int32              `json:"full_content_bytes,omitempty"` // 超长数据完整内容的大小，单位 byte
@@ -97,8 +107,11 @@ func (c *Content) SetContentType(contentType ContentType) {
 }
 
 type Audio struct {
-	Format *string `json:"format,omitempty"`
-	URL    *string `json:"url,omitempty"`
+	Format          *string          `json:"format,omitempty"`
+	URL             *string          `json:"url,omitempty"`
+	Name            *string          `json:"name,omitempty"`
+	URI             *string          `json:"uri,omitempty"`
+	StorageProvider *StorageProvider `json:"storage_provider,omitempty"`
 }
 
 // OrderBy 排序结构体
