@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS `prompt_commit`
     `created_at`       datetime                                NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`       datetime                                NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `has_snippets` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否包含prompt片段',
+    `encrypt_messages` longtext COLLATE utf8mb4_general_ci COMMENT 'encrypt message list',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_prompt_id_version` (`prompt_id`, `version`),
     KEY `idx_prompt_key_version` (`prompt_key`, `version`) USING BTREE

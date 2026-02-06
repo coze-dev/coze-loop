@@ -47,6 +47,7 @@ func newPromptCommit(db *gorm.DB, opts ...gen.DOOption) promptCommit {
 	_promptCommit.CreatedAt = field.NewTime(tableName, "created_at")
 	_promptCommit.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_promptCommit.HasSnippets = field.NewBool(tableName, "has_snippets")
+	_promptCommit.EncryptMessages = field.NewString(tableName, "encrypt_messages")
 
 	_promptCommit.fillFieldMap()
 
@@ -57,27 +58,28 @@ func newPromptCommit(db *gorm.DB, opts ...gen.DOOption) promptCommit {
 type promptCommit struct {
 	promptCommitDo promptCommitDo
 
-	ALL            field.Asterisk
-	ID             field.Int64  // 主键ID
-	SpaceID        field.Int64  // 空间ID
-	PromptID       field.Int64  // Prompt ID
-	PromptKey      field.String // Prompt key
-	TemplateType   field.String // 模版类型
-	Messages       field.String // 托管消息列表
-	ModelConfig    field.String // 模型配置
-	VariableDefs   field.String // 变量定义
-	Tools          field.String // tools
-	ToolCallConfig field.String // tool调用配置
-	Metadata       field.String // 模板元信息
-	McpConfig      field.String // mcp config info
-	Version        field.String // 版本
-	BaseVersion    field.String // 来源版本
-	CommittedBy    field.String // 提交人
-	Description    field.String // 提交版本描述
-	ExtInfo        field.String // 扩展字段
-	CreatedAt      field.Time   // 创建时间
-	UpdatedAt      field.Time   // 更新时间
-	HasSnippets    field.Bool   // 是否包含prompt片段
+	ALL             field.Asterisk
+	ID              field.Int64  // 主键ID
+	SpaceID         field.Int64  // 空间ID
+	PromptID        field.Int64  // Prompt ID
+	PromptKey       field.String // Prompt key
+	TemplateType    field.String // 模版类型
+	Messages        field.String // 托管消息列表
+	ModelConfig     field.String // 模型配置
+	VariableDefs    field.String // 变量定义
+	Tools           field.String // tools
+	ToolCallConfig  field.String // tool调用配置
+	Metadata        field.String // 模板元信息
+	McpConfig       field.String // mcp config info
+	Version         field.String // 版本
+	BaseVersion     field.String // 来源版本
+	CommittedBy     field.String // 提交人
+	Description     field.String // 提交版本描述
+	ExtInfo         field.String // 扩展字段
+	CreatedAt       field.Time   // 创建时间
+	UpdatedAt       field.Time   // 更新时间
+	HasSnippets     field.Bool   // 是否包含prompt片段
+	EncryptMessages field.String // encrypt message list
 
 	fieldMap map[string]field.Expr
 }
@@ -114,6 +116,7 @@ func (p *promptCommit) updateTableName(table string) *promptCommit {
 	p.CreatedAt = field.NewTime(table, "created_at")
 	p.UpdatedAt = field.NewTime(table, "updated_at")
 	p.HasSnippets = field.NewBool(table, "has_snippets")
+	p.EncryptMessages = field.NewString(table, "encrypt_messages")
 
 	p.fillFieldMap()
 
@@ -142,7 +145,7 @@ func (p *promptCommit) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (p *promptCommit) fillFieldMap() {
-	p.fieldMap = make(map[string]field.Expr, 20)
+	p.fieldMap = make(map[string]field.Expr, 21)
 	p.fieldMap["id"] = p.ID
 	p.fieldMap["space_id"] = p.SpaceID
 	p.fieldMap["prompt_id"] = p.PromptID
@@ -163,6 +166,7 @@ func (p *promptCommit) fillFieldMap() {
 	p.fieldMap["created_at"] = p.CreatedAt
 	p.fieldMap["updated_at"] = p.UpdatedAt
 	p.fieldMap["has_snippets"] = p.HasSnippets
+	p.fieldMap["encrypt_messages"] = p.EncryptMessages
 }
 
 func (p promptCommit) clone(db *gorm.DB) promptCommit {

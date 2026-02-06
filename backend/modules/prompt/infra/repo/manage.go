@@ -513,8 +513,9 @@ func (d *ManageRepoImpl) UpdatePrompt(ctx context.Context, param repo.UpdateProm
 	updateFields := map[string]interface{}{
 		q.PromptBasic.UpdatedBy.ColumnName().String(): param.UpdatedBy,
 
-		q.PromptBasic.Name.ColumnName().String():        param.PromptName,
-		q.PromptBasic.Description.ColumnName().String(): param.PromptDescription,
+		q.PromptBasic.Name.ColumnName().String():          param.PromptName,
+		q.PromptBasic.Description.ColumnName().String():   param.PromptDescription,
+		q.PromptBasic.SecurityLevel.ColumnName().String(): param.SecurityLevel,
 	}
 	err = d.promptBasicDAO.Update(ctx, param.PromptID, updateFields)
 	if err != nil {
