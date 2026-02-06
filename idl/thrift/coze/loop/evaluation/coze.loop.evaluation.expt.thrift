@@ -36,6 +36,7 @@ struct CreateExperimentRequest {
     41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
     42: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
     43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
+    45: optional i32 item_retry_num (api.boy = 'item_retry_num')
 
     200: optional common.Session session
 
@@ -74,6 +75,7 @@ struct SubmitExperimentRequest {
     // 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重）
     41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
     42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
+    45: optional i32 item_retry_num (api.boy = 'item_retry_num')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -372,6 +374,8 @@ struct CreateExperimentTemplateRequest {
     21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
+
+    45: optional i32 item_retry_num (api.boy = 'item_retry_num')
 
     200: optional common.Session session
     255: optional base.Base Base
