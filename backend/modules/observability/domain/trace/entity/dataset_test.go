@@ -673,6 +673,101 @@ func TestGetContentInfo(t *testing.T) {
 			},
 			wantError: 0,
 		},
+		{
+			name: "multipart content with image_url",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {
+				    "type": "image_url",
+				    "image_url": {"name": "img", "url": "http://img.jpg"}
+				  }
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{
+						ContentType: ContentType_Image,
+						Image:       &Image{Name: "img", Url: "http://img.jpg"},
+					},
+				},
+			},
+			wantError: 0,
+		},
+		{
+			name: "multipart content with mixed types - text, image, audio, video",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {"type": "text", "text": "You are an assistant"},
+				  {"type": "image_url", "image_url": {"name": "img", "url": "http://img.jpg"}},
+				  {"type": "audio_url", "audio_url": {"name": "aud", "url": "http://audio.mp3"}},
+				  {"type": "video_url", "video_url": {"name": "vid", "url": "http://video.mp4"}}
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{ContentType: ContentType_Text, Text: "You are an assistant"},
+					{ContentType: ContentType_Image, Image: &Image{Name: "img", Url: "http://img.jpg"}},
+					{ContentType: ContentType_Audio, Audio: &Audio{Name: "aud", Url: "http://audio.mp3"}},
+					{ContentType: ContentType_Video, Video: &Video{Name: "vid", Url: "http://video.mp4"}},
+				},
+			},
+			wantError: 0,
+		},
+		{
+			name: "multipart content with audio_url but nil audio_url field - should skip",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {"type": "audio_url"},
+				  {"type": "text", "text": "hello"}
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{ContentType: ContentType_Text, Text: "hello"},
+				},
+			},
+			wantError: 0,
+		},
+		{
+			name: "multipart content with video_url but nil video_url field - should skip",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_MultiPart,
+				value: `[
+				  {"type": "video_url"},
+				  {"type": "text", "text": "world"}
+				]`,
+			},
+			wantContent: &Content{
+				ContentType: ContentType_MultiPart,
+				MultiPart: []*Content{
+					{ContentType: ContentType_Text, Text: "world"},
+				},
+			},
+			wantError: 0,
+		},
+		{
+			name: "video content type as non-multipart",
+			args: args{
+				ctx:         ctx,
+				contentType: ContentType_Video,
+				value:       "video data",
+			},
+			wantContent: &Content{
+				ContentType: ContentType_Text,
+				Text:        "video data",
+			},
+			wantError: 0,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
