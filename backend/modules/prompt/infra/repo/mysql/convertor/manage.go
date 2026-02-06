@@ -182,6 +182,9 @@ func PromptDO2CommitPO(do *entity.Prompt) *model.PromptCommit {
 			if do.PromptCommit.PromptDetail.ToolCallConfig != nil {
 				po.ToolCallConfig = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.ToolCallConfig))
 			}
+			if do.PromptCommit.PromptDetail.McpConfig != nil {
+				po.McpConfig = ptr.Of(json.Jsonify(do.PromptCommit.PromptDetail.McpConfig))
+			}
 			if do.PromptCommit.PromptDetail.PromptTemplate != nil {
 				po.TemplateType = ptr.Of(string(do.PromptCommit.PromptDetail.PromptTemplate.TemplateType))
 				if do.PromptCommit.PromptDetail.PromptTemplate.Messages != nil {
@@ -240,6 +243,9 @@ func PromptDO2DraftPO(promptDO *entity.Prompt) *model.PromptUserDraft {
 			if detailDO.ToolCallConfig != nil {
 				po.ToolCallConfig = ptr.Of(json.Jsonify(detailDO.ToolCallConfig))
 			}
+			if detailDO.McpConfig != nil {
+				po.McpConfig = ptr.Of(json.Jsonify(detailDO.McpConfig))
+			}
 			// 序列化ExtInfos到ExtInfo字段
 			if detailDO.ExtInfos != nil {
 				po.ExtInfo = ptr.Of(json.Jsonify(detailDO.ExtInfos))
@@ -286,6 +292,7 @@ func PromptUserDraftPO2PromptDetailDO(draftPO *model.PromptUserDraft) *entity.Pr
 		Tools:          UnmarshalToolDOs(draftPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(draftPO.ToolCallConfig),
 		ModelConfig:    UnmarshalModelConfig(draftPO.ModelConfig),
+		McpConfig:      UnmarshalMcpConfig(draftPO.McpConfig),
 		ExtInfos:       UnmarshalExtInfos(draftPO.ExtInfo),
 	}
 }
@@ -305,6 +312,7 @@ func PromptCommitPO2PromptDetailDO(commitPO *model.PromptCommit) *entity.PromptD
 		Tools:          UnmarshalToolDOs(commitPO.Tools),
 		ToolCallConfig: UnmarshalToolCallConfig(commitPO.ToolCallConfig),
 		ModelConfig:    UnmarshalModelConfig(commitPO.ModelConfig),
+		McpConfig:      UnmarshalMcpConfig(commitPO.McpConfig),
 		ExtInfos:       UnmarshalExtInfos(commitPO.ExtInfo),
 	}
 }
@@ -377,6 +385,15 @@ func UnmarshalExtInfos(text *string) map[string]string {
 	extInfos := make(map[string]string)
 	_ = json.Unmarshal([]byte(*text), &extInfos)
 	return extInfos
+}
+
+func UnmarshalMcpConfig(text *string) *entity.McpConfig {
+	if text == nil {
+		return nil
+	}
+	mcpConfig := &entity.McpConfig{}
+	_ = json.Unmarshal([]byte(*text), &mcpConfig)
+	return mcpConfig
 }
 
 func UnmarshalBool(val int32) bool {
