@@ -5718,3 +5718,17 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluators(t *testing.T) {
 		})
 	}
 }
+
+//
+// func TestName(t *testing.T) {
+// 	inputFields := make(map[string]*evaluatorcommon.Content)
+// 	err := json.Unmarshal([]byte(`{"image":{"content_type":"MultiPart","multi_part":[{"content_type":"Image","image":{"name":"test.jpg","url":"https://gjlv5sbrfw-psl.cn.oast-cn.bytedance.net/realtime_p/ssrf/fuceaabbcc.jpg","uri":"","storage_provider":4}}]}}`), &inputFields)
+// 	if err != nil {
+// 		return
+// 	}
+// 	e := EvaluatorHandlerImpl{}
+// 	err = e.checkURIs(context.Background(), inputFields)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
