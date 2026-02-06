@@ -578,6 +578,8 @@ func OpenAPIContentDO2DTO(content *entity.Content) *common.Content {
 		ContentType:      convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
 		Text:             content.Text,
 		Image:            ConvertImageDO2DTO(content.Image),
+		Audio:            ConvertAudioDO2DTO(content.Audio),
+		Video:            ConvertVideoDO2DTO(content.Video),
 		MultiPart:        multiPart,
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
@@ -614,6 +616,18 @@ func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
 		URL:    audio.URL,
 		Name:   audio.Name,
 		URI:    audio.URI,
+	}
+}
+
+func ConvertVideoDO2DTO(video *entity.Video) *common.Video {
+	if video == nil {
+		return nil
+	}
+	return &common.Video{
+		Name:     video.Name,
+		URL:      video.URL,
+		ThumbURL: video.ThumbURL,
+		URI:      video.URI,
 	}
 }
 
