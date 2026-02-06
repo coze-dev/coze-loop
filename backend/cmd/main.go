@@ -61,11 +61,11 @@ func main() {
 		panic(err)
 	}
 
-	registry := registry.NewConsumerRegistry(c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler))
-	if err := registry.StartAll(ctx); err != nil {
+	r := registry.NewConsumerRegistry(c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler))
+	if err := r.StartAll(ctx); err != nil {
 		panic(err)
 	}
-	defer func() { _ = registry.StopAll(context.Background()) }()
+	defer func() { _ = r.StopAll(context.Background()) }()
 
 	api.Start(handler)
 }
