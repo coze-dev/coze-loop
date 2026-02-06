@@ -188,6 +188,7 @@ func (p SpanTransCfgList) doFilter(ctx context.Context, spans SpanList) (SpanLis
 	redirectMap := make(map[string]string)
 	for _, span := range spans {
 		if !p.satisfyFilter(span) { // 不满足条件, 去除该Span
+			logs.CtxWarn(ctx, "Span %v skipped because it's not satisfied", span.SpanID)
 			redirectMap[span.SpanID] = span.ParentID
 			continue
 		} else if span.LogicDeleteTime > 0 && span.LogicDeleteTime < st {
