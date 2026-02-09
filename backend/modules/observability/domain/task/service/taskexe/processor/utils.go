@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
 
 	"github.com/bytedance/gg/gptr"
@@ -16,7 +18,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -206,7 +207,7 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 				fieldDatas = append(fieldDatas, &eval_set.FieldData{
 					Key:     key,
 					Name:    gptr.Of(fieldSchema.Name),
-					Content: tracer.ConvertContentDO2DTO(content),
+					Content: evaluationset.ConvertContentDO2DTO(content),
 				})
 			}
 		}

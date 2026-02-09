@@ -5,14 +5,13 @@ package trace
 
 import (
 	"github.com/bytedance/gg/gptr"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 )
 
 // ExportRequestDTO2DO 将导出请求从 DTO 转换为 DO
@@ -177,7 +176,7 @@ func ConvertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSc
 				Key:         &key,
 				Name:        name,
 				Description: description,
-				ContentType: tracer.ConvertContentTypeDTO2DO(fs.GetContentType()),
+				ContentType: evaluationset.ConvertContentTypeDTO2DO(fs.GetContentType()),
 				TextSchema:  textSchema,
 				SchemaKey:   entity.SchemaKey(fs.GetSchemaKey()),
 			}
@@ -200,7 +199,7 @@ func ConvertFieldMappingsDTO2DO(mappings []*dataset0.FieldMapping) []entity.Fiel
 				Key:         mapping.GetFieldSchema().Key,
 				Name:        mapping.GetFieldSchema().GetName(),
 				Description: mapping.GetFieldSchema().GetDescription(),
-				ContentType: tracer.ConvertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
+				ContentType: evaluationset.ConvertContentTypeDTO2DO(mapping.GetFieldSchema().GetContentType()),
 				SchemaKey:   entity.SchemaKey(mapping.GetFieldSchema().GetSchemaKey()),
 				TextSchema:  mapping.GetFieldSchema().GetTextSchema(),
 			},

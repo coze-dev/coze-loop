@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/tracer"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -197,7 +197,7 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 		tt := tt
 		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tt.expected, tracer.ConvertContentTypeDTO2DO(tt.input))
+			assert.Equal(t, tt.expected, evaluationset.ConvertContentTypeDTO2DO(tt.input))
 		})
 	}
 }
