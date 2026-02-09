@@ -26,6 +26,7 @@ type SimpleCmdable interface {
 	StringCmdable
 	HashCmdable
 	SortedSetCmdable
+	ListCmdable
 
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
 	Eval(ctx context.Context, script string, keys []string, args ...any) *redis.Cmd
@@ -67,6 +68,11 @@ type SortedSetCmdable interface {
 	ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZAddNX(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd
+}
+
+// ListCmdable copy methods we need in [redis.ListCmdable]
+type ListCmdable interface {
+	RPush(ctx context.Context, key string, values ...any) *redis.IntCmd
 }
 
 type Pipeliner interface {

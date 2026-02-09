@@ -1879,3 +1879,8 @@ func _reportevaluatorinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc 
 	// your code...
 	return nil
 }
+
+func _reportevaluatorinvokeprogressMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

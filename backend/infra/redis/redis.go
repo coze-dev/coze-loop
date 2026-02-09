@@ -150,3 +150,7 @@ func (p *provider) Pipeline() Pipeliner {
 	pipe := p.cli.Pipeline()
 	return pipe
 }
+
+func (p *provider) RPush(ctx context.Context, key string, values ...any) *redis.IntCmd {
+	return p.cli.RPush(ctx, key, values...)
+}

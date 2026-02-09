@@ -59,6 +59,8 @@ type EvaluatorService interface {
 	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
 	// ReportEvaluatorInvokeResult 上报评估器异步执行结果
 	ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error
+	// RPushEvaluatorProgress 将评估器执行过程推送到 Redis list
+	RPushEvaluatorProgress(ctx context.Context, invokeID int64, messages []*entity.EvaluatorProgressMessage) error
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

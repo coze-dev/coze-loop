@@ -6,6 +6,8 @@ package evaluator
 import (
 	"context"
 
+	evaluatorredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/redis/dao"
+
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -15,16 +17,18 @@ import (
 )
 
 type EvaluatorRecordRepoImpl struct {
-	idgen              idgen.IIDGenerator
-	evaluatorRecordDao mysql.EvaluatorRecordDAO
-	dbProvider         db.Provider
+	idgen                idgen.IIDGenerator
+	evaluatorRecordDao   mysql.EvaluatorRecordDAO
+	dbProvider           db.Provider
+	evaluatorProgressDao evaluatorredis.IEvaluatorProgressDAO
 }
 
-func NewEvaluatorRecordRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorRecordDao mysql.EvaluatorRecordDAO) repo.IEvaluatorRecordRepo {
+func NewEvaluatorRecordRepo(idgen idgen.IIDGenerator, provider db.Provider, evaluatorRecordDao mysql.EvaluatorRecordDAO, evaluatorProgressDao evaluatorredis.IEvaluatorProgressDAO) repo.IEvaluatorRecordRepo {
 	singletonEvaluatorRecordRepo := &EvaluatorRecordRepoImpl{
-		evaluatorRecordDao: evaluatorRecordDao,
-		dbProvider:         provider,
-		idgen:              idgen,
+		evaluatorRecordDao:   evaluatorRecordDao,
+		dbProvider:           provider,
+		idgen:                idgen,
+		evaluatorProgressDao: evaluatorProgressDao,
 	}
 	return singletonEvaluatorRecordRepo
 }
@@ -99,4 +103,8 @@ func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Contex
 		return nil
 	}
 	return r.evaluatorRecordDao.UpdateEvaluatorRecord(ctx, po)
+}
+
+func (r *EvaluatorRecordRepoImpl) RPushEvaluatorProgress(ctx context.Context, invokeID int64, messages []*entity.EvaluatorProgressMessage) error {
+	return r.evaluatorProgressDao.RPushEvaluatorProgress(ctx, invokeID, messages)
 }

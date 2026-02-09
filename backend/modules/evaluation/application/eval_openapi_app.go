@@ -1036,3 +1036,31 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 
 	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
+
+func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeProgress(ctx context.Context, req *openapi.ReportEvaluatorInvokeProgressRequest) (r *openapi.ReportEvaluatorInvokeProgressResponse, err error) {
+	logs.CtxInfo(ctx, "ReportEvaluatorInvokeProgress receive req: %v", json.Jsonify(req))
+
+	if len(req.GetProgressMessages()) == 0 {
+		return &openapi.ReportEvaluatorInvokeProgressResponse{BaseResp: base.NewBaseResp()}, nil
+	}
+
+	// 将 OpenAPI DTO 消息转换为领域实体消息
+	messages := make([]*entity.EvaluatorProgressMessage, 0, len(req.GetProgressMessages()))
+	for _, m := range req.GetProgressMessages() {
+		if m == nil {
+			continue
+		}
+		messages = append(messages, &entity.EvaluatorProgressMessage{
+			Role:        m.GetRole(),
+			Type:        m.GetType(),
+			Message:     m.GetMessage(),
+			CreatedAtMs: m.GetCreatedAtMs(),
+		})
+	}
+
+	if err := e.evaluatorService.RPushEvaluatorProgress(ctx, req.GetInvokeID(), messages); err != nil {
+		return nil, err
+	}
+
+	return &openapi.ReportEvaluatorInvokeProgressResponse{BaseResp: base.NewBaseResp()}, nil
+}

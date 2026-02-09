@@ -19,6 +19,14 @@ import (
 // mockEvaluatorClient 实现 evaluatorservice.Client 的必要方法，返回空响应以通过渲染
 type mockEvaluatorClient struct{}
 
+func (m *mockEvaluatorClient) AsyncRunEvaluator(ctx context.Context, req *evaluator.AsyncRunEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncRunEvaluatorResponse, err error) {
+	return nil, nil
+}
+
+func (m *mockEvaluatorClient) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncDebugEvaluatorResponse, err error) {
+	return nil, nil
+}
+
 func (m *mockEvaluatorClient) ListEvaluators(ctx context.Context, req *evaluator.ListEvaluatorsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorsResponse, err error) {
 	return &evaluator.ListEvaluatorsResponse{}, nil
 }

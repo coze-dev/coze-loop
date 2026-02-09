@@ -439,6 +439,7 @@ func (l *LocalEvaluationOpenAPIService) GetExperimentAggrResultOApi(ctx context.
 }
 
 // ReportEvaluatorInvokeResult_
+// 评估器接口
 // 评估器调用结果上报接口
 func (l *LocalEvaluationOpenAPIService) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (*openapi.ReportEvaluatorInvokeResultResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
@@ -455,6 +456,27 @@ func (l *LocalEvaluationOpenAPIService) ReportEvaluatorInvokeResult_(ctx context
 	arg := &openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs{Req: req}
 	result := &openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult{}
 	ctx = l.injectRPCInfo(ctx, "ReportEvaluatorInvokeResult_")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluationOpenAPIService) ReportEvaluatorInvokeProgress(ctx context.Context, req *openapi.ReportEvaluatorInvokeProgressRequest, callOptions ...callopt.Option) (*openapi.ReportEvaluatorInvokeProgressResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeProgressArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeProgressResult)
+		resp, err := l.impl.ReportEvaluatorInvokeProgress(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeProgressArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeProgressResult{}
+	ctx = l.injectRPCInfo(ctx, "ReportEvaluatorInvokeProgress")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

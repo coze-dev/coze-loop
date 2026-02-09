@@ -139,3 +139,19 @@ func ReportEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// ReportEvaluatorInvokeProgress .
+// @router /v1/loop/evaluation/evaluators/progress [POST]
+func ReportEvaluatorInvokeProgress(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.ReportEvaluatorInvokeProgressRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.ReportEvaluatorInvokeProgressResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
