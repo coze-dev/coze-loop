@@ -32,7 +32,7 @@ type EvaluatorService interface {
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// AsyncRunEvaluator Agent evaluator_version 异步运行
-	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.AsyncRunEvaluatorResponse, error)
+	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID
 	DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error)
 	// AsyncDebugEvaluator Agent evaluator_version 异步调试
@@ -59,6 +59,8 @@ type EvaluatorService interface {
 	CheckNameExist(ctx context.Context, spaceID, evaluatorID int64, name string) (bool, error)
 	// ListEvaluatorTags 根据 tagType 聚合标签，并按字母序返回
 	ListEvaluatorTags(ctx context.Context, tagType entity.EvaluatorTagKeyType) (map[entity.EvaluatorTagKey][]string, error)
+	// ReportEvaluatorInvokeResult 上报评估器异步执行结果
+	ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error
 }
 
 //go:generate mockgen -destination mocks/evaluator_record_service_mock.go -package mocks . EvaluatorRecordService

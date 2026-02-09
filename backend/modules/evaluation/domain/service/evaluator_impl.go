@@ -692,7 +692,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 }
 
 // AsyncRunEvaluator Agent evaluator_version 异步运行
-func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.AsyncRunEvaluatorResponse, error) {
+func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
 		return nil, err
@@ -729,9 +729,33 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		return nil, err
 	}
 	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d", invokeID, request.EvaluatorVersionID, request.SpaceID)
-	return &entity.AsyncRunEvaluatorResponse{
-		InvokeID: invokeID,
-	}, nil
+
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+	recordDO := &entity.EvaluatorRecord{
+		ID:                  invokeID,
+		SpaceID:             request.SpaceID,
+		ExperimentID:        request.ExperimentID,
+		ExperimentRunID:     request.ExperimentRunID,
+		ItemID:              request.ItemID,
+		TurnID:              request.TurnID,
+		EvaluatorVersionID:  request.EvaluatorVersionID,
+		LogID:               logID,
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: &entity.EvaluatorOutputData{},
+		Status:              entity.EvaluatorRunStatusAsyncInvoking,
+		Ext:                 request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+		},
+	}
+	err = e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO)
+	if err != nil {
+		return nil, err
+	}
+	return recordDO, nil
 }
 
 // AsyncDebugEvaluator Agent evaluator_version 异步调试
@@ -778,6 +802,12 @@ func (e *EvaluatorServiceImpl) GetAsyncDebugEvaluatorInvokeResult(ctx context.Co
 	}
 	logs.CtxInfo(ctx, "[GetAsyncDebugEvaluatorInvokeResult] invokeID: %d, spaceID: %d, status: %v", request.InvokeID, request.SpaceID, resp.Status)
 	return resp, nil
+}
+
+// ReportEvaluatorInvokeResult 上报评估器异步执行结果
+func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
+	logs.CtxInfo(ctx, "[ReportEvaluatorInvokeResult] recordID: %d, spaceID: %d, status: %v", param.RecordID, param.SpaceID, param.Status)
+	return e.evaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, param.RecordID, param.Status, param.OutputData)
 }
 
 // DebugEvaluator 调试 evaluator_version

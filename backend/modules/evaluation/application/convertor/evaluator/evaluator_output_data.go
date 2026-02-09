@@ -7,7 +7,9 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	evaluatorentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 )
 
 // ConvertEvaluatorOutputDataDTO2DO 将 DTO 转换为 evaluatorentity.EvaluatorOutputData 结构体
@@ -127,5 +129,72 @@ func ConvertEvaluatorRunErrorDO2DTO(do *evaluatorentity.EvaluatorRunError) *eval
 	return &evaluatordto.EvaluatorRunError{
 		Code:    gptr.Of(do.Code),
 		Message: gptr.Of(do.Message),
+	}
+}
+
+func ToEvaluatorRunStatusDO(status spi.InvokeEvaluatorRunStatus) evaluatorentity.EvaluatorRunStatus {
+	switch status {
+	case spi.InvokeEvaluatorRunStatus_FAILED:
+		return evaluatorentity.EvaluatorRunStatusFail
+	case spi.InvokeEvaluatorRunStatus_SUCCESS:
+		return evaluatorentity.EvaluatorRunStatusSuccess
+	default:
+		return evaluatorentity.EvaluatorRunStatusUnknown
+	}
+}
+
+func ToInvokeEvaluatorOutputDataDO(outputData *spi.InvokeEvaluatorOutputData, status spi.InvokeEvaluatorRunStatus) *evaluatorentity.EvaluatorOutputData {
+	if outputData == nil {
+		return nil
+	}
+
+	switch status {
+	case spi.InvokeEvaluatorRunStatus_SUCCESS:
+		return &evaluatorentity.EvaluatorOutputData{
+			EvaluatorResult:   toInvokeEvaluatorResultDO(outputData.EvaluatorResult_),
+			EvaluatorUsage:    toInvokeEvaluatorUsageDO(outputData.EvaluatorUsage),
+			EvaluatorRunError: nil,
+		}
+	case spi.InvokeEvaluatorRunStatus_FAILED:
+		return &evaluatorentity.EvaluatorOutputData{
+			EvaluatorResult:   nil,
+			EvaluatorUsage:    nil,
+			EvaluatorRunError: toInvokeEvaluatorRunErrorDO(outputData.EvaluatorRunError),
+		}
+	default:
+		return nil
+	}
+}
+
+func toInvokeEvaluatorResultDO(result *spi.InvokeEvaluatorResult_) *evaluatorentity.EvaluatorResult {
+	if result == nil {
+		return nil
+	}
+	return &evaluatorentity.EvaluatorResult{
+		Score:     result.Score,
+		Reasoning: result.GetReasoning(),
+	}
+}
+
+func toInvokeEvaluatorUsageDO(usage *spi.InvokeEvaluatorUsage) *evaluatorentity.EvaluatorUsage {
+	if usage == nil {
+		return nil
+	}
+	return &evaluatorentity.EvaluatorUsage{
+		InputTokens:  usage.GetInputTokens(),
+		OutputTokens: usage.GetOutputTokens(),
+	}
+}
+
+func toInvokeEvaluatorRunErrorDO(runError *spi.InvokeEvaluatorRunError) *evaluatorentity.EvaluatorRunError {
+	if runError == nil {
+		return &evaluatorentity.EvaluatorRunError{
+			Code:    errno.RunEvaluatorFailCode,
+			Message: "unknown error",
+		}
+	}
+	return &evaluatorentity.EvaluatorRunError{
+		Code:    runError.GetCode(),
+		Message: runError.GetMessage(),
 	}
 }

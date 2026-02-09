@@ -271,6 +271,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 			continue
 		}
 
+		if existResult != nil && existResult.Status == entity.EvaluatorRunStatusAsyncInvoking {
+			evaluatorResults[existResult.ID] = existResult
+			continue
+		}
+
 		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())
 	}
 
@@ -334,29 +339,35 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, err
 		}
 
-		pool.Add(func() error {
-			var err error
-			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
-
-			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
-				Name:               "",
-				EvaluatorVersionID: ev.GetEvaluatorVersionID(),
-				InputData:          inputData,
-				ExperimentID:       etec.Event.ExptID,
-				ExperimentRunID:    etec.Event.ExptRunID,
-				ItemID:             item.ItemID,
-				TurnID:             turn.ID,
-				Ext:                etec.Ext,
-				EvaluatorRunConf:   ec.RunConf,
+		if ev.EvaluatorType == entity.EvaluatorTypeAgent {
+			pool.Add(func() error {
+				return e.asyncCallEvaluator(ctx, ev, ec, etec, inputData, &recordMap)
 			})
-			if err != nil {
-				return err
-			}
+		} else {
+			pool.Add(func() error {
+				var err error
+				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
 
-			recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
-			return nil
-		})
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+					SpaceID:            spaceID,
+					Name:               "",
+					EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+					InputData:          inputData,
+					ExperimentID:       etec.Event.ExptID,
+					ExperimentRunID:    etec.Event.ExptRunID,
+					ItemID:             item.ItemID,
+					TurnID:             turn.ID,
+					Ext:                etec.Ext,
+					EvaluatorRunConf:   ec.RunConf,
+				})
+				if err != nil {
+					return err
+				}
+
+				recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+				return nil
+			})
+		}
 	}
 
 	err = pool.Exec(ctx)
@@ -368,6 +379,43 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	})
 
 	return records, err
+}
+
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(ctx context.Context, ev *entity.Evaluator, ec *entity.EvaluatorConf,
+	etec *entity.ExptTurnEvalCtx, inputData *entity.EvaluatorInputData, recordMap *sync.Map) error {
+	var err error
+	defer e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil)
+
+	ts := time.Now()
+
+	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            etec.Event.SpaceID,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		ExperimentID:       etec.Event.ExptID,
+		ExperimentRunID:    etec.Event.ExptRunID,
+		ItemID:             etec.EvalSetItem.ItemID,
+		TurnID:             etec.Turn.ID,
+		Ext:                etec.Ext,
+		EvaluatorRunConf:   ec.RunConf,
+	})
+	if err != nil {
+		return err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", evaluatorRecord.ID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		Event:              etec.Event,
+		RecordID:           evaluatorRecord.ID,
+		AsyncUnixMS:        ts.UnixMilli(),
+		Session:            etec.Event.Session,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+	}); err != nil {
+		return err
+	}
+
+	recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,

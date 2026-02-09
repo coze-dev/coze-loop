@@ -87,3 +87,16 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 
 	return evaluatorRecords, nil
 }
+
+func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
+	record := &entity.EvaluatorRecord{
+		ID:                  recordID,
+		EvaluatorOutputData: outputData,
+		Status:              status,
+	}
+	po := convertor.ConvertEvaluatorRecordDO2PO(record)
+	if po == nil {
+		return nil
+	}
+	return r.evaluatorRecordDao.UpdateEvaluatorRecord(ctx, po)
+}

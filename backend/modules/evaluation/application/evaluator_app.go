@@ -1897,7 +1897,7 @@ func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evalu
 		return nil, err
 	}
 	return &evaluatorservice.AsyncRunEvaluatorResponse{
-		InvokeID: gptr.Of(resp.InvokeID),
+		InvokeID: gptr.Of(resp.ID),
 	}, nil
 }
 
