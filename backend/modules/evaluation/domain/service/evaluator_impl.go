@@ -763,32 +763,6 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	}
 
 	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d", invokeID, request.EvaluatorVersionID, request.SpaceID)
-
-	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
-	logID := logs.GetLogID(ctx)
-	recordDO := &entity.EvaluatorRecord{
-		ID:                  invokeID,
-		SpaceID:             request.SpaceID,
-		ExperimentID:        request.ExperimentID,
-		ExperimentRunID:     request.ExperimentRunID,
-		ItemID:              request.ItemID,
-		TurnID:              request.TurnID,
-		EvaluatorVersionID:  request.EvaluatorVersionID,
-		LogID:               logID,
-		EvaluatorInputData:  request.InputData,
-		EvaluatorOutputData: &entity.EvaluatorOutputData{},
-		Status:              entity.EvaluatorRunStatusAsyncInvoking,
-		Ext:                 request.Ext,
-		BaseInfo: &entity.BaseInfo{
-			CreatedBy: &entity.UserInfo{
-				UserID: gptr.Of(userIDInContext),
-			},
-		},
-	}
-	err = e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO)
-	if err != nil {
-		return nil, err
-	}
 	return recordDO, nil
 }
 
