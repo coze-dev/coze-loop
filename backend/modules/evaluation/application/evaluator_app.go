@@ -1980,32 +1980,6 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 	}, nil
 }
 
-func (e *EvaluatorHandlerImpl) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultRequest) (r *evaluatorservice.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
-		SpaceID:       req.WorkspaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
-	resp, err := e.evaluatorService.GetAsyncDebugEvaluatorInvokeResult(ctx, &entity.GetAsyncDebugEvaluatorInvokeResultRequest{
-		SpaceID:  req.WorkspaceID,
-		InvokeID: req.InvokeID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return &evaluatorservice.GetAsyncDebugEvaluatorInvokeResultResponse{
-		WorkspaceID:      gptr.Of(resp.SpaceID),
-		Status:           evaluatordto.EvaluatorRunStatusPtr(evaluatordto.EvaluatorRunStatus(resp.Status)),
-		OutputData:       evaluatorconvertor.ConvertEvaluatorOutputDataDO2DTO(resp.OutputData),
-		EvaluatorContent: evaluatorconvertor.ConvertEvaluatorDO2DTO(resp.EvaluatorDO).GetCurrentVersion().GetEvaluatorContent(),
-		EvaluatorType:    evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType(resp.EvaluatorDO.EvaluatorType)),
-		InputData:        evaluatorconvertor.ConvertEvaluatorInputDataDO2DTO(resp.InputData),
-	}, nil
-}
-
 func convertListEvaluatorTagType(tagType evaluatordto.EvaluatorTagType) entity.EvaluatorTagKeyType {
 	switch tagType {
 	case evaluatordto.EvaluatorTagTypeTemplate:

@@ -152,12 +152,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_template.PATCH("/:evaluator_template_id", append(_updateevaluatortemplateMw(handler), apis.UpdateEvaluatorTemplate)...)
 				_v11.POST("/evaluators", append(_evaluatorsMw(handler), apis.CreateEvaluator)...)
 				_evaluators := _v11.Group("/evaluators", _evaluatorsMw(handler)...)
-				_evaluators.POST("/async_debug", append(_async_debugMw(handler), apis.AsyncDebugEvaluator)...)
-				_async_debug := _evaluators.Group("/async_debug", _async_debugMw(handler)...)
-				{
-					_result := _async_debug.Group("/result", _resultMw(handler)...)
-					_result.GET("/:invoke_id", append(_getasyncdebugevaluatorinvokeresultMw(handler), apis.GetAsyncDebugEvaluatorInvokeResult)...)
-				}
+				_evaluators.POST("/async_debug", append(_asyncdebugevaluatorMw(handler), apis.AsyncDebugEvaluator)...)
 				_evaluators.POST("/batch_debug", append(_batchdebugevaluatorMw(handler), apis.BatchDebugEvaluator)...)
 				_evaluators.POST("/check_name", append(_checkevaluatornameMw(handler), apis.CheckEvaluatorName)...)
 				_evaluators.POST("/debug", append(_debugevaluatorMw(handler), apis.DebugEvaluator)...)
@@ -201,6 +196,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_evaluator_records := _v11.Group("/evaluator_records", _evaluator_recordsMw(handler)...)
+					_evaluator_records.POST("/batch_get", append(_batchgetevaluatorrecordsMw(handler), apis.BatchGetEvaluatorRecords)...)
+					_evaluator_records.GET("/:evaluator_record_id", append(_getevaluatorrecordMw(handler), apis.GetEvaluatorRecord)...)
 					_evaluator_records.PATCH("/:evaluator_record_id", append(_updateevaluatorrecordMw(handler), apis.UpdateEvaluatorRecord)...)
 				}
 				{

@@ -828,21 +828,6 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	}, nil
 }
 
-// GetAsyncDebugEvaluatorInvokeResult 获取异步调试结果
-func (e *EvaluatorServiceImpl) GetAsyncDebugEvaluatorInvokeResult(ctx context.Context, request *entity.GetAsyncDebugEvaluatorInvokeResultRequest) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
-	evaluatorSourceService, ok := e.evaluatorSourceServices[entity.EvaluatorTypeAgent]
-	if !ok {
-		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
-	}
-	resp, err := evaluatorSourceService.GetAsyncDebugResult(ctx, request.SpaceID, request.InvokeID)
-	if err != nil {
-		logs.CtxError(ctx, "[GetAsyncDebugEvaluatorInvokeResult] GetAsyncDebugResult fail, invokeID: %d, err: %v", request.InvokeID, err)
-		return nil, err
-	}
-	logs.CtxInfo(ctx, "[GetAsyncDebugEvaluatorInvokeResult] invokeID: %d, spaceID: %d, status: %v", request.InvokeID, request.SpaceID, resp.Status)
-	return resp, nil
-}
-
 // DebugEvaluator 调试 evaluator_version
 func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {

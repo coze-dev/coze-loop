@@ -154,13 +154,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetAsyncDebugEvaluatorInvokeResult": kitex.NewMethodInfo(
-		getAsyncDebugEvaluatorInvokeResult_Handler,
-		newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs,
-		newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"UpdateEvaluatorRecord": kitex.NewMethodInfo(
 		updateEvaluatorRecordHandler,
 		newEvaluatorServiceUpdateEvaluatorRecordArgs,
@@ -658,25 +651,6 @@ func newEvaluatorServiceAsyncDebugEvaluatorResult() interface{} {
 	return evaluator.NewEvaluatorServiceAsyncDebugEvaluatorResult()
 }
 
-func getAsyncDebugEvaluatorInvokeResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs)
-	realResult := result.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult)
-	success, err := handler.(evaluator.EvaluatorService).GetAsyncDebugEvaluatorInvokeResult_(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs() interface{} {
-	return evaluator.NewEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs()
-}
-
-func newEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult() interface{} {
-	return evaluator.NewEvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult()
-}
-
 func updateEvaluatorRecordHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*evaluator.EvaluatorServiceUpdateEvaluatorRecordArgs)
 	realResult := result.(*evaluator.EvaluatorServiceUpdateEvaluatorRecordResult)
@@ -1112,16 +1086,6 @@ func (p *kClient) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncD
 	_args.Req = req
 	var _result evaluator.EvaluatorServiceAsyncDebugEvaluatorResult
 	if err = p.c.Call(ctx, "AsyncDebugEvaluator", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
-	var _args evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs
-	_args.Req = req
-	var _result evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult
-	if err = p.c.Call(ctx, "GetAsyncDebugEvaluatorInvokeResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
