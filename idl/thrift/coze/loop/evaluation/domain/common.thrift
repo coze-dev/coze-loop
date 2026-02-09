@@ -61,6 +61,8 @@ struct Image {
 struct OrderBy {
     1: optional string field,
     2: optional bool is_asc,
+
+    100: optional bool is_field_key, // 用于区分当前字段是否是 field key，仅在评测集场景下生效
 }
 
 enum Role {
