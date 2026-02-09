@@ -617,15 +617,15 @@ func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
 	}
 }
 
-func ConvertVideoDO2DTO(video *entity.Audio) *common.Audio {
+func ConvertVideoDO2DTO(video *entity.Video) *common.Video {
 	if video == nil {
 		return nil
 	}
-	return &common.Audio{
-		Format: video.Format,
-		URL:    video.URL,
-		Name:   video.Name,
-		URI:    video.URI,
+	return &common.Video{
+		Name:     video.Name,
+		URL:      video.URL,
+		URI:      video.URI,
+		ThumbURL: video.ThumbURL,
 	}
 }
 

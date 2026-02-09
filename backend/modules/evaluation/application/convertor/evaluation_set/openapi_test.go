@@ -606,6 +606,25 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 
 	assert.Equal(t, &common.Audio{Format: &audioFormat, URL: &audioURL}, ConvertAudioDO2DTO(doContent.Audio))
 	assert.Nil(t, ConvertAudioDO2DTO(nil))
+
+	videoName := "video.mp4"
+	videoURL := "http://video.url"
+	videoURI := "video_uri"
+	videoThumbURL := "http://video.thumb"
+	doVideo := &entity.Video{
+		Name:     &videoName,
+		URL:      &videoURL,
+		URI:      &videoURI,
+		ThumbURL: &videoThumbURL,
+	}
+	expectedVideo := &common.Video{
+		Name:     &videoName,
+		URL:      &videoURL,
+		URI:      &videoURI,
+		ThumbURL: &videoThumbURL,
+	}
+	assert.Equal(t, expectedVideo, ConvertVideoDO2DTO(doVideo))
+	assert.Nil(t, ConvertVideoDO2DTO(nil))
 }
 
 func TestItemErrorConversions(t *testing.T) {
