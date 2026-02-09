@@ -6,10 +6,11 @@ package entity
 import (
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/manage"
+	druntime "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/domain/runtime"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
 func TestMergeStreamMsgs(t *testing.T) {
@@ -404,6 +405,138 @@ func TestToTraceModelInput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equalf(t, tt.want, ToTraceModelInput(tt.args.msgs, tt.args.ts, tt.args.tc), "ToTraceModelInput(%v, %v, %v)", tt.args.msgs, tt.args.ts, tt.args.tc)
+		})
+	}
+}
+
+func TestConvertToParamValues(t *testing.T) {
+	type args struct {
+		model       *Model
+		paramValues []*druntime.ParamConfigValue
+	}
+	tests := []struct {
+		name string
+		args args
+		want map[string]*ParamValue
+	}{
+		{
+			name: "model is nil",
+			args: args{
+				model:       nil,
+				paramValues: []*druntime.ParamConfigValue{},
+			},
+			want: nil,
+		},
+		{
+			name: "model param config is nil",
+			args: args{
+				model:       &Model{},
+				paramValues: []*druntime.ParamConfigValue{},
+			},
+			want: nil,
+		},
+		{
+			name: "param values is empty",
+			args: args{
+				model: &Model{
+					ParamConfig: &ParamConfig{
+						ParamSchemas: []*ParamSchema{
+							{
+								Name:     "temperature",
+								Type:     ParamTypeFloat,
+								JsonPath: "temperature",
+							},
+						},
+					},
+				},
+				paramValues: []*druntime.ParamConfigValue{},
+			},
+			want: map[string]*ParamValue{},
+		},
+		{
+			name: "param values with non-existent param",
+			args: args{
+				model: &Model{
+					ParamConfig: &ParamConfig{
+						ParamSchemas: []*ParamSchema{
+							{
+								Name:     "temperature",
+								Type:     ParamTypeFloat,
+								JsonPath: "temperature",
+							},
+						},
+					},
+				},
+				paramValues: []*druntime.ParamConfigValue{
+					{
+						Name: ptr.Of("non_existent"),
+						Value: &manage.ParamOption{
+							Value: ptr.Of("0.5"),
+						},
+					},
+				},
+			},
+			want: map[string]*ParamValue{},
+		},
+		{
+			name: "param values with existing param",
+			args: args{
+				model: &Model{
+					ParamConfig: &ParamConfig{
+						ParamSchemas: []*ParamSchema{
+							{
+								Name:     "temperature",
+								Type:     ParamTypeFloat,
+								JsonPath: "temperature",
+							},
+							{
+								Name:     "max_tokens",
+								Type:     ParamTypeInt,
+								JsonPath: "max_tokens",
+							},
+						},
+					},
+				},
+				paramValues: []*druntime.ParamConfigValue{
+					{
+						Name: ptr.Of("temperature"),
+						Value: &manage.ParamOption{
+							Value: ptr.Of("0.5"),
+						},
+					},
+					{
+						Name: ptr.Of("max_tokens"),
+						Value: &manage.ParamOption{
+							Value: ptr.Of("1000"),
+						},
+					},
+					{
+						Name: ptr.Of("non_existent"),
+						Value: &manage.ParamOption{
+							Value: ptr.Of("test"),
+						},
+					},
+				},
+			},
+			want: map[string]*ParamValue{
+				"temperature": {
+					Name:      "temperature",
+					ParamType: ParamTypeFloat,
+					Value:     "0.5",
+					JsonPath:  "temperature",
+				},
+				"max_tokens": {
+					Name:      "max_tokens",
+					ParamType: ParamTypeInt,
+					Value:     "1000",
+					JsonPath:  "max_tokens",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, ConvertToParamValues(tt.args.model, tt.args.paramValues), "ConvertToParamValues(%v, %v)", tt.args.model, tt.args.paramValues)
 		})
 	}
 }

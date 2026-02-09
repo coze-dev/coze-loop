@@ -6,9 +6,8 @@ package entity
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestModel_Available(t *testing.T) {
@@ -412,6 +411,114 @@ func TestParamConfig_GetCommonParamDefaultVal(t *testing.T) {
 				ParamSchemas: tt.fields.ParamSchemas,
 			}
 			assert.Equalf(t, tt.want, p.GetCommonParamDefaultVal(), "GetCommonParamDefaultVal()")
+		})
+	}
+}
+
+func TestAbility_GetAbilityEnums(t *testing.T) {
+	type fields struct {
+		ability *Ability
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []AbilityEnum
+	}{
+		{
+			name: "ability is nil",
+			fields: fields{
+				ability: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "ability has no enabled abilities",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: false,
+					JsonMode:     false,
+					MultiModal:   false,
+					Thinking:     false,
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "ability has function call enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: true,
+					JsonMode:     false,
+					MultiModal:   false,
+					Thinking:     false,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumFunctionCall},
+		},
+		{
+			name: "ability has json mode enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: false,
+					JsonMode:     true,
+					MultiModal:   false,
+					Thinking:     false,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumJsonMode},
+		},
+		{
+			name: "ability has multi modal enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: false,
+					JsonMode:     false,
+					MultiModal:   true,
+					Thinking:     false,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumMultiModal},
+		},
+		{
+			name: "ability has thinking enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: false,
+					JsonMode:     false,
+					MultiModal:   false,
+					Thinking:     true,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumThinking},
+		},
+		{
+			name: "ability has multiple abilities enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: true,
+					JsonMode:     true,
+					MultiModal:   false,
+					Thinking:     false,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumFunctionCall, AbilityEnumJsonMode},
+		},
+		{
+			name: "ability has all abilities enabled",
+			fields: fields{
+				ability: &Ability{
+					FunctionCall: true,
+					JsonMode:     true,
+					MultiModal:   true,
+					Thinking:     true,
+				},
+			},
+			want: []AbilityEnum{AbilityEnumFunctionCall, AbilityEnumJsonMode, AbilityEnumMultiModal, AbilityEnumThinking},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, tt.fields.ability.GetAbilityEnums(), "GetAbilityEnums()")
 		})
 	}
 }

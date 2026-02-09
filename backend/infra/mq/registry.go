@@ -12,6 +12,7 @@ import (
 type ConsumerRegistry interface {
 	Register(worker []IConsumerWorker) ConsumerRegistry
 	StartAll(ctx context.Context) error
+	StopAll(ctx context.Context) error
 }
 
 type IConsumerWorker interface {

@@ -15839,6 +15839,20 @@ func (p *ExptResultExportRecord) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -16014,6 +16028,20 @@ func (p *ExptResultExportRecord) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptResultExportRecord) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.URL_ = _field
+	return offset, nil
+}
+
 func (p *ExptResultExportRecord) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -16031,6 +16059,7 @@ func (p *ExptResultExportRecord) FastWriteNocopy(buf []byte, w thrift.NocopyWrit
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -16049,6 +16078,7 @@ func (p *ExptResultExportRecord) BLength() int {
 		l += p.field8Length()
 		l += p.field9Length()
 		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -16136,6 +16166,15 @@ func (p *ExptResultExportRecord) fastWriteField10(buf []byte, w thrift.NocopyWri
 	return offset
 }
 
+func (p *ExptResultExportRecord) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetURL_() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 11)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URL_)
+	}
+	return offset
+}
+
 func (p *ExptResultExportRecord) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -16218,6 +16257,15 @@ func (p *ExptResultExportRecord) field10Length() int {
 	return l
 }
 
+func (p *ExptResultExportRecord) field11Length() int {
+	l := 0
+	if p.IsSetURL_() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.URL_)
+	}
+	return l
+}
+
 func (p *ExptResultExportRecord) DeepCopy(s interface{}) error {
 	src, ok := s.(*ExptResultExportRecord)
 	if !ok {
@@ -16272,6 +16320,14 @@ func (p *ExptResultExportRecord) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Error = _error
+
+	if src.URL_ != nil {
+		var tmp string
+		if *src.URL_ != "" {
+			tmp = kutils.StringDeepCopy(*src.URL_)
+		}
+		p.URL_ = &tmp
+	}
 
 	return nil
 }

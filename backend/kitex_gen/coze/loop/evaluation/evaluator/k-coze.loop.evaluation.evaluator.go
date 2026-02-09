@@ -2004,6 +2004,20 @@ func (p *CreateEvaluatorRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField100(buf[offset:])
@@ -2068,6 +2082,20 @@ func (p *CreateEvaluatorRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateEvaluatorRequest) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
 func (p *CreateEvaluatorRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -2101,6 +2129,7 @@ func (p *CreateEvaluatorRequest) FastWrite(buf []byte) int {
 func (p *CreateEvaluatorRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -2113,6 +2142,7 @@ func (p *CreateEvaluatorRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field100Length()
 		l += p.field255Length()
 	}
@@ -2124,6 +2154,15 @@ func (p *CreateEvaluatorRequest) fastWriteField1(buf []byte, w thrift.NocopyWrit
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Evaluator.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *CreateEvaluatorRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
+	}
 	return offset
 }
 
@@ -2149,6 +2188,15 @@ func (p *CreateEvaluatorRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Evaluator.BLength()
+	return l
+}
+
+func (p *CreateEvaluatorRequest) field2Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
@@ -2184,6 +2232,11 @@ func (p *CreateEvaluatorRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Evaluator = _evaluator
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
+	}
 
 	if src.Cid != nil {
 		var tmp string

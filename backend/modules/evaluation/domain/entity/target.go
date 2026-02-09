@@ -53,6 +53,9 @@ const (
 	EvalTargetTypeVolcengineAgent EvalTargetType = 5
 	// 自定义服务 for内场
 	EvalTargetTypeCustomRPCServer EvalTargetType = 6
+
+	// 火山智能体Agentkit
+	EvalTargetTypeVolcengineAgentAgentkit EvalTargetType = 7
 )
 
 func (p EvalTargetType) String() string {
@@ -69,6 +72,8 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgent"
 	case EvalTargetTypeCustomRPCServer:
 		return "CustomRPCServer"
+	case EvalTargetTypeVolcengineAgentAgentkit:
+		return "VolcengineAgentKit"
 	}
 	return "<UNSET>"
 }
