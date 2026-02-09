@@ -728,6 +728,40 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
 	}
+
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+	status := entity.EvaluatorRunStatusAsyncInvoking
+	outputData := &entity.EvaluatorOutputData{}
+	recordDO := &entity.EvaluatorRecord{
+		ID:                  invokeID,
+		SpaceID:             request.SpaceID,
+		ExperimentID:        request.ExperimentID,
+		ExperimentRunID:     request.ExperimentRunID,
+		ItemID:              request.ItemID,
+		TurnID:              request.TurnID,
+		EvaluatorVersionID:  request.EvaluatorVersionID,
+		LogID:               logID,
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: outputData,
+		Status:              status,
+		Ext:                 request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+			UpdatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+			CreatedAt: gptr.Of(time.Now().UnixMilli()),
+			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+		},
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluator] CreateEvaluatorRecord fail, invokeID: %d, err: %v", invokeID, err)
+		return nil, err
+	}
+
 	logs.CtxInfo(ctx, "[AsyncRunEvaluator] invokeID: %d, evaluatorVersionID: %d, spaceID: %d", invokeID, request.EvaluatorVersionID, request.SpaceID)
 	return &entity.AsyncRunEvaluatorResponse{
 		InvokeID: invokeID,
@@ -759,6 +793,35 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 		logs.CtxError(ctx, "[AsyncDebugEvaluator] AsyncDebug fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
 	}
+
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+	status := entity.EvaluatorRunStatusAsyncInvoking
+	outputData := &entity.EvaluatorOutputData{}
+	recordDO := &entity.EvaluatorRecord{
+		ID:                  invokeID,
+		SpaceID:             request.SpaceID,
+		EvaluatorVersionID:  evaluatorDO.GetEvaluatorVersionID(),
+		LogID:               logID,
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: outputData,
+		Status:              status,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+			UpdatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+			CreatedAt: gptr.Of(time.Now().UnixMilli()),
+			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+		},
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		logs.CtxError(ctx, "[AsyncDebugEvaluator] CreateEvaluatorRecord fail, invokeID: %d, err: %v", invokeID, err)
+		return nil, err
+	}
+
 	logs.CtxInfo(ctx, "[AsyncDebugEvaluator] invokeID: %d, spaceID: %d", invokeID, request.SpaceID)
 	return &entity.AsyncDebugEvaluatorResponse{
 		InvokeID: invokeID,
