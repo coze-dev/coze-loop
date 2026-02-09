@@ -98,37 +98,6 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) EvaluatorType() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluatorType", reflect.TypeOf((*MockEvaluatorSourceService)(nil).EvaluatorType))
 }
 
-// GetAsyncDebugResult mocks base method.
-func (m *MockEvaluatorSourceService) GetAsyncDebugResult(ctx context.Context, spaceID, invokeID int64) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAsyncDebugResult", ctx, spaceID, invokeID)
-	ret0, _ := ret[0].(*entity.GetAsyncDebugEvaluatorInvokeResultResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAsyncDebugResult indicates an expected call of GetAsyncDebugResult.
-func (mr *MockEvaluatorSourceServiceMockRecorder) GetAsyncDebugResult(ctx, spaceID, invokeID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncDebugResult", reflect.TypeOf((*MockEvaluatorSourceService)(nil).GetAsyncDebugResult), ctx, spaceID, invokeID)
-}
-
-// GetAsyncRunResult mocks base method.
-func (m *MockEvaluatorSourceService) GetAsyncRunResult(ctx context.Context, spaceID, invokeID int64) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAsyncRunResult", ctx, spaceID, invokeID)
-	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
-	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// GetAsyncRunResult indicates an expected call of GetAsyncRunResult.
-func (mr *MockEvaluatorSourceServiceMockRecorder) GetAsyncRunResult(ctx, spaceID, invokeID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncRunResult", reflect.TypeOf((*MockEvaluatorSourceService)(nil).GetAsyncRunResult), ctx, spaceID, invokeID)
-}
-
 // PreHandle mocks base method.
 func (m *MockEvaluatorSourceService) PreHandle(ctx context.Context, evaluator *entity.Evaluator) error {
 	m.ctrl.T.Helper()

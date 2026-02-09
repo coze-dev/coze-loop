@@ -244,19 +244,3 @@ func AsyncDebugEvaluator(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
-
-// GetAsyncDebugEvaluatorInvokeResult .
-// @router /api/evaluation/v1/evaluators/async_debug/result/:invoke_id [GET]
-func GetAsyncDebugEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.GetAsyncDebugEvaluatorInvokeResultRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.GetAsyncDebugEvaluatorInvokeResultResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}

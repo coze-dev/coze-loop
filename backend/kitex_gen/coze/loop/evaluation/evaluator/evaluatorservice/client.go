@@ -31,7 +31,6 @@ type Client interface {
 	DebugEvaluator(ctx context.Context, req *evaluator.DebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.DebugEvaluatorResponse, err error)
 	BatchDebugEvaluator(ctx context.Context, req *evaluator.BatchDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.BatchDebugEvaluatorResponse, err error)
 	AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncDebugEvaluatorResponse, err error)
-	GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error)
 	UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error)
 	GetEvaluatorRecord(ctx context.Context, req *evaluator.GetEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.GetEvaluatorRecordResponse, err error)
 	BatchGetEvaluatorRecords(ctx context.Context, req *evaluator.BatchGetEvaluatorRecordsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorRecordsResponse, err error)
@@ -173,11 +172,6 @@ func (p *kEvaluatorServiceClient) BatchDebugEvaluator(ctx context.Context, req *
 func (p *kEvaluatorServiceClient) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (r *evaluator.AsyncDebugEvaluatorResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.AsyncDebugEvaluator(ctx, req)
-}
-
-func (p *kEvaluatorServiceClient) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetAsyncDebugEvaluatorInvokeResult_(ctx, req)
 }
 
 func (p *kEvaluatorServiceClient) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (r *evaluator.UpdateEvaluatorRecordResponse, err error) {

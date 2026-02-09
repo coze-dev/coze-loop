@@ -16,10 +16,8 @@ type EvaluatorSourceService interface {
 	EvaluatorType() entity.EvaluatorType
 	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
 	AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) error
-	GetAsyncRunResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error)
 	Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error)
 	AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) error
-	GetAsyncDebugResult(ctx context.Context, spaceID int64, invokeID int64) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error)
 	PreHandle(ctx context.Context, evaluator *entity.Evaluator) error
 	// Validate 验证评估器
 	Validate(ctx context.Context, evaluator *entity.Evaluator) error

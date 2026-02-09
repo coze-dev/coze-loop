@@ -190,21 +190,6 @@ func (mr *MockEvaluatorServiceMockRecorder) DeleteEvaluator(ctx, evaluatorIDs, u
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).DeleteEvaluator), ctx, evaluatorIDs, userID)
 }
 
-// GetAsyncDebugEvaluatorInvokeResult mocks base method.
-func (m *MockEvaluatorService) GetAsyncDebugEvaluatorInvokeResult(ctx context.Context, request *entity.GetAsyncDebugEvaluatorInvokeResultRequest) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAsyncDebugEvaluatorInvokeResult", ctx, request)
-	ret0, _ := ret[0].(*entity.GetAsyncDebugEvaluatorInvokeResultResponse)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAsyncDebugEvaluatorInvokeResult indicates an expected call of GetAsyncDebugEvaluatorInvokeResult.
-func (mr *MockEvaluatorServiceMockRecorder) GetAsyncDebugEvaluatorInvokeResult(ctx, request any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncDebugEvaluatorInvokeResult", reflect.TypeOf((*MockEvaluatorService)(nil).GetAsyncDebugEvaluatorInvokeResult), ctx, request)
-}
-
 // GetBuiltinEvaluator mocks base method.
 func (m *MockEvaluatorService) GetBuiltinEvaluator(ctx context.Context, evaluatorID int64) (*entity.Evaluator, error) {
 	m.ctrl.T.Helper()

@@ -450,27 +450,6 @@ func (l *LocalEvaluatorService) AsyncDebugEvaluator(ctx context.Context, req *ev
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalEvaluatorService) GetAsyncDebugEvaluatorInvokeResult_(ctx context.Context, req *evaluator.GetAsyncDebugEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (*evaluator.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs)
-		result := out.(*evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult)
-		resp, err := l.impl.GetAsyncDebugEvaluatorInvokeResult_(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultArgs{Req: req}
-	result := &evaluator.EvaluatorServiceGetAsyncDebugEvaluatorInvokeResultResult{}
-	ctx = l.injectRPCInfo(ctx, "GetAsyncDebugEvaluatorInvokeResult_")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 // UpdateEvaluatorRecord
 // 评估器执行结果
 func (l *LocalEvaluatorService) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (*evaluator.UpdateEvaluatorRecordResponse, error) {
