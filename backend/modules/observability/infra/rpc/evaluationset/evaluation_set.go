@@ -456,6 +456,8 @@ func FieldDisplayFormatDO2DTO(df entity.FieldDisplayFormat) dataset_domain.Field
 	}
 }
 
+// ConvertContentDO2DTO
+// Transfer Observability Content struct entity.Content to Evaluation Content struct common.Content
 func ConvertContentDO2DTO(content *entity.Content) *common.Content {
 	var result *common.Content
 	if content == nil {
