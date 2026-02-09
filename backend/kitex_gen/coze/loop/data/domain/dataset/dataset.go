@@ -9003,6 +9003,8 @@ type FieldData struct {
 	Format *FieldDisplayFormat `thrift:"format,6,optional" frugal:"6,optional,FieldDisplayFormat" form:"format" json:"format,omitempty" query:"format"`
 	// 图文混排时，图文内容
 	Parts []*FieldData `thrift:"parts,7,optional" frugal:"7,optional,list<FieldData>" form:"parts" json:"parts,omitempty" query:"parts"`
+	// 关联的 trace ID
+	TraceID *string `thrift:"trace_id,8,optional" frugal:"8,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
 }
 
 func NewFieldData() *FieldData {
@@ -9095,6 +9097,18 @@ func (p *FieldData) GetParts() (v []*FieldData) {
 	}
 	return p.Parts
 }
+
+var FieldData_TraceID_DEFAULT string
+
+func (p *FieldData) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return FieldData_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
 func (p *FieldData) SetKey(val *string) {
 	p.Key = val
 }
@@ -9116,6 +9130,9 @@ func (p *FieldData) SetFormat(val *FieldDisplayFormat) {
 func (p *FieldData) SetParts(val []*FieldData) {
 	p.Parts = val
 }
+func (p *FieldData) SetTraceID(val *string) {
+	p.TraceID = val
+}
 
 var fieldIDToName_FieldData = map[int16]string{
 	1: "key",
@@ -9125,6 +9142,7 @@ var fieldIDToName_FieldData = map[int16]string{
 	5: "attachments",
 	6: "format",
 	7: "parts",
+	8: "trace_id",
 }
 
 func (p *FieldData) IsSetKey() bool {
@@ -9153,6 +9171,10 @@ func (p *FieldData) IsSetFormat() bool {
 
 func (p *FieldData) IsSetParts() bool {
 	return p.Parts != nil
+}
+
+func (p *FieldData) IsSetTraceID() bool {
+	return p.TraceID != nil
 }
 
 func (p *FieldData) Read(iprot thrift.TProtocol) (err error) {
@@ -9224,6 +9246,14 @@ func (p *FieldData) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9361,6 +9391,17 @@ func (p *FieldData) ReadField7(iprot thrift.TProtocol) error {
 	p.Parts = _field
 	return nil
 }
+func (p *FieldData) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
 
 func (p *FieldData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9394,6 +9435,10 @@ func (p *FieldData) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -9556,6 +9601,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
+func (p *FieldData) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *FieldData) String() string {
 	if p == nil {
@@ -9590,6 +9653,9 @@ func (p *FieldData) DeepEqual(ano *FieldData) bool {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.Parts) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.TraceID) {
 		return false
 	}
 	return true
@@ -9678,6 +9744,18 @@ func (p *FieldData) Field7DeepEqual(src []*FieldData) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *FieldData) Field8DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
+		return false
 	}
 	return true
 }

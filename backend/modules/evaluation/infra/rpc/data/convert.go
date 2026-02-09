@@ -435,6 +435,7 @@ func convert2EvaluationSetFieldData(ctx context.Context, fieldData *dataset.Fiel
 			Video:       convertObjectStorageToVideo(ctx, fieldData.Attachments),
 			MultiPart:   multiPart,
 		},
+		TraceID: gptr.Indirect(fieldData.TraceID),
 	}
 	return evalSetFieldData
 }
