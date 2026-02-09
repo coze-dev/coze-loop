@@ -471,3 +471,9 @@ error_code:
     message: custom eval target run failed
     description: the custom eval target run failed, check if the configuration is correct
     no_affect_stability: true
+
+  - name: AgentEvaluatorRunFailed
+    code: 5068
+    message: agent evaluator run failed
+    description: the agent evaluator run failed, check if the configuration is correct
+    no_affect_stability: true
