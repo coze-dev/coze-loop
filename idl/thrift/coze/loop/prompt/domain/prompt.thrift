@@ -76,8 +76,8 @@ struct McpConfig {
 }
 
 struct McpServerCombine {
-    1: optional i64 mcp_server_id
-    2: optional i64 access_point_id
+    1: optional i64 mcp_server_id (api.js_conv="true", go.tag='json:"mcp_server_id"')
+    2: optional i64 access_point_id (api.js_conv="true", go.tag='json:"access_point_id"')
     3: optional list<string> disabled_tools
     4: optional list<string> enabled_tools
     5: optional bool is_enabled_tools
@@ -145,7 +145,7 @@ struct ModelConfig {
 }
 
 struct ThinkingConfig {
-     1: optional i64 budget_tokens (agw.key="budget_tokens") // thinking内容的最大输出token
+     1: optional i64 budget_tokens (agw.key="budget_tokens", api.js_conv="true", go.tag='json:"budget_tokens"') // thinking内容的最大输出token
      2: optional ThinkingOption thinking_option (agw.key="thinking_option")
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
 }

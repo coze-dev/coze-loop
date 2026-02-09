@@ -301,7 +301,7 @@ struct ListPromptBasicData {
 struct PromptPublishInfo {
     1: string publisher // 发布者
     2: string publish_description // 发布描述
-    3: optional i64 publish_at // 发布时间
+    3: optional i64 publish_at (api.js_conv='true', go.tag='json:"publish_at"') // 发布时间
 }
 
 enum PublishStatus {
@@ -319,7 +319,7 @@ enum SecurityLevel {
 }
 
 struct ThinkingConfig {
-     1: optional i64 budget_tokens (agw.key="budget_tokens") // thinking内容的最大输出token
+     1: optional i64 budget_tokens (agw.key="budget_tokens", api.js_conv='true', go.tag='json:"budget_tokens"') // thinking内容的最大输出token
      2: optional ThinkingOption thinking_option (agw.key="thinking_option")
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
 }
