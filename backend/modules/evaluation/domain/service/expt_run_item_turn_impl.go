@@ -271,11 +271,6 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 			continue
 		}
 
-		if existResult != nil && existResult.Status == entity.EvaluatorRunStatusAsyncInvoking {
-			evaluatorResults[existResult.ID] = existResult
-			continue
-		}
-
 		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())
 	}
 
