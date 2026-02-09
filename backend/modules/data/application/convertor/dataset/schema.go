@@ -55,7 +55,7 @@ func ContentTypeDO2DTO(ct entity.ContentType) dataset.ContentType {
 	case entity.ContentTypeAudio:
 		return dataset.ContentType_Audio
 	case entity.ContentTypeVideo:
-		return dataset.ContentType_Video
+		return dataset.ContentType_Audio
 	case entity.ContentTypeMultiPart:
 		return dataset.ContentType_MultiPart
 	default:
@@ -142,8 +142,6 @@ func ContentTypeDTO2DO(s dataset.ContentType) entity.ContentType {
 		return entity.ContentTypeImage
 	case dataset.ContentType_Audio:
 		return entity.ContentTypeAudio
-	case dataset.ContentType_Video:
-		return entity.ContentTypeVideo
 	case dataset.ContentType_MultiPart:
 		return entity.ContentTypeMultiPart
 	}
