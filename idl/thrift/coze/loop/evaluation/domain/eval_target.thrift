@@ -53,6 +53,8 @@ enum EvalTargetType {
     CozeWorkflow = 4
     VolcengineAgent = 5 // 火山智能体
     CustomRPCServer = 6 // 自定义RPC服务 for内场
+
+    VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
 }
 
 // Agent协议类型
@@ -125,6 +127,7 @@ struct VolcengineAgent {
     11: optional string description  // DTO使用，不存数据库
     12: optional list<VolcengineAgentEndpoint> volcengine_agent_endpoints // DTO使用，不存数据库
     13: optional VolcengineAgentProtocol protocol // 注册协议
+    14: optional string runtime_id
 
     100: optional common.BaseInfo base_info
 }

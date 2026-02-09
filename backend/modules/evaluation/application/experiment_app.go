@@ -208,6 +208,15 @@ func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, 
 	session := entity.NewSession(ctx)
 	logs.CtxInfo(ctx, "BatchGetExperimentTemplate template_ids: %v, workspace_id: %d", req.GetTemplateIds(), req.GetWorkspaceID())
 
+	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
 	templateIDs := req.GetTemplateIds()
 	if len(templateIDs) == 0 {
 		return &expt.BatchGetExperimentTemplateResponse{
@@ -218,11 +227,6 @@ func (e *experimentApplication) BatchGetExperimentTemplate(ctx context.Context, 
 
 	templates, err := e.templateManager.MGet(ctx, templateIDs, req.GetWorkspaceID(), session)
 	if err != nil {
-		return nil, err
-	}
-
-	// 权限校验，抽象成与实验类似的批量鉴权方法
-	if err := e.AuthReadExptTemplates(ctx, templates, req.GetWorkspaceID()); err != nil {
 		return nil, err
 	}
 
@@ -248,22 +252,22 @@ func (e *experimentApplication) UpdateExperimentTemplate(ctx context.Context, re
 
 	logs.CtxInfo(ctx, "UpdateExperimentTemplate template_id: %d, workspace_id: %d", templateID, workspaceID)
 
-	// 获取现有模板用于权限校验
+	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(workspaceID, 10),
+		SpaceID:       workspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	// 获取现有模板用于业务逻辑
 	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
 	if err != nil {
 		return nil, err
 	}
-
-	// 权限校验
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(templateID, 10),
-		SpaceID:         workspaceID,
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
-		OwnerID:         gptr.Of(got.GetCreatedBy()),
-		ResourceSpaceID: workspaceID,
-	})
-	if err != nil {
-		return nil, err
+	if got == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found"))
 	}
 
 	// 转换请求参数
@@ -299,22 +303,22 @@ func (e *experimentApplication) UpdateExperimentTemplateMeta(ctx context.Context
 
 	logs.CtxInfo(ctx, "UpdateExperimentTemplateMeta template_id: %d, workspace_id: %d", templateID, workspaceID)
 
-	// 获取现有模板用于权限校验
+	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(workspaceID, 10),
+		SpaceID:       workspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	// 获取现有模板用于业务逻辑
 	got, err := e.templateManager.Get(ctx, templateID, workspaceID, session)
 	if err != nil {
 		return nil, err
 	}
-
-	// 权限校验
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(templateID, 10),
-		SpaceID:         workspaceID,
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
-		OwnerID:         gptr.Of(got.GetCreatedBy()),
-		ResourceSpaceID: workspaceID,
-	})
-	if err != nil {
-		return nil, err
+	if got == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("template not found"))
 	}
 
 	// 转换请求参数
@@ -351,24 +355,12 @@ func (e *experimentApplication) DeleteExperimentTemplate(ctx context.Context, re
 	session := entity.NewSession(ctx)
 	logs.CtxInfo(ctx, "DeleteExperimentTemplate template_id: %d, workspace_id: %d", req.GetTemplateID(), req.GetWorkspaceID())
 
-	// 获取现有模板用于权限校验
-	existingTemplate, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
-	if err != nil {
-		return nil, err
-	}
-	if existingTemplate == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template not found"))
-	}
-
-	// 权限校验
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(req.GetTemplateID(), 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExptTemplate)}},
-		OwnerID:         gptr.Of(existingTemplate.GetCreatedBy()),
-		ResourceSpaceID: req.GetWorkspaceID(),
-	})
-	if err != nil {
+	// 权限校验，与 ListExperimentTemplates 一致：空间级 listLoopExptTemplate
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionReadExptTemplate), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
 		return nil, err
 	}
 
@@ -1192,7 +1184,7 @@ func (e *experimentApplication) BatchGetExperimentAggrResult_(ctx context.Contex
 	}
 
 	return &expt.BatchGetExperimentAggrResultResponse{
-		ExptAggregateResults: exptAggregateResultDTOs,
+		ExptAggregateResult_: exptAggregateResultDTOs,
 	}, nil
 }
 
@@ -1667,8 +1659,8 @@ func (e *experimentApplication) GetExptResultExportRecord(ctx context.Context, r
 	}
 
 	return &expt.GetExptResultExportRecordResponse{
-		ExptResultExportRecord: experiment.ExportRecordDO2DTO(record),
-		BaseResp:               base.NewBaseResp(),
+		ExptResultExportRecords: experiment.ExportRecordDO2DTO(record),
+		BaseResp:                base.NewBaseResp(),
 	}, nil
 }
 

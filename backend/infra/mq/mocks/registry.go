@@ -69,6 +69,20 @@ func (mr *MockConsumerRegistryMockRecorder) StartAll(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAll", reflect.TypeOf((*MockConsumerRegistry)(nil).StartAll), ctx)
 }
 
+// StopAll mocks base method.
+func (m *MockConsumerRegistry) StopAll(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StopAll", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StopAll indicates an expected call of StopAll.
+func (mr *MockConsumerRegistryMockRecorder) StopAll(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StopAll", reflect.TypeOf((*MockConsumerRegistry)(nil).StopAll), ctx)
+}
+
 // MockIConsumerWorker is a mock of IConsumerWorker interface.
 type MockIConsumerWorker struct {
 	ctrl     *gomock.Controller

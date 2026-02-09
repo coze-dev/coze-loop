@@ -229,3 +229,78 @@ func TestToDOToolCalls(t *testing.T) {
 		})
 	}
 }
+
+func TestEinoConvertor_MoreFromDO(t *testing.T) {
+	t.Run("FromDOMessages", func(t *testing.T) {
+		dos := []*Message{
+			{
+				Role:    RoleUser,
+				Content: "hello",
+				MultiModalContent: []*ChatMessagePart{
+					{Type: ChatMessagePartTypeImageURL, ImageURL: &ChatMessageImageURL{URL: "url"}},
+				},
+			},
+		}
+		res := FromDOMessages(dos)
+		assert.Len(t, res, 1)
+		assert.Equal(t, schema.User, res[0].Role)
+	})
+
+	t.Run("FromDOImageURL_nil", func(t *testing.T) {
+		assert.Nil(t, FromDOImageURL(nil))
+	})
+
+	t.Run("FromDOOptions", func(t *testing.T) {
+		temp := float32(0.7)
+		maxT := 100
+		opts := &Options{
+			Temperature: &temp,
+			MaxTokens:   &maxT,
+		}
+		res, err := FromDOOptions(opts)
+		assert.NoError(t, err)
+		assert.Len(t, res, 2)
+	})
+
+	t.Run("FromDOTools", func(t *testing.T) {
+		toolDef := `{"type": "object"}`
+		dos := []*ToolInfo{
+			{
+				Name:        "t1",
+				Desc:        "d1",
+				ToolDefType: ToolDefTypeOpenAPIV3,
+				Def:         toolDef,
+			},
+		}
+		res, err := FromDOTools(dos)
+		assert.NoError(t, err)
+		assert.Len(t, res, 1)
+
+		_, err = FromDOTools([]*ToolInfo{{ToolDefType: "unknown"}})
+		assert.Error(t, err)
+	})
+}
+
+func TestEinoConvertor_MoreToDO(t *testing.T) {
+	t.Run("ToDOMessage_nil", func(t *testing.T) {
+		res, err := ToDOMessage(nil)
+		assert.NoError(t, err)
+		assert.Nil(t, res)
+	})
+
+	t.Run("ToDOMultiContents", func(t *testing.T) {
+		cms := []schema.ChatMessagePart{
+			{Type: schema.ChatMessagePartTypeText, Text: "txt"},
+			{Type: schema.ChatMessagePartTypeImageURL, ImageURL: &schema.ChatMessageImageURL{URL: "url"}},
+		}
+		res := ToDOMultiContents(cms)
+		assert.Len(t, res, 2)
+		assert.Equal(t, ChatMessagePartTypeText, res[0].Type)
+		assert.Equal(t, ChatMessagePartTypeImageURL, res[1].Type)
+	})
+
+	t.Run("GetReasoningContent", func(t *testing.T) {
+		msg := &schema.Message{}
+		assert.Equal(t, "", GetReasoningContent(msg))
+	})
+}
