@@ -269,7 +269,7 @@ func (e *ExptMangerImpl) CheckBenefit(ctx context.Context, expt *entity.Experime
 	return nil
 }
 
-func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
+func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
 	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
 	}
@@ -280,27 +280,29 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
-		SpaceID:     spaceID,
-		ExptID:      exptID,
-		ExptRunID:   runID,
-		ExptRunMode: runMode,
-		ExptType:    expt.ExptType,
-		CreatedAt:   time.Now().Unix(),
-		Session:     session,
-		Ext:         ext,
+		SpaceID:        spaceID,
+		ExptID:         exptID,
+		ExptRunID:      runID,
+		ExptRunMode:    runMode,
+		ExptType:       expt.ExptType,
+		CreatedAt:      time.Now().Unix(),
+		ItemRetryTimes: itemRetryNum,
+		Session:        session,
+		Ext:            ext,
 	}, gptr.Of(time.Second*3)); err != nil {
 		return err
 	}
 
-	err = e.sendExptNotify(ctx, expt)
-	if err != nil {
-		logs.CtxWarn(ctx, "[Run] sendExptNotify failed, expt_id: %v, error: %v", exptID, err)
+	switch runMode {
+	case entity.EvaluationModeSubmit:
+		if err = e.sendExptNotify(ctx, expt); err != nil {
+			logs.CtxWarn(ctx, "[Run] SendExptNotify failed, expt_id: %v, error: %v", exptID, err)
+		}
 	}
-
 	return nil
 }
 
-func (e *ExptMangerImpl) RetryUnSuccess(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, ext map[string]string) error {
+func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
 	if err := NewQuotaService(e.quotaRepo, e.configer).AllowExptRun(ctx, exptID, spaceID, session); err != nil {
 		return err
 	}
@@ -311,14 +313,16 @@ func (e *ExptMangerImpl) RetryUnSuccess(ctx context.Context, exptID, runID, spac
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
-		SpaceID:     spaceID,
-		ExptID:      exptID,
-		ExptRunID:   runID,
-		ExptRunMode: entity.EvaluationModeFailRetry,
-		ExptType:    expt.ExptType,
-		CreatedAt:   time.Now().Unix(),
-		Session:     session,
-		Ext:         ext,
+		SpaceID:            spaceID,
+		ExptID:             exptID,
+		ExptRunID:          runID,
+		ExptRunMode:        entity.EvaluationModeRetryItems,
+		ExptType:           expt.ExptType,
+		CreatedAt:          time.Now().Unix(),
+		ItemRetryTimes:     itemRetryNum,
+		ExecEvalSetItemIDs: itemIDs,
+		Session:            session,
+		Ext:                ext,
 	}, gptr.Of(time.Second*3)); err != nil {
 		return err
 	}

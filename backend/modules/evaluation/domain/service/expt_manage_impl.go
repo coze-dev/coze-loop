@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"

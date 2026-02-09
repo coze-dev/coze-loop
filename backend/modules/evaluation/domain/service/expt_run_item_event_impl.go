@@ -158,6 +158,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 
 		retryConf := e.configer.GetErrRetryConf(ctx, event.SpaceID, nextErr)
 		needRetry := event.RetryTimes < retryConf.GetRetryTimes()
+		if event.MaxRetryTimes > 0 {
+			needRetry = event.RetryTimes < event.MaxRetryTimes
+		}
 
 		defer func() {
 			code, stable, _ := errno.ParseStatusError(nextErr)

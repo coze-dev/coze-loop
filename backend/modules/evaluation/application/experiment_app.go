@@ -467,6 +467,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		Session:                req.Session,
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
+		ItemRetryNum: req.ItemRetryNum,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -477,11 +478,12 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}
 
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
-		WorkspaceID: gptr.Of(req.GetWorkspaceID()),
-		ExptID:      cresp.GetExperiment().ID,
-		ExptType:    req.ExptType,
-		Session:     req.Session,
-		Ext:         req.Ext,
+		WorkspaceID:  gptr.Of(req.GetWorkspaceID()),
+		ExptID:       cresp.GetExperiment().ID,
+		ExptType:     req.ExptType,
+		ItemRetryNum: req.ItemRetryNum,
+		Session:      req.Session,
+		Ext:          req.Ext,
 	})
 	if err != nil {
 		return nil, err
@@ -979,7 +981,7 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 		return nil, err
 	}
 
-	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), session, evalMode, req.GetExt()); err != nil {
+	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), session, evalMode, req.GetExt()); err != nil {
 		return nil, err
 	}
 	return &expt.RunExperimentResponse{
@@ -990,6 +992,11 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 
 func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest) (r *expt.RetryExperimentResponse, err error) {
 	session := entity.NewSession(ctx)
+
+	if req.GetRetryMode() == 0 {
+		req.RetryMode = domain_expt.ExptRetryModePtr(domain_expt.ExptRetryMode_RetryFailure)
+	}
+	runMode := experiment.ConvRetryMode(req.GetRetryMode())
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
@@ -1011,12 +1018,20 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, entity.EvaluationModeFailRetry, req.GetWorkspaceID(), session); err != nil {
+	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, runMode, req.GetWorkspaceID(), session); err != nil {
 		return nil, err
 	}
 
-	if err := e.manager.RetryUnSuccess(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), session, req.GetExt()); err != nil {
-		return nil, err
+	itemRetryNum := gptr.Indirect(got.EvalConf.ItemRetryNum)
+	switch runMode {
+	case entity.EvaluationModeRetryItems:
+		if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), itemRetryNum, req.GetItemIds(), session, req.GetExt()); err != nil {
+			return nil, err
+		}
+	default:
+		if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), itemRetryNum, session, runMode, req.GetExt()); err != nil {
+			return nil, err
+		}
 	}
 
 	return &expt.RetryExperimentResponse{

@@ -160,6 +160,7 @@ func (e *ExptEvaluatorVersionRef) String() string {
 type EvaluationConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
+	ItemRetryNum  *int
 }
 
 type Connector struct {

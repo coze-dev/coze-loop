@@ -208,7 +208,7 @@ func TestExptMangerImpl_Run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.Run(ctx, tt.exptID, tt.runID, tt.spaceID, session, tt.runMode, tt.ext)
+			err := mgr.Run(ctx, tt.exptID, tt.runID, tt.spaceID, 0, session, tt.runMode, tt.ext)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -517,136 +517,6 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 			err := mgr.Kill(ctx, tt.exptID, tt.spaceID, tt.msg, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Kill() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestExptMangerImpl_RetryUnSuccess(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mgr := newTestExptManager(ctrl)
-	ctx := context.Background()
-	session := &entity.Session{UserID: "test_user"}
-
-	tests := []struct {
-		name    string
-		exptID  int64
-		runID   int64
-		spaceID int64
-		ext     map[string]string
-		setup   func()
-		wantErr bool
-	}{
-		{
-			name:    "successful_retry",
-			exptID:  123,
-			runID:   456,
-			spaceID: 789,
-			ext:     map[string]string{"retry": "true"},
-			setup: func() {
-				// Mock lwt.CheckWriteFlagByID
-				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
-					EXPECT().
-					CheckWriteFlagByID(ctx, gomock.Any(), int64(123)).
-					Return(false).AnyTimes()
-
-				// Mock MGetByID for experiment retrieval
-				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
-					EXPECT().
-					MGetByID(ctx, []int64{123}, int64(789)).
-					Return([]*entity.Experiment{{ID: 123, SpaceID: 789}}, nil).AnyTimes()
-
-				// Mock GetEvaluationSet
-				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(&entity.EvaluationSet{}, nil).AnyTimes()
-
-				// Mock MGetStats
-				mgr.exptResultService.(*svcMocks.MockExptResultService).
-					EXPECT().
-					MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]*entity.ExptStats{}, nil).AnyTimes()
-
-				// Mock BatchGetExptAggrResultByExperimentIDs
-				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
-					EXPECT().
-					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
-
-				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
-					EXPECT().
-					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
-					Return(nil)
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, int64(789)).AnyTimes().
-					Return(&entity.ExptExecConf{
-						SpaceExptConcurLimit: 10,
-					})
-				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
-					EXPECT().
-					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
-					Do(func(ctx context.Context, event *entity.ExptScheduleEvent, timeout *time.Duration) {
-						assert.Equal(t, entity.EvaluationModeFailRetry, event.ExptRunMode)
-					}).
-					Return(nil)
-			},
-			wantErr: false,
-		},
-		{
-			name:    "quota_check_failure_on_retry",
-			exptID:  123,
-			runID:   456,
-			spaceID: 789,
-			ext:     map[string]string{},
-			setup: func() {
-				// Mock lwt.CheckWriteFlagByID
-				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
-					EXPECT().
-					CheckWriteFlagByID(ctx, gomock.Any(), int64(123)).
-					Return(false).AnyTimes()
-
-				// Mock MGetByID for experiment retrieval
-				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
-					EXPECT().
-					MGetByID(ctx, []int64{123}, int64(789)).
-					Return([]*entity.Experiment{{ID: 123, SpaceID: 789}}, nil).AnyTimes()
-
-				// Mock GetEvaluationSet
-				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
-					EXPECT().
-					GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(&entity.EvaluationSet{}, nil).AnyTimes()
-
-				// Mock MGetStats
-				mgr.exptResultService.(*svcMocks.MockExptResultService).
-					EXPECT().
-					MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]*entity.ExptStats{}, nil).AnyTimes()
-
-				// Mock BatchGetExptAggrResultByExperimentIDs
-				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
-					EXPECT().
-					BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
-					Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
-
-				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
-					EXPECT().
-					CreateOrUpdate(ctx, int64(789), gomock.Any(), session).
-					Return(errors.New("quota exceeded"))
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := mgr.RetryUnSuccess(ctx, tt.exptID, tt.runID, tt.spaceID, session, tt.ext)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("RetryUnSuccess() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

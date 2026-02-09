@@ -6,6 +6,7 @@ package experiment
 import (
 	"fmt"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -232,6 +233,7 @@ func buildTemplateConfForCreate(
 	templateConf := &entity.ExptTemplateConfiguration{
 		ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+		ItemRetryNum:        gcond.If(req.GetItemRetryNum() > 0, gptr.Of(int(req.GetItemRetryNum())), nil),
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
@@ -600,6 +602,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 
 	fieldMapping := &domain_expt.ExptFieldMapping{
 		ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+		ItemRetryNum:  gcond.If(gptr.Indirect(template.TemplateConf.ItemRetryNum) > 0, gptr.Of(int32(gptr.Indirect(template.TemplateConf.ItemRetryNum))), nil),
 	}
 
 	if template.FieldMappingConfig.TargetFieldMapping != nil {

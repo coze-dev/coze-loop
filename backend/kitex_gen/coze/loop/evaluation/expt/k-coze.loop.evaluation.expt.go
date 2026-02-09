@@ -5925,6 +5925,20 @@ func (p *RunExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 11:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -6053,6 +6067,20 @@ func (p *RunExperimentRequest) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *RunExperimentRequest) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return offset, nil
+}
+
 func (p *RunExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -6118,6 +6146,7 @@ func (p *RunExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
@@ -6135,6 +6164,7 @@ func (p *RunExperimentRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field10Length()
+		l += p.field11Length()
 		l += p.field100Length()
 		l += p.field200Length()
 		l += p.field255Length()
@@ -6182,6 +6212,15 @@ func (p *RunExperimentRequest) fastWriteField10(buf []byte, w thrift.NocopyWrite
 	if p.IsSetExptType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 10)
 		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.ExptType))
+	}
+	return offset
+}
+
+func (p *RunExperimentRequest) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemRetryNum() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 11)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemRetryNum)
 	}
 	return offset
 }
@@ -6259,6 +6298,15 @@ func (p *RunExperimentRequest) field10Length() int {
 	return l
 }
 
+func (p *RunExperimentRequest) field11Length() int {
+	l := 0
+	if p.IsSetItemRetryNum() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
 func (p *RunExperimentRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -6320,6 +6368,11 @@ func (p *RunExperimentRequest) DeepCopy(s interface{}) error {
 	if src.ExptType != nil {
 		tmp := *src.ExptType
 		p.ExptType = &tmp
+	}
+
+	if src.ItemRetryNum != nil {
+		tmp := *src.ItemRetryNum
+		p.ItemRetryNum = &tmp
 	}
 
 	if src.Ext != nil {

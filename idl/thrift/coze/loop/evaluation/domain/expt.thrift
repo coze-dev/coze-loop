@@ -62,6 +62,7 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+    45: optional i32 item_retry_num
 
     51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 
@@ -78,7 +79,6 @@ struct ExptTemplateMeta {
     3: optional string name
     4: optional string desc
     5: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
-
 }
 
 // 实验三元组配置
@@ -99,6 +99,7 @@ struct ExptFieldMapping {
     2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
     3: optional common.RuntimeParam target_runtime_param
     4: optional i32 item_concur_num
+    5: optional i32 item_retry_num
 }
 
 // 实验评估器得分加权配置

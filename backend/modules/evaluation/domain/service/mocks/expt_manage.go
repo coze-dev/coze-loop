@@ -358,32 +358,32 @@ func (mr *MockIExptManagerMockRecorder) PendRun(ctx, exptID, exptRunID, spaceID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendRun", reflect.TypeOf((*MockIExptManager)(nil).PendRun), ctx, exptID, exptRunID, spaceID, session)
 }
 
-// RetryUnSuccess mocks base method.
-func (m *MockIExptManager) RetryUnSuccess(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, ext map[string]string) error {
+// RetryItems mocks base method.
+func (m *MockIExptManager) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RetryUnSuccess", ctx, exptID, runID, spaceID, session, ext)
+	ret := m.ctrl.Call(m, "RetryItems", ctx, exptID, runID, spaceID, itemRetryNum, itemIDs, session, ext)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RetryUnSuccess indicates an expected call of RetryUnSuccess.
-func (mr *MockIExptManagerMockRecorder) RetryUnSuccess(ctx, exptID, runID, spaceID, session, ext any) *gomock.Call {
+// RetryItems indicates an expected call of RetryItems.
+func (mr *MockIExptManagerMockRecorder) RetryItems(ctx, exptID, runID, spaceID, itemRetryNum, itemIDs, session, ext any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryUnSuccess", reflect.TypeOf((*MockIExptManager)(nil).RetryUnSuccess), ctx, exptID, runID, spaceID, session, ext)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RetryItems", reflect.TypeOf((*MockIExptManager)(nil).RetryItems), ctx, exptID, runID, spaceID, itemRetryNum, itemIDs, session, ext)
 }
 
 // Run mocks base method.
-func (m *MockIExptManager) Run(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
+func (m *MockIExptManager) Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", ctx, exptID, runID, spaceID, session, runMode, ext)
+	ret := m.ctrl.Call(m, "Run", ctx, exptID, runID, spaceID, itemRetryNum, session, runMode, ext)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockIExptManagerMockRecorder) Run(ctx, exptID, runID, spaceID, session, runMode, ext any) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) Run(ctx, exptID, runID, spaceID, itemRetryNum, session, runMode, ext any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockIExptManager)(nil).Run), ctx, exptID, runID, spaceID, session, runMode, ext)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockIExptManager)(nil).Run), ctx, exptID, runID, spaceID, itemRetryNum, session, runMode, ext)
 }
 
 // SetExptTerminating mocks base method.

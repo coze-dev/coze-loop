@@ -355,6 +355,7 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 			ExptRunMode:   event.ExptRunMode,
 			EvalSetItemID: ts.ItemID,
 			CreateAt:      now,
+			MaxRetryTimes: event.ItemRetryTimes,
 			Ext:           event.Ext,
 			Session:       event.Session,
 		})
