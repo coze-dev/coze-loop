@@ -282,26 +282,6 @@ struct AsyncDebugEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
-struct GetAsyncDebugEvaluatorInvokeResultRequest {
-    1: required i64 workspace_id (api.query='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
-    2: required i64 invoke_id (api.js_conv="true", api.path='invoke_id', go.path = 'json:"invoke_id"')
-
-    255: optional base.Base Base
-}
-
-struct GetAsyncDebugEvaluatorInvokeResultResponse {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: optional evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')
-    3: optional evaluator.EvaluatorInputData input_data (api.body='input_data')
-    4: optional evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
-
-    11: optional evaluator.EvaluatorRunStatus status (api.js_conv="true", go.tag = 'json:"status"')
-    12: optional evaluator.EvaluatorOutputData output_data (api.body='output_data') // 输出数据
-
-    255: base.BaseResp BaseResp
-}
-
-
 struct BatchDebugEvaluatorRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
     2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')                     // 待调试评估器内容
@@ -559,12 +539,11 @@ service EvaluatorService {
     DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug")// evaluator 调试
     BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/batch_debug")// evaluator 调试
     AsyncDebugEvaluatorResponse AsyncDebugEvaluator(1: AsyncDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/async_debug")// evaluator 异步调试
-    GetAsyncDebugEvaluatorInvokeResultResponse GetAsyncDebugEvaluatorInvokeResult(1: GetAsyncDebugEvaluatorInvokeResultRequest req) (api.get="/api/evaluation/v1/evaluators/async_debug/result/:invoke_id")// 获取evaluator 异步调试结果
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
-    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
-    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
+    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req) (api.get="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 获取evaluator运行记录详情
+    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req) (api.post="/api/evaluation/v1/evaluator_records/batch_get") // 按id批量查询evaluator运行记录详情
     
     // 评估器验证
     ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
