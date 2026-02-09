@@ -6935,9 +6935,9 @@ func (p *InvokeEvaluatorRunError) Field2DeepEqual(src *string) bool {
 }
 
 type EvaluatorExtraOutputContent struct {
-	OutputType  *EvaluatorExtraOutputType `thrift:"output_type,1,optional" frugal:"1,optional,string" form:"output_type" json:"output_type,omitempty" query:"output_type"`
-	HTMLURL     *string                   `thrift:"html_url,2,optional" frugal:"2,optional,string" form:"html_url" json:"html_url,omitempty" query:"html_url"`
-	MarkdownURL *string                   `thrift:"markdown_url,3,optional" frugal:"3,optional,string" form:"markdown_url" json:"markdown_url,omitempty" query:"markdown_url"`
+	OutputType *EvaluatorExtraOutputType `thrift:"output_type,1,optional" frugal:"1,optional,string" form:"output_type" json:"output_type,omitempty" query:"output_type"`
+	URI        *string                   `thrift:"uri,2,optional" frugal:"2,optional,string" form:"uri" json:"uri,omitempty" query:"uri"`
+	URL        *string                   `thrift:"url,3,optional" frugal:"3,optional,string" form:"url" json:"url,omitempty" query:"url"`
 }
 
 func NewEvaluatorExtraOutputContent() *EvaluatorExtraOutputContent {
@@ -6959,55 +6959,55 @@ func (p *EvaluatorExtraOutputContent) GetOutputType() (v EvaluatorExtraOutputTyp
 	return *p.OutputType
 }
 
-var EvaluatorExtraOutputContent_HTMLURL_DEFAULT string
+var EvaluatorExtraOutputContent_URI_DEFAULT string
 
-func (p *EvaluatorExtraOutputContent) GetHTMLURL() (v string) {
+func (p *EvaluatorExtraOutputContent) GetURI() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetHTMLURL() {
-		return EvaluatorExtraOutputContent_HTMLURL_DEFAULT
+	if !p.IsSetURI() {
+		return EvaluatorExtraOutputContent_URI_DEFAULT
 	}
-	return *p.HTMLURL
+	return *p.URI
 }
 
-var EvaluatorExtraOutputContent_MarkdownURL_DEFAULT string
+var EvaluatorExtraOutputContent_URL_DEFAULT string
 
-func (p *EvaluatorExtraOutputContent) GetMarkdownURL() (v string) {
+func (p *EvaluatorExtraOutputContent) GetURL() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetMarkdownURL() {
-		return EvaluatorExtraOutputContent_MarkdownURL_DEFAULT
+	if !p.IsSetURL() {
+		return EvaluatorExtraOutputContent_URL_DEFAULT
 	}
-	return *p.MarkdownURL
+	return *p.URL
 }
 func (p *EvaluatorExtraOutputContent) SetOutputType(val *EvaluatorExtraOutputType) {
 	p.OutputType = val
 }
-func (p *EvaluatorExtraOutputContent) SetHTMLURL(val *string) {
-	p.HTMLURL = val
+func (p *EvaluatorExtraOutputContent) SetURI(val *string) {
+	p.URI = val
 }
-func (p *EvaluatorExtraOutputContent) SetMarkdownURL(val *string) {
-	p.MarkdownURL = val
+func (p *EvaluatorExtraOutputContent) SetURL(val *string) {
+	p.URL = val
 }
 
 var fieldIDToName_EvaluatorExtraOutputContent = map[int16]string{
 	1: "output_type",
-	2: "html_url",
-	3: "markdown_url",
+	2: "uri",
+	3: "url",
 }
 
 func (p *EvaluatorExtraOutputContent) IsSetOutputType() bool {
 	return p.OutputType != nil
 }
 
-func (p *EvaluatorExtraOutputContent) IsSetHTMLURL() bool {
-	return p.HTMLURL != nil
+func (p *EvaluatorExtraOutputContent) IsSetURI() bool {
+	return p.URI != nil
 }
 
-func (p *EvaluatorExtraOutputContent) IsSetMarkdownURL() bool {
-	return p.MarkdownURL != nil
+func (p *EvaluatorExtraOutputContent) IsSetURL() bool {
+	return p.URL != nil
 }
 
 func (p *EvaluatorExtraOutputContent) Read(iprot thrift.TProtocol) (err error) {
@@ -7100,7 +7100,7 @@ func (p *EvaluatorExtraOutputContent) ReadField2(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.HTMLURL = _field
+	p.URI = _field
 	return nil
 }
 func (p *EvaluatorExtraOutputContent) ReadField3(iprot thrift.TProtocol) error {
@@ -7111,7 +7111,7 @@ func (p *EvaluatorExtraOutputContent) ReadField3(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.MarkdownURL = _field
+	p.URL = _field
 	return nil
 }
 
@@ -7170,11 +7170,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *EvaluatorExtraOutputContent) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetHTMLURL() {
-		if err = oprot.WriteFieldBegin("html_url", thrift.STRING, 2); err != nil {
+	if p.IsSetURI() {
+		if err = oprot.WriteFieldBegin("uri", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.HTMLURL); err != nil {
+		if err := oprot.WriteString(*p.URI); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -7188,11 +7188,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *EvaluatorExtraOutputContent) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetMarkdownURL() {
-		if err = oprot.WriteFieldBegin("markdown_url", thrift.STRING, 3); err != nil {
+	if p.IsSetURL() {
+		if err = oprot.WriteFieldBegin("url", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.MarkdownURL); err != nil {
+		if err := oprot.WriteString(*p.URL); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -7223,10 +7223,10 @@ func (p *EvaluatorExtraOutputContent) DeepEqual(ano *EvaluatorExtraOutputContent
 	if !p.Field1DeepEqual(ano.OutputType) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.HTMLURL) {
+	if !p.Field2DeepEqual(ano.URI) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.MarkdownURL) {
+	if !p.Field3DeepEqual(ano.URL) {
 		return false
 	}
 	return true
@@ -7246,24 +7246,24 @@ func (p *EvaluatorExtraOutputContent) Field1DeepEqual(src *EvaluatorExtraOutputT
 }
 func (p *EvaluatorExtraOutputContent) Field2DeepEqual(src *string) bool {
 
-	if p.HTMLURL == src {
+	if p.URI == src {
 		return true
-	} else if p.HTMLURL == nil || src == nil {
+	} else if p.URI == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.HTMLURL, *src) != 0 {
+	if strings.Compare(*p.URI, *src) != 0 {
 		return false
 	}
 	return true
 }
 func (p *EvaluatorExtraOutputContent) Field3DeepEqual(src *string) bool {
 
-	if p.MarkdownURL == src {
+	if p.URL == src {
 		return true
-	} else if p.MarkdownURL == nil || src == nil {
+	} else if p.URL == nil || src == nil {
 		return false
 	}
-	if strings.Compare(*p.MarkdownURL, *src) != 0 {
+	if strings.Compare(*p.URL, *src) != 0 {
 		return false
 	}
 	return true

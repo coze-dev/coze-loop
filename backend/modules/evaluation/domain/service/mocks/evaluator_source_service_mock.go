@@ -41,6 +41,34 @@ func (m *MockEvaluatorSourceService) EXPECT() *MockEvaluatorSourceServiceMockRec
 	return m.recorder
 }
 
+// AsyncDebug mocks base method.
+func (m *MockEvaluatorSourceService) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncDebug", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AsyncDebug indicates an expected call of AsyncDebug.
+func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncDebug(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncDebug", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncDebug), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+}
+
+// AsyncRun mocks base method.
+func (m *MockEvaluatorSourceService) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncRun", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AsyncRun indicates an expected call of AsyncRun.
+func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncRun(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncRun", reflect.TypeOf((*MockEvaluatorSourceService)(nil).AsyncRun), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
+}
+
 // Debug mocks base method.
 func (m *MockEvaluatorSourceService) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	m.ctrl.T.Helper()
@@ -68,6 +96,37 @@ func (m *MockEvaluatorSourceService) EvaluatorType() entity.EvaluatorType {
 func (mr *MockEvaluatorSourceServiceMockRecorder) EvaluatorType() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EvaluatorType", reflect.TypeOf((*MockEvaluatorSourceService)(nil).EvaluatorType))
+}
+
+// GetAsyncDebugResult mocks base method.
+func (m *MockEvaluatorSourceService) GetAsyncDebugResult(ctx context.Context, spaceID, invokeID int64) (*entity.GetAsyncDebugEvaluatorInvokeResultResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAsyncDebugResult", ctx, spaceID, invokeID)
+	ret0, _ := ret[0].(*entity.GetAsyncDebugEvaluatorInvokeResultResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAsyncDebugResult indicates an expected call of GetAsyncDebugResult.
+func (mr *MockEvaluatorSourceServiceMockRecorder) GetAsyncDebugResult(ctx, spaceID, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncDebugResult", reflect.TypeOf((*MockEvaluatorSourceService)(nil).GetAsyncDebugResult), ctx, spaceID, invokeID)
+}
+
+// GetAsyncRunResult mocks base method.
+func (m *MockEvaluatorSourceService) GetAsyncRunResult(ctx context.Context, spaceID, invokeID int64) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAsyncRunResult", ctx, spaceID, invokeID)
+	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
+	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetAsyncRunResult indicates an expected call of GetAsyncRunResult.
+func (mr *MockEvaluatorSourceServiceMockRecorder) GetAsyncRunResult(ctx, spaceID, invokeID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAsyncRunResult", reflect.TypeOf((*MockEvaluatorSourceService)(nil).GetAsyncRunResult), ctx, spaceID, invokeID)
 }
 
 // PreHandle mocks base method.

@@ -8463,7 +8463,7 @@ func (p *EvaluatorExtraOutputContent) FastReadField2(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.HTMLURL = _field
+	p.URI = _field
 	return offset, nil
 }
 
@@ -8477,7 +8477,7 @@ func (p *EvaluatorExtraOutputContent) FastReadField3(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
-	p.MarkdownURL = _field
+	p.URL = _field
 	return offset, nil
 }
 
@@ -8518,18 +8518,18 @@ func (p *EvaluatorExtraOutputContent) fastWriteField1(buf []byte, w thrift.Nocop
 
 func (p *EvaluatorExtraOutputContent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetHTMLURL() {
+	if p.IsSetURI() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.HTMLURL)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URI)
 	}
 	return offset
 }
 
 func (p *EvaluatorExtraOutputContent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetMarkdownURL() {
+	if p.IsSetURL() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.MarkdownURL)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URL)
 	}
 	return offset
 }
@@ -8545,18 +8545,18 @@ func (p *EvaluatorExtraOutputContent) field1Length() int {
 
 func (p *EvaluatorExtraOutputContent) field2Length() int {
 	l := 0
-	if p.IsSetHTMLURL() {
+	if p.IsSetURI() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.HTMLURL)
+		l += thrift.Binary.StringLengthNocopy(*p.URI)
 	}
 	return l
 }
 
 func (p *EvaluatorExtraOutputContent) field3Length() int {
 	l := 0
-	if p.IsSetMarkdownURL() {
+	if p.IsSetURL() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.MarkdownURL)
+		l += thrift.Binary.StringLengthNocopy(*p.URL)
 	}
 	return l
 }
@@ -8572,20 +8572,20 @@ func (p *EvaluatorExtraOutputContent) DeepCopy(s interface{}) error {
 		p.OutputType = &tmp
 	}
 
-	if src.HTMLURL != nil {
+	if src.URI != nil {
 		var tmp string
-		if *src.HTMLURL != "" {
-			tmp = kutils.StringDeepCopy(*src.HTMLURL)
+		if *src.URI != "" {
+			tmp = kutils.StringDeepCopy(*src.URI)
 		}
-		p.HTMLURL = &tmp
+		p.URI = &tmp
 	}
 
-	if src.MarkdownURL != nil {
+	if src.URL != nil {
 		var tmp string
-		if *src.MarkdownURL != "" {
-			tmp = kutils.StringDeepCopy(*src.MarkdownURL)
+		if *src.URL != "" {
+			tmp = kutils.StringDeepCopy(*src.URL)
 		}
-		p.MarkdownURL = &tmp
+		p.URL = &tmp
 	}
 
 	return nil
