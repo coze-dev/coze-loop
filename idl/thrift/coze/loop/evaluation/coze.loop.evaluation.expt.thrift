@@ -731,11 +731,11 @@ service ExperimentService {
 
     // SubmitExperiment 创建并提交运行
     SubmitExperimentResponse SubmitExperiment(1: SubmitExperimentRequest req) (
-        api.post = '/api/evaluation/v1/experiments/submit', api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = '/api/evaluation/v1/experiments/submit', api.op_type = 'create', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     BatchGetExperimentsResponse BatchGetExperiments(1: BatchGetExperimentsRequest req) (
-        api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = '/api/evaluation/v1/experiments/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     ListExperimentsResponse ListExperiments(1: ListExperimentsRequest req) (
@@ -771,7 +771,7 @@ service ExperimentService {
 
     // MGetExperimentResult 获取实验结果
     BatchGetExperimentResultResponse BatchGetExperimentResult(1: BatchGetExperimentResultRequest req) (
-        api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = "/api/evaluation/v1/experiments/results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     CalculateExperimentAggrResultResponse CalculateExperimentAggrResult(1: CalculateExperimentAggrResultRequest req) (
@@ -779,7 +779,7 @@ service ExperimentService {
     )
 
     BatchGetExperimentAggrResultResponse BatchGetExperimentAggrResult(1: BatchGetExperimentAggrResultRequest req) (
-        api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = "/api/evaluation/v1/experiments/aggr_results/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit,open', api.category = 'experiment'
     )
 
     // 在线实验
