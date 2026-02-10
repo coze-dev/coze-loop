@@ -34,6 +34,10 @@ type ExptItemEvalEvent struct {
 	Session       *Session
 }
 
+func (e *ExptItemEvalEvent) IgnoreExistedResult() bool {
+	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
+}
+
 func (e *ExptItemEvalEvent) GetExptID() int64 {
 	if e == nil {
 		return 0

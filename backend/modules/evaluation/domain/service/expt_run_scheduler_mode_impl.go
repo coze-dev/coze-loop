@@ -90,6 +90,10 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
 		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+	case entity.EvaluationModeRetryAll:
+		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+	case entity.EvaluationModeRetryItems:
+		return NewExptRetryItemsExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -892,17 +896,17 @@ func makeEndIdemKey(event *entity.ExptScheduleEvent) string {
 }
 
 func NewExptRetryAllExec(
-	configer component.IConfiger,
-	evaluationSetItemService EvaluationSetItemService,
-	evaluatorRecordService EvaluatorRecordService,
+	manager IExptManager,
 	exptItemResultRepo repo.IExptItemResultRepo,
-	exptRepo repo.IExperimentRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
-	idem idem.IdempotentService,
 	idgenerator idgen.IIDGenerator,
-	manager IExptManager,
+	evaluationSetItemService EvaluationSetItemService,
+	exptRepo repo.IExperimentRepo,
+	idem idem.IdempotentService,
+	configer component.IConfiger,
 	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
 ) *ExptRetryAllExec {
 	return &ExptRetryAllExec{
@@ -1116,6 +1120,36 @@ func (e *ExptRetryAllExec) PublishResult(ctx context.Context, turnEvaluatorRefs 
 		return nil
 	}
 	return newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).publishResult(ctx, turnEvaluatorRefs, event)
+}
+
+func NewExptRetryItemsExec(
+	manager IExptManager,
+	exptItemResultRepo repo.IExptItemResultRepo,
+	exptStatsRepo repo.IExptStatsRepo,
+	exptTurnResultRepo repo.IExptTurnResultRepo,
+	idgenerator idgen.IIDGenerator,
+	evaluationSetItemService EvaluationSetItemService,
+	exptRepo repo.IExperimentRepo,
+	idem idem.IdempotentService,
+	configer component.IConfiger,
+	publisher events.ExptEventPublisher,
+	evaluatorRecordService EvaluatorRecordService,
+	templateManager IExptTemplateManager,
+) *ExptRetryItemsExec {
+	return &ExptRetryItemsExec{
+		configer:                 configer,
+		evaluationSetItemService: evaluationSetItemService,
+		evaluatorRecordService:   evaluatorRecordService,
+		exptItemResultRepo:       exptItemResultRepo,
+		exptRepo:                 exptRepo,
+		exptStatsRepo:            exptStatsRepo,
+		exptTurnResultRepo:       exptTurnResultRepo,
+		idem:                     idem,
+		idgenerator:              idgenerator,
+		manager:                  manager,
+		publisher:                publisher,
+		templateManager:          templateManager,
+	}
 }
 
 type ExptRetryItemsExec struct {

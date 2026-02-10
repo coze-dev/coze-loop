@@ -374,6 +374,11 @@ func NewRecordEvalMode(
 			resultSvc:          resultSvc,
 			idgen:              idgen,
 		}, nil
+	case entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems:
+		return &ExptRecordEvalModeRetryIgnoreResult{
+			exptTurnResultRepo: exptTurnResultRepo,
+			idgen:              idgen,
+		}, nil
 	default:
 		return nil, fmt.Errorf("NewRecordEvalMode with unknown expt mode: %v", event.ExptRunMode)
 	}
@@ -387,13 +392,12 @@ type ExptRecordEvalModeSubmit struct {
 }
 
 func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
+		return nil
+	}
+
 	event := eiec.Event
 	turns := eiec.EvalSetItem.Turns
-
-	// if err := e.exptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, map[string]any{"status": int32(entity.ItemRunState_Processing)},
-	//	event.SpaceID); err != nil {
-	//	return err
-	// }
 
 	got, err := e.exptTurnResultRepo.GetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
 	if err != nil {
@@ -504,5 +508,52 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 }
 
 func (e *ExptRecordEvalModeFailRetry) PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	return nil
+}
+
+type ExptRecordEvalModeRetryIgnoreResult struct {
+	exptTurnResultRepo repo.IExptTurnResultRepo
+	idgen              idgen.IIDGenerator
+}
+
+func (e *ExptRecordEvalModeRetryIgnoreResult) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
+	if eiec.GetExistItemResultLog() != nil && len(eiec.GetExistTurnResultLogs()) > 0 {
+		return nil
+	}
+
+	event := eiec.Event
+	logID := logs.GetLogID(ctx)
+
+	ids, err := e.idgen.GenMultiIDs(ctx, len(eiec.EvalSetItem.Turns))
+	if err != nil {
+		return err
+	}
+
+	turnRunLogs := make([]*entity.ExptTurnResultRunLog, 0, len(eiec.EvalSetItem.Turns))
+	for idx, turn := range eiec.EvalSetItem.Turns {
+		turnRunLogs = append(turnRunLogs, &entity.ExptTurnResultRunLog{
+			ID:        ids[idx],
+			SpaceID:   event.SpaceID,
+			ExptID:    event.ExptID,
+			ExptRunID: event.ExptRunID,
+			ItemID:    event.EvalSetItemID,
+			TurnID:    turn.ID,
+			Status:    entity.TurnRunState_Processing,
+			LogID:     logID,
+		})
+	}
+
+	if err := e.exptTurnResultRepo.BatchCreateNXRunLog(ctx, turnRunLogs); err != nil {
+		return err
+	}
+
+	eiec.ExistItemEvalResult.TurnResultRunLogs = gslice.ToMap(turnRunLogs, func(t *entity.ExptTurnResultRunLog) (int64, *entity.ExptTurnResultRunLog) {
+		return t.TurnID, t
+	})
+
+	return nil
+}
+
+func (e *ExptRecordEvalModeRetryIgnoreResult) PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
 	return nil
 }

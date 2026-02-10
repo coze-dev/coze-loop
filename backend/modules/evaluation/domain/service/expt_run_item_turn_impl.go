@@ -100,7 +100,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if existRecord := e.existedTargetRecord(etec); existRecord != nil {
+	if existRecord := e.existedTargetRecord(etec); etec.Event.IgnoreExistedResult() && existRecord != nil {
 		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
 		return existRecord, nil
 	}
@@ -266,7 +266,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
-		if existResult != nil && existResult.Status == entity.EvaluatorRunStatusSuccess {
+		if etec.Event.IgnoreExistedResult() && existResult != nil && existResult.Status == entity.EvaluatorRunStatusSuccess {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}
