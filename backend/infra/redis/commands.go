@@ -73,6 +73,7 @@ type SortedSetCmdable interface {
 // ListCmdable copy methods we need in [redis.ListCmdable]
 type ListCmdable interface {
 	RPush(ctx context.Context, key string, values ...any) *redis.IntCmd
+	LRange(ctx context.Context, key string, start int64, stop int64) *redis.StringSliceCmd
 }
 
 type Pipeliner interface {
