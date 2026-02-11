@@ -1,33 +1,33 @@
 namespace go stone.fornax.ml_flow.domain.filter
 
 typedef string QueryType
-const QueryType query_type_match = "match"
-const QueryType query_type_not_match = "not_match"
-const QueryType query_type_eq = "eq"
-const QueryType query_type_not_eq = "not_eq"
-const QueryType query_type_lte= "lte"
-const QueryType query_type_gte = "gte"
-const QueryType query_type_lt = "lt"
-const QueryType query_type_gt = "gt"
-const QueryType query_type_exist = "exist"
-const QueryType query_type_not_exist = "not_exist"
-const QueryType query_type_in = "in"
-const QueryType query_type_not_in = "not_in"
-const QueryType query_type_is_null = "is_null"
-const QueryType query_type_not_null = "not_null"
+const QueryType QueryType_Match = "match"
+const QueryType QueryType_NotMatch = "not_match"
+const QueryType QueryType_Eq = "eq"
+const QueryType QueryType_NotEq = "not_eq"
+const QueryType QueryType_Lte= "lte"
+const QueryType QueryType_Gte = "gte"
+const QueryType QueryType_Lt = "lt"
+const QueryType QueryType_Gt = "gt"
+const QueryType QueryType_Exist = "exist"
+const QueryType QueryType_NotExist = "not_exist"
+const QueryType QueryType_In = "in"
+const QueryType QueryType_NotIn = "not_in"
+const QueryType QueryType_IsNull = "is_null"
+const QueryType QueryType_NotNull = "not_null"
 
 typedef string QueryRelation
-const QueryRelation query_relation_and = "and"
-const QueryRelation query_relation_or = "or"
+const QueryRelation QueryRelation_And = "and"
+const QueryRelation QueryRelation_Or = "or"
 
 typedef string FieldType
-const FieldType field_type_string = "string"
-const FieldType field_type_long = "long"
-const FieldType field_type_double = "double"
-const FieldType field_type_bool = "bool"
-const FieldType field_type_float = "float"
-const FieldType field_type_tag = "tag"
-const FieldType field_type_integer = "integer"
+const FieldType FieldType_String = "string"
+const FieldType FieldType_Long = "long"
+const FieldType FieldType_Double = "double"
+const FieldType FieldType_Bool = "bool"
+const FieldType FieldType_Float = "float"
+const FieldType FieldType_Tag = "tag"
+const FieldType FieldType_Integer = "integer"
 
 
 
