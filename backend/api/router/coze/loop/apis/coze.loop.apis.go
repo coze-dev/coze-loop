@@ -460,7 +460,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
 				{
 					_evaluators1 := _evaluation0.Group("/evaluators", _evaluators1Mw(handler)...)
-					_evaluators1.POST("/progress", append(_reportevaluatorinvokeprogressMw(handler), apis.ReportEvaluatorInvokeProgress)...)
 					_evaluators1.POST("/result", append(_reportevaluatorinvokeresultMw(handler), apis.ReportEvaluatorInvokeResult)...)
 				}
 			}
