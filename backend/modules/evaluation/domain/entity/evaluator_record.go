@@ -59,16 +59,6 @@ type EvaluatorRunError struct {
 	Message string `json:"message,omitempty"`
 }
 
-type EvaluatorProgressMessage struct {
-	// 如 system, assistant
-	Role string `json:"role,omitempty"`
-	// 如 tool_use, tool_result
-	Type string `json:"type,omitempty"`
-	// 如 Check current user identity and working directory
-	Message     string `json:"message,omitempty"`
-	CreatedAtMs int64  `json:"created_at_ms,omitempty"`
-}
-
 type EvaluatorRunStatus int64
 
 const (

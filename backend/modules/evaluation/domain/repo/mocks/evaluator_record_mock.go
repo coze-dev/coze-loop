@@ -98,3 +98,17 @@ func (mr *MockIEvaluatorRecordRepoMockRecorder) GetEvaluatorRecord(ctx, evaluato
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).GetEvaluatorRecord), ctx, evaluatorRecordID, includeDeleted)
 }
+
+// UpdateEvaluatorRecordResult mocks base method.
+func (m *MockIEvaluatorRecordRepo) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordResult", ctx, recordID, status, outputData)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvaluatorRecordResult indicates an expected call of UpdateEvaluatorRecordResult.
+func (mr *MockIEvaluatorRecordRepoMockRecorder) UpdateEvaluatorRecordResult(ctx, recordID, status, outputData any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).UpdateEvaluatorRecordResult), ctx, recordID, status, outputData)
+}

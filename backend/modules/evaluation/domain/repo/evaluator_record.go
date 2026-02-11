@@ -16,5 +16,4 @@ type IEvaluatorRecordRepo interface {
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error)
 	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error
-	RPushEvaluatorProgress(ctx context.Context, invokeID int64, messages []*entity.EvaluatorProgressMessage) error
 }

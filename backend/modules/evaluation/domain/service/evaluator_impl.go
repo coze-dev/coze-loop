@@ -832,12 +832,6 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 	return e.evaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, param.RecordID, param.Status, param.OutputData)
 }
 
-// RPushEvaluatorProgress 将评估器执行过程推送到 Redis list
-func (e *EvaluatorServiceImpl) RPushEvaluatorProgress(ctx context.Context, invokeID int64, messages []*entity.EvaluatorProgressMessage) error {
-	logs.CtxInfo(ctx, "[RPushEvaluatorProgress] invokeID: %d, messages count: %d", invokeID, len(messages))
-	return e.evaluatorRecordRepo.RPushEvaluatorProgress(ctx, invokeID, messages)
-}
-
 // DebugEvaluator 调试 evaluator_version
 func (e *EvaluatorServiceImpl) DebugEvaluator(ctx context.Context, evaluatorDO *entity.Evaluator, inputData *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (*entity.EvaluatorOutputData, error) {
 	if evaluatorDO == nil || (evaluatorDO.EvaluatorType == entity.EvaluatorTypePrompt && evaluatorDO.PromptEvaluatorVersion == nil) {

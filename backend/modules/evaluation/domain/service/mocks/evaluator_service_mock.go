@@ -298,20 +298,6 @@ func (mr *MockEvaluatorServiceMockRecorder) ListEvaluatorVersion(ctx, request an
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).ListEvaluatorVersion), ctx, request)
 }
 
-// RPushEvaluatorProgress mocks base method.
-func (m *MockEvaluatorService) RPushEvaluatorProgress(ctx context.Context, invokeID int64, messages []*entity.EvaluatorProgressMessage) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RPushEvaluatorProgress", ctx, invokeID, messages)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RPushEvaluatorProgress indicates an expected call of RPushEvaluatorProgress.
-func (mr *MockEvaluatorServiceMockRecorder) RPushEvaluatorProgress(ctx, invokeID, messages any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPushEvaluatorProgress", reflect.TypeOf((*MockEvaluatorService)(nil).RPushEvaluatorProgress), ctx, invokeID, messages)
-}
-
 // ReportEvaluatorInvokeResult mocks base method.
 func (m *MockEvaluatorService) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
 	m.ctrl.T.Helper()

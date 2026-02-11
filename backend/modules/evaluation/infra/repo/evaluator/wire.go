@@ -4,7 +4,6 @@
 package evaluator
 
 import (
-	evaluatorredis "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/redis/dao"
 	"github.com/google/wire"
 
 	evaluatormysql "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
@@ -18,5 +17,4 @@ var EvaluatorRepoSet = wire.NewSet(
 	NewPlainRateLimiterImpl,
 	// DAO Sets
 	evaluatormysql.EvaluatorMySQLDAOSet,
-	evaluatorredis.EvaluatorRedisDAOSet,
 )
