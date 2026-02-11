@@ -11,11 +11,12 @@ import (
 type Literal string
 
 const (
-	TextLiteral      Literal = "text"
-	ImageLiteral     Literal = "image"
-	ImageUrlLiteral  Literal = "image_url"
-	ReasoningLiteral Literal = "reasoning"
-	ToolCallLiteral  Literal = "tool_call"
+	TextLiteral             Literal = "text"
+	ImageLiteral            Literal = "image"
+	ImageUrlLiteral         Literal = "image_url"
+	ReasoningLiteral        Literal = "reasoning"
+	ToolCallLiteral         Literal = "tool_call"
+	ToolCallResponseLiteral Literal = "tool_call_response"
 )
 
 type ModelMessagePartType string
@@ -120,9 +121,18 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 						},
 					}
 					toolCalls = append(toolCalls, modelCall)
+					part = nil
+				case string(ToolCallResponseLiteral):
+					toolCallId, _ := mcContent["id"]
+					toolCallResult, _ := mcContent["result"]
+					modelMsg["content"] = toolCallResult
+					modelMsg["tool_call_id"] = toolCallId
+					part = nil
 				default:
 				}
-				parts = append(parts, part)
+				if part != nil {
+					parts = append(parts, part)
+				}
 			}
 		}
 		if len(toolCalls) > 0 {
