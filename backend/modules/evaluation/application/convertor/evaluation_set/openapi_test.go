@@ -533,6 +533,10 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 			Format: &audioFormat,
 			URL:    &audioURL,
 		},
+		Video: &entity.Video{
+			Name: &imageName,
+			URL:  &imageURL,
+		},
 	}
 
 	do := &entity.EvaluationSetItem{
@@ -570,6 +574,8 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 								URL:      &imageURL,
 								ThumbURL: &thumbURL,
 							},
+							Audio: &common.Audio{Format: &audioFormat, URL: &audioURL},
+							Video: &common.Video{Name: &imageName, URL: &imageURL},
 							MultiPart: []*common.Content{
 								{
 									ContentType: ptr[common.ContentType](common.ContentTypeText),
