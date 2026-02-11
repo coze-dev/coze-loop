@@ -353,9 +353,91 @@ func TestPromptTemplate_formatMessages(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			formattedMsgs, err := tt.template.formatMessages(tt.messages, tt.variableVals)
 			unittest.AssertErrorEqual(t, tt.expectedError, err)
-			assert.Equal(t, tt.expectedMsgs, formattedMsgs)
+			assert.Equal(t, normalizeSkipRender(tt.expectedMsgs), normalizeSkipRender(formattedMsgs))
 		})
 	}
+}
+
+func TestPromptTemplate_formatMessages_SkipRender(t *testing.T) {
+	template := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages: []*Message{
+			{
+				Role:    RoleAssistant,
+				Content: ptr.Of("template {{name}}"),
+			},
+		},
+		VariableDefs: []*VariableDef{
+			{
+				Key:  "name",
+				Desc: "name",
+				Type: VariableTypeString,
+			},
+		},
+	}
+	messages := []*Message{
+		{
+			Role:       RoleSystem,
+			Content:    ptr.Of("system {{name}}"),
+			SkipRender: ptr.Of(true),
+		},
+		{
+			Role:    RoleUser,
+			Content: ptr.Of("user {{name}}"),
+		},
+		{
+			Role:    RoleAssistant,
+			Content: ptr.Of("assistant {{name}}"),
+		},
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("assistant forced {{name}}"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:    RoleTool,
+			Content: ptr.Of("tool {{name}}"),
+		},
+	}
+	variableVals := []*VariableVal{
+		{
+			Key:   "name",
+			Value: ptr.Of("bob"),
+		},
+	}
+	expectedMsgs := []*Message{
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("template bob"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:       RoleSystem,
+			Content:    ptr.Of("system {{name}}"),
+			SkipRender: ptr.Of(true),
+		},
+		{
+			Role:    RoleUser,
+			Content: ptr.Of("user bob"),
+		},
+		{
+			Role:    RoleAssistant,
+			Content: ptr.Of("assistant {{name}}"),
+		},
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("assistant forced bob"),
+			SkipRender: ptr.Of(false),
+		},
+		{
+			Role:    RoleTool,
+			Content: ptr.Of("tool {{name}}"),
+		},
+	}
+
+	formattedMsgs, err := template.formatMessages(messages, variableVals)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedMsgs, formattedMsgs)
 }
 
 func TestCmpEqual(t *testing.T) {
@@ -364,6 +446,34 @@ func TestCmpEqual(t *testing.T) {
 	fmt.Printf("nil cmp nil = %t\n", cmp.Equal(pd1, pd2))              // true
 	fmt.Printf("nil cmp !nil = %t\n", cmp.Equal(pd1, &PromptDetail{})) // false
 	fmt.Printf("!nil cmp nil = %t\n", cmp.Equal(&PromptDetail{}, pd2)) // false
+}
+
+func TestPromptTemplate_getTemplateMessages_SkipRenderHandling(t *testing.T) {
+	t.Parallel()
+
+	templateMsg := &Message{
+		Role:    RoleUser,
+		Content: ptr.Of("pt {{name}}"),
+	}
+	inputMsg := &Message{
+		Role:       RoleSystem,
+		Content:    ptr.Of("in {{name}}"),
+		SkipRender: ptr.Of(true),
+	}
+	pt := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages: []*Message{
+			nil,
+			templateMsg,
+		},
+	}
+
+	got := pt.getTemplateMessages([]*Message{inputMsg})
+	assert.Len(t, got, 2)
+	assert.Same(t, templateMsg, got[0])
+	assert.Equal(t, ptr.Of(false), got[0].SkipRender)
+	assert.Same(t, inputMsg, got[1])
+	assert.Equal(t, ptr.Of(true), got[1].SkipRender)
 }
 
 func TestConvertVariablesToMap(t *testing.T) {
@@ -1285,9 +1395,19 @@ func TestPromptTemplate_formatMessages_Jinja2(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			formattedMsgs, err := tt.template.formatMessages(tt.messages, tt.variableVals)
 			unittest.AssertErrorEqual(t, tt.expectedError, err)
-			assert.Equal(t, tt.expectedMsgs, formattedMsgs)
+			assert.Equal(t, normalizeSkipRender(tt.expectedMsgs), normalizeSkipRender(formattedMsgs))
 		})
 	}
+}
+
+func normalizeSkipRender(messages []*Message) []*Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestRenderGoTemplate(t *testing.T) {

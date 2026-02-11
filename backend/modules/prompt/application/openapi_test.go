@@ -2469,7 +2469,16 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 						},
 					},
 				}
-				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				expectedResponseAPIConfig := &entity.ResponseAPIConfig{
+					PreviousResponseID: ptr.Of("prev-id"),
+					EnableCaching:      ptr.Of(true),
+					SessionID:          ptr.Of("session-123"),
+				}
+				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteParam) (*entity.Reply, error) {
+						assert.Equal(t, expectedResponseAPIConfig, param.ResponseAPIConfig)
+						return expectedReply, nil
+					})
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
@@ -2493,6 +2502,11 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
 						},
+					},
+					ResponseAPIConfig: &openapi.ResponseAPIConfig{
+						PreviousResponseID: ptr.Of("prev-id"),
+						EnableCaching:      ptr.Of(true),
+						SessionID:          ptr.Of("session-123"),
 					},
 				},
 			},
@@ -3399,9 +3413,15 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 						},
 					},
 				}
+				expectedResponseAPIConfig := &entity.ResponseAPIConfig{
+					PreviousResponseID: ptr.Of("prev-id"),
+					EnableCaching:      ptr.Of(true),
+					SessionID:          ptr.Of("session-123"),
+				}
 				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						assert.Equal(t, expectedResponseAPIConfig, param.ExecuteParam.ResponseAPIConfig)
 						// 模拟发送多个流式响应 - 使用同步方式避免竞争条件
 						// 发送第一个chunk
 						param.ResultStream <- &entity.Reply{
@@ -3462,6 +3482,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
 							},
+						},
+						ResponseAPIConfig: &openapi.ResponseAPIConfig{
+							PreviousResponseID: ptr.Of("prev-id"),
+							EnableCaching:      ptr.Of(true),
+							SessionID:          ptr.Of("session-123"),
 						},
 					},
 					stream: stream,
