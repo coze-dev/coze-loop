@@ -145,5 +145,5 @@ struct AgentConfig {
 }
 
 struct SkillConfig {
-    1: optional i64 skill_id // skill id
+    1: optional i64 skill_id (api.js_conv="true") // skill id
 }
