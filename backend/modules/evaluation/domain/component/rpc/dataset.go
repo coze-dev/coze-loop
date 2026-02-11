@@ -93,6 +93,7 @@ type ListDatasetItemsParam struct {
 	PageToken       *string
 	OrderBys        []*entity.OrderBy
 	ItemIDsNotIn    []int64
+	Filter          *entity.Filter
 }
 
 type BatchGetDatasetItemsParam struct {

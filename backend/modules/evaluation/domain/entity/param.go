@@ -55,6 +55,7 @@ type ListEvaluationSetItemsParam struct {
 	PageToken       *string
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
+	Filter          *Filter
 }
 type BatchGetEvaluationSetItemsParam struct {
 	SpaceID         int64

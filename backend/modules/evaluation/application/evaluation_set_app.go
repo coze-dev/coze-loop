@@ -515,6 +515,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 		PageNumber:      req.PageNumber,
 		PageSize:        req.PageSize,
 		OrderBys:        common.ConvertOrderByDTO2DOs(req.OrderBys),
+		Filter:          req.Filter,
 	})
 	if err != nil {
 		return nil, err
