@@ -108,6 +108,7 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 					}
 				case string(ReasoningLiteral):
 					modelMsg["reasoning_content"] = text
+					part = nil
 				case string(ToolCallLiteral):
 					toolCallId, _ := mcContent["id"]
 					toolCallName, _ := mcContent["name"]
