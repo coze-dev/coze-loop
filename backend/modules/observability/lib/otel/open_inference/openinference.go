@@ -125,7 +125,10 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 					part = nil
 				case string(ToolCallResponseLiteral):
 					toolCallId, _ := mcContent["id"]
-					toolCallResult, _ := mcContent["result"]
+					toolCallResult, _ := mcContent["response"]
+					if toolCallResult == nil {
+						toolCallResult, _ = mcContent["result"]
+					}
 					modelMsg["content"] = toolCallResult
 					modelMsg["tool_call_id"] = toolCallId
 					part = nil
