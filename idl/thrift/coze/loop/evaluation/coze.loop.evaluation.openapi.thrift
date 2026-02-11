@@ -469,19 +469,6 @@ struct ReportEvaluatorInvokeResultResponse {
     255: base.BaseResp BaseResp
 }
 
-struct ReportEvaluatorInvokeProgressRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: required i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
-    3: optional list<evaluator.EvaluatorProgressMessage> progress_messages
-
-    255: optional base.Base Base
-}
-
-struct ReportEvaluatorInvokeProgressResponse {
-    255: base.BaseResp BaseResp
-}
-
-
 // ===============================
 // 服务定义
 // ===============================
@@ -531,5 +518,4 @@ service EvaluationOpenAPIService {
     // 评估器接口
     // 评估器调用结果上报接口
     ReportEvaluatorInvokeResultResponse ReportEvaluatorInvokeResult(1: ReportEvaluatorInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/result")
-    ReportEvaluatorInvokeProgressResponse ReportEvaluatorInvokeProgress(1: ReportEvaluatorInvokeProgressRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/progress")
 }

@@ -6823,7 +6823,7 @@ func (p *AgentConfig) Field1DeepEqual(src *AgentType) bool {
 
 type SkillConfig struct {
 	// skill id
-	SkillID *int64 `thrift:"skill_id,1,optional" frugal:"1,optional,i64" form:"skill_id" json:"skill_id,omitempty" query:"skill_id"`
+	SkillID *int64 `thrift:"skill_id,1,optional" frugal:"1,optional,i64" form:"skill_id" json:"skill_id,string,omitempty" query:"skill_id"`
 }
 
 func NewSkillConfig() *SkillConfig {

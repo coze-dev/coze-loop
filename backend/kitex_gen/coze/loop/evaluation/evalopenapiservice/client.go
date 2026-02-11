@@ -30,7 +30,6 @@ type Client interface {
 	ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error)
 	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
 	ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error)
-	ReportEvaluatorInvokeProgress(ctx context.Context, req *openapi.ReportEvaluatorInvokeProgressRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeProgressResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -155,9 +154,4 @@ func (p *kEvalOpenAPIServiceClient) GetExperimentAggrResultOApi(ctx context.Cont
 func (p *kEvalOpenAPIServiceClient) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ReportEvaluatorInvokeResult_(ctx, req)
-}
-
-func (p *kEvalOpenAPIServiceClient) ReportEvaluatorInvokeProgress(ctx context.Context, req *openapi.ReportEvaluatorInvokeProgressRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeProgressResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.ReportEvaluatorInvokeProgress(ctx, req)
 }
