@@ -77,6 +77,7 @@ func (d *EvaluationSetItemServiceImpl) ListEvaluationSetItems(ctx context.Contex
 		PageToken:       param.PageToken,
 		OrderBys:        param.OrderBys,
 		ItemIDsNotIn:    param.ItemIDsNotIn,
+		Filter:          param.Filter,
 	}
 	if param.VersionID == nil {
 		return d.datasetRPCAdapter.ListDatasetItems(ctx, listParam)

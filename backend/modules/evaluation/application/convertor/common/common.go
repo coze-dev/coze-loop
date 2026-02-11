@@ -247,8 +247,9 @@ func ConvertOrderByDTO2DO(order *commondto.OrderBy) *commonentity.OrderBy {
 		return nil
 	}
 	return &commonentity.OrderBy{
-		Field: order.Field,
-		IsAsc: order.IsAsc,
+		Field:      order.Field,
+		IsAsc:      order.IsAsc,
+		IsFieldKey: order.IsFieldKey,
 	}
 }
 
@@ -258,8 +259,9 @@ func ConvertOrderByDO2DTO(order *commonentity.OrderBy) *commondto.OrderBy {
 		return nil
 	}
 	return &commondto.OrderBy{
-		Field: order.Field,
-		IsAsc: order.IsAsc,
+		Field:      order.Field,
+		IsAsc:      order.IsAsc,
+		IsFieldKey: order.IsFieldKey,
 	}
 }
 
