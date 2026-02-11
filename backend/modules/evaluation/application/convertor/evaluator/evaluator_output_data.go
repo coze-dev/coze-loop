@@ -154,12 +154,14 @@ func ToInvokeEvaluatorOutputDataDO(outputData *spi.InvokeEvaluatorOutputData, st
 			EvaluatorResult:   toInvokeEvaluatorResultDO(outputData.EvaluatorResult_),
 			EvaluatorUsage:    toInvokeEvaluatorUsageDO(outputData.EvaluatorUsage),
 			EvaluatorRunError: nil,
+			ExtraOutput:       toInvokeEvaluatorExtraOutputDO(outputData.ExtraOutput),
 		}
 	case spi.InvokeEvaluatorRunStatus_FAILED:
 		return &evaluatorentity.EvaluatorOutputData{
 			EvaluatorResult:   nil,
 			EvaluatorUsage:    nil,
 			EvaluatorRunError: toInvokeEvaluatorRunErrorDO(outputData.EvaluatorRunError),
+			ExtraOutput:       toInvokeEvaluatorExtraOutputDO(outputData.ExtraOutput),
 		}
 	default:
 		return nil
@@ -197,4 +199,18 @@ func toInvokeEvaluatorRunErrorDO(runError *spi.InvokeEvaluatorRunError) *evaluat
 		Code:    runError.GetCode(),
 		Message: runError.GetMessage(),
 	}
+}
+
+func toInvokeEvaluatorExtraOutputDO(extraOutput *spi.EvaluatorExtraOutputContent) *evaluatorentity.EvaluatorExtraOutputContent {
+	if extraOutput == nil {
+		return nil
+	}
+	result := &evaluatorentity.EvaluatorExtraOutputContent{}
+	if extraOutput.OutputType != nil {
+		outputType := evaluatorentity.EvaluatorExtraOutputType(*extraOutput.OutputType)
+		result.OutputType = &outputType
+	}
+	result.URI = extraOutput.URI
+	result.URL = extraOutput.URL
+	return result
 }

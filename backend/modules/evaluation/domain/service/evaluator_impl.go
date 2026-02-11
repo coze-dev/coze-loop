@@ -723,7 +723,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	if !ok {
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
 	}
-	err = evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	asyncRunExt, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
@@ -732,7 +732,9 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	logID := logs.GetLogID(ctx)
 	status := entity.EvaluatorRunStatusAsyncInvoking
-	outputData := &entity.EvaluatorOutputData{}
+	outputData := &entity.EvaluatorOutputData{
+		Ext: asyncRunExt,
+	}
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  invokeID,
 		SpaceID:             request.SpaceID,
@@ -786,7 +788,7 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	if !ok {
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
 	}
-	err = evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	asyncDebugExt, err := evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncDebugEvaluator] AsyncDebug fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
@@ -795,7 +797,9 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	logID := logs.GetLogID(ctx)
 	status := entity.EvaluatorRunStatusAsyncInvoking
-	outputData := &entity.EvaluatorOutputData{}
+	outputData := &entity.EvaluatorOutputData{
+		Ext: asyncDebugExt,
+	}
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  invokeID,
 		SpaceID:             request.SpaceID,
@@ -829,7 +833,32 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 // ReportEvaluatorInvokeResult 上报评估器异步执行结果
 func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
 	logs.CtxInfo(ctx, "[ReportEvaluatorInvokeResult] recordID: %d, spaceID: %d, status: %v", param.RecordID, param.SpaceID, param.Status)
-	return e.evaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, param.RecordID, param.Status, param.OutputData)
+
+	existingRecord, err := e.evaluatorRecordRepo.GetEvaluatorRecord(ctx, param.RecordID, false)
+	if err != nil {
+		logs.CtxError(ctx, "[ReportEvaluatorInvokeResult] GetEvaluatorRecord fail, recordID: %d, err: %v", param.RecordID, err)
+		return err
+	}
+	if existingRecord == nil {
+		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
+	}
+
+	mergedOutputData := param.OutputData
+	if mergedOutputData == nil {
+		mergedOutputData = &entity.EvaluatorOutputData{}
+	}
+	if existingRecord.EvaluatorOutputData != nil && existingRecord.EvaluatorOutputData.Ext != nil {
+		if mergedOutputData.Ext == nil {
+			mergedOutputData.Ext = make(map[string]string)
+		}
+		for k, v := range existingRecord.EvaluatorOutputData.Ext {
+			if _, exists := mergedOutputData.Ext[k]; !exists {
+				mergedOutputData.Ext[k] = v
+			}
+		}
+	}
+
+	return e.evaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, param.RecordID, param.Status, mergedOutputData)
 }
 
 // DebugEvaluator 调试 evaluator_version
