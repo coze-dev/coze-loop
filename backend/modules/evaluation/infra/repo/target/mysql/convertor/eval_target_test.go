@@ -178,6 +178,34 @@ func TestEvalTargetVersionDO2PO(t *testing.T) {
 				assert.NotNil(t, po.TargetMeta)
 			},
 		},
+		{
+			name: "CozeWorkflow类型的版本转换",
+			do: &entity.EvalTargetVersion{
+				ID:             1,
+				EvalTargetType: entity.EvalTargetTypeCozeWorkflow,
+				CozeWorkflow:   &entity.CozeWorkflow{ID: "wf1"},
+				InputSchema:    []*entity.ArgsSchema{{Key: gptr.Of("in")}},
+				OutputSchema:   []*entity.ArgsSchema{{Key: gptr.Of("out")}},
+			},
+			expectError: false,
+			checkResult: func(t *testing.T, po *model.TargetVersion) {
+				assert.NotNil(t, po.TargetMeta)
+				assert.NotNil(t, po.InputSchema)
+				assert.NotNil(t, po.OutputSchema)
+			},
+		},
+		{
+			name: "VolcengineAgentAgentkit类型的版本转换",
+			do: &entity.EvalTargetVersion{
+				ID:              1,
+				EvalTargetType:  entity.EvalTargetTypeVolcengineAgentAgentkit,
+				VolcengineAgent: &entity.VolcengineAgent{Name: "agent"},
+			},
+			expectError: false,
+			checkResult: func(t *testing.T, po *model.TargetVersion) {
+				assert.NotNil(t, po.TargetMeta)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -391,6 +419,43 @@ func TestEvalTargetVersionPO2DO(t *testing.T) {
 			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
 				assert.NotNil(t, do)
 				assert.Equal(t, int64(1), do.ID)
+			},
+		},
+		{
+			name: "CozeWorkflow类型的版本转换",
+			targetVersionPO: &model.TargetVersion{
+				ID:         1,
+				TargetMeta: gptr.Of([]byte(`{"id":"wf1"}`)),
+			},
+			targetType: entity.EvalTargetTypeCozeWorkflow,
+			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
+				assert.NotNil(t, do)
+				assert.Equal(t, "wf1", do.CozeWorkflow.ID)
+			},
+		},
+		{
+			name: "VolcengineAgentAgentkit类型的版本转换",
+			targetVersionPO: &model.TargetVersion{
+				ID:         1,
+				TargetMeta: gptr.Of([]byte(`{"RuntimeID":"agent"}`)),
+			},
+			targetType: entity.EvalTargetTypeVolcengineAgentAgentkit,
+			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
+				assert.NotNil(t, do)
+				assert.Equal(t, "agent", *do.VolcengineAgent.RuntimeID)
+			},
+		},
+		{
+			name: "Schema转换测试",
+			targetVersionPO: &model.TargetVersion{
+				ID:           1,
+				InputSchema:  gptr.Of([]byte(`[{"key":"in"}]`)),
+				OutputSchema: gptr.Of([]byte(`[{"key":"out"}]`)),
+			},
+			targetType: entity.EvalTargetTypeCozeBot,
+			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
+				assert.Len(t, do.InputSchema, 1)
+				assert.Len(t, do.OutputSchema, 1)
 			},
 		},
 	}

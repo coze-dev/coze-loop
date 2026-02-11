@@ -20,6 +20,7 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 		name          string
 		workers       []mq.IConsumerWorker
 		setupMocks    func(*mocks.MockIFactory, []*mocks.MockIConsumer, []*mocks.MockIConsumerWorker)
+		shutdownCtx   context.Context
 		expectedError error
 	}{
 		{
@@ -37,6 +38,21 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 					factory.EXPECT().NewConsumer(gomock.Any()).Return(consumers[i], nil)
 				}
 			},
+			expectedError: nil,
+		},
+		{
+			name: "successfully start all workers with shutdown ctx",
+			workers: []mq.IConsumerWorker{
+				mocks.NewMockIConsumerWorker(gomock.NewController(t)),
+			},
+			setupMocks: func(factory *mocks.MockIFactory, consumers []*mocks.MockIConsumer, workers []*mocks.MockIConsumerWorker) {
+				cfg := &mq.ConsumerConfig{}
+				workers[0].EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+				consumers[0].EXPECT().RegisterHandler(gomock.Any()).Return()
+				consumers[0].EXPECT().Start().Return(nil)
+				factory.EXPECT().NewConsumer(gomock.Any()).Return(consumers[0], nil)
+			},
+			shutdownCtx:   context.Background(),
 			expectedError: nil,
 		},
 		{
@@ -92,9 +108,12 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 			}
 
 			tt.setupMocks(factory, consumers, workers)
-
-			registry := NewConsumerRegistry(factory).Register(tt.workers)
-
+			var registry mq.ConsumerRegistry
+			if tt.shutdownCtx != nil {
+				registry = NewConsumerRegistryWithShutdown(tt.shutdownCtx, factory).Register(tt.workers)
+			} else {
+				registry = NewConsumerRegistry(factory).Register(tt.workers)
+			}
 			err := registry.StartAll(context.Background())
 			if tt.expectedError != nil {
 				assert.Error(t, err)
@@ -104,6 +123,69 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultConsumerRegistry_StopAll(t *testing.T) {
+	t.Run("no consumers", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		registry := NewConsumerRegistry(factory)
+		err := registry.StopAll(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("successfully stop all consumers", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		workers := []mq.IConsumerWorker{
+			mocks.NewMockIConsumerWorker(ctrl),
+			mocks.NewMockIConsumerWorker(ctrl),
+		}
+		consumers := []*mocks.MockIConsumer{
+			mocks.NewMockIConsumer(ctrl),
+			mocks.NewMockIConsumer(ctrl),
+		}
+		cfg := &mq.ConsumerConfig{}
+		for i := range workers {
+			workers[i].(*mocks.MockIConsumerWorker).EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+			factory.EXPECT().NewConsumer(gomock.Any()).Return(consumers[i], nil)
+			consumers[i].EXPECT().RegisterHandler(gomock.Any())
+			consumers[i].EXPECT().Start().Return(nil)
+		}
+		registry := NewConsumerRegistry(factory).Register(workers)
+		err := registry.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		// StopAll 按逆序关闭，先关 consumers[1] 再关 consumers[0]
+		consumers[1].EXPECT().Close().Return(nil)
+		consumers[0].EXPECT().Close().Return(nil)
+		err = registry.StopAll(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("context cancelled during stop", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		factory := mocks.NewMockIFactory(ctrl)
+		worker := mocks.NewMockIConsumerWorker(ctrl)
+		consumer := mocks.NewMockIConsumer(ctrl)
+		cfg := &mq.ConsumerConfig{}
+		worker.EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+		factory.EXPECT().NewConsumer(gomock.Any()).Return(consumer, nil)
+		consumer.EXPECT().RegisterHandler(gomock.Any())
+		consumer.EXPECT().Start().Return(nil)
+		registry := NewConsumerRegistry(factory).Register([]mq.IConsumerWorker{worker})
+		err := registry.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+		err = registry.StopAll(ctx)
+		assert.Error(t, err)
+		assert.True(t, errors.Is(err, context.Canceled))
+	})
 }
 
 func TestSafeConsumerHandlerDecorator_HandleMessage(t *testing.T) {
@@ -144,6 +226,75 @@ func TestSafeConsumerHandlerDecorator_HandleMessage(t *testing.T) {
 			if tt.expectedError != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tt.expectedError.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestNewConsumerRegistryWithShutdown(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	factory := mocks.NewMockIFactory(ctrl)
+	shutdownCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	registry := NewConsumerRegistryWithShutdown(shutdownCtx, factory).(*defaultConsumerRegistry)
+	assert.Equal(t, factory, registry.factory)
+	assert.Equal(t, shutdownCtx, registry.shutdownCtx)
+}
+
+func TestShutdownContextDecorator_HandleMessage(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockHandler := mocks.NewMockIConsumerWorker(ctrl)
+	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+
+	decorator := &shutdownContextDecorator{
+		handler:     mockHandler,
+		shutdownCtx: shutdownCtx,
+	}
+
+	tests := []struct {
+		name          string
+		setupMock     func()
+		triggerCancel func()
+		ctx           context.Context
+	}{
+		{
+			name: "normal execution",
+			setupMock: func() {
+				mockHandler.EXPECT().HandleMessage(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			triggerCancel: func() {},
+			ctx:           context.Background(),
+		},
+		{
+			name: "shutdown context cancelled",
+			setupMock: func() {
+				mockHandler.EXPECT().HandleMessage(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, msg *mq.MessageExt) error {
+					<-ctx.Done()
+					return ctx.Err()
+				})
+			},
+			triggerCancel: func() {
+				shutdownCancel()
+			},
+			ctx: context.Background(),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMock()
+			go tt.triggerCancel()
+			err := decorator.HandleMessage(tt.ctx, &mq.MessageExt{})
+			if tt.name == "shutdown context cancelled" {
+				assert.Error(t, err)
+				assert.True(t, errors.Is(err, context.Canceled))
 			} else {
 				assert.NoError(t, err)
 			}

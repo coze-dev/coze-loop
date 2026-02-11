@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +23,7 @@ import (
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
@@ -315,21 +316,33 @@ func TestEvaluatorHandlerImpl_ListEvaluators(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "success - with evaluator type filter",
+			name: "success - builtin evaluators request with filters",
 			req: &evaluatorservice.ListEvaluatorsRequest{
 				WorkspaceID:   validSpaceID,
+				Builtin:       gptr.Of(true),
+				SearchName:    gptr.Of("builtin"),
 				EvaluatorType: []evaluatordto.EvaluatorType{evaluatordto.EvaluatorType_Prompt},
 			},
 			mockSetup: func() {
-				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				mockEvaluatorService.EXPECT().ListEvaluator(gomock.Any(), gomock.Any()).
-					Return(validEvaluators[:1], int64(1), nil)
+				// Mock auth
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				// Mock builtin evaluator service call
+				mockEvaluatorService.EXPECT().ListBuiltinEvaluator(gomock.Any(), gomock.Any()).
+					Return(validEvaluators, int64(2), nil)
+
+				// Mock user info service
 				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
 			},
 			wantResp: &evaluatorservice.ListEvaluatorsResponse{
-				Total: gptr.Of(int64(1)),
+				Total: gptr.Of(int64(2)),
 				Evaluators: []*evaluatordto.Evaluator{
 					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[0]),
+					evaluator.ConvertEvaluatorDO2DTO(validEvaluators[1]),
 				},
 			},
 			wantErr: false,
@@ -1056,6 +1069,545 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
 	}
 }
 
+func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		userInfoService:  mockUserInfoService,
+	}
+
+	workspaceID := int64(100)
+	evaluatorID := int64(200)
+	evaluators := []*entity.Evaluator{
+		{
+			ID:            evaluatorID,
+			SpaceID:       workspaceID,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          1,
+				EvaluatorID: evaluatorID,
+				Version:     "1.0.0",
+			},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.ListEvaluatorVersionsRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
+					Return(evaluators, int64(1), nil)
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "service_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
+					Return(nil, int64(0), errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "success_with_params",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+				PageSize:    gptr.Of(int32(10)),
+				PageNumber:  gptr.Of(int32(2)),
+				OrderBys: []*common.OrderBy{
+					{Field: gptr.Of("id"), IsAsc: gptr.Of(true)},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, req *entity.ListEvaluatorVersionRequest) ([]*entity.Evaluator, int64, error) {
+						assert.Equal(t, int32(10), req.PageSize)
+						assert.Equal(t, int32(2), req.PageNum)
+						assert.Equal(t, "id", *req.OrderBys[0].Field)
+						return evaluators, int64(1), nil
+					})
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.ListEvaluatorVersions(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				assert.Equal(t, int64(1), *resp.Total)
+				assert.Len(t, resp.EvaluatorVersions, 1)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_SubmitEvaluatorVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		auditClient:      mockAuditClient,
+	}
+
+	workspaceID := int64(100)
+	evaluatorID := int64(200)
+	version := "1.0.0"
+	evaluatorDO := &entity.Evaluator{
+		ID:      evaluatorID,
+		SpaceID: workspaceID,
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaluatorservice.SubmitEvaluatorVersionRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     version,
+			},
+			mockSetup: func() {
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).
+					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().SubmitEvaluatorVersion(gomock.Any(), evaluatorDO, version, gomock.Any(), gomock.Any()).
+					Return(evaluatorDO, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid_version",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     "invalid",
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "audit_rejected",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     version,
+			},
+			mockSetup: func() {
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).
+					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil)
+			},
+			wantErr:     true,
+			wantErrCode: errno.RiskContentDetectedCode,
+		},
+		{
+			name: "version_too_long",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     string(make([]byte, consts.MaxEvaluatorVersionLength+1)),
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "description_too_long",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     version,
+				Description: gptr.Of(string(make([]byte, consts.MaxEvaluatorVersionDescLength+1))),
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "evaluator_not_found",
+			req: &evaluatorservice.SubmitEvaluatorVersionRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Version:     version,
+			},
+			mockSetup: func() {
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).
+					Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+			},
+			wantErr:     true,
+			wantErrCode: errno.EvaluatorNotExistCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.SubmitEvaluatorVersion(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_CheckEvaluatorName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+	}
+
+	workspaceID := int64(100)
+	name := "test-name"
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.CheckEvaluatorNameRequest
+		mockSetup func()
+		wantPass  bool
+		wantErr   bool
+	}{
+		{
+			name: "pass",
+			req: &evaluatorservice.CheckEvaluatorNameRequest{
+				WorkspaceID: workspaceID,
+				Name:        name,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().CheckNameExist(gomock.Any(), workspaceID, gomock.Any(), name).
+					Return(false, nil)
+			},
+			wantPass: true,
+			wantErr:  false,
+		},
+		{
+			name: "name_exists",
+			req: &evaluatorservice.CheckEvaluatorNameRequest{
+				WorkspaceID: workspaceID,
+				Name:        name,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().CheckNameExist(gomock.Any(), workspaceID, gomock.Any(), name).
+					Return(true, nil)
+			},
+			wantPass: false,
+			wantErr:  false,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.CheckEvaluatorNameRequest{
+				WorkspaceID: workspaceID,
+				Name:        name,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.CheckEvaluatorName(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantPass, *resp.Pass)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:                   mockAuth,
+		evaluatorService:       mockEvaluatorService,
+		evaluatorRecordService: mockEvaluatorRecordService,
+		userInfoService:        mockUserInfoService,
+	}
+
+	recordID := int64(10)
+	versionID := int64(20)
+	spaceID := int64(100)
+	record := &entity.EvaluatorRecord{
+		ID:                 recordID,
+		EvaluatorVersionID: versionID,
+		SpaceID:            spaceID,
+	}
+	evaluatorDO := &entity.Evaluator{
+		ID:      1,
+		SpaceID: spaceID,
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.GetEvaluatorRecordRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.GetEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
+					Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
+					Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "record_not_found",
+			req: &evaluatorservice.GetEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
+					Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "evaluator_not_found",
+			req: &evaluatorservice.GetEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
+					Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
+					Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.GetEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
+					Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
+					Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.GetEvaluatorRecord(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:                   mockAuth,
+		evaluatorRecordService: mockEvaluatorRecordService,
+	}
+
+	recordIDs := []int64{10, 11}
+	spaceID := int64(100)
+	records := []*entity.EvaluatorRecord{
+		{ID: 10, SpaceID: spaceID},
+		{ID: 11, SpaceID: spaceID},
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.BatchGetEvaluatorRecordsRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+				EvaluatorRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+					Return(records, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty_records",
+			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+				EvaluatorRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+					Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "service_error",
+			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+				EvaluatorRecordIds: recordIDs,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.BatchGetEvaluatorRecords(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+				if tt.name == "success" {
+					assert.Len(t, resp.Records, 2)
+				} else {
+					assert.Len(t, resp.Records, 0)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_GetDefaultPromptEvaluatorTools(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
+
+	toolsConf := map[string]*evaluatordto.Tool{
+		consts.DefaultEvaluatorToolKey: {
+			Type:     evaluatordto.ToolType_Function,
+			Function: &evaluatordto.Function{Name: "default-tool"},
+		},
+	}
+
+	mockConfiger.EXPECT().GetEvaluatorToolConf(gomock.Any()).Return(toolsConf)
+
+	resp, err := app.GetDefaultPromptEvaluatorTools(context.Background(), &evaluatorservice.GetDefaultPromptEvaluatorToolsRequest{})
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Len(t, resp.Tools, 1)
+	assert.Equal(t, "default-tool", resp.Tools[0].Function.Name)
+}
+
 // 新增的复杂业务逻辑测试
 
 // TestEvaluatorHandlerImpl_ComplexBusinessScenarios 测试复杂业务场景
@@ -1776,7 +2328,6 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 	}
 }
 
-// TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions 测试边界条件
 func TestEvaluatorHandlerImpl_EdgeCasesAndBoundaryConditions(t *testing.T) {
 	t.Parallel()
 
@@ -1990,6 +2541,7 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 	tests := []struct {
 		name         string
 		request      *evaluatorservice.ListTemplatesRequest
+		mockSetup    func()
 		expectedKeys []string
 	}{
 		{
@@ -2006,11 +2558,55 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 			},
 			expectedKeys: []string{"js_template_1", "python_template_1", "python_template_2"}, // 按template_key去重后排序
 		},
+		{
+			name: "Code类型-配置为空",
+			request: &evaluatorservice.ListTemplatesRequest{
+				BuiltinTemplateType: evaluatordto.TemplateType_Code,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().GetCodeEvaluatorTemplateConf(gomock.Any()).Return(nil)
+			},
+			expectedKeys: []string{},
+		},
+		{
+			name: "Prompt类型",
+			request: &evaluatorservice.ListTemplatesRequest{
+				BuiltinTemplateType: evaluatordto.TemplateType_Prompt,
+			},
+			mockSetup: func() {
+				promptTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+					"prompt": {
+						"key1": {
+							PromptEvaluator: &evaluatordto.PromptEvaluator{
+								PromptTemplateKey:  gptr.Of("key1"),
+								PromptTemplateName: gptr.Of("name1"),
+							},
+						},
+					},
+				}
+				mockConfiger.EXPECT().GetEvaluatorTemplateConf(gomock.Any()).Return(promptTemplates)
+			},
+			expectedKeys: []string{"key1"},
+		},
+		{
+			name: "Prompt类型-配置为空",
+			request: &evaluatorservice.ListTemplatesRequest{
+				BuiltinTemplateType: evaluatordto.TemplateType_Prompt,
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().GetEvaluatorTemplateConf(gomock.Any()).Return(make(map[string]map[string]*evaluatordto.EvaluatorContent))
+			},
+			expectedKeys: []string{},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockConfiger.EXPECT().GetCodeEvaluatorTemplateConf(gomock.Any()).Return(codeTemplateConf)
+			if tt.mockSetup != nil {
+				tt.mockSetup()
+			} else {
+				mockConfiger.EXPECT().GetCodeEvaluatorTemplateConf(gomock.Any()).Return(codeTemplateConf)
+			}
 
 			resp, err := handler.ListTemplates(context.Background(), tt.request)
 
@@ -2023,6 +2619,8 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 			for i, template := range resp.BuiltinTemplateKeys {
 				if template.GetCodeEvaluator() != nil {
 					actualKeys[i] = template.GetCodeEvaluator().GetCodeTemplateKey()
+				} else if template.GetPromptEvaluator() != nil {
+					actualKeys[i] = template.GetPromptEvaluator().GetPromptTemplateKey()
 				}
 			}
 
@@ -2033,9 +2631,288 @@ func TestEvaluatorHandlerImpl_ListTemplates_Code(t *testing.T) {
 	}
 }
 
+func TestEvaluatorHandlerImpl_GetTemplateInfo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	handler := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
+
+	ctx := context.Background()
+
+	t.Run("Prompt success", func(t *testing.T) {
+		promptTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+			"prompt": {
+				"key1": {
+					PromptEvaluator: &evaluatordto.PromptEvaluator{
+						PromptTemplateKey: gptr.Of("key1"),
+					},
+				},
+			},
+		}
+		mockConfiger.EXPECT().GetEvaluatorTemplateConf(gomock.Any()).Return(promptTemplates)
+		resp, err := handler.GetTemplateInfo(ctx, &evaluatorservice.GetTemplateInfoRequest{
+			BuiltinTemplateType: evaluatordto.TemplateType_Prompt,
+			BuiltinTemplateKey:  "key1",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "key1", *resp.EvaluatorContent.PromptEvaluator.PromptTemplateKey)
+	})
+
+	t.Run("Code success python", func(t *testing.T) {
+		codeTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+			"key1": {
+				"Python": {
+					CodeEvaluator: &evaluatordto.CodeEvaluator{
+						CodeTemplateKey: gptr.Of("key1"),
+					},
+				},
+			},
+		}
+		mockConfiger.EXPECT().GetCodeEvaluatorTemplateConf(gomock.Any()).Return(codeTemplates)
+		resp, err := handler.GetTemplateInfo(ctx, &evaluatorservice.GetTemplateInfoRequest{
+			BuiltinTemplateType: evaluatordto.TemplateType_Code,
+			BuiltinTemplateKey:  "key1",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "key1", *resp.EvaluatorContent.CodeEvaluator.CodeTemplateKey)
+	})
+
+	t.Run("Code custom", func(t *testing.T) {
+		customTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+			"custom": {
+				"Python": {
+					CodeEvaluator: &evaluatordto.CodeEvaluator{
+						CodeTemplateKey: gptr.Of("custom"),
+					},
+				},
+			},
+		}
+		mockConfiger.EXPECT().GetCustomCodeEvaluatorTemplateConf(gomock.Any()).Return(customTemplates)
+		resp, err := handler.GetTemplateInfo(ctx, &evaluatorservice.GetTemplateInfoRequest{
+			BuiltinTemplateType: evaluatordto.TemplateType_Code,
+			BuiltinTemplateKey:  "custom",
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, "custom", *resp.EvaluatorContent.CodeEvaluator.CodeTemplateKey)
+	})
+
+	t.Run("not found", func(t *testing.T) {
+		mockConfiger.EXPECT().GetEvaluatorTemplateConf(gomock.Any()).Return(make(map[string]map[string]*evaluatordto.EvaluatorContent))
+		_, err := handler.GetTemplateInfo(ctx, &evaluatorservice.GetTemplateInfoRequest{
+			BuiltinTemplateType: evaluatordto.TemplateType_Prompt,
+			BuiltinTemplateKey:  "non-existent",
+		})
+		assert.Error(t, err)
+	})
+}
+
 // 新增：运行配置参数透传与扩展字段注入
+func TestEvaluatorHandlerImpl_DebugEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+		configer:         mockConfiger,
+		fileProvider:     mockFileProvider,
+	}
+
+	workspaceID := int64(100)
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.DebugEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success_prompt",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					PromptEvaluator: &evaluatordto.PromptEvaluator{},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_prompt_with_uris",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					PromptEvaluator: &evaluatordto.PromptEvaluator{
+						Tools: []*evaluatordto.Tool{
+							{Function: &evaluatordto.Function{Name: "test_tool"}},
+						},
+					},
+				},
+				InputData: &evaluatordto.EvaluatorInputData{
+					InputFields: map[string]*common.Content{
+						"field1": {
+							ContentType: gptr.Of(common.ContentTypeImage),
+							Image: &common.Image{
+								URI: gptr.Of("uri1"),
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(map[string]string{"uri1": "url1"}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_prompt_with_multipart_uris",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_Prompt,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					PromptEvaluator: &evaluatordto.PromptEvaluator{
+						Tools: []*evaluatordto.Tool{
+							{Function: &evaluatordto.Function{Name: "test_tool"}},
+						},
+					},
+				},
+				InputData: &evaluatordto.EvaluatorInputData{
+					InputFields: map[string]*common.Content{
+						"field1": {
+							ContentType: gptr.Of(common.ContentTypeMultiPart),
+							MultiPart: []*common.Content{
+								{
+									ContentType: gptr.Of(common.ContentTypeImage),
+									Image: &common.Image{
+										URI: gptr.Of("uri1"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(map[string]string{"uri1": "url1"}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_custom_rpc",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				EvaluatorContent: &evaluatordto.EvaluatorContent{
+					CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// authCustomRPCEvaluatorContentWritable
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{"100"})
+				mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "100", []string{"100"}).Return(true, nil)
+
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "benefit_denied",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: gptr.Of(benefit.DenyReason(1))}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "benefit_error",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("benefit service error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "custom_rpc_auth_failed",
+			req: &evaluatorservice.DebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// authCustomRPCEvaluatorContentWritable failed
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{"100"})
+				mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "100", []string{"100"}).Return(false, nil)
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.DebugEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
 func TestEvaluatorHandlerImpl_DebugEvaluator_RuntimeParamExt(t *testing.T) {
-	t.Skip("暂时跳过：依赖外部 benefitService 行为，已通过 buildRunEvaluatorRequest 的单测验证 runtime_param 注入")
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -3460,6 +4337,37 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "custom code",
+			req: &evaluatorservice.GetTemplateV2Request{
+				CustomCode: gptr.Of(true),
+			},
+			mockSetup: func() {
+				customTemplates := map[string]map[string]*evaluatordto.EvaluatorContent{
+					"custom": {
+						"Python": {
+							CodeEvaluator: &evaluatordto.CodeEvaluator{
+								CodeContent: gptr.Of("print(1)"),
+							},
+						},
+					},
+				}
+				mockConfiger := confmocks.NewMockIConfiger(ctrl)
+				mockConfiger.EXPECT().GetCustomCodeEvaluatorTemplateConf(gomock.Any()).Return(customTemplates)
+				app.configer = mockConfiger
+			},
+			wantResp: &evaluatorservice.GetTemplateV2Response{
+				EvaluatorTemplate: &evaluatordto.EvaluatorTemplate{
+					EvaluatorType: evaluatordto.EvaluatorTypePtr(evaluatordto.EvaluatorType_Code),
+					EvaluatorContent: &evaluatordto.EvaluatorContent{
+						CodeEvaluator: &evaluatordto.CodeEvaluator{
+							Lang2CodeContent: map[string]string{"Python": "print(1)"},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "success - template not found",
 			req: &evaluatorservice.GetTemplateV2Request{
 				EvaluatorTemplateID: gptr.Of(templateID),
@@ -3507,7 +4415,7 @@ func TestEvaluatorHandlerImpl_GetTemplateV2(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
 				if tt.wantResp.EvaluatorTemplate != nil {
-					assert.Equal(t, templateID, resp.GetEvaluatorTemplate().GetID())
+					assert.Equal(t, tt.wantResp.GetEvaluatorTemplate().GetID(), resp.GetEvaluatorTemplate().GetID())
 				}
 			}
 		})
@@ -4366,120 +5274,823 @@ func TestEvaluatorHandlerImpl_DebugBuiltinEvaluator(t *testing.T) {
 
 // TestEvaluatorHandlerImpl_UpdateEvaluatorRecord 测试 UpdateEvaluatorRecord 方法
 func TestEvaluatorHandlerImpl_UpdateEvaluatorRecord(t *testing.T) {
-	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	const (
-		workspaceID        = int64(101)
-		evaluatorID        = int64(202)
-		evaluatorVersionID = int64(303)
-		recordID           = int64(404)
-	)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:                   mockAuth,
+		evaluatorService:       mockEvaluatorService,
+		evaluatorRecordService: mockEvaluatorRecordService,
+		auditClient:            mockAuditClient,
+		configer:               mockConfiger,
+	}
+
+	recordID := int64(10)
+	versionID := int64(20)
+	spaceID := int64(100)
+	ctx := context.Background()
+
+	record := &entity.EvaluatorRecord{
+		ID:                 recordID,
+		EvaluatorVersionID: versionID,
+		SpaceID:            spaceID,
+	}
+	evaluatorDO := &entity.Evaluator{
+		ID:      1,
+		SpaceID: spaceID,
+		Builtin: false,
+	}
+	builtinEvaluatorDO := &entity.Evaluator{
+		ID:      1,
+		SpaceID: spaceID,
+		Builtin: true,
+	}
 
 	tests := []struct {
-		name         string
-		evaluator    *entity.Evaluator
-		setupAuth    func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, mockConfiger *confmocks.MockIConfiger)
-		expectConfig bool
+		name      string
+		req       *evaluatorservice.UpdateEvaluatorRecordRequest
+		mockSetup func()
+		wantErr   bool
 	}{
 		{
-			name: "success - custom evaluator uses evaluator authorization",
-			evaluator: &entity.Evaluator{
-				ID:      evaluatorID,
-				SpaceID: workspaceID,
-				Builtin: false,
+			name: "success_custom",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+				Correction: &evaluatordto.Correction{
+					Score: gptr.Of(0.95),
+				},
 			},
-			setupAuth: func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, _ *confmocks.MockIConfiger) {
-				mockAuth.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
-						assert.Equal(t, strconv.FormatInt(evaluatorID, 10), param.ObjectID)
-						assert.Equal(t, workspaceID, param.SpaceID)
-						if assert.Len(t, param.ActionObjects, 1) {
-							assert.Equal(t, consts.Edit, gptr.Indirect(param.ActionObjects[0].Action))
-							assert.Equal(t, rpc.AuthEntityType_Evaluator, gptr.Indirect(param.ActionObjects[0].EntityType))
-						}
-						return nil
-					})
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), record, gomock.Any()).Return(nil)
 			},
+			wantErr: false,
 		},
 		{
-			name: "success - builtin evaluator uses builtin space validation",
-			evaluator: &entity.Evaluator{
-				ID:      evaluatorID,
-				SpaceID: workspaceID,
-				Builtin: true,
+			name: "success_builtin",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
 			},
-			setupAuth: func(t *testing.T, mockAuth *rpcmocks.MockIAuthProvider, mockConfiger *confmocks.MockIConfiger) {
-				// authWrite 为 false 时，不会调用 Authorization，只检查空间配置
-				mockConfiger.EXPECT().
-					GetBuiltinEvaluatorSpaceConf(gomock.Any()).
-					Return([]string{strconv.FormatInt(workspaceID, 10)})
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(builtinEvaluatorDO, nil)
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{"100"})
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), record, gomock.Any()).Return(nil)
 			},
+			wantErr: false,
+		},
+		{
+			name: "record_not_found",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(nil, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "evaluator_not_found",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(nil, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "audit_rejected",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "audit_service_error_still_pass",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{}, errors.New("audit error"))
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), record, gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "correct_service_error",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(record, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Nil(), versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), record, gomock.Any()).Return(errors.New("db error"))
+			},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-			mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
-			mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
-			mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
-			mockConfiger := confmocks.NewMockIConfiger(ctrl)
-
-			handler := &EvaluatorHandlerImpl{
-				auth:                   mockAuth,
-				evaluatorService:       mockEvaluatorService,
-				evaluatorRecordService: mockEvaluatorRecordService,
-				auditClient:            mockAuditClient,
-				configer:               mockConfiger,
+			tt.mockSetup()
+			resp, err := app.UpdateEvaluatorRecord(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
 			}
-
-			tt.setupAuth(t, mockAuth, mockConfiger)
-
-			evaluatorRecord := &entity.EvaluatorRecord{
-				ID:                 recordID,
-				EvaluatorVersionID: evaluatorVersionID,
-			}
-			mockEvaluatorRecordService.EXPECT().
-				GetEvaluatorRecord(gomock.Any(), recordID, false).
-				Return(evaluatorRecord, nil)
-
-			mockEvaluatorService.EXPECT().
-				GetEvaluatorVersion(gomock.Any(), gomock.Nil(), evaluatorVersionID, false, false).
-				Return(tt.evaluator, nil)
-
-			mockAuditClient.EXPECT().
-				Audit(gomock.Any(), gomock.Any()).
-				Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
-
-			mockEvaluatorRecordService.EXPECT().
-				CorrectEvaluatorRecord(gomock.Any(), evaluatorRecord, gomock.Any()).
-				Return(nil)
-
-			req := &evaluatorservice.UpdateEvaluatorRecordRequest{
-				WorkspaceID:       workspaceID,
-				EvaluatorRecordID: recordID,
-				Correction: &evaluatordto.Correction{
-					Explain:   gptr.Of("need update"),
-					UpdatedBy: gptr.Of("tester"),
-				},
-			}
-
-			resp, err := handler.UpdateEvaluatorRecord(context.Background(), req)
-			assert.NoError(t, err)
-			assert.NotNil(t, resp)
-			assert.NotNil(t, resp.Record)
 		})
 	}
 }
 
 // TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags 测试 UpdateBuiltinEvaluatorTags 方法
+
+func TestEvaluatorHandlerImpl_BatchDebugEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		benefitService:   mockBenefitService,
+		configer:         mockConfiger,
+	}
+
+	workspaceID := int64(100)
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.BatchDebugEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success_custom_rpc",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+				InputData: []*evaluatordto.EvaluatorInputData{
+					{},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// authCustomRPCEvaluatorContentWritable
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{"100"})
+				mockConfiger.EXPECT().CheckCustomRPCEvaluatorWritable(gomock.Any(), "100", []string{"100"}).Return(true, nil)
+
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "benefit_denied",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: gptr.Of(benefit.DenyReason(1))}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "success_with_runtime_param",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
+					},
+				},
+				InputData: []*evaluatordto.EvaluatorInputData{
+					{},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(&entity.EvaluatorOutputData{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_with_debug_error",
+			req: &evaluatorservice.BatchDebugEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				InputData: []*evaluatordto.EvaluatorInputData{
+					{},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
+					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
+					Return(nil, errors.New("debug error"))
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.BatchDebugEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_CreateEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		auditClient:      mockAuditClient,
+		configer:         mockConfiger,
+		metrics:          mockMetrics,
+		fileProvider:     mockFileProvider,
+	}
+
+	workspaceID := int64(100)
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.CreateEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID:   gptr.Of(workspaceID),
+					Name:          gptr.Of("test"),
+					EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+					CurrentVersion: &evaluatordto.EvaluatorVersion{
+						Version: gptr.Of("1.0.0"),
+						EvaluatorContent: &evaluatordto.EvaluatorContent{
+							PromptEvaluator: &evaluatordto.PromptEvaluator{},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(1), nil)
+				mockMetrics.EXPECT().EmitCreate(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantErr: false,
+		},
+		{
+			name: "req_nil",
+			req:  nil,
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "workspace_id_zero",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(int64(0)),
+				},
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "name_empty",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of(""),
+				},
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "version_nil",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID:    gptr.Of(workspaceID),
+					Name:           gptr.Of("test"),
+					CurrentVersion: nil,
+				},
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "content_nil",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of("test"),
+					CurrentVersion: &evaluatordto.EvaluatorVersion{
+						Version:          gptr.Of("1.0.0"),
+						EvaluatorContent: nil,
+					},
+				},
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "builtin_success",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID:   gptr.Of(workspaceID),
+					Name:          gptr.Of("test"),
+					Builtin:       gptr.Of(true),
+					EvaluatorType: gptr.Of(evaluatordto.EvaluatorType_Prompt),
+					CurrentVersion: &evaluatordto.EvaluatorVersion{
+						Version: gptr.Of("1.0.0"),
+						EvaluatorContent: &evaluatordto.EvaluatorContent{
+							PromptEvaluator: &evaluatordto.PromptEvaluator{},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().CreateEvaluator(gomock.Any(), gomock.Any(), gomock.Any()).Return(int64(1), nil)
+				mockMetrics.EXPECT().EmitCreate(gomock.Any(), gomock.Any()).AnyTimes()
+			},
+			wantErr: false,
+		},
+		{
+			name: "name_too_long",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of(strings.Repeat("a", consts.MaxEvaluatorNameLength+1)),
+				},
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "desc_too_long",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of("test"),
+					Description: gptr.Of(strings.Repeat("a", consts.MaxEvaluatorDescLength+1)),
+				},
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "version_too_long",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of("test"),
+					CurrentVersion: &evaluatordto.EvaluatorVersion{
+						Version: gptr.Of(strings.Repeat("a", consts.MaxEvaluatorVersionLength+1)),
+						EvaluatorContent: &evaluatordto.EvaluatorContent{
+							PromptEvaluator: &evaluatordto.PromptEvaluator{},
+						},
+					},
+				},
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+		{
+			name: "version_desc_too_long",
+			req: &evaluatorservice.CreateEvaluatorRequest{
+				Evaluator: &evaluatordto.Evaluator{
+					WorkspaceID: gptr.Of(workspaceID),
+					Name:        gptr.Of("test"),
+					CurrentVersion: &evaluatordto.EvaluatorVersion{
+						Version:     gptr.Of("1.0.0"),
+						Description: gptr.Of(strings.Repeat("a", consts.MaxEvaluatorVersionDescLength+1)),
+						EvaluatorContent: &evaluatordto.EvaluatorContent{
+							PromptEvaluator: &evaluatordto.PromptEvaluator{},
+						},
+					},
+				},
+			},
+			mockSetup: func() {},
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.CreateEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_DeleteEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+	}
+
+	workspaceID := int64(100)
+	evaluatorID := int64(1)
+	ctx := context.Background()
+
+	evaluatorDO := &entity.Evaluator{
+		ID:      evaluatorID,
+		SpaceID: workspaceID,
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.DeleteEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "get_error",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "delete_error",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).
+					Return(errors.New("delete error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "evaluator_not_found_skip_delete",
+			req: &evaluatorservice.DeleteEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluator(gomock.Any(), workspaceID, []int64{evaluatorID}, false).
+					Return([]*entity.Evaluator{nil}, nil)
+				mockEvaluatorService.EXPECT().DeleteEvaluator(gomock.Any(), []int64{evaluatorID}, gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.DeleteEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_UpdateEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		auditClient:      mockAuditClient,
+		configer:         mockConfiger,
+		metrics:          mockMetrics,
+		fileProvider:     mockFileProvider,
+	}
+
+	workspaceID := int64(100)
+	evaluatorID := int64(1)
+	ctx := context.Background()
+
+	evaluatorDO := &entity.Evaluator{
+		ID:      evaluatorID,
+		SpaceID: workspaceID,
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.UpdateEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+	}{
+		{
+			name: "success",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Name:        gptr.Of("new name"),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "req_nil",
+			req:  nil,
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "id_zero",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				EvaluatorID: 0,
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "workspace_id_zero",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: 0,
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "name_too_long",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				Name:        gptr.Of(strings.Repeat("a", 101)),
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "description_too_long",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				EvaluatorID: evaluatorID,
+				WorkspaceID: workspaceID,
+				Description: gptr.Of(strings.Repeat("a", 1001)),
+			},
+			mockSetup: func() {
+			},
+			wantErr: true,
+		},
+		{
+			name: "evaluator_not_found",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(nil, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "auth_failed",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "builtin_auth_failed",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Builtin:     gptr.Of(true),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil) // First auth at line 385
+				// authBuiltinManagement calls second auth at line 1839
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("builtin management auth failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "audit_rejected",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "audit_service_error_passed",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{}, errors.New("audit error"))
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_with_prompt_content",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				Name:        gptr.Of("new name"),
+				Description: gptr.Of("new desc"),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_custom_rpc",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID:   workspaceID,
+				EvaluatorID:   evaluatorID,
+				EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "success_with_info_and_box_type",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				EvaluatorInfo: &evaluatordto.EvaluatorInfo{
+					Benchmark: gptr.Of("bench"),
+				},
+				BoxType: gptr.Of(evaluatordto.EvaluatorBoxType("Black")),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.UpdateEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
 func TestEvaluatorHandlerImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
 	t.Parallel()
 
@@ -4974,7 +6585,7 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorDraft(t *testing.T) {
 				{Role: entity.RoleSystem, Content: &entity.Content{Text: gptr.Of("old content")}},
 			},
 			ModelConfig: &entity.ModelConfig{
-				ModelID: int64(1),
+				ModelID: gptr.Of(int64(1)),
 			},
 		},
 	}
@@ -5219,12 +6830,16 @@ func TestEvaluatorHandlerImpl_UpdateEvaluator(t *testing.T) {
 	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+	mockMetrics := metricsmock.NewMockEvaluatorExecMetrics(ctrl)
+	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
 
 	app := &EvaluatorHandlerImpl{
 		auth:             mockAuth,
 		evaluatorService: mockEvaluatorService,
 		auditClient:      mockAuditClient,
 		configer:         mockConfiger,
+		metrics:          mockMetrics,
+		fileProvider:     mockFileProvider,
 	}
 
 	// Test data
@@ -5714,6 +7329,303 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluators(t *testing.T) {
 					assert.Equal(t, *tt.wantResp.Evaluators[i].Name, *evaluator.Name)
 					assert.Equal(t, *tt.wantResp.Evaluators[i].Builtin, *evaluator.Builtin)
 				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_RunEvaluator_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+	}
+
+	ctx := context.Background()
+	versionID := int64(123)
+	workspaceID := int64(456)
+	evaluatorName := "test-eval"
+
+	evaluatorDO := &entity.Evaluator{
+		ID:      1,
+		SpaceID: workspaceID,
+		Name:    evaluatorName,
+		Builtin: false,
+	}
+
+	builtinEvaluatorDO := &entity.Evaluator{
+		ID:      2,
+		SpaceID: workspaceID,
+		Name:    evaluatorName,
+		Builtin: true,
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.RunEvaluatorRequest
+		mockSetup func()
+		wantErr   bool
+		errCode   int32
+	}{
+		{
+			name: "success_normal",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 789}, nil)
+			},
+		},
+		{
+			name: "success_builtin",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(builtinEvaluatorDO, nil)
+				// skips auth
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 789}, nil)
+			},
+		},
+		{
+			name: "error_not_found",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(nil, nil)
+			},
+			wantErr: true,
+			errCode: errno.EvaluatorNotExistCode,
+		},
+		{
+			name: "error_get_version_failed",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "error_auth_failed",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: true,
+			errCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error_run_failed",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "with_runtime_param",
+			req: &evaluatorservice.RunEvaluatorRequest{
+				WorkspaceID:        workspaceID,
+				EvaluatorVersionID: versionID,
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"val"}`),
+					},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 789}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := handler.RunEvaluator(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errCode != 0 {
+					statusErr, _ := errorx.FromStatusError(err)
+					assert.Equal(t, tt.errCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_UpdateEvaluatorRecord_Comprehensive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+	mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		auth:                   mockAuth,
+		evaluatorService:       mockEvaluatorService,
+		evaluatorRecordService: mockEvaluatorRecordService,
+		auditClient:            mockAuditClient,
+		configer:               mockConfiger,
+	}
+
+	ctx := context.Background()
+	recordID := int64(789)
+	workspaceID := int64(456)
+	versionID := int64(123)
+
+	recordDO := &entity.EvaluatorRecord{
+		ID:                 recordID,
+		EvaluatorVersionID: versionID,
+		SpaceID:            workspaceID,
+	}
+
+	evaluatorDO := &entity.Evaluator{
+		ID:      1,
+		SpaceID: workspaceID,
+		Builtin: false,
+	}
+
+	builtinEvaluatorDO := &entity.Evaluator{
+		ID:      2,
+		SpaceID: workspaceID,
+		Builtin: true,
+	}
+
+	tests := []struct {
+		name      string
+		req       *evaluatorservice.UpdateEvaluatorRecordRequest
+		mockSetup func()
+		wantErr   bool
+		errCode   int32
+	}{
+		{
+			name: "success_normal",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+				Correction: &evaluatordto.Correction{
+					Score:   gptr.Of(float64(0.85)),
+					Explain: gptr.Of("good"),
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(recordDO, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "success_builtin",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(recordDO, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(builtinEvaluatorDO, nil)
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).Return([]string{strconv.FormatInt(workspaceID, 10)})
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+		{
+			name: "error_record_not_found",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(nil, nil)
+			},
+			wantErr: true,
+			errCode: errno.EvaluatorRecordNotFoundCode,
+		},
+		{
+			name: "error_evaluator_not_found",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(recordDO, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(nil, nil)
+			},
+			wantErr: false, // returns empty resp
+		},
+		{
+			name: "error_audit_failed",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(recordDO, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Rejected}, nil)
+			},
+			wantErr: true,
+			errCode: errno.RiskContentDetectedCode,
+		},
+		{
+			name: "audit_service_error_passed",
+			req: &evaluatorservice.UpdateEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			},
+			mockSetup: func() {
+				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(recordDO, nil)
+				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), nil, versionID, false, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{}, errors.New("audit service down"))
+				mockEvaluatorRecordService.EXPECT().CorrectEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := handler.UpdateEvaluatorRecord(ctx, tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.errCode != 0 {
+					statusErr, _ := errorx.FromStatusError(err)
+					assert.Equal(t, tt.errCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
 			}
 		})
 	}
