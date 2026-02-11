@@ -130,10 +130,10 @@ func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *e
 	}
 	defer func() {
 		var modelID string
-		if evaluator.PromptEvaluatorVersion.ModelConfig.ModelID == 0 {
+		if evaluator.PromptEvaluatorVersion.ModelConfig.GetModelID() == 0 {
 			modelID = ptr.From(evaluator.PromptEvaluatorVersion.ModelConfig.ProviderModelID)
 		} else {
-			modelID = strconv.FormatInt(evaluator.PromptEvaluatorVersion.ModelConfig.ModelID, 10)
+			modelID = strconv.FormatInt(evaluator.PromptEvaluatorVersion.ModelConfig.GetModelID(), 10)
 		}
 
 		p.metric.EmitRun(exptSpaceID, err, startTime, modelID)
@@ -705,7 +705,7 @@ func (p *EvaluatorSourcePromptServiceImpl) injectParseType(ctx context.Context, 
 		return
 	}
 
-	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetModelConfig().ModelID, 10)]; ok {
+	if suffixKey, ok := p.configer.GetEvaluatorPromptSuffixMapping(ctx)[strconv.FormatInt(evaluatorDO.GetModelConfig().GetModelID(), 10)]; ok {
 		evaluatorDO.SetPromptSuffix(p.configer.GetEvaluatorPromptSuffix(ctx)[suffixKey])
 		evaluatorDO.SetParseType(entity.ParseType(suffixKey))
 	} else {

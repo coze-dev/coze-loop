@@ -1,6 +1,7 @@
 namespace go coze.loop.evaluation.domain.common
 
 include "../../data/domain/dataset.thrift"
+include "../../llm/domain/manage.thrift"
 
 typedef string ContentType(ts.enum="true")
 
@@ -117,6 +118,9 @@ struct ModelConfig {
     3: optional double temperature
     4: optional i32 max_tokens
     5: optional double top_p
+    6: optional manage.Protocol protocol
+    7: optional string identification
+    8: optional bool preset_model
 
     50: optional string json_ext
 }

@@ -34,6 +34,9 @@ type RMQConf struct {
 	ConsumerGroup  string        `json:"consumer_group" mapstructure:"consumer_group"`
 	WorkerNum      int           `json:"worker_num" mapstructure:"worker_num"`
 	ConsumeTimeout time.Duration `json:"consume_timeout" mapstructure:"consume_timeout"`
+
+	AccessKey    *string `json:"access_key" mapstructure:"access_key"`
+	AccessSecret *string `json:"access_secret" mapstructure:"access_secret"`
 }
 
 func (c *RMQConf) Valid() bool {
@@ -47,6 +50,8 @@ func (c *RMQConf) ToProducerCfg() mq.ProducerConfig {
 		ProduceTimeout: c.ProduceTimeout,
 		RetryTimes:     c.RetryTimes,
 		ProducerGroup:  gptr.Of(c.ProducerGroup),
+		AccessKey:      c.AccessKey,
+		AccessSecret:   c.AccessSecret,
 	}
 }
 
@@ -58,5 +63,7 @@ func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 		ConsumerGroup:        c.ConsumerGroup,
 		ConsumeGoroutineNums: c.WorkerNum,
 		ConsumeTimeout:       c.ConsumeTimeout,
+		AccessKey:            c.AccessKey,
+		AccessSecret:         c.AccessSecret,
 	}
 }

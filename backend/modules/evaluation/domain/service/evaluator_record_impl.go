@@ -199,6 +199,8 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 			version2Record[r.EvaluatorVersionID] = r
 		}
 	}
+	// 用当前已校正的 record 覆盖，避免主从延迟或读从库时 BatchGet 拿到旧数据，导致重算加权分仍用旧分
+	version2Record[rec.EvaluatorVersionID] = rec
 
 	// 6. 构建权重映射
 	scoreWeights := make(map[int64]float64)

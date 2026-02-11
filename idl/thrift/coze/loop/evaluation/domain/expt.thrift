@@ -570,9 +570,11 @@ struct ExptResultExportRecord {
     5: optional common.BaseInfo base_info
     6: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
     7: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
+    // deprecated, cause not match snake name
     8: optional string URL
     9: optional bool expired
     10: optional RunError error
+    11: optional string url
 }
 
 // 分析任务状态

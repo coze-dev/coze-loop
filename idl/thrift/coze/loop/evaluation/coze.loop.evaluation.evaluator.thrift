@@ -57,6 +57,8 @@ struct GetEvaluatorResponse {
 
 struct CreateEvaluatorRequest {
     1: required evaluator.Evaluator evaluator (api.body='evaluator')
+    2: optional i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
+
     100: optional string cid (api.body='cid')
 
     255: optional base.Base Base
@@ -513,58 +515,110 @@ struct ListEvaluatorTagsResponse {
 
 service EvaluatorService {
     // 评估器
-    ListEvaluatorsResponse ListEvaluators(1: ListEvaluatorsRequest request)           (api.post=  "/api/evaluation/v1/evaluators/list")      // 按查询条件查询evaluator
-    BatchGetEvaluatorsResponse BatchGetEvaluators(1: BatchGetEvaluatorsRequest request)           (api.post=  "/api/evaluation/v1/evaluators/batch_get")      // 按id批量查询evaluator
-    GetEvaluatorResponse GetEvaluator(1: GetEvaluatorRequest request)           (api.get=  "/api/evaluation/v1/evaluators/:evaluator_id")      // 按id单个查询evaluator
-    CreateEvaluatorResponse CreateEvaluator(1: CreateEvaluatorRequest request)     (api.post=  "/api/evaluation/v1/evaluators")           // 创建evaluator
-    UpdateEvaluatorResponse UpdateEvaluator(1: UpdateEvaluatorRequest request)     (api.patch=   "/api/evaluation/v1/evaluators/:evaluator_id")  // 修改evaluator元信息
-    UpdateEvaluatorDraftResponse UpdateEvaluatorDraft(1: UpdateEvaluatorDraftRequest request)     (api.patch=   "/api/evaluation/v1/evaluators/:evaluator_id/update_draft")  // 修改evaluator草稿
-    DeleteEvaluatorResponse DeleteEvaluator(1: DeleteEvaluatorRequest request)     (api.delete=   "/api/evaluation/v1/evaluators/:evaluator_id")   // 批量删除evaluator
-    CheckEvaluatorNameResponse CheckEvaluatorName(1: CheckEvaluatorNameRequest request)     (api.post=   "/api/evaluation/v1/evaluators/check_name")   // 校验evaluator名称是否重复
+    ListEvaluatorsResponse ListEvaluators(1: ListEvaluatorsRequest request) (
+        api.post=  "/api/evaluation/v1/evaluators/list", api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按查询条件查询evaluator
+    BatchGetEvaluatorsResponse BatchGetEvaluators(1: BatchGetEvaluatorsRequest request)           (
+        api.post=  "/api/evaluation/v1/evaluators/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按id批量查询evaluator
+    GetEvaluatorResponse GetEvaluator(1: GetEvaluatorRequest request)           (
+        api.get=  "/api/evaluation/v1/evaluators/:evaluator_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按id单个查询evaluator
+    CreateEvaluatorResponse CreateEvaluator(1: CreateEvaluatorRequest request)     (
+        api.post=  "/api/evaluation/v1/evaluators", api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )           // 创建evaluator
+    UpdateEvaluatorResponse UpdateEvaluator(1: UpdateEvaluatorRequest request)     (
+        api.patch=   "/api/evaluation/v1/evaluators/:evaluator_id", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )  // 修改evaluator元信息
+    UpdateEvaluatorDraftResponse UpdateEvaluatorDraft(1: UpdateEvaluatorDraftRequest request)     (
+        api.patch=   "/api/evaluation/v1/evaluators/:evaluator_id/update_draft", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )  // 修改evaluator草稿
+    DeleteEvaluatorResponse DeleteEvaluator(1: DeleteEvaluatorRequest request)     (
+        api.delete=   "/api/evaluation/v1/evaluators/:evaluator_id", api.op_type = 'delete', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )   // 批量删除evaluator
+    CheckEvaluatorNameResponse CheckEvaluatorName(1: CheckEvaluatorNameRequest request)     (
+        api.post=   "/api/evaluation/v1/evaluators/check_name", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )   // 校验evaluator名称是否重复
 
     // 评估器版本
-    ListEvaluatorVersionsResponse ListEvaluatorVersions(1: ListEvaluatorVersionsRequest request)           (api.post=  "/api/evaluation/v1/evaluators/:evaluator_id/versions/list")      // 按evaluator id查询evaluator version
-    GetEvaluatorVersionResponse GetEvaluatorVersion(1: GetEvaluatorVersionRequest request)           (api.get=  "/api/evaluation/v1/evaluators_versions/:evaluator_version_id")      // 按版本id单个查询evaluator version
-    BatchGetEvaluatorVersionsResponse BatchGetEvaluatorVersions(1: BatchGetEvaluatorVersionsRequest request)           (api.post=  "/api/evaluation/v1/evaluators_versions/batch_get")      // 按版本id批量查询evaluator version
-    SubmitEvaluatorVersionResponse SubmitEvaluatorVersion(1: SubmitEvaluatorVersionRequest request)     (api.post=   "/api/evaluation/v1/evaluators/:evaluator_id/submit_version")   // 提交evaluator版本
+    ListEvaluatorVersionsResponse ListEvaluatorVersions(1: ListEvaluatorVersionsRequest request)           (
+        api.post=  "/api/evaluation/v1/evaluators/:evaluator_id/versions/list", api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按evaluator id查询evaluator version
+    GetEvaluatorVersionResponse GetEvaluatorVersion(1: GetEvaluatorVersionRequest request)           (
+        api.get=  "/api/evaluation/v1/evaluators_versions/:evaluator_version_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按版本id单个查询evaluator version
+    BatchGetEvaluatorVersionsResponse BatchGetEvaluatorVersions(1: BatchGetEvaluatorVersionsRequest request)           (
+        api.post=  "/api/evaluation/v1/evaluators_versions/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按版本id批量查询evaluator version
+    SubmitEvaluatorVersionResponse SubmitEvaluatorVersion(1: SubmitEvaluatorVersionRequest request)     (
+        api.post=   "/api/evaluation/v1/evaluators/:evaluator_id/submit_version", api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )   // 提交evaluator版本
 
     // 评估器预置模版
-    ListTemplatesResponse ListTemplates(1: ListTemplatesRequest request)           (api.post=  "/api/evaluation/v1/evaluators/list_template")      // 获取内置评估器模板列表（不含具体内容）
-    GetTemplateInfoResponse GetTemplateInfo(1: GetTemplateInfoRequest request) (api.post=  "/api/evaluation/v1/evaluators/get_template_info")      // 按key单个查询内置评估器模板详情
-    GetDefaultPromptEvaluatorToolsResponse GetDefaultPromptEvaluatorTools(1: GetDefaultPromptEvaluatorToolsRequest req) (api.post="/api/evaluation/v1/evaluators/default_prompt_evaluator_tools") // 获取prompt evaluator tools配置
+    ListTemplatesResponse ListTemplates(1: ListTemplatesRequest request)           (
+        api.post=  "/api/evaluation/v1/evaluators/list_template", api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 获取内置评估器模板列表（不含具体内容）
+    GetTemplateInfoResponse GetTemplateInfo(1: GetTemplateInfoRequest request) (
+        api.post=  "/api/evaluation/v1/evaluators/get_template_info", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )      // 按key单个查询内置评估器模板详情
+    GetDefaultPromptEvaluatorToolsResponse GetDefaultPromptEvaluatorTools(1: GetDefaultPromptEvaluatorToolsRequest req) (
+        api.post="/api/evaluation/v1/evaluators/default_prompt_evaluator_tools", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    ) // 获取prompt evaluator tools配置
 
     // 评估器执行
-    RunEvaluatorResponse RunEvaluator(1: RunEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/run")// evaluator 运行
-    AsyncRunEvaluatorResponse AsyncRunEvaluator(1: AsyncRunEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/async_run")// evaluator 异步运行
-    DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug")// evaluator 调试
-    BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/batch_debug")// evaluator 调试
-    AsyncDebugEvaluatorResponse AsyncDebugEvaluator(1: AsyncDebugEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/async_debug")// evaluator 异步调试
+    RunEvaluatorResponse RunEvaluator(1: RunEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/run", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )// evaluator 运行
+    DebugEvaluatorResponse DebugEvaluator(1: DebugEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators/debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
+    )// evaluator 调试
+    BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators/batch_debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
+    )// evaluator 调试
 
     // 评估器执行结果
-    UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 修正evaluator运行分数
-    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req) (api.get="/api/evaluation/v1/evaluator_records/:evaluator_record_id") // 获取evaluator运行记录详情
-    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req) (api.post="/api/evaluation/v1/evaluator_records/batch_get") // 按id批量查询evaluator运行记录详情
-    
+    UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (
+        api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    ) // 修正evaluator运行分数
+    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
+    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
+
     // 评估器验证
-    ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (api.post="/api/evaluation/v1/evaluators/validate")
+    ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (
+        api.post="/api/evaluation/v1/evaluators/validate", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
 
     // 查询评估器模板
-    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (api.post="/api/evaluation/v1/evaluator_template/list")
-    GetTemplateV2Response GetTemplateV2(1: GetTemplateV2Request request) (api.get="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
+    ListTemplatesV2Response ListTemplatesV2(1: ListTemplatesV2Request request) (
+        api.post="/api/evaluation/v1/evaluator_template/list", api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
+    GetTemplateV2Response GetTemplateV2(1: GetTemplateV2Request request) (
+        api.get="/api/evaluation/v1/evaluator_template/:evaluator_template_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
 
     // 创建评估器模板
-    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (api.post="/api/evaluation/v1/evaluator_template")
+    CreateEvaluatorTemplateResponse CreateEvaluatorTemplate(1: CreateEvaluatorTemplateRequest request) (
+        api.post="/api/evaluation/v1/evaluator_template", api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
     // 更新评估器模板
-    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (api.patch="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
+    UpdateEvaluatorTemplateResponse UpdateEvaluatorTemplate(1: UpdateEvaluatorTemplateRequest request) (
+        api.patch="/api/evaluation/v1/evaluator_template/:evaluator_template_id", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
     // 删除
-    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (api.delete="/api/evaluation/v1/evaluator_template/:evaluator_template_id")
+    DeleteEvaluatorTemplateResponse DeleteEvaluatorTemplate(1: DeleteEvaluatorTemplateRequest request) (
+        api.delete="/api/evaluation/v1/evaluator_template/:evaluator_template_id", api.op_type = 'delete', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
 
     // 调试预置评估器
-    DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (api.post="/api/evaluation/v1/evaluators/debug_builtin")// 调试预置评估器
+    DebugBuiltinEvaluatorResponse DebugBuiltinEvaluator(1: DebugBuiltinEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators/debug_builtin", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
+    )// 调试预置评估器
 
     // 更新预置评估器tag
     UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req)
     // 查询Tag
-    ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (api.post="/api/evaluation/v1/evaluators/list_tags")
+    ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (
+        api.post="/api/evaluation/v1/evaluators/list_tags", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+    )
 
-} (api.js_conv="true" )
+}
