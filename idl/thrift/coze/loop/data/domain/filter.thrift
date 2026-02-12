@@ -1,6 +1,6 @@
 namespace go stone.fornax.ml_flow.domain.filter
 
-typedef string QueryType
+typedef string QueryType (ts.enum="true")
 const QueryType QueryType_Match = "match"
 const QueryType QueryType_NotMatch = "not_match"
 const QueryType QueryType_Eq = "eq"
@@ -16,11 +16,11 @@ const QueryType QueryType_NotIn = "not_in"
 const QueryType QueryType_IsNull = "is_null"
 const QueryType QueryType_NotNull = "not_null"
 
-typedef string QueryRelation
+typedef string QueryRelation (ts.enum="true")
 const QueryRelation QueryRelation_And = "and"
 const QueryRelation QueryRelation_Or = "or"
 
-typedef string FieldType
+typedef string FieldType (ts.enum="true")
 const FieldType FieldType_String = "string"
 const FieldType FieldType_Long = "long"
 const FieldType FieldType_Double = "double"
