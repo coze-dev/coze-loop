@@ -682,6 +682,7 @@ func ConvertSkillConfigsDTO2DO(dtos []*commondto.SkillConfig) []*evaluatordo.Ski
 		if dto != nil {
 			dos = append(dos, &evaluatordo.SkillConfig{
 				SkillID: dto.GetSkillID(),
+				Version: dto.Version,
 			})
 		}
 	}
@@ -697,6 +698,7 @@ func ConvertSkillConfigsDO2DTO(dos []*evaluatordo.SkillConfig) []*commondto.Skil
 		if do != nil {
 			dtos = append(dtos, &commondto.SkillConfig{
 				SkillID: gptr.Of(do.SkillID),
+				Version: do.Version,
 			})
 		}
 	}
