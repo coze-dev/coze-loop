@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
@@ -56,6 +58,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	fileProvider rpc.IFileProvider,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 	exptResultService service.ExptResultService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                    idgen,
@@ -71,6 +74,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		fileProvider:             fileProvider,
 		evaluatorSourceServices:  evaluatorSourceServices,
 		exptResultService:        exptResultService,
+		evalAsyncRepo:            evalAsyncRepo,
 	}
 	return handler
 }
@@ -90,6 +94,7 @@ type EvaluatorHandlerImpl struct {
 	fileProvider             rpc.IFileProvider
 	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
 	exptResultService        service.ExptResultService
+	evalAsyncRepo            repo.IEvalAsyncRepo
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -1878,6 +1883,7 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *e
 }
 
 func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evaluatorservice.AsyncRunEvaluatorRequest) (r *evaluatorservice.AsyncRunEvaluatorResponse, err error) {
+	startTime := time.Now()
 	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
 	if err != nil {
 		return nil, err
@@ -1899,6 +1905,18 @@ func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evalu
 	if err != nil {
 		return nil, err
 	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.ID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           resp.ID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.ID, err)
+		return nil, err
+	}
+
 	return &evaluatorservice.AsyncRunEvaluatorResponse{
 		InvokeID: gptr.Of(resp.ID),
 	}, nil
@@ -1931,6 +1949,7 @@ func buildAsyncRunEvaluatorRequest(evaluatorName string, request *evaluatorservi
 }
 
 func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
+	startTime := time.Now()
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
 		SpaceID:       req.WorkspaceID,
@@ -1978,6 +1997,18 @@ func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *eva
 	if err != nil {
 		return nil, err
 	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           resp.InvokeID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: do.GetEvaluatorVersionID(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
+		return nil, err
+	}
+
 	return &evaluatorservice.AsyncDebugEvaluatorResponse{
 		InvokeID: gptr.Of(resp.InvokeID),
 	}, nil

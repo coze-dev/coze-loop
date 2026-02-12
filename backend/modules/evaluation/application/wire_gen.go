@@ -247,7 +247,9 @@ func InitEvaluatorApplication(ctx context.Context, idgen2 idgen.IIDGenerator, au
 	iTagRPCAdapter := tag.NewTagRPCProvider(tagClient)
 	iEvaluationAnalysisService := service.NewEvaluationAnalysisService()
 	exptResultService := service.NewExptResultService(iExptItemResultRepo, iExptTurnResultRepo, iExptAnnotateRepo, iExptStatsRepo, iExperimentRepo, exptMetric, iLatestWriteTracker, idgen2, iExptTurnResultFilterRepo, evaluatorService, iEvalTargetService, evaluationSetVersionService, iEvaluationSetService, evaluatorRecordService, evaluationSetItemService, exptEventPublisher, iTagRPCAdapter, iEvaluationAnalysisService)
-	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorTemplateService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v, exptResultService)
+	iEvalAsyncDAO := dao.NewEvalAsyncDAO(cmdable)
+	iEvalAsyncRepo := experiment.NewEvalAsyncRepo(iEvalAsyncDAO)
+	evaluationEvaluatorService := NewEvaluatorHandlerImpl(idgen2, iConfiger, iAuthProvider, evaluatorService, evaluatorRecordService, evaluatorTemplateService, evaluatorExecMetrics, userInfoService, auditClient, benefitSvc, iFileProvider, v, exptResultService, iEvalAsyncRepo)
 	return evaluationEvaluatorService, nil
 }
 
