@@ -13,6 +13,8 @@ import (
 	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
@@ -1321,4 +1323,346 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
 	}
+}
+
+func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment.ExptTemplate {
+	if template == nil {
+		return nil
+	}
+
+	dto := &openapiExperiment.ExptTemplate{
+		Meta: &openapiExperiment.ExptTemplateMeta{
+			ID:          gptr.Of(template.Meta.ID),
+			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+			Name:        gptr.Of(template.Meta.Name),
+			Description: gptr.Of(template.Meta.Desc),
+			ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
+		},
+		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
+	}
+
+	if template.TripleConfig != nil {
+		dto.TripleConfig = &openapiExperiment.ExptTuple{
+			EvalSetID:        gptr.Of(template.TripleConfig.EvalSetID),
+			EvalSetVersionID: gptr.Of(template.TripleConfig.EvalSetVersionID),
+			TargetID:         gptr.Of(template.TripleConfig.TargetID),
+			TargetVersionID:  gptr.Of(template.TripleConfig.TargetVersionID),
+		}
+		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+			if item == nil {
+				continue
+			}
+			dto.TripleConfig.EvaluatorVersions = append(dto.TripleConfig.EvaluatorVersions, &openapiEvaluator.EvaluatorVersion{
+				ID:      gptr.Of(item.EvaluatorVersionID),
+				Version: gptr.Of(item.Version),
+			})
+		}
+	}
+
+	if template.FieldMappingConfig != nil {
+		dto.FieldMappingConfig = &openapiExperiment.ExptFieldMapping{
+			ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+		}
+		if template.FieldMappingConfig.TargetFieldMapping != nil {
+			dto.FieldMappingConfig.TargetFieldMapping = DomainTargetFieldMappingDTO2OpenAPI(&domainExpt.TargetFieldMapping{
+				FromEvalSet: slices.Transform(template.FieldMappingConfig.TargetFieldMapping.FromEvalSet, func(e *entity.ExptTemplateFieldMapping, _ int) *domainExpt.FieldMapping {
+					return &domainExpt.FieldMapping{FieldName: gptr.Of(e.FieldName), FromFieldName: gptr.Of(e.FromFieldName)}
+				}),
+			})
+		}
+		if template.FieldMappingConfig.TargetRuntimeParam != nil {
+			dto.FieldMappingConfig.TargetRuntimeParam = &openapiCommon.RuntimeParam{
+				JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
+			}
+		}
+		for _, em := range template.FieldMappingConfig.EvaluatorFieldMapping {
+			m := &openapiExperiment.EvaluatorFieldMapping{
+				EvaluatorID: gptr.Of(em.EvaluatorID),
+				Version:     gptr.Of(em.Version),
+			}
+			for _, fm := range em.FromEvalSet {
+				m.FromEvalSet = append(m.FromEvalSet, &openapiExperiment.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				m.FromTarget = append(m.FromTarget, &openapiExperiment.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+				})
+			}
+			dto.FieldMappingConfig.EvaluatorFieldMapping = append(dto.FieldMappingConfig.EvaluatorFieldMapping, m)
+		}
+	}
+
+	return dto
+}
+
+func OpenAPIExptTemplateDO2DTOs(templates []*entity.ExptTemplate) []*openapiExperiment.ExptTemplate {
+	if len(templates) == 0 {
+		return nil
+	}
+	dtos := make([]*openapiExperiment.ExptTemplate, 0, len(templates))
+	for _, t := range templates {
+		dtos = append(dtos, OpenAPIExptTemplateDO2DTO(t))
+	}
+	return dtos
+}
+
+func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequest) (*entity.CreateExptTemplateParam, error) {
+	if req == nil {
+		return nil, nil
+	}
+	param := &entity.CreateExptTemplateParam{
+		SpaceID:               req.GetWorkspaceID(),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
+	}
+
+	if req.GetMeta() != nil {
+		meta := req.GetMeta()
+		param.Name = meta.GetName()
+		param.Description = meta.GetDescription()
+		param.ExptType = OpenAPIExptTypeDTO2DO(meta.ExptType)
+	}
+
+	if req.GetTripleConfig() != nil {
+		tc := req.GetTripleConfig()
+		param.EvalSetID = tc.GetEvalSetID()
+		param.EvalSetVersionID = tc.GetEvalSetVersionID()
+		param.TargetID = tc.GetTargetID()
+		param.TargetVersionID = tc.GetTargetVersionID()
+		for _, item := range tc.EvaluatorVersions {
+			if item == nil {
+				continue
+			}
+			param.EvaluatorIDVersionItems = append(param.EvaluatorIDVersionItems, &entity.EvaluatorIDVersionItem{
+				Version:            item.GetVersion(),
+				EvaluatorVersionID: item.GetID(),
+			})
+		}
+	}
+
+	if req.GetFieldMappingConfig() != nil {
+		fmc := req.GetFieldMappingConfig()
+		var rtp *entity.RuntimeParam
+		if fmc.TargetRuntimeParam != nil {
+			rtp = &entity.RuntimeParam{JSONValue: fmc.TargetRuntimeParam.JSONValue}
+		}
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: param.TargetVersionID,
+					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
+				},
+			},
+		}
+		for _, em := range fmc.EvaluatorFieldMapping {
+			if em == nil {
+				continue
+			}
+			ec := &entity.EvaluatorConf{
+				EvaluatorID: em.GetEvaluatorID(),
+				Version:     em.GetVersion(),
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{},
+					TargetAdapter:  &entity.FieldAdapter{},
+				},
+			}
+			for _, fm := range em.FromEvalSet {
+				ec.IngressConf.EvalSetAdapter.FieldConfs = append(ec.IngressConf.EvalSetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				ec.IngressConf.TargetAdapter.FieldConfs = append(ec.IngressConf.TargetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			if param.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
+			}
+			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	return param, nil
+}
+
+func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequest) (*entity.UpdateExptTemplateParam, error) {
+	if req == nil {
+		return nil, nil
+	}
+	param := &entity.UpdateExptTemplateParam{
+		TemplateID:            req.GetTemplateID(),
+		SpaceID:               req.GetWorkspaceID(),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
+	}
+
+	if req.GetMeta() != nil {
+		meta := req.GetMeta()
+		param.Name = meta.GetName()
+		param.Description = meta.GetDescription()
+		param.ExptType = OpenAPIExptTypeDTO2DO(meta.ExptType)
+	}
+
+	if req.GetTripleConfig() != nil {
+		tc := req.GetTripleConfig()
+		param.EvalSetVersionID = tc.GetEvalSetVersionID()
+		param.TargetVersionID = tc.GetTargetVersionID()
+		for _, item := range tc.EvaluatorVersions {
+			if item == nil {
+				continue
+			}
+			param.EvaluatorIDVersionItems = append(param.EvaluatorIDVersionItems, &entity.EvaluatorIDVersionItem{
+				Version:            item.GetVersion(),
+				EvaluatorVersionID: item.GetID(),
+			})
+		}
+	}
+
+	if req.GetFieldMappingConfig() != nil {
+		fmc := req.GetFieldMappingConfig()
+		var rtp *entity.RuntimeParam
+		if fmc.TargetRuntimeParam != nil {
+			rtp = &entity.RuntimeParam{JSONValue: fmc.TargetRuntimeParam.JSONValue}
+		}
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: param.TargetVersionID,
+					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
+				},
+			},
+		}
+		for _, em := range fmc.EvaluatorFieldMapping {
+			if em == nil {
+				continue
+			}
+			ec := &entity.EvaluatorConf{
+				EvaluatorID: em.GetEvaluatorID(),
+				Version:     em.GetVersion(),
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{},
+					TargetAdapter:  &entity.FieldAdapter{},
+				},
+			}
+			for _, fm := range em.FromEvalSet {
+				ec.IngressConf.EvalSetAdapter.FieldConfs = append(ec.IngressConf.EvalSetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				ec.IngressConf.TargetAdapter.FieldConfs = append(ec.IngressConf.TargetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			if param.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
+			}
+			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	return param, nil
+}
+
+func OpenAPIExptTypeDO2DTO(t entity.ExptType) *openapiExperiment.ExperimentType {
+	var s openapiExperiment.ExperimentType
+	switch t {
+	case entity.ExptType_Offline:
+		s = openapiExperiment.ExperimentTypeOffline
+	case entity.ExptType_Online:
+		s = openapiExperiment.ExperimentTypeOnline
+	default:
+		return nil
+	}
+	return &s
+}
+
+func OpenAPIExptTypeDTO2DO(t *openapiExperiment.ExperimentType) entity.ExptType {
+	if t == nil {
+		return entity.ExptType_Offline
+	}
+	switch *t {
+	case openapiExperiment.ExperimentTypeOffline:
+		return entity.ExptType_Offline
+	case openapiExperiment.ExperimentTypeOnline:
+		return entity.ExptType_Online
+	default:
+		return entity.ExptType_Offline
+	}
+}
+
+func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEvalTargetParam) *entity.CreateEvalTargetParam {
+	if param == nil {
+		return nil
+	}
+
+	res := &entity.CreateEvalTargetParam{
+		SourceTargetID:      param.SourceTargetID,
+		SourceTargetVersion: param.SourceTargetVersion,
+		BotPublishVersion:   param.BotPublishVersion,
+		Env:                 param.Env,
+	}
+	if param.EvalTargetType != nil {
+		val, err := mapOpenAPIEvalTargetType(*param.EvalTargetType)
+		if err == nil {
+			res.EvalTargetType = gptr.Of(entity.EvalTargetType(val))
+		}
+	}
+	if param.BotInfoType != nil {
+		val, err := mapOpenAPICozeBotInfoType(*param.BotInfoType)
+		if err == nil {
+			res.BotInfoType = gptr.Of(entity.CozeBotInfoType(val))
+		}
+	}
+	if param.Region != nil {
+		val, err := mapOpenAPIRegion(*param.Region)
+		if err == nil {
+			res.Region = gptr.Of(val)
+		}
+	}
+	if param.CustomEvalTarget != nil {
+		res.CustomEvalTarget = &entity.CustomEvalTarget{
+			ID:        param.CustomEvalTarget.ID,
+			Name:      param.CustomEvalTarget.Name,
+			AvatarURL: param.CustomEvalTarget.AvatarURL,
+			Ext:       param.CustomEvalTarget.Ext,
+		}
+	}
+	return res
+}
+
+func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldMapping, rtp *entity.RuntimeParam) *entity.TargetIngressConf {
+	tic := &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}
+
+	if mapping != nil {
+		fc := make([]*entity.FieldConf, 0, len(mapping.GetFromEvalSet()))
+		for _, fm := range mapping.GetFromEvalSet() {
+			fc = append(fc, &entity.FieldConf{
+				FieldName: fm.GetFieldName(),
+				FromField: fm.GetFromFieldName(),
+			})
+		}
+		tic.EvalSetAdapter.FieldConfs = fc
+	}
+
+	if rtp != nil && rtp.JSONValue != nil && len(*rtp.JSONValue) > 0 {
+		tic.CustomConf = &entity.FieldAdapter{
+			FieldConfs: []*entity.FieldConf{{
+				FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+				Value:     *rtp.JSONValue,
+			}},
+		}
+	}
+	return tic
 }

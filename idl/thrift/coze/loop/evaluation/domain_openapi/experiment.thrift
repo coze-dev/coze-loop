@@ -225,3 +225,68 @@ struct ItemResult {
 struct ItemSystemInfo {
     1: optional ItemRunState run_state
 }
+
+// ===============================
+// 实验模板相关结构定义
+// ===============================
+
+// 实验模板基础信息
+struct ExptTemplateMeta {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional string name
+    4: optional string description
+    5: optional ExperimentType expt_type   // 模板对应的实验类型，当前主要为 Offline
+}
+
+// 实验三元组配置
+struct ExptTuple {
+    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    4: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    5: optional list<evaluator.EvaluatorVersion> evaluator_versions
+
+    // 兼容内部结构
+    7: optional eval_set.EvaluationSet eval_set
+    8: optional eval_target.EvalTarget eval_target
+    9: optional list<evaluator.Evaluator> evaluators
+}
+
+// 实验模板字段映射配置
+struct ExptFieldMapping {
+    1: optional TargetFieldMapping target_field_mapping
+    2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    3: optional common.RuntimeParam target_runtime_param
+    4: optional i32 item_concur_num
+}
+
+// 实验模板
+struct ExptTemplate {
+    1: optional ExptTemplateMeta meta
+    2: optional ExptTuple triple_config
+    3: optional ExptFieldMapping field_mapping_config
+
+    100: optional common.BaseInfo base_info
+}
+
+// 通用筛选逻辑
+struct Filters {
+    1: optional list<FilterCondition> filter_conditions
+    2: optional FilterLogicOp logic_op
+}
+
+typedef string FilterLogicOp(ts.enum="true")
+const FilterLogicOp FilterLogicOp_And = "and"
+const FilterLogicOp FilterLogicOp_Or = "or"
+
+struct FilterCondition {
+    1: optional string field
+    2: optional string operator
+    3: optional string value
+}
+
+// 实验模板筛选器
+struct ExperimentTemplateFilter {
+    1: optional Filters filters
+}
