@@ -30,6 +30,7 @@ enum ExptType {
 enum SourceType {
     Evaluation = 1
     AutoTask = 2
+    Workflow = 3
 }
 
 struct Experiment {
@@ -113,8 +114,14 @@ struct ExptTemplate {
     3: optional ExptFieldMapping field_mapping_config
     4: optional ExptScoreWeight score_weight_config
     5: optional ExptInfo expt_info
+    6: optional ExptSource expt_source
 
     255: optional common.BaseInfo base_info
+}
+
+struct ExptSource {
+    1: optional SourceType source_type
+    2: optional string source_id
 }
 
 struct ExptInfo {

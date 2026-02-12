@@ -202,6 +202,7 @@ type SourceType int64
 const (
 	SourceType_Evaluation SourceType = 1
 	SourceType_AutoTask   SourceType = 2
+	SourceType_Workflow   SourceType = 3
 )
 
 func (p SourceType) String() string {
@@ -210,6 +211,8 @@ func (p SourceType) String() string {
 		return "Evaluation"
 	case SourceType_AutoTask:
 		return "AutoTask"
+	case SourceType_Workflow:
+		return "Workflow"
 	}
 	return "<UNSET>"
 }
@@ -220,6 +223,8 @@ func SourceTypeFromString(s string) (SourceType, error) {
 		return SourceType_Evaluation, nil
 	case "AutoTask":
 		return SourceType_AutoTask, nil
+	case "Workflow":
+		return SourceType_Workflow, nil
 	}
 	return SourceType(0), fmt.Errorf("not a valid SourceType string")
 }
@@ -5352,6 +5357,7 @@ type ExptTemplate struct {
 	FieldMappingConfig *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
 	ScoreWeightConfig  *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	ExptInfo           *ExptInfo         `thrift:"expt_info,5,optional" frugal:"5,optional,ExptInfo" form:"expt_info" json:"expt_info,omitempty" query:"expt_info"`
+	ExptSource         *ExptSource       `thrift:"expt_source,6,optional" frugal:"6,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
 	BaseInfo           *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
@@ -5422,6 +5428,18 @@ func (p *ExptTemplate) GetExptInfo() (v *ExptInfo) {
 	return p.ExptInfo
 }
 
+var ExptTemplate_ExptSource_DEFAULT *ExptSource
+
+func (p *ExptTemplate) GetExptSource() (v *ExptSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptSource() {
+		return ExptTemplate_ExptSource_DEFAULT
+	}
+	return p.ExptSource
+}
+
 var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
@@ -5448,6 +5466,9 @@ func (p *ExptTemplate) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *ExptTemplate) SetExptInfo(val *ExptInfo) {
 	p.ExptInfo = val
 }
+func (p *ExptTemplate) SetExptSource(val *ExptSource) {
+	p.ExptSource = val
+}
 func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -5458,6 +5479,7 @@ var fieldIDToName_ExptTemplate = map[int16]string{
 	3:   "field_mapping_config",
 	4:   "score_weight_config",
 	5:   "expt_info",
+	6:   "expt_source",
 	255: "base_info",
 }
 
@@ -5479,6 +5501,10 @@ func (p *ExptTemplate) IsSetScoreWeightConfig() bool {
 
 func (p *ExptTemplate) IsSetExptInfo() bool {
 	return p.ExptInfo != nil
+}
+
+func (p *ExptTemplate) IsSetExptSource() bool {
+	return p.ExptSource != nil
 }
 
 func (p *ExptTemplate) IsSetBaseInfo() bool {
@@ -5538,6 +5564,14 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5620,6 +5654,14 @@ func (p *ExptTemplate) ReadField5(iprot thrift.TProtocol) error {
 	p.ExptInfo = _field
 	return nil
 }
+func (p *ExptTemplate) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewExptSource()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptSource = _field
+	return nil
+}
 func (p *ExptTemplate) ReadField255(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -5653,6 +5695,10 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -5767,6 +5813,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExptTemplate) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptSource() {
+		if err = oprot.WriteFieldBegin("expt_source", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptSource.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ExptTemplate) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 255); err != nil {
@@ -5815,6 +5879,9 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	if !p.Field5DeepEqual(ano.ExptInfo) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.ExptSource) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseInfo) {
 		return false
 	}
@@ -5856,9 +5923,275 @@ func (p *ExptTemplate) Field5DeepEqual(src *ExptInfo) bool {
 	}
 	return true
 }
+func (p *ExptTemplate) Field6DeepEqual(src *ExptSource) bool {
+
+	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExptSource struct {
+	SourceType *SourceType `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	SourceID   *string     `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+}
+
+func NewExptSource() *ExptSource {
+	return &ExptSource{}
+}
+
+func (p *ExptSource) InitDefault() {
+}
+
+var ExptSource_SourceType_DEFAULT SourceType
+
+func (p *ExptSource) GetSourceType() (v SourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceType() {
+		return ExptSource_SourceType_DEFAULT
+	}
+	return *p.SourceType
+}
+
+var ExptSource_SourceID_DEFAULT string
+
+func (p *ExptSource) GetSourceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceID() {
+		return ExptSource_SourceID_DEFAULT
+	}
+	return *p.SourceID
+}
+func (p *ExptSource) SetSourceType(val *SourceType) {
+	p.SourceType = val
+}
+func (p *ExptSource) SetSourceID(val *string) {
+	p.SourceID = val
+}
+
+var fieldIDToName_ExptSource = map[int16]string{
+	1: "source_type",
+	2: "source_id",
+}
+
+func (p *ExptSource) IsSetSourceType() bool {
+	return p.SourceType != nil
+}
+
+func (p *ExptSource) IsSetSourceID() bool {
+	return p.SourceID != nil
+}
+
+func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptSource[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptSource) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *SourceType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := SourceType(v)
+		_field = &tmp
+	}
+	p.SourceType = _field
+	return nil
+}
+func (p *ExptSource) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceID = _field
+	return nil
+}
+
+func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptSource"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptSource) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceType() {
+		if err = oprot.WriteFieldBegin("source_type", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SourceType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptSource) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceID() {
+		if err = oprot.WriteFieldBegin("source_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SourceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ExptSource) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptSource(%+v)", *p)
+
+}
+
+func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SourceType) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SourceID) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptSource) Field1DeepEqual(src *SourceType) bool {
+
+	if p.SourceType == src {
+		return true
+	} else if p.SourceType == nil || src == nil {
+		return false
+	}
+	if *p.SourceType != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field2DeepEqual(src *string) bool {
+
+	if p.SourceID == src {
+		return true
+	} else if p.SourceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SourceID, *src) != 0 {
 		return false
 	}
 	return true

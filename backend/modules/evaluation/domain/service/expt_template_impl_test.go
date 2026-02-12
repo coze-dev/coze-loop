@@ -26,6 +26,7 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	platestwrite "github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -87,6 +88,8 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
 	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
 	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+	mockTaskRPCAdapter := mocks.NewMockITaskRPCAdapter(ctrl)
+	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
 
 	mgr := NewExptTemplateManager(
 		mockRepo,
@@ -96,6 +99,8 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 		mockEvalSetSvc,
 		mockEvalSetVerSvc,
 		mockLWT,
+		mockTaskRPCAdapter,
+		mockExptRepo,
 	)
 
 	ctx := context.Background()
