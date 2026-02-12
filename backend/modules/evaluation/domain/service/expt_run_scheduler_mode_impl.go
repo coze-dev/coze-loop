@@ -1037,6 +1037,10 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
+		if itemCnt >= int(total) || len(items) == 0 {
+			break
+		}
+
 		time.Sleep(time.Millisecond * 30)
 	}
 
