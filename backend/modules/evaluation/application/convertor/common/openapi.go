@@ -226,7 +226,7 @@ func OpenAPIModelConfigDO2DTO(config *commonentity.ModelConfig) *openapiCommon.M
 		return nil
 	}
 	return &openapiCommon.ModelConfig{
-		ModelID:     gptr.Of(config.ModelID),
+		ModelID:     config.ModelID,
 		ModelName:   gptr.Of(config.ModelName),
 		Temperature: config.Temperature,
 		MaxTokens:   config.MaxTokens,
@@ -239,7 +239,7 @@ func OpenAPIModelConfigDTO2DO(config *openapiCommon.ModelConfig) *commonentity.M
 		return nil
 	}
 	return &commonentity.ModelConfig{
-		ModelID:     config.GetModelID(),
+		ModelID:     config.ModelID,
 		ModelName:   gptr.Indirect(config.ModelName),
 		Temperature: config.Temperature,
 		MaxTokens:   config.MaxTokens,

@@ -151,7 +151,7 @@ func TestOpenAPIRoleDO2DTO(t *testing.T) {
 
 func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 	assert.Nil(t, OpenAPIModelConfigDO2DTO(nil))
-	do := &commonentity.ModelConfig{ModelID: 1, ModelName: "m"}
+	do := &commonentity.ModelConfig{ModelID: gptr.Of(int64(1)), ModelName: "m"}
 	dto := OpenAPIModelConfigDO2DTO(do)
 	assert.Equal(t, int64(1), *dto.ModelID)
 	assert.Equal(t, "m", *dto.ModelName)
@@ -161,7 +161,7 @@ func TestOpenAPIModelConfigDTO2DO(t *testing.T) {
 	assert.Nil(t, OpenAPIModelConfigDTO2DO(nil))
 	dto := &openapiCommon.ModelConfig{ModelID: gptr.Of(int64(1)), ModelName: gptr.Of("m")}
 	do := OpenAPIModelConfigDTO2DO(dto)
-	assert.Equal(t, int64(1), do.ModelID)
+	assert.Equal(t, int64(1), *do.ModelID)
 	assert.Equal(t, "m", do.ModelName)
 }
 
