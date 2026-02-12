@@ -469,6 +469,6 @@ type AgentConfig struct {
 }
 
 type SkillConfig struct {
-	SkillID int64   `json:"skill_id,omitempty"` // skill id
+	SkillID *int64  `json:"skill_id,omitempty"` // skill id
 	Version *string `json:"version,omitempty"`  // skill version
 }
