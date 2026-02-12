@@ -23,6 +23,7 @@ func ConvertEvaluatorOutputDataDTO2DO(dto *evaluatordto.EvaluatorOutputData) *ev
 		EvaluatorRunError: ConvertEvaluatorRunErrorDTO2DO(dto.EvaluatorRunError),
 		TimeConsumingMS:   dto.GetTimeConsumingMs(),
 		Stdout:            dto.GetStdout(),
+		ExtraOutput:       ConvertEvaluatorExtraOutputContentDTO2DO(dto.ExtraOutput),
 	}
 }
 
@@ -37,7 +38,40 @@ func ConvertEvaluatorOutputDataDO2DTO(do *evaluatorentity.EvaluatorOutputData) *
 		EvaluatorRunError: ConvertEvaluatorRunErrorDO2DTO(do.EvaluatorRunError),
 		TimeConsumingMs:   gptr.Of(do.TimeConsumingMS),
 		Stdout:            gptr.Of(do.Stdout),
+		ExtraOutput:       ConvertEvaluatorExtraOutputContentDO2DTO(do.ExtraOutput),
 	}
+}
+
+// ConvertEvaluatorExtraOutputContentDTO2DO 将 DTO 转换为 DO
+func ConvertEvaluatorExtraOutputContentDTO2DO(dto *evaluatordto.EvaluatorExtraOutputContent) *evaluatorentity.EvaluatorExtraOutputContent {
+	if dto == nil {
+		return nil
+	}
+	result := &evaluatorentity.EvaluatorExtraOutputContent{
+		URI: dto.URI,
+		URL: dto.URL,
+	}
+	if dto.OutputType != nil {
+		outputType := evaluatorentity.EvaluatorExtraOutputType(*dto.OutputType)
+		result.OutputType = &outputType
+	}
+	return result
+}
+
+// ConvertEvaluatorExtraOutputContentDO2DTO 将 DO 转换为 DTO
+func ConvertEvaluatorExtraOutputContentDO2DTO(do *evaluatorentity.EvaluatorExtraOutputContent) *evaluatordto.EvaluatorExtraOutputContent {
+	if do == nil {
+		return nil
+	}
+	result := &evaluatordto.EvaluatorExtraOutputContent{
+		URI: do.URI,
+		URL: do.URL,
+	}
+	if do.OutputType != nil {
+		outputType := evaluatordto.EvaluatorExtraOutputType(*do.OutputType)
+		result.OutputType = &outputType
+	}
+	return result
 }
 
 // ConvertCorrectionDTO2DO 将 DTO 转换为 evaluatorentity.Correction 结构体

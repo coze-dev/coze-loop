@@ -154,6 +154,7 @@ func InitExperimentApplication(
 	objectStorage fileserver.ObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
+	fileClient fileservice.Client,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -242,6 +243,7 @@ func InitEvalOpenAPIApplication(
 	ckProvider ck.Provider,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
+	fileClient fileservice.Client,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,
