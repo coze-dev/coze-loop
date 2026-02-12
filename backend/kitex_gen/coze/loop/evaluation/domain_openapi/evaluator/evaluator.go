@@ -1908,11 +1908,12 @@ func (p *EvaluatorVersion) Field100DeepEqual(src *common.BaseInfo) bool {
 // 评估器
 type Evaluator struct {
 	ID               *int64            `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name             *string           `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Description      *string           `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
-	EvaluatorType    *EvaluatorType    `thrift:"evaluator_type,4,optional" frugal:"4,optional,string" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
-	IsDraftSubmitted *bool             `thrift:"is_draft_submitted,5,optional" frugal:"5,optional,bool" form:"is_draft_submitted" json:"is_draft_submitted,omitempty" query:"is_draft_submitted"`
-	LatestVersion    *string           `thrift:"latest_version,6,optional" frugal:"6,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
+	WorkspaceID      *int64            `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	Name             *string           `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Description      *string           `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	EvaluatorType    *EvaluatorType    `thrift:"evaluator_type,5,optional" frugal:"5,optional,string" form:"evaluator_type" json:"evaluator_type,omitempty" query:"evaluator_type"`
+	IsDraftSubmitted *bool             `thrift:"is_draft_submitted,6,optional" frugal:"6,optional,bool" form:"is_draft_submitted" json:"is_draft_submitted,omitempty" query:"is_draft_submitted"`
+	LatestVersion    *string           `thrift:"latest_version,7,optional" frugal:"7,optional,string" form:"latest_version" json:"latest_version,omitempty" query:"latest_version"`
 	CurrentVersion   *EvaluatorVersion `thrift:"current_version,20,optional" frugal:"20,optional,EvaluatorVersion" form:"current_version" json:"current_version,omitempty" query:"current_version"`
 	BaseInfo         *common.BaseInfo  `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -1934,6 +1935,18 @@ func (p *Evaluator) GetID() (v int64) {
 		return Evaluator_ID_DEFAULT
 	}
 	return *p.ID
+}
+
+var Evaluator_WorkspaceID_DEFAULT int64
+
+func (p *Evaluator) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return Evaluator_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var Evaluator_Name_DEFAULT string
@@ -2022,6 +2035,9 @@ func (p *Evaluator) GetBaseInfo() (v *common.BaseInfo) {
 func (p *Evaluator) SetID(val *int64) {
 	p.ID = val
 }
+func (p *Evaluator) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *Evaluator) SetName(val *string) {
 	p.Name = val
 }
@@ -2046,17 +2062,22 @@ func (p *Evaluator) SetBaseInfo(val *common.BaseInfo) {
 
 var fieldIDToName_Evaluator = map[int16]string{
 	1:   "id",
-	2:   "name",
-	3:   "description",
-	4:   "evaluator_type",
-	5:   "is_draft_submitted",
-	6:   "latest_version",
+	2:   "workspace_id",
+	3:   "name",
+	4:   "description",
+	5:   "evaluator_type",
+	6:   "is_draft_submitted",
+	7:   "latest_version",
 	20:  "current_version",
 	100: "base_info",
 }
 
 func (p *Evaluator) IsSetID() bool {
 	return p.ID != nil
+}
+
+func (p *Evaluator) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *Evaluator) IsSetName() bool {
@@ -2114,7 +2135,7 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2138,7 +2159,7 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 5:
-			if fieldTypeId == thrift.BOOL {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2146,8 +2167,16 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 6:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2211,13 +2240,13 @@ func (p *Evaluator) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *Evaluator) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
 		_field = &v
 	}
-	p.Name = _field
+	p.WorkspaceID = _field
 	return nil
 }
 func (p *Evaluator) ReadField3(iprot thrift.TProtocol) error {
@@ -2228,10 +2257,21 @@ func (p *Evaluator) ReadField3(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
-	p.Description = _field
+	p.Name = _field
 	return nil
 }
 func (p *Evaluator) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *Evaluator) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *EvaluatorType
 	if v, err := iprot.ReadString(); err != nil {
@@ -2242,7 +2282,7 @@ func (p *Evaluator) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluatorType = _field
 	return nil
 }
-func (p *Evaluator) ReadField5(iprot thrift.TProtocol) error {
+func (p *Evaluator) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -2253,7 +2293,7 @@ func (p *Evaluator) ReadField5(iprot thrift.TProtocol) error {
 	p.IsDraftSubmitted = _field
 	return nil
 }
-func (p *Evaluator) ReadField6(iprot thrift.TProtocol) error {
+func (p *Evaluator) ReadField7(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -2311,6 +2351,10 @@ func (p *Evaluator) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 6
 			goto WriteFieldError
 		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
 			goto WriteFieldError
@@ -2356,11 +2400,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *Evaluator) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetName() {
-		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Name); err != nil {
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2374,11 +2418,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *Evaluator) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDescription() {
-		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.Description); err != nil {
+		if err := oprot.WriteString(*p.Name); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2392,11 +2436,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *Evaluator) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetEvaluatorType() {
-		if err = oprot.WriteFieldBegin("evaluator_type", thrift.STRING, 4); err != nil {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.EvaluatorType); err != nil {
+		if err := oprot.WriteString(*p.Description); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2410,11 +2454,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *Evaluator) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetIsDraftSubmitted() {
-		if err = oprot.WriteFieldBegin("is_draft_submitted", thrift.BOOL, 5); err != nil {
+	if p.IsSetEvaluatorType() {
+		if err = oprot.WriteFieldBegin("evaluator_type", thrift.STRING, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteBool(*p.IsDraftSubmitted); err != nil {
+		if err := oprot.WriteString(*p.EvaluatorType); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2428,11 +2472,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *Evaluator) writeField6(oprot thrift.TProtocol) (err error) {
-	if p.IsSetLatestVersion() {
-		if err = oprot.WriteFieldBegin("latest_version", thrift.STRING, 6); err != nil {
+	if p.IsSetIsDraftSubmitted() {
+		if err = oprot.WriteFieldBegin("is_draft_submitted", thrift.BOOL, 6); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.LatestVersion); err != nil {
+		if err := oprot.WriteBool(*p.IsDraftSubmitted); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2444,6 +2488,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *Evaluator) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatestVersion() {
+		if err = oprot.WriteFieldBegin("latest_version", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LatestVersion); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 func (p *Evaluator) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCurrentVersion() {
@@ -2499,19 +2561,22 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 	if !p.Field1DeepEqual(ano.ID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Name) {
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Description) {
+	if !p.Field3DeepEqual(ano.Name) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.EvaluatorType) {
+	if !p.Field4DeepEqual(ano.Description) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.IsDraftSubmitted) {
+	if !p.Field5DeepEqual(ano.EvaluatorType) {
 		return false
 	}
-	if !p.Field6DeepEqual(ano.LatestVersion) {
+	if !p.Field6DeepEqual(ano.IsDraftSubmitted) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.LatestVersion) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.CurrentVersion) {
@@ -2535,7 +2600,19 @@ func (p *Evaluator) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field2DeepEqual(src *string) bool {
+func (p *Evaluator) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *Evaluator) Field3DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -2547,7 +2624,7 @@ func (p *Evaluator) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field3DeepEqual(src *string) bool {
+func (p *Evaluator) Field4DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -2559,7 +2636,7 @@ func (p *Evaluator) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field4DeepEqual(src *EvaluatorType) bool {
+func (p *Evaluator) Field5DeepEqual(src *EvaluatorType) bool {
 
 	if p.EvaluatorType == src {
 		return true
@@ -2571,7 +2648,7 @@ func (p *Evaluator) Field4DeepEqual(src *EvaluatorType) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field5DeepEqual(src *bool) bool {
+func (p *Evaluator) Field6DeepEqual(src *bool) bool {
 
 	if p.IsDraftSubmitted == src {
 		return true
@@ -2583,7 +2660,7 @@ func (p *Evaluator) Field5DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *Evaluator) Field6DeepEqual(src *string) bool {
+func (p *Evaluator) Field7DeepEqual(src *string) bool {
 
 	if p.LatestVersion == src {
 		return true

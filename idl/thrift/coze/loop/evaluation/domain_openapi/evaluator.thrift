@@ -69,11 +69,12 @@ struct EvaluatorVersion {
 // 评估器
 struct Evaluator {
     1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
-    2: optional string name
-    3: optional string description
-    4: optional EvaluatorType evaluator_type
-    5: optional bool is_draft_submitted
-    6: optional string latest_version
+    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    3: optional string name
+    4: optional string description
+    5: optional EvaluatorType evaluator_type
+    6: optional bool is_draft_submitted
+    7: optional string latest_version
 
     20: optional EvaluatorVersion current_version
 

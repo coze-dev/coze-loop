@@ -512,6 +512,7 @@ struct BatchGetEvaluatorsOpenAPIData {
 // 3.3 创建评估器
 struct CreateEvaluatorOApiRequest {
     1: optional evaluator.Evaluator evaluator (api.body="evaluator")
+    2: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
 
     255: optional base.Base Base
 }

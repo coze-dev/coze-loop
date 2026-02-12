@@ -1092,8 +1092,7 @@ func (e *EvalOpenAPIApplication) CreateEvaluatorOApi(ctx context.Context, req *o
 	var evaluatorID int64
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
-		workspaceID := int64(0)
-		// FIXME: CreateEvaluatorOApiRequest missing workspace_id in IDL
+		workspaceID := req.GetWorkspaceID()
 		e.metric.EmitOpenAPIMetric(ctx, workspaceID, evaluatorID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
 
@@ -1101,7 +1100,22 @@ func (e *EvalOpenAPIApplication) CreateEvaluatorOApi(ctx context.Context, req *o
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req or evaluator is nil"))
 	}
 
-	workspaceID := int64(0) // FIXME: CreateEvaluatorOApiRequest missing workspace_id in IDL
+	// 如果 Evaluator 中的 WorkspaceID 为 0，则使用请求中的 WorkspaceID
+	if req.GetEvaluator() != nil && req.GetEvaluator().GetWorkspaceID() == 0 {
+		req.Evaluator.WorkspaceID = req.WorkspaceID
+	}
+
+	workspaceID := req.GetWorkspaceID()
+	if workspaceID == 0 {
+		// 如果请求中没有 workspace_id，尝试从 Evaluator 中获取
+		if req.GetEvaluator() != nil {
+			workspaceID = req.GetEvaluator().GetWorkspaceID()
+		}
+		if workspaceID == 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+		}
+	}
+
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(workspaceID, 10),
 		SpaceID:       workspaceID,

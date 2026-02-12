@@ -16,6 +16,7 @@ func OpenAPIEvaluatorDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evaluator {
 	}
 	dto := &openapiEvaluator.Evaluator{
 		ID:               gptr.Of(do.ID),
+		WorkspaceID:      gptr.Of(do.SpaceID),
 		Name:             gptr.Of(do.Name),
 		Description:      gptr.Of(do.Description),
 		EvaluatorType:    OpenAPIEvaluatorTypeDO2DTO(do.EvaluatorType),
@@ -443,6 +444,7 @@ func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator,
 	evalType := OpenAPIEvaluatorTypeDTO2DO(dto.EvaluatorType)
 	res := &entity.Evaluator{
 		ID:            dto.GetID(),
+		SpaceID:       dto.GetWorkspaceID(),
 		Name:          dto.GetName(),
 		Description:   dto.GetDescription(),
 		EvaluatorType: evalType,
