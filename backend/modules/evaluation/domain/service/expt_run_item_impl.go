@@ -169,7 +169,14 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	}
 
 	if evalErr != nil {
-		errMsg := e.Configer.GetErrCtrl(ctx).ConvertErrMsg(evalErr.Error())
+		var rawErrMsg string
+		if se, ok := errorx.FromStatusError(evalErr); ok && se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode {
+			rawErrMsg = errorx.ErrorWithoutStack(evalErr)
+		} else {
+			rawErrMsg = evalErr.Error()
+		}
+
+		errMsg := e.Configer.GetErrCtrl(ctx).ConvertErrMsg(rawErrMsg)
 		logs.CtxWarn(ctx, "[ExptTurnEval] store turn run err, before: %v, after: %v", evalErr, errMsg)
 
 		ei, ok := errno.ParseErrImpl(evalErr)
