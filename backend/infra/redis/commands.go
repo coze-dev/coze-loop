@@ -74,6 +74,7 @@ type SortedSetCmdable interface {
 type ListCmdable interface {
 	RPush(ctx context.Context, key string, values ...any) *redis.IntCmd
 	LRange(ctx context.Context, key string, start int64, stop int64) *redis.StringSliceCmd
+	LTrim(ctx context.Context, key string, start int64, stop int64) *redis.StatusCmd
 }
 
 type Pipeliner interface {
