@@ -575,13 +575,24 @@ service EvaluatorService {
     BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (
         api.post="/api/evaluation/v1/evaluators/batch_debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
     )// evaluator 调试
+    AsyncRunEvaluatorResponse AsyncRunEvaluator(1: AsyncRunEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/async_run"
+    )// evaluator 异步运行
+    AsyncDebugEvaluatorResponse AsyncDebugEvaluator(1: AsyncDebugEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators/async_debug"
+    )// evaluator 异步调试
+
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (
         api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
     ) // 修正evaluator运行分数
-    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
-    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
+    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req) (
+        api.get="/api/evaluation/v1/evaluator_records/:evaluator_record_id"
+    ) // 获取evaluator运行记录详情
+    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req) (
+        api.post="/api/evaluation/v1/evaluator_records/batch_get"
+    ) // 按id批量查询evaluator运行记录详情
 
     // 评估器验证
     ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (
