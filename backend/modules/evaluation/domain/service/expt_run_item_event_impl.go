@@ -327,7 +327,7 @@ func (e *ExptItemEventEvalServiceImpl) GetExistExptRecordEvalResult(ctx context.
 
 	turnRunResultMap := make(map[int64]*entity.ExptTurnResultRunLog, len(turnRunLogs))
 	for _, result := range turnRunLogs {
-		turnRunResultMap[result.ItemID] = result
+		turnRunResultMap[result.TurnID] = result
 	}
 
 	itemRunLog, err := e.exptItemResultRepo.GetItemRunLog(ctx, event.ExptID, event.ExptRunID, event.EvalSetItemID, event.SpaceID)
