@@ -17444,7 +17444,7 @@ type ListDatasetItemsResponse struct {
 	/* pagination */
 	NextPageToken *string        `thrift:"next_page_token,100,optional" frugal:"100,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
 	Total         *int64         `thrift:"total,101,optional" frugal:"101,optional,i64" json:"total" form:"total" query:"total"`
-	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"fliter_total" form:"filter_total" query:"filter_total"`
+	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -18664,7 +18664,7 @@ type ListDatasetItemsByVersionResponse struct {
 	/* pagination */
 	NextPageToken *string        `thrift:"next_page_token,100,optional" frugal:"100,optional,string" json:"next_page_token" form:"next_page_token" query:"next_page_token"`
 	Total         *int64         `thrift:"total,101,optional" frugal:"101,optional,i64" json:"total" form:"total" query:"total"`
-	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"fliter_total" form:"filter_total" query:"filter_total"`
+	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
