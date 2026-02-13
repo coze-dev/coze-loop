@@ -304,7 +304,7 @@ struct ListEvaluationSetItemsResponse {
 
     100: optional i64 total (api.js_conv="true", go.tag='json:"total"'),
     101: optional string next_page_token
-    102: optional i64 filterTotal (agw.js_conv = "str", go.tag='json:"filter_total"')
+    102: optional i64 filter_total (agw.js_conv = "str", go.tag='json:"filter_total"')
 
     255: base.BaseResp BaseResp
 }
