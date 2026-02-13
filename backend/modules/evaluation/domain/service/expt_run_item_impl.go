@@ -170,7 +170,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	if evalErr != nil {
 		var rawErrMsg string
-		if se, ok := errorx.FromStatusError(evalErr); ok && se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode {
+		if se, ok := errorx.FromStatusError(evalErr); ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode) {
 			rawErrMsg = errorx.ErrorWithoutStack(evalErr)
 		} else {
 			rawErrMsg = evalErr.Error()
