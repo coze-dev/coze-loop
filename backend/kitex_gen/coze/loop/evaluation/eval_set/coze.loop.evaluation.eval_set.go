@@ -13967,6 +13967,7 @@ type ListEvaluationSetItemsResponse struct {
 	Items         []*eval_set.EvaluationSetItem `thrift:"items,1,optional" frugal:"1,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty" query:"items"`
 	Total         *int64                        `thrift:"total,100,optional" frugal:"100,optional,i64" json:"total" form:"total" query:"total"`
 	NextPageToken *string                       `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	FilterTotal   *int64                        `thrift:"filterTotal,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filterTotal" query:"filterTotal"`
 	BaseResp      *base.BaseResp                `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -14013,6 +14014,18 @@ func (p *ListEvaluationSetItemsResponse) GetNextPageToken() (v string) {
 	return *p.NextPageToken
 }
 
+var ListEvaluationSetItemsResponse_FilterTotal_DEFAULT int64
+
+func (p *ListEvaluationSetItemsResponse) GetFilterTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterTotal() {
+		return ListEvaluationSetItemsResponse_FilterTotal_DEFAULT
+	}
+	return *p.FilterTotal
+}
+
 var ListEvaluationSetItemsResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListEvaluationSetItemsResponse) GetBaseResp() (v *base.BaseResp) {
@@ -14033,6 +14046,9 @@ func (p *ListEvaluationSetItemsResponse) SetTotal(val *int64) {
 func (p *ListEvaluationSetItemsResponse) SetNextPageToken(val *string) {
 	p.NextPageToken = val
 }
+func (p *ListEvaluationSetItemsResponse) SetFilterTotal(val *int64) {
+	p.FilterTotal = val
+}
 func (p *ListEvaluationSetItemsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -14041,6 +14057,7 @@ var fieldIDToName_ListEvaluationSetItemsResponse = map[int16]string{
 	1:   "items",
 	100: "total",
 	101: "next_page_token",
+	102: "filterTotal",
 	255: "BaseResp",
 }
 
@@ -14054,6 +14071,10 @@ func (p *ListEvaluationSetItemsResponse) IsSetTotal() bool {
 
 func (p *ListEvaluationSetItemsResponse) IsSetNextPageToken() bool {
 	return p.NextPageToken != nil
+}
+
+func (p *ListEvaluationSetItemsResponse) IsSetFilterTotal() bool {
+	return p.FilterTotal != nil
 }
 
 func (p *ListEvaluationSetItemsResponse) IsSetBaseResp() bool {
@@ -14097,6 +14118,14 @@ func (p *ListEvaluationSetItemsResponse) Read(iprot thrift.TProtocol) (err error
 		case 101:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14184,6 +14213,17 @@ func (p *ListEvaluationSetItemsResponse) ReadField101(iprot thrift.TProtocol) er
 	p.NextPageToken = _field
 	return nil
 }
+func (p *ListEvaluationSetItemsResponse) ReadField102(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return nil
+}
 func (p *ListEvaluationSetItemsResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -14209,6 +14249,10 @@ func (p *ListEvaluationSetItemsResponse) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -14295,6 +14339,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ListEvaluationSetItemsResponse) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterTotal() {
+		if err = oprot.WriteFieldBegin("filterTotal", thrift.I64, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FilterTotal); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *ListEvaluationSetItemsResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -14333,6 +14395,9 @@ func (p *ListEvaluationSetItemsResponse) DeepEqual(ano *ListEvaluationSetItemsRe
 		return false
 	}
 	if !p.Field101DeepEqual(ano.NextPageToken) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.FilterTotal) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -14374,6 +14439,18 @@ func (p *ListEvaluationSetItemsResponse) Field101DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.NextPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetItemsResponse) Field102DeepEqual(src *int64) bool {
+
+	if p.FilterTotal == src {
+		return true
+	} else if p.FilterTotal == nil || src == nil {
+		return false
+	}
+	if *p.FilterTotal != *src {
 		return false
 	}
 	return true

@@ -508,7 +508,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 		return nil, err
 	}
 	// domain调用
-	items, total, nextCursor, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+	items, total, filterTotal, nextCursor, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.WorkspaceID,
 		EvaluationSetID: req.EvaluationSetID,
 		VersionID:       req.VersionID,
@@ -524,6 +524,7 @@ func (e *EvaluationSetApplicationImpl) ListEvaluationSetItems(ctx context.Contex
 	return &eval_set.ListEvaluationSetItemsResponse{
 		Items:         evaluation_set.ItemDO2DTOs(items),
 		Total:         total,
+		FilterTotal:   filterTotal,
 		NextPageToken: nextCursor,
 	}, nil
 }

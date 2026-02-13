@@ -64,9 +64,9 @@ func (d *EvaluationSetItemServiceImpl) BatchDeleteEvaluationSetItems(ctx context
 	return d.datasetRPCAdapter.BatchDeleteDatasetItems(ctx, spaceID, evaluationSetID, itemIDs)
 }
 
-func (d *EvaluationSetItemServiceImpl) ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error) {
+func (d *EvaluationSetItemServiceImpl) ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error) {
 	if param == nil {
-		return nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
+		return nil, nil, nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	listParam := &rpc.ListDatasetItemsParam{
 		SpaceID:         param.SpaceID,
