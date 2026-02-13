@@ -350,6 +350,7 @@ struct ListDatasetItemsResponse {
     /* pagination */
     100: optional string next_page_token
     101: optional i64 total (api.js_conv="true", go.tag='json:"total"')
+    102: optional i64 filter_total (api.js_conv="true", go.tag='json:"fliter_total"')
 
     255: base.BaseResp BaseResp
 }
@@ -374,6 +375,7 @@ struct ListDatasetItemsByVersionResponse {
     /* pagination */
     100: optional string next_page_token (api.js_conv="true", go.tag='json:"next_page_token"'),
     101: optional i64 total (api.js_conv="true", go.tag='json:"total"')
+    102: optional i64 filter_total (api.js_conv="true", go.tag='json:"fliter_total"')
 
     255: base.BaseResp BaseResp
 }
