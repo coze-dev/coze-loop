@@ -228,6 +228,28 @@ struct RunEvaluatorResponse {
     255: base.BaseResp BaseResp
 }
 
+struct AsyncRunEvaluatorRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
+    2: required i64 evaluator_version_id (api.path='evaluator_version_id', api.js_conv='true', go.tag='json:"evaluator_version_id"')                     // 评测规则 id
+    3: required evaluator.EvaluatorInputData input_data (api.body='input_data')         // 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
+    4: optional i64 experiment_id (api.body='experiment_id', api.js_conv='true', go.tag='json:"experiment_id"')                          // experiment id
+    5: optional i64 experiment_run_id (api.body='experiment_run_id', api.js_conv='true', go.tag='json:"experiment_run_id"')                          // experiment run id
+    6: optional i64 item_id (api.body='item_id', api.js_conv='true', go.tag='json:"item_id"')
+    7: optional i64 turn_id (api.body='turn_id', api.js_conv='true', go.tag='json:"turn_id"')
+
+    11: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body='evaluator_run_conf')    // 评估器运行配置参数
+
+    100: optional map<string, string> ext (api.body='ext')
+
+    255: optional base.Base Base
+}
+
+struct AsyncRunEvaluatorResponse {
+    1: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
+
+    255: base.BaseResp BaseResp
+}
+
 struct DebugEvaluatorRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
     2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')                     // 待调试评估器内容
@@ -241,6 +263,23 @@ struct DebugEvaluatorRequest {
 
 struct DebugEvaluatorResponse {
     1: optional evaluator.EvaluatorOutputData evaluator_output_data (api.body='evaluator_output_data') // 输出数据
+
+    255: base.BaseResp BaseResp
+}
+
+struct AsyncDebugEvaluatorRequest {
+    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"') // 空间 id
+    2: required evaluator.EvaluatorContent evaluator_content (api.body='evaluator_content')                     // 待调试评估器内容
+    3: required evaluator.EvaluatorInputData input_data (api.body='input_data')         // 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace
+    4: required evaluator.EvaluatorType evaluator_type (api.body='evaluator_type', go.tag='json:"evaluator_type"')
+
+    11: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body='evaluator_run_conf')    // 评估器运行配置参数
+
+    255: optional base.Base Base
+}
+
+struct AsyncDebugEvaluatorResponse {
+    1: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
 
     255: base.BaseResp BaseResp
 }
@@ -536,14 +575,25 @@ service EvaluatorService {
     BatchDebugEvaluatorResponse BatchDebugEvaluator(1: BatchDebugEvaluatorRequest req) (
         api.post="/api/evaluation/v1/evaluators/batch_debug", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator', api.timeout = '300000'
     )// evaluator 调试
+    AsyncRunEvaluatorResponse AsyncRunEvaluator(1: AsyncRunEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators_versions/:evaluator_version_id/async_run"
+    )// evaluator 异步运行
+    AsyncDebugEvaluatorResponse AsyncDebugEvaluator(1: AsyncDebugEvaluatorRequest req) (
+        api.post="/api/evaluation/v1/evaluators/async_debug"
+    )// evaluator 异步调试
+
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (
         api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
     ) // 修正evaluator运行分数
-    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
-    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
-    
+    GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req) (
+        api.get="/api/evaluation/v1/evaluator_records/:evaluator_record_id"
+    ) // 获取evaluator运行记录详情
+    BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req) (
+        api.post="/api/evaluation/v1/evaluator_records/batch_get"
+    ) // 按id批量查询evaluator运行记录详情
+
     // 评估器验证
     ValidateEvaluatorResponse ValidateEvaluator(1: ValidateEvaluatorRequest request) (
         api.post="/api/evaluation/v1/evaluators/validate", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'

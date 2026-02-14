@@ -122,3 +122,6 @@ func (p *EvaluatorRunConfig) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorProgressMessage) IsValid() error {
+	return nil
+}

@@ -22,6 +22,7 @@ import (
 type EvaluatorRecordDAO interface {
 	CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
+	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
 }
@@ -65,6 +66,19 @@ func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecord(ctx context.Context, ev
 		Model(&model.EvaluatorRecord{}).
 		Where("id = ? AND deleted_at IS NULL", evaluatorRecord.ID).
 		Save(evaluatorRecord).Error
+}
+
+func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error {
+	dbsession := dao.provider.NewSession(ctx, opts...)
+
+	return dbsession.WithContext(ctx).
+		Model(&model.EvaluatorRecord{}).
+		Where("id = ? AND deleted_at IS NULL", recordID).
+		Updates(map[string]interface{}{
+			"status":      status,
+			"score":       score,
+			"output_data": outputData,
+		}).Error
 }
 
 func (dao *EvaluatorRecordDAOImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error) {

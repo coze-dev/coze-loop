@@ -410,6 +410,25 @@ func (mr *MockPersistentCmdableMockRecorder) Pipeline() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Pipeline", reflect.TypeOf((*MockPersistentCmdable)(nil).Pipeline))
 }
 
+// RPush mocks base method.
+func (m *MockPersistentCmdable) RPush(ctx context.Context, key string, values ...any) *redis0.IntCmd {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, key}
+	for _, a := range values {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "RPush", varargs...)
+	ret0, _ := ret[0].(*redis0.IntCmd)
+	return ret0
+}
+
+// RPush indicates an expected call of RPush.
+func (mr *MockPersistentCmdableMockRecorder) RPush(ctx, key any, values ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, key}, values...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RPush", reflect.TypeOf((*MockPersistentCmdable)(nil).RPush), varargs...)
+}
+
 // Set mocks base method.
 func (m *MockPersistentCmdable) Set(ctx context.Context, key string, value any, expiration time.Duration) *redis0.StatusCmd {
 	m.ctrl.T.Helper()

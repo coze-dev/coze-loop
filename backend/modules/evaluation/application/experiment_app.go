@@ -55,6 +55,7 @@ type experimentApplication struct {
 	configer      component.IConfiger
 	auth          rpc.IAuthProvider
 	tagRPCAdapter rpc.ITagRPCAdapter
+	fileProvider  rpc.IFileProvider
 
 	service.ExptSchedulerEvent
 	service.ExptItemEvalEvent
@@ -92,6 +93,7 @@ func NewExperimentApplication(
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
 	evaluatorService service.EvaluatorService,
 	templateManager service.IExptTemplateManager,
+	fileProvider rpc.IFileProvider,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -111,6 +113,7 @@ func NewExperimentApplication(
 		IExptInsightAnalysisService: exptInsightAnalysisService,
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
+		fileProvider:                fileProvider,
 	}
 }
 
@@ -1119,6 +1122,10 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 		BaseResp:              base.NewBaseResp(),
 	}
 
+	if err := e.transformExtraOutputURIsToURLs(ctx, resp.ItemResults); err != nil {
+		logs.CtxError(ctx, "[BatchGetExperimentResult_] transformExtraOutputURIsToURLs fail, err: %v", err)
+	}
+
 	return resp, nil
 }
 
@@ -1921,4 +1928,66 @@ func (e *experimentApplication) CalculateExperimentAggrResult_(ctx context.Conte
 	}
 
 	return &expt.CalculateExperimentAggrResultResponse{BaseResp: base.NewBaseResp()}, nil
+}
+
+func (e *experimentApplication) transformExtraOutputURIsToURLs(ctx context.Context, itemResults []*domain_expt.ItemResult_) error {
+	uris := make([]string, 0)
+	for _, item := range itemResults {
+		for _, turn := range item.GetTurnResults() {
+			for _, exptResult := range turn.GetExperimentResults() {
+				payload := exptResult.GetPayload()
+				if payload == nil {
+					continue
+				}
+				evaluatorOutput := payload.GetEvaluatorOutput()
+				if evaluatorOutput == nil {
+					continue
+				}
+				for _, record := range evaluatorOutput.GetEvaluatorRecords() {
+					if record.GetEvaluatorOutputData() != nil && record.GetEvaluatorOutputData().GetExtraOutput() != nil {
+						uri := record.GetEvaluatorOutputData().GetExtraOutput().GetURI()
+						if uri != "" {
+							uris = append(uris, uri)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(uris) == 0 {
+		return nil
+	}
+
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range itemResults {
+		for _, turn := range item.GetTurnResults() {
+			for _, exptResult := range turn.GetExperimentResults() {
+				payload := exptResult.GetPayload()
+				if payload == nil {
+					continue
+				}
+				evaluatorOutput := payload.GetEvaluatorOutput()
+				if evaluatorOutput == nil {
+					continue
+				}
+				for _, record := range evaluatorOutput.GetEvaluatorRecords() {
+					if record.GetEvaluatorOutputData() != nil && record.GetEvaluatorOutputData().GetExtraOutput() != nil {
+						uri := record.GetEvaluatorOutputData().GetExtraOutput().GetURI()
+						if uri != "" {
+							if url, ok := urlMap[uri]; ok {
+								record.GetEvaluatorOutputData().GetExtraOutput().URL = gptr.Of(url)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

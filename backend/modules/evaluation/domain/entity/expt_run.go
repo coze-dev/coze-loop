@@ -511,9 +511,10 @@ type CKDBConfig struct {
 }
 
 type EvalAsyncCtx struct {
-	Event       *ExptItemEvalEvent
-	RecordID    int64
-	AsyncUnixMS int64 // async call time with unix ms ts
-	Session     *Session
-	Callee      string
+	Event              *ExptItemEvalEvent
+	RecordID           int64
+	AsyncUnixMS        int64 // async call time with unix ms ts
+	Session            *Session
+	Callee             string
+	EvaluatorVersionID int64 // evaluator version id, used for evaluator async scenario
 }

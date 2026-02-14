@@ -141,6 +141,14 @@ func (e *Experiment) AsyncCallTarget() bool {
 }
 
 func (e *Experiment) AsyncCallEvaluators() bool {
+	if e == nil || len(e.Evaluators) == 0 {
+		return false
+	}
+	for _, ev := range e.Evaluators {
+		if ev.EvaluatorType == EvaluatorTypeAgent {
+			return true
+		}
+	}
 	return false
 }
 
