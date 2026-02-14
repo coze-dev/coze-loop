@@ -2666,6 +2666,8 @@ func (p *Image) Field10DeepEqual(src *dataset.StorageProvider) bool {
 type OrderBy struct {
 	Field *string `thrift:"field,1,optional" frugal:"1,optional,string" form:"field" json:"field,omitempty" query:"field"`
 	IsAsc *bool   `thrift:"is_asc,2,optional" frugal:"2,optional,bool" form:"is_asc" json:"is_asc,omitempty" query:"is_asc"`
+	// 用于区分当前字段是否是 field key，仅在评测集场景下生效
+	IsFieldKey *bool `thrift:"is_field_key,100,optional" frugal:"100,optional,bool" form:"is_field_key" json:"is_field_key,omitempty" query:"is_field_key"`
 }
 
 func NewOrderBy() *OrderBy {
@@ -2698,16 +2700,32 @@ func (p *OrderBy) GetIsAsc() (v bool) {
 	}
 	return *p.IsAsc
 }
+
+var OrderBy_IsFieldKey_DEFAULT bool
+
+func (p *OrderBy) GetIsFieldKey() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsFieldKey() {
+		return OrderBy_IsFieldKey_DEFAULT
+	}
+	return *p.IsFieldKey
+}
 func (p *OrderBy) SetField(val *string) {
 	p.Field = val
 }
 func (p *OrderBy) SetIsAsc(val *bool) {
 	p.IsAsc = val
 }
+func (p *OrderBy) SetIsFieldKey(val *bool) {
+	p.IsFieldKey = val
+}
 
 var fieldIDToName_OrderBy = map[int16]string{
-	1: "field",
-	2: "is_asc",
+	1:   "field",
+	2:   "is_asc",
+	100: "is_field_key",
 }
 
 func (p *OrderBy) IsSetField() bool {
@@ -2716,6 +2734,10 @@ func (p *OrderBy) IsSetField() bool {
 
 func (p *OrderBy) IsSetIsAsc() bool {
 	return p.IsAsc != nil
+}
+
+func (p *OrderBy) IsSetIsFieldKey() bool {
+	return p.IsFieldKey != nil
 }
 
 func (p *OrderBy) Read(iprot thrift.TProtocol) (err error) {
@@ -2747,6 +2769,14 @@ func (p *OrderBy) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2803,6 +2833,17 @@ func (p *OrderBy) ReadField2(iprot thrift.TProtocol) error {
 	p.IsAsc = _field
 	return nil
 }
+func (p *OrderBy) ReadField100(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsFieldKey = _field
+	return nil
+}
 
 func (p *OrderBy) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2816,6 +2857,10 @@ func (p *OrderBy) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -2872,6 +2917,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *OrderBy) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsFieldKey() {
+		if err = oprot.WriteFieldBegin("is_field_key", thrift.BOOL, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsFieldKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 
 func (p *OrderBy) String() string {
 	if p == nil {
@@ -2891,6 +2954,9 @@ func (p *OrderBy) DeepEqual(ano *OrderBy) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.IsAsc) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.IsFieldKey) {
 		return false
 	}
 	return true
@@ -2916,6 +2982,18 @@ func (p *OrderBy) Field2DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsAsc != *src {
+		return false
+	}
+	return true
+}
+func (p *OrderBy) Field100DeepEqual(src *bool) bool {
+
+	if p.IsFieldKey == src {
+		return true
+	} else if p.IsFieldKey == nil || src == nil {
+		return false
+	}
+	if *p.IsFieldKey != *src {
 		return false
 	}
 	return true

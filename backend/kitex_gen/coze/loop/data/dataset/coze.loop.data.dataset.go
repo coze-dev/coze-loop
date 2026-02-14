@@ -17444,6 +17444,7 @@ type ListDatasetItemsResponse struct {
 	/* pagination */
 	NextPageToken *string        `thrift:"next_page_token,100,optional" frugal:"100,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
 	Total         *int64         `thrift:"total,101,optional" frugal:"101,optional,i64" json:"total" form:"total" query:"total"`
+	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -17490,6 +17491,18 @@ func (p *ListDatasetItemsResponse) GetTotal() (v int64) {
 	return *p.Total
 }
 
+var ListDatasetItemsResponse_FilterTotal_DEFAULT int64
+
+func (p *ListDatasetItemsResponse) GetFilterTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterTotal() {
+		return ListDatasetItemsResponse_FilterTotal_DEFAULT
+	}
+	return *p.FilterTotal
+}
+
 var ListDatasetItemsResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListDatasetItemsResponse) GetBaseResp() (v *base.BaseResp) {
@@ -17510,6 +17523,9 @@ func (p *ListDatasetItemsResponse) SetNextPageToken(val *string) {
 func (p *ListDatasetItemsResponse) SetTotal(val *int64) {
 	p.Total = val
 }
+func (p *ListDatasetItemsResponse) SetFilterTotal(val *int64) {
+	p.FilterTotal = val
+}
 func (p *ListDatasetItemsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -17518,6 +17534,7 @@ var fieldIDToName_ListDatasetItemsResponse = map[int16]string{
 	1:   "items",
 	100: "next_page_token",
 	101: "total",
+	102: "filter_total",
 	255: "BaseResp",
 }
 
@@ -17531,6 +17548,10 @@ func (p *ListDatasetItemsResponse) IsSetNextPageToken() bool {
 
 func (p *ListDatasetItemsResponse) IsSetTotal() bool {
 	return p.Total != nil
+}
+
+func (p *ListDatasetItemsResponse) IsSetFilterTotal() bool {
+	return p.FilterTotal != nil
 }
 
 func (p *ListDatasetItemsResponse) IsSetBaseResp() bool {
@@ -17574,6 +17595,14 @@ func (p *ListDatasetItemsResponse) Read(iprot thrift.TProtocol) (err error) {
 		case 101:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17661,6 +17690,17 @@ func (p *ListDatasetItemsResponse) ReadField101(iprot thrift.TProtocol) error {
 	p.Total = _field
 	return nil
 }
+func (p *ListDatasetItemsResponse) ReadField102(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return nil
+}
 func (p *ListDatasetItemsResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -17686,6 +17726,10 @@ func (p *ListDatasetItemsResponse) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -17772,6 +17816,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ListDatasetItemsResponse) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterTotal() {
+		if err = oprot.WriteFieldBegin("filter_total", thrift.I64, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FilterTotal); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *ListDatasetItemsResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -17810,6 +17872,9 @@ func (p *ListDatasetItemsResponse) DeepEqual(ano *ListDatasetItemsResponse) bool
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.FilterTotal) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -17851,6 +17916,18 @@ func (p *ListDatasetItemsResponse) Field101DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *ListDatasetItemsResponse) Field102DeepEqual(src *int64) bool {
+
+	if p.FilterTotal == src {
+		return true
+	} else if p.FilterTotal == nil || src == nil {
+		return false
+	}
+	if *p.FilterTotal != *src {
 		return false
 	}
 	return true
@@ -18587,6 +18664,7 @@ type ListDatasetItemsByVersionResponse struct {
 	/* pagination */
 	NextPageToken *string        `thrift:"next_page_token,100,optional" frugal:"100,optional,string" json:"next_page_token" form:"next_page_token" query:"next_page_token"`
 	Total         *int64         `thrift:"total,101,optional" frugal:"101,optional,i64" json:"total" form:"total" query:"total"`
+	FilterTotal   *int64         `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -18633,6 +18711,18 @@ func (p *ListDatasetItemsByVersionResponse) GetTotal() (v int64) {
 	return *p.Total
 }
 
+var ListDatasetItemsByVersionResponse_FilterTotal_DEFAULT int64
+
+func (p *ListDatasetItemsByVersionResponse) GetFilterTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterTotal() {
+		return ListDatasetItemsByVersionResponse_FilterTotal_DEFAULT
+	}
+	return *p.FilterTotal
+}
+
 var ListDatasetItemsByVersionResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListDatasetItemsByVersionResponse) GetBaseResp() (v *base.BaseResp) {
@@ -18653,6 +18743,9 @@ func (p *ListDatasetItemsByVersionResponse) SetNextPageToken(val *string) {
 func (p *ListDatasetItemsByVersionResponse) SetTotal(val *int64) {
 	p.Total = val
 }
+func (p *ListDatasetItemsByVersionResponse) SetFilterTotal(val *int64) {
+	p.FilterTotal = val
+}
 func (p *ListDatasetItemsByVersionResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -18661,6 +18754,7 @@ var fieldIDToName_ListDatasetItemsByVersionResponse = map[int16]string{
 	1:   "items",
 	100: "next_page_token",
 	101: "total",
+	102: "filter_total",
 	255: "BaseResp",
 }
 
@@ -18674,6 +18768,10 @@ func (p *ListDatasetItemsByVersionResponse) IsSetNextPageToken() bool {
 
 func (p *ListDatasetItemsByVersionResponse) IsSetTotal() bool {
 	return p.Total != nil
+}
+
+func (p *ListDatasetItemsByVersionResponse) IsSetFilterTotal() bool {
+	return p.FilterTotal != nil
 }
 
 func (p *ListDatasetItemsByVersionResponse) IsSetBaseResp() bool {
@@ -18717,6 +18815,14 @@ func (p *ListDatasetItemsByVersionResponse) Read(iprot thrift.TProtocol) (err er
 		case 101:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18804,6 +18910,17 @@ func (p *ListDatasetItemsByVersionResponse) ReadField101(iprot thrift.TProtocol)
 	p.Total = _field
 	return nil
 }
+func (p *ListDatasetItemsByVersionResponse) ReadField102(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return nil
+}
 func (p *ListDatasetItemsByVersionResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -18829,6 +18946,10 @@ func (p *ListDatasetItemsByVersionResponse) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -18915,6 +19036,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ListDatasetItemsByVersionResponse) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterTotal() {
+		if err = oprot.WriteFieldBegin("filter_total", thrift.I64, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FilterTotal); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *ListDatasetItemsByVersionResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -18953,6 +19092,9 @@ func (p *ListDatasetItemsByVersionResponse) DeepEqual(ano *ListDatasetItemsByVer
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Total) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.FilterTotal) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -18994,6 +19136,18 @@ func (p *ListDatasetItemsByVersionResponse) Field101DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+func (p *ListDatasetItemsByVersionResponse) Field102DeepEqual(src *int64) bool {
+
+	if p.FilterTotal == src {
+		return true
+	} else if p.FilterTotal == nil || src == nil {
+		return false
+	}
+	if *p.FilterTotal != *src {
 		return false
 	}
 	return true
