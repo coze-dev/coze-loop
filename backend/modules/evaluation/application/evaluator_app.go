@@ -1164,18 +1164,10 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 	if evaluatorRecord == nil {
 		return &evaluatorservice.GetEvaluatorRecordResponse{}, nil
 	}
-	// 鉴权
-	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, evaluatorRecord.EvaluatorVersionID, request.GetIncludeDeleted(), false)
-	if err != nil {
-		return nil, err
-	}
-	if evaluatorDO == nil {
-		return &evaluatorservice.GetEvaluatorRecordResponse{}, nil
-	}
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		ObjectID:      strconv.FormatInt(evaluatorRecord.SpaceID, 10),
+		SpaceID:       evaluatorRecord.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
