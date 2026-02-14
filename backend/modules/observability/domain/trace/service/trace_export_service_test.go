@@ -1038,6 +1038,118 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 	}
 }
 
+func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Multimodal(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITraceRepo(ctrl)
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	datasetProviderMock := rpcmocks.NewMockIDatasetProvider(ctrl)
+	confMock := confmocks.NewMockITraceConfig(ctrl)
+	traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
+	annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+	metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+
+	adaptor := NewDatasetServiceAdaptor()
+	adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
+
+	multipartInput := `[{"type":"text","text":"You are an assistant"},{"type":"image_url","image_url":{"name":"img","url":"http://img.jpg"}},{"type":"audio_url","audio_url":{"name":"aud","url":"http://audio.mp3"}},{"type":"video_url","video_url":{"name":"vid","url":"http://video.mp4"}}]`
+
+	testSpan := &loop_span.Span{
+		TraceID:     "trace-multimodal",
+		SpanID:      "span-multimodal",
+		WorkspaceID: "123",
+		Input:       multipartInput,
+		Output:      `{"answer": "test output"}`,
+	}
+
+	tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
+	repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+		Spans: []*loop_span.Span{testSpan},
+	}, nil)
+	datasetProviderMock.EXPECT().ValidateDatasetItems(gomock.Any(), gomock.Any(), gomock.Any(), (*bool)(nil)).Return(
+		[]*entity.DatasetItem{}, []entity.ItemErrorGroup{}, nil)
+
+	r := &TraceExportServiceImpl{
+		traceRepo:             repoMock,
+		traceConfig:           confMock,
+		traceProducer:         traceProducerMock,
+		annotationProducer:    annotationProducerMock,
+		metrics:               metricsMock,
+		tenantProvider:        tenantMock,
+		DatasetServiceAdaptor: adaptor,
+		buildHelper:           buildHelper,
+		traceService:          &stubTraceService{},
+	}
+
+	req := &ExportTracesToDatasetRequest{
+		WorkspaceID: 123,
+		SpanIds:     []SpanID{{TraceID: "trace-multimodal", SpanID: "span-multimodal"}},
+		Category:    entity.DatasetCategory_General,
+		Config: DatasetConfig{
+			IsNewDataset: true,
+			DatasetName:  ptr.Of("multimodal-dataset"),
+			DatasetSchema: entity.DatasetSchema{
+				FieldSchemas: []entity.FieldSchema{
+					{Key: lo.ToPtr("input"), Name: "input", ContentType: entity.ContentType_MultiPart},
+					{Key: lo.ToPtr("output"), Name: "output", ContentType: entity.ContentType_Text},
+				},
+			},
+		},
+		StartTime:    time.Now().Unix() - 3600,
+		EndTime:      time.Now().Unix(),
+		PlatformType: loop_span.PlatformCozeLoop,
+		ExportType:   ExportType_Append,
+		FieldMappings: []entity.FieldMapping{
+			{TraceFieldKey: "Input", TraceFieldJsonpath: "", FieldSchema: entity.FieldSchema{Key: lo.ToPtr("input"), Name: "input", ContentType: entity.ContentType_MultiPart}},
+			{TraceFieldKey: "Output", TraceFieldJsonpath: "answer", FieldSchema: entity.FieldSchema{Key: lo.ToPtr("output"), Name: "output", ContentType: entity.ContentType_Text}},
+		},
+	}
+
+	got, err := r.PreviewExportTracesToDataset(ctx, req)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Len(t, got.Items, 1)
+
+	item := got.Items[0]
+	assert.Equal(t, "trace-multimodal", item.TraceID)
+	assert.Equal(t, "span-multimodal", item.SpanID)
+	assert.Len(t, item.FieldData, 2)
+
+	inputFieldData := item.FieldData[0]
+	assert.Equal(t, "input", inputFieldData.Name)
+	assert.NotNil(t, inputFieldData.Content)
+	assert.Equal(t, entity.ContentType_MultiPart, inputFieldData.Content.ContentType)
+	assert.Len(t, inputFieldData.Content.MultiPart, 4)
+
+	assert.Equal(t, entity.ContentType_Text, inputFieldData.Content.MultiPart[0].ContentType)
+	assert.Equal(t, "You are an assistant", inputFieldData.Content.MultiPart[0].Text)
+
+	assert.Equal(t, entity.ContentType_Image, inputFieldData.Content.MultiPart[1].ContentType)
+	assert.NotNil(t, inputFieldData.Content.MultiPart[1].Image)
+	assert.Equal(t, "img", inputFieldData.Content.MultiPart[1].Image.Name)
+	assert.Equal(t, "http://img.jpg", inputFieldData.Content.MultiPart[1].Image.Url)
+
+	assert.Equal(t, entity.ContentType_Audio, inputFieldData.Content.MultiPart[2].ContentType)
+	assert.NotNil(t, inputFieldData.Content.MultiPart[2].Audio)
+	assert.Equal(t, "aud", inputFieldData.Content.MultiPart[2].Audio.Name)
+	assert.Equal(t, "http://audio.mp3", inputFieldData.Content.MultiPart[2].Audio.Url)
+
+	assert.Equal(t, entity.ContentType_Video, inputFieldData.Content.MultiPart[3].ContentType)
+	assert.NotNil(t, inputFieldData.Content.MultiPart[3].Video)
+	assert.Equal(t, "vid", inputFieldData.Content.MultiPart[3].Video.Name)
+	assert.Equal(t, "http://video.mp4", inputFieldData.Content.MultiPart[3].Video.Url)
+
+	outputFieldData := item.FieldData[1]
+	assert.Equal(t, "output", outputFieldData.Name)
+	assert.NotNil(t, outputFieldData.Content)
+	assert.Equal(t, entity.ContentType_Text, outputFieldData.Content.ContentType)
+	assert.Equal(t, "test output", outputFieldData.Content.Text)
+}
+
 func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 	type fields struct {
 		traceRepo             repo.ITraceRepo
