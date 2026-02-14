@@ -310,7 +310,7 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
 		Where(conds...)
 	if filter.RawFilter {
-		query = query.Clauses(filter.RawCond)
+		query = query.Clauses(clause.Where{Exprs: []clause.Expression{filter.RawCond}})
 	}
 	query = query.Order(q.ID.Asc())
 	if limit > 0 {
