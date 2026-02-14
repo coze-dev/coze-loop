@@ -119,3 +119,22 @@ func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecord(ctx, evaluat
 	varargs := append([]any{ctx, evaluatorRecord}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecord), varargs...)
 }
+
+// UpdateEvaluatorRecordResult mocks base method.
+func (m *MockEvaluatorRecordDAO) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, recordID, status, score, outputData}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordResult", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvaluatorRecordResult indicates an expected call of UpdateEvaluatorRecordResult.
+func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordResult(ctx, recordID, status, score, outputData any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, recordID, status, score, outputData}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecordResult), varargs...)
+}

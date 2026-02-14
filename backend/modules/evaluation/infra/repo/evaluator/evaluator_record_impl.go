@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/convertor"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 type EvaluatorRecordRepoImpl struct {
@@ -89,14 +90,15 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 }
 
 func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
-	record := &entity.EvaluatorRecord{
-		ID:                  recordID,
-		EvaluatorOutputData: outputData,
-		Status:              status,
+	var score float64
+	if outputData != nil && outputData.EvaluatorResult != nil && outputData.EvaluatorResult.Score != nil {
+		score = *outputData.EvaluatorResult.Score
 	}
-	po := convertor.ConvertEvaluatorRecordDO2PO(record)
-	if po == nil {
-		return nil
+
+	var outputDataStr string
+	if outputData != nil {
+		outputDataStr = json.Jsonify(outputData)
 	}
-	return r.evaluatorRecordDao.UpdateEvaluatorRecord(ctx, po)
+
+	return r.evaluatorRecordDao.UpdateEvaluatorRecordResult(ctx, recordID, int8(status), score, outputDataStr)
 }
