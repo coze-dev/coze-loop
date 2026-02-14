@@ -293,9 +293,7 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		q.ExptRunID.Eq(exptRunID),
 	}
 
-	if filter.RawFilter {
-		conds = append(conds, gen.Cond(filter.RawCond)...)
-	} else {
+	if !filter.RawFilter {
 		if filter.ResultState != nil {
 			conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
 		}
@@ -310,8 +308,11 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 
 	query := q.WithContext(ctx).
 		Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
-		Where(conds...).
-		Order(q.ID.Asc())
+		Where(conds...)
+	if filter.RawFilter {
+		query = query.Clauses(filter.RawCond)
+	}
+	query = query.Order(q.ID.Asc())
 	if limit > 0 {
 		query = query.Limit(int(limit))
 	}
