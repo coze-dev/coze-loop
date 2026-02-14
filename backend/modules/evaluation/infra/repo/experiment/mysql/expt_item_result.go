@@ -285,34 +285,54 @@ func (dao *exptItemResultDAOImpl) GetItemIDListByExptID(ctx context.Context, exp
 }
 
 func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error) {
-	db := dao.provider.NewSession(ctx, opts...)
-	q := query.Use(db).ExptItemResultRunLog
+	if filter == nil {
+		filter = &entity.ExptItemRunLogFilter{}
+	}
+	session := dao.provider.NewSession(ctx, opts...)
+
+	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
+	if filter.RawFilter && filter.RawCond.SQL != "" {
+		var res []*model.ExptItemResultRunLog
+		tx := session.WithContext(ctx).Model(&model.ExptItemResultRunLog{}).
+			Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
+			Where("space_id = ? AND expt_id = ? AND expt_run_id = ?", spaceID, exptID, exptRunID).
+			Where(filter.RawCond.SQL, filter.RawCond.Vars...)
+		if cursor > 0 {
+			tx = tx.Where("id > ?", cursor)
+		}
+		tx = tx.Order("id asc")
+		if limit > 0 {
+			tx = tx.Limit(int(limit))
+		}
+		if err := tx.Find(&res).Error; err != nil {
+			return nil, 0, errorx.Wrapf(err, "ScanItemRunLogs fail, exptID=%d, exptRunID=%d, cursor=%d", exptID, exptRunID, cursor)
+		}
+		if len(res) == 0 {
+			return nil, 0, nil
+		}
+		return res, res[len(res)-1].ID, nil
+	}
+
+	q := query.Use(session).ExptItemResultRunLog
 	conds := []gen.Condition{
 		q.SpaceID.Eq(spaceID),
 		q.ExptID.Eq(exptID),
 		q.ExptRunID.Eq(exptRunID),
 	}
-
-	if !filter.RawFilter {
-		if filter.ResultState != nil {
-			conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
-		}
-		if len(filter.Status) > 0 {
-			conds = append(conds, q.Status.In(filter.GetStatus()...))
-		}
+	if filter.ResultState != nil {
+		conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
 	}
-
+	if len(filter.Status) > 0 {
+		conds = append(conds, q.Status.In(filter.GetStatus()...))
+	}
 	if cursor > 0 {
 		conds = append(conds, q.ID.Gt(cursor))
 	}
 
 	query := q.WithContext(ctx).
 		Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
-		Where(conds...)
-	if filter.RawFilter {
-		query = query.Clauses(clause.Where{Exprs: []clause.Expression{filter.RawCond}})
-	}
-	query = query.Order(q.ID.Asc())
+		Where(conds...).
+		Order(q.ID.Asc())
 	if limit > 0 {
 		query = query.Limit(int(limit))
 	}
