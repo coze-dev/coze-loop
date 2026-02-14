@@ -1172,6 +1172,9 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 	if err != nil {
 		return nil, err
 	}
+	if err := e.transformExtraOutputURIToURL(ctx, evaluatorRecord); err != nil {
+		logs.CtxError(ctx, "[GetEvaluatorRecord] transformExtraOutputURIToURL fail, err: %v", err)
+	}
 	dto := evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord)
 	e.userInfoService.PackUserInfo(ctx, []userinfo.UserInfoCarrier{dto})
 	return &evaluatorservice.GetEvaluatorRecordResponse{
@@ -1383,6 +1386,25 @@ func (e *EvaluatorHandlerImpl) fillVideoURLs(uriToContentMap map[string][]*evalu
 			}
 		}
 	}
+}
+
+func (e *EvaluatorHandlerImpl) transformExtraOutputURIToURL(ctx context.Context, record *entity.EvaluatorRecord) error {
+	if record == nil || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.ExtraOutput == nil {
+		return nil
+	}
+	extraOutput := record.EvaluatorOutputData.ExtraOutput
+	if extraOutput.URI == nil || *extraOutput.URI == "" {
+		return nil
+	}
+	uri := *extraOutput.URI
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, []string{uri})
+	if err != nil {
+		return err
+	}
+	if url, ok := urlMap[uri]; ok {
+		extraOutput.URL = gptr.Of(url)
+	}
+	return nil
 }
 
 // ValidateEvaluator 验证评估器
