@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"gorm.io/gorm/clause"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/mysql/gorm_gen/model"
@@ -490,6 +491,33 @@ func TestExptItemResultRepoImpl_ScanItemRunLogs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptItemResultRepoImpl_ScanItemRunLogs_WithRawFilter(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockDAO := mocks.NewMockIExptItemResultDAO(ctrl)
+	repo := &ExptItemResultRepoImpl{exptItemResultDAO: mockDAO}
+	rawFilter := &entity.ExptItemRunLogFilter{
+		RawFilter: true,
+		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{1}, int32(2)}},
+	}
+
+	rs := int32(2)
+	mockDAO.EXPECT().ScanItemRunLogs(gomock.Any(), int64(1), int64(2), rawFilter, int64(0), int64(0), int64(3)).
+		Return([]*model.ExptItemResultRunLog{
+			{ItemID: 10, Status: 1},
+			{ItemID: 20, Status: 2, ResultState: &rs},
+		}, int64(0), nil)
+
+	got, ncursor, err := repo.ScanItemRunLogs(context.Background(), 1, 2, rawFilter, 0, 0, 3)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), ncursor)
+	assert.Len(t, got, 2)
+	assert.Equal(t, int64(10), got[0].ItemID)
+	assert.Equal(t, int64(20), got[1].ItemID)
+	assert.Equal(t, int32(2), got[1].ResultState)
 }
 
 func TestExptItemResultRepoImpl_BatchCreateNX(t *testing.T) {

@@ -293,11 +293,15 @@ func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, e
 		q.ExptRunID.Eq(exptRunID),
 	}
 
-	if filter.ResultState != nil {
-		conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
-	}
-	if len(filter.Status) > 0 {
-		conds = append(conds, q.Status.In(filter.GetStatus()...))
+	if filter.RawFilter {
+		conds = append(conds, gen.Cond(filter.RawCond)...)
+	} else {
+		if filter.ResultState != nil {
+			conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
+		}
+		if len(filter.Status) > 0 {
+			conds = append(conds, q.Status.In(filter.GetStatus()...))
+		}
 	}
 
 	if cursor > 0 {

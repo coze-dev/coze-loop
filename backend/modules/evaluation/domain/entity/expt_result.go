@@ -9,9 +9,12 @@ import (
 	"strconv"
 	"time"
 
+	"gorm.io/gorm/clause"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	gslice "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 type FieldType int64
@@ -244,6 +247,12 @@ type ExptItemEvalResult struct {
 	TurnResultRunLogs map[int64]*ExptTurnResultRunLog
 }
 
+type ExptEvalItems []*ExptEvalItem
+
+func (e ExptEvalItems) GetItemIDs() []int64 {
+	return gslice.Map(e, func(f *ExptEvalItem) int64 { return f.ItemID })
+}
+
 type ExptEvalItem struct {
 	ExptID           int64
 	EvalSetVersionID int64
@@ -465,9 +474,15 @@ func (e *ExptTemplateFilterFields) IsValid() bool {
 type ExptItemRunLogFilter struct {
 	Status      []ItemRunState
 	ResultState *ExptItemResultState
+
+	RawFilter bool
+	RawCond   clause.Expr
 }
 
 func (e *ExptItemRunLogFilter) GetResultState() ExptItemResultState {
+	if e.ResultState == nil {
+		return 0
+	}
 	return *e.ResultState
 }
 

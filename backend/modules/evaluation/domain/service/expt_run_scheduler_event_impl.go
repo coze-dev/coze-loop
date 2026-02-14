@@ -258,6 +258,9 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	complete = append(complete, zombies...)
+	logs.CtxInfo(ctx, "expt scheduler scan item, to_submit: %v, incomplete: %v, complete: %v",
+		entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs(), entity.ExptEvalItems(complete).GetItemIDs())
+
 	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode); err != nil {
 		return err
 	}

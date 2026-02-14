@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
+	"gorm.io/gorm/clause"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -758,28 +759,48 @@ func newExptBaseExec(
 }
 
 func (e *exptBaseExec) ScanEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (toSubmit, incomplete, complete []*entity.ExptEvalItem, err error) {
-	incomplete, err = e.ScanRunLogEvalItems(ctx, event, expt, &entity.ExptItemRunLogFilter{
-		Status: []entity.ItemRunState{entity.ItemRunState_Processing},
-	}, 0)
+	incomplete, complete, err = e.scanIncompleteAndComplete(ctx, event, expt)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	if submitCnt := e.getItemConcurNum(ctx, expt) - len(incomplete); submitCnt > 0 {
-		toSubmit, err = e.ScanRunLogEvalItems(ctx, event, expt, &entity.ExptItemRunLogFilter{Status: []entity.ItemRunState{entity.ItemRunState_Queueing}}, int64(submitCnt))
+		toSubmit, err = e.scanToSubmit(ctx, event, expt, int64(submitCnt))
 		if err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
-	complete, err = e.ScanRunLogEvalItems(ctx, event, expt, &entity.ExptItemRunLogFilter{
-		ResultState: gptr.Of(entity.ExptItemResultStateLogged),
-	}, 0)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
 	return toSubmit, incomplete, complete, nil
+}
+
+func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) (incomplete, complete []*entity.ExptEvalItem, err error) {
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{
+		RawFilter: true,
+		RawCond:   clause.Expr{SQL: "status IN (?) OR result_state = ?", Vars: []interface{}{[]int32{int32(entity.ItemRunState_Processing)}, int32(entity.ExptItemResultStateLogged)}},
+	}, 0, 0, event.SpaceID)
+	if err != nil {
+		return nil, nil, err
+	}
+	incomplete = make([]*entity.ExptEvalItem, 0)
+	complete = make([]*entity.ExptEvalItem, 0)
+	evalSetVersionID := expt.EvalSet.EvaluationSetVersion.ID
+	for _, log := range rls {
+		item := &entity.ExptEvalItem{
+			ExptID:           event.ExptID,
+			EvalSetVersionID: evalSetVersionID,
+			ItemID:           log.ItemID,
+			State:            entity.ItemRunState(log.Status),
+			UpdatedAt:        log.UpdatedAt,
+		}
+		if log.Status == int32(entity.ItemRunState_Processing) {
+			incomplete = append(incomplete, item)
+		}
+		if log.ResultState == int32(entity.ExptItemResultStateLogged) {
+			complete = append(complete, item)
+		}
+	}
+	return incomplete, complete, nil
 }
 
 func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experiment) int {
@@ -791,8 +812,8 @@ func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experi
 	return concurNum
 }
 
-func (e *exptBaseExec) ScanRunLogEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, filter *entity.ExptItemRunLogFilter, limit int64) (items []*entity.ExptEvalItem, err error) {
-	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, filter, 0, limit, event.SpaceID)
+func (e *exptBaseExec) scanToSubmit(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, limit int64) (items []*entity.ExptEvalItem, err error) {
+	rls, _, err := e.exptItemResultRepo.ScanItemRunLogs(ctx, event.ExptID, event.ExptRunID, &entity.ExptItemRunLogFilter{Status: []entity.ItemRunState{entity.ItemRunState_Queueing}}, 0, limit, event.SpaceID)
 	if err != nil {
 		return nil, err
 	}
