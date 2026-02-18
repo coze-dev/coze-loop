@@ -490,6 +490,30 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 				JSONMode:         ptr.Of(true),
 			},
 		},
+		{
+			name: "model config with thinking and extra",
+			do: &entity.ModelConfig{
+				ModelID:     456,
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &entity.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+					ReasoningEffort: ptr.Of(entity.ReasoningEffortLow),
+				},
+			},
+			want: &openapi.LLMConfig{
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &openapi.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(openapi.ThinkingOption_Enabled),
+					ReasoningEffort: ptr.Of(openapi.ReasoningEffort_Low),
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -664,6 +688,35 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				Type: entity.ContentTypeVideoURL,
 				VideoURL: &entity.VideoURL{
 					URL: "https://example.com/video.mp4",
+				},
+			},
+			want: &openapi.ContentPart{
+				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
+			},
+		},
+		{
+			name: "video url empty string keeps nil in dto",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "",
+				},
+				MediaConfig: &entity.MediaConfig{},
+			},
+			want: &openapi.ContentPart{
+				Type: ptr.Of(openapi.ContentTypeVideoURL),
+			},
+		},
+		{
+			name: "media config with nil fps keeps nil config",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+				MediaConfig: &entity.MediaConfig{
+					Fps: nil,
 				},
 			},
 			want: &openapi.ContentPart{
@@ -907,6 +960,19 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 			},
 		},
 		{
+			name: "message with skip render",
+			do: &entity.Message{
+				Role:       entity.RoleUser,
+				Content:    ptr.Of("skip this"),
+				SkipRender: ptr.Of(true),
+			},
+			want: &openapi.Message{
+				Role:       ptr.Of(prompt.RoleUser),
+				Content:    ptr.Of("skip this"),
+				SkipRender: ptr.Of(true),
+			},
+		},
+		{
 			name: "message with all new fields",
 			do: &entity.Message{
 				Role:             entity.RoleAssistant,
@@ -1136,6 +1202,7 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 					Role:             ptr.Of(prompt.RoleAssistant),
 					ReasoningContent: ptr.Of("thinking..."),
 					Content:          ptr.Of("I can help you."),
+					SkipRender:       ptr.Of(true),
 				},
 			},
 			want: []*entity.Message{
@@ -1147,6 +1214,7 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 					Role:             entity.RoleAssistant,
 					ReasoningContent: ptr.Of("thinking..."),
 					Content:          ptr.Of("I can help you."),
+					SkipRender:       ptr.Of(true),
 				},
 			},
 		},
@@ -1400,6 +1468,33 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 					MediaConfig: &entity.MediaConfig{
 						Fps: ptr.Of(1.8),
 					},
+				},
+			},
+		},
+		{
+			name: "video url empty string and nil config handling",
+			dtos: []*openapi.ContentPart{
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of(""),
+				},
+				{
+					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config:   nil,
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type:     entity.ContentTypeVideoURL,
+					VideoURL: nil,
+				},
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+					},
+					MediaConfig: nil,
 				},
 			},
 		},
@@ -2248,6 +2343,166 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, OpenAPIToolCallConfigDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIBatchToolDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dtos []*openapi.Tool
+		want []*entity.Tool
+	}{
+		{
+			name: "nil input",
+			dtos: nil,
+			want: nil,
+		},
+		{
+			name: "array with nil elements",
+			dtos: []*openapi.Tool{
+				nil,
+				{
+					Type: ptr.Of(openapi.ToolTypeFunction),
+					Function: &openapi.Function{
+						Name:        ptr.Of("tool_a"),
+						Description: ptr.Of("desc"),
+						Parameters:  ptr.Of("{}"),
+					},
+				},
+			},
+			want: []*entity.Tool{
+				{
+					Type: entity.ToolTypeFunction,
+					Function: &entity.Function{
+						Name:        "tool_a",
+						Description: "desc",
+						Parameters:  "{}",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIBatchToolDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestOpenAPIToolCallConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *openapi.ToolCallConfig
+		want *entity.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "specific tool choice with specification",
+			dto: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(openapi.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
+					Type: ptr.Of(openapi.ToolTypeFunction),
+					Name: ptr.Of("tool_a"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "tool_a",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolCallConfigDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestOpenAPIModelConfigDTO2DO(t *testing.T) {
+	dto := &openapi.ModelConfig{
+		ModelID:     ptr.Of(int64(123)),
+		MaxTokens:   ptr.Of(int32(2048)),
+		Temperature: ptr.Of(0.8),
+		Thinking: &openapi.ThinkingConfig{
+			BudgetTokens:    ptr.Of(int64(256)),
+			ThinkingOption:  ptr.Of(openapi.ThinkingOption_Enabled),
+			ReasoningEffort: ptr.Of(openapi.ReasoningEffort_High),
+		},
+		ParamConfigValues: []*openapi.ParamConfigValue{
+			{
+				Name:  ptr.Of("top_p"),
+				Label: ptr.Of("Top P"),
+				Value: &openapi.ParamOption{
+					Value: ptr.Of("0.9"),
+					Label: ptr.Of("0.9"),
+				},
+			},
+		},
+	}
+	want := &entity.ModelConfig{
+		ModelID:     123,
+		MaxTokens:   ptr.Of(int32(2048)),
+		Temperature: ptr.Of(0.8),
+		Thinking: &entity.ThinkingConfig{
+			BudgetTokens:    ptr.Of(int64(256)),
+			ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+			ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+		},
+		ParamConfigValues: []*entity.ParamConfigValue{
+			{
+				Name:  "top_p",
+				Label: "Top P",
+				Value: &entity.ParamOption{
+					Value: "0.9",
+					Label: "0.9",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, want, OpenAPIModelConfigDTO2DO(dto))
+}
+
+func TestOpenAPIResponseAPIConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *openapi.ResponseAPIConfig
+		want *entity.ResponseAPIConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "response api config with values",
+			dto: &openapi.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+			want: &entity.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIResponseAPIConfigDTO2DO(tt.dto))
 		})
 	}
 }

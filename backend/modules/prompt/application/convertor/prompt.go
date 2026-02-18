@@ -114,7 +114,45 @@ func PromptDetailDTO2DO(dto *prompt.PromptDetail) *entity.PromptDetail {
 		Tools:          BatchToolDTO2DO(dto.Tools),
 		ToolCallConfig: ToolCallConfigDTO2DO(dto.ToolCallConfig),
 		ModelConfig:    ModelConfigDTO2DO(dto.ModelConfig),
+		McpConfig:      McpConfigDTO2DO(dto.McpConfig),
 		ExtInfos:       dto.ExtInfos,
+	}
+}
+
+func McpConfigDTO2DO(dto *prompt.McpConfig) *entity.McpConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.McpConfig{
+		IsMcpCallAutoRetry: dto.IsMcpCallAutoRetry,
+		McpServers:         BatchMcpServerCombineDTO2DO(dto.McpServers),
+	}
+}
+
+func BatchMcpServerCombineDTO2DO(dtos []*prompt.McpServerCombine) []*entity.McpServerCombine {
+	if dtos == nil {
+		return nil
+	}
+	servers := make([]*entity.McpServerCombine, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		servers = append(servers, McpServerCombineDTO2DO(dto))
+	}
+	return servers
+}
+
+func McpServerCombineDTO2DO(dto *prompt.McpServerCombine) *entity.McpServerCombine {
+	if dto == nil {
+		return nil
+	}
+	return &entity.McpServerCombine{
+		McpServerID:    dto.McpServerID,
+		AccessPointID:  dto.AccessPointID,
+		DisabledTools:  dto.DisabledTools,
+		EnabledTools:   dto.EnabledTools,
+		IsEnabledTools: dto.IsEnabledTools,
 	}
 }
 
@@ -142,7 +180,7 @@ func TemplateTypeDTO2DO(dto prompt.TemplateType) entity.TemplateType {
 	case prompt.TemplateTypeGoTemplate:
 		return entity.TemplateTypeGoTemplate
 	case prompt.TemplateTypeCustomTemplateM:
-		return entity.TemplateTYpeCustomTemplateM
+		return entity.TemplateTypeCustomTemplateM
 	default:
 		return entity.TemplateTypeNormal
 	}
@@ -185,6 +223,8 @@ func MessageDTO2DO(dto *prompt.Message) *entity.Message {
 		Parts:            BatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        BatchToolCallDTO2DO(dto.ToolCalls),
+		SkipRender:       dto.SkipRender,
+		Signature:        dto.Signature,
 		Metadata:         dto.Metadata,
 	}
 }
@@ -231,6 +271,7 @@ func ContentPartDTO2DO(dto *prompt.ContentPart) *entity.ContentPart {
 		ImageURL:    ImageURLDTO2DO(dto.ImageURL),
 		VideoURL:    VideoURLDTO2DO(dto.VideoURL),
 		MediaConfig: MediaConfigDTO2DO(dto.MediaConfig),
+		Signature:   dto.Signature,
 	}
 }
 
@@ -400,6 +441,7 @@ func ToolCallDTO2DO(dto *prompt.ToolCall) *entity.ToolCall {
 		ID:           dto.GetID(),
 		Type:         ToolTypeDTO2DO(dto.GetType()),
 		FunctionCall: FunctionCallDTO2DO(dto.FunctionCall),
+		Signature:    dto.Signature,
 	}
 }
 
@@ -475,8 +517,36 @@ func ModelConfigDTO2DO(dto *prompt.ModelConfig) *entity.ModelConfig {
 		FrequencyPenalty:  dto.FrequencyPenalty,
 		JSONMode:          dto.JSONMode,
 		Extra:             dto.Extra,
+		Thinking:          ThinkingConfigDTO2DO(dto.Thinking),
 		ParamConfigValues: BatchParamConfigValueDTO2DO(dto.ParamConfigValues),
 	}
+}
+
+func ThinkingConfigDTO2DO(dto *prompt.ThinkingConfig) *entity.ThinkingConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ThinkingConfig{
+		BudgetTokens:    dto.BudgetTokens,
+		ThinkingOption:  ThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort: ReasoningEffortDTO2DO(dto.ReasoningEffort),
+	}
+}
+
+func ThinkingOptionDTO2DO(dto *prompt.ThinkingOption) *entity.ThinkingOption {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ThinkingOption(*dto)
+	return &result
+}
+
+func ReasoningEffortDTO2DO(dto *prompt.ReasoningEffort) *entity.ReasoningEffort {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ReasoningEffort(*dto)
+	return &result
 }
 
 func BatchParamConfigValueDTO2DO(dtos []*prompt.ParamConfigValue) []*entity.ParamConfigValue {
@@ -591,6 +661,7 @@ func ToolCallDO2DTO(do *entity.ToolCall) *prompt.ToolCall {
 		ID:           ptr.Of(do.ID),
 		Type:         ptr.Of(ToolTypeDO2DTO(do.Type)),
 		FunctionCall: FunctionCallDO2DTO(do.FunctionCall),
+		Signature:    do.Signature,
 	}
 }
 
@@ -649,6 +720,7 @@ func ContentPartDO2DTO(do *entity.ContentPart) *prompt.ContentPart {
 		ImageURL:    ImageURLDO2DTO(do.ImageURL),
 		VideoURL:    VideoURLDO2DTO(do.VideoURL),
 		MediaConfig: MediaConfigDO2DTO(do.MediaConfig),
+		Signature:   do.Signature,
 	}
 }
 
@@ -772,6 +844,8 @@ func MessageDO2DTO(do *entity.Message) *prompt.Message {
 		Parts:            BatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        BatchToolCallDO2DTO(do.ToolCalls),
+		SkipRender:       do.SkipRender,
+		Signature:        do.Signature,
 		Metadata:         do.Metadata,
 	}
 }
@@ -927,6 +1001,7 @@ func PromptDetailDO2DTO(do *entity.PromptDetail) *prompt.PromptDetail {
 		Tools:          BatchToolDO2DTO(do.Tools),
 		ToolCallConfig: ToolCallConfigDO2DTO(do.ToolCallConfig),
 		ModelConfig:    ModelConfigDO2DTO(do.ModelConfig),
+		McpConfig:      McpConfigDO2DTO(do.McpConfig),
 		ExtInfos:       do.ExtInfos,
 	}
 }
@@ -945,8 +1020,36 @@ func ModelConfigDO2DTO(do *entity.ModelConfig) *prompt.ModelConfig {
 		FrequencyPenalty:  do.FrequencyPenalty,
 		JSONMode:          do.JSONMode,
 		Extra:             do.Extra,
+		Thinking:          ThinkingConfigDO2DTO(do.Thinking),
 		ParamConfigValues: BatchParamConfigValueDO2DTO(do.ParamConfigValues),
 	}
+}
+
+func ThinkingConfigDO2DTO(do *entity.ThinkingConfig) *prompt.ThinkingConfig {
+	if do == nil {
+		return nil
+	}
+	return &prompt.ThinkingConfig{
+		BudgetTokens:    do.BudgetTokens,
+		ThinkingOption:  ThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort: ReasoningEffortDO2DTO(do.ReasoningEffort),
+	}
+}
+
+func ThinkingOptionDO2DTO(do *entity.ThinkingOption) *prompt.ThinkingOption {
+	if do == nil {
+		return nil
+	}
+	result := prompt.ThinkingOption(*do)
+	return &result
+}
+
+func ReasoningEffortDO2DTO(do *entity.ReasoningEffort) *prompt.ReasoningEffort {
+	if do == nil {
+		return nil
+	}
+	result := prompt.ReasoningEffort(*do)
+	return &result
 }
 
 func BatchParamConfigValueDO2DTO(dos []*entity.ParamConfigValue) []*prompt.ParamConfigValue {
@@ -981,6 +1084,43 @@ func ParamOptionDO2DTO(do *entity.ParamOption) *prompt.ParamOption {
 	return &prompt.ParamOption{
 		Value: ptr.Of(do.Value),
 		Label: ptr.Of(do.Label),
+	}
+}
+
+func McpConfigDO2DTO(do *entity.McpConfig) *prompt.McpConfig {
+	if do == nil {
+		return nil
+	}
+	return &prompt.McpConfig{
+		IsMcpCallAutoRetry: do.IsMcpCallAutoRetry,
+		McpServers:         BatchMcpServerCombineDO2DTO(do.McpServers),
+	}
+}
+
+func BatchMcpServerCombineDO2DTO(dos []*entity.McpServerCombine) []*prompt.McpServerCombine {
+	if dos == nil {
+		return nil
+	}
+	servers := make([]*prompt.McpServerCombine, 0, len(dos))
+	for _, do := range dos {
+		if do == nil {
+			continue
+		}
+		servers = append(servers, McpServerCombineDO2DTO(do))
+	}
+	return servers
+}
+
+func McpServerCombineDO2DTO(do *entity.McpServerCombine) *prompt.McpServerCombine {
+	if do == nil {
+		return nil
+	}
+	return &prompt.McpServerCombine{
+		McpServerID:    do.McpServerID,
+		AccessPointID:  do.AccessPointID,
+		DisabledTools:  do.DisabledTools,
+		EnabledTools:   do.EnabledTools,
+		IsEnabledTools: do.IsEnabledTools,
 	}
 }
 
