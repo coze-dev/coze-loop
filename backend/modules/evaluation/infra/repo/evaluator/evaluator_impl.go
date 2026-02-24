@@ -291,6 +291,18 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
 			}
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
+		case int32(entity.EvaluatorTypeAgent):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
+			evaluatorDO.AgentEvaluatorVersion = evaluatorVersionDO.AgentEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeAgent
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
+			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		default:
 			continue
 		}
