@@ -100,7 +100,7 @@ const (
 	riskContentDetectedMessage           = "detected risk content in user input or model response"
 	riskContentDetectedNoAffectStability = true
 
-	SkillNoPermissionCode              = 600503001
+	SkillNoPermissionCode              = 600503801
 	skillNoPermissionMessage           = "skill no permission"
 	skillNoPermissionNoAffectStability = true
 )

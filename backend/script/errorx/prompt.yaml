@@ -57,6 +57,6 @@ error_code:
 
   # 3xxx
   - name: SkillNoPermission
-    code: 3001
+    code: 3801
     message: skill no permission
     no_affect_stability: true
