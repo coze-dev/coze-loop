@@ -243,6 +243,12 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		}
 	}
 
+	// 从 TemplateConf 中提取 ExptSource
+	var exptSource *entity.ExptSource
+	if templateConf != nil && templateConf.ExptSource != nil {
+		exptSource = templateConf.ExptSource
+	}
+
 	return &entity.ExptTemplate{
 		Meta:                meta,
 		TripleConfig:        tripleConfig,
@@ -251,6 +257,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		TemplateConf:        templateConf,
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
+		ExptSource:          exptSource,
 	}, nil
 }
 

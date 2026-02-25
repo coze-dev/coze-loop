@@ -39,6 +39,15 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	// 转换 ExptSource
+	if req.ExptSource != nil {
+		exptSourceDTO := req.ExptSource
+		param.ExptSource = &entity.ExptSource{
+			SourceType: entity.SourceType(gptr.Indirect(exptSourceDTO.SourceType)),
+			SourceID:   gptr.Indirect(exptSourceDTO.SourceID),
+		}
+	}
+
 	return param, nil
 }
 
@@ -235,6 +244,10 @@ func buildTemplateConfForCreate(
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
+		// 即使没有字段映射，也需要设置 ExptSource
+		if param.ExptSource != nil {
+			templateConf.ExptSource = param.ExptSource
+		}
 		return templateConf
 	}
 
@@ -249,6 +262,11 @@ func buildTemplateConfForCreate(
 		templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
 			EvaluatorConf: evaluatorConfs,
 		}
+	}
+
+	// 设置 ExptSource
+	if param.ExptSource != nil {
+		templateConf.ExptSource = param.ExptSource
 	}
 
 	return templateConf
@@ -412,6 +430,15 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 			LatestExptStatus: gptr.Of(domain_expt.ExptStatus(template.ExptInfo.LatestExptStatus)),
 		}
 		dto.SetExptInfo(exptInfo)
+	}
+
+	// 填充 ExptSource
+	if template.ExptSource != nil {
+		exptSource := &domain_expt.ExptSource{
+			SourceType: gptr.Of(domain_expt.SourceType(template.ExptSource.SourceType)),
+			SourceID:   gptr.Of(template.ExptSource.SourceID),
+		}
+		dto.SetExptSource(exptSource)
 	}
 
 	return dto

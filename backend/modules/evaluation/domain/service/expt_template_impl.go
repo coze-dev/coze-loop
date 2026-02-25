@@ -6,6 +6,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -13,6 +16,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
+	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
@@ -21,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 func NewExptTemplateManager(
@@ -31,6 +37,8 @@ func NewExptTemplateManager(
 	evaluationSetService IEvaluationSetService,
 	evaluationSetVersionService EvaluationSetVersionService,
 	lwt platestwrite.ILatestWriteTracker,
+	taskRPCAdapter rpc.ITaskRPCAdapter,
+	exptRepo repo.IExperimentRepo,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
 		templateRepo:                templateRepo,
@@ -40,6 +48,8 @@ func NewExptTemplateManager(
 		evaluationSetService:        evaluationSetService,
 		evaluationSetVersionService: evaluationSetVersionService,
 		lwt:                         lwt,
+		taskRPCAdapter:              taskRPCAdapter,
+		exptRepo:                    exptRepo,
 	}
 }
 
@@ -51,6 +61,8 @@ type ExptTemplateManagerImpl struct {
 	evaluationSetService        IEvaluationSetService
 	evaluationSetVersionService EvaluationSetVersionService
 	lwt                         platestwrite.ILatestWriteTracker
+	taskRPCAdapter              rpc.ITaskRPCAdapter
+	exptRepo                    repo.IExperimentRepo
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
@@ -127,6 +139,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
+		ExptSource: param.ExptSource,
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
@@ -571,6 +584,339 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 	}
 
 	return templates, count, nil
+}
+
+// ListOnline 查询在线实验模板（通过 Task 查询）
+func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+	// Step 1: 通过 ITaskRPCAdapter 查询当前空间下所有的 task
+	// 由于 ListTasks 接口支持分页，但我们需要获取所有 task，所以先查询所有 task
+	limit := int32(200) // ListTasks 接口的最大 limit
+	offset := int32(0)
+	var allTasks []*taskdomain.Task
+
+	for {
+		tasks, total, err := e.taskRPCAdapter.ListTasks(ctx, &rpc.ListTasksParam{
+			WorkspaceID: spaceID,
+			Limit:       gptr.Of(limit),
+			Offset:      gptr.Of(offset),
+		})
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "list tasks fail, workspace_id: %d", spaceID)
+		}
+		if tasks == nil || len(tasks) == 0 {
+			break
+		}
+		allTasks = append(allTasks, tasks...)
+		if total != nil && int64(len(allTasks)) >= *total {
+			break
+		}
+		offset += limit
+	}
+
+	if len(allTasks) == 0 {
+		return []*entity.ExptTemplate{}, 0, nil
+	}
+
+	// Step 2: 从 task 中提取 task_id，查询关联的在线实验
+	taskIDs := make([]string, 0, len(allTasks))
+	for _, task := range allTasks {
+		if task.ID != nil {
+			taskIDs = append(taskIDs, strconv.FormatInt(*task.ID, 10))
+		}
+	}
+
+	// 查询在线实验：source_type = AutoTask (2), source_id in taskIDs, expt_type = Online
+	// 根据 IDL 定义：SourceType_AutoTask = 2
+	exptFilter := &entity.ExptListFilter{
+		Includes: &entity.ExptFilterFields{
+			ExptType:   []int64{int64(entity.ExptType_Online)},
+			SourceType: []int64{2}, // AutoTask = 2
+			SourceID:   taskIDs,
+		},
+	}
+
+	// 查询所有相关的在线实验（不分页，因为需要获取所有）
+	onlineExpts, _, err := e.exptRepo.List(ctx, 0, 0, exptFilter, nil, spaceID)
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "list online experiments fail, workspace_id: %d", spaceID)
+	}
+
+	if len(onlineExpts) == 0 {
+		return []*entity.ExptTemplate{}, 0, nil
+	}
+
+	// Step 3: 从在线实验中提取实验模板ID
+	templateIDSet := make(map[int64]bool)
+	for _, expt := range onlineExpts {
+		if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
+			templateIDSet[expt.ExptTemplateMeta.ID] = true
+		}
+	}
+
+	if len(templateIDSet) == 0 {
+		return []*entity.ExptTemplate{}, 0, nil
+	}
+
+	templateIDs := make([]int64, 0, len(templateIDSet))
+	for id := range templateIDSet {
+		templateIDs = append(templateIDs, id)
+	}
+
+	// Step 4: 批量查询实验模板
+	templates, err := e.MGet(ctx, templateIDs, spaceID, session)
+	if err != nil {
+		return nil, 0, errorx.Wrapf(err, "mget experiment templates fail, template_ids: %v", templateIDs)
+	}
+
+	// Step 4.5: 填充关联数据（EvalSet、Target、Evaluators）
+	if len(templates) > 0 {
+		tupleIDs := make([]*entity.ExptTupleID, 0, len(templates))
+		for _, template := range templates {
+			tupleIDs = append(tupleIDs, e.packTemplateTupleID(template))
+		}
+		exptTuples, err := e.mgetExptTupleByID(ctx, tupleIDs, spaceID, session)
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "mget expt tuple by id fail, template_ids: %v", templateIDs)
+		}
+		// 填充关联数据
+		for idx := range exptTuples {
+			templates[idx].EvalSet = exptTuples[idx].EvalSet
+			templates[idx].Target = exptTuples[idx].Target
+			templates[idx].Evaluators = exptTuples[idx].Evaluators
+		}
+	}
+
+	// Step 5: 应用筛选条件
+	filteredTemplates := e.applyTemplateFilters(templates, filter)
+
+	// Step 6: 应用排序
+	e.applyTemplateOrderBy(filteredTemplates, orderBys)
+
+	// Step 7: 应用分页
+	total := int64(len(filteredTemplates))
+	start := int((page - 1) * pageSize)
+	end := start + int(pageSize)
+	if start > len(filteredTemplates) {
+		return []*entity.ExptTemplate{}, total, nil
+	}
+	if end > len(filteredTemplates) {
+		end = len(filteredTemplates)
+	}
+
+	return filteredTemplates[start:end], total, nil
+}
+
+// applyTemplateFilters 应用筛选条件
+func (e *ExptTemplateManagerImpl) applyTemplateFilters(templates []*entity.ExptTemplate, filters *entity.ExptTemplateListFilter) []*entity.ExptTemplate {
+	if filters == nil {
+		return templates
+	}
+
+	var result []*entity.ExptTemplate
+	for _, template := range templates {
+		if e.matchesTemplateFilter(template, filters) {
+			result = append(result, template)
+		}
+	}
+	return result
+}
+
+// matchesTemplateFilter 检查模板是否匹配筛选条件
+func (e *ExptTemplateManagerImpl) matchesTemplateFilter(template *entity.ExptTemplate, filters *entity.ExptTemplateListFilter) bool {
+	if filters == nil {
+		return true
+	}
+
+	includes := filters.Includes
+	excludes := filters.Excludes
+
+	// 检查 Includes
+	if includes != nil {
+		// CreatedBy
+		if len(includes.CreatedBy) > 0 {
+			createdBy := ""
+			if template.BaseInfo != nil && template.BaseInfo.CreatedBy != nil && template.BaseInfo.CreatedBy.UserID != nil {
+				createdBy = *template.BaseInfo.CreatedBy.UserID
+			}
+			if !slices.Contains(includes.CreatedBy, createdBy) {
+				return false
+			}
+		}
+
+		// UpdatedBy
+		if len(includes.UpdatedBy) > 0 {
+			updatedBy := ""
+			if template.BaseInfo != nil && template.BaseInfo.UpdatedBy != nil && template.BaseInfo.UpdatedBy.UserID != nil {
+				updatedBy = *template.BaseInfo.UpdatedBy.UserID
+			}
+			if !slices.Contains(includes.UpdatedBy, updatedBy) {
+				return false
+			}
+		}
+
+		// EvalSetIDs
+		if len(includes.EvalSetIDs) > 0 {
+			evalSetID := template.GetEvalSetID()
+			if !slices.Contains(includes.EvalSetIDs, evalSetID) {
+				return false
+			}
+		}
+
+		// TargetIDs
+		if len(includes.TargetIDs) > 0 {
+			targetID := template.GetTargetID()
+			if !slices.Contains(includes.TargetIDs, targetID) {
+				return false
+			}
+		}
+
+		// EvaluatorIDs
+		if len(includes.EvaluatorIDs) > 0 {
+			// 需要查询评估器ID，这里简化处理，暂时跳过这个筛选条件
+			// TODO: 实现评估器ID的精确匹配
+		}
+
+		// TargetType
+		if len(includes.TargetType) > 0 {
+			targetType := int64(template.GetTargetType())
+			if !slices.Contains(includes.TargetType, targetType) {
+				return false
+			}
+		}
+
+		// ExptType (应该都是 Online，但检查一下)
+		if len(includes.ExptType) > 0 {
+			exptType := int64(template.GetExptType())
+			if !slices.Contains(includes.ExptType, exptType) {
+				return false
+			}
+		}
+
+		// FuzzyName
+		if len(filters.FuzzyName) > 0 {
+			name := template.Meta.Name
+			if !strings.Contains(strings.ToLower(name), strings.ToLower(filters.FuzzyName)) {
+				return false
+			}
+		}
+	}
+
+	// 检查 Excludes
+	if excludes != nil {
+		// CreatedBy
+		if len(excludes.CreatedBy) > 0 {
+			createdBy := ""
+			if template.BaseInfo != nil && template.BaseInfo.CreatedBy != nil && template.BaseInfo.CreatedBy.UserID != nil {
+				createdBy = *template.BaseInfo.CreatedBy.UserID
+			}
+			if slices.Contains(excludes.CreatedBy, createdBy) {
+				return false
+			}
+		}
+
+		// UpdatedBy
+		if len(excludes.UpdatedBy) > 0 {
+			updatedBy := ""
+			if template.BaseInfo != nil && template.BaseInfo.UpdatedBy != nil && template.BaseInfo.UpdatedBy.UserID != nil {
+				updatedBy = *template.BaseInfo.UpdatedBy.UserID
+			}
+			if slices.Contains(excludes.UpdatedBy, updatedBy) {
+				return false
+			}
+		}
+
+		// EvalSetIDs
+		if len(excludes.EvalSetIDs) > 0 {
+			evalSetID := template.GetEvalSetID()
+			if slices.Contains(excludes.EvalSetIDs, evalSetID) {
+				return false
+			}
+		}
+
+		// TargetIDs
+		if len(excludes.TargetIDs) > 0 {
+			targetID := template.GetTargetID()
+			if slices.Contains(excludes.TargetIDs, targetID) {
+				return false
+			}
+		}
+
+		// TargetType
+		if len(excludes.TargetType) > 0 {
+			targetType := int64(template.GetTargetType())
+			if slices.Contains(excludes.TargetType, targetType) {
+				return false
+			}
+		}
+
+		// ExptType
+		if len(excludes.ExptType) > 0 {
+			exptType := int64(template.GetExptType())
+			if slices.Contains(excludes.ExptType, exptType) {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// applyTemplateOrderBy 应用排序
+func (e *ExptTemplateManagerImpl) applyTemplateOrderBy(templates []*entity.ExptTemplate, orderBys []*entity.OrderBy) {
+	if len(orderBys) == 0 {
+		return
+	}
+
+	// 使用标准库的 sort.Slice 进行排序
+	sort.Slice(templates, func(i, j int) bool {
+		a, b := templates[i], templates[j]
+		for _, orderBy := range orderBys {
+			field := gptr.Indirect(orderBy.Field)
+			isAsc := gptr.Indirect(orderBy.IsAsc)
+
+			var cmp int
+			switch field {
+			case entity.OrderByUpdatedAt:
+				updatedAtA := int64(0)
+				updatedAtB := int64(0)
+				if a.BaseInfo != nil && a.BaseInfo.UpdatedAt != nil {
+					updatedAtA = *a.BaseInfo.UpdatedAt
+				}
+				if b.BaseInfo != nil && b.BaseInfo.UpdatedAt != nil {
+					updatedAtB = *b.BaseInfo.UpdatedAt
+				}
+				if updatedAtA < updatedAtB {
+					cmp = -1
+				} else if updatedAtA > updatedAtB {
+					cmp = 1
+				}
+			case entity.OrderByCreatedAt:
+				createdAtA := int64(0)
+				createdAtB := int64(0)
+				if a.BaseInfo != nil && a.BaseInfo.CreatedAt != nil {
+					createdAtA = *a.BaseInfo.CreatedAt
+				}
+				if b.BaseInfo != nil && b.BaseInfo.CreatedAt != nil {
+					createdAtB = *b.BaseInfo.CreatedAt
+				}
+				if createdAtA < createdAtB {
+					cmp = -1
+				} else if createdAtA > createdAtB {
+					cmp = 1
+				}
+			default:
+				continue
+			}
+
+			if cmp != 0 {
+				if !isAsc {
+					return cmp > 0
+				}
+				return cmp < 0
+			}
+		}
+		return false
+	})
 }
 
 // resolveAndFillEvaluatorVersionIDs 解析并回填评估器版本ID

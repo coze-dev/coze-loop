@@ -43,6 +43,7 @@ func NewSchedulerModeFactory(
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
 	templateManager IExptTemplateManager,
+	deadlineStore repo.IExptDeadlineStore,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -58,6 +59,7 @@ func NewSchedulerModeFactory(
 		evaluatorRecordService:   evaluatorRecordService,
 		resultSvc:                resultSvc,
 		templateManager:          templateManager,
+		deadlineStore:            deadlineStore,
 	}
 }
 
@@ -76,6 +78,7 @@ type DefaultSchedulerModeFactory struct {
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
 	templateManager          IExptTemplateManager
+	deadlineStore            repo.IExptDeadlineStore
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -87,7 +90,7 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeFailRetry:
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
-		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.deadlineStore), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -594,6 +597,7 @@ type ExptAppendExec struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	templateManager          IExptTemplateManager
+	deadlineStore            repo.IExptDeadlineStore
 }
 
 func NewExptAppendMode(
@@ -609,6 +613,7 @@ func NewExptAppendMode(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
+	deadlineStore repo.IExptDeadlineStore,
 ) *ExptAppendExec {
 	return &ExptAppendExec{
 		manager:                  manager,
@@ -623,6 +628,7 @@ func NewExptAppendMode(
 		publisher:                publisher,
 		evaluatorRecordService:   evaluatorRecordService,
 		templateManager:          templateManager,
+		deadlineStore:            deadlineStore,
 	}
 }
 
@@ -639,6 +645,7 @@ func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
+	// 情况1：Draining 且无数据 -> 完成实验
 	if toSubmit == 0 && incomplete == 0 && expt.Status == entity.ExptStatus_Draining {
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
@@ -646,6 +653,15 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		}
 		return false, nil
 	}
+
+	// 情况2：Processing/Pending 且无数据 -> 暂停调度（停止 NextTick），等待新的 Invoke 调用
+	if toSubmit == 0 && incomplete == 0 && (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) {
+		logs.CtxInfo(ctx, "[ExptEval] expt daemon paused (no data), expt_id: %v, expt_run_id: %v, status: %v, will resume when new items are invoked",
+			event.ExptID, event.ExptRunID, expt.Status)
+		return false, nil
+	}
+
+	// 情况3：有数据或非 Processing/Pending 状态 -> 继续调度
 	return true, nil
 }
 
@@ -655,7 +671,7 @@ func (e *ExptAppendExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 func (e *ExptAppendExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
 	if toSubmit == 0 && incomplete == 0 && (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) {
-		// 没有数据且未完成，计算一次stats
+		// 没有数据且未完成，计算一次stats；ExptEnd 会返回 false 停止周期性调度，等待后续 Invoke 唤醒
 		logs.CtxInfo(ctx, "[ExptEval] expt daemon found no data, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		if err := e.manager.PendRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
 			logs.CtxError(ctx, "[ExptEval] expt daemon pend run failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
@@ -663,7 +679,7 @@ func (e *ExptAppendExec) ScheduleEnd(ctx context.Context, event *entity.ExptSche
 		if err := e.manager.PendExpt(ctx, event.ExptID, event.SpaceID, event.Session); err != nil {
 			logs.CtxError(ctx, "[ExptEval] expt daemon pend expt failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 		}
-		time.Sleep(time.Second * 60)
+		// 移除 sleep，避免无谓阻塞；停止周期性调度的逻辑由 ExptEnd 控制
 	} else if entity.IsExptFinished(expt.Status) {
 		logs.CtxInfo(ctx, "[ExptEval] online expt finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 	}
@@ -673,7 +689,16 @@ func (e *ExptAppendExec) ScheduleEnd(ctx context.Context, event *entity.ExptSche
 func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	// 先检查是否需要结束
 	logs.CtxInfo(ctx, "ExptAppendExec.ScheduleStart, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+	if expt.StartAt == nil {
+		return nil
+	}
 	deadline := expt.StartAt.Add(time.Duration(expt.MaxAliveTime) * time.Millisecond)
+	// 存在未来到期点：写入 Redis ZSET，到点由 Worker 从 DB 组事件并派发
+	if e.deadlineStore != nil && (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) && expt.MaxAliveTime > 0 && time.Now().Before(deadline) {
+		if err := e.deadlineStore.AddDeadline(ctx, event.SpaceID, event.ExptID, event.ExptRunID, deadline.Unix()); err != nil {
+			logs.CtxWarn(ctx, "expt deadline AddDeadline failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		}
+	}
 	if (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) && expt.MaxAliveTime > 0 && time.Now().After(deadline) {
 		newStatus := entity.ExptStatus_Draining
 		logs.CtxInfo(ctx, "expt max alive time exceeded, expt_id: %v, expt_run_id: %v, deadline: %v", event.ExptID, event.ExptRunID, deadline)
@@ -714,6 +739,11 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
+	// 当无需继续调度时，直接跳过
+	if !nextTick {
+		logs.CtxInfo(ctx, "[ExptEval] skip next tick (idle), expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+		return nil
+	}
 	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
 	event.CreatedAt = time.Now().Unix()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))

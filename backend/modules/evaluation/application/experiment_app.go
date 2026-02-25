@@ -46,6 +46,8 @@ type IExperimentApplication interface {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
+	// StartDeadlineDispatcher 启动 Redis ZSET 到点派发 Worker（与 consumer 同进程时调用）
+	StartDeadlineDispatcher(ctx context.Context)
 }
 
 type experimentApplication struct {
@@ -72,6 +74,9 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 到点派发 Worker，与 consumer 同进程时启动
+	deadlineDispatcher *service.ExptDeadlineDispatcher
 }
 
 func NewExperimentApplication(
@@ -92,6 +97,7 @@ func NewExperimentApplication(
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
 	evaluatorService service.EvaluatorService,
 	templateManager service.IExptTemplateManager,
+	deadlineDispatcher *service.ExptDeadlineDispatcher,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -111,7 +117,15 @@ func NewExperimentApplication(
 		IExptInsightAnalysisService: exptInsightAnalysisService,
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
+		deadlineDispatcher:          deadlineDispatcher,
 	}
+}
+
+func (e *experimentApplication) StartDeadlineDispatcher(ctx context.Context) {
+	if e.deadlineDispatcher == nil {
+		return
+	}
+	go e.deadlineDispatcher.Run(ctx)
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
@@ -395,6 +409,18 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 		}
 	}
 
+	// 检查是否需要分流处理在线实验模板
+	needOnlineExptTemplates := false
+	if filters != nil && filters.Includes != nil && len(filters.Includes.ExptType) > 0 {
+		// 检查是否包含在线实验类型 (ExptType_Online = 2)
+		for _, exptType := range filters.Includes.ExptType {
+			if exptType == int64(entity.ExptType_Online) {
+				needOnlineExptTemplates = true
+				break
+			}
+		}
+	}
+
 	orderBys := slices.Transform(req.GetOrderBys(), func(e *common.OrderBy, _ int) *entity.OrderBy {
 		return &entity.OrderBy{Field: gptr.Of(e.GetField()), IsAsc: gptr.Of(e.GetIsAsc())}
 	})
@@ -407,9 +433,22 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 			},
 		}
 	}
-	templates, count, err := e.templateManager.List(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
-	if err != nil {
-		return nil, err
+
+	var templates []*entity.ExptTemplate
+	var count int64
+
+	if needOnlineExptTemplates {
+		// 在线实验模板：通过 Task 查询
+		templates, count, err = e.templateManager.ListOnline(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// 离线实验模板：使用原有逻辑
+		templates, count, err = e.templateManager.List(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dtos := experiment.ToExptTemplateDTOs(templates)

@@ -777,6 +777,26 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	if err != nil {
 		return err
 	}
+	// 若新增了 items 且实验处于 Processing/Pending，则尝试恢复调度
+	if len(toSubmitItems) > 0 && (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) {
+		logs.CtxInfo(ctx, "[ExptEval] Invoke with new items, restart scheduler if paused, expt_id: %v, expt_run_id: %v, new_items: %v, status: %v",
+			invokeExptReq.ExptID, invokeExptReq.RunID, len(toSubmitItems), expt.Status)
+	}
+
+	// 发布前通过调度锁判断：若锁已占用说明调度器正在运行，跳过发布以避免重复调度
+	lockKey := fmt.Sprintf("expt_run_exec_lock:%d:%d", invokeExptReq.ExptID, invokeExptReq.RunID)
+	locked, lkErr := e.mutex.Lock(ctx, lockKey, time.Second*2)
+	if lkErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] check scheduler lock failed, will publish anyway, key: %v, err: %v", lockKey, lkErr)
+	} else if !locked {
+		logs.CtxInfo(ctx, "[ExptEval] scheduler is running, skip publish, expt_id: %v, run_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID)
+		return nil
+	} else {
+		// 仅作占用检测，立即释放锁
+		if _, uErr := e.mutex.Unlock(lockKey); uErr != nil {
+			logs.CtxWarn(ctx, "[ExptEval] release check lock failed, key: %v, err: %v", lockKey, uErr)
+		}
+	}
 
 	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,

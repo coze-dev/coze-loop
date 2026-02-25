@@ -27,6 +27,7 @@ var ExperimentRepoSet = wire.NewSet(
 	NewExptTemplateRepo,
 	NewQuotaService,
 	NewEvalAsyncRepo,
+	NewExptDeadlineStore,
 	idem.NewIdempotentService,
 	// DAO Sets
 	exptmysql.ExperimentMySQLDAOSet,

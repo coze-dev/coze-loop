@@ -70,6 +70,8 @@ func main() {
 	if err := r.StartAll(ctx); err != nil {
 		panic(err)
 	}
+	// 启动实验到点派发 Worker（Redis ZSET 定时器）
+	handler.StartDeadlineDispatcher(signalCtx)
 
 	go api.Start(handler)
 	<-signalCtx.Done()

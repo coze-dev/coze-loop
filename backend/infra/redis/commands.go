@@ -62,11 +62,16 @@ type HashCmdable interface {
 	HMGet(ctx context.Context, key string, fields ...string) *redis.SliceCmd
 }
 
+// ZRangeBy is the options for ZRangeByScore.
+type ZRangeBy = redis.ZRangeBy
+
 // SortedSetCmdable copy methods we need in [redis.SortedSetCmdable]
 type SortedSetCmdable interface {
 	ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZAddNX(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd
 	ZRange(ctx context.Context, key string, start, stop int64) *redis.StringSliceCmd
+	ZRangeByScore(ctx context.Context, key string, opt *redis.ZRangeBy) *redis.StringSliceCmd
+	ZRem(ctx context.Context, key string, members ...any) *redis.IntCmd
 }
 
 type Pipeliner interface {

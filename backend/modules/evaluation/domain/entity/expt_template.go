@@ -34,6 +34,15 @@ type ExptTemplate struct {
 
 	// ExptInfo 实验运行状态信息（存储在数据库的 expt_info 字段中，JSON格式）
 	ExptInfo *ExptInfo
+
+	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
+	ExptSource *ExptSource
+}
+
+// ExptSource 实验来源信息
+type ExptSource struct {
+	SourceType SourceType
+	SourceID   string
 }
 
 // ExptInfo 实验模板关联的实验运行状态信息
@@ -131,6 +140,9 @@ type ExptTemplateConfiguration struct {
 
 	// 默认评估器并发数
 	EvaluatorsConcurNum *int
+
+	// ExptSource 实验来源信息
+	ExptSource *ExptSource `json:"expt_source,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO
@@ -347,6 +359,7 @@ type CreateExptTemplateParam struct {
 	TemplateConf            *ExptTemplateConfiguration
 	ExptType                ExptType
 	CreateEvalTargetParam   *CreateEvalTargetParam
+	ExptSource              *ExptSource // 实验来源信息
 }
 
 // UpdateExptTemplateParam 更新实验模板参数

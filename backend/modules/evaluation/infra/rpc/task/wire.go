@@ -1,14 +1,12 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package dao
+package task
 
 import (
 	"github.com/google/wire"
 )
 
-var ExperimentRedisDAOSet = wire.NewSet(
-	NewQuotaDAO,
-	NewEvalAsyncDAO,
-	NewExptDeadlineDAO,
+var TaskRPCSet = wire.NewSet(
+	NewTaskRPCAdapter,
 )

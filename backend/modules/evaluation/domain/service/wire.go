@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/llm"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
+	taskrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 )
@@ -33,8 +34,11 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	NewExptResultExportService,
 	NewInsightAnalysisService,
 	NewSchedulerModeFactory,
+	NewExptDeadlineDispatcher,
 	NewExptTemplateManager,
 	NewEvaluationAnalysisService,
+	// Infrastructure Sets
+	taskrpc.TaskRPCSet,
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
 )

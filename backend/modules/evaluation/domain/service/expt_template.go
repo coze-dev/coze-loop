@@ -21,4 +21,6 @@ type IExptTemplateManager interface {
 	UpdateExptInfo(ctx context.Context, templateID, spaceID int64, exptID int64, exptStatus entity.ExptStatus, adjustCount int64) error
 	Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error
 	List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error)
+	// ListOnline 查询在线实验模板（通过 Task 查询）
+	ListOnline(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error)
 }

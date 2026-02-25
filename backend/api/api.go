@@ -26,6 +26,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/infra/redis"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lodataset"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lotag"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_set"
@@ -35,6 +36,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/lofile"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/louser"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/llm/loruntime"
+	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotask"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotrace"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/loexecute"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lomanage"
@@ -115,6 +117,9 @@ func Init(
 		plainLimiterFactory,
 		func() observabilitytraceservice.Client {
 			return lotrace.NewLocalTraceService(observabilityHandler.ITraceApplication)
+		},
+		func() taskservice.Client {
+			return lotask.NewLocalTaskService(observabilityHandler.ITaskApplication)
 		},
 	)
 	if err != nil {
