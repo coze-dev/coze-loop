@@ -16,8 +16,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
-	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observabi
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -51,7 +51,7 @@ func NewExptTemplateManager(
 		evaluationSetVersionService: evaluationSetVersionService,
 		lwt:                         lwt,
 		taskRPCAdapter:              taskRPCAdapter,
-		pipelineRPCAdapter:         pipelineRPCAdapter,
+		pipelineRPCAdapter:          pipelineRPCAdapter,
 		exptRepo:                    exptRepo,
 	}
 }
@@ -757,7 +757,7 @@ func taskToExptTemplate(task *taskdomain.Task, spaceID int64) *entity.ExptTempla
 	if task.Rule != nil && task.Rule.SpanFilters != nil {
 		exptSource.SpanFilterFields = spanFilterFieldsFromTaskRule(task.Rule.SpanFilters)
 	}
-	exptSource.Scheduler = nil
+	exptSource.Scheduler = taskRuleToExptScheduler(task.Rule)
 
 	baseInfo := &entity.BaseInfo{}
 	if task.BaseInfo != nil {
@@ -880,6 +880,83 @@ func extractEvaluatorVersionIDs(items []*entity.EvaluatorIDVersionItem) []int64 
 	return ids
 }
 
+// taskRuleToExptScheduler 将 task.Rule (Sampler + EffectiveTime) 转为 entity.ExptSchedulerDO
+// 参考 convertScheduler/convertFrequency 逻辑
+func taskRuleToExptScheduler(rule *taskdomain.Rule) *entity.ExptSchedulerDO {
+	if rule == nil {
+		return nil
+	}
+	sampler := rule.Sampler
+	effectiveTime := rule.EffectiveTime
+	if sampler == nil && effectiveTime == nil {
+		return nil
+	}
+	out := &entity.ExptSchedulerDO{}
+	if sampler != nil {
+		out.Enabled = sampler.IsCycle
+		if sampler.IsCycle != nil && *sampler.IsCycle {
+			if freq := convertTaskFrequency(sampler, effectiveTime); freq != nil {
+				out.Frequency = freq
+			}
+		}
+	}
+	if effectiveTime != nil {
+		if effectiveTime.StartAt != nil && *effectiveTime.StartAt != 0 {
+			out.StartTime = effectiveTime.StartAt
+		}
+		if effectiveTime.EndAt != nil && *effectiveTime.EndAt != 0 {
+			out.EndTime = effectiveTime.EndAt
+		}
+	}
+	if out.Enabled == nil && out.Frequency == nil && out.TriggerAt == nil && out.StartTime == nil && out.EndTime == nil {
+		return nil
+	}
+	return out
+}
+
+// convertTaskFrequency 根据 task.Sampler.CycleTimeUnit 和 EffectiveTime 计算 Frequency
+func convertTaskFrequency(sampler *taskdomain.Sampler, effectiveTime *taskdomain.EffectiveTime) *string {
+	if sampler == nil || sampler.IsCycle == nil || !*sampler.IsCycle {
+		return nil
+	}
+	cycleTimeUnit := ""
+	if sampler.CycleTimeUnit != nil {
+		cycleTimeUnit = *sampler.CycleTimeUnit
+	}
+	switch cycleTimeUnit {
+	case taskdomain.TimeUnitDay, taskdomain.TimeUnitNull, "":
+		f := "every_day"
+		return &f
+	case taskdomain.TimeUnitWeek:
+		if effectiveTime == nil || effectiveTime.StartAt == nil || *effectiveTime.StartAt == 0 {
+			return nil
+		}
+		wd := time.UnixMilli(*effectiveTime.StartAt).Weekday()
+		var f string
+		switch wd {
+		case time.Monday:
+			f = "monday"
+		case time.Tuesday:
+			f = "tuesday"
+		case time.Wednesday:
+			f = "wednesday"
+		case time.Thursday:
+			f = "thursday"
+		case time.Friday:
+			f = "friday"
+		case time.Saturday:
+			f = "saturday"
+		case time.Sunday:
+			f = "sunday"
+		default:
+			return nil
+		}
+		return &f
+	default:
+		return nil
+	}
+}
+
 // spanFilterFieldsFromTaskRule 将 task.Rule.SpanFilters (filter.SpanFilterFields) 转为 entity.SpanFilterFieldsDO
 func spanFilterFieldsFromTaskRule(sf *taskfilter.SpanFilterFields) *entity.SpanFilterFieldsDO {
 	if sf == nil {
@@ -928,7 +1005,7 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 	}
 	fd := &entity.FilterFieldDO{
 		FieldName: f.FieldName,
-		Values:     f.Values,
+		Values:    f.Values,
 	}
 	if f.FieldType != nil {
 		s := string(*f.FieldType)
@@ -1037,23 +1114,23 @@ type taskRuleSpanFiltersJSON struct {
 }
 
 type spanFiltersJSON struct {
-	SpanListType *string        `json:"span_list_type"`
-	PlatformType *string        `json:"platform_type"`
-	Filters      *filtersJSON  `json:"filters"`
+	SpanListType *string      `json:"span_list_type"`
+	PlatformType *string      `json:"platform_type"`
+	Filters      *filtersJSON `json:"filters"`
 }
 
 type filtersJSON struct {
-	QueryAndOr   *string           `json:"query_and_or"`
+	QueryAndOr   *string            `json:"query_and_or"`
 	FilterFields []*filterFieldJSON `json:"filter_fields"`
 }
 
 type filterFieldJSON struct {
-	FieldName  *string         `json:"field_name"`
-	FieldType  *string         `json:"field_type"`
-	Values     []string        `json:"values"`
-	QueryType  *string         `json:"query_type"`
-	QueryAndOr *string         `json:"query_and_or"`
-	SubFilter  *filtersJSON   `json:"sub_filter"`
+	FieldName  *string      `json:"field_name"`
+	FieldType  *string      `json:"field_type"`
+	Values     []string     `json:"values"`
+	QueryType  *string      `json:"query_type"`
+	QueryAndOr *string      `json:"query_and_or"`
+	SubFilter  *filtersJSON `json:"sub_filter"`
 }
 
 func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
