@@ -54,3 +54,9 @@ error_code:
     message: detected risk content in user input or model response
     description: detected risk content in user input or model response
     no_affect_stability: true
+
+  # 3xxx
+  - name: SkillNoPermission
+    code: 3001
+    message: skill no permission
+    no_affect_stability: true

@@ -99,6 +99,10 @@ const (
 	RiskContentDetectedCode              = 600505014 // detected risk content in user input or model response
 	riskContentDetectedMessage           = "detected risk content in user input or model response"
 	riskContentDetectedNoAffectStability = true
+
+	SkillNoPermissionCode              = 600503001
+	skillNoPermissionMessage           = "skill no permission"
+	skillNoPermissionNoAffectStability = true
 )
 
 func init() {
@@ -239,6 +243,12 @@ func init() {
 		RiskContentDetectedCode,
 		riskContentDetectedMessage,
 		code.WithAffectStability(!riskContentDetectedNoAffectStability),
+	)
+
+	code.Register(
+		SkillNoPermissionCode,
+		skillNoPermissionMessage,
+		code.WithAffectStability(!skillNoPermissionNoAffectStability),
 	)
 
 }
