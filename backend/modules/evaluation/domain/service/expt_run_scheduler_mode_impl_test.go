@@ -640,7 +640,7 @@ func TestExptSubmitExec_ScanEvalItems(t *testing.T) {
 			wantIncomplete: []*entity.ExptEvalItem{},
 			wantComplete:   []*entity.ExptEvalItem{},
 			wantErr:        false,
-			assertErr:     func(t *testing.T, err error) { assert.NoError(t, err) },
+			assertErr:      func(t *testing.T, err error) { assert.NoError(t, err) },
 		},
 	}
 
@@ -2087,6 +2087,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 	evaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 	resultService := svcmocks.NewMockExptResultService(ctrl)
 	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
+	mockExptRunLogRepo := mock_repo.NewMockIExptRunLogRepo(ctrl)
 
 	factory := NewSchedulerModeFactory(
 		manager,
@@ -2102,6 +2103,7 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 		evaluatorRecordService,
 		resultService,
 		templateManager,
+		mockExptRunLogRepo,
 	)
 
 	tests := []struct {

@@ -912,7 +912,7 @@ func (e *ExptMangerImpl) PendExpt(ctx context.Context, exptID, spaceID int64, se
 	return nil
 }
 
-func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, session *entity.Session) error {
+func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
 	if err != nil {
@@ -924,7 +924,7 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 
 	defer e.mtr.EmitExptExecRun(spaceID, int64(mode))
 
-	if err := e.runLogRepo.Create(ctx, &entity.ExptRunLog{
+	rl := &entity.ExptRunLog{
 		ID:        exptRunID,
 		SpaceID:   spaceID,
 		CreatedBy: session.UserID,
@@ -932,7 +932,12 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 		ExptRunID: exptRunID,
 		Mode:      int32(mode),
 		Status:    int64(entity.ExptStatus_Pending),
-	}); err != nil {
+	}
+	if len(itemIDs) > 0 {
+		rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
+	}
+
+	if err := e.runLogRepo.Create(ctx, rl); err != nil {
 		return err
 	}
 
@@ -944,6 +949,70 @@ func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mo
 	}
 
 	return nil
+}
+
+func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (runID int64, retried bool, err error) {
+	expireAt := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
+	retryTime := time.Second
+	runID, err = e.idgenerator.GenID(ctx)
+	if err != nil {
+		return 0, false, err
+	}
+
+	locked, existedRunID, err := e.mutex.BackoffLockWithValue(ctx, e.makeExptMutexLockKey(exptID), strconv.FormatInt(runID, 10), expireAt, retryTime)
+	if err != nil {
+		return 0, false, err
+	}
+
+	var rl *entity.ExptRunLog
+	retried = !locked
+
+	if retried {
+		runID, err = strconv.ParseInt(existedRunID, 10, 64)
+		if err != nil {
+			logs.CtxError(ctx, "parsing expt run lock value to runid failed, raw: %v", existedRunID)
+			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+		}
+
+		rl, err = e.runLogRepo.Get(ctx, exptID, runID)
+		if err != nil {
+			return 0, false, err
+		}
+
+		if rl == nil {
+			return 0, false, errorx.Wrapf(err, "target runlog %v not found, expt_id: %v", runID, exptID)
+		}
+
+		if err := rl.AppendItemIDs(itemIDs); err != nil {
+			return 0, false, err
+		}
+	} else {
+		rl = &entity.ExptRunLog{
+			ID:        runID,
+			SpaceID:   spaceID,
+			CreatedBy: session.UserID,
+			ExptID:    exptID,
+			ExptRunID: runID,
+			Mode:      int32(mode),
+			Status:    int64(entity.ExptStatus_Pending),
+		}
+		if len(itemIDs) > 0 {
+			rl.ItemIds = []entity.ExptRunLogItems{{ItemIDs: itemIDs, CreateAt: gptr.Of(time.Now().Unix())}}
+		}
+	}
+
+	if err := e.runLogRepo.Save(ctx, rl); err != nil {
+		return 0, false, err
+	}
+
+	if !retried {
+		if err := e.exptRepo.Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: runID}); err != nil {
+			return 0, false, err
+		}
+		e.mtr.EmitExptExecRun(spaceID, int64(mode))
+	}
+
+	return runID, !locked, nil
 }
 
 func (e *ExptMangerImpl) GetRunLog(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) (*entity.ExptRunLog, error) {

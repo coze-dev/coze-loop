@@ -42,6 +42,22 @@ func (m *MockILocker) EXPECT() *MockILockerMockRecorder {
 	return m.recorder
 }
 
+// BackoffLockWithValue mocks base method.
+func (m *MockILocker) BackoffLockWithValue(ctx context.Context, key, val string, expiresIn, backoff time.Duration) (bool, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BackoffLockWithValue", ctx, key, val, expiresIn, backoff)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// BackoffLockWithValue indicates an expected call of BackoffLockWithValue.
+func (mr *MockILockerMockRecorder) BackoffLockWithValue(ctx, key, val, expiresIn, backoff any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackoffLockWithValue", reflect.TypeOf((*MockILocker)(nil).BackoffLockWithValue), ctx, key, val, expiresIn, backoff)
+}
+
 // ExpireLockIn mocks base method.
 func (m *MockILocker) ExpireLockIn(key string, expiresIn time.Duration) (bool, error) {
 	m.ctrl.T.Helper()

@@ -249,6 +249,7 @@ func TestDefaultSchedulerModeFactory_NewSchedulerMode_Integration(t *testing.T) 
 	mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockTemplateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
+	mockExptRunLogRepo := mock_repo.NewMockIExptRunLogRepo(ctrl)
 
 	factory := NewSchedulerModeFactory(
 		mockManager,
@@ -264,6 +265,7 @@ func TestDefaultSchedulerModeFactory_NewSchedulerMode_Integration(t *testing.T) 
 		mockEvaluatorRecordService,
 		mockResultSvc,
 		mockTemplateManager,
+		mockExptRunLogRepo,
 	)
 
 	tests := []struct {

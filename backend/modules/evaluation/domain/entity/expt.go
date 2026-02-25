@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -51,14 +52,13 @@ const (
 	SourceType_Trace      SourceType = 2
 )
 
-// TODO
 type ExptRunLog struct {
 	ID            int64
 	SpaceID       int64
 	CreatedBy     string
 	ExptID        int64
 	ExptRunID     int64
-	ItemIds       []byte
+	ItemIds       []ExptRunLogItems
 	Mode          int32
 	Status        int64
 	PendingCnt    int32
@@ -71,6 +71,38 @@ type ExptRunLog struct {
 	TerminatedCnt int32
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
+}
+
+func (e *ExptRunLog) GetItemIDs() []int64 {
+	var itemIDs []int64
+	for _, items := range e.ItemIds {
+		for _, itemID := range items.ItemIDs {
+			itemIDs = append(itemIDs, itemID)
+		}
+	}
+	return itemIDs
+}
+
+func (e *ExptRunLog) AppendItemIDs(itemIDs []int64) error {
+	if e == nil {
+		return errorx.New("ExptRunLog AppendItemIDs must init first")
+	}
+	var exists map[int64]bool
+	for _, chunk := range e.ItemIds {
+		for _, itemID := range chunk.ItemIDs {
+			exists[itemID] = true
+		}
+	}
+	rlItems := ExptRunLogItems{CreateAt: gptr.Of(time.Now().Unix())}
+	for _, itemID := range itemIDs {
+		if exists[itemID] {
+			return errorx.NewByCode(errno.EvalItemAlreadyRetryingCode, errorx.WithExtraMsg(fmt.Sprintf("existed item_id: %v", itemID)))
+		} else {
+			rlItems.ItemIDs = append(rlItems.ItemIDs, itemID)
+		}
+	}
+	e.ItemIds = append(e.ItemIds, rlItems)
+	return nil
 }
 
 type Experiment struct {
@@ -340,4 +372,9 @@ type InvokeExptReq struct {
 	Items []*EvaluationSetItem
 
 	Ext map[string]string
+}
+
+type ExptRunLogItems struct {
+	ItemIDs  []int64
+	CreateAt *int64
 }

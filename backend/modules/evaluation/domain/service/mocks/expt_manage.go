@@ -267,18 +267,34 @@ func (mr *MockIExptManagerMockRecorder) ListExptRaw(ctx, page, pageSize, spaceID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListExptRaw", reflect.TypeOf((*MockIExptManager)(nil).ListExptRaw), ctx, page, pageSize, spaceID, filter)
 }
 
-// LogRun mocks base method.
-func (m *MockIExptManager) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, session *entity.Session) error {
+// LogRetryItemsRun mocks base method.
+func (m *MockIExptManager) LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (int64, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LogRun", ctx, exptID, exptRunID, mode, spaceID, session)
+	ret := m.ctrl.Call(m, "LogRetryItemsRun", ctx, exptID, mode, spaceID, itemIDs, session)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// LogRetryItemsRun indicates an expected call of LogRetryItemsRun.
+func (mr *MockIExptManagerMockRecorder) LogRetryItemsRun(ctx, exptID, mode, spaceID, itemIDs, session any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRetryItemsRun", reflect.TypeOf((*MockIExptManager)(nil).LogRetryItemsRun), ctx, exptID, mode, spaceID, itemIDs, session)
+}
+
+// LogRun mocks base method.
+func (m *MockIExptManager) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LogRun", ctx, exptID, exptRunID, mode, spaceID, itemIDs, session)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // LogRun indicates an expected call of LogRun.
-func (mr *MockIExptManagerMockRecorder) LogRun(ctx, exptID, exptRunID, mode, spaceID, session any) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) LogRun(ctx, exptID, exptRunID, mode, spaceID, itemIDs, session any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRun", reflect.TypeOf((*MockIExptManager)(nil).LogRun), ctx, exptID, exptRunID, mode, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LogRun", reflect.TypeOf((*MockIExptManager)(nil).LogRun), ctx, exptID, exptRunID, mode, spaceID, itemIDs, session)
 }
 
 // MDelete mocks base method.

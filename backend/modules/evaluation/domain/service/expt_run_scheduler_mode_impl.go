@@ -46,6 +46,7 @@ func NewSchedulerModeFactory(
 	evaluatorRecordService EvaluatorRecordService,
 	resultSvc ExptResultService,
 	templateManager IExptTemplateManager,
+	exptRunLogRepo repo.IExptRunLogRepo,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -61,6 +62,7 @@ func NewSchedulerModeFactory(
 		evaluatorRecordService:   evaluatorRecordService,
 		resultSvc:                resultSvc,
 		templateManager:          templateManager,
+		exptRunLogRepo:           exptRunLogRepo,
 	}
 }
 
@@ -79,6 +81,7 @@ type DefaultSchedulerModeFactory struct {
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
 	templateManager          IExptTemplateManager
+	exptRunLogRepo           repo.IExptRunLogRepo
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -94,7 +97,7 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeRetryAll:
 		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeRetryItems:
-		return NewExptRetryItemsExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+		return NewExptRetryItemsExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.exptRunLogRepo), nil
 	default:
 		return nil, fmt.Errorf("NewSchedulerMode with unknown mode: %v", mode)
 	}
@@ -1160,6 +1163,7 @@ func NewExptRetryItemsExec(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
+	exptRunLogRepo repo.IExptRunLogRepo,
 ) *ExptRetryItemsExec {
 	return &ExptRetryItemsExec{
 		configer:                 configer,
@@ -1174,6 +1178,7 @@ func NewExptRetryItemsExec(
 		manager:                  manager,
 		publisher:                publisher,
 		templateManager:          templateManager,
+		exptRunLogRepo:           exptRunLogRepo,
 	}
 }
 
@@ -1190,6 +1195,7 @@ type ExptRetryItemsExec struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	templateManager          IExptTemplateManager
+	exptRunLogRepo           repo.IExptRunLogRepo
 }
 
 func (e *ExptRetryItemsExec) Mode() entity.ExptRunMode {
@@ -1206,6 +1212,41 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		return nil
 	}
 
+	if err := e.resetEvalItems(ctx, event, expt, event.ExecEvalSetItemIDs); err != nil {
+		return err
+	}
+
+	if err := e.exptRepo.Update(ctx, &entity.Experiment{
+		Status:  entity.ExptStatus_Processing,
+		ID:      event.ExptID,
+		SpaceID: event.SpaceID,
+	}); err != nil {
+		return err
+	}
+
+	if e.templateManager != nil {
+		var templateID int64
+		if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
+			templateID = expt.ExptTemplateMeta.ID
+		}
+		if templateID > 0 {
+			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+				logs.CtxError(ctx, "UpdateExptInfo failed in ExptRetryItemsExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
+			}
+		}
+	}
+
+	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
+		return err
+	}
+
+	time.Sleep(time.Second * 3)
+
+	return nil
+}
+
+func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIDs []int64) error {
 	got, err := e.exptStatsRepo.Get(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
@@ -1217,8 +1258,8 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		pageSize         = int32(100)
 	)
 
-	for _, chunk := range gslice.Chunk(event.ExecEvalSetItemIDs, int(pageSize)) {
-		logs.CtxInfo(ctx, "ExptRetryItemsExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, item_ids: %v",
+	for _, chunk := range gslice.Chunk(itemIDs, int(pageSize)) {
+		logs.CtxInfo(ctx, "ExptRetryItemsExec.resetEvalItems scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, item_ids: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
 
 		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
@@ -1242,11 +1283,11 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		}
 
 		idIdx := 0
-		itemIDs := gslice.ToMap(items, func(t *entity.EvaluationSetItem) (int64, bool) { return t.ItemID, true })
+		itemIDMap := gslice.ToMap(items, func(t *entity.EvaluationSetItem) (int64, bool) { return t.ItemID, true })
 		itemTurnIDs := make([]*entity.ItemTurnID, 0, len(items))
 		for _, item := range items {
 			for _, turn := range item.Turns {
-				itemIDs[item.ItemID] = true
+				itemIDMap[item.ItemID] = true
 				itemTurnIDs = append(itemTurnIDs, &entity.ItemTurnID{
 					ItemID: item.ItemID,
 					TurnID: turn.ID,
@@ -1254,8 +1295,8 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 			}
 		}
 
-		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDs))
-		for itemID := range itemIDs {
+		itemRunLogs := make([]*entity.ExptItemResultRunLog, 0, len(itemIDMap))
+		for itemID := range itemIDMap {
 			itemRunLogs = append(itemRunLogs, &entity.ExptItemResultRunLog{
 				ID:        ids[idIdx],
 				SpaceID:   event.SpaceID,
@@ -1290,7 +1331,7 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 			}
 		}
 
-		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k }), map[string]any{
+		if err := e.exptItemResultRepo.UpdateItemsResult(ctx, event.SpaceID, event.ExptID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k }), map[string]any{
 			"status":      int32(entity.ItemRunState_Queueing),
 			"expt_run_id": event.ExptRunID,
 		}); err != nil {
@@ -1314,35 +1355,8 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		return err
 	}
 
-	logs.CtxInfo(ctx, "ExptRetryItemsExec.ExptStart reset stat: %v, expt_id: %v", json.Jsonify(got), event.ExptID)
-
-	if err := e.exptRepo.Update(ctx, &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
-	}); err != nil {
-		return err
-	}
-
-	if e.templateManager != nil {
-		var templateID int64
-		if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
-			templateID = expt.ExptTemplateMeta.ID
-		}
-		if templateID > 0 {
-			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
-				logs.CtxError(ctx, "UpdateExptInfo failed in ExptRetryItemsExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
-			}
-		}
-	}
-
-	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
-	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
-		return err
-	}
-
+	logs.CtxInfo(ctx, "ExptRetryItemsExec.resetEvalItems reset stat: %v, expt_id: %v", json.Jsonify(got), event.ExptID)
 	time.Sleep(time.Second * 3)
-
 	return nil
 }
 
@@ -1359,7 +1373,25 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 }
 
 func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
-	return nil
+	rl, err := e.exptRunLogRepo.Get(ctx, event.ExptID, event.ExptRunID)
+	if err != nil {
+		return err
+	}
+
+	var (
+		absence []int64
+		all     = rl.GetItemIDs()
+		exist   = gslice.ToMap(event.ExecEvalSetItemIDs, func(t int64) (int64, bool) { return t, true })
+	)
+	for _, itemID := range all {
+		if !exist[itemID] {
+			absence = append(absence, itemID)
+		}
+	}
+	event.ExecEvalSetItemIDs = all
+	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
+
+	return e.resetEvalItems(ctx, event, expt, absence)
 }
 
 func (e *ExptRetryItemsExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {

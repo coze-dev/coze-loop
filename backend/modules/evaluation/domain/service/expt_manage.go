@@ -53,6 +53,7 @@ type IExptExecutionManager interface {
 	// SetExptTerminating Set experiment/run_log status to "terminating".
 	SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 
-	LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, session *entity.Session) error
+	LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error
+	LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (int64, bool, error)
 	GetRunLog(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) (*entity.ExptRunLog, error)
 }

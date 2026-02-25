@@ -642,7 +642,7 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.LogRun(ctx, tt.exptID, tt.exptRunID, tt.mode, tt.spaceID, session)
+			err := mgr.LogRun(ctx, tt.exptID, tt.exptRunID, tt.mode, tt.spaceID, nil, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LogRun() error = %v, wantErr %v", err, tt.wantErr)
 			}

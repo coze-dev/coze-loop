@@ -969,13 +969,14 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 
 	evalMode := experiment.ExptType2EvalMode(req.GetExptType())
 
-	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), session); err != nil {
+	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), nil, session); err != nil {
 		return nil, err
 	}
 
 	if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), int(req.GetItemRetryNum()), session, evalMode, req.GetExt()); err != nil {
 		return nil, err
 	}
+
 	return &expt.RunExperimentResponse{
 		RunID:    gptr.Of(runID),
 		BaseResp: base.NewBaseResp(),
@@ -983,12 +984,15 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 }
 
 func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.RetryExperimentRequest) (r *expt.RetryExperimentResponse, err error) {
-	session := entity.NewSession(ctx)
-
 	if req.GetRetryMode() == 0 {
 		req.RetryMode = domain_expt.ExptRetryModePtr(domain_expt.ExptRetryMode_RetryFailure)
 	}
-	runMode := experiment.ConvRetryMode(req.GetRetryMode())
+
+	var (
+		runID   int64
+		session = entity.NewSession(ctx)
+		runMode = experiment.ConvRetryMode(req.GetRetryMode())
+	)
 
 	got, err := e.manager.Get(ctx, req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
@@ -1005,23 +1009,27 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		return nil, err
 	}
 
-	runID, err := e.idgen.GenID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, runMode, req.GetWorkspaceID(), session); err != nil {
-		return nil, err
-	}
-
-	itemRetryNum := gptr.Indirect(got.EvalConf.ItemRetryNum)
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
-		if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), itemRetryNum, req.GetItemIds(), session, req.GetExt()); err != nil {
+		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
+		if err != nil {
 			return nil, err
 		}
+		if !retried {
+			if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), req.GetItemIds(), session, req.GetExt()); err != nil {
+				return nil, err
+			}
+		}
+		runID = rid
 	default:
-		if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), itemRetryNum, session, runMode, req.GetExt()); err != nil {
+		runID, err = e.idgen.GenID(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if err := e.manager.LogRun(ctx, req.GetExptID(), runID, runMode, req.GetWorkspaceID(), nil, session); err != nil {
+			return nil, err
+		}
+		if err := e.manager.Run(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), session, runMode, req.GetExt()); err != nil {
 			return nil, err
 		}
 	}
