@@ -87,7 +87,7 @@ func (e *ExptRunLog) AppendItemIDs(itemIDs []int64) error {
 	if e == nil {
 		return errorx.New("ExptRunLog AppendItemIDs must init first")
 	}
-	var exists map[int64]bool
+	exists := make(map[int64]bool)
 	for _, chunk := range e.ItemIds {
 		for _, itemID := range chunk.ItemIDs {
 			exists[itemID] = true
