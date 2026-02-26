@@ -723,7 +723,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 	if !ok {
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
 	}
-	asyncRunExt, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	asyncRunExt, traceID, err := evaluatorSourceService.AsyncRun(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncRunEvaluator] AsyncRun fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
@@ -743,6 +743,7 @@ func (e *EvaluatorServiceImpl) AsyncRunEvaluator(ctx context.Context, request *e
 		ItemID:              request.ItemID,
 		TurnID:              request.TurnID,
 		EvaluatorVersionID:  request.EvaluatorVersionID,
+		TraceID:             traceID,
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: outputData,
@@ -788,7 +789,7 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 	if !ok {
 		return nil, errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("evaluator source service not found for agent type"))
 	}
-	asyncDebugExt, err := evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
+	asyncDebugExt, traceID, err := evaluatorSourceService.AsyncDebug(ctx, evaluatorDO, request.InputData, request.EvaluatorRunConf, request.SpaceID, invokeID)
 	if err != nil {
 		logs.CtxError(ctx, "[AsyncDebugEvaluator] AsyncDebug fail, invokeID: %d, err: %v", invokeID, err)
 		return nil, err
@@ -804,6 +805,7 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 		ID:                  invokeID,
 		SpaceID:             request.SpaceID,
 		EvaluatorVersionID:  evaluatorDO.GetEvaluatorVersionID(),
+		TraceID:             traceID,
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: outputData,
@@ -824,9 +826,10 @@ func (e *EvaluatorServiceImpl) AsyncDebugEvaluator(ctx context.Context, request 
 		return nil, err
 	}
 
-	logs.CtxInfo(ctx, "[AsyncDebugEvaluator] invokeID: %d, spaceID: %d", invokeID, request.SpaceID)
+	logs.CtxInfo(ctx, "[AsyncDebugEvaluator] invokeID: %d, traceID: %s, spaceID: %d", invokeID, traceID, request.SpaceID)
 	return &entity.AsyncDebugEvaluatorResponse{
 		InvokeID: invokeID,
+		TraceID:  traceID,
 	}, nil
 }
 

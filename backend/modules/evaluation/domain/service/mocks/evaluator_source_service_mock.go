@@ -42,12 +42,13 @@ func (m *MockEvaluatorSourceService) EXPECT() *MockEvaluatorSourceServiceMockRec
 }
 
 // AsyncDebug mocks base method.
-func (m *MockEvaluatorSourceService) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, error) {
+func (m *MockEvaluatorSourceService) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AsyncDebug", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
 	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // AsyncDebug indicates an expected call of AsyncDebug.
@@ -57,12 +58,13 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) AsyncDebug(ctx, evaluator, inp
 }
 
 // AsyncRun mocks base method.
-func (m *MockEvaluatorSourceService) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, error) {
+func (m *MockEvaluatorSourceService) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID, invokeID int64) (map[string]string, string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AsyncRun", ctx, evaluator, input, evaluatorRunConf, exptSpaceID, invokeID)
 	ret0, _ := ret[0].(map[string]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // AsyncRun indicates an expected call of AsyncRun.

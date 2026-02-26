@@ -241,7 +241,8 @@ type AsyncDebugEvaluatorRequest struct {
 }
 
 type AsyncDebugEvaluatorResponse struct {
-	InvokeID int64 `json:"invoke_id"`
+	InvokeID int64  `json:"invoke_id"`
+	TraceID  string `json:"trace_id"`
 }
 
 type GetAsyncDebugEvaluatorInvokeResultRequest struct {
