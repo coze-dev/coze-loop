@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0			runMode: entity.EvaluationModeSubmit,
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
@@ -637,14 +638,332 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name:      "successful_log_run_with_item_ids",
+			exptID:    123,
+			exptRunID: 456,
+			mode:      entity.EvaluationModeSubmit,
+			spaceID:   789,
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, int64(789)).AnyTimes().
+					Return(&entity.ExptExecConf{
+						ZombieIntervalSecond: 300,
+					})
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					LockBackoff(ctx, gomock.Any(), time.Duration(300)*time.Second, time.Second).
+					Return(true, nil)
+
+				mgr.mtr.(*metricsMocks.MockExptMetric).
+					EXPECT().
+					EmitExptExecRun(int64(789), int64(entity.EvaluationModeSubmit))
+
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().
+					Create(ctx, gomock.Any()).
+					Do(func(ctx context.Context, runLog *entity.ExptRunLog) {
+						assert.Equal(t, int64(456), runLog.ID)
+						assert.Equal(t, int64(123), runLog.ExptID)
+						assert.Len(t, runLog.ItemIds, 1)
+						assert.Equal(t, []int64{1, 2}, runLog.ItemIds[0].ItemIDs)
+					}).
+					Return(nil)
+
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().
+					Update(ctx, gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.LogRun(ctx, tt.exptID, tt.exptRunID, tt.mode, tt.spaceID, nil, session)
+			itemIDs := []int64(nil)
+			if tt.name == "successful_log_run_with_item_ids" {
+				itemIDs = []int64{1, 2}
+			}
+			err := mgr.LogRun(ctx, tt.exptID, tt.exptRunID, tt.mode, tt.spaceID, itemIDs, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LogRun() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	exptID := int64(123)
+	spaceID := int64(789)
+	mode := entity.EvaluationModeRetryItems
+	itemIDs := []int64{1, 2}
+
+	tests := []struct {
+		name      string
+		setup     func()
+		wantRunID int64
+		wantRetry bool
+		wantErr   bool
+	}{
+		{
+			name: "locked_success_new_run",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1001), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1001", 300*time.Second, time.Second).
+					Return(true, "1001", nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().Save(ctx, gomock.Any()).
+					Do(func(ctx context.Context, rl *entity.ExptRunLog) {
+						assert.Equal(t, int64(1001), rl.ExptRunID)
+						assert.Len(t, rl.ItemIds, 1)
+						assert.Equal(t, itemIDs, rl.ItemIds[0].ItemIDs)
+					}).
+					Return(nil)
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().Update(ctx, &entity.Experiment{ID: exptID, LatestRunID: 1001}).Return(nil)
+				mgr.mtr.(*metricsMocks.MockExptMetric).
+					EXPECT().EmitExptExecRun(spaceID, int64(mode))
+			},
+			wantRunID: 1001,
+			wantRetry: false,
+			wantErr:   false,
+		},
+		{
+			name: "retried_append_to_existing_run",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1002), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1002", 300*time.Second, time.Second).
+					Return(false, "1001", nil)
+				existingLog := &entity.ExptRunLog{ID: 1001, ExptID: exptID, ExptRunID: 1001}
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().Get(ctx, exptID, int64(1001)).
+					Return(existingLog, nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().Save(ctx, gomock.Any()).Return(nil)
+			},
+			wantRunID: 1001,
+			wantRetry: true,
+			wantErr:   false,
+		},
+		{
+			name: "idgen_error",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(0), errors.New("idgen failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "lock_error",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1003), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1003", 300*time.Second, time.Second).
+					Return(false, "", errors.New("redis error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "retried_parse_run_id_error",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1004), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1004", 300*time.Second, time.Second).
+					Return(false, "not_a_number", nil)
+			},
+			wantErr: true,
+		},
+		{
+			name: "retried_get_run_log_returns_error",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1005), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1005", 300*time.Second, time.Second).
+					Return(false, "1001", nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().Get(ctx, exptID, int64(1001)).
+					Return(nil, errors.New("get run log failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "save_error",
+			setup: func() {
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().
+					GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
+				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
+					EXPECT().GenID(ctx).Return(int64(1006), nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					BackoffLockWithValue(ctx, gomock.Any(), "1006", 300*time.Second, time.Second).
+					Return(true, "1006", nil)
+				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			runID, retried, err := mgr.LogRetryItemsRun(ctx, exptID, mode, spaceID, itemIDs, session)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantRunID, runID)
+			assert.Equal(t, tt.wantRetry, retried)
+		})
+	}
+}
+
+func TestExptMangerImpl_RetryItems(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+	exptID := int64(123)
+	runID := int64(456)
+	spaceID := int64(789)
+	itemRetryNum := 1
+	itemIDs := []int64{1, 2}
+	ext := map[string]string{"k": "v"}
+
+	tests := []struct {
+		name    string
+		setup   func()
+		wantErr bool
+	}{
+		{
+			name: "success_publish_event",
+			setup: func() {
+				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
+					EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(nil)
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
+				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+					EXPECT().CheckWriteFlagByID(ctx, gomock.Any(), exptID).Return(false).AnyTimes()
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
+					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID, ExptType: 1}}, nil).AnyTimes()
+				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+					EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "quota_check_failure",
+			setup: func() {
+				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
+					EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(errors.New("quota exceeded"))
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
+				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+					EXPECT().CheckWriteFlagByID(ctx, gomock.Any(), exptID).Return(false).AnyTimes()
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
+					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
+				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+					EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+			},
+			wantErr: true,
+		},
+		{
+			name: "publish_event_failure",
+			setup: func() {
+				mgr.quotaRepo.(*repoMocks.MockQuotaRepo).
+					EXPECT().CreateOrUpdate(ctx, spaceID, gomock.Any(), session).Return(nil)
+				mgr.configer.(*componentMocks.MockIConfiger).
+					EXPECT().GetExptExecConf(ctx, spaceID).AnyTimes().
+					Return(&entity.ExptExecConf{SpaceExptConcurLimit: 10})
+				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
+					EXPECT().CheckWriteFlagByID(ctx, gomock.Any(), exptID).Return(false).AnyTimes()
+				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+					EXPECT().MGetByID(ctx, []int64{exptID}, spaceID).
+					Return([]*entity.Experiment{{ID: exptID, SpaceID: spaceID}}, nil).AnyTimes()
+				mgr.evaluationSetService.(*svcMocks.MockIEvaluationSetService).
+					EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
+				mgr.exptResultService.(*svcMocks.MockExptResultService).
+					EXPECT().MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptStats{}, nil).AnyTimes()
+				mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).
+					EXPECT().BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
+					Return(errors.New("publish failed"))
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setup()
+			err := mgr.RetryItems(ctx, exptID, runID, spaceID, itemRetryNum, itemIDs, session, ext)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RetryItems() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
