@@ -493,6 +493,17 @@ func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
 	return false
 }
 
+func (e *ExptTurnRunResult) AbortWithEvaluatorResults() bool {
+	// evaluator async exec, check if any evaluator is in async invoking status
+	for _, record := range e.EvaluatorResults {
+		if record != nil && record.Status == EvaluatorRunStatusAsyncInvoking {
+			e.AsyncAbort = true
+			return true
+		}
+	}
+	return false
+}
+
 //go:generate  mockgen -destination  ./mocks/expt_scheduler_mock.go  --package mocks . ExptSchedulerMode
 type ExptSchedulerMode interface {
 	Mode() ExptRunMode
