@@ -205,7 +205,7 @@ export const RightRender: React.FC<RightRenderProps> = props => {
           formatter={numberInputFormatter}
           disabled={disabled || isRowDisabled}
           hideButtons
-          value={right?.[0] as string}
+          value={(right?.[0] as string) ?? ''}
           max={Number.MAX_SAFE_INTEGER}
           min={Number.MIN_SAFE_INTEGER}
           onChange={v => {
