@@ -10,7 +10,7 @@ import (
 
 	rpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
-	gomock "github.com/golang/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 // MockIDatasetRPCAdapter is a mock of IDatasetRPCAdapter interface.
