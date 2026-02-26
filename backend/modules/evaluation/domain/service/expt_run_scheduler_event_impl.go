@@ -265,6 +265,10 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
+		return err
+	}
+
 	err = mode.ScheduleEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
 	if err != nil {
 		return err
@@ -272,10 +276,6 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
 	if err != nil {
-		return err
-	}
-
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
