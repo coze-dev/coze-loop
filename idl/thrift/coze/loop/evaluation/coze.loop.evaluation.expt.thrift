@@ -376,8 +376,6 @@ struct CreateExperimentTemplateRequest {
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
 
-    45: optional i32 item_retry_num (api.boy = 'item_retry_num')
-
     200: optional common.Session session
     255: optional base.Base Base
 }

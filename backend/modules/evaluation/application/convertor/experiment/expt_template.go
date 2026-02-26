@@ -233,7 +233,7 @@ func buildTemplateConfForCreate(
 	templateConf := &entity.ExptTemplateConfiguration{
 		ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
-		ItemRetryNum:        gcond.If(req.GetItemRetryNum() > 0, gptr.Of(int(req.GetItemRetryNum())), nil),
+		ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
@@ -961,6 +961,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 		templateConf := &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 		}
 
 		// 构建 ConnectorConf
