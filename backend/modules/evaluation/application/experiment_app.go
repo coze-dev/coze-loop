@@ -1015,15 +1015,15 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 		if err != nil {
 			return nil, err
 		}
+		runID = rid
+
 		if !retried {
 			if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), req.GetItemIds(), session, req.GetExt()); err != nil {
 				return nil, err
 			}
 		}
-		runID = rid
 	default:
-		runID, err = e.idgen.GenID(ctx)
-		if err != nil {
+		if runID, err = e.idgen.GenID(ctx); err != nil {
 			return nil, err
 		}
 		if err := e.manager.LogRun(ctx, req.GetExptID(), runID, runMode, req.GetWorkspaceID(), nil, session); err != nil {
