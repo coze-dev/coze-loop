@@ -76,9 +76,7 @@ type ExptRunLog struct {
 func (e *ExptRunLog) GetItemIDs() []int64 {
 	var itemIDs []int64
 	for _, items := range e.ItemIds {
-		for _, itemID := range items.ItemIDs {
-			itemIDs = append(itemIDs, itemID)
-		}
+		itemIDs = append(itemIDs, items.ItemIDs...)
 	}
 	return itemIDs
 }
