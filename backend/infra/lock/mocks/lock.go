@@ -152,6 +152,36 @@ func (mr *MockILockerMockRecorder) Unlock(key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Unlock", reflect.TypeOf((*MockILocker)(nil).Unlock), key)
 }
 
+// UnlockForce mocks base method.
+func (m *MockILocker) UnlockForce(ctx context.Context, key string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnlockForce", ctx, key)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnlockForce indicates an expected call of UnlockForce.
+func (mr *MockILockerMockRecorder) UnlockForce(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockForce", reflect.TypeOf((*MockILocker)(nil).UnlockForce), ctx, key)
+}
+
+// UnlockWithValue mocks base method.
+func (m *MockILocker) UnlockWithValue(ctx context.Context, key, val string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UnlockWithValue", ctx, key, val)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UnlockWithValue indicates an expected call of UnlockWithValue.
+func (mr *MockILockerMockRecorder) UnlockWithValue(ctx, key, val any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockWithValue", reflect.TypeOf((*MockILocker)(nil).UnlockWithValue), ctx, key, val)
+}
+
 // WithHolder mocks base method.
 func (m *MockILocker) WithHolder(holder string) lock.ILocker {
 	m.ctrl.T.Helper()

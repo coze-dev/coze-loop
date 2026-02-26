@@ -32,6 +32,9 @@ type ILocker interface {
 	LockWithRenew(parent context.Context, key string, ttl time.Duration, maxHold time.Duration) (locked bool, ctx context.Context, cancel func(), err error)
 
 	BackoffLockWithValue(ctx context.Context, key, val string, expiresIn time.Duration, backoff time.Duration) (bool, string, error)
+	UnlockWithValue(ctx context.Context, key, val string) (bool, error)
+	// UnlockForce deletes the key without comparing its value.
+	UnlockForce(ctx context.Context, key string) (bool, error)
 }
 
 func NewRedisLocker(c redis.Cmdable) ILocker {
@@ -143,6 +146,27 @@ func (r *redisLocker) Unlock(key string) (bool, error) {
 		return false, errors.Errorf("unknown result type %T", result)
 	}
 	return rt == 1, nil
+}
+
+func (r *redisLocker) UnlockWithValue(ctx context.Context, key, val string) (bool, error) {
+	const unlockWithValueScript = `if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1; end; return 0;`
+	result, err := r.c.Eval(ctx, unlockWithValueScript, []string{key}, val).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "unlock with lua script")
+	}
+	rt, ok := result.(int64)
+	if !ok {
+		return false, errors.Errorf("unknown result type %T", result)
+	}
+	return rt == 1, nil
+}
+
+func (r *redisLocker) UnlockForce(ctx context.Context, key string) (bool, error) {
+	n, err := r.c.Del(ctx, key).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "unlock force del fail")
+	}
+	return n > 0, nil
 }
 
 func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Duration, maxHold time.Duration) {

@@ -362,7 +362,7 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID int6
 		return err
 	}
 
-	if _, err := e.mutex.Unlock(e.makeExptMutexLockKey(exptID)); err != nil {
+	if _, err := e.mutex.UnlockForce(ctx, e.makeExptMutexLockKey(exptID)); err != nil {
 		return err
 	}
 
