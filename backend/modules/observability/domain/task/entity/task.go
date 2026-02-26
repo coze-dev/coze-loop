@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
@@ -124,10 +125,11 @@ type EvaluateFieldMapping struct {
 	EvalSetName        *string              `json:"eval_set_name"`
 }
 type DataReflowConfig struct {
-	DatasetID     *int64                 `json:"dataset_id"`
-	DatasetName   *string                `json:"dataset_name"`
-	DatasetSchema dataset.DatasetSchema  `json:"dataset_schema"`
-	FieldMappings []dataset.FieldMapping `json:"field_mappings"`
+	DatasetID       *int64                       `json:"dataset_id"`
+	DatasetName     *string                      `json:"dataset_name"`
+	DatasetSchema   dataset.DatasetSchema        `json:"dataset_schema"`
+	FieldMappings   []dataset.FieldMapping       `json:"field_mappings"`
+	DatasetCategory *datadataset.DatasetCategory `json:"dataset_category"`
 }
 
 type TaskRun struct {

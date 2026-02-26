@@ -11,12 +11,14 @@ import (
 	"github.com/cloudwego/gopkg/protocol/thrift"
 	kutils "github.com/cloudwego/kitex/pkg/utils"
 
+	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 )
 
 var (
+	_ = dataset0.KitexUnusedProtection
 	_ = common.KitexUnusedProtection
 	_ = dataset.KitexUnusedProtection
 	_ = filter.KitexUnusedProtection
@@ -1890,6 +1892,20 @@ func (p *DataReflowConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1973,6 +1989,22 @@ func (p *DataReflowConfig) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *DataReflowConfig) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *dataset0.DatasetCategory
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := dataset0.DatasetCategory(v)
+		_field = &tmp
+	}
+	p.DatasetCategory = _field
+	return offset, nil
+}
+
 func (p *DataReflowConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1984,6 +2016,7 @@ func (p *DataReflowConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1996,6 +2029,7 @@ func (p *DataReflowConfig) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2044,6 +2078,15 @@ func (p *DataReflowConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *DataReflowConfig) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDatasetCategory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.DatasetCategory))
+	}
+	return offset
+}
+
 func (p *DataReflowConfig) field1Length() int {
 	l := 0
 	if p.IsSetDatasetID() {
@@ -2080,6 +2123,15 @@ func (p *DataReflowConfig) field4Length() int {
 			_ = v
 			l += v.BLength()
 		}
+	}
+	return l
+}
+
+func (p *DataReflowConfig) field5Length() int {
+	l := 0
+	if p.IsSetDatasetCategory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
 	}
 	return l
 }
@@ -2125,6 +2177,11 @@ func (p *DataReflowConfig) DeepCopy(s interface{}) error {
 
 			p.FieldMappings = append(p.FieldMappings, _elem)
 		}
+	}
+
+	if src.DatasetCategory != nil {
+		tmp := *src.DatasetCategory
+		p.DatasetCategory = &tmp
 	}
 
 	return nil

@@ -1301,7 +1301,7 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	taskRepo := repomocks.NewMockITaskRepo(ctrl)
 
 	// Test constructor
-	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalMock, evaluationMock, taskRepo, &EvalTargetBuilderImpl{})
+	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalMock, evaluationMock, taskRepo, &EvalTargetBuilderImpl{}, nil)
 
 	assert.NotNil(t, proc)
 	assert.Equal(t, int32(123), proc.aid)
@@ -1309,6 +1309,7 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	assert.Equal(t, evalMock, proc.evalSvc)
 	assert.Equal(t, evaluationMock, proc.evaluationSvc)
 	assert.Equal(t, taskRepo, proc.taskRepo)
+	assert.NotNil(t, proc.taskHookProvider)
 }
 
 // fakeEvaluatorAdapter 是 IEvaluatorRPCAdapter 的fake实现
