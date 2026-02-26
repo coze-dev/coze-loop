@@ -1340,7 +1340,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 				set := &entity.EvaluationSet{ID: evaluationSetID, SpaceID: workspaceID}
 				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), evaluationSetID, gomock.Any()).Return(set, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
-				itemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetItemsParam{})).Return(nil, nil, nil, errors.New("list error"))
+				itemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetItemsParam{})).Return(nil, nil, nil, nil, errors.New("list error"))
 			},
 			wantErr: -1,
 		},
@@ -1358,7 +1358,7 @@ func TestEvalOpenAPIApplication_ListEvaluationSetVersionItemsOApi(t *testing.T) 
 				items := []*entity.EvaluationSetItem{{ID: 1}, {ID: 2}}
 				total := gptr.Of(int64(2))
 				next := gptr.Of("cursor")
-				itemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetItemsParam{})).Return(items, total, next, nil)
+				itemSvc.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.AssignableToTypeOf(&entity.ListEvaluationSetItemsParam{})).Return(items, total, total, next, nil)
 			},
 			wantLen: 2,
 		},
