@@ -576,7 +576,7 @@ service EvaluatorService {
     )// 调试预置评估器
 
     // 更新预置评估器tag
-    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req)
+    UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req) (api.patch="/api/evaluation/v1/evaluators/:evaluator_id/update_builtin_tags")// 更新预置评估器
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (
         api.post="/api/evaluation/v1/evaluators/list_tags", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
