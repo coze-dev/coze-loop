@@ -48,6 +48,8 @@ type IExptExecutionManager interface {
 	PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 	PendExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 
+	// IsCompletingRun returns true if the given run is currently in the completing phase.
+	IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error)
 	CompleteRun(ctx context.Context, exptID, exptRunID int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 	CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 	// SetExptTerminating Set experiment/run_log status to "terminating".

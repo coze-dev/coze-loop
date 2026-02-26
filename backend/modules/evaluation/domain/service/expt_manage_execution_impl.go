@@ -353,6 +353,11 @@ func (e *ExptMangerImpl) CompleteRun(ctx context.Context, exptID, exptRunID int6
 		}
 	}
 
+	if err := e.lockCompletingRun(ctx, exptID, exptRunID, spaceID, session); err != nil {
+		return err
+	}
+	defer func() { _ = e.unlockCompletingRun(ctx, exptID, exptRunID, spaceID, session) }()
+
 	runLog, err := e.runLogRepo.Get(ctx, exptID, exptRunID)
 	if err != nil {
 		return err
@@ -912,6 +917,26 @@ func (e *ExptMangerImpl) PendExpt(ctx context.Context, exptID, spaceID int64, se
 	return nil
 }
 
+func (e *ExptMangerImpl) IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+	return e.mutex.Exists(ctx, e.makeExptCompletingLockKey(exptID, exptRunID))
+}
+
+func (e *ExptMangerImpl) lockCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+	locked, err := e.mutex.Lock(ctx, e.makeExptCompletingLockKey(exptID, exptRunID), time.Minute*3)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return errorx.New("lockCompletingRun fail, expt_id: %v, expt_run_id: %v", exptID, exptRunID)
+	}
+	return nil
+}
+
+func (e *ExptMangerImpl) unlockCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+	_, err := e.mutex.Unlock(e.makeExptCompletingLockKey(exptID, exptRunID))
+	return err
+}
+
 func (e *ExptMangerImpl) LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error {
 	duration := time.Duration(e.configer.GetExptExecConf(ctx, spaceID).GetZombieIntervalSecond()) * time.Second
 	locked, err := e.mutex.LockBackoff(ctx, e.makeExptMutexLockKey(exptID), duration, time.Second)
@@ -972,6 +997,14 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		if err != nil {
 			logs.CtxError(ctx, "parsing expt run lock value to runid failed, raw: %v", existedRunID)
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
+		}
+
+		completing, err := e.IsCompletingRun(ctx, exptID, runID, spaceID)
+		if err != nil {
+			return 0, false, err
+		}
+		if completing {
+			return 0, false, errorx.NewByCode(errno.ExperimentIsCompletingCode)
 		}
 
 		rl, err = e.runLogRepo.Get(ctx, exptID, runID)

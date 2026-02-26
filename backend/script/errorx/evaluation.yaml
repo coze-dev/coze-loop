@@ -118,6 +118,12 @@ error_code:
     description: item already has been retrying
     no_affect_stability: true
 
+  - name: ExperimentIsCompleting
+    code: 4016
+    message: experiment is completing, please try later
+    description: experiment is completing, please try later
+    no_affect_stability: true
+
   - name: ContentTypeNotSupported
     code: 5000
     message: content type is not supported

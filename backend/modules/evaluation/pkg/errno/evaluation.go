@@ -128,6 +128,10 @@ const (
 	evalItemAlreadyRetryingMessage           = "item already has been retrying"
 	evalItemAlreadyRetryingNoAffectStability = true
 
+	ExperimentIsCompletingCode              = 601204016 // experiment is completing, please try later
+	experimentIsCompletingMessage           = "experiment is completing, please try later"
+	experimentIsCompletingNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -545,6 +549,12 @@ func init() {
 		EvalItemAlreadyRetryingCode,
 		evalItemAlreadyRetryingMessage,
 		code.WithAffectStability(!evalItemAlreadyRetryingNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentIsCompletingCode,
+		experimentIsCompletingMessage,
+		code.WithAffectStability(!experimentIsCompletingNoAffectStability),
 	)
 
 	code.Register(

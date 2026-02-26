@@ -35,6 +35,8 @@ type ILocker interface {
 	UnlockWithValue(ctx context.Context, key, val string) (bool, error)
 	// UnlockForce deletes the key without comparing its value.
 	UnlockForce(ctx context.Context, key string) (bool, error)
+	// Exists returns true if the key exists.
+	Exists(ctx context.Context, key string) (bool, error)
 }
 
 func NewRedisLocker(c redis.Cmdable) ILocker {
@@ -164,7 +166,15 @@ func (r *redisLocker) UnlockWithValue(ctx context.Context, key, val string) (boo
 func (r *redisLocker) UnlockForce(ctx context.Context, key string) (bool, error) {
 	n, err := r.c.Del(ctx, key).Result()
 	if err != nil {
-		return false, errors.WithMessage(err, "unlock force del fail")
+		return false, errors.WithMessage(err, "unlock force del")
+	}
+	return n > 0, nil
+}
+
+func (r *redisLocker) Exists(ctx context.Context, key string) (bool, error) {
+	n, err := r.c.Exists(ctx, key).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "exists")
 	}
 	return n > 0, nil
 }

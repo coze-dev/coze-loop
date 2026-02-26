@@ -1365,11 +1365,16 @@ func (e *ExptRetryItemsExec) ScanEvalItems(ctx context.Context, event *entity.Ex
 }
 
 func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
-	if toSubmit == 0 && incomplete == 0 {
-		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
+	if toSubmit > 0 || incomplete > 0 {
+		return true, nil
 	}
-	return true, nil
+
+	logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+
+	if err := newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
 func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {

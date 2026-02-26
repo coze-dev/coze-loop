@@ -235,6 +235,21 @@ func (mr *MockIExptManagerMockRecorder) Invoke(ctx, invokeExptReq any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Invoke", reflect.TypeOf((*MockIExptManager)(nil).Invoke), ctx, invokeExptReq)
 }
 
+// IsRunCompleting mocks base method.
+func (m *MockIExptManager) IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsCompletingRun", ctx, exptID, exptRunID, spaceID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsRunCompleting indicates an expected call of IsRunCompleting.
+func (mr *MockIExptManagerMockRecorder) IsRunCompleting(ctx, exptID, exptRunID, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCompletingRun", reflect.TypeOf((*MockIExptManager)(nil).IsCompletingRun), ctx, exptID, exptRunID, spaceID)
+}
+
 // List mocks base method.
 func (m *MockIExptManager) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptListFilter, orders []*entity.OrderBy, session *entity.Session) ([]*entity.Experiment, int64, error) {
 	m.ctrl.T.Helper()

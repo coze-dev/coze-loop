@@ -87,21 +87,6 @@ func (mr *MockIEvaluationSetServiceMockRecorder) CreateEvaluationSetWithImport(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluationSetWithImport", reflect.TypeOf((*MockIEvaluationSetService)(nil).CreateEvaluationSetWithImport), ctx, param)
 }
 
-// ParseImportSourceFile mocks base method.
-func (m *MockIEvaluationSetService) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseImportSourceFile", ctx, param)
-	ret0, _ := ret[0].(*entity.ParseImportSourceFileResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ParseImportSourceFile indicates an expected call of ParseImportSourceFile.
-func (mr *MockIEvaluationSetServiceMockRecorder) ParseImportSourceFile(ctx, param any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIEvaluationSetService)(nil).ParseImportSourceFile), ctx, param)
-}
-
 // DeleteEvaluationSet mocks base method.
 func (m *MockIEvaluationSetService) DeleteEvaluationSet(ctx context.Context, spaceID, evaluationSetID int64) error {
 	m.ctrl.T.Helper()
@@ -146,6 +131,21 @@ func (m *MockIEvaluationSetService) ListEvaluationSets(ctx context.Context, para
 func (mr *MockIEvaluationSetServiceMockRecorder) ListEvaluationSets(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluationSets", reflect.TypeOf((*MockIEvaluationSetService)(nil).ListEvaluationSets), ctx, param)
+}
+
+// ParseImportSourceFile mocks base method.
+func (m *MockIEvaluationSetService) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseImportSourceFile", ctx, param)
+	ret0, _ := ret[0].(*entity.ParseImportSourceFileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseImportSourceFile indicates an expected call of ParseImportSourceFile.
+func (mr *MockIEvaluationSetServiceMockRecorder) ParseImportSourceFile(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIEvaluationSetService)(nil).ParseImportSourceFile), ctx, param)
 }
 
 // QueryItemSnapshotMappings mocks base method.

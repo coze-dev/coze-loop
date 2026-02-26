@@ -316,6 +316,10 @@ func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 	return fmt.Sprintf("expt_run_mutex_lock:%d", exptID)
 }
 
+func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
+	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
+}
+
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {
 	return e.getExptTupleByID(ctx, e.packTupleID(ctx, expt), spaceID, session, opts...)
 }

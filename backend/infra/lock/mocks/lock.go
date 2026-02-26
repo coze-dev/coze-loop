@@ -58,6 +58,21 @@ func (mr *MockILockerMockRecorder) BackoffLockWithValue(ctx, key, val, expiresIn
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BackoffLockWithValue", reflect.TypeOf((*MockILocker)(nil).BackoffLockWithValue), ctx, key, val, expiresIn, backoff)
 }
 
+// Exists mocks base method.
+func (m *MockILocker) Exists(ctx context.Context, key string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exists", ctx, key)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Exists indicates an expected call of Exists.
+func (mr *MockILockerMockRecorder) Exists(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockILocker)(nil).Exists), ctx, key)
+}
+
 // ExpireLockIn mocks base method.
 func (m *MockILocker) ExpireLockIn(key string, expiresIn time.Duration) (bool, error) {
 	m.ctrl.T.Helper()
