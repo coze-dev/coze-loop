@@ -11,8 +11,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 )
 
-type Filter = filter.Filter
-type FilterField = filter.FilterField
+type (
+	Filter      = filter.Filter
+	FilterField = filter.FilterField
+)
 
 // ContentType 定义内容类型
 type ContentType string
