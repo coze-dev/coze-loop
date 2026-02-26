@@ -207,7 +207,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 func (e *ExptItemEventEvalServiceImpl) HandleEventLock(next RecordEvalEndPoint) RecordEvalEndPoint {
 	return func(ctx context.Context, event *entity.ExptItemEvalEvent) error {
 		lockKey := fmt.Sprintf("expt_item_eval_run_lock:%d:%d", event.ExptID, event.EvalSetItemID)
-		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*20, time.Second*60*60)
+		locked, ctx, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*10, time.Second*60*60)
 		if err != nil {
 			return err
 		}

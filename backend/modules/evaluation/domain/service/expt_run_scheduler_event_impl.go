@@ -163,7 +163,7 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
-		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*20, time.Second*60*5)
+		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*10, time.Second*60*5)
 		if err != nil {
 			return err
 		}
