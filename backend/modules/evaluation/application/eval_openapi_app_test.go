@@ -2766,30 +2766,6 @@ func TestEvalOpenAPIApplication_UpdateEvaluatorOApi(t *testing.T) {
 				evaluatorSvc.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.AssignableToTypeOf(&entity.UpdateEvaluatorMetaRequest{})).Return(nil)
 			},
 		},
-		{
-			name: "success with box type",
-			req: &openapi.UpdateEvaluatorOApiRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				EvaluatorID: gptr.Of(evaluatorID),
-				BoxType:     gptr.Of(openapiEvaluator.EvaluatorBoxTypeBlack),
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
-				ownerID := gptr.Of("owner")
-				evaluator := &entity.Evaluator{
-					ID:      evaluatorID,
-					SpaceID: workspaceID,
-					BaseInfo: &entity.BaseInfo{
-						CreatedBy: &entity.UserInfo{UserID: ownerID},
-					},
-				}
-				evaluatorSvc.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluator, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
-				evaluatorSvc.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.AssignableToTypeOf(&entity.UpdateEvaluatorMetaRequest{})).DoAndReturn(func(_ context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
-					assert.Equal(t, entity.EvaluatorBoxTypeBlack, *req.BoxType)
-					return nil
-				})
-			},
-		},
 	}
 
 	for _, tt := range tests {
@@ -4064,8 +4040,8 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				assert.Nil(t, resp)
 			} else {
 				assert.NoError(t, err)
-				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Experiment) {
-					assert.Equal(t, tc.wantID, resp.Experiment.GetID())
+				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) && assert.NotNil(t, resp.Data.Experiment) {
+					assert.Equal(t, tc.wantID, resp.Data.Experiment.GetID())
 				}
 				if assert.NotNil(t, fakeApp.lastReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.WorkspaceID)

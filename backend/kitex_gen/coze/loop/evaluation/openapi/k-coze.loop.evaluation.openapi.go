@@ -17665,34 +17665,6 @@ func (p *UpdateEvaluatorOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 5:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField5(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 14:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField14(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -17781,34 +17753,6 @@ func (p *UpdateEvaluatorOApiRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *UpdateEvaluatorOApiRequest) FastReadField5(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *evaluator.EvaluatorType
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.EvaluatorType = _field
-	return offset, nil
-}
-
-func (p *UpdateEvaluatorOApiRequest) FastReadField14(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *evaluator.EvaluatorBoxType
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.BoxType = _field
-	return offset, nil
-}
-
 func (p *UpdateEvaluatorOApiRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -17832,8 +17776,6 @@ func (p *UpdateEvaluatorOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField5(buf[offset:], w)
-		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -17847,8 +17789,6 @@ func (p *UpdateEvaluatorOApiRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
-		l += p.field5Length()
-		l += p.field14Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -17887,24 +17827,6 @@ func (p *UpdateEvaluatorOApiRequest) fastWriteField4(buf []byte, w thrift.Nocopy
 	if p.IsSetDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
-	}
-	return offset
-}
-
-func (p *UpdateEvaluatorOApiRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetEvaluatorType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.EvaluatorType)
-	}
-	return offset
-}
-
-func (p *UpdateEvaluatorOApiRequest) fastWriteField14(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetBoxType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 14)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BoxType)
 	}
 	return offset
 }
@@ -17954,24 +17876,6 @@ func (p *UpdateEvaluatorOApiRequest) field4Length() int {
 	return l
 }
 
-func (p *UpdateEvaluatorOApiRequest) field5Length() int {
-	l := 0
-	if p.IsSetEvaluatorType() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.EvaluatorType)
-	}
-	return l
-}
-
-func (p *UpdateEvaluatorOApiRequest) field14Length() int {
-	l := 0
-	if p.IsSetBoxType() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.BoxType)
-	}
-	return l
-}
-
 func (p *UpdateEvaluatorOApiRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -18011,16 +17915,6 @@ func (p *UpdateEvaluatorOApiRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Description)
 		}
 		p.Description = &tmp
-	}
-
-	if src.EvaluatorType != nil {
-		tmp := *src.EvaluatorType
-		p.EvaluatorType = &tmp
-	}
-
-	if src.BoxType != nil {
-		tmp := *src.BoxType
-		p.BoxType = &tmp
 	}
 
 	var _base *base.Base
@@ -29415,8 +29309,36 @@ func (p *SubmitExptFromTemplateOApiResponse) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.I32 {
 				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -29462,13 +29384,41 @@ SkipFieldError:
 
 func (p *SubmitExptFromTemplateOApiResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := experiment.NewExperiment()
+
+	var _field *int32
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Code = _field
+	return offset, nil
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Msg = _field
+	return offset, nil
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+	_field := NewSubmitExptFromTemplateOpenAPIData()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.Experiment = _field
+	p.Data = _field
 	return offset, nil
 }
 
@@ -29492,6 +29442,8 @@ func (p *SubmitExptFromTemplateOApiResponse) FastWriteNocopy(buf []byte, w thrif
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -29502,6 +29454,8 @@ func (p *SubmitExptFromTemplateOApiResponse) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -29510,9 +29464,27 @@ func (p *SubmitExptFromTemplateOApiResponse) BLength() int {
 
 func (p *SubmitExptFromTemplateOApiResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetExperiment() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-		offset += p.Experiment.FastWriteNocopy(buf[offset:], w)
+	if p.IsSetCode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
+		offset += thrift.Binary.WriteI32(buf[offset:], *p.Code)
+	}
+	return offset
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMsg() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Msg)
+	}
+	return offset
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetData() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.Data.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -29526,9 +29498,27 @@ func (p *SubmitExptFromTemplateOApiResponse) fastWriteField255(buf []byte, w thr
 
 func (p *SubmitExptFromTemplateOApiResponse) field1Length() int {
 	l := 0
-	if p.IsSetExperiment() {
+	if p.IsSetCode() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.Experiment.BLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) field2Length() int {
+	l := 0
+	if p.IsSetMsg() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Msg)
+	}
+	return l
+}
+
+func (p *SubmitExptFromTemplateOApiResponse) field3Length() int {
+	l := 0
+	if p.IsSetData() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Data.BLength()
 	}
 	return l
 }
@@ -29546,14 +29536,27 @@ func (p *SubmitExptFromTemplateOApiResponse) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _experiment *experiment.Experiment
-	if src.Experiment != nil {
-		_experiment = &experiment.Experiment{}
-		if err := _experiment.DeepCopy(src.Experiment); err != nil {
+	if src.Code != nil {
+		tmp := *src.Code
+		p.Code = &tmp
+	}
+
+	if src.Msg != nil {
+		var tmp string
+		if *src.Msg != "" {
+			tmp = kutils.StringDeepCopy(*src.Msg)
+		}
+		p.Msg = &tmp
+	}
+
+	var _data *SubmitExptFromTemplateOpenAPIData
+	if src.Data != nil {
+		_data = &SubmitExptFromTemplateOpenAPIData{}
+		if err := _data.DeepCopy(src.Data); err != nil {
 			return err
 		}
 	}
-	p.Experiment = _experiment
+	p.Data = _data
 
 	var _baseResp *base.BaseResp
 	if src.BaseResp != nil {
@@ -29563,6 +29566,125 @@ func (p *SubmitExptFromTemplateOApiResponse) DeepCopy(s interface{}) error {
 		}
 	}
 	p.BaseResp = _baseResp
+
+	return nil
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SubmitExptFromTemplateOpenAPIData[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := experiment.NewExperiment()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Experiment = _field
+	return offset, nil
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExperiment() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+		offset += p.Experiment.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) field1Length() int {
+	l := 0
+	if p.IsSetExperiment() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Experiment.BLength()
+	}
+	return l
+}
+
+func (p *SubmitExptFromTemplateOpenAPIData) DeepCopy(s interface{}) error {
+	src, ok := s.(*SubmitExptFromTemplateOpenAPIData)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _experiment *experiment.Experiment
+	if src.Experiment != nil {
+		_experiment = &experiment.Experiment{}
+		if err := _experiment.DeepCopy(src.Experiment); err != nil {
+			return err
+		}
+	}
+	p.Experiment = _experiment
 
 	return nil
 }

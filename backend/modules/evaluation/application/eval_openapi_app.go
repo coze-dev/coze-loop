@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
@@ -1197,14 +1196,6 @@ func (e *EvalOpenAPIApplication) UpdateEvaluatorOApi(ctx context.Context, req *o
 		Name:        req.Name,
 		Description: req.Description,
 	}
-	if req.IsSetBoxType() {
-		switch req.GetBoxType() {
-		case openapiEvaluator.EvaluatorBoxTypeWhite:
-			updateReq.BoxType = gptr.Of(entity.EvaluatorBoxTypeWhite)
-		case openapiEvaluator.EvaluatorBoxTypeBlack:
-			updateReq.BoxType = gptr.Of(entity.EvaluatorBoxTypeBlack)
-		}
-	}
 
 	err = e.evaluatorService.UpdateEvaluatorMeta(ctx, updateReq)
 	if err != nil {
@@ -1718,7 +1709,9 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 	}
 
 	return &openapi.SubmitExptFromTemplateOApiResponse{
-		Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
+		Data: &openapi.SubmitExptFromTemplateOpenAPIData{
+			Experiment: experiment_convertor.DomainExperimentDTO2OpenAPI(cresp.GetExperiment()),
+		},
 	}, nil
 }
 

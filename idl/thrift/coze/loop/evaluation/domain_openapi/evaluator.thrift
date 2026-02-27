@@ -8,11 +8,6 @@ const EvaluatorType EvaluatorType_Prompt = "prompt"
 const EvaluatorType EvaluatorType_Code = "code"
 const EvaluatorType EvaluatorType_CustomRPC = "custom_rpc"
 
-// 评估器盒子类型
-typedef string EvaluatorBoxType(ts.enum="true")
-const EvaluatorBoxType EvaluatorBoxType_White = "White" // 白盒
-const EvaluatorBoxType EvaluatorBoxType_Black = "Black" // 黑盒
-
 // 语言类型
 typedef string LanguageType(ts.enum="true")
 const LanguageType LanguageType_Python = "python"

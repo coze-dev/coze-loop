@@ -537,8 +537,6 @@ struct UpdateEvaluatorOApiRequest {
     2: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     3: optional string name (api.body="name")
     4: optional string description (api.body="description")
-    5: optional evaluator.EvaluatorType evaluator_type (api.body="evaluator_type")
-    14: optional evaluator.EvaluatorBoxType box_type (api.body="box_type", go.tag='json:"box_type"')
 
     255: optional base.Base Base
 }
@@ -882,9 +880,15 @@ struct SubmitExptFromTemplateOApiRequest {
 }
 
 struct SubmitExptFromTemplateOApiResponse {
-    1: optional experiment.Experiment experiment
+    1: optional i32 code
+    2: optional string msg
+    3: optional SubmitExptFromTemplateOpenAPIData data
 
     255: base.BaseResp BaseResp
+}
+
+struct SubmitExptFromTemplateOpenAPIData {
+    1: optional experiment.Experiment experiment (api.body="experiment")
 }
 
 // ===============================

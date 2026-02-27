@@ -16,10 +16,6 @@ const (
 
 	EvaluatorTypeCustomRPC = "custom_rpc"
 
-	EvaluatorBoxTypeWhite = "White"
-
-	EvaluatorBoxTypeBlack = "Black"
-
 	LanguageTypePython = "python"
 
 	LanguageTypeJS = "javascript"
@@ -49,9 +45,6 @@ const (
 
 // 评估器类型
 type EvaluatorType = string
-
-// 评估器盒子类型
-type EvaluatorBoxType = string
 
 // 语言类型
 type LanguageType = string

@@ -1162,14 +1162,22 @@ func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateOApiResponse) IsValid() error {
-	if p.Experiment != nil {
-		if err := p.Experiment.IsValid(); err != nil {
-			return fmt.Errorf("field Experiment not valid, %w", err)
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
 		}
 	}
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitExptFromTemplateOpenAPIData) IsValid() error {
+	if p.Experiment != nil {
+		if err := p.Experiment.IsValid(); err != nil {
+			return fmt.Errorf("field Experiment not valid, %w", err)
 		}
 	}
 	return nil
