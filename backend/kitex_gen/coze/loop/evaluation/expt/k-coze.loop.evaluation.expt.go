@@ -12793,20 +12793,6 @@ func (p *CreateExperimentTemplateRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 45:
-			if fieldTypeId == thrift.I32 {
-				l, err = p.FastReadField45(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -12949,20 +12935,6 @@ func (p *CreateExperimentTemplateRequest) FastReadField22(buf []byte) (int, erro
 	return offset, nil
 }
 
-func (p *CreateExperimentTemplateRequest) FastReadField45(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *int32
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.ItemRetryNum = _field
-	return offset, nil
-}
-
 func (p *CreateExperimentTemplateRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -12996,7 +12968,6 @@ func (p *CreateExperimentTemplateRequest) FastWriteNocopy(buf []byte, w thrift.N
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
-		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
@@ -13019,7 +12990,6 @@ func (p *CreateExperimentTemplateRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field21Length()
 		l += p.field22Length()
-		l += p.field45Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -13084,15 +13054,6 @@ func (p *CreateExperimentTemplateRequest) fastWriteField22(buf []byte, w thrift.
 	if p.IsSetScheduleCron() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ScheduleCron)
-	}
-	return offset
-}
-
-func (p *CreateExperimentTemplateRequest) fastWriteField45(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetItemRetryNum() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 45)
-		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemRetryNum)
 	}
 	return offset
 }
@@ -13176,15 +13137,6 @@ func (p *CreateExperimentTemplateRequest) field22Length() int {
 	return l
 }
 
-func (p *CreateExperimentTemplateRequest) field45Length() int {
-	l := 0
-	if p.IsSetItemRetryNum() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
-	}
-	return l
-}
-
 func (p *CreateExperimentTemplateRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -13258,11 +13210,6 @@ func (p *CreateExperimentTemplateRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ScheduleCron)
 		}
 		p.ScheduleCron = &tmp
-	}
-
-	if src.ItemRetryNum != nil {
-		tmp := *src.ItemRetryNum
-		p.ItemRetryNum = &tmp
 	}
 
 	var _session *common.Session

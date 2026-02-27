@@ -1013,7 +1013,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 		}
 
 		if rl == nil {
-			return 0, false, errorx.Wrapf(err, "target runlog %v not found, expt_id: %v", runID, exptID)
+			return 0, false, errorx.New("target runlog %v not found, expt_id: %v", runID, exptID)
 		}
 
 		if err := rl.AppendItemIDs(itemIDs); err != nil {
