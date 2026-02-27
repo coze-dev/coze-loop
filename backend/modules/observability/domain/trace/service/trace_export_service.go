@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"strconv"
 	"time"
 
@@ -197,6 +198,45 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
 	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	var root map[string]interface{}
+	_ = json.Unmarshal([]byte(spans[0].Input), &root)
+
+	messages, ok := root["messages"].([]interface{})
+	if !ok {
+		logs.CtxError(ctx, "Can't find messages")
+	}
+
+	for _, m := range messages {
+		msg, ok := m.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// 只处理 role == user
+		if msg["role"] != "user" {
+			continue
+		}
+
+		parts, ok := msg["parts"].([]interface{})
+		if !ok {
+			continue
+		}
+
+		for _, p := range parts {
+			part, ok := p.(map[string]interface{})
+			if !ok {
+				continue
+			}
+
+			if part["type"] == "image_url" {
+				if img, ok := part["image_url"].(map[string]interface{}); ok {
+					img["url"] = ""
+				}
+			}
+		}
+	}
+	a, err := json.Marshal(root)
+	spans[0].Input = string(a)
 	// todo fby test
 	logs.CtxInfo(ctx, "Span input after CK: %v", spans[0].Input)
 	if err != nil {
