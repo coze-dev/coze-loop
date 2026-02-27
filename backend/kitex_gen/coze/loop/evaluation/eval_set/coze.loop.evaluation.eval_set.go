@@ -13967,7 +13967,7 @@ type ListEvaluationSetItemsResponse struct {
 	Items         []*eval_set.EvaluationSetItem `thrift:"items,1,optional" frugal:"1,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty" query:"items"`
 	Total         *int64                        `thrift:"total,100,optional" frugal:"100,optional,i64" json:"total" form:"total" query:"total"`
 	NextPageToken *string                       `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
-	FilterTotal   *int64                        `thrift:"filterTotal,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filterTotal" query:"filterTotal"`
+	FilterTotal   *int64                        `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp                `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -14057,7 +14057,7 @@ var fieldIDToName_ListEvaluationSetItemsResponse = map[int16]string{
 	1:   "items",
 	100: "total",
 	101: "next_page_token",
-	102: "filterTotal",
+	102: "filter_total",
 	255: "BaseResp",
 }
 
@@ -14341,7 +14341,7 @@ WriteFieldEndError:
 }
 func (p *ListEvaluationSetItemsResponse) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFilterTotal() {
-		if err = oprot.WriteFieldBegin("filterTotal", thrift.I64, 102); err != nil {
+		if err = oprot.WriteFieldBegin("filter_total", thrift.I64, 102); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteI64(*p.FilterTotal); err != nil {
