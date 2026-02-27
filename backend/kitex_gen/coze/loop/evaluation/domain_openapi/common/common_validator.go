@@ -90,6 +90,9 @@ func (p *OrderBy) IsValid() error {
 func (p *RuntimeParam) IsValid() error {
 	return nil
 }
+func (p *RateLimit) IsValid() error {
+	return nil
+}
 func (p *Message) IsValid() error {
 	if p.Content != nil {
 		if err := p.Content.IsValid(); err != nil {

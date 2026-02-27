@@ -6,13 +6,17 @@ package experiment
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	evalsetopenapi "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
+	evaluator_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
@@ -704,6 +708,27 @@ func TurnRunStateDO2DTO(state entity.TurnRunState) *openapiExperiment.TurnRunSta
 	return &openapiState
 }
 
+// openAPIExptTupleEvaluatorItemsToEntity 将 ExptTuple 的 evaluator_id_version_items 转为 entity.EvaluatorIDVersionItem。
+func openAPIExptTupleEvaluatorItemsToEntity(tc *openapiExperiment.ExptTuple) []*entity.EvaluatorIDVersionItem {
+	if tc == nil || tc.EvaluatorIDVersionItems == nil {
+		return nil
+	}
+	items := tc.EvaluatorIDVersionItems
+	out := make([]*entity.EvaluatorIDVersionItem, 0, len(items))
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		out = append(out, &entity.EvaluatorIDVersionItem{
+			EvaluatorID:        item.GetEvaluatorID(),
+			Version:            item.GetVersion(),
+			EvaluatorVersionID: item.GetEvaluatorVersionID(),
+			ScoreWeight:        item.GetScoreWeight(),
+		})
+	}
+	return out
+}
+
 func convertEntityContentTypeToOpenAPI(contentType entity.ContentType) *openapiCommon.ContentType {
 	var openapiType openapiCommon.ContentType
 	switch contentType {
@@ -713,8 +738,12 @@ func convertEntityContentTypeToOpenAPI(contentType entity.ContentType) *openapiC
 		openapiType = openapiCommon.ContentTypeImage
 	case entity.ContentTypeAudio:
 		openapiType = openapiCommon.ContentTypeAudio
-	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+	case entity.ContentTypeVideo:
+		openapiType = openapiCommon.ContentTypeVideo
+	case entity.ContentTypeMultipart:
 		openapiType = openapiCommon.ContentTypeMultiPart
+	case entity.ContentTypeMultipartVariable:
+		openapiType = openapiCommon.ContentTypeMultiPartVariable
 	default:
 		return nil
 	}
@@ -1321,4 +1350,607 @@ func OpenAPICustomEvalTargetDO2DTO(do *entity.CustomEvalTarget) *openapiEvalTarg
 		AvatarURL: do.AvatarURL,
 		Ext:       do.Ext,
 	}
+}
+
+func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment.ExptTemplate {
+	if template == nil {
+		return nil
+	}
+
+	dto := &openapiExperiment.ExptTemplate{
+		Meta: &openapiExperiment.ExptTemplateMeta{
+			ID:          gptr.Of(template.Meta.ID),
+			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+			Name:        gptr.Of(template.Meta.Name),
+			Description: gptr.Of(template.Meta.Desc),
+			ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
+		},
+		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
+	}
+
+	if template.TripleConfig != nil {
+		dto.TripleConfig = &openapiExperiment.ExptTuple{
+			EvalSetID:        gptr.Of(template.TripleConfig.EvalSetID),
+			EvalSetVersionID: gptr.Of(template.TripleConfig.EvalSetVersionID),
+			TargetID:         gptr.Of(template.TripleConfig.TargetID),
+			TargetVersionID:  gptr.Of(template.TripleConfig.TargetVersionID),
+		}
+		// run_config、score_weight、version 来源于 TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf，按 EvaluatorVersionID 映射后填入 DTO（从 DB 加载时 item 可能无这些字段）
+		runConfByVersionID := make(map[int64]*entity.EvaluatorRunConfig)
+		scoreWeightByVersionID := make(map[int64]float64)
+		versionByVersionID := make(map[int64]string)
+		if template.TemplateConf != nil && template.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
+			for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+				if ec == nil || ec.EvaluatorVersionID <= 0 {
+					continue
+				}
+				if ec.RunConf != nil {
+					runConfByVersionID[ec.EvaluatorVersionID] = ec.RunConf
+				}
+				if ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+					scoreWeightByVersionID[ec.EvaluatorVersionID] = *ec.ScoreWeight
+				}
+				if ec.Version != "" {
+					versionByVersionID[ec.EvaluatorVersionID] = ec.Version
+				}
+			}
+		}
+		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+			if item == nil {
+				continue
+			}
+			scoreWeight := item.ScoreWeight
+			if scoreWeight <= 0 && item.EvaluatorVersionID > 0 {
+				scoreWeight = scoreWeightByVersionID[item.EvaluatorVersionID]
+			}
+			version := item.Version
+			if version == "" && item.EvaluatorVersionID > 0 {
+				version = versionByVersionID[item.EvaluatorVersionID]
+			}
+			dto.TripleConfig.EvaluatorIDVersionItems = append(dto.TripleConfig.EvaluatorIDVersionItems, &openapiEvaluator.EvaluatorIDVersionItem{
+				EvaluatorID:        gptr.Of(item.EvaluatorID),
+				Version:            gptr.Of(version),
+				EvaluatorVersionID: gptr.Of(item.EvaluatorVersionID),
+				ScoreWeight:        gptr.Of(scoreWeight),
+				RunConfig:          evaluator_convertor.OpenAPIEvaluatorRunConfigDO2DTO(runConfByVersionID[item.EvaluatorVersionID]),
+			})
+		}
+	}
+
+	if template.FieldMappingConfig != nil {
+		dto.FieldMappingConfig = &openapiExperiment.ExptFieldMapping{
+			ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+		}
+		if template.FieldMappingConfig.TargetFieldMapping != nil {
+			dto.FieldMappingConfig.TargetFieldMapping = DomainTargetFieldMappingDTO2OpenAPI(&domainExpt.TargetFieldMapping{
+				FromEvalSet: slices.Transform(template.FieldMappingConfig.TargetFieldMapping.FromEvalSet, func(e *entity.ExptTemplateFieldMapping, _ int) *domainExpt.FieldMapping {
+					return &domainExpt.FieldMapping{FieldName: gptr.Of(e.FieldName), FromFieldName: gptr.Of(e.FromFieldName)}
+				}),
+			})
+		}
+		if template.FieldMappingConfig.TargetRuntimeParam != nil {
+			dto.FieldMappingConfig.TargetRuntimeParam = &openapiCommon.RuntimeParam{
+				JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
+			}
+		}
+		// 按 evaluator_version_id 从 TripleConfig 回填 evaluator_id / version（兼容从 DB 加载时仅含 EvaluatorVersionID 的情况）
+		evaluatorIDByVersionID := make(map[int64]int64)
+		versionByVersionID := make(map[int64]string)
+		if template.TripleConfig != nil {
+			for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+				if item != nil && item.EvaluatorVersionID > 0 {
+					evaluatorIDByVersionID[item.EvaluatorVersionID] = item.EvaluatorID
+					versionByVersionID[item.EvaluatorVersionID] = item.Version
+				}
+			}
+		}
+		for _, em := range template.FieldMappingConfig.EvaluatorFieldMapping {
+			evaluatorID, version := em.EvaluatorID, em.Version
+			if (evaluatorID == 0 || version == "") && em.EvaluatorVersionID > 0 {
+				if id, ok := evaluatorIDByVersionID[em.EvaluatorVersionID]; ok {
+					evaluatorID = id
+				}
+				if v, ok := versionByVersionID[em.EvaluatorVersionID]; ok {
+					version = v
+				}
+			}
+			m := &openapiExperiment.EvaluatorFieldMapping{
+				EvaluatorID: gptr.Of(evaluatorID),
+				Version:     gptr.Of(version),
+			}
+			for _, fm := range em.FromEvalSet {
+				m.FromEvalSet = append(m.FromEvalSet, &openapiExperiment.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				m.FromTarget = append(m.FromTarget, &openapiExperiment.FieldMapping{
+					FieldName:     gptr.Of(fm.FieldName),
+					FromFieldName: gptr.Of(fm.FromFieldName),
+				})
+			}
+			dto.FieldMappingConfig.EvaluatorFieldMapping = append(dto.FieldMappingConfig.EvaluatorFieldMapping, m)
+		}
+	}
+
+	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
+	return dto
+}
+
+// buildOpenAPIExptScoreWeightFromTemplate 从 entity.ExptTemplate 抽取评估器权重配置，转为 openapi ExptScoreWeight（与 expt_template.buildTemplateScoreWeightConfigDTO 逻辑一致）
+func buildOpenAPIExptScoreWeightFromTemplate(template *entity.ExptTemplate) *openapiExperiment.ExptScoreWeight {
+	evaluatorScoreWeights := buildScoreWeightsFromTemplateConf(template)
+	if len(evaluatorScoreWeights) == 0 &&
+		template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
+		evaluatorScoreWeights = make(map[int64]float64)
+		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+			if item == nil || item.EvaluatorVersionID <= 0 || item.ScoreWeight <= 0 {
+				continue
+			}
+			evaluatorScoreWeights[item.EvaluatorVersionID] = item.ScoreWeight
+		}
+	}
+	hasWeightedScore := len(evaluatorScoreWeights) > 0
+	if template.TemplateConf != nil && template.TemplateConf.ConnectorConf.EvaluatorsConf != nil {
+		hasWeightedScore = hasWeightedScore || template.TemplateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight
+	}
+	if !hasWeightedScore {
+		return nil
+	}
+	return &openapiExperiment.ExptScoreWeight{
+		EnableWeightedScore:   gptr.Of(hasWeightedScore),
+		EvaluatorScoreWeights: evaluatorScoreWeights,
+	}
+}
+
+func OpenAPIExptTemplateDO2DTOs(templates []*entity.ExptTemplate) []*openapiExperiment.ExptTemplate {
+	if len(templates) == 0 {
+		return nil
+	}
+	dtos := make([]*openapiExperiment.ExptTemplate, 0, len(templates))
+	for _, t := range templates {
+		dtos = append(dtos, OpenAPIExptTemplateDO2DTO(t))
+	}
+	return dtos
+}
+
+func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequest) (*entity.CreateExptTemplateParam, error) {
+	if req == nil {
+		return nil, nil
+	}
+	param := &entity.CreateExptTemplateParam{
+		SpaceID:               req.GetWorkspaceID(),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
+	}
+
+	if req.GetMeta() != nil {
+		meta := req.GetMeta()
+		param.Name = meta.GetName()
+		param.Description = meta.GetDescription()
+		param.ExptType = OpenAPIExptTypeDTO2DO(meta.ExptType)
+	}
+
+	if req.GetTripleConfig() != nil {
+		tc := req.GetTripleConfig()
+		param.EvalSetID = tc.GetEvalSetID()
+		param.EvalSetVersionID = tc.GetEvalSetVersionID()
+		param.TargetID = tc.GetTargetID()
+		param.TargetVersionID = tc.GetTargetVersionID()
+		param.EvaluatorIDVersionItems = openAPIExptTupleEvaluatorItemsToEntity(tc)
+	}
+
+	if req.GetFieldMappingConfig() != nil {
+		fmc := req.GetFieldMappingConfig()
+		var rtp *entity.RuntimeParam
+		if fmc.TargetRuntimeParam != nil {
+			rtp = &entity.RuntimeParam{JSONValue: fmc.TargetRuntimeParam.JSONValue}
+		}
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: param.TargetVersionID,
+					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
+				},
+			},
+		}
+		tc := req.GetTripleConfig()
+		for i, em := range fmc.EvaluatorFieldMapping {
+			if em == nil {
+				continue
+			}
+			ec := &entity.EvaluatorConf{
+				EvaluatorID: em.GetEvaluatorID(),
+				Version:     em.GetVersion(),
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{},
+					TargetAdapter:  &entity.FieldAdapter{},
+				},
+			}
+			// 与 triple_config.evaluator_id_version_items 按索引对齐：若有则用其补全 id/version（便于 service 层 resolveAndFillEvaluatorVersionIDs 用 (id,version) 解析并回填 evaluator_version_id）、run_config、score_weight（写入 EvaluatorConf 后随 template_conf 落库）
+			if tc != nil && i < len(tc.EvaluatorIDVersionItems) && tc.EvaluatorIDVersionItems[i] != nil {
+				item := tc.EvaluatorIDVersionItems[i]
+				if ec.EvaluatorID == 0 && item.GetEvaluatorID() != 0 {
+					ec.EvaluatorID = item.GetEvaluatorID()
+				}
+				if ec.Version == "" && item.GetVersion() != "" {
+					ec.Version = item.GetVersion()
+				}
+				if item.GetEvaluatorVersionID() > 0 {
+					ec.EvaluatorVersionID = item.GetEvaluatorVersionID()
+				}
+				if item.GetRunConfig() != nil {
+					ec.RunConf = evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(item.GetRunConfig())
+				}
+				if item.IsSetScoreWeight() {
+					ec.ScoreWeight = gptr.Of(item.GetScoreWeight())
+				}
+			}
+			for _, fm := range em.FromEvalSet {
+				ec.IngressConf.EvalSetAdapter.FieldConfs = append(ec.IngressConf.EvalSetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				ec.IngressConf.TargetAdapter.FieldConfs = append(ec.IngressConf.TargetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			if param.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
+			}
+			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	return param, nil
+}
+
+func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequest) (*entity.UpdateExptTemplateParam, error) {
+	if req == nil {
+		return nil, nil
+	}
+	param := &entity.UpdateExptTemplateParam{
+		TemplateID:            req.GetTemplateID(),
+		SpaceID:               req.GetWorkspaceID(),
+		CreateEvalTargetParam: OpenAPICreateEvalTargetParamDTO2DomainV2(req.GetCreateEvalTargetParam()),
+	}
+
+	if req.GetMeta() != nil {
+		meta := req.GetMeta()
+		param.Name = meta.GetName()
+		param.Description = meta.GetDescription()
+		param.ExptType = OpenAPIExptTypeDTO2DO(meta.ExptType)
+	}
+
+	if req.GetTripleConfig() != nil {
+		tc := req.GetTripleConfig()
+		param.EvalSetVersionID = tc.GetEvalSetVersionID()
+		param.TargetVersionID = tc.GetTargetVersionID()
+		param.EvaluatorIDVersionItems = openAPIExptTupleEvaluatorItemsToEntity(tc)
+	}
+
+	if req.GetFieldMappingConfig() != nil {
+		fmc := req.GetFieldMappingConfig()
+		var rtp *entity.RuntimeParam
+		if fmc.TargetRuntimeParam != nil {
+			rtp = &entity.RuntimeParam{JSONValue: fmc.TargetRuntimeParam.JSONValue}
+		}
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: param.TargetVersionID,
+					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
+				},
+			},
+		}
+		tc := req.GetTripleConfig()
+		for i, em := range fmc.EvaluatorFieldMapping {
+			if em == nil {
+				continue
+			}
+			ec := &entity.EvaluatorConf{
+				EvaluatorID: em.GetEvaluatorID(),
+				Version:     em.GetVersion(),
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{},
+					TargetAdapter:  &entity.FieldAdapter{},
+				},
+			}
+			// 与 triple_config.evaluator_id_version_items 按索引对齐：若有则用其补全 id/version、run_config、score_weight（写入 EvaluatorConf 后随 template_conf 落库）
+			if tc != nil && i < len(tc.EvaluatorIDVersionItems) && tc.EvaluatorIDVersionItems[i] != nil {
+				item := tc.EvaluatorIDVersionItems[i]
+				if ec.EvaluatorID == 0 && item.GetEvaluatorID() != 0 {
+					ec.EvaluatorID = item.GetEvaluatorID()
+				}
+				if ec.Version == "" && item.GetVersion() != "" {
+					ec.Version = item.GetVersion()
+				}
+				if item.GetEvaluatorVersionID() > 0 {
+					ec.EvaluatorVersionID = item.GetEvaluatorVersionID()
+				}
+				if item.GetRunConfig() != nil {
+					ec.RunConf = evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(item.GetRunConfig())
+				}
+				if item.IsSetScoreWeight() {
+					ec.ScoreWeight = gptr.Of(item.GetScoreWeight())
+				}
+			}
+			for _, fm := range em.FromEvalSet {
+				ec.IngressConf.EvalSetAdapter.FieldConfs = append(ec.IngressConf.EvalSetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			for _, fm := range em.FromTarget {
+				ec.IngressConf.TargetAdapter.FieldConfs = append(ec.IngressConf.TargetAdapter.FieldConfs, &entity.FieldConf{
+					FieldName: fm.GetFieldName(),
+					FromField: fm.GetFromFieldName(),
+				})
+			}
+			if param.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
+			}
+			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	return param, nil
+}
+
+func OpenAPIExptTypeDO2DTO(t entity.ExptType) *openapiExperiment.ExperimentType {
+	var s openapiExperiment.ExperimentType
+	switch t {
+	case entity.ExptType_Offline:
+		s = openapiExperiment.ExperimentTypeOffline
+	case entity.ExptType_Online:
+		s = openapiExperiment.ExperimentTypeOnline
+	default:
+		return nil
+	}
+	return &s
+}
+
+func OpenAPIExptTypeDTO2DO(t *openapiExperiment.ExperimentType) entity.ExptType {
+	if t == nil {
+		return entity.ExptType_Offline
+	}
+	switch *t {
+	case openapiExperiment.ExperimentTypeOffline:
+		return entity.ExptType_Offline
+	case openapiExperiment.ExperimentTypeOnline:
+		return entity.ExptType_Online
+	default:
+		return entity.ExptType_Offline
+	}
+}
+
+// parseExptTypeFromString 将字符串解析为 entity.ExptType，支持 "offline"/"online" 或 "1"/"2"
+func parseExptTypeFromString(s string) (entity.ExptType, bool) {
+	switch s {
+	case "offline", "1":
+		return entity.ExptType_Offline, true
+	case "online", "2":
+		return entity.ExptType_Online, true
+	default:
+		return entity.ExptType_Offline, false
+	}
+}
+
+// isIncludeOperator 判断操作符是否表示包含（IN/EQ 等）
+func isOpenAPIIncludeOperator(op string) bool {
+	switch op {
+	case "in", "eq", "equal", "=", "IN", "EQ", "EQUAL":
+		return true
+	default:
+		return false
+	}
+}
+
+// isExcludeOperator 判断操作符是否表示排除（NOT_IN/NE 等）
+func isOpenAPIExcludeOperator(op string) bool {
+	switch op {
+	case "not_in", "ne", "not_equal", "!=", "NOT_IN", "NE", "NOT_EQUAL":
+		return true
+	default:
+		return false
+	}
+}
+
+// OpenAPIExptTemplateFilterDTO2DO 将 OpenAPI 实验模板筛选器转换为 entity.ExptTemplateListFilter（与 domain/expt 结构一致）
+func OpenAPIExptTemplateFilterDTO2DO(dto *openapiExperiment.ExperimentTemplateFilter) *entity.ExptTemplateListFilter {
+	if dto == nil {
+		return nil
+	}
+	result := &entity.ExptTemplateListFilter{
+		Includes: &entity.ExptTemplateFilterFields{},
+		Excludes: &entity.ExptTemplateFilterFields{},
+	}
+
+	// KeywordSearch.keyword -> FuzzyName（与 domain/expt 一致）
+	if dto.KeywordSearch != nil && dto.KeywordSearch.Keyword != nil {
+		if k := strings.TrimSpace(*dto.KeywordSearch.Keyword); k != "" {
+			result.FuzzyName = k
+		}
+	}
+
+	// Filters
+	filters := dto.Filters
+	if filters == nil || len(filters.GetFilterConditions()) == 0 {
+		if result.FuzzyName == "" && !result.Includes.IsValid() && !result.Excludes.IsValid() {
+			return nil
+		}
+		return result
+	}
+	if filters.LogicOp != nil && strings.ToLower(*filters.LogicOp) != "and" {
+		return nil
+	}
+
+	parseInt64List := func(s string) ([]int64, bool) {
+		var ids []int64
+		for _, p := range strings.Split(s, ",") {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			v, err := strconv.ParseInt(p, 10, 64)
+			if err != nil {
+				return nil, false
+			}
+			ids = append(ids, v)
+		}
+		return ids, len(ids) > 0
+	}
+	parseStringList := func(s string) []string {
+		var parts []string
+		for _, p := range strings.Split(s, ",") {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				parts = append(parts, p)
+			}
+		}
+		return parts
+	}
+
+	for _, cond := range filters.GetFilterConditions() {
+		if cond == nil || cond.GetField() == nil {
+			continue
+		}
+		fieldType := strings.TrimSpace(strings.ToLower(cond.GetField().GetFieldType()))
+		operator := strings.TrimSpace(strings.ToLower(cond.GetOperator()))
+		value := strings.TrimSpace(cond.GetValue())
+
+		// name 支持任意操作符，直接作为模糊搜索
+		if fieldType == "name" {
+			result.FuzzyName = value
+			continue
+		}
+
+		var targetIncludes, targetExcludes *entity.ExptTemplateFilterFields
+		if isOpenAPIIncludeOperator(operator) {
+			targetIncludes, targetExcludes = result.Includes, nil
+		} else if isOpenAPIExcludeOperator(operator) {
+			targetIncludes, targetExcludes = nil, result.Excludes
+		} else {
+			continue
+		}
+
+		ff := targetIncludes
+		if ff == nil {
+			ff = targetExcludes
+		}
+		if ff == nil {
+			continue
+		}
+
+		switch fieldType {
+		case "expt_type":
+			for _, part := range strings.Split(value, ",") {
+				part = strings.TrimSpace(part)
+				if et, ok := parseExptTypeFromString(part); ok {
+					ff.ExptType = append(ff.ExptType, int64(et))
+				}
+			}
+		case "eval_set_id":
+			if ids, ok := parseInt64List(value); ok {
+				ff.EvalSetIDs = append(ff.EvalSetIDs, ids...)
+			}
+		case "target_id":
+			if ids, ok := parseInt64List(value); ok {
+				ff.TargetIDs = append(ff.TargetIDs, ids...)
+			}
+		case "evaluator_id":
+			if ids, ok := parseInt64List(value); ok {
+				ff.EvaluatorIDs = append(ff.EvaluatorIDs, ids...)
+			}
+		case "target_type":
+			if ids, ok := parseInt64List(value); ok {
+				ff.TargetType = append(ff.TargetType, ids...)
+			}
+		case "creator_by":
+			if ss := parseStringList(value); len(ss) > 0 {
+				ff.CreatedBy = append(ff.CreatedBy, ss...)
+			}
+		case "updated_by":
+			if ss := parseStringList(value); len(ss) > 0 {
+				ff.UpdatedBy = append(ff.UpdatedBy, ss...)
+			}
+		}
+	}
+
+	if result.FuzzyName == "" && !result.Includes.IsValid() && !result.Excludes.IsValid() {
+		return nil
+	}
+	return result
+}
+
+func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEvalTargetParam) *entity.CreateEvalTargetParam {
+	if param == nil {
+		return nil
+	}
+
+	res := &entity.CreateEvalTargetParam{
+		SourceTargetID:      param.SourceTargetID,
+		SourceTargetVersion: param.SourceTargetVersion,
+		BotPublishVersion:   param.BotPublishVersion,
+		Env:                 param.Env,
+	}
+	if param.EvalTargetType != nil {
+		val, err := mapOpenAPIEvalTargetType(*param.EvalTargetType)
+		if err == nil {
+			res.EvalTargetType = gptr.Of(entity.EvalTargetType(val))
+		}
+	}
+	if param.BotInfoType != nil {
+		val, err := mapOpenAPICozeBotInfoType(*param.BotInfoType)
+		if err == nil {
+			res.BotInfoType = gptr.Of(entity.CozeBotInfoType(val))
+		}
+	}
+	if param.Region != nil {
+		val, err := mapOpenAPIRegion(*param.Region)
+		if err == nil {
+			res.Region = gptr.Of(val)
+		}
+	}
+	if param.CustomEvalTarget != nil {
+		res.CustomEvalTarget = &entity.CustomEvalTarget{
+			ID:        param.CustomEvalTarget.ID,
+			Name:      param.CustomEvalTarget.Name,
+			AvatarURL: param.CustomEvalTarget.AvatarURL,
+			Ext:       param.CustomEvalTarget.Ext,
+		}
+	}
+	return res
+}
+
+func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldMapping, rtp *entity.RuntimeParam) *entity.TargetIngressConf {
+	tic := &entity.TargetIngressConf{EvalSetAdapter: &entity.FieldAdapter{}}
+
+	if mapping != nil {
+		fc := make([]*entity.FieldConf, 0, len(mapping.GetFromEvalSet()))
+		for _, fm := range mapping.GetFromEvalSet() {
+			fc = append(fc, &entity.FieldConf{
+				FieldName: fm.GetFieldName(),
+				FromField: fm.GetFromFieldName(),
+			})
+		}
+		tic.EvalSetAdapter.FieldConfs = fc
+	}
+
+	if rtp != nil && rtp.JSONValue != nil && len(*rtp.JSONValue) > 0 {
+		tic.CustomConf = &entity.FieldAdapter{
+			FieldConfs: []*entity.FieldConf{{
+				FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+				Value:     *rtp.JSONValue,
+			}},
+		}
+	}
+	return tic
 }

@@ -148,10 +148,18 @@ func (e *ExptMangerImpl) checkTargetConnector(ctx context.Context, expt *entity.
 	}
 
 	if cc := expt.EvalConf.ConnectorConf.TargetConf.IngressConf.CustomConf; cc != nil {
+		targetType := expt.TargetType
+		if targetType == 0 && expt.Target != nil {
+			// TargetType 可能未在 CreateExpt 中正确设置（如从模板提交时），从 Target 回退获取
+			targetType = expt.Target.EvalTargetType
+			if targetType == 0 && expt.Target.EvalTargetVersion != nil {
+				targetType = expt.Target.EvalTargetVersion.EvalTargetType
+			}
+		}
 		for _, fc := range cc.FieldConfs {
 			if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
-				if err := e.evalTargetService.ValidateRuntimeParam(ctx, expt.TargetType, fc.Value); err != nil {
-					logs.CtxError(ctx, "parse type %s runtime param fail, raw: %v, err: %v", expt.TargetType, fc.Value, err)
+				if err := e.evalTargetService.ValidateRuntimeParam(ctx, targetType, fc.Value); err != nil {
+					logs.CtxError(ctx, "parse type %s runtime param fail, raw: %v, err: %v", targetType, fc.Value, err)
 					return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("invalid runtime param"))
 				}
 			}

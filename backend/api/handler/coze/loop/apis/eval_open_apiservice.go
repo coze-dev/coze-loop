@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 )
 
@@ -120,4 +121,118 @@ func DeleteEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field [GET]
 func GetEvaluationItemFieldOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationItemFieldOApi)
+}
+
+// ListEvaluatorsOApi .
+// @router /v1/loop/evaluation/evaluators/list [POST]
+func ListEvaluatorsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluatorsOApi)
+}
+
+// BatchGetEvaluatorsOApi .
+// @router /v1/loop/evaluation/evaluators/batch_get [POST]
+func BatchGetEvaluatorsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchGetEvaluatorsOApi)
+}
+
+// CreateEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators [POST]
+func CreateEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CreateEvaluatorOApi)
+}
+
+// UpdateEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators/:evaluator_id [PATCH]
+func UpdateEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluatorOApi)
+}
+
+// UpdateEvaluatorDraftOApi .
+// @router /v1/loop/evaluation/evaluators/:evaluator_id/update_draft [PATCH]
+func UpdateEvaluatorDraftOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateEvaluatorDraftOApi)
+}
+
+// DeleteEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators/:evaluator_id [DELETE]
+func DeleteEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.DeleteEvaluatorOApi)
+}
+
+// ListEvaluatorVersionsOApi .
+// @router /v1/loop/evaluation/evaluators/:evaluator_id/versions/list [POST]
+func ListEvaluatorVersionsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListEvaluatorVersionsOApi)
+}
+
+// BatchGetEvaluatorVersionsOApi .
+// @router /v1/loop/evaluation/evaluators_versions/batch_get [POST]
+func BatchGetEvaluatorVersionsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchGetEvaluatorVersionsOApi)
+}
+
+// SubmitEvaluatorVersionOApi .
+// @router /v1/loop/evaluation/evaluators/:evaluator_id/submit_version [POST]
+func SubmitEvaluatorVersionOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.SubmitEvaluatorVersionOApi)
+}
+
+// RunEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators_versions/:evaluator_version_id/run [POST]
+func RunEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.RunEvaluatorOApi)
+}
+
+// CorrectEvaluatorRecordOApi .
+// @router /v1/loop/evaluation/evaluator_records/:evaluator_record_id [PATCH]
+func CorrectEvaluatorRecordOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CorrectEvaluatorRecordOApi)
+}
+
+// BatchGetEvaluatorRecordsOApi .
+// @router /v1/loop/evaluation/evaluator_records/batch_get [POST]
+func BatchGetEvaluatorRecordsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchGetEvaluatorRecordsOApi)
+}
+
+// CreateExptTemplateOApi .
+// @router /v1/loop/evaluation/experiment_templates [POST]
+func CreateExptTemplateOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.CreateExptTemplateOApi)
+}
+
+// BatchGetExptTemplatesOApi .
+// @router /v1/loop/evaluation/experiment_templates/batch_get [POST]
+func BatchGetExptTemplatesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.BatchGetExptTemplatesOApi)
+}
+
+// UpdateExptTemplateMetaOApi .
+// @router /v1/loop/evaluation/experiment_templates/update_meta [POST]
+func UpdateExptTemplateMetaOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateExptTemplateMetaOApi)
+}
+
+// UpdateExptTemplateOApi .
+// @router /v1/loop/evaluation/experiment_templates/:template_id [PATCH]
+func UpdateExptTemplateOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.UpdateExptTemplateOApi)
+}
+
+// DeleteExptTemplateOApi .
+// @router /v1/loop/evaluation/experiment_templates/:template_id [DELETE]
+func DeleteExptTemplateOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.DeleteExptTemplateOApi)
+}
+
+// ListExptTemplatesOApi .
+// @router /v1/loop/evaluation/experiment_templates/list [POST]
+func ListExptTemplatesOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListExptTemplatesOApi)
+}
+
+// SubmitExptFromTemplateOApi .
+// @router /v1/loop/evaluation/experiment_templates/submit_expt [POST]
+func SubmitExptFromTemplateOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.SubmitExptFromTemplateOApi)
 }

@@ -733,6 +733,66 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 	}
 }
 
+// TemplateToSubmitExperimentRequest 将实验模板转换为 SubmitExperimentRequest，用于根据模板提交实验
+func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name string, workspaceID int64) *expt.SubmitExperimentRequest {
+	if template == nil {
+		return nil
+	}
+	req := &expt.SubmitExperimentRequest{
+		WorkspaceID:     workspaceID,
+		Name:            gptr.Of(name),
+		ExptTemplateID:  gptr.Of(template.Meta.ID),
+	}
+
+	if template.TripleConfig == nil {
+		return req
+	}
+
+	req.EvalSetID = gptr.Of(template.TripleConfig.EvalSetID)
+	req.EvalSetVersionID = gptr.Of(template.TripleConfig.EvalSetVersionID)
+	if template.TripleConfig.TargetID > 0 || template.TripleConfig.TargetVersionID > 0 {
+		req.TargetID = gptr.Of(template.TripleConfig.TargetID)
+		req.TargetVersionID = gptr.Of(template.TripleConfig.TargetVersionID)
+	}
+
+	// 评估器版本 ID 列表
+	evaluatorVersionIDs := make([]int64, 0)
+	for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+		if item != nil && item.EvaluatorVersionID > 0 {
+			evaluatorVersionIDs = append(evaluatorVersionIDs, item.EvaluatorVersionID)
+		}
+	}
+	req.EvaluatorVersionIds = evaluatorVersionIDs
+
+	// EvaluatorIDVersionList（含 RunConfig、ScoreWeight）
+	req.EvaluatorIDVersionList = buildEvaluatorIDVersionItemsDTO(template)
+
+	// 字段映射
+	fieldMapping := buildTemplateFieldMappingDTO(template)
+	if fieldMapping != nil {
+		req.TargetFieldMapping = fieldMapping.TargetFieldMapping
+		req.EvaluatorFieldMapping = fieldMapping.EvaluatorFieldMapping
+		req.TargetRuntimeParam = fieldMapping.TargetRuntimeParam
+		req.ItemConcurNum = fieldMapping.ItemConcurNum
+	}
+
+	// 评估器并发数
+	if template.TemplateConf != nil && template.TemplateConf.EvaluatorsConcurNum != nil {
+		req.EvaluatorsConcurNum = gptr.Of(int32(*template.TemplateConf.EvaluatorsConcurNum))
+	}
+
+	// 实验类型、分数权重（权重从 EvaluatorIDVersionList 的 ScoreWeight 解析）
+	if template.Meta != nil {
+		req.ExptType = gptr.Of(domain_expt.ExptType(template.Meta.ExptType))
+	}
+	scoreWeight := buildTemplateScoreWeightConfigDTO(template)
+	if scoreWeight != nil && scoreWeight.IsSetEnableWeightedScore() && scoreWeight.GetEnableWeightedScore() {
+		req.EnableWeightedScore = gptr.Of(true)
+	}
+
+	return req
+}
+
 // 细分：从 TemplateConf 中抽取权重
 func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]float64 {
 	if template.TemplateConf == nil || template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {

@@ -442,6 +442,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		WorkspaceID:            req.GetWorkspaceID(),
 		EvalSetVersionID:       req.EvalSetVersionID,
 		EvalSetID:              req.EvalSetID,
+		TargetID:               req.TargetID,
+		TargetVersionID:        req.TargetVersionID,
 		EvaluatorVersionIds:    req.EvaluatorVersionIds,
 		Name:                   req.Name,
 		Desc:                   req.Desc,
