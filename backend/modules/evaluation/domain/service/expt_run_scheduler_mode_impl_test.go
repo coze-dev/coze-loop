@@ -367,7 +367,7 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{
 					{ItemID: 1, Turns: []*entity.Turn{{ID: 1}}},
 					{ItemID: 2, Turns: []*entity.Turn{{ID: 2}}},
-				}, ptr.Of(int64(2)), nil, nil).Times(1)
+				}, ptr.Of(int64(2)), ptr.Of(int64(2)), nil, nil).Times(1)
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2, 3, 4}, nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNX(gomock.Any(), gomock.Any()).Return(nil).Times(1)

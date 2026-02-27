@@ -622,7 +622,7 @@ func (e *EvalOpenAPIApplication) ListEvaluationSetVersionItemsOApi(ctx context.C
 	}
 
 	// 调用domain服务
-	items, total, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+	items, total, _, nextPageToken, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         req.GetWorkspaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		VersionID:       req.VersionID,

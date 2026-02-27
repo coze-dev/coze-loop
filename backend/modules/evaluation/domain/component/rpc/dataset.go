@@ -31,8 +31,8 @@ type IDatasetRPCAdapter interface {
 	BatchUpdateDatasetItems(ctx context.Context, param *BatchUpdateDatasetItemsParam) (errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error)
 	BatchDeleteDatasetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
-	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error)
-	ListDatasetItemsByVersion(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error)
+	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error)
+	ListDatasetItemsByVersion(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error)
 	BatchGetDatasetItems(ctx context.Context, param *BatchGetDatasetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	BatchGetDatasetItemsByVersion(ctx context.Context, param *BatchGetDatasetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
@@ -93,6 +93,7 @@ type ListDatasetItemsParam struct {
 	PageToken       *string
 	OrderBys        []*entity.OrderBy
 	ItemIDsNotIn    []int64
+	Filter          *entity.Filter
 }
 
 type BatchGetDatasetItemsParam struct {

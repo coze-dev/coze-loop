@@ -5,6 +5,7 @@ include "domain/eval_set.thrift"
 include "domain/common.thrift"
 include "../data/domain/dataset.thrift"
 include "../data/domain/dataset_job.thrift"
+include "../data/domain/filter.thrift"
 
 struct CreateEvaluationSetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
@@ -290,9 +291,10 @@ struct ListEvaluationSetItemsRequest {
     100: optional i32 page_number,
     101: optional i32 page_size,    // 分页大小 (0, 200]，默认为 20
     102: optional string page_token
-    103: optional list<common.OrderBy> order_bys,
+    103: optional list<common.OrderBy> order_bys, // 排列顺序，默认按照 updated_at 顺序排列，目前仅支持按照一个字段排序，该字段必须是 field key 或 item 元信息中的 created_at 或 updated_at
 
     200: optional list<i64> item_id_not_in (api.js_conv="true", go.tag='json:"item_id_not_in"')
+    201: optional filter.Filter filter // item 过滤条件
 
     255: optional base.Base Base
 }
@@ -302,6 +304,7 @@ struct ListEvaluationSetItemsResponse {
 
     100: optional i64 total (api.js_conv="true", go.tag='json:"total"'),
     101: optional string next_page_token
+    102: optional i64 filter_total (agw.js_conv = "str", go.tag='json:"filter_total"')
 
     255: base.BaseResp BaseResp
 }
