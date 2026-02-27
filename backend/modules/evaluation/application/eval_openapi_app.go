@@ -1689,7 +1689,7 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
 	}
 
-	submitReq := experiment_convertor.TemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
+	submitReq := experiment_convertor.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}

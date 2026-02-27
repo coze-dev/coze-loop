@@ -29,6 +29,7 @@ import (
 	domainEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domainExpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	domainEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 )
 
 // ---------- Request Converters ----------
@@ -1513,6 +1514,125 @@ func OpenAPIExptTemplateDO2DTOs(templates []*entity.ExptTemplate) []*openapiExpe
 		dtos = append(dtos, OpenAPIExptTemplateDO2DTO(t))
 	}
 	return dtos
+}
+
+// OpenAPITemplateToSubmitExperimentRequest 将实验模板转换为 SubmitExperimentRequest（用于 SubmitExptFromTemplateOApi）
+// 与 OpenAPIExptTemplateDO2DTO 逻辑一致：从 TemplateConf.EvaluatorConf 构建 runConf/scoreWeight/version 映射后填充
+func OpenAPITemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name string, workspaceID int64) *expt.SubmitExperimentRequest {
+	req := TemplateToSubmitExperimentRequest(template, name, workspaceID)
+	if req == nil {
+		return nil
+	}
+	// 从 TemplateConf 构建 runConf/scoreWeight/version 映射（与 BatchGet 一致）
+	runConfByVersionID, scoreWeightByVersionID, versionByVersionID := buildOpenAPITemplateConfMaps(template)
+
+	// 填充 EvaluatorIDVersionList
+	if items := req.GetEvaluatorIDVersionList(); len(items) > 0 {
+		for _, item := range items {
+			if item == nil || item.GetEvaluatorVersionID() <= 0 {
+				continue
+			}
+			verID := item.GetEvaluatorVersionID()
+			// version
+			if item.GetVersion() == "" && versionByVersionID != nil {
+				if v := versionByVersionID[verID]; v != "" {
+					item.SetVersion(gptr.Of(v))
+				}
+			}
+			// scoreWeight
+			if (!item.IsSetScoreWeight() || item.GetScoreWeight() <= 0) && scoreWeightByVersionID != nil {
+				if w := scoreWeightByVersionID[verID]; w > 0 {
+					item.SetScoreWeight(gptr.Of(w))
+				}
+			}
+			// RunConfig
+			if !item.IsSetRunConfig() && runConfByVersionID != nil {
+				if rc := runConfByVersionID[verID]; rc != nil {
+					item.SetRunConfig(entityRunConfToDomainEvaluator(rc))
+				}
+			}
+		}
+	}
+
+	// 填充 EvaluatorFieldMapping 中的 EvaluatorIDVersionItem
+	if fm := req.GetEvaluatorFieldMapping(); len(fm) > 0 {
+		for _, m := range fm {
+			if m == nil || m.GetEvaluatorVersionID() <= 0 {
+				continue
+			}
+			item := m.GetEvaluatorIDVersionItem()
+			if item == nil {
+				continue
+			}
+			verID := m.GetEvaluatorVersionID()
+			if item.GetVersion() == "" && versionByVersionID != nil {
+				if v := versionByVersionID[verID]; v != "" {
+					item.SetVersion(gptr.Of(v))
+				}
+			}
+			if (!item.IsSetScoreWeight() || item.GetScoreWeight() <= 0) && scoreWeightByVersionID != nil {
+				if w := scoreWeightByVersionID[verID]; w > 0 {
+					item.SetScoreWeight(gptr.Of(w))
+				}
+			}
+			if !item.IsSetRunConfig() && runConfByVersionID != nil {
+				if rc := runConfByVersionID[verID]; rc != nil {
+					item.SetRunConfig(entityRunConfToDomainEvaluator(rc))
+				}
+			}
+		}
+	}
+
+	return req
+}
+
+// buildOpenAPITemplateConfMaps 从 TemplateConf.EvaluatorConf 构建 runConf/scoreWeight/version 映射（与 OpenAPIExptTemplateDO2DTO 一致）
+func buildOpenAPITemplateConfMaps(template *entity.ExptTemplate) (
+	runConfByVersionID map[int64]*entity.EvaluatorRunConfig,
+	scoreWeightByVersionID map[int64]float64,
+	versionByVersionID map[int64]string,
+) {
+	if template == nil || template.TemplateConf == nil ||
+		template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+		return nil, nil, nil
+	}
+	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+		if ec == nil || ec.EvaluatorVersionID <= 0 {
+			continue
+		}
+		if ec.RunConf != nil {
+			if runConfByVersionID == nil {
+				runConfByVersionID = make(map[int64]*entity.EvaluatorRunConfig)
+			}
+			runConfByVersionID[ec.EvaluatorVersionID] = ec.RunConf
+		}
+		if ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+			if scoreWeightByVersionID == nil {
+				scoreWeightByVersionID = make(map[int64]float64)
+			}
+			scoreWeightByVersionID[ec.EvaluatorVersionID] = *ec.ScoreWeight
+		}
+		if ec.Version != "" {
+			if versionByVersionID == nil {
+				versionByVersionID = make(map[int64]string)
+			}
+			versionByVersionID[ec.EvaluatorVersionID] = ec.Version
+		}
+	}
+	return runConfByVersionID, scoreWeightByVersionID, versionByVersionID
+}
+
+// entityRunConfToDomainEvaluator 将 entity.EvaluatorRunConfig 转为 domainEvaluator.EvaluatorRunConfig
+func entityRunConfToDomainEvaluator(rc *entity.EvaluatorRunConfig) *domainEvaluator.EvaluatorRunConfig {
+	if rc == nil {
+		return nil
+	}
+	dto := domainEvaluator.NewEvaluatorRunConfig()
+	dto.Env = rc.Env
+	if rc.EvaluatorRuntimeParam != nil {
+		dto.EvaluatorRuntimeParam = &domainCommon.RuntimeParam{JSONValue: rc.EvaluatorRuntimeParam.JSONValue}
+	}
+	return dto
 }
 
 func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequest) (*entity.CreateExptTemplateParam, error) {
