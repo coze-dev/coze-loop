@@ -4066,17 +4066,21 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 			args: args{
 				ctx: session.WithCtxUser(context.Background(), &session.User{ID: testUserID}),
 				event: &entity.ExptScheduleEvent{
-					ExptID:      1,
-					ExptRunID:   2,
-					SpaceID:     3,
-					ExptRunMode: entity.EvaluationModeRetryItems,
-					Session:     &entity.Session{UserID: testUserID},
+					ExptID:             1,
+					ExptRunID:          2,
+					SpaceID:            3,
+					ExptRunMode:        entity.EvaluationModeRetryItems,
+					Session:            &entity.Session{UserID: testUserID},
+					ExecEvalSetItemIDs: []int64{1},
 				},
 				expt:       mockExpt,
 				toSubmit:   0,
 				incomplete: 0,
 			},
 			prepareMock: func(f *exptRetryItemsExecFields, args args) {
+				f.exptRunLogRepo.EXPECT().Get(gomock.Any(), args.event.ExptID, args.event.ExptRunID).Return(&entity.ExptRunLog{
+					ItemIds: []entity.ExptRunLogItems{{ItemIDs: []int64{1}}},
+				}, nil).Times(1)
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)

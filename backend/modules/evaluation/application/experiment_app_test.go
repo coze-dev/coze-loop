@@ -2468,11 +2468,12 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				ExptID:      gptr.Of(validExptID),
 			},
 			mockSetup: func() {
-				// 获取实验信息
+				itemRetryNum := 0
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
 					ID:        validExptID,
 					SpaceID:   validWorkspaceID,
 					CreatedBy: strconv.FormatInt(validUserID, 10),
+					EvalConf:  &entity.EvaluationConfiguration{ItemRetryNum: &itemRetryNum},
 				}, nil)
 
 				// 权限验证

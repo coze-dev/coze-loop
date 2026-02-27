@@ -247,6 +247,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 			spaceID: 789,
 			opts:    []entity.CompleteExptOptionFn{},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				runLog := &entity.ExptRunLog{
 					ID:        456,
 					ExptID:    123,
@@ -269,13 +274,18 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					Unlock(gomock.Any()).
+					UnlockForce(ctx, "expt_run_mutex_lock:123").
 					Return(true, nil)
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: false,
 		},
@@ -296,6 +306,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					Exist(ctx, "CompleteRun:test_cid").
 					Return(false, nil)
 
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				runLog := &entity.ExptRunLog{
 					ID:        456,
 					ExptID:    123,
@@ -314,13 +329,18 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					Unlock(gomock.Any()).
+					UnlockForce(ctx, "expt_run_mutex_lock:123").
 					Return(true, nil)
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 
 				mgr.idem.(*idemMocks.MockIdempotentService).
 					EXPECT().
@@ -356,6 +376,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 				entity.WithCompleteInterval(time.Millisecond * 100),
 			},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				runLog := &entity.ExptRunLog{
 					ID:        456,
 					ExptID:    123,
@@ -375,13 +400,18 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					Unlock(gomock.Any()).
+					UnlockForce(ctx, "expt_run_mutex_lock:123").
 					Return(true, nil)
 
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: false,
 		},
@@ -393,10 +423,20 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 			spaceID: 789,
 			opts:    []entity.CompleteExptOptionFn{},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Get(ctx, int64(123), int64(456)).
 					Return(nil, errors.New("run log not found"))
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -758,6 +798,8 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().
 					BackoffLockWithValue(ctx, gomock.Any(), "1002", 300*time.Second, time.Second).
 					Return(false, "1001", nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
 				existingLog := &entity.ExptRunLog{ID: 1001, ExptID: exptID, ExptRunID: 1001}
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Get(ctx, exptID, int64(1001)).
@@ -826,6 +868,8 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					EXPECT().
 					BackoffLockWithValue(ctx, gomock.Any(), "1005", 300*time.Second, time.Second).
 					Return(false, "1001", nil)
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Get(ctx, exptID, int64(1001)).
 					Return(nil, errors.New("get run log failed"))

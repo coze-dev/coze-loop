@@ -600,9 +600,13 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 		return nil
 	}
 
+	var itemRetryNum *int32
+	if template.TemplateConf != nil && gptr.Indirect(template.TemplateConf.ItemRetryNum) > 0 {
+		itemRetryNum = gptr.Of(int32(gptr.Indirect(template.TemplateConf.ItemRetryNum)))
+	}
 	fieldMapping := &domain_expt.ExptFieldMapping{
 		ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
-		ItemRetryNum:  gcond.If(gptr.Indirect(template.TemplateConf.ItemRetryNum) > 0, gptr.Of(int32(gptr.Indirect(template.TemplateConf.ItemRetryNum))), nil),
+		ItemRetryNum:  itemRetryNum,
 	}
 
 	if template.FieldMappingConfig.TargetFieldMapping != nil {
