@@ -58,7 +58,7 @@ func (e ExptAnnotateServiceImpl) CreateExptTurnResultTagRefs(ctx context.Context
 		return err
 	}
 
-	_, total, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+	_, total, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
 		SpaceID:         ref.SpaceID,
 		EvaluationSetID: expt.EvalSetID,
 		VersionID:       ptr.Of(expt.EvalSetVersionID),
