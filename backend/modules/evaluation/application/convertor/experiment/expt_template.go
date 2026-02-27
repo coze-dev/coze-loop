@@ -474,6 +474,20 @@ func buildTemplateTripleConfigDTO(template *entity.ExptTemplate) *domain_expt.Ex
 	}
 }
 
+// getScoreWeightFromTemplateConf 从 TemplateConf.EvaluatorConf 中根据 evaluator_version_id 获取权重
+func getScoreWeightFromTemplateConf(template *entity.ExptTemplate, evalVerID int64) float64 {
+	if template == nil || template.TemplateConf == nil ||
+		template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+		return 0
+	}
+	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+		if ec != nil && ec.EvaluatorVersionID == evalVerID && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+			return *ec.ScoreWeight
+		}
+	}
+	return 0
+}
+
 // 拆分子函数：根据模板信息构建 EvaluatorIDVersionItems DTO 列表
 func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluatorpkg.EvaluatorIDVersionItem {
 	evaluatorIDVersionItems := make([]*evaluatorpkg.EvaluatorIDVersionItem, 0)
@@ -513,8 +527,11 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 				item.Version = gptr.Of(entityItem.Version)
 			}
 			item.EvaluatorVersionID = gptr.Of(entityItem.EvaluatorVersionID)
+			// 权重：优先 entityItem，否则从 TemplateConf.EvaluatorConf 回填
 			if entityItem.ScoreWeight > 0 {
 				item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
+			} else if w := getScoreWeightFromTemplateConf(template, entityItem.EvaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
 			}
 			// 透传 RunConfig：根据 evaluator_version_id 在 TemplateConf 中查找
 			if rc := buildRunConfigDTO(entityItem.EvaluatorVersionID); rc != nil {
@@ -526,12 +543,12 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 	}
 
 	if len(template.Evaluators) > 0 {
-		appendEvaluatorIDVersionItemsFromEvaluators(template, &evaluatorIDVersionItems)
+		appendEvaluatorIDVersionItemsFromEvaluators(template, &evaluatorIDVersionItems, buildRunConfigDTO)
 		return evaluatorIDVersionItems
 	}
 
 	if len(template.EvaluatorVersionRef) > 0 {
-		appendEvaluatorIDVersionItemsFromVersionRef(template, &evaluatorIDVersionItems)
+		appendEvaluatorIDVersionItemsFromVersionRef(template, &evaluatorIDVersionItems, buildRunConfigDTO)
 	}
 
 	return evaluatorIDVersionItems
@@ -541,6 +558,7 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 func appendEvaluatorIDVersionItemsFromEvaluators(
 	template *entity.ExptTemplate,
 	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
+	buildRunConfigDTO func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig,
 ) {
 	for _, evaluator := range template.Evaluators {
 		if evaluator == nil {
@@ -557,12 +575,24 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 		item.Version = gptr.Of(version)
 		item.EvaluatorVersionID = gptr.Of(evaluatorVersionID)
 
+		// 权重：优先 TripleConfig.EvaluatorIDVersionItems，否则从 TemplateConf 回填
 		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
 				if entityItem != nil && entityItem.EvaluatorVersionID == evaluatorVersionID && entityItem.ScoreWeight > 0 {
 					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
 					break
 				}
+			}
+		}
+		if item.ScoreWeight == nil {
+			if w := getScoreWeightFromTemplateConf(template, evaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
+			}
+		}
+		// RunConfig：从 TemplateConf.EvaluatorConf 透传
+		if buildRunConfigDTO != nil {
+			if rc := buildRunConfigDTO(evaluatorVersionID); rc != nil {
+				item.RunConfig = rc
 			}
 		}
 		*dst = append(*dst, item)
@@ -573,6 +603,7 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 func appendEvaluatorIDVersionItemsFromVersionRef(
 	template *entity.ExptTemplate,
 	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
+	buildRunConfigDTO func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig,
 ) {
 	for _, ref := range template.EvaluatorVersionRef {
 		if ref.EvaluatorID <= 0 || ref.EvaluatorVersionID <= 0 {
@@ -582,12 +613,24 @@ func appendEvaluatorIDVersionItemsFromVersionRef(
 		item.EvaluatorID = gptr.Of(ref.EvaluatorID)
 		item.EvaluatorVersionID = gptr.Of(ref.EvaluatorVersionID)
 
+		// 权重：优先 TripleConfig.EvaluatorIDVersionItems，否则从 TemplateConf 回填
 		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
 				if entityItem != nil && entityItem.EvaluatorVersionID == ref.EvaluatorVersionID && entityItem.ScoreWeight > 0 {
 					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
 					break
 				}
+			}
+		}
+		if item.ScoreWeight == nil {
+			if w := getScoreWeightFromTemplateConf(template, ref.EvaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
+			}
+		}
+		// RunConfig：从 TemplateConf.EvaluatorConf 透传
+		if buildRunConfigDTO != nil {
+			if rc := buildRunConfigDTO(ref.EvaluatorVersionID); rc != nil {
+				item.RunConfig = rc
 			}
 		}
 		*dst = append(*dst, item)
