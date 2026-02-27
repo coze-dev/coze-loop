@@ -234,8 +234,10 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
+	replyChan := make(chan *entity.Reply, 1)
 	goroutine.GoSafe(ctx, func() {
 		var executeErr error
+		var localReply *entity.Reply
 		defer func() {
 			e := recover()
 			if e != nil {
@@ -247,13 +249,15 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 				errChan <- executeErr
 			}
 			close(errChan)
+			replyChan <- localReply
+			close(replyChan)
 		}()
 		defer func() {
 			// 写入调试记录
 			logErr := p.saveDebugLog(context.WithoutCancel(ctx), saveDebugLogParam{
 				prompt:          prompt,
 				startTime:       startTime,
-				result:          aggregatedReply,
+				result:          localReply,
 				err:             executeErr,
 				singleStepDebug: req.GetSingleStepDebug(),
 			})
@@ -269,7 +273,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if executeErr != nil {
 			return
 		}
-		aggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
+		localReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
 				Prompt:        prompt,
 				Messages:      messages,
@@ -333,6 +337,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 				logs.CtxError(ctx, "debug streaming failed, err=%v", err)
 			}
 		}
+		aggregatedReply = <-replyChan
 		return aggregatedReply, err
 	}
 }
