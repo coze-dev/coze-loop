@@ -2597,6 +2597,70 @@ func TestExptMangerImpl_checkTargetConnector_WithRuntimeParam(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "TargetType为0时从Target回填并校验runtime_param",
+			expt: &entity.Experiment{
+				ID:              1,
+				TargetVersionID: 1,
+				TargetType:      0, // 未设置，需从 Target 回填
+				Target: &entity.EvalTarget{
+					EvalTargetType: 0,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+						OutputSchema:   []*entity.ArgsSchema{{Key: gptr.Of("output_field")}},
+					},
+				},
+				EvalSet: &entity.EvaluationSet{
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						EvaluationSetSchema: &entity.EvaluationSetSchema{
+							FieldSchemas: []*entity.FieldSchema{{Name: "input_field"}},
+						},
+					},
+				},
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						TargetConf: &entity.TargetConf{
+							TargetVersionID: 1,
+							IngressConf: &entity.TargetIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{{FromField: "input_field"}},
+								},
+								CustomConf: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{
+										{
+											FieldName: consts.FieldAdapterBuiltinFieldNameRuntimeParam,
+											Value:     `{"model_config":{"model_id":"fallback_model"}}`,
+										},
+									},
+								},
+							},
+						},
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{
+									EvaluatorVersionID: 1,
+									IngressConf: &entity.EvaluatorIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FromField: "input_field"}},
+										},
+										TargetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{{FromField: "output_field"}},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			setup: func() {
+				mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+					EXPECT().
+					ValidateRuntimeParam(ctx, entity.EvalTargetTypeLoopPrompt, `{"model_config":{"model_id":"fallback_model"}}`).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
 			name: "invalid_runtime_param_format_error",
 			expt: &entity.Experiment{
 				ID:              1,
