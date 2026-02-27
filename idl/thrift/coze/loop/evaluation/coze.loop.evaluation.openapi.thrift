@@ -346,7 +346,7 @@ struct SubmitExperimentOApiRequest {
     20: optional i32 item_concur_num (api.body = 'item_concur_num')
     22: optional common.RuntimeParam target_runtime_param (api.body = 'target_runtime_param')
 
-    45: optional i32 item_retry_num (api.boy = 'item_retry_num')
+    45: optional i32 item_retry_num (api.body = 'item_retry_num')
 
     255: optional base.Base Base
 }
