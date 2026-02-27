@@ -192,6 +192,26 @@ func (mr *MockIExptItemResultDAOMockRecorder) ListItemResultsByExptID(ctx, exptI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemResultsByExptID", reflect.TypeOf((*MockIExptItemResultDAO)(nil).ListItemResultsByExptID), ctx, exptID, spaceID, page, desc)
 }
 
+// MGetItemResults mocks base method.
+func (m *MockIExptItemResultDAO) MGetItemResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, itemIDs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MGetItemResults", varargs...)
+	ret0, _ := ret[0].([]*model.ExptItemResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetItemResults indicates an expected call of MGetItemResults.
+func (mr *MockIExptItemResultDAOMockRecorder) MGetItemResults(ctx, spaceID, exptID, itemIDs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, itemIDs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemResults", reflect.TypeOf((*MockIExptItemResultDAO)(nil).MGetItemResults), varargs...)
+}
+
 // MGetItemRunLog mocks base method.
 func (m *MockIExptItemResultDAO) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, error) {
 	m.ctrl.T.Helper()
@@ -210,6 +230,26 @@ func (mr *MockIExptItemResultDAOMockRecorder) MGetItemRunLog(ctx, exptID, exptRu
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{ctx, exptID, exptRunID, itemIDs, spaceID}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemRunLog", reflect.TypeOf((*MockIExptItemResultDAO)(nil).MGetItemRunLog), varargs...)
+}
+
+// MGetItemTurnResults mocks base method.
+func (m *MockIExptItemResultDAO) MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, itemIDs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "MGetItemTurnResults", varargs...)
+	ret0, _ := ret[0].([]*model.ExptTurnResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetItemTurnResults indicates an expected call of MGetItemTurnResults.
+func (mr *MockIExptItemResultDAOMockRecorder) MGetItemTurnResults(ctx, spaceID, exptID, itemIDs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, itemIDs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemTurnResults", reflect.TypeOf((*MockIExptItemResultDAO)(nil).MGetItemTurnResults), varargs...)
 }
 
 // SaveItemResults mocks base method.

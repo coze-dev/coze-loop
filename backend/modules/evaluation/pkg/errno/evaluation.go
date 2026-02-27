@@ -124,6 +124,14 @@ const (
 	duplicateCalcExptAggrResultErrorMessage           = "aggregated result calculation is already in progress"
 	duplicateCalcExptAggrResultErrorNoAffectStability = true
 
+	EvalItemAlreadyRetryingCode              = 601204015 // item already has been retrying
+	evalItemAlreadyRetryingMessage           = "item already has been retrying"
+	evalItemAlreadyRetryingNoAffectStability = true
+
+	ExperimentIsCompletingCode              = 601204016 // experiment is completing, please try later
+	experimentIsCompletingMessage           = "experiment is completing, please try later"
+	experimentIsCompletingNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -535,6 +543,18 @@ func init() {
 		DuplicateCalcExptAggrResultErrorCode,
 		duplicateCalcExptAggrResultErrorMessage,
 		code.WithAffectStability(!duplicateCalcExptAggrResultErrorNoAffectStability),
+	)
+
+	code.Register(
+		EvalItemAlreadyRetryingCode,
+		evalItemAlreadyRetryingMessage,
+		code.WithAffectStability(!evalItemAlreadyRetryingNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentIsCompletingCode,
+		experimentIsCompletingMessage,
+		code.WithAffectStability(!experimentIsCompletingNoAffectStability),
 	)
 
 	code.Register(

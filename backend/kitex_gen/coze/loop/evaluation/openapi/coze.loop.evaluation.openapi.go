@@ -14824,6 +14824,7 @@ type SubmitExperimentOApiRequest struct {
 	// 运行信息
 	ItemConcurNum      *int32               `thrift:"item_concur_num,20,optional" frugal:"20,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	ItemRetryNum       *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 	Base               *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -14954,6 +14955,18 @@ func (p *SubmitExperimentOApiRequest) GetTargetRuntimeParam() (v *common.Runtime
 	return p.TargetRuntimeParam
 }
 
+var SubmitExperimentOApiRequest_ItemRetryNum_DEFAULT int32
+
+func (p *SubmitExperimentOApiRequest) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return SubmitExperimentOApiRequest_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
+
 var SubmitExperimentOApiRequest_Base_DEFAULT *base.Base
 
 func (p *SubmitExperimentOApiRequest) GetBase() (v *base.Base) {
@@ -14995,6 +15008,9 @@ func (p *SubmitExperimentOApiRequest) SetItemConcurNum(val *int32) {
 func (p *SubmitExperimentOApiRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
 	p.TargetRuntimeParam = val
 }
+func (p *SubmitExperimentOApiRequest) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 func (p *SubmitExperimentOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -15010,6 +15026,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	8:   "evaluator_field_mapping",
 	20:  "item_concur_num",
 	22:  "target_runtime_param",
+	45:  "item_retry_num",
 	255: "Base",
 }
 
@@ -15051,6 +15068,10 @@ func (p *SubmitExperimentOApiRequest) IsSetItemConcurNum() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetTargetRuntimeParam() bool {
 	return p.TargetRuntimeParam != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetBase() bool {
@@ -15150,6 +15171,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 22:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 45:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField45(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15314,6 +15343,17 @@ func (p *SubmitExperimentOApiRequest) ReadField22(iprot thrift.TProtocol) error 
 	p.TargetRuntimeParam = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField45(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -15367,6 +15407,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField45(oprot); err != nil {
+			fieldId = 45
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -15587,6 +15631,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField45(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 45); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -15648,6 +15710,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field22DeepEqual(ano.TargetRuntimeParam) {
+		return false
+	}
+	if !p.Field45DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -15754,6 +15819,18 @@ func (p *SubmitExperimentOApiRequest) Field20DeepEqual(src *int32) bool {
 func (p *SubmitExperimentOApiRequest) Field22DeepEqual(src *common.RuntimeParam) bool {
 
 	if !p.TargetRuntimeParam.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field45DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true

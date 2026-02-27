@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -313,6 +314,10 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 
 func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 	return fmt.Sprintf("expt_run_mutex_lock:%d", exptID)
+}
+
+func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
+	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
 }
 
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {

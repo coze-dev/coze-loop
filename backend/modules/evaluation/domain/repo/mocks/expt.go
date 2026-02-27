@@ -457,6 +457,21 @@ func (mr *MockIExptItemResultRepoMockRecorder) ListItemResultsByExptID(ctx, expt
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListItemResultsByExptID", reflect.TypeOf((*MockIExptItemResultRepo)(nil).ListItemResultsByExptID), ctx, exptID, spaceID, page, desc)
 }
 
+// MGetItemResults mocks base method.
+func (m *MockIExptItemResultRepo) MGetItemResults(ctx context.Context, exptID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MGetItemResults", ctx, exptID, itemIDs, spaceID)
+	ret0, _ := ret[0].([]*entity.ExptItemResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetItemResults indicates an expected call of MGetItemResults.
+func (mr *MockIExptItemResultRepoMockRecorder) MGetItemResults(ctx, exptID, itemIDs, spaceID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemResults", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MGetItemResults), ctx, exptID, itemIDs, spaceID)
+}
+
 // MGetItemRunLog mocks base method.
 func (m *MockIExptItemResultRepo) MGetItemRunLog(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptItemResultRunLog, error) {
 	m.ctrl.T.Helper()
@@ -470,6 +485,21 @@ func (m *MockIExptItemResultRepo) MGetItemRunLog(ctx context.Context, exptID, ex
 func (mr *MockIExptItemResultRepoMockRecorder) MGetItemRunLog(ctx, exptID, exptRunID, itemIDs, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemRunLog", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MGetItemRunLog), ctx, exptID, exptRunID, itemIDs, spaceID)
+}
+
+// MGetItemTurnResults mocks base method.
+func (m *MockIExptItemResultRepo) MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MGetItemTurnResults", ctx, spaceID, exptID, itemIDs)
+	ret0, _ := ret[0].([]*entity.ExptTurnResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MGetItemTurnResults indicates an expected call of MGetItemTurnResults.
+func (mr *MockIExptItemResultRepoMockRecorder) MGetItemTurnResults(ctx, spaceID, exptID, itemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetItemTurnResults", reflect.TypeOf((*MockIExptItemResultRepo)(nil).MGetItemTurnResults), ctx, spaceID, exptID, itemIDs)
 }
 
 // SaveItemResults mocks base method.

@@ -188,6 +188,20 @@ func (mr *MockExptResultServiceMockRecorder) ManualUpsertExptTurnResultFilter(ct
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManualUpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).ManualUpsertExptTurnResultFilter), ctx, spaceID, exptID, itemIDs)
 }
 
+// RecalculateWeightedScore mocks base method.
+func (m *MockExptResultService) RecalculateWeightedScore(ctx context.Context, spaceID, exptID, itemID, turnID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecalculateWeightedScore", ctx, spaceID, exptID, itemID, turnID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecalculateWeightedScore indicates an expected call of RecalculateWeightedScore.
+func (mr *MockExptResultServiceMockRecorder) RecalculateWeightedScore(ctx, spaceID, exptID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecalculateWeightedScore", reflect.TypeOf((*MockExptResultService)(nil).RecalculateWeightedScore), ctx, spaceID, exptID, itemID, turnID)
+}
+
 // RecordItemRunLogs mocks base method.
 func (m *MockExptResultService) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	m.ctrl.T.Helper()
@@ -215,20 +229,6 @@ func (m *MockExptResultService) UpsertExptTurnResultFilter(ctx context.Context, 
 func (mr *MockExptResultServiceMockRecorder) UpsertExptTurnResultFilter(ctx, spaceID, exptID, itemID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertExptTurnResultFilter", reflect.TypeOf((*MockExptResultService)(nil).UpsertExptTurnResultFilter), ctx, spaceID, exptID, itemID)
-}
-
-// RecalculateWeightedScore mocks base method.
-func (m *MockExptResultService) RecalculateWeightedScore(ctx context.Context, spaceID, exptID, itemID, turnID int64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecalculateWeightedScore", ctx, spaceID, exptID, itemID, turnID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RecalculateWeightedScore indicates an expected call of RecalculateWeightedScore.
-func (mr *MockExptResultServiceMockRecorder) RecalculateWeightedScore(ctx, spaceID, exptID, itemID, turnID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecalculateWeightedScore", reflect.TypeOf((*MockExptResultService)(nil).RecalculateWeightedScore), ctx, spaceID, exptID, itemID, turnID)
 }
 
 // MockExptAggrResultService is a mock of ExptAggrResultService interface.
