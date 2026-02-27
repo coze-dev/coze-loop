@@ -47,7 +47,7 @@ struct Task {
     9: optional RunDetail task_detail                                                       // 任务状态详情
     10: optional RunDetail backfill_task_detail                                             // 任务历史数据执行详情
     11: optional TaskSource task_source                                                     // 创建来源
-
+    12: optional i64 workflow_id (api.js_conv="true", go.tag='json:"worflow_id"')           // 对应工作流 ID
     100: optional common.BaseInfo base_info                                                 // 基础信息
 }
 
