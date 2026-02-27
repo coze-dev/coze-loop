@@ -364,9 +364,15 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EndAt != nil {
 		res.EndTime = gptr.Of(experiment.EndAt.Unix())
 	}
-	if experiment.EvalConf != nil && experiment.EvalConf.ItemConcurNum != nil {
-		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
-		res.ItemRetryNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemRetryNum)))
+	if experiment.EvalConf != nil {
+		if experiment.EvalConf.ItemConcurNum != nil {
+			res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
+		}
+		if experiment.EvalConf.ItemRetryNum != nil {
+			res.ItemRetryNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemRetryNum)))
+		} else {
+			res.ItemRetryNum = gptr.Of(int32(0))
+		}
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）
