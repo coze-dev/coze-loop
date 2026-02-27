@@ -739,9 +739,9 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		return nil
 	}
 	req := &expt.SubmitExperimentRequest{
-		WorkspaceID:     workspaceID,
-		Name:            gptr.Of(name),
-		ExptTemplateID:  gptr.Of(template.Meta.ID),
+		WorkspaceID:    workspaceID,
+		Name:           gptr.Of(name),
+		ExptTemplateID: gptr.Of(template.Meta.ID),
 	}
 
 	if template.TripleConfig == nil {

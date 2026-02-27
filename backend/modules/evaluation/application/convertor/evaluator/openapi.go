@@ -189,13 +189,13 @@ func openapiAccessProtocolFromEntity(protocol entity.EvaluatorAccessProtocol) *o
 	case entity.EvaluatorAccessProtocolFaasHTTPOld:
 		return gptr.Of(openapiEvaluator.EvaluatorAccessProtocolFaasHTTP)
 	case entity.EvaluatorAccessProtocolRPC, entity.EvaluatorAccessProtocolFaasHTTP:
-		var t openapiEvaluator.EvaluatorAccessProtocol = protocol
+		t := openapiEvaluator.EvaluatorAccessProtocol(protocol)
 		return &t
 	default:
 		if protocol == "" {
 			return nil
 		}
-		var t openapiEvaluator.EvaluatorAccessProtocol = protocol
+		t := openapiEvaluator.EvaluatorAccessProtocol(protocol)
 		return &t
 	}
 }
@@ -206,7 +206,7 @@ func OpenAPIEvaluatorHTTPInfoDO2DTO(do *entity.EvaluatorHTTPInfo) *openapiEvalua
 	}
 	var method *openapiEvaluator.EvaluatorHTTPMethod
 	if do.Method != nil {
-		var m openapiEvaluator.EvaluatorHTTPMethod = *do.Method
+		m := openapiEvaluator.EvaluatorHTTPMethod(*do.Method)
 		method = &m
 	}
 	return &openapiEvaluator.EvaluatorHTTPInfo{
@@ -221,8 +221,7 @@ func OpenAPIEvaluatorHTTPInfoDTO2DO(dto *openapiEvaluator.EvaluatorHTTPInfo) *en
 	}
 	var method *entity.EvaluatorHTTPMethod
 	if dto.Method != nil {
-		m := entity.EvaluatorHTTPMethod(*dto.Method)
-		method = &m
+		method = (*entity.EvaluatorHTTPMethod)(dto.Method)
 	}
 	return &entity.EvaluatorHTTPInfo{
 		Method: method,
@@ -489,7 +488,7 @@ func OpenAPIEvaluatorContentDTO2DO(dto *openapiEvaluator.EvaluatorContent, evalT
 				res.CustomRPCEvaluatorVersion.ProviderEvaluatorCode = gptr.Of(c.GetProviderEvaluatorCode())
 			}
 			if c.IsSetAccessProtocol() {
-				res.CustomRPCEvaluatorVersion.AccessProtocol = entity.EvaluatorAccessProtocol(c.GetAccessProtocol())
+				res.CustomRPCEvaluatorVersion.AccessProtocol = c.GetAccessProtocol()
 			}
 			res.CustomRPCEvaluatorVersion.ServiceName = gptr.Of(c.GetServiceName())
 			res.CustomRPCEvaluatorVersion.Cluster = gptr.Of(c.GetCluster())
