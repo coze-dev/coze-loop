@@ -189,13 +189,13 @@ func openapiAccessProtocolFromEntity(protocol entity.EvaluatorAccessProtocol) *o
 	case entity.EvaluatorAccessProtocolFaasHTTPOld:
 		return gptr.Of(openapiEvaluator.EvaluatorAccessProtocolFaasHTTP)
 	case entity.EvaluatorAccessProtocolRPC, entity.EvaluatorAccessProtocolFaasHTTP:
-		t := openapiEvaluator.EvaluatorAccessProtocol(protocol)
+		t := protocol
 		return &t
 	default:
 		if protocol == "" {
 			return nil
 		}
-		t := openapiEvaluator.EvaluatorAccessProtocol(protocol)
+		t := protocol
 		return &t
 	}
 }
@@ -206,7 +206,7 @@ func OpenAPIEvaluatorHTTPInfoDO2DTO(do *entity.EvaluatorHTTPInfo) *openapiEvalua
 	}
 	var method *openapiEvaluator.EvaluatorHTTPMethod
 	if do.Method != nil {
-		m := openapiEvaluator.EvaluatorHTTPMethod(*do.Method)
+		m := *do.Method
 		method = &m
 	}
 	return &openapiEvaluator.EvaluatorHTTPInfo{
@@ -221,7 +221,7 @@ func OpenAPIEvaluatorHTTPInfoDTO2DO(dto *openapiEvaluator.EvaluatorHTTPInfo) *en
 	}
 	var method *entity.EvaluatorHTTPMethod
 	if dto.Method != nil {
-		method = (*entity.EvaluatorHTTPMethod)(dto.Method)
+		method = dto.Method
 	}
 	return &entity.EvaluatorHTTPInfo{
 		Method: method,

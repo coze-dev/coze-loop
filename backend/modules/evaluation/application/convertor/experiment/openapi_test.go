@@ -1964,7 +1964,7 @@ func TestOpenAPIAggregateDataDO2DTO(t *testing.T) {
 	}
 
 	distData := &entity.AggregateData{
-		DataType:         entity.ScoreDistribution,
+		DataType: entity.ScoreDistribution,
 		ScoreDistribution: &entity.ScoreDistributionData{
 			ScoreDistributionItems: []*entity.ScoreDistributionItem{
 				{Score: "0.8", Count: 10, Percentage: 0.5},

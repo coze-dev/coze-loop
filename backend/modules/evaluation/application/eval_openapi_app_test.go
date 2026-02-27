@@ -3851,8 +3851,8 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				WorkspaceID: workspaceID,
 			},
 			TripleConfig: &entity.ExptTemplateTuple{
-				EvalSetID:         100,
-				EvalSetVersionID:  200,
+				EvalSetID:        100,
+				EvalSetVersionID: 200,
 			},
 		}
 	}
@@ -3865,9 +3865,10 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 		wantID  int64
 	}{
 		{
-			name:    "nil request",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {},
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -3877,7 +3878,8 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				TemplateID:  gptr.Of(templateID),
 				Name:        gptr.Of("exp"),
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -3887,7 +3889,8 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				TemplateID:  gptr.Of(int64(0)),
 				Name:        gptr.Of("exp"),
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager, _ *fakeExperimentApp) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
