@@ -197,6 +197,8 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
 	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	// todo fby test
+	logs.CtxInfo(ctx, "Span input after CK: %v", spans[0].Input)
 	if err != nil {
 		return resp, err
 	}
@@ -500,6 +502,8 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 			}
 		} else {
 			value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+			// todo fby test
+			logs.CtxInfo(ctx, "Input extract from span %v", value)
 			if err != nil {
 				// 非json但使用了jsonpath，也不报错，置空
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
