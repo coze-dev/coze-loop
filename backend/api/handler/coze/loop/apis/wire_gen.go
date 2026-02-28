@@ -44,6 +44,7 @@ import (
 	application3 "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -175,7 +176,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable)
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, taskhook.NewNoopTaskHookProvider())
 	if err != nil {
 		return nil, err
 	}

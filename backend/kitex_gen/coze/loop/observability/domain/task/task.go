@@ -5,6 +5,7 @@ package task
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -2571,6 +2572,8 @@ type DataReflowConfig struct {
 	// 数据集列数据schema
 	DatasetSchema *dataset.DatasetSchema  `thrift:"dataset_schema,3,optional" frugal:"3,optional,dataset.DatasetSchema" form:"dataset_schema" json:"dataset_schema,omitempty" query:"dataset_schema"`
 	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
+	// 数据集类型
+	DatasetCategory *dataset0.DatasetCategory `thrift:"dataset_category,5,optional" frugal:"5,optional,DatasetCategory" form:"dataset_category" json:"dataset_category,omitempty" query:"dataset_category"`
 }
 
 func NewDataReflowConfig() *DataReflowConfig {
@@ -2627,6 +2630,18 @@ func (p *DataReflowConfig) GetFieldMappings() (v []*dataset.FieldMapping) {
 	}
 	return p.FieldMappings
 }
+
+var DataReflowConfig_DatasetCategory_DEFAULT dataset0.DatasetCategory
+
+func (p *DataReflowConfig) GetDatasetCategory() (v dataset0.DatasetCategory) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetCategory() {
+		return DataReflowConfig_DatasetCategory_DEFAULT
+	}
+	return *p.DatasetCategory
+}
 func (p *DataReflowConfig) SetDatasetID(val *int64) {
 	p.DatasetID = val
 }
@@ -2639,12 +2654,16 @@ func (p *DataReflowConfig) SetDatasetSchema(val *dataset.DatasetSchema) {
 func (p *DataReflowConfig) SetFieldMappings(val []*dataset.FieldMapping) {
 	p.FieldMappings = val
 }
+func (p *DataReflowConfig) SetDatasetCategory(val *dataset0.DatasetCategory) {
+	p.DatasetCategory = val
+}
 
 var fieldIDToName_DataReflowConfig = map[int16]string{
 	1: "dataset_id",
 	2: "dataset_name",
 	3: "dataset_schema",
 	4: "field_mappings",
+	5: "dataset_category",
 }
 
 func (p *DataReflowConfig) IsSetDatasetID() bool {
@@ -2661,6 +2680,10 @@ func (p *DataReflowConfig) IsSetDatasetSchema() bool {
 
 func (p *DataReflowConfig) IsSetFieldMappings() bool {
 	return p.FieldMappings != nil
+}
+
+func (p *DataReflowConfig) IsSetDatasetCategory() bool {
+	return p.DatasetCategory != nil
 }
 
 func (p *DataReflowConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2708,6 +2731,14 @@ func (p *DataReflowConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2795,6 +2826,18 @@ func (p *DataReflowConfig) ReadField4(iprot thrift.TProtocol) error {
 	p.FieldMappings = _field
 	return nil
 }
+func (p *DataReflowConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *dataset0.DatasetCategory
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset0.DatasetCategory(v)
+		_field = &tmp
+	}
+	p.DatasetCategory = _field
+	return nil
+}
 
 func (p *DataReflowConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2816,6 +2859,10 @@ func (p *DataReflowConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2916,6 +2963,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *DataReflowConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetCategory() {
+		if err = oprot.WriteFieldBegin("dataset_category", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.DatasetCategory)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *DataReflowConfig) String() string {
 	if p == nil {
@@ -2941,6 +3006,9 @@ func (p *DataReflowConfig) DeepEqual(ano *DataReflowConfig) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.FieldMappings) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.DatasetCategory) {
 		return false
 	}
 	return true
@@ -2987,6 +3055,18 @@ func (p *DataReflowConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *DataReflowConfig) Field5DeepEqual(src *dataset0.DatasetCategory) bool {
+
+	if p.DatasetCategory == src {
+		return true
+	} else if p.DatasetCategory == nil || src == nil {
+		return false
+	}
+	if *p.DatasetCategory != *src {
+		return false
 	}
 	return true
 }

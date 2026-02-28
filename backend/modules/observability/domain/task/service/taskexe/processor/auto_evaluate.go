@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -43,6 +44,7 @@ type AutoEvaluateProcessor struct {
 	taskRepo              repo.ITaskRepo
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
+	taskHookProvider      taskhook.ITaskHookProvider
 }
 
 func NewAutoEvaluateProcessor(
@@ -52,7 +54,11 @@ func NewAutoEvaluateProcessor(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
+	taskHookProvider taskhook.ITaskHookProvider,
 ) *AutoEvaluateProcessor {
+	if taskHookProvider == nil {
+		taskHookProvider = taskhook.NewNoopTaskHookProvider()
+	}
 	return &AutoEvaluateProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
@@ -60,6 +66,7 @@ func NewAutoEvaluateProcessor(
 		taskRepo:              taskRepo,
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
+		taskHookProvider:      taskHookProvider,
 	}
 }
 
@@ -266,6 +273,13 @@ func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskex
 		logs.CtxWarn(ctx, "OnTaskFinished, taskID:%d, taskRun:%+v, isFinish:%v", param.Task.ID, param.TaskRun, param.IsFinish)
 		if err := p.OnTaskUpdated(ctx, param.Task, task.TaskStatusSuccess); err != nil {
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
+			return err
+		}
+		if err := p.taskHookProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+			Task:    param.Task,
+			TaskRun: param.TaskRun,
+		}); err != nil {
+			logs.CtxError(ctx, "taskHookProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
 		if err := p.taskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(param.Task.WorkspaceID, 10), param.Task.ID); err != nil {

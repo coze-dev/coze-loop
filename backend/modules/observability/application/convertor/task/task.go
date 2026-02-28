@@ -156,10 +156,11 @@ func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 		}
 	}
 	return &task.DataReflowConfig{
-		DatasetID:     v.DatasetID,
-		DatasetName:   v.DatasetName,
-		DatasetSchema: ptr.Of(v.DatasetSchema),
-		FieldMappings: fieldMappings,
+		DatasetID:       v.DatasetID,
+		DatasetName:     v.DatasetName,
+		DatasetSchema:   ptr.Of(v.DatasetSchema),
+		FieldMappings:   fieldMappings,
+		DatasetCategory: v.DatasetCategory,
 	}
 }
 
@@ -448,10 +449,11 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 			}
 		}
 		dataReflowConfigs = append(dataReflowConfigs, &entity.DataReflowConfig{
-			DatasetID:     dataReflowConfig.DatasetID,
-			DatasetName:   dataReflowConfig.DatasetName,
-			DatasetSchema: *dataReflowConfig.DatasetSchema,
-			FieldMappings: fieldMappings,
+			DatasetID:       dataReflowConfig.DatasetID,
+			DatasetName:     dataReflowConfig.DatasetName,
+			DatasetSchema:   *dataReflowConfig.DatasetSchema,
+			FieldMappings:   fieldMappings,
+			DatasetCategory: dataReflowConfig.DatasetCategory,
 		})
 	}
 	return &entity.TaskConfig{
