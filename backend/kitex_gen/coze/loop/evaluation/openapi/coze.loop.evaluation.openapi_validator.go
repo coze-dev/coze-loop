@@ -580,6 +580,608 @@ func (p *GetExperimentAggrResultOpenAPIData) IsValid() error {
 	}
 	return nil
 }
+func (p *ListEvaluatorsOApiRequest) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+		if *p.PageSize > int32(200) {
+			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.PageNumber != nil {
+		if *p.PageNumber <= int32(0) {
+			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *BatchGetEvaluatorsOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *CreateEvaluatorOApiRequest) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateEvaluatorOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *UpdateEvaluatorOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *UpdateEvaluatorDraftOApiRequest) IsValid() error {
+	if p.EvaluatorContent != nil {
+		if err := p.EvaluatorContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorDraftOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateEvaluatorDraftOpenAPIData) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteEvaluatorOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteEvaluatorOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *ListEvaluatorVersionsOApiRequest) IsValid() error {
+	if p.PageSize != nil {
+		if *p.PageSize <= int32(0) {
+			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorVersionsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListEvaluatorVersionsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *BatchGetEvaluatorVersionsOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorVersionsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorVersionsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *SubmitEvaluatorVersionOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitEvaluatorVersionOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitEvaluatorVersionOpenAPIData) IsValid() error {
+	if p.Evaluator != nil {
+		if err := p.Evaluator.IsValid(); err != nil {
+			return fmt.Errorf("field Evaluator not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunEvaluatorOApiRequest) IsValid() error {
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunEvaluatorOpenAPIData) IsValid() error {
+	if p.Record != nil {
+		if err := p.Record.IsValid(); err != nil {
+			return fmt.Errorf("field Record not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CorrectEvaluatorRecordOApiRequest) IsValid() error {
+	if p.Correction != nil {
+		if err := p.Correction.IsValid(); err != nil {
+			return fmt.Errorf("field Correction not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CorrectEvaluatorRecordOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CorrectEvaluatorRecordOpenAPIData) IsValid() error {
+	if p.Record != nil {
+		if err := p.Record.IsValid(); err != nil {
+			return fmt.Errorf("field Record not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorRecordsOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorRecordsOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetEvaluatorRecordsOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *ValidateEvaluatorOpenAPIData) IsValid() error {
+	if p.EvaluatorOutputData != nil {
+		if err := p.EvaluatorOutputData.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateExptTemplateOApiRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.TripleConfig != nil {
+		if err := p.TripleConfig.IsValid(); err != nil {
+			return fmt.Errorf("field TripleConfig not valid, %w", err)
+		}
+	}
+	if p.FieldMappingConfig != nil {
+		if err := p.FieldMappingConfig.IsValid(); err != nil {
+			return fmt.Errorf("field FieldMappingConfig not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateExptTemplateOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateExptTemplateOpenAPIData) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetExptTemplatesOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetExptTemplatesOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetExptTemplatesOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *UpdateExptTemplateMetaOApiRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExptTemplateMetaOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExptTemplateMetaOpenAPIData) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExptTemplateOApiRequest) IsValid() error {
+	if p.Meta != nil {
+		if err := p.Meta.IsValid(); err != nil {
+			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.TripleConfig != nil {
+		if err := p.TripleConfig.IsValid(); err != nil {
+			return fmt.Errorf("field TripleConfig not valid, %w", err)
+		}
+	}
+	if p.FieldMappingConfig != nil {
+		if err := p.FieldMappingConfig.IsValid(); err != nil {
+			return fmt.Errorf("field FieldMappingConfig not valid, %w", err)
+		}
+	}
+	if p.CreateEvalTargetParam != nil {
+		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
+			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExptTemplateOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpdateExptTemplateOpenAPIData) IsValid() error {
+	if p.ExperimentTemplate != nil {
+		if err := p.ExperimentTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field ExperimentTemplate not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExptTemplateOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExptTemplateOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeleteExptTemplateOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *ListExptTemplatesOApiRequest) IsValid() error {
+	if p.FilterOption != nil {
+		if err := p.FilterOption.IsValid(); err != nil {
+			return fmt.Errorf("field FilterOption not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptTemplatesOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListExptTemplatesOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitExptFromTemplateOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SubmitExptFromTemplateOpenAPIData) IsValid() error {
+	if p.Experiment != nil {
+		if err := p.Experiment.IsValid(); err != nil {
+			return fmt.Errorf("field Experiment not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ReportEvaluatorInvokeResultRequest) IsValid() error {
 	if p.Output != nil {
 		if err := p.Output.IsValid(); err != nil {

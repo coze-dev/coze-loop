@@ -131,6 +131,7 @@ type ExptTemplateConfiguration struct {
 
 	// 默认评估器并发数
 	EvaluatorsConcurNum *int
+	ItemRetryNum        *int
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO

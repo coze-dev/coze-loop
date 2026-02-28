@@ -55,6 +55,7 @@ type ListEvaluationSetItemsParam struct {
 	PageToken       *string
 	OrderBys        []*OrderBy
 	ItemIDsNotIn    []int64
+	Filter          *Filter
 }
 type BatchGetEvaluationSetItemsParam struct {
 	SpaceID         int64
@@ -266,26 +267,22 @@ type ReportEvaluatorRecordParam struct {
 }
 
 type CreateExptParam struct {
-	WorkspaceID         int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvalSetVersionID    int64   `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
-	TargetVersionID     int64   `thrift:"target_version_id,3,optional" frugal:"3,optional,i64" json:"target_version_id" form:"target_version_id" `
-	EvaluatorVersionIds []int64 `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
-	Name                string  `thrift:"name,5,optional" frugal:"5,optional,string" form:"name" json:"name,omitempty"`
-	Desc                string  `thrift:"desc,6,optional" frugal:"6,optional,string" form:"desc" json:"desc,omitempty"`
-	EvalSetID           int64   `thrift:"eval_set_id,7,optional" frugal:"7,optional,i64" json:"eval_set_id" form:"eval_set_id" `
-	TargetID            *int64  `thrift:"target_id,8,optional" frugal:"8,optional,i64" json:"target_id" form:"target_id" `
-	// TargetFieldMapping    *TargetFieldMapping                `thrift:"target_field_mapping,20,optional" frugal:"20,optional,TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
-	// EvaluatorFieldMapping []*EvaluatorFieldMapping           `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
-	// ItemConcurNum         int32                        `thrift:"item_concur_num,22,optional" frugal:"22,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
-	// EvaluatorsConcurNum   int32                        `thrift:"evaluators_concur_num,23,optional" frugal:"23,optional,i32" form:"evaluators_concur_num" json:"evaluators_concur_num,omitempty"`
-	CreateEvalTargetParam *CreateEvalTargetParam `thrift:"create_eval_target_param,24,optional" frugal:"24,optional,eval_target.CreateEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
-	ExptType              ExptType               `thrift:"expt_type,30,optional" frugal:"30,optional,ExptType" form:"expt_type" json:"expt_type,omitempty"`
-	MaxAliveTime          int64                  `thrift:"max_alive_time,31,optional" frugal:"31,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty"`
-	SourceType            SourceType             `thrift:"source_type,32,optional" frugal:"32,optional,SourceType" form:"source_type" json:"source_type,omitempty"`
-	SourceID              string                 `thrift:"source_id,33,optional" frugal:"33,optional,string" form:"source_id" json:"source_id,omitempty"`
-	ExptTemplateID        int64                  `thrift:"expt_template_id,34,optional" frugal:"34,optional,i64" form:"expt_template_id" json:"expt_template_id,omitempty"`
-
-	ExptConf *EvaluationConfiguration
+	WorkspaceID           int64                    `json:"workspace_id"`
+	EvalSetVersionID      int64                    `json:"eval_set_version_id"`
+	TargetVersionID       int64                    `json:"target_version_id"`
+	EvaluatorVersionIds   []int64                  `json:"evaluator_version_ids"`
+	Name                  string                   `json:"name"`
+	Desc                  string                   `json:"desc"`
+	EvalSetID             int64                    `json:"eval_set_id"`
+	TargetID              *int64                   `json:"target_id,omitempty"`
+	CreateEvalTargetParam *CreateEvalTargetParam   `json:"create_eval_target_param,omitempty"`
+	ExptType              ExptType                 `json:"expt_type"`
+	MaxAliveTime          int64                    `json:"max_alive_time"`
+	SourceType            SourceType               `json:"source_type"`
+	SourceID              string                   `json:"source_id"`
+	ExptTemplateID        int64                    `json:"expt_template_id"`
+	ExptConf              *EvaluationConfiguration `json:"expt_conf"`
+	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
 }
 
 type ExptRunCheckOption struct {

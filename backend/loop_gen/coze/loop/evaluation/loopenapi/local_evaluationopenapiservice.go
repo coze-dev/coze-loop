@@ -438,6 +438,445 @@ func (l *LocalEvaluationOpenAPIService) GetExperimentAggrResultOApi(ctx context.
 	return result.GetSuccess(), nil
 }
 
+// ListEvaluatorsOApi
+// 评估器接口
+// 查询评估器列表
+func (l *LocalEvaluationOpenAPIService) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvaluatorsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListEvaluatorsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListEvaluatorsOApiResult)
+		resp, err := l.impl.ListEvaluatorsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListEvaluatorsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListEvaluatorsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluatorsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// BatchGetEvaluatorsOApi
+// 批量查询评估器
+func (l *LocalEvaluationOpenAPIService) BatchGetEvaluatorsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorsOApiRequest, callOptions ...callopt.Option) (*openapi.BatchGetEvaluatorsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult)
+		resp, err := l.impl.BatchGetEvaluatorsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetEvaluatorsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// CreateEvaluatorOApi
+// 创建评估器
+func (l *LocalEvaluationOpenAPIService) CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.CreateEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult)
+		resp, err := l.impl.CreateEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// UpdateEvaluatorOApi
+// 更新评估器
+func (l *LocalEvaluationOpenAPIService) UpdateEvaluatorOApi(ctx context.Context, req *openapi.UpdateEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiResult)
+		resp, err := l.impl.UpdateEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// UpdateEvaluatorDraftOApi
+// 更新评估器草稿
+func (l *LocalEvaluationOpenAPIService) UpdateEvaluatorDraftOApi(ctx context.Context, req *openapi.UpdateEvaluatorDraftOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateEvaluatorDraftOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult)
+		resp, err := l.impl.UpdateEvaluatorDraftOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateEvaluatorDraftOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// DeleteEvaluatorOApi
+// 删除评估器
+func (l *LocalEvaluationOpenAPIService) DeleteEvaluatorOApi(ctx context.Context, req *openapi.DeleteEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.DeleteEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiResult)
+		resp, err := l.impl.DeleteEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ListEvaluatorVersionsOApi
+// 查询评估器版本列表
+func (l *LocalEvaluationOpenAPIService) ListEvaluatorVersionsOApi(ctx context.Context, req *openapi.ListEvaluatorVersionsOApiRequest, callOptions ...callopt.Option) (*openapi.ListEvaluatorVersionsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiResult)
+		resp, err := l.impl.ListEvaluatorVersionsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListEvaluatorVersionsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// BatchGetEvaluatorVersionsOApi
+// 批量查询评估器版本
+func (l *LocalEvaluationOpenAPIService) BatchGetEvaluatorVersionsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorVersionsOApiRequest, callOptions ...callopt.Option) (*openapi.BatchGetEvaluatorVersionsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult)
+		resp, err := l.impl.BatchGetEvaluatorVersionsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetEvaluatorVersionsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// SubmitEvaluatorVersionOApi
+// 提交评估器版本
+func (l *LocalEvaluationOpenAPIService) SubmitEvaluatorVersionOApi(ctx context.Context, req *openapi.SubmitEvaluatorVersionOApiRequest, callOptions ...callopt.Option) (*openapi.SubmitEvaluatorVersionOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult)
+		resp, err := l.impl.SubmitEvaluatorVersionOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "SubmitEvaluatorVersionOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// RunEvaluatorOApi
+// 执行评估器
+func (l *LocalEvaluationOpenAPIService) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.RunEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult)
+		resp, err := l.impl.RunEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "RunEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// CorrectEvaluatorRecordOApi
+// 修正评估记录
+func (l *LocalEvaluationOpenAPIService) CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest, callOptions ...callopt.Option) (*openapi.CorrectEvaluatorRecordOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult)
+		resp, err := l.impl.CorrectEvaluatorRecordOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CorrectEvaluatorRecordOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// BatchGetEvaluatorRecordsOApi
+// 批量查询评估记录
+func (l *LocalEvaluationOpenAPIService) BatchGetEvaluatorRecordsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorRecordsOApiRequest, callOptions ...callopt.Option) (*openapi.BatchGetEvaluatorRecordsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult)
+		resp, err := l.impl.BatchGetEvaluatorRecordsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetEvaluatorRecordsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// CreateExptTemplateOApi
+// 实验模板接口
+// 创建实验模板
+func (l *LocalEvaluationOpenAPIService) CreateExptTemplateOApi(ctx context.Context, req *openapi.CreateExptTemplateOApiRequest, callOptions ...callopt.Option) (*openapi.CreateExptTemplateOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiResult)
+		resp, err := l.impl.CreateExptTemplateOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateExptTemplateOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// BatchGetExptTemplatesOApi
+// 批量查询实验模板
+func (l *LocalEvaluationOpenAPIService) BatchGetExptTemplatesOApi(ctx context.Context, req *openapi.BatchGetExptTemplatesOApiRequest, callOptions ...callopt.Option) (*openapi.BatchGetExptTemplatesOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult)
+		resp, err := l.impl.BatchGetExptTemplatesOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetExptTemplatesOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// UpdateExptTemplateMetaOApi
+// 更新实验模板元信息
+func (l *LocalEvaluationOpenAPIService) UpdateExptTemplateMetaOApi(ctx context.Context, req *openapi.UpdateExptTemplateMetaOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateExptTemplateMetaOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult)
+		resp, err := l.impl.UpdateExptTemplateMetaOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateExptTemplateMetaOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// UpdateExptTemplateOApi
+// 更新实验模板
+func (l *LocalEvaluationOpenAPIService) UpdateExptTemplateOApi(ctx context.Context, req *openapi.UpdateExptTemplateOApiRequest, callOptions ...callopt.Option) (*openapi.UpdateExptTemplateOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiResult)
+		resp, err := l.impl.UpdateExptTemplateOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "UpdateExptTemplateOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// DeleteExptTemplateOApi
+// 删除实验模板
+func (l *LocalEvaluationOpenAPIService) DeleteExptTemplateOApi(ctx context.Context, req *openapi.DeleteExptTemplateOApiRequest, callOptions ...callopt.Option) (*openapi.DeleteExptTemplateOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiResult)
+		resp, err := l.impl.DeleteExptTemplateOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "DeleteExptTemplateOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ListExptTemplatesOApi
+// 查询实验模板列表
+func (l *LocalEvaluationOpenAPIService) ListExptTemplatesOApi(ctx context.Context, req *openapi.ListExptTemplatesOApiRequest, callOptions ...callopt.Option) (*openapi.ListExptTemplatesOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListExptTemplatesOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListExptTemplatesOApiResult)
+		resp, err := l.impl.ListExptTemplatesOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListExptTemplatesOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListExptTemplatesOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExptTemplatesOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// SubmitExptFromTemplateOApi
+// 根据实验模板提交新实验
+func (l *LocalEvaluationOpenAPIService) SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.SubmitExptFromTemplateOApiRequest, callOptions ...callopt.Option) (*openapi.SubmitExptFromTemplateOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult)
+		resp, err := l.impl.SubmitExptFromTemplateOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "SubmitExptFromTemplateOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ReportEvaluatorInvokeResult_
 // 评估器接口
 // 评估器调用结果上报接口

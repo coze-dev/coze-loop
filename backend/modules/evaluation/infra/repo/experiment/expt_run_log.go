@@ -28,16 +28,17 @@ func (e *ExptRunLogImpl) Get(ctx context.Context, exptID, exptRunID int64) (*ent
 	if err != nil {
 		return nil, err
 	}
-	do := convert.NewExptRunLogConvertor().PO2DO(po)
-	return do, nil
+	return convert.NewExptRunLogConvertor().PO2DO(po)
 }
 
 func (e *ExptRunLogImpl) Create(ctx context.Context, exptRunLog *entity.ExptRunLog) error {
-	po := convert.NewExptRunLogConvertor().DO2PO(exptRunLog)
+	po, err := convert.NewExptRunLogConvertor().DO2PO(exptRunLog)
+	if err != nil {
+		return err
+	}
 	po.CreatedAt = time.Now()
 
-	err := e.exptRunLogDAO.Create(ctx, po)
-	if err != nil {
+	if err := e.exptRunLogDAO.Create(ctx, po); err != nil {
 		return err
 	}
 
@@ -45,11 +46,13 @@ func (e *ExptRunLogImpl) Create(ctx context.Context, exptRunLog *entity.ExptRunL
 }
 
 func (e *ExptRunLogImpl) Save(ctx context.Context, exptRunLog *entity.ExptRunLog) error {
-	po := convert.NewExptRunLogConvertor().DO2PO(exptRunLog)
+	po, err := convert.NewExptRunLogConvertor().DO2PO(exptRunLog)
+	if err != nil {
+		return err
+	}
 	po.UpdatedAt = time.Now()
 
-	err := e.exptRunLogDAO.Save(ctx, po)
-	if err != nil {
+	if err := e.exptRunLogDAO.Save(ctx, po); err != nil {
 		return err
 	}
 	return nil

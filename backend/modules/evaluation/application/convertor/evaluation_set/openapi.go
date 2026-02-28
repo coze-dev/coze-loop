@@ -28,6 +28,8 @@ func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.Conte
 		return entity.ContentTypeVideo
 	case common.ContentTypeMultiPart:
 		return entity.ContentTypeMultipart
+	case common.ContentTypeMultiPartVariable:
+		return entity.ContentTypeMultipartVariable
 	default:
 		return entity.ContentTypeText // 默认使用Text类型
 	}
@@ -52,8 +54,11 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 	case entity.ContentTypeVideo:
 		ct := common.ContentTypeVideo
 		return &ct
-	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+	case entity.ContentTypeMultipart:
 		ct := common.ContentTypeMultiPart
+		return &ct
+	case entity.ContentTypeMultipartVariable:
+		ct := common.ContentTypeMultiPartVariable
 		return &ct
 	default:
 		// 默认使用text类型

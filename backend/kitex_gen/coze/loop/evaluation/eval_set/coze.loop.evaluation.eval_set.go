@@ -11,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 	"strings"
 )
 
@@ -13082,11 +13083,14 @@ type ListEvaluationSetItemsRequest struct {
 	VersionID       *int64 `thrift:"version_id,3,optional" frugal:"3,optional,i64" json:"version_id" form:"version_id" query:"version_id"`
 	PageNumber      *int32 `thrift:"page_number,100,optional" frugal:"100,optional,i32" form:"page_number" json:"page_number,omitempty" query:"page_number"`
 	// 分页大小 (0, 200]，默认为 20
-	PageSize    *int32            `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
-	PageToken   *string           `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
+	PageSize  *int32  `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty" query:"page_size"`
+	PageToken *string `thrift:"page_token,102,optional" frugal:"102,optional,string" form:"page_token" json:"page_token,omitempty" query:"page_token"`
+	// 排列顺序，默认按照 updated_at 顺序排列，目前仅支持按照一个字段排序，该字段必须是 field key 或 item 元信息中的 created_at 或 updated_at
 	OrderBys    []*common.OrderBy `thrift:"order_bys,103,optional" frugal:"103,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty" query:"order_bys"`
 	ItemIDNotIn []int64           `thrift:"item_id_not_in,200,optional" frugal:"200,optional,list<i64>" json:"item_id_not_in" form:"item_id_not_in" query:"item_id_not_in"`
-	Base        *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// item 过滤条件
+	Filter *filter.Filter `thrift:"filter,201,optional" frugal:"201,optional,filter.Filter" form:"filter" json:"filter,omitempty" query:"filter"`
+	Base   *base.Base     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListEvaluationSetItemsRequest() *ListEvaluationSetItemsRequest {
@@ -13182,6 +13186,18 @@ func (p *ListEvaluationSetItemsRequest) GetItemIDNotIn() (v []int64) {
 	return p.ItemIDNotIn
 }
 
+var ListEvaluationSetItemsRequest_Filter_DEFAULT *filter.Filter
+
+func (p *ListEvaluationSetItemsRequest) GetFilter() (v *filter.Filter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilter() {
+		return ListEvaluationSetItemsRequest_Filter_DEFAULT
+	}
+	return p.Filter
+}
+
 var ListEvaluationSetItemsRequest_Base_DEFAULT *base.Base
 
 func (p *ListEvaluationSetItemsRequest) GetBase() (v *base.Base) {
@@ -13217,6 +13233,9 @@ func (p *ListEvaluationSetItemsRequest) SetOrderBys(val []*common.OrderBy) {
 func (p *ListEvaluationSetItemsRequest) SetItemIDNotIn(val []int64) {
 	p.ItemIDNotIn = val
 }
+func (p *ListEvaluationSetItemsRequest) SetFilter(val *filter.Filter) {
+	p.Filter = val
+}
 func (p *ListEvaluationSetItemsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -13230,6 +13249,7 @@ var fieldIDToName_ListEvaluationSetItemsRequest = map[int16]string{
 	102: "page_token",
 	103: "order_bys",
 	200: "item_id_not_in",
+	201: "filter",
 	255: "Base",
 }
 
@@ -13255,6 +13275,10 @@ func (p *ListEvaluationSetItemsRequest) IsSetOrderBys() bool {
 
 func (p *ListEvaluationSetItemsRequest) IsSetItemIDNotIn() bool {
 	return p.ItemIDNotIn != nil
+}
+
+func (p *ListEvaluationSetItemsRequest) IsSetFilter() bool {
+	return p.Filter != nil
 }
 
 func (p *ListEvaluationSetItemsRequest) IsSetBase() bool {
@@ -13342,6 +13366,14 @@ func (p *ListEvaluationSetItemsRequest) Read(iprot thrift.TProtocol) (err error)
 		case 200:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 201:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField201(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13507,6 +13539,14 @@ func (p *ListEvaluationSetItemsRequest) ReadField200(iprot thrift.TProtocol) err
 	p.ItemIDNotIn = _field
 	return nil
 }
+func (p *ListEvaluationSetItemsRequest) ReadField201(iprot thrift.TProtocol) error {
+	_field := filter.NewFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filter = _field
+	return nil
+}
 func (p *ListEvaluationSetItemsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -13552,6 +13592,10 @@ func (p *ListEvaluationSetItemsRequest) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField200(oprot); err != nil {
 			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField201(oprot); err != nil {
+			fieldId = 201
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -13732,6 +13776,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
 }
+func (p *ListEvaluationSetItemsRequest) writeField201(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilter() {
+		if err = oprot.WriteFieldBegin("filter", thrift.STRUCT, 201); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 201 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 201 end error: ", p), err)
+}
 func (p *ListEvaluationSetItemsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -13787,6 +13849,9 @@ func (p *ListEvaluationSetItemsRequest) DeepEqual(ano *ListEvaluationSetItemsReq
 		return false
 	}
 	if !p.Field200DeepEqual(ano.ItemIDNotIn) {
+		return false
+	}
+	if !p.Field201DeepEqual(ano.Filter) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -13883,6 +13948,13 @@ func (p *ListEvaluationSetItemsRequest) Field200DeepEqual(src []int64) bool {
 	}
 	return true
 }
+func (p *ListEvaluationSetItemsRequest) Field201DeepEqual(src *filter.Filter) bool {
+
+	if !p.Filter.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *ListEvaluationSetItemsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -13895,6 +13967,7 @@ type ListEvaluationSetItemsResponse struct {
 	Items         []*eval_set.EvaluationSetItem `thrift:"items,1,optional" frugal:"1,optional,list<eval_set.EvaluationSetItem>" form:"items" json:"items,omitempty" query:"items"`
 	Total         *int64                        `thrift:"total,100,optional" frugal:"100,optional,i64" json:"total" form:"total" query:"total"`
 	NextPageToken *string                       `thrift:"next_page_token,101,optional" frugal:"101,optional,string" form:"next_page_token" json:"next_page_token,omitempty" query:"next_page_token"`
+	FilterTotal   *int64                        `thrift:"filter_total,102,optional" frugal:"102,optional,i64" json:"filter_total" form:"filter_total" query:"filter_total"`
 	BaseResp      *base.BaseResp                `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -13941,6 +14014,18 @@ func (p *ListEvaluationSetItemsResponse) GetNextPageToken() (v string) {
 	return *p.NextPageToken
 }
 
+var ListEvaluationSetItemsResponse_FilterTotal_DEFAULT int64
+
+func (p *ListEvaluationSetItemsResponse) GetFilterTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterTotal() {
+		return ListEvaluationSetItemsResponse_FilterTotal_DEFAULT
+	}
+	return *p.FilterTotal
+}
+
 var ListEvaluationSetItemsResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ListEvaluationSetItemsResponse) GetBaseResp() (v *base.BaseResp) {
@@ -13961,6 +14046,9 @@ func (p *ListEvaluationSetItemsResponse) SetTotal(val *int64) {
 func (p *ListEvaluationSetItemsResponse) SetNextPageToken(val *string) {
 	p.NextPageToken = val
 }
+func (p *ListEvaluationSetItemsResponse) SetFilterTotal(val *int64) {
+	p.FilterTotal = val
+}
 func (p *ListEvaluationSetItemsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -13969,6 +14057,7 @@ var fieldIDToName_ListEvaluationSetItemsResponse = map[int16]string{
 	1:   "items",
 	100: "total",
 	101: "next_page_token",
+	102: "filter_total",
 	255: "BaseResp",
 }
 
@@ -13982,6 +14071,10 @@ func (p *ListEvaluationSetItemsResponse) IsSetTotal() bool {
 
 func (p *ListEvaluationSetItemsResponse) IsSetNextPageToken() bool {
 	return p.NextPageToken != nil
+}
+
+func (p *ListEvaluationSetItemsResponse) IsSetFilterTotal() bool {
+	return p.FilterTotal != nil
 }
 
 func (p *ListEvaluationSetItemsResponse) IsSetBaseResp() bool {
@@ -14025,6 +14118,14 @@ func (p *ListEvaluationSetItemsResponse) Read(iprot thrift.TProtocol) (err error
 		case 101:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14112,6 +14213,17 @@ func (p *ListEvaluationSetItemsResponse) ReadField101(iprot thrift.TProtocol) er
 	p.NextPageToken = _field
 	return nil
 }
+func (p *ListEvaluationSetItemsResponse) ReadField102(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return nil
+}
 func (p *ListEvaluationSetItemsResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -14137,6 +14249,10 @@ func (p *ListEvaluationSetItemsResponse) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -14223,6 +14339,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ListEvaluationSetItemsResponse) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterTotal() {
+		if err = oprot.WriteFieldBegin("filter_total", thrift.I64, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.FilterTotal); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *ListEvaluationSetItemsResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 		goto WriteFieldBeginError
@@ -14261,6 +14395,9 @@ func (p *ListEvaluationSetItemsResponse) DeepEqual(ano *ListEvaluationSetItemsRe
 		return false
 	}
 	if !p.Field101DeepEqual(ano.NextPageToken) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.FilterTotal) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -14302,6 +14439,18 @@ func (p *ListEvaluationSetItemsResponse) Field101DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.NextPageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListEvaluationSetItemsResponse) Field102DeepEqual(src *int64) bool {
+
+	if p.FilterTotal == src {
+		return true
+	} else if p.FilterTotal == nil || src == nil {
+		return false
+	}
+	if *p.FilterTotal != *src {
 		return false
 	}
 	return true

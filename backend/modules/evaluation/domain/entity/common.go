@@ -8,6 +8,12 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
+)
+
+type (
+	Filter      = filter.Filter
+	FilterField = filter.FilterField
 )
 
 // ContentType 定义内容类型
@@ -116,8 +122,9 @@ type Audio struct {
 
 // OrderBy 排序结构体
 type OrderBy struct {
-	Field *string `json:"field,omitempty"`
-	IsAsc *bool   `json:"is_asc,omitempty"`
+	Field      *string `json:"field,omitempty"`
+	IsAsc      *bool   `json:"is_asc,omitempty"`
+	IsFieldKey *bool   `json:"is_field_key,omitempty"`
 }
 
 const (

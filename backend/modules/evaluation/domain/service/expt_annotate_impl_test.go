@@ -67,7 +67,7 @@ func TestExptAnnotateServiceImpl_CreateExptTurnResultTagRefs(t *testing.T) {
 
 				svc.evaluationSetItemService.(*svcMocks.MockEvaluationSetItemService).EXPECT().
 					ListEvaluationSetItems(ctx, gomock.Any()).
-					Return(nil, ptr.Of(int64((1))), nil, nil).Times(1)
+					Return(nil, ptr.Of(int64((1))), ptr.Of(int64((1))), nil, nil).Times(1)
 
 				svc.repo.(*repoMocks.MockIExptAnnotateRepo).EXPECT().
 					CreateExptTurnResultTagRefs(ctx, gomock.Any()).

@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
@@ -315,6 +316,10 @@ func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 	return fmt.Sprintf("expt_run_mutex_lock:%d", exptID)
 }
 
+func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
+	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
+}
+
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {
 	return e.getExptTupleByID(ctx, e.packTupleID(ctx, expt), spaceID, session, opts...)
 }
@@ -610,6 +615,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			TargetID:  targetID,
 			VersionID: targetVersionID,
 		}
+	} else if req.TargetID != nil && *req.TargetID > 0 && req.TargetVersionID > 0 {
+		// 使用已有 target（如从模板提交实验时）
+		versionedTargetID = &entity.VersionedTargetID{
+			TargetID:  *req.TargetID,
+			VersionID: req.TargetVersionID,
+		}
 	}
 
 	tuple, err := e.getExptTupleByID(ctx, &entity.ExptTupleID{
@@ -685,11 +696,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 	}
 
-	if !req.CreateEvalTargetParam.IsNull() {
-		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
-		if versionedTargetID != nil {
-			do.TargetID = versionedTargetID.TargetID
-			do.TargetVersionID = versionedTargetID.VersionID
+	if versionedTargetID != nil {
+		do.TargetID = versionedTargetID.TargetID
+		do.TargetVersionID = versionedTargetID.VersionID
+		if !req.CreateEvalTargetParam.IsNull() {
+			do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		} else if tuple.Target != nil {
+			if tuple.Target.EvalTargetVersion != nil {
+				do.TargetType = tuple.Target.EvalTargetVersion.EvalTargetType
+			} else {
+				do.TargetType = tuple.Target.EvalTargetType
+			}
 		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID

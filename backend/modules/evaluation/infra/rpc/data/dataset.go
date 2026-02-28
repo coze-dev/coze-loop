@@ -358,7 +358,7 @@ func (a *DatasetRPCAdapter) BatchDeleteDatasetItems(ctx context.Context, spaceID
 	return nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetItems(ctx, &dataset.ListDatasetItemsRequest{
 		WorkspaceID: &param.SpaceID,
 		DatasetID:   param.EvaluationSetID,
@@ -370,18 +370,18 @@ func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.Lis
 		// ItemIDsNotIn: param.ItemIDsNotIn,
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if resp == nil {
-		return nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
+		return nil, nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
 	}
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
-		return nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
+		return nil, nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return convert2EvaluationSetItems(ctx, resp.Items), resp.Total, resp.NextPageToken, nil
+	return convert2EvaluationSetItems(ctx, resp.Items), resp.Total, resp.FilterTotal, resp.NextPageToken, nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetItemsByVersion(ctx, &dataset.ListDatasetItemsByVersionRequest{
 		WorkspaceID: &param.SpaceID,
 		DatasetID:   param.EvaluationSetID,
@@ -392,15 +392,15 @@ func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param
 		OrderBys:    convert2DatasetOrderBys(ctx, param.OrderBys),
 	})
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if resp == nil {
-		return nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
+		return nil, nil, nil, nil, errorx.NewByCode(errno.CommonRPCErrorCode)
 	}
 	if resp.BaseResp != nil && resp.BaseResp.StatusCode != 0 {
-		return nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
+		return nil, nil, nil, nil, errorx.NewByCode(resp.BaseResp.StatusCode, errorx.WithExtraMsg(resp.BaseResp.StatusMessage))
 	}
-	return convert2EvaluationSetItems(ctx, resp.Items), resp.Total, resp.NextPageToken, nil
+	return convert2EvaluationSetItems(ctx, resp.Items), resp.Total, resp.FilterTotal, resp.NextPageToken, nil
 }
 
 func (a *DatasetRPCAdapter) BatchGetDatasetItems(ctx context.Context, param *rpc.BatchGetDatasetItemsParam) (items []*entity.EvaluationSetItem, err error) {

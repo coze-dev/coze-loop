@@ -380,7 +380,7 @@ func TestDatasetItemsDO2DTO(t *testing.T) {
 
 func TestConvertContentDO2DTO(t *testing.T) {
 	t.Run("nil content", func(t *testing.T) {
-		got := convertContentDO2DTO(nil)
+		got := ConvertContentDO2DTO(nil)
 		assert.Nil(t, got)
 	})
 
@@ -390,7 +390,7 @@ func TestConvertContentDO2DTO(t *testing.T) {
 			Text:        "test text",
 		}
 
-		got := convertContentDO2DTO(content)
+		got := ConvertContentDO2DTO(content)
 		assert.NotNil(t, got)
 		assert.Equal(t, entity.CommonContentTypeDO2DTO(entity.ContentType_Text), got.ContentType)
 		assert.Equal(t, "test text", got.GetText())
@@ -407,7 +407,7 @@ func TestConvertContentDO2DTO(t *testing.T) {
 			},
 		}
 
-		got := convertContentDO2DTO(content)
+		got := ConvertContentDO2DTO(content)
 		assert.NotNil(t, got)
 		assert.Equal(t, entity.CommonContentTypeDO2DTO(entity.ContentType_MultiPart), got.ContentType)
 		assert.Equal(t, 1, len(got.MultiPart))
