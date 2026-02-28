@@ -74,11 +74,11 @@ const (
 
 	RequestNotValidCode              = 601505007
 	requestNotValidMessage           = "request not valid"
-	requestNotValidNoAffectStability = false
+	requestNotValidNoAffectStability = true
 
 	RequestNotCompatibleWithModelAbilityCode              = 601505008
 	requestNotCompatibleWithModelAbilityMessage           = "request is not compatible with model ability"
-	requestNotCompatibleWithModelAbilityNoAffectStability = false
+	requestNotCompatibleWithModelAbilityNoAffectStability = true
 
 	CallModelFailedCode              = 601505009
 	callModelFailedMessage           = "call model failed"
@@ -95,6 +95,34 @@ const (
 	CallModelTimeoutCode              = 601505012
 	callModelTimeoutMessage           = "call model timeout"
 	callModelTimeoutNoAffectStability = true
+
+	ModelNotExistCode              = 601505101 // 模型不存在
+	modelNotExistMessage           = "model not exist"
+	modelNotExistNoAffectStability = true
+
+	InterfaceNotAvailableInHouseCode              = 601505102 // 当前接口无法使用
+	interfaceNotAvailableInHouseMessage           = "the interface is not available"
+	interfaceNotAvailableInHouseNoAffectStability = true
+
+	GetModelListFailedCode              = 601505103 // 请求模型列表接口失败
+	getModelListFailedMessage           = "get model list failed"
+	getModelListFailedNoAffectStability = true
+
+	GetModelFailedCode              = 601505104 // 请求模型详情接口失败
+	getModelFailedMessage           = "get model failed"
+	getModelFailedNoAffectStability = true
+
+	GetModelListParamFailedCode              = 601505105 // 请求模型列表参数接口失败
+	getModelListParamFailedMessage           = "get model list param failed"
+	getModelListParamFailedNoAffectStability = true
+
+	GetModelUsageFailedCode              = 601505106 // 请求模型用量接口失败
+	getModelUsageFailedMessage           = "get model usage failed"
+	getModelUsageFailedNoAffectStability = true
+
+	GetModelConfigFailedCode              = 601505107 // 获取模型配置失败
+	getModelConfigFailedMessage           = "get model config failed"
+	getModelConfigFailedNoAffectStability = true
 )
 
 func init() {
@@ -229,6 +257,48 @@ func init() {
 		CallModelTimeoutCode,
 		callModelTimeoutMessage,
 		code.WithAffectStability(!callModelTimeoutNoAffectStability),
+	)
+
+	code.Register(
+		ModelNotExistCode,
+		modelNotExistMessage,
+		code.WithAffectStability(!modelNotExistNoAffectStability),
+	)
+
+	code.Register(
+		InterfaceNotAvailableInHouseCode,
+		interfaceNotAvailableInHouseMessage,
+		code.WithAffectStability(!interfaceNotAvailableInHouseNoAffectStability),
+	)
+
+	code.Register(
+		GetModelListFailedCode,
+		getModelListFailedMessage,
+		code.WithAffectStability(!getModelListFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetModelFailedCode,
+		getModelFailedMessage,
+		code.WithAffectStability(!getModelFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetModelListParamFailedCode,
+		getModelListParamFailedMessage,
+		code.WithAffectStability(!getModelListParamFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetModelUsageFailedCode,
+		getModelUsageFailedMessage,
+		code.WithAffectStability(!getModelUsageFailedNoAffectStability),
+	)
+
+	code.Register(
+		GetModelConfigFailedCode,
+		getModelConfigFailedMessage,
+		code.WithAffectStability(!getModelConfigFailedNoAffectStability),
 	)
 
 }
