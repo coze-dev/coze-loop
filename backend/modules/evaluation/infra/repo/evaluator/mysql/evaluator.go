@@ -167,18 +167,14 @@ func (dao *EvaluatorDAOImpl) BatchDeleteEvaluator(ctx context.Context, ids []int
 		return nil
 	}
 
-	// 通过opts获取当前的db session实例
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
-	// 开启事务确保操作的原子性
-	return dbsession.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&model.Evaluator{}).
-			Where("id IN (?)", ids).
-			Updates(map[string]interface{}{
-				"deleted_at": gorm.DeletedAt{Time: time.Now(), Valid: true},
-				"updated_by": userID,
-			}).Error
-	})
+	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
+		Where("id IN (?)", ids).
+		Updates(map[string]interface{}{
+			"deleted_at": gorm.DeletedAt{Time: time.Now(), Valid: true},
+			"updated_by": userID,
+		}).Error
 }
 
 // CheckNameExist 校验当前名称是否存在

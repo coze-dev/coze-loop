@@ -890,6 +890,20 @@ struct SubmitExptFromTemplateOApiResponse {
 struct SubmitExptFromTemplateOpenAPIData {
     1: optional experiment.Experiment experiment (api.body="experiment")
 }
+struct ReportEvaluatorInvokeResultRequest {
+    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
+    3: optional coze.loop.evaluation.spi.InvokeEvaluatorRunStatus status
+
+    // set output if status=SUCCESS
+    10: optional coze.loop.evaluation.spi.InvokeEvaluatorOutputData output
+
+    255: optional base.Base Base
+}
+
+struct ReportEvaluatorInvokeResultResponse {
+    255: base.BaseResp BaseResp
+}
 
 // ===============================
 // 服务定义
@@ -979,4 +993,8 @@ service EvaluationOpenAPIService {
     // 根据实验模板提交新实验
     SubmitExptFromTemplateOApiResponse SubmitExptFromTemplateOApi(1: SubmitExptFromTemplateOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiment_templates/submit_expt")
 
+
+    // 评估器接口
+    // 评估器调用结果上报接口
+    ReportEvaluatorInvokeResultResponse ReportEvaluatorInvokeResult(1: ReportEvaluatorInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/result")
 }

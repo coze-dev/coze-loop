@@ -291,6 +291,18 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
 			}
 			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
+		case int32(entity.EvaluatorTypeAgent):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
+			evaluatorDO.AgentEvaluatorVersion = evaluatorVersionDO.AgentEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeAgent
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
+			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
 		default:
 			continue
 		}
@@ -635,7 +647,7 @@ func (r *EvaluatorRepoImpl) BatchDeleteEvaluator(ctx context.Context, ids []int6
 			return err
 		}
 		for _, id := range ids {
-			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Evaluator), "", nil); err != nil {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Evaluator), "", nil, opt); err != nil {
 				return err
 			}
 		}

@@ -1954,3 +1954,38 @@ func _submitexptfromtemplateoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _async_debugMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _asyncdebugevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _resultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getasyncdebugevaluatorinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _asyncrunevaluatorMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _reportevaluatorinvokeresultMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _reportevaluatorinvokeprogressMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -173,3 +173,6 @@ func (p *EvaluatorFilterOption) IsValid() error {
 	}
 	return nil
 }
+func (p *EvaluatorProgressMessage) IsValid() error {
+	return nil
+}

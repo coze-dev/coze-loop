@@ -199,3 +199,11 @@ struct EvaluatorFilterOption {
     1: optional string search_keyword
     2: optional EvaluatorFilters filters
 }
+
+
+struct EvaluatorProgressMessage {
+    1: optional string role    // 如 system, assistant
+    2: optional string type    // 如 tool_use, tool_result
+    3: optional string message    // 如 Check current user identity and working directory
+    4: optional i64 created_at_ms
+}

@@ -152,6 +152,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_template.PATCH("/:evaluator_template_id", append(_updateevaluatortemplateMw(handler), apis.UpdateEvaluatorTemplate)...)
 				_v11.POST("/evaluators", append(_evaluatorsMw(handler), apis.CreateEvaluator)...)
 				_evaluators := _v11.Group("/evaluators", _evaluatorsMw(handler)...)
+				_evaluators.POST("/async_debug", append(_asyncdebugevaluatorMw(handler), apis.AsyncDebugEvaluator)...)
 				_evaluators.POST("/batch_debug", append(_batchdebugevaluatorMw(handler), apis.BatchDebugEvaluator)...)
 				_evaluators.POST("/check_name", append(_checkevaluatornameMw(handler), apis.CheckEvaluatorName)...)
 				_evaluators.POST("/debug", append(_debugevaluatorMw(handler), apis.DebugEvaluator)...)
@@ -195,6 +196,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_evaluator_records := _v11.Group("/evaluator_records", _evaluator_recordsMw(handler)...)
+					_evaluator_records.POST("/batch_get", append(_batchgetevaluatorrecordsMw(handler), apis.BatchGetEvaluatorRecords)...)
+					_evaluator_records.GET("/:evaluator_record_id", append(_getevaluatorrecordMw(handler), apis.GetEvaluatorRecord)...)
 					_evaluator_records.PATCH("/:evaluator_record_id", append(_updateevaluatorrecordMw(handler), apis.UpdateEvaluatorRecord)...)
 				}
 				{
@@ -213,6 +216,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_evaluators_versions.POST("/batch_get", append(_batchgetevaluatorversionsMw(handler), apis.BatchGetEvaluatorVersions)...)
 					_evaluators_versions.GET("/:evaluator_version_id", append(_evaluator_version_idMw(handler), apis.GetEvaluatorVersion)...)
 					_evaluator_version_id := _evaluators_versions.Group("/:evaluator_version_id", _evaluator_version_idMw(handler)...)
+					_evaluator_version_id.POST("/async_run", append(_asyncrunevaluatorMw(handler), apis.AsyncRunEvaluator)...)
 					_evaluator_version_id.POST("/run", append(_runevaluatorMw(handler), apis.RunEvaluator)...)
 				}
 				{
@@ -460,6 +464,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluators1.PATCH("/:evaluator_id", append(_evaluator_id2Mw(handler), apis.UpdateEvaluatorOApi)...)
 				_evaluator_id2 := _evaluators1.Group("/:evaluator_id", _evaluator_id2Mw(handler)...)
 				_evaluator_id2.PATCH("/update_draft", append(_updateevaluatordraftoapiMw(handler), apis.UpdateEvaluatorDraftOApi)...)
+				_evaluators1.POST("/result", append(_reportevaluatorinvokeresultMw(handler), apis.ReportEvaluatorInvokeResult)...)
 				_evaluation0.POST("/experiment_templates", append(_experiment_templates0Mw(handler), apis.CreateExptTemplateOApi)...)
 				_experiment_templates0 := _evaluation0.Group("/experiment_templates", _experiment_templates0Mw(handler)...)
 				_experiment_templates0.POST("/batch_get", append(_batchgetexpttemplatesoapiMw(handler), apis.BatchGetExptTemplatesOApi)...)

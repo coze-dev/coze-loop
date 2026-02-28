@@ -4245,6 +4245,20 @@ func (p *InvokeEvaluatorOutputData) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -4299,6 +4313,18 @@ func (p *InvokeEvaluatorOutputData) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *InvokeEvaluatorOutputData) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+	_field := NewEvaluatorExtraOutputContent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ExtraOutput = _field
+	return offset, nil
+}
+
 func (p *InvokeEvaluatorOutputData) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -4309,6 +4335,7 @@ func (p *InvokeEvaluatorOutputData) FastWriteNocopy(buf []byte, w thrift.NocopyW
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -4320,6 +4347,7 @@ func (p *InvokeEvaluatorOutputData) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field12Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -4352,6 +4380,15 @@ func (p *InvokeEvaluatorOutputData) fastWriteField3(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *InvokeEvaluatorOutputData) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExtraOutput() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 12)
+		offset += p.ExtraOutput.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *InvokeEvaluatorOutputData) field1Length() int {
 	l := 0
 	if p.IsSetEvaluatorResult_() {
@@ -4375,6 +4412,15 @@ func (p *InvokeEvaluatorOutputData) field3Length() int {
 	if p.IsSetEvaluatorRunError() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.EvaluatorRunError.BLength()
+	}
+	return l
+}
+
+func (p *InvokeEvaluatorOutputData) field12Length() int {
+	l := 0
+	if p.IsSetExtraOutput() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ExtraOutput.BLength()
 	}
 	return l
 }
@@ -4411,6 +4457,15 @@ func (p *InvokeEvaluatorOutputData) DeepCopy(s interface{}) error {
 		}
 	}
 	p.EvaluatorRunError = _evaluatorRunError
+
+	var _extraOutput *EvaluatorExtraOutputContent
+	if src.ExtraOutput != nil {
+		_extraOutput = &EvaluatorExtraOutputContent{}
+		if err := _extraOutput.DeepCopy(src.ExtraOutput); err != nil {
+			return err
+		}
+	}
+	p.ExtraOutput = _extraOutput
 
 	return nil
 }
@@ -4926,6 +4981,235 @@ func (p *InvokeEvaluatorRunError) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Message)
 		}
 		p.Message = &tmp
+	}
+
+	return nil
+}
+
+func (p *EvaluatorExtraOutputContent) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorExtraOutputContent[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *EvaluatorExtraOutputContent) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *EvaluatorExtraOutputType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OutputType = _field
+	return offset, nil
+}
+
+func (p *EvaluatorExtraOutputContent) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.URI = _field
+	return offset, nil
+}
+
+func (p *EvaluatorExtraOutputContent) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.URL = _field
+	return offset, nil
+}
+
+func (p *EvaluatorExtraOutputContent) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *EvaluatorExtraOutputContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *EvaluatorExtraOutputContent) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *EvaluatorExtraOutputContent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOutputType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OutputType)
+	}
+	return offset
+}
+
+func (p *EvaluatorExtraOutputContent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetURI() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URI)
+	}
+	return offset
+}
+
+func (p *EvaluatorExtraOutputContent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetURL() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.URL)
+	}
+	return offset
+}
+
+func (p *EvaluatorExtraOutputContent) field1Length() int {
+	l := 0
+	if p.IsSetOutputType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.OutputType)
+	}
+	return l
+}
+
+func (p *EvaluatorExtraOutputContent) field2Length() int {
+	l := 0
+	if p.IsSetURI() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.URI)
+	}
+	return l
+}
+
+func (p *EvaluatorExtraOutputContent) field3Length() int {
+	l := 0
+	if p.IsSetURL() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.URL)
+	}
+	return l
+}
+
+func (p *EvaluatorExtraOutputContent) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluatorExtraOutputContent)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.OutputType != nil {
+		tmp := *src.OutputType
+		p.OutputType = &tmp
+	}
+
+	if src.URI != nil {
+		var tmp string
+		if *src.URI != "" {
+			tmp = kutils.StringDeepCopy(*src.URI)
+		}
+		p.URI = &tmp
+	}
+
+	if src.URL != nil {
+		var tmp string
+		if *src.URL != "" {
+			tmp = kutils.StringDeepCopy(*src.URL)
+		}
+		p.URL = &tmp
 	}
 
 	return nil

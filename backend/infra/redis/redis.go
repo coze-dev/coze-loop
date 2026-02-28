@@ -150,3 +150,15 @@ func (p *provider) Pipeline() Pipeliner {
 	pipe := p.cli.Pipeline()
 	return pipe
 }
+
+func (p *provider) RPush(ctx context.Context, key string, values ...any) *redis.IntCmd {
+	return p.cli.RPush(ctx, key, values...)
+}
+
+func (p *provider) LRange(ctx context.Context, key string, start int64, stop int64) *redis.StringSliceCmd {
+	return p.cli.LRange(ctx, key, start, stop)
+}
+
+func (p *provider) LTrim(ctx context.Context, key string, start int64, stop int64) *redis.StatusCmd {
+	return p.cli.LTrim(ctx, key, start, stop)
+}

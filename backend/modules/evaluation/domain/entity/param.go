@@ -217,6 +217,55 @@ type RunEvaluatorRequest struct {
 	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
 }
 
+type AsyncRunEvaluatorRequest struct {
+	SpaceID            int64               `json:"space_id"`
+	Name               string              `json:"name"`
+	EvaluatorVersionID int64               `json:"evaluator_version_id"`
+	InputData          *EvaluatorInputData `json:"input_data"`
+	ExperimentID       int64               `json:"experiment_id,omitempty"`
+	ExperimentRunID    int64               `json:"experiment_run_id,omitempty"`
+	ItemID             int64               `json:"item_id,omitempty"`
+	TurnID             int64               `json:"turn_id,omitempty"`
+	Ext                map[string]string   `json:"ext,omitempty"`
+	EvaluatorRunConf   *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+}
+
+type AsyncRunEvaluatorResponse struct {
+	InvokeID int64 `json:"invoke_id"`
+}
+
+type AsyncDebugEvaluatorRequest struct {
+	SpaceID          int64               `json:"space_id"`
+	EvaluatorDO      *Evaluator          `json:"evaluator_do"`
+	InputData        *EvaluatorInputData `json:"input_data"`
+	EvaluatorRunConf *EvaluatorRunConfig `json:"evaluator_run_conf,omitempty"`
+}
+
+type AsyncDebugEvaluatorResponse struct {
+	InvokeID int64  `json:"invoke_id"`
+	TraceID  string `json:"trace_id"`
+}
+
+type GetAsyncDebugEvaluatorInvokeResultRequest struct {
+	SpaceID  int64 `json:"space_id"`
+	InvokeID int64 `json:"invoke_id"`
+}
+
+type GetAsyncDebugEvaluatorInvokeResultResponse struct {
+	SpaceID      int64                `json:"space_id"`
+	Status       EvaluatorRunStatus   `json:"status"`
+	OutputData   *EvaluatorOutputData `json:"output_data,omitempty"`
+	EvaluatorDO  *Evaluator           `json:"evaluator_do,omitempty"`
+	InputData    *EvaluatorInputData  `json:"input_data,omitempty"`
+}
+
+type ReportEvaluatorRecordParam struct {
+	SpaceID    int64                `json:"space_id"`
+	RecordID   int64                `json:"record_id"`
+	OutputData *EvaluatorOutputData `json:"output_data,omitempty"`
+	Status     EvaluatorRunStatus   `json:"status"`
+}
+
 type CreateExptParam struct {
 	WorkspaceID           int64                    `json:"workspace_id"`
 	EvalSetVersionID      int64                    `json:"eval_set_version_id"`

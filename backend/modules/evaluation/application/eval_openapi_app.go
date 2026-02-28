@@ -31,6 +31,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
+	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -1906,4 +1907,39 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 			Total:               gptr.Of(int32(total)),
 		},
 	}, nil
+}
+
+func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
+	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive req: %v", json.Jsonify(req))
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", req.GetInvokeID())
+	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
+	if err != nil {
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
+		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID())
+
+	outputData := evaluatorconvertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
+	if outputData != nil {
+		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
+	}
+
+	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
+		SpaceID:    req.GetWorkspaceID(),
+		RecordID:   req.GetInvokeID(),
+		OutputData: outputData,
+		Status:     evaluatorconvertor.ToEvaluatorRunStatusDO(req.GetStatus()),
+	}); err != nil {
+		return nil, err
+	}
+
+	if actx.Event != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil); err != nil {
+			return nil, err
+		}
+	}
+
+	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }

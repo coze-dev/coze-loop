@@ -325,6 +325,32 @@ func (p *RunEvaluatorResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *AsyncRunEvaluatorRequest) IsValid() error {
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncRunEvaluatorResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *DebugEvaluatorRequest) IsValid() error {
 	if p.EvaluatorContent != nil {
 		if err := p.EvaluatorContent.IsValid(); err != nil {
@@ -354,6 +380,37 @@ func (p *DebugEvaluatorResponse) IsValid() error {
 			return fmt.Errorf("field EvaluatorOutputData not valid, %w", err)
 		}
 	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncDebugEvaluatorRequest) IsValid() error {
+	if p.EvaluatorContent != nil {
+		if err := p.EvaluatorContent.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AsyncDebugEvaluatorResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
