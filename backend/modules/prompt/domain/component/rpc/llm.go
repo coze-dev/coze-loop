@@ -17,10 +17,11 @@ type LLMCallParam struct {
 	Scenario      entity.Scenario
 	UserID        *string
 
-	Messages       []*entity.Message
-	Tools          []*entity.Tool
-	ToolCallConfig *entity.ToolCallConfig
-	ModelConfig    *entity.ModelConfig
+	Messages          []*entity.Message
+	Tools             []*entity.Tool
+	ToolCallConfig    *entity.ToolCallConfig
+	ModelConfig       *entity.ModelConfig
+	ResponseAPIConfig *entity.ResponseAPIConfig
 }
 
 type LLMStreamingCallParam struct {
