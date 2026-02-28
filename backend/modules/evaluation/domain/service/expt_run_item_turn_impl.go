@@ -263,6 +263,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return make(map[int64]*entity.EvaluatorRecord), nil
 	}
 
+	if etec.Event.AsyncReportTrigger {
+		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
+		return etec.ExptTurnRunResult.EvaluatorResults, nil
+	}
+
 	expt := etec.Expt
 	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
