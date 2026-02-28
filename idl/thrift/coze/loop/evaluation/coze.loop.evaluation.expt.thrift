@@ -823,7 +823,7 @@ service ExperimentService {
 
     // 实验模板
     CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (
-        api.post = '/api/evaluation/v1/experiment_templates', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = '/api/evaluation/v1/experiment_templates', api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
     BatchGetExperimentTemplateResponse BatchGetExperimentTemplate(1: BatchGetExperimentTemplateRequest req) (
         api.post = '/api/evaluation/v1/experiment_templates/batch_get', api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'experiment'

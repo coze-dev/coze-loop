@@ -411,7 +411,7 @@ service EvaluationSetService {
 
     // 数据管理
     BatchCreateEvaluationSetItemsResponse BatchCreateEvaluationSetItems(1: BatchCreateEvaluationSetItemsRequest req) (
-        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_create", api.op_type = 'query', api.tag = 'volc-agentkit,open'
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/batch_create", api.op_type = 'create', api.tag = 'volc-agentkit,open'
     )
     UpdateEvaluationSetItemResponse UpdateEvaluationSetItem(1: UpdateEvaluationSetItemRequest req) (
         api.category="evaluation_set", api.put = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id", api.op_type = 'update', api.tag = 'volc-agentkit,open'
