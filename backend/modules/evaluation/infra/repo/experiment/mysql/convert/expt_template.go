@@ -185,6 +185,8 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 				}
 				em := &entity.EvaluatorFieldMapping{
 					EvaluatorVersionID: ec.EvaluatorVersionID,
+					EvaluatorID:        ec.EvaluatorID,
+					Version:            ec.Version,
 				}
 				if ec.IngressConf.EvalSetAdapter != nil {
 					for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {

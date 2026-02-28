@@ -7,6 +7,7 @@ const ContentType ContentType_Image = "image"
 const ContentType ContentType_Audio = "audio"
 const ContentType ContentType_Video = "video"
 const ContentType ContentType_MultiPart = "multi_part"
+const ContentType ContentType_MultiPartVariable = "multi_part_variable"
 
 // 内容结构
 struct Content {
@@ -103,6 +104,13 @@ struct OrderBy {
 
 struct RuntimeParam {
     1: optional string json_value
+}
+
+// 限流配置（用于 CustomRPCEvaluator 等）
+struct RateLimit {
+    1: optional i32 rate
+    2: optional i32 burst
+    3: optional string period
 }
 
 // 消息角色

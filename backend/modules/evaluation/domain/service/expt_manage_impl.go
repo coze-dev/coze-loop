@@ -615,6 +615,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			TargetID:  targetID,
 			VersionID: targetVersionID,
 		}
+	} else if req.TargetID != nil && *req.TargetID > 0 && req.TargetVersionID > 0 {
+		// 使用已有 target（如从模板提交实验时）
+		versionedTargetID = &entity.VersionedTargetID{
+			TargetID:  *req.TargetID,
+			VersionID: req.TargetVersionID,
+		}
 	}
 
 	tuple, err := e.getExptTupleByID(ctx, &entity.ExptTupleID{
@@ -690,11 +696,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 	}
 
-	if !req.CreateEvalTargetParam.IsNull() {
-		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
-		if versionedTargetID != nil {
-			do.TargetID = versionedTargetID.TargetID
-			do.TargetVersionID = versionedTargetID.VersionID
+	if versionedTargetID != nil {
+		do.TargetID = versionedTargetID.TargetID
+		do.TargetVersionID = versionedTargetID.VersionID
+		if !req.CreateEvalTargetParam.IsNull() {
+			do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		} else if tuple.Target != nil {
+			if tuple.Target.EvalTargetVersion != nil {
+				do.TargetType = tuple.Target.EvalTargetVersion.EvalTargetType
+			} else {
+				do.TargetType = tuple.Target.EvalTargetType
+			}
 		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID
