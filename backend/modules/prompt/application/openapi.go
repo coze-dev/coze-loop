@@ -178,9 +178,6 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 
 // fetchPromptResults 构建返回结果
 func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, promptKeyIDMap map[string]int64) (*openapi.BatchGetPromptByPromptKeyResponse, error) {
-	// 准备查询参数
-	var mgetParams []repo.GetPromptParam
-
 	// 构建统一的查询参数
 	var queryParams []service.PromptQueryParam
 	for _, q := range req.Queries {
@@ -191,12 +188,13 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		if !exists {
 			continue // 如果找不到对应的 prompt ID，跳过该查询
 		}
-		queryParams = append(queryParams, service.PromptQueryParam{
+		queryParam := service.PromptQueryParam{
 			PromptID:  promptID,
 			PromptKey: q.GetPromptKey(),
 			Version:   q.GetVersion(),
 			Label:     q.GetLabel(),
-		})
+		}
+		queryParams = append(queryParams, queryParam)
 	}
 
 	// 使用统一的方法解析版本信息
@@ -204,6 +202,10 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+
+	// 准备查询参数
+	var commitParams []repo.GetPromptParam
+	var draftParams []repo.GetPromptParam
 	for _, query := range req.Queries {
 		if query == nil {
 			continue
@@ -229,41 +231,65 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		if commitVersion != consts.PromptPersonalDraftVersion {
 			param.WithCommit = true
 			param.CommitVersion = commitVersion
+			commitParams = append(commitParams, param)
 		} else {
 			param.WithDraft = true
-			if userID, ok := p.user.GetUserIdInCtx(ctx); ok {
-				param.UserID = userID
+			userID, ok := p.user.GetUserIdInCtx(ctx)
+			if !ok || userID == "" {
+				return nil, errorx.NewByCode(prompterr.CommonNoPermissionCode, errorx.WithExtraMsg("user not found"))
 			}
+			param.UserID = userID
+			draftParams = append(draftParams, param)
 		}
-		mgetParams = append(mgetParams, param)
 	}
 
 	// 获取prompt详细信息
-	prompts, err := p.promptManageRepo.MGetPrompt(ctx, mgetParams, repo.WithPromptCacheEnable())
-	if err != nil {
-		if bizErr, ok := errorx.FromStatusError(err); ok && bizErr.Code() == prompterr.PromptVersionNotExistCode {
-			extra := bizErr.Extra()
-			for promptKey, promptID := range promptKeyIDMap {
-				if extra["prompt_id"] == strconv.FormatInt(promptID, 10) {
-					extra["prompt_key"] = promptKey
-					break
+	prompts := make(map[repo.GetPromptParam]*entity.Prompt)
+	if len(commitParams) > 0 {
+		commitPromptMap, err := p.promptManageRepo.MGetPrompt(ctx, commitParams, repo.WithPromptCacheEnable())
+		if err != nil {
+			if bizErr, ok := errorx.FromStatusError(err); ok && bizErr.Code() == prompterr.PromptVersionNotExistCode {
+				extra := bizErr.Extra()
+				for promptKey, promptID := range promptKeyIDMap {
+					if extra["prompt_id"] == strconv.FormatInt(promptID, 10) {
+						extra["prompt_key"] = promptKey
+						break
+					}
 				}
+				bizErr.WithExtra(extra)
 			}
-			bizErr.WithExtra(extra)
+			return nil, err
 		}
-		return nil, err
+		for queryParam, prompt := range commitPromptMap {
+			prompts[queryParam] = prompt
+		}
+	}
+	if len(draftParams) > 0 {
+		draftPromptMap, err := p.promptManageRepo.MGetPrompt(ctx, draftParams)
+		if err != nil {
+			return nil, err
+		}
+		for queryParam, prompt := range draftPromptMap {
+			prompts[queryParam] = prompt
+		}
 	}
 
 	// 展开片段内容（若有），构建版本映射
 	promptMap := make(map[service.PromptKeyVersionPair]*entity.Prompt)
-	for _, prompt := range maps.Values(prompts) {
-		err = p.promptService.ExpandSnippets(ctx, prompt)
-		if err != nil {
+	for queryParam, prompt := range prompts {
+		if prompt == nil {
+			continue
+		}
+		if err := p.promptService.ExpandSnippets(ctx, prompt); err != nil {
 			return nil, err
+		}
+		version := queryParam.CommitVersion
+		if queryParam.WithDraft {
+			version = consts.PromptPersonalDraftVersion
 		}
 		promptMap[service.PromptKeyVersionPair{
 			PromptKey: prompt.PromptKey,
-			Version:   prompt.GetVersion(),
+			Version:   version,
 		}] = prompt
 	}
 
