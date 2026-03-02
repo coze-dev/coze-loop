@@ -2843,9 +2843,7 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 		assert.Equal(t, end, res.EndTime)
 	}
 
-	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> use 0
-	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(2)).Return("third-2")
-	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-b"})
+	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> should return error because DateValidator requires non-zero time
 	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "2", "", "").Return(nil, nil)
 
 	req2 := &openapi.SearchTraceOApiRequest{
@@ -2854,7 +2852,6 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 		EndTime:     0,
 	}
 	res2, err := app.buildSearchTraceOApiReq(ctx, req2)
-	assert.NoError(t, err)
-	assert.Equal(t, int64(0), res2.StartTime)
-	assert.Equal(t, int64(0), res2.EndTime)
+	assert.Error(t, err)
+	assert.Nil(t, res2)
 }
