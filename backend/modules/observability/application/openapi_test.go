@@ -2827,12 +2827,12 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id").Return(&start, &end)
 
 	req := &openapi.SearchTraceOApiRequest{
-		WorkspaceID:  1,
-		TraceID:      ptr.Of("trace-id"),
-		Logid:        ptr.Of("log-id"),
-		StartTime:    0,
-		EndTime:      0,
-		Limit:        50,
+		WorkspaceID: 1,
+		TraceID:     ptr.Of("trace-id"),
+		Logid:       ptr.Of("log-id"),
+		StartTime:   0,
+		EndTime:     0,
+		Limit:       50,
 	}
 
 	res, err := app.buildSearchTraceOApiReq(ctx, req)
