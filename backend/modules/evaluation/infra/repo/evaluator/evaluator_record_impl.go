@@ -98,11 +98,8 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 			if err != nil {
 				return nil, err
 			}
-			if r.recordDataStorage != nil {
-				if err := r.recordDataStorage.LoadEvaluatorRecordData(ctx, evaluatorRecord); err != nil {
-					return nil, err
-				}
-			}
+			// BatchGet 用于列表/批量场景，返回 MySQL 中已裁剪的 evaluator_input_data 预览，不加载 TOS 完整内容
+			// 完整内容需通过 GetEvaluatorRecord 单条查询获取
 			evaluatorRecords = append(evaluatorRecords, evaluatorRecord)
 		}
 	}
