@@ -24,7 +24,11 @@ type IEvalTargetRepo interface {
 	SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
+	GetEvalTargetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, targetID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error)
+	GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error)
 	ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
+	// LoadEvalTargetRecordOutputFields 从 S3 加载 record output 中指定字段的大对象完整内容
+	LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
 	// target record end
 }
 

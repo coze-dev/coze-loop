@@ -35,8 +35,7 @@ type EvalTargetRecord struct {
 	EvalTargetInputData *EvalTargetInputData
 	// 输出数据
 	EvalTargetOutputData *EvalTargetOutputData
-	Status               *EvalTargetRunStatus
-
+	Status   *EvalTargetRunStatus
 	BaseInfo *BaseInfo
 }
 

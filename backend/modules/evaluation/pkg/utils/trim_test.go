@@ -224,3 +224,24 @@ func TestGenerateTextPreview(t *testing.T) {
 		})
 	}
 }
+
+func TestTruncateJsonPreviewToSize(t *testing.T) {
+	t.Parallel()
+
+	t.Run("small object unchanged", func(t *testing.T) {
+		json := []byte(`{"a":1}`)
+		got := TruncateJsonPreviewToSize(json, 1024)
+		assert.Equal(t, json, got)
+	})
+	t.Run("large object truncated", func(t *testing.T) {
+		json := []byte(`{"key1":"value1","key2":"value2","key3":"value3"}`)
+		got := TruncateJsonPreviewToSize(json, 30)
+		assert.LessOrEqual(t, len(got), 33) // maxBytes + "..."
+		assert.True(t, len(got) < len(json))
+	})
+	t.Run("maxBytes 0 returns original", func(t *testing.T) {
+		json := []byte(`{"a":1}`)
+		got := TruncateJsonPreviewToSize(json, 0)
+		assert.Equal(t, json, got)
+	})
+}

@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	eval_target_dto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
@@ -405,6 +406,40 @@ func (e EvalTargetApplicationImpl) BatchGetEvalTargetRecords(ctx context.Context
 		dtoList = append(dtoList, target.EvalTargetRecordDO2DTO(record))
 	}
 	resp.EvalTargetRecords = dtoList
+	return resp, nil
+}
+
+func (e EvalTargetApplicationImpl) GetEvalTargetOutputFieldContent(ctx context.Context, request *eval_target.GetEvalTargetOutputFieldContentRequest) (r *eval_target.GetEvalTargetOutputFieldContentResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	resp := &eval_target.GetEvalTargetOutputFieldContentResponse{}
+	turnID := request.GetTurnID()
+	// 鉴权：先获取 record 拿到 target_id
+	record, err := e.evalTargetService.GetRecordByExperimentRunIDAndItemID(ctx, request.WorkspaceID, request.ExperimentRunID, request.ItemID, turnID)
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found"))
+	}
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(record.TargetID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	fieldContents, err := e.evalTargetService.GetOutputFieldContent(ctx, request.WorkspaceID, request.ExperimentRunID, request.ItemID, turnID, request.FieldKeys)
+	if err != nil {
+		return nil, err
+	}
+	if len(fieldContents) == 0 {
+		resp.FieldContents = map[string]*common.Content{}
+		return resp, nil
+	}
+	resp.FieldContents = target.ContentDOToDTOs(fieldContents)
 	return resp, nil
 }
 

@@ -118,6 +118,36 @@ func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTarget(ctx, targetID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTarget", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTarget), ctx, targetID)
 }
 
+// GetEvalTargetRecordByExperimentRunIDAndItemID mocks base method.
+func (m *MockIEvalTargetRepo) GetEvalTargetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID, targetID, experimentRunID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetRecordByExperimentRunIDAndItemID", ctx, spaceID, targetID, experimentRunID, itemID, turnID)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetRecordByExperimentRunIDAndItemID indicates an expected call of GetEvalTargetRecordByExperimentRunIDAndItemID.
+func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetRecordByExperimentRunIDAndItemID(ctx, spaceID, targetID, experimentRunID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetRecordByExperimentRunIDAndItemID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetRecordByExperimentRunIDAndItemID), ctx, spaceID, targetID, experimentRunID, itemID, turnID)
+}
+
+// GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID mocks base method.
+func (m *MockIEvalTargetRepo) GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID, experimentRunID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID", ctx, spaceID, experimentRunID, itemID, turnID)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID indicates an expected call of GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID.
+func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx, spaceID, experimentRunID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID), ctx, spaceID, experimentRunID, itemID, turnID)
+}
+
 // GetEvalTargetRecordByIDAndSpaceID mocks base method.
 func (m *MockIEvalTargetRepo) GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	m.ctrl.T.Helper()
@@ -191,6 +221,20 @@ func (m *MockIEvalTargetRepo) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Co
 func (mr *MockIEvalTargetRepoMockRecorder) ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvalTargetRecordByIDsAndSpaceID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).ListEvalTargetRecordByIDsAndSpaceID), ctx, spaceID, recordIDs)
+}
+
+// LoadEvalTargetRecordOutputFields mocks base method.
+func (m *MockIEvalTargetRepo) LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadEvalTargetRecordOutputFields", ctx, record, fieldKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LoadEvalTargetRecordOutputFields indicates an expected call of LoadEvalTargetRecordOutputFields.
+func (mr *MockIEvalTargetRepoMockRecorder) LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEvalTargetRecordOutputFields", reflect.TypeOf((*MockIEvalTargetRepo)(nil).LoadEvalTargetRecordOutputFields), ctx, record, fieldKeys)
 }
 
 // SaveEvalTargetRecord mocks base method.

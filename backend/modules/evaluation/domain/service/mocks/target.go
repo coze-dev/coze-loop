@@ -288,6 +288,36 @@ func (mr *MockIEvalTargetServiceMockRecorder) GetEvalTargetVersionByTarget(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetVersionByTarget", reflect.TypeOf((*MockIEvalTargetService)(nil).GetEvalTargetVersionByTarget), ctx, spaceID, targetID, sourceTargetVersion, needSourceInfo)
 }
 
+// GetOutputFieldContent mocks base method.
+func (m *MockIEvalTargetService) GetOutputFieldContent(ctx context.Context, spaceID, experimentRunID, itemID, turnID int64, fieldKeys []string) (map[string]*entity.Content, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOutputFieldContent", ctx, spaceID, experimentRunID, itemID, turnID, fieldKeys)
+	ret0, _ := ret[0].(map[string]*entity.Content)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOutputFieldContent indicates an expected call of GetOutputFieldContent.
+func (mr *MockIEvalTargetServiceMockRecorder) GetOutputFieldContent(ctx, spaceID, experimentRunID, itemID, turnID, fieldKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOutputFieldContent", reflect.TypeOf((*MockIEvalTargetService)(nil).GetOutputFieldContent), ctx, spaceID, experimentRunID, itemID, turnID, fieldKeys)
+}
+
+// GetRecordByExperimentRunIDAndItemID mocks base method.
+func (m *MockIEvalTargetService) GetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID, experimentRunID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRecordByExperimentRunIDAndItemID", ctx, spaceID, experimentRunID, itemID, turnID)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRecordByExperimentRunIDAndItemID indicates an expected call of GetRecordByExperimentRunIDAndItemID.
+func (mr *MockIEvalTargetServiceMockRecorder) GetRecordByExperimentRunIDAndItemID(ctx, spaceID, experimentRunID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordByExperimentRunIDAndItemID", reflect.TypeOf((*MockIEvalTargetService)(nil).GetRecordByExperimentRunIDAndItemID), ctx, spaceID, experimentRunID, itemID, turnID)
+}
+
 // GetRecordByID mocks base method.
 func (m *MockIEvalTargetService) GetRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	m.ctrl.T.Helper()

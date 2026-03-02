@@ -31,6 +31,7 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 		Status:             int32(do.Status),
 	}
 
+	// 大字段已在 Save 时剪裁并放回结构体
 	if do.EvaluatorInputData != nil {
 		inputDataBytes, err := json.Marshal(do.EvaluatorInputData)
 		if err != nil {
@@ -45,7 +46,6 @@ func ConvertEvaluatorRecordDO2PO(do *entity.EvaluatorRecord) *model.EvaluatorRec
 			return nil
 		}
 		po.OutputData = gptr.Of(outputDataBytes)
-
 		if do.EvaluatorOutputData.EvaluatorResult != nil {
 			if do.EvaluatorOutputData.EvaluatorResult.Correction != nil {
 				po.UpdatedBy = do.EvaluatorOutputData.EvaluatorResult.Correction.UpdatedBy

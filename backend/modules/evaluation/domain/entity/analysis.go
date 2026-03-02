@@ -84,3 +84,11 @@ type SourceInfo struct {
 type AnalysisEvent struct {
 	RecordID int64 `json:"record_id"`
 }
+
+// TrajectoryAnalysisParam 轨迹分析请求参数，置于 entity 避免 service/mocks 循环依赖
+type TrajectoryAnalysisParam struct {
+	WorkspaceID int64
+	ExptID      int64
+	ItemID      int64
+	TurnID      int64
+}

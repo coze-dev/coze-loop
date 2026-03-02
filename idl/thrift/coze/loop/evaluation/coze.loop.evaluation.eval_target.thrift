@@ -140,6 +140,23 @@ struct BatchGetEvalTargetRecordsResponse {
     255: base.BaseResp BaseResp
 }
 
+// 按需查询 output 中的大对象完整内容
+struct GetEvalTargetOutputFieldContentRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: required i64 experiment_run_id (api.js_conv="true", go.tag = 'json:"experiment_run_id"')  // 实验运行ID
+    3: required i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')  // 评测集数据项ID
+    4: required list<string> field_keys (api.js_conv="true", go.tag = 'json:"field_keys"')  // output_fields 中待查询的字段 key
+    5: optional i64 turn_id (api.js_conv="true", go.tag = 'json:"turn_id"')  // 轮次ID，默认0
+
+    255: optional base.Base Base
+}
+
+struct GetEvalTargetOutputFieldContentResponse {
+    1: optional map<string, common.Content> field_contents  // field_key -> 完整 Content
+
+    255: base.BaseResp BaseResp
+}
+
 struct ListSourceEvalTargetsRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
     2: optional eval_target.EvalTargetType target_type
@@ -308,6 +325,10 @@ service EvalTargetService {
     )
     BatchGetEvalTargetRecordsResponse BatchGetEvalTargetRecords(1: BatchGetEvalTargetRecordsRequest request) (
         api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
+    // 按需查询 output 中大对象的完整内容
+    GetEvalTargetOutputFieldContentResponse GetEvalTargetOutputFieldContent(1: GetEvalTargetOutputFieldContentRequest request) (
+        api.category="eval_target", api.post = "/api/evaluation/v1/eval_target_records/output_fields", api.op_type = 'query', api.tag = 'volc-agentkit'
     )
 
     // debug
