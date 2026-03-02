@@ -2822,8 +2822,9 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(1)).Return("third-1")
 	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-a"})
 
-	start := int64(1000)
-	end := int64(2000)
+	now := time.Now().UnixMilli()
+	start := now - 10000
+	end := now
 	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id").Return(&start, &end)
 
 	req := &openapi.SearchTraceOApiRequest{
@@ -2837,8 +2838,10 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 
 	res, err := app.buildSearchTraceOApiReq(ctx, req)
 	assert.NoError(t, err)
-	assert.Equal(t, start, res.StartTime)
-	assert.Equal(t, end, res.EndTime)
+	if assert.NotNil(t, res) {
+		assert.Equal(t, start, res.StartTime)
+		assert.Equal(t, end, res.EndTime)
+	}
 
 	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> use 0
 	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(2)).Return("third-2")
