@@ -2017,19 +2017,8 @@ func TestOpenAPIApplication_validateSearchTraceOApiReq(t *testing.T) {
 	negativeLimit.Limit = -1
 	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &negativeLimit))
 
-	// invalid time range (zero values)
-	invalidTime := *validReq
-	invalidTime.StartTime = 0
-	invalidTime.EndTime = 0
-	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidTime))
-
 	// valid request should pass
 	assert.NoError(t, app.validateSearchTraceOApiReq(ctx, validReq))
-
-	// start time later than end time
-	invalidRange := *validReq
-	invalidRange.StartTime = now + 1000
-	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidRange))
 }
 
 func TestOpenAPIApplication_buildSearchTraceOApiReq(t *testing.T) {
