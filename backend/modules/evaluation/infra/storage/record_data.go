@@ -150,25 +150,37 @@ func (s *RecordDataStorage) getFieldMaxSize(ctx context.Context) int64 {
 }
 
 func (s *RecordDataStorage) processInputData(ctx context.Context, input *entity.EvaluatorInputData, fieldMaxSize int64) error {
-	for _, c := range input.InputFields {
-		if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
-			return err
-		}
+	if input == nil {
+		return nil
 	}
-	for _, c := range input.EvaluateDatasetFields {
-		if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
-			return err
-		}
-	}
-	for _, c := range input.EvaluateTargetOutputFields {
-		if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
-			return err
-		}
-	}
-	for _, m := range input.HistoryMessages {
-		if m != nil && m.Content != nil {
-			if err := s.processContent(ctx, m.Content, fieldMaxSize); err != nil {
+	// input_fields、evaluate_dataset_fields、evaluate_target_output_fields 中的大字段需写入 TOS
+	if input.InputFields != nil {
+		for _, c := range input.InputFields {
+			if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
 				return err
+			}
+		}
+	}
+	if input.EvaluateDatasetFields != nil {
+		for _, c := range input.EvaluateDatasetFields {
+			if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
+				return err
+			}
+		}
+	}
+	if input.EvaluateTargetOutputFields != nil {
+		for _, c := range input.EvaluateTargetOutputFields {
+			if err := s.processContent(ctx, c, fieldMaxSize); err != nil {
+				return err
+			}
+		}
+	}
+	if input.HistoryMessages != nil {
+		for _, m := range input.HistoryMessages {
+			if m != nil && m.Content != nil {
+				if err := s.processContent(ctx, m.Content, fieldMaxSize); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -237,25 +249,36 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 }
 
 func (s *RecordDataStorage) loadOmittedContent(ctx context.Context, input *entity.EvaluatorInputData) error {
-	for _, c := range input.InputFields {
-		if err := s.loadContentFromS3(ctx, c); err != nil {
-			return err
-		}
+	if input == nil {
+		return nil
 	}
-	for _, c := range input.EvaluateDatasetFields {
-		if err := s.loadContentFromS3(ctx, c); err != nil {
-			return err
-		}
-	}
-	for _, c := range input.EvaluateTargetOutputFields {
-		if err := s.loadContentFromS3(ctx, c); err != nil {
-			return err
-		}
-	}
-	for _, m := range input.HistoryMessages {
-		if m != nil && m.Content != nil {
-			if err := s.loadContentFromS3(ctx, m.Content); err != nil {
+	if input.InputFields != nil {
+		for _, c := range input.InputFields {
+			if err := s.loadContentFromS3(ctx, c); err != nil {
 				return err
+			}
+		}
+	}
+	if input.EvaluateDatasetFields != nil {
+		for _, c := range input.EvaluateDatasetFields {
+			if err := s.loadContentFromS3(ctx, c); err != nil {
+				return err
+			}
+		}
+	}
+	if input.EvaluateTargetOutputFields != nil {
+		for _, c := range input.EvaluateTargetOutputFields {
+			if err := s.loadContentFromS3(ctx, c); err != nil {
+				return err
+			}
+		}
+	}
+	if input.HistoryMessages != nil {
+		for _, m := range input.HistoryMessages {
+			if m != nil && m.Content != nil {
+				if err := s.loadContentFromS3(ctx, m.Content); err != nil {
+					return err
+				}
 			}
 		}
 	}

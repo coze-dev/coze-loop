@@ -481,11 +481,13 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
 	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
 
 	service := &DefaultExptTurnEvaluationImpl{
-		metric:           mockMetric,
-		evaluatorService: mockEvaluatorService,
-		benefitService:   mockBenefitService,
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
+		benefitService:    mockBenefitService,
+		evalTargetService: mockEvalTargetService,
 	}
 
 	mockContent := &entity.Content{Text: gptr.Of("value1")}
@@ -1342,7 +1344,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Prompt evaluator - empty field configs",
+			name:          "Prompt evaluator - empty field configs（透传全部 target 输出）",
 			evaluatorType: entity.EvaluatorTypePrompt,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -1358,7 +1360,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
 				HistoryMessages: nil,
-				InputFields:     map[string]*entity.Content{},
+				InputFields:     targetFields,
 				Ext:             make(map[string]string),
 			},
 			wantErr: false,
@@ -1492,10 +1494,17 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		Text:        gptr.Of(`{"key": "nested_value"}`),
 	}
 
+	actualOutputContent := &entity.Content{Text: gptr.Of("actual output text")}
 	sourceFields := map[string]*entity.Content{
 		"field1":     mockContent1,
 		"field2":     mockContent2,
 		"json_field": mockJSONContent,
+	}
+	sourceFieldsWithActualOutput := map[string]*entity.Content{
+		"field1":         mockContent1,
+		"field2":         mockContent2,
+		"json_field":     mockJSONContent,
+		"actual_output": actualOutputContent,
 	}
 
 	tests := []struct {
@@ -1564,11 +1573,11 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:          "Empty field configuration",
+			name:          "Empty field configuration - 透传全部 target 输出确保 actual_output 等不丢失",
 			fieldConfs:    []*entity.FieldConf{},
 			sourceFields:  sourceFields,
 			evaluatorType: entity.EvaluatorTypePrompt,
-			wantResult:    map[string]*entity.Content{},
+			wantResult:    sourceFields,
 			wantErr:       false,
 		},
 		{
@@ -1581,6 +1590,19 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			// 对于 Code 类型评估器，应直接返回 sourceFields
 			wantResult: sourceFields,
 			wantErr:    false,
+		},
+		{
+			name: "actual_output 始终传入评估器（FieldConfs 未配置时自动补充）",
+			fieldConfs: []*entity.FieldConf{
+				{FieldName: "output1", FromField: "field1"},
+			},
+			sourceFields:  sourceFieldsWithActualOutput,
+			evaluatorType: entity.EvaluatorTypePrompt,
+			wantResult: map[string]*entity.Content{
+				"output1":        mockContent1,
+				"actual_output":  actualOutputContent,
+			},
+			wantErr: false,
 		},
 	}
 
@@ -1809,11 +1831,13 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
 	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
 
 	service := &DefaultExptTurnEvaluationImpl{
-		metric:           mockMetric,
-		evaluatorService: mockEvaluatorService,
+		metric:            mockMetric,
+		evaluatorService:  mockEvaluatorService,
 		benefitService:   mockBenefitService,
+		evalTargetService: mockEvalTargetService,
 	}
 
 	mockContent := &entity.Content{Text: gptr.Of("value1")}
@@ -2376,7 +2400,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 			},
 		},
 		{
-			name:          "prompt evaluator with empty field configs",
+			name:          "prompt evaluator with empty field configs（透传全部 target 输出）",
 			evaluatorType: entity.EvaluatorTypePrompt,
 			ec: &entity.EvaluatorConf{
 				IngressConf: &entity.EvaluatorIngressConf{
@@ -2389,7 +2413,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 			wantErr:      false,
 			validateResult: func(t *testing.T, result *entity.EvaluatorInputData) {
 				assert.NotNil(t, result.InputFields)
-				assert.Empty(t, result.InputFields)
+				assert.Equal(t, targetFields, result.InputFields)
 			},
 		},
 	}

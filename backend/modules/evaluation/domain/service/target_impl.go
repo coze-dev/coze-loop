@@ -583,6 +583,13 @@ func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID
 	return e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
 }
 
+func (e *EvalTargetServiceImpl) LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	if record == nil || len(fieldKeys) == 0 {
+		return nil
+	}
+	return e.evalTargetRepo.LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys)
+}
+
 func (e *EvalTargetServiceImpl) GetOutputFieldContent(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64, fieldKeys []string) (map[string]*entity.Content, error) {
 	if spaceID == 0 || experimentRunID == 0 || itemID == 0 || len(fieldKeys) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)

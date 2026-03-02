@@ -311,6 +311,21 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
 	targetFields := targetResult.EvalTargetOutputData.OutputFields
 
+	// 评估器需要完整的 target_output，从 TOS 加载被裁剪的大字段
+	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
+		omitKeys := make([]string, 0)
+		for k, c := range targetResult.EvalTargetOutputData.OutputFields {
+			if c != nil && c.IsContentOmitted() {
+				omitKeys = append(omitKeys, k)
+			}
+		}
+		if len(omitKeys) > 0 {
+			if err := e.evalTargetService.LoadRecordOutputFields(ctx, targetResult, omitKeys); err != nil {
+				logs.CtxWarn(ctx, "[CallEvaluators] LoadRecordOutputFields fail, err: %v", err)
+			}
+		}
+	}
+
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
 	if err != nil {
 		return nil, err
@@ -373,11 +388,19 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
 	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
 ) (*entity.EvaluatorInputData, error) {
-	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, ec.IngressConf.EvalSetAdapter.FieldConfs, evalSetTurn)
+	var targetFieldConfs []*entity.FieldConf
+	if ec.IngressConf != nil && ec.IngressConf.TargetAdapter != nil {
+		targetFieldConfs = ec.IngressConf.TargetAdapter.FieldConfs
+	}
+	var evalSetFieldConfs []*entity.FieldConf
+	if ec.IngressConf != nil && ec.IngressConf.EvalSetAdapter != nil {
+		evalSetFieldConfs = ec.IngressConf.EvalSetAdapter.FieldConfs
+	}
+	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, evalSetFieldConfs, evalSetTurn)
 	if err != nil {
 		return nil, err
 	}
-	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields, evaluatorType, inputSchemas)
+	fromTarget, err := e.buildFieldsFromSource(ctx, targetFieldConfs, targetFields, evaluatorType, inputSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -411,15 +434,20 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	return res, nil
 }
 
-// buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic
+// buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic.
+// 评估器评测需要完整的 target_output，故：1) Code 或 无 input_schemas 的 CustomRPC 直接透传全部 sourceFields；
+// 2) 有 FieldConfs 时按配置映射，并确保 actual_output 等 target 正常输出字段始终包含（避免遗漏）。
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
 	sourceFields map[string]*entity.Content, evaluatorType entity.EvaluatorType, inputSchemas []*entity.ArgsSchema,
 ) (map[string]*entity.Content, error) {
 	if evaluatorType == entity.EvaluatorTypeCode || (evaluatorType == entity.EvaluatorTypeCustomRPC && len(inputSchemas) == 0) {
 		return sourceFields, nil
 	}
+	// FieldConfs 为空时透传全部 target 输出，确保 actual_output 等字段不丢失
+	if len(fieldConfs) == 0 {
+		return sourceFields, nil
+	}
 	result := make(map[string]*entity.Content)
-
 	for _, fc := range fieldConfs {
 		content, err := e.getFieldContent(fc, sourceFields)
 		if err != nil {
@@ -427,7 +455,12 @@ func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Contex
 		}
 		result[fc.FieldName] = content
 	}
-
+	// 确保 actual_output 始终传入评估器（target 正常输出字段，评测必需）
+	if c := sourceFields[consts.EvalTargetOutputFieldKeyActualOutput]; c != nil {
+		if _, has := result[consts.EvalTargetOutputFieldKeyActualOutput]; !has {
+			result[consts.EvalTargetOutputFieldKeyActualOutput] = c
+		}
+	}
 	return result, nil
 }
 

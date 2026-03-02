@@ -333,6 +333,20 @@ func (mr *MockIEvalTargetServiceMockRecorder) GetRecordByID(ctx, spaceID, record
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordByID", reflect.TypeOf((*MockIEvalTargetService)(nil).GetRecordByID), ctx, spaceID, recordID)
 }
 
+// LoadRecordOutputFields mocks base method.
+func (m *MockIEvalTargetService) LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadRecordOutputFields", ctx, record, fieldKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LoadRecordOutputFields indicates an expected call of LoadRecordOutputFields.
+func (mr *MockIEvalTargetServiceMockRecorder) LoadRecordOutputFields(ctx, record, fieldKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadRecordOutputFields", reflect.TypeOf((*MockIEvalTargetService)(nil).LoadRecordOutputFields), ctx, record, fieldKeys)
+}
+
 // ReportInvokeRecords mocks base method.
 func (m *MockIEvalTargetService) ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error {
 	m.ctrl.T.Helper()
