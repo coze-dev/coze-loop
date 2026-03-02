@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -66,6 +67,7 @@ func NewOpenAPIApplication(
 	traceConfig config.ITraceConfig,
 	metrics metrics.ITraceMetrics,
 	collector collector.ICollectorProvider,
+	timeRange time_range.ITimeRangeProvider,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -77,6 +79,7 @@ func NewOpenAPIApplication(
 		traceConfig:  traceConfig,
 		metrics:      metrics,
 		collector:    collector,
+		timeRange:    timeRange,
 	}, nil
 }
 
@@ -90,6 +93,7 @@ type OpenAPIApplication struct {
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
 	collector    collector.ICollectorProvider
+	timeRange    time_range.ITimeRangeProvider
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -574,14 +578,25 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		platformType = loop_span.PlatformCozeLoop
 	}
 
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+
+	if startTime == 0 && endTime == 0 {
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.WorkspaceID, 10), req.GetLogid(), req.GetTraceID())
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
+
 	ret := &service.SearchTraceOApiReq{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
 		LogID:                 req.GetLogid(),
-		StartTime:             req.GetStartTime(),
-		EndTime:               req.GetEndTime(),
+		StartTime:             startTime,
+		EndTime:               endTime,
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
 		WithDetail:            true,

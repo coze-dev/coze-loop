@@ -73,6 +73,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
 	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -137,6 +138,7 @@ var (
 		NewOpenAPIApplication,
 		auth.NewAuthProvider,
 		traceDomainSet,
+		time_range.NewTimeRangeProvider,
 	)
 	taskSet = wire.NewSet(
 		tracehub.NewTraceHubImpl,

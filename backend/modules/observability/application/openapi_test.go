@@ -30,6 +30,7 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
+	time_rangemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	workspacemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -964,6 +965,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 	collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+	timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
 
 	rateLimiterFactoryMock.EXPECT().NewRateLimiter().Return(rateLimiterMock)
 
@@ -977,6 +979,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 		traceConfigMock,
 		metricsMock,
 		collectorMock,
+		timeRangeMock,
 	)
 
 	assert.NoError(t, err)
@@ -994,6 +997,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	assert.NotNil(t, openAPIApp.traceConfig)
 	assert.NotNil(t, openAPIApp.metrics)
 	assert.NotNil(t, openAPIApp.collector)
+	assert.NotNil(t, openAPIApp.timeRange)
 }
 
 // 补充IngestTraces的边界测试场景
@@ -2796,4 +2800,58 @@ func TestUngzip(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, result)
 	})
+}
+
+func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
+
+	app := &OpenAPIApplication{
+		tenant:    tenantMock,
+		workspace: workspaceMock,
+		timeRange: timeRangeMock,
+	}
+
+	ctx := context.Background()
+
+	// Case: StartTime=0, EndTime=0 -> use TimeRangeProvider
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(1)).Return("third-1")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-a"})
+
+	start := int64(1000)
+	end := int64(2000)
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id").Return(&start, &end)
+
+	req := &openapi.SearchTraceOApiRequest{
+		WorkspaceID:  1,
+		TraceID:      ptr.Of("trace-id"),
+		Logid:        ptr.Of("log-id"),
+		StartTime:    0,
+		EndTime:      0,
+		Limit:        50,
+	}
+
+	res, err := app.buildSearchTraceOApiReq(ctx, req)
+	assert.NoError(t, err)
+	assert.Equal(t, start, res.StartTime)
+	assert.Equal(t, end, res.EndTime)
+
+	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> use 0
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(2)).Return("third-2")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-b"})
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "2", "", "").Return(nil, nil)
+
+	req2 := &openapi.SearchTraceOApiRequest{
+		WorkspaceID: 2,
+		StartTime:   0,
+		EndTime:     0,
+	}
+	res2, err := app.buildSearchTraceOApiReq(ctx, req2)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), res2.StartTime)
+	assert.Equal(t, int64(0), res2.EndTime)
 }
