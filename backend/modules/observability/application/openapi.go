@@ -558,17 +558,7 @@ func (o *OpenAPIApplication) validateSearchTraceOApiReq(ctx context.Context, req
 	} else if req.Limit > MaxListSpansLimit || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
 	}
-	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
-		EarliestDays: 365,
-	}
-	newStartTime, newEndTime, err := v.CorrectDate()
-	if err != nil {
-		return err
-	}
-	req.SetStartTime(newStartTime)
-	req.SetEndTime(newEndTime)
+
 	return nil
 }
 
@@ -589,14 +579,24 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		}
 	}
 
+	v := utils.DateValidator{
+		Start:        startTime,
+		End:          endTime,
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
 	ret := &service.SearchTraceOApiReq{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
 		LogID:                 req.GetLogid(),
-		StartTime:             startTime,
-		EndTime:               endTime,
+		StartTime:             newStartTime,
+		EndTime:               newEndTime,
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
 		WithDetail:            true,
