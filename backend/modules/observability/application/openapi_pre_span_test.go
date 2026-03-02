@@ -141,7 +141,7 @@ func TestOpenAPIApplication_ListPreSpanOApi(t *testing.T) {
 
 	// 公共期望：允许速率
 	traceCfg.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil).AnyTimes()
-	metricsProv.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	metricsProv.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	collectorProv.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	// 成功场景
@@ -215,7 +215,7 @@ func TestOpenAPIApplication_ListPreSpanOApi_NoPermission(t *testing.T) {
 
 	// 公共期望：允许速率
 	traceCfg.EXPECT().GetQueryMaxQPS(gomock.Any(), gomock.Any()).Return(10, nil).AnyTimes()
-	metricsProv.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	metricsProv.EXPECT().EmitTraceOapi(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	collectorProv.EXPECT().CollectTraceOpenAPIEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 	// 无权限场景
