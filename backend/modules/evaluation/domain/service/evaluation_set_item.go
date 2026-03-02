@@ -15,7 +15,7 @@ type EvaluationSetItemService interface {
 	UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error)
 	BatchUpdateEvaluationSetItems(ctx context.Context, param *entity.BatchUpdateEvaluationSetItemsParam) (errors []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	BatchDeleteEvaluationSetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
-	ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total *int64, nextPageToken *string, err error)
+	ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error)
 	BatchGetEvaluationSetItems(ctx context.Context, param *entity.BatchGetEvaluationSetItemsParam) (items []*entity.EvaluationSetItem, err error)
 	ClearEvaluationSetDraftItem(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetEvaluationSetItemField(ctx context.Context, param *entity.GetEvaluationSetItemFieldParam) (fieldData *entity.FieldData, err error)

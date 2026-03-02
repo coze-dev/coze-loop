@@ -342,7 +342,6 @@ func (h *TraceHubServiceImpl) fetchSpans(ctx context.Context, listParam *repo.Li
 		logs.CtxInfo(ctx, "Completed listing spans, task_id=%d", sub.t.ID)
 		return spans, "", nil
 	}
-
 	return spans, result.PageToken, nil
 }
 

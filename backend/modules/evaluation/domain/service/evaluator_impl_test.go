@@ -1493,7 +1493,7 @@ func TestEvaluatorServiceImpl_SubmitEvaluatorVersion(t *testing.T) {
 			PromptTemplateKey: "test-template-key",
 			PromptSuffix:      "test-prompt-suffix",
 			ModelConfig: &entity.ModelConfig{
-				ModelID: 1,
+				ModelID: gptr.Of(int64(1)),
 			},
 			ParseType: entity.ParseTypeFunctionCall,
 			MessageList: []*entity.Message{
@@ -1672,7 +1672,7 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 			PromptTemplateKey: "test-template-key",
 			PromptSuffix:      "test-prompt-suffix",
 			ModelConfig: &entity.ModelConfig{
-				ModelID: 1,
+				ModelID: gptr.Of(int64(1)),
 			},
 			ParseType: entity.ParseTypeFunctionCall,
 			MessageList: []*entity.Message{
@@ -1910,7 +1910,7 @@ func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 			PromptTemplateKey: "test-template-key",
 			PromptSuffix:      "test-prompt-suffix",
 			ModelConfig: &entity.ModelConfig{
-				ModelID: 1,
+				ModelID: gptr.Of(int64(1)),
 			},
 			ParseType: entity.ParseTypeFunctionCall,
 			MessageList: []*entity.Message{
@@ -2051,7 +2051,7 @@ func TestEvaluatorServiceImpl_RunEvaluator_DisableTracing(t *testing.T) {
 			PromptTemplateKey: "test-template-key",
 			PromptSuffix:      "test-prompt-suffix",
 			ModelConfig: &entity.ModelConfig{
-				ModelID: 1,
+				ModelID: gptr.Of(int64(1)),
 			},
 			ParseType: entity.ParseTypeFunctionCall,
 		},

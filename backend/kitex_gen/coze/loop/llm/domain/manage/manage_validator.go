@@ -37,6 +37,33 @@ func (p *Model) IsValid() error {
 			return fmt.Errorf("field ParamConfig not valid, %w", err)
 		}
 	}
+	if p.Series != nil {
+		if err := p.Series.IsValid(); err != nil {
+			return fmt.Errorf("field Series not valid, %w", err)
+		}
+	}
+	if p.Visibility != nil {
+		if err := p.Visibility.IsValid(); err != nil {
+			return fmt.Errorf("field Visibility not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Series) IsValid() error {
+	return nil
+}
+func (p *Visibility) IsValid() error {
+	return nil
+}
+func (p *ProviderInfo) IsValid() error {
+	if p.MaasInfo != nil {
+		if err := p.MaasInfo.IsValid(); err != nil {
+			return fmt.Errorf("field MaasInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MaaSInfo) IsValid() error {
 	return nil
 }
 func (p *Ability) IsValid() error {
@@ -156,6 +183,14 @@ func (p *ParamConfig) IsValid() error {
 	return nil
 }
 func (p *ParamSchema) IsValid() error {
+	if p.Reaction != nil {
+		if err := p.Reaction.IsValid(); err != nil {
+			return fmt.Errorf("field Reaction not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Reaction) IsValid() error {
 	return nil
 }
 func (p *ParamOption) IsValid() error {

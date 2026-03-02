@@ -51,6 +51,8 @@ const (
 	EvalTargetType_VolcengineAgent EvalTargetType = 5
 	// 自定义RPC服务 for内场
 	EvalTargetType_CustomRPCServer EvalTargetType = 6
+	// 火山智能体Agentkit
+	EvalTargetType_VolcengineAgentAgentkit EvalTargetType = 7
 )
 
 func (p EvalTargetType) String() string {
@@ -67,6 +69,8 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgent"
 	case EvalTargetType_CustomRPCServer:
 		return "CustomRPCServer"
+	case EvalTargetType_VolcengineAgentAgentkit:
+		return "VolcengineAgentAgentkit"
 	}
 	return "<UNSET>"
 }
@@ -85,6 +89,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_VolcengineAgent, nil
 	case "CustomRPCServer":
 		return EvalTargetType_CustomRPCServer, nil
+	case "VolcengineAgentAgentkit":
+		return EvalTargetType_VolcengineAgentAgentkit, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -4386,8 +4392,9 @@ type VolcengineAgent struct {
 	// DTO使用，不存数据库
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint `thrift:"volcengine_agent_endpoints,12,optional" frugal:"12,optional,list<VolcengineAgentEndpoint>" form:"volcengine_agent_endpoints" json:"volcengine_agent_endpoints,omitempty" query:"volcengine_agent_endpoints"`
 	// 注册协议
-	Protocol *VolcengineAgentProtocol `thrift:"protocol,13,optional" frugal:"13,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
-	BaseInfo *common.BaseInfo         `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	Protocol  *VolcengineAgentProtocol `thrift:"protocol,13,optional" frugal:"13,optional,string" form:"protocol" json:"protocol,omitempty" query:"protocol"`
+	RuntimeID *string                  `thrift:"runtime_id,14,optional" frugal:"14,optional,string" form:"runtime_id" json:"runtime_id,omitempty" query:"runtime_id"`
+	BaseInfo  *common.BaseInfo         `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewVolcengineAgent() *VolcengineAgent {
@@ -4457,6 +4464,18 @@ func (p *VolcengineAgent) GetProtocol() (v VolcengineAgentProtocol) {
 	return *p.Protocol
 }
 
+var VolcengineAgent_RuntimeID_DEFAULT string
+
+func (p *VolcengineAgent) GetRuntimeID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRuntimeID() {
+		return VolcengineAgent_RuntimeID_DEFAULT
+	}
+	return *p.RuntimeID
+}
+
 var VolcengineAgent_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *VolcengineAgent) GetBaseInfo() (v *common.BaseInfo) {
@@ -4483,6 +4502,9 @@ func (p *VolcengineAgent) SetVolcengineAgentEndpoints(val []*VolcengineAgentEndp
 func (p *VolcengineAgent) SetProtocol(val *VolcengineAgentProtocol) {
 	p.Protocol = val
 }
+func (p *VolcengineAgent) SetRuntimeID(val *string) {
+	p.RuntimeID = val
+}
 func (p *VolcengineAgent) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -4493,6 +4515,7 @@ var fieldIDToName_VolcengineAgent = map[int16]string{
 	11:  "description",
 	12:  "volcengine_agent_endpoints",
 	13:  "protocol",
+	14:  "runtime_id",
 	100: "base_info",
 }
 
@@ -4514,6 +4537,10 @@ func (p *VolcengineAgent) IsSetVolcengineAgentEndpoints() bool {
 
 func (p *VolcengineAgent) IsSetProtocol() bool {
 	return p.Protocol != nil
+}
+
+func (p *VolcengineAgent) IsSetRuntimeID() bool {
+	return p.RuntimeID != nil
 }
 
 func (p *VolcengineAgent) IsSetBaseInfo() bool {
@@ -4573,6 +4600,14 @@ func (p *VolcengineAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 13:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4682,6 +4717,17 @@ func (p *VolcengineAgent) ReadField13(iprot thrift.TProtocol) error {
 	p.Protocol = _field
 	return nil
 }
+func (p *VolcengineAgent) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.RuntimeID = _field
+	return nil
+}
 func (p *VolcengineAgent) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -4715,6 +4761,10 @@ func (p *VolcengineAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField13(oprot); err != nil {
 			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4837,6 +4887,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
 }
+func (p *VolcengineAgent) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRuntimeID() {
+		if err = oprot.WriteFieldBegin("runtime_id", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.RuntimeID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *VolcengineAgent) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -4883,6 +4951,9 @@ func (p *VolcengineAgent) DeepEqual(ano *VolcengineAgent) bool {
 		return false
 	}
 	if !p.Field13DeepEqual(ano.Protocol) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.RuntimeID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -4948,6 +5019,18 @@ func (p *VolcengineAgent) Field13DeepEqual(src *VolcengineAgentProtocol) bool {
 		return false
 	}
 	if strings.Compare(*p.Protocol, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *VolcengineAgent) Field14DeepEqual(src *string) bool {
+
+	if p.RuntimeID == src {
+		return true
+	} else if p.RuntimeID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.RuntimeID, *src) != 0 {
 		return false
 	}
 	return true

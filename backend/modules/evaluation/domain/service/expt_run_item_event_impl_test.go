@@ -562,6 +562,7 @@ func TestExptItemEventEvalServiceImpl_GetExistExptRecordEvalResult(t *testing.T)
 		{
 			ID:     1,
 			ItemID: 1,
+			TurnID: 1,
 		},
 	}
 

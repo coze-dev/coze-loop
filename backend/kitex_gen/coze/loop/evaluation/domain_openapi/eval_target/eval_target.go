@@ -516,6 +516,8 @@ func (p *CustomEvalTarget) Field10DeepEqual(src map[string]string) bool {
 type EvalTarget struct {
 	// 基本信息
 	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	// 空间ID
+	WorkspaceID *int64 `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	// 源对象ID，例如prompt ID
 	SourceTargetID *string `thrift:"source_target_id,3,optional" frugal:"3,optional,string" form:"source_target_id" json:"source_target_id,omitempty" query:"source_target_id"`
 	// 评测对象类型
@@ -543,6 +545,18 @@ func (p *EvalTarget) GetID() (v int64) {
 		return EvalTarget_ID_DEFAULT
 	}
 	return *p.ID
+}
+
+var EvalTarget_WorkspaceID_DEFAULT int64
+
+func (p *EvalTarget) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return EvalTarget_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var EvalTarget_SourceTargetID_DEFAULT string
@@ -595,6 +609,9 @@ func (p *EvalTarget) GetBaseInfo() (v *common.BaseInfo) {
 func (p *EvalTarget) SetID(val *int64) {
 	p.ID = val
 }
+func (p *EvalTarget) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *EvalTarget) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -610,6 +627,7 @@ func (p *EvalTarget) SetBaseInfo(val *common.BaseInfo) {
 
 var fieldIDToName_EvalTarget = map[int16]string{
 	1:   "id",
+	2:   "workspace_id",
 	3:   "source_target_id",
 	4:   "eval_target_type",
 	10:  "eval_target_version",
@@ -618,6 +636,10 @@ var fieldIDToName_EvalTarget = map[int16]string{
 
 func (p *EvalTarget) IsSetID() bool {
 	return p.ID != nil
+}
+
+func (p *EvalTarget) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *EvalTarget) IsSetSourceTargetID() bool {
@@ -657,6 +679,14 @@ func (p *EvalTarget) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -734,6 +764,17 @@ func (p *EvalTarget) ReadField1(iprot thrift.TProtocol) error {
 	p.ID = _field
 	return nil
 }
+func (p *EvalTarget) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *EvalTarget) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -781,6 +822,10 @@ func (p *EvalTarget) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField3(oprot); err != nil {
@@ -834,6 +879,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvalTarget) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *EvalTarget) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSourceTargetID() {
@@ -925,6 +988,9 @@ func (p *EvalTarget) DeepEqual(ano *EvalTarget) bool {
 	if !p.Field1DeepEqual(ano.ID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.SourceTargetID) {
 		return false
 	}
@@ -948,6 +1014,18 @@ func (p *EvalTarget) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvalTarget) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
 		return false
 	}
 	return true
@@ -994,6 +1072,8 @@ func (p *EvalTarget) Field100DeepEqual(src *common.BaseInfo) bool {
 type EvalTargetVersion struct {
 	// 基本信息
 	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	// 空间ID
+	WorkspaceID *int64 `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
 	// 对象唯一标识
 	TargetID *int64 `thrift:"target_id,3,optional" frugal:"3,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
 	// 源对象版本，例如prompt是0.0.1，bot是版本号12233等
@@ -1021,6 +1101,18 @@ func (p *EvalTargetVersion) GetID() (v int64) {
 		return EvalTargetVersion_ID_DEFAULT
 	}
 	return *p.ID
+}
+
+var EvalTargetVersion_WorkspaceID_DEFAULT int64
+
+func (p *EvalTargetVersion) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return EvalTargetVersion_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
 }
 
 var EvalTargetVersion_TargetID_DEFAULT int64
@@ -1073,6 +1165,9 @@ func (p *EvalTargetVersion) GetBaseInfo() (v *common.BaseInfo) {
 func (p *EvalTargetVersion) SetID(val *int64) {
 	p.ID = val
 }
+func (p *EvalTargetVersion) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
 func (p *EvalTargetVersion) SetTargetID(val *int64) {
 	p.TargetID = val
 }
@@ -1088,6 +1183,7 @@ func (p *EvalTargetVersion) SetBaseInfo(val *common.BaseInfo) {
 
 var fieldIDToName_EvalTargetVersion = map[int16]string{
 	1:   "id",
+	2:   "workspace_id",
 	3:   "target_id",
 	4:   "source_target_version",
 	5:   "eval_target_content",
@@ -1096,6 +1192,10 @@ var fieldIDToName_EvalTargetVersion = map[int16]string{
 
 func (p *EvalTargetVersion) IsSetID() bool {
 	return p.ID != nil
+}
+
+func (p *EvalTargetVersion) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
 }
 
 func (p *EvalTargetVersion) IsSetTargetID() bool {
@@ -1135,6 +1235,14 @@ func (p *EvalTargetVersion) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1212,6 +1320,17 @@ func (p *EvalTargetVersion) ReadField1(iprot thrift.TProtocol) error {
 	p.ID = _field
 	return nil
 }
+func (p *EvalTargetVersion) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
 func (p *EvalTargetVersion) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -1259,6 +1378,10 @@ func (p *EvalTargetVersion) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 		if err = p.writeField3(oprot); err != nil {
@@ -1312,6 +1435,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvalTargetVersion) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *EvalTargetVersion) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetID() {
@@ -1403,6 +1544,9 @@ func (p *EvalTargetVersion) DeepEqual(ano *EvalTargetVersion) bool {
 	if !p.Field1DeepEqual(ano.ID) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.WorkspaceID) {
+		return false
+	}
 	if !p.Field3DeepEqual(ano.TargetID) {
 		return false
 	}
@@ -1426,6 +1570,18 @@ func (p *EvalTargetVersion) Field1DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetVersion) Field2DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
 		return false
 	}
 	return true

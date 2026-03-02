@@ -28,6 +28,8 @@ func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.Conte
 		return entity.ContentTypeVideo
 	case common.ContentTypeMultiPart:
 		return entity.ContentTypeMultipart
+	case common.ContentTypeMultiPartVariable:
+		return entity.ContentTypeMultipartVariable
 	default:
 		return entity.ContentTypeText // 默认使用Text类型
 	}
@@ -52,8 +54,11 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 	case entity.ContentTypeVideo:
 		ct := common.ContentTypeVideo
 		return &ct
-	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+	case entity.ContentTypeMultipart:
 		ct := common.ContentTypeMultiPart
+		return &ct
+	case entity.ContentTypeMultipartVariable:
+		ct := common.ContentTypeMultiPartVariable
 		return &ct
 	default:
 		// 默认使用text类型
@@ -578,6 +583,8 @@ func OpenAPIContentDO2DTO(content *entity.Content) *common.Content {
 		ContentType:      convertDOContentTypeToOpenAPI(gptr.Indirect(content.ContentType)),
 		Text:             content.Text,
 		Image:            ConvertImageDO2DTO(content.Image),
+		Audio:            ConvertAudioDO2DTO(content.Audio),
+		Video:            ConvertVideoDO2DTO(content.Video),
 		MultiPart:        multiPart,
 		ContentOmitted:   content.ContentOmitted,
 		FullContent:      ConvertObjectStorageDO2DTO(content.FullContent),
@@ -614,6 +621,18 @@ func ConvertAudioDO2DTO(audio *entity.Audio) *common.Audio {
 		URL:    audio.URL,
 		Name:   audio.Name,
 		URI:    audio.URI,
+	}
+}
+
+func ConvertVideoDO2DTO(video *entity.Video) *common.Video {
+	if video == nil {
+		return nil
+	}
+	return &common.Video{
+		Name:     video.Name,
+		URL:      video.URL,
+		ThumbURL: video.ThumbURL,
+		URI:      video.URI,
 	}
 }
 

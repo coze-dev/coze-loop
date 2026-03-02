@@ -214,13 +214,14 @@ func TestEvaluationSetItemServiceImpl_ListEvaluationSetItems(t *testing.T) {
 	service := NewEvaluationSetItemServiceImpl(mockDatasetRPCAdapter)
 
 	tests := []struct {
-		name          string
-		param         *entity.ListEvaluationSetItemsParam
-		mockSetup     func()
-		wantItems     []*entity.EvaluationSetItem
-		wantTotal     *int64
-		wantNextToken *string
-		wantErr       bool
+		name            string
+		param           *entity.ListEvaluationSetItemsParam
+		mockSetup       func()
+		wantItems       []*entity.EvaluationSetItem
+		wantTotal       *int64
+		wantFilterTotal *int64
+		wantNextToken   *string
+		wantErr         bool
 	}{
 		{
 			name: "成功列出项目 - 无版本ID",
@@ -234,14 +235,15 @@ func TestEvaluationSetItemServiceImpl_ListEvaluationSetItems(t *testing.T) {
 					ListDatasetItems(gomock.Any(), gomock.Any()).
 					Return([]*entity.EvaluationSetItem{
 						{ID: 1, ItemKey: "item1"},
-					}, gptr.Of[int64](1), gptr.Of("next_token"), nil)
+					}, gptr.Of[int64](1), gptr.Of[int64](1), gptr.Of("next_token"), nil)
 			},
 			wantItems: []*entity.EvaluationSetItem{
 				{ID: 1, ItemKey: "item1"},
 			},
-			wantTotal:     gptr.Of[int64](1),
-			wantNextToken: gptr.Of("next_token"),
-			wantErr:       false,
+			wantTotal:       gptr.Of[int64](1),
+			wantFilterTotal: gptr.Of[int64](1),
+			wantNextToken:   gptr.Of("next_token"),
+			wantErr:         false,
 		},
 		{
 			name: "成功列出项目 - 有版本ID",
@@ -255,12 +257,13 @@ func TestEvaluationSetItemServiceImpl_ListEvaluationSetItems(t *testing.T) {
 					ListDatasetItemsByVersion(gomock.Any(), gomock.Any()).
 					Return([]*entity.EvaluationSetItem{
 						{ID: 1, ItemKey: "item1"},
-					}, gptr.Of[int64](1), nil, nil)
+					}, gptr.Of[int64](1), gptr.Of[int64](1), nil, nil)
 			},
-			wantItems:     []*entity.EvaluationSetItem{{ID: 1, ItemKey: "item1"}},
-			wantTotal:     gptr.Of[int64](1),
-			wantNextToken: nil,
-			wantErr:       false,
+			wantItems:       []*entity.EvaluationSetItem{{ID: 1, ItemKey: "item1"}},
+			wantTotal:       gptr.Of[int64](1),
+			wantFilterTotal: gptr.Of[int64](1),
+			wantNextToken:   nil,
+			wantErr:         false,
 		},
 		{
 			name:      "列出失败 - 参数为空",
@@ -274,7 +277,7 @@ func TestEvaluationSetItemServiceImpl_ListEvaluationSetItems(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			items, total, nextToken, err := service.ListEvaluationSetItems(context.Background(), tt.param)
+			items, total, filterTotal, nextToken, err := service.ListEvaluationSetItems(context.Background(), tt.param)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -283,6 +286,7 @@ func TestEvaluationSetItemServiceImpl_ListEvaluationSetItems(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantItems, items)
 			assert.Equal(t, tt.wantTotal, total)
+			assert.Equal(t, tt.wantFilterTotal, filterTotal)
 			assert.Equal(t, tt.wantNextToken, nextToken)
 		})
 	}

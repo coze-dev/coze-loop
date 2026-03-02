@@ -49,6 +49,11 @@ func TestConvertOpenAPIContentTypeToDO(t *testing.T) {
 			expected: entity.ContentTypeMultipart,
 		},
 		{
+			name:     "multi-part-variable",
+			input:    ptr[common.ContentType](common.ContentTypeMultiPartVariable),
+			expected: entity.ContentTypeMultipartVariable,
+		},
+		{
 			name:     "unknown",
 			input:    ptr[common.ContentType](common.ContentType("unknown")),
 			expected: entity.ContentTypeText,
@@ -100,7 +105,7 @@ func TestConvertDOContentTypeToOpenAPI(t *testing.T) {
 		{
 			name:     "multipart variable",
 			input:    entity.ContentTypeMultipartVariable,
-			expected: ptr[common.ContentType](common.ContentTypeMultiPart),
+			expected: ptr[common.ContentType](common.ContentTypeMultiPartVariable),
 		},
 		{
 			name:     "unknown",
@@ -533,6 +538,10 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 			Format: &audioFormat,
 			URL:    &audioURL,
 		},
+		Video: &entity.Video{
+			Name: &imageName,
+			URL:  &imageURL,
+		},
 	}
 
 	do := &entity.EvaluationSetItem{
@@ -570,6 +579,8 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 								URL:      &imageURL,
 								ThumbURL: &thumbURL,
 							},
+							Audio: &common.Audio{Format: &audioFormat, URL: &audioURL},
+							Video: &common.Video{Name: &imageName, URL: &imageURL},
 							MultiPart: []*common.Content{
 								{
 									ContentType: ptr[common.ContentType](common.ContentTypeText),

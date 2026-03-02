@@ -748,9 +748,9 @@ func (p *GetExptResultExportRecordRequest) IsValid() error {
 	return nil
 }
 func (p *GetExptResultExportRecordResponse) IsValid() error {
-	if p.ExptResultExportRecord != nil {
-		if err := p.ExptResultExportRecord.IsValid(); err != nil {
-			return fmt.Errorf("field ExptResultExportRecord not valid, %w", err)
+	if p.ExptResultExportRecords != nil {
+		if err := p.ExptResultExportRecords.IsValid(); err != nil {
+			return fmt.Errorf("field ExptResultExportRecords not valid, %w", err)
 		}
 	}
 	if p.BaseResp != nil {
