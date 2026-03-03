@@ -295,6 +295,12 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 			return nil, err
 		}
 	}
+	if request.GetEvaluator().GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	defer func() {
 		e.metrics.EmitCreate(request.GetEvaluator().GetWorkspaceID(), err)
@@ -504,6 +510,12 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	}
 	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, evaluatorDO.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1030,6 +1042,12 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 			return nil, err
 		}
 	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 
@@ -1477,6 +1495,12 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 	}
 	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -2111,6 +2135,17 @@ func (e *EvaluatorHandlerImpl) authCustomRPCEvaluatorContentWritable(ctx context
 	}
 	if !ok {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current space does not support custom RPC evaluator"))
+	}
+	return nil
+}
+
+func (e *EvaluatorHandlerImpl) authAgentEvaluatorContentWritable(ctx context.Context) error {
+	ok, err := e.configer.CheckAgentEvaluatorWritable(ctx)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current space does not support agent evaluator"))
 	}
 	return nil
 }
