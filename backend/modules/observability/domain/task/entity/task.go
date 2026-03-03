@@ -80,8 +80,8 @@ type ObservabilityTask struct {
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
 	TaskSource            *string           // 创建来源
-
-	TaskRuns []*TaskRun
+	WorkflowID            *int64            // 关联 workflow ID
+	TaskRuns              []*TaskRun
 }
 
 type RunDetail struct {

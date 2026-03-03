@@ -342,6 +342,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		CreatedBy:             createdBy,
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
+		WorkflowID:            taskDTO.WorkflowID,
 	}
 
 	if taskDTO.TaskSource != nil {
