@@ -5,12 +5,13 @@ package loop_span
 
 import (
 	"context"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 
