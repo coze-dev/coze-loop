@@ -499,9 +499,12 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 				}
 			}
 		} else {
-			value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+			if mapping.FieldSchema.ContentType == entity.ContentType_MultiPart {
+				value, err = span.ExtractByJsonpathRaw(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+			} else {
+				value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+			}
 			if err != nil {
-				// 非json但使用了jsonpath，也不报错，置空
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 			}
 		}
