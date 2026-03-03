@@ -2825,7 +2825,7 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 	now := time.Now().UnixMilli()
 	start := now - 10000
 	end := now
-	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id").Return(&start, &end)
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id", gomock.Any()).Return(&start, &end)
 
 	req := &openapi.SearchTraceOApiRequest{
 		WorkspaceID: 1,
@@ -2844,7 +2844,7 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 	}
 
 	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> should return error because DateValidator requires non-zero time
-	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "2", "", "").Return(nil, nil)
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "2", "", "", gomock.Any()).Return(nil, nil)
 
 	req2 := &openapi.SearchTraceOApiRequest{
 		WorkspaceID: 2,
