@@ -576,7 +576,7 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 	endTime := req.GetEndTime()
 
 	if startTime == 0 && endTime == 0 {
-		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.WorkspaceID, 10), req.GetLogid(), req.GetTraceID())
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.WorkspaceID, 10), req.GetLogid(), req.GetTraceID(), 1000*60*60*24)
 		if st != nil && et != nil {
 			startTime = *st
 			endTime = *et

@@ -8,5 +8,5 @@ import (
 
 //go:generate mockgen -destination=mocks/time_range_mock.go -package=mocks . ITimeRangeProvider
 type ITimeRangeProvider interface {
-	GetTimeRange(ctx context.Context, workSpaceID, logID, traceID string) (*int64, *int64)
+	GetTimeRange(ctx context.Context, workSpaceID, logID, traceID string, delayTime int64) (*int64, *int64)
 }

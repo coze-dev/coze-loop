@@ -14,6 +14,6 @@ func NewTimeRangeProvider() time_range.ITimeRangeProvider {
 	return &TimeRangeProvider{}
 }
 
-func (p *TimeRangeProvider) GetTimeRange(ctx context.Context, workSpaceID, logID, traceID string) (*int64, *int64) {
+func (p *TimeRangeProvider) GetTimeRange(ctx context.Context, workSpaceID, logID, traceID string, delayTime int64) (*int64, *int64) {
 	return nil, nil
 }

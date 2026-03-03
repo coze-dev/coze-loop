@@ -20,7 +20,7 @@ func TestTimeRangeProvider_GetTimeRange(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("returns nil for any input", func(t *testing.T) {
-		start, end := provider.GetTimeRange(ctx, "workspace1", "log1", "trace1")
+		start, end := provider.GetTimeRange(ctx, "workspace1", "log1", "trace1", 0)
 		assert.Nil(t, start)
 		assert.Nil(t, end)
 	})
