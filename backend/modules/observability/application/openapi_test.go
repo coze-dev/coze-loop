@@ -30,6 +30,7 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
+	time_rangemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
 	workspacemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -964,6 +965,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
 	metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 	collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+	timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
 
 	rateLimiterFactoryMock.EXPECT().NewRateLimiter().Return(rateLimiterMock)
 
@@ -977,6 +979,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 		traceConfigMock,
 		metricsMock,
 		collectorMock,
+		timeRangeMock,
 	)
 
 	assert.NoError(t, err)
@@ -994,6 +997,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	assert.NotNil(t, openAPIApp.traceConfig)
 	assert.NotNil(t, openAPIApp.metrics)
 	assert.NotNil(t, openAPIApp.collector)
+	assert.NotNil(t, openAPIApp.timeRange)
 }
 
 // 补充IngestTraces的边界测试场景
@@ -2016,19 +2020,8 @@ func TestOpenAPIApplication_validateSearchTraceOApiReq(t *testing.T) {
 	negativeLimit.Limit = -1
 	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &negativeLimit))
 
-	// invalid time range (zero values)
-	invalidTime := *validReq
-	invalidTime.StartTime = 0
-	invalidTime.EndTime = 0
-	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidTime))
-
 	// valid request should pass
 	assert.NoError(t, app.validateSearchTraceOApiReq(ctx, validReq))
-
-	// start time later than end time
-	invalidRange := *validReq
-	invalidRange.StartTime = now + 1000
-	assert.Error(t, app.validateSearchTraceOApiReq(ctx, &invalidRange))
 }
 
 func TestOpenAPIApplication_buildSearchTraceOApiReq(t *testing.T) {
@@ -2807,4 +2800,58 @@ func TestUngzip(t *testing.T) {
 		assert.Error(t, err)
 		assert.Nil(t, result)
 	})
+}
+
+func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
+
+	app := &OpenAPIApplication{
+		tenant:    tenantMock,
+		workspace: workspaceMock,
+		timeRange: timeRangeMock,
+	}
+
+	ctx := context.Background()
+
+	// Case: StartTime=0, EndTime=0 -> use TimeRangeProvider
+	workspaceMock.EXPECT().GetThirdPartyQueryWorkSpaceID(gomock.Any(), int64(1)).Return("third-1")
+	tenantMock.EXPECT().GetOAPIQueryTenants(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant-a"})
+
+	now := time.Now().UnixMilli()
+	start := now - 10000
+	end := now
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "1", "log-id", "trace-id", gomock.Any()).Return(&start, &end)
+
+	req := &openapi.SearchTraceOApiRequest{
+		WorkspaceID: 1,
+		TraceID:     ptr.Of("trace-id"),
+		Logid:       ptr.Of("log-id"),
+		StartTime:   0,
+		EndTime:     0,
+		Limit:       50,
+	}
+
+	res, err := app.buildSearchTraceOApiReq(ctx, req)
+	assert.NoError(t, err)
+	if assert.NotNil(t, res) {
+		assert.Equal(t, start, res.StartTime)
+		assert.Equal(t, end, res.EndTime)
+	}
+
+	// Case: StartTime=0, EndTime=0 -> TimeRangeProvider returns nil -> should return error because DateValidator requires non-zero time
+	timeRangeMock.EXPECT().GetTimeRange(gomock.Any(), "2", "", "", gomock.Any()).Return(nil, nil)
+
+	req2 := &openapi.SearchTraceOApiRequest{
+		WorkspaceID: 2,
+		StartTime:   0,
+		EndTime:     0,
+	}
+	res2, err := app.buildSearchTraceOApiReq(ctx, req2)
+	assert.Error(t, err)
+	assert.Nil(t, res2)
 }
