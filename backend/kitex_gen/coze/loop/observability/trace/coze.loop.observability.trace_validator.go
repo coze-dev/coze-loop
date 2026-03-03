@@ -340,6 +340,33 @@ func (p *ListAnnotationsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ListWorkspaceAnnotationsRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.StartTime <= int64(0) {
+		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
+	}
+	if p.Limit != nil {
+		if *p.Limit <= int64(0) {
+			return fmt.Errorf("field Limit gt rule failed, current value: %v", *p.Limit)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListWorkspaceAnnotationsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ExportTracesToDatasetRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
@@ -585,6 +612,32 @@ func (p *ListTrajectoryRequest) IsValid() error {
 	return nil
 }
 func (p *ListTrajectoryResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListMetadataRequest) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.Limit != nil {
+		if *p.Limit <= int64(0) {
+			return fmt.Errorf("field Limit gt rule failed, current value: %v", *p.Limit)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListMetadataResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

@@ -1849,3 +1849,18 @@ func _checkexperimenttemplatenameMw(handler *apis.APIHandler) []app.HandlerFunc 
 	// your code...
 	return nil
 }
+
+func _listworkspaceannotationsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _metadataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listmetadataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

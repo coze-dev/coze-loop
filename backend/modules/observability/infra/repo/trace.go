@@ -441,6 +441,40 @@ func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnn
 	return converter.AnnotationListPO2DO(annotations).Uniq(), nil
 }
 
+func (t *TraceRepoImpl) ListWorkspaceAnnotations(ctx context.Context, param *repo.ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error) {
+	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants)
+	annoDao := t.annoDaos[spanStorage.StorageName]
+	if annoDao == nil {
+		return nil, errorx.WrapByCode(errors.New("invalid storage"), obErrorx.CommercialCommonInvalidParamCodeCode)
+	}
+	tableCfg, err := t.getQueryTenantTables(ctx, param.Tenants)
+	if err != nil {
+		return nil, err
+	} else if len(tableCfg.AnnoTables) == 0 {
+		return loop_span.AnnotationList{}, nil
+	}
+	limit := param.Limit
+	if limit <= 0 || limit > 1000 {
+		limit = 1000
+	}
+	st := time.Now()
+	annotations, err := annoDao.List(ctx, &dao.ListAnnotationsParam{
+		Tables:          tableCfg.AnnoTables,
+		WorkspaceID:     param.WorkSpaceID,
+		AnnotationType:  param.AnnotationType,
+		StartTime:       time_util.MillSec2MicroSec(param.StartAt),
+		EndTime:         time_util.MillSec2MicroSec(param.EndAt),
+		DescByUpdatedAt: param.DescByUpdatedAt,
+		Limit:           int32(limit),
+		Extra:           spanStorage.StorageConfig,
+	})
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "list workspace annotations successfully, annotations count %d, cost %v", len(annotations), time.Since(st))
+	return converter.AnnotationListPO2DO(annotations).Uniq(), nil
+}
+
 func (t *TraceRepoImpl) GetAnnotation(ctx context.Context, param *repo.GetAnnotationParam) (*loop_span.Annotation, error) {
 	spanStorage := t.storageProvider.GetTraceStorage(ctx, param.WorkSpaceID, param.Tenants)
 	annoDao := t.annoDaos[spanStorage.StorageName]

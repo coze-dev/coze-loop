@@ -208,6 +208,20 @@ func (p *Task) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField12(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -397,6 +411,20 @@ func (p *Task) FastReadField11(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Task) FastReadField12(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkflowID = _field
+	return offset, nil
+}
+
 func (p *Task) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -418,6 +446,7 @@ func (p *Task) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -447,6 +476,7 @@ func (p *Task) BLength() int {
 		l += p.field9Length()
 		l += p.field10Length()
 		l += p.field11Length()
+		l += p.field12Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -544,6 +574,15 @@ func (p *Task) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetTaskSource() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 11)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.TaskSource)
+	}
+	return offset
+}
+
+func (p *Task) fastWriteField12(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkflowID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 12)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkflowID)
 	}
 	return offset
 }
@@ -652,6 +691,15 @@ func (p *Task) field11Length() int {
 	return l
 }
 
+func (p *Task) field12Length() int {
+	l := 0
+	if p.IsSetWorkflowID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *Task) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -735,6 +783,11 @@ func (p *Task) DeepCopy(s interface{}) error {
 	if src.TaskSource != nil {
 		tmp := *src.TaskSource
 		p.TaskSource = &tmp
+	}
+
+	if src.WorkflowID != nil {
+		tmp := *src.WorkflowID
+		p.WorkflowID = &tmp
 	}
 
 	var _baseInfo *common.BaseInfo

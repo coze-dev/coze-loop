@@ -84,6 +84,8 @@ type Task struct {
 	BackfillTaskDetail *RunDetail `thrift:"backfill_task_detail,10,optional" frugal:"10,optional,RunDetail" form:"backfill_task_detail" json:"backfill_task_detail,omitempty" query:"backfill_task_detail"`
 	// 创建来源
 	TaskSource *TaskSource `thrift:"task_source,11,optional" frugal:"11,optional,string" form:"task_source" json:"task_source,omitempty" query:"task_source"`
+	// 对应工作流 ID
+	WorkflowID *int64 `thrift:"workflow_id,12,optional" frugal:"12,optional,i64" json:"worflow_id" form:"workflow_id" query:"workflow_id"`
 	// 基础信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -217,6 +219,18 @@ func (p *Task) GetTaskSource() (v TaskSource) {
 	return *p.TaskSource
 }
 
+var Task_WorkflowID_DEFAULT int64
+
+func (p *Task) GetWorkflowID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkflowID() {
+		return Task_WorkflowID_DEFAULT
+	}
+	return *p.WorkflowID
+}
+
 var Task_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Task) GetBaseInfo() (v *common.BaseInfo) {
@@ -261,6 +275,9 @@ func (p *Task) SetBackfillTaskDetail(val *RunDetail) {
 func (p *Task) SetTaskSource(val *TaskSource) {
 	p.TaskSource = val
 }
+func (p *Task) SetWorkflowID(val *int64) {
+	p.WorkflowID = val
+}
 func (p *Task) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -277,6 +294,7 @@ var fieldIDToName_Task = map[int16]string{
 	9:   "task_detail",
 	10:  "backfill_task_detail",
 	11:  "task_source",
+	12:  "workflow_id",
 	100: "base_info",
 }
 
@@ -314,6 +332,10 @@ func (p *Task) IsSetBackfillTaskDetail() bool {
 
 func (p *Task) IsSetTaskSource() bool {
 	return p.TaskSource != nil
+}
+
+func (p *Task) IsSetWorkflowID() bool {
+	return p.WorkflowID != nil
 }
 
 func (p *Task) IsSetBaseInfo() bool {
@@ -425,6 +447,14 @@ func (p *Task) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -587,6 +617,17 @@ func (p *Task) ReadField11(iprot thrift.TProtocol) error {
 	p.TaskSource = _field
 	return nil
 }
+func (p *Task) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkflowID = _field
+	return nil
+}
 func (p *Task) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -644,6 +685,10 @@ func (p *Task) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -862,6 +907,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *Task) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkflowID() {
+		if err = oprot.WriteFieldBegin("workflow_id", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkflowID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *Task) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -926,6 +989,9 @@ func (p *Task) DeepEqual(ano *Task) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.TaskSource) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.WorkflowID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -1032,6 +1098,18 @@ func (p *Task) Field11DeepEqual(src *TaskSource) bool {
 		return false
 	}
 	if strings.Compare(*p.TaskSource, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Task) Field12DeepEqual(src *int64) bool {
+
+	if p.WorkflowID == src {
+		return true
+	} else if p.WorkflowID == nil || src == nil {
+		return false
+	}
+	if *p.WorkflowID != *src {
 		return false
 	}
 	return true

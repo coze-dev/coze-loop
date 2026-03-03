@@ -56,6 +56,7 @@ type ListSpansReq struct {
 	PlatformType          loop_span.PlatformType
 	SpanListType          loop_span.SpanListType
 	Source                span_filter.SourceType
+	SelectColumns         []string
 }
 
 type ListSpansResp struct {
@@ -121,6 +122,20 @@ type GetTraceReq struct {
 type GetTraceResp struct {
 	TraceId string
 	Spans   loop_span.SpanList
+}
+
+type ListMetadataReq struct {
+	WorkspaceID  int64
+	StartTime    int64 // ms
+	EndTime      int64 // ms
+	Filters      *loop_span.FilterFields
+	SpanListType loop_span.SpanListType
+	PlatformType loop_span.PlatformType
+	Limit        int64
+}
+
+type ListMetadataResp struct {
+	KeyValuesetMap map[string][]string
 }
 
 type SearchTraceOApiReq struct {
@@ -273,6 +288,20 @@ type ListAnnotationsResp struct {
 	Annotations loop_span.AnnotationList
 }
 
+type ListWorkspaceAnnotationsReq struct {
+	WorkspaceID     int64
+	StartTime       int64
+	EndTime         int64
+	AnnotationType  string
+	DescByUpdatedAt bool
+	PlatformType    loop_span.PlatformType
+	Limit           int64
+}
+
+type ListWorkspaceAnnotationsResp struct {
+	KeyAnnotationsMap map[string]loop_span.AnnotationList
+}
+
 type ChangeEvaluatorScoreRequest struct {
 	WorkspaceID  int64
 	AnnotationID string
@@ -397,7 +426,9 @@ type ITraceService interface {
 	GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error)
 	IngestTraces(ctx context.Context, req *IngestTracesReq) error
 	GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error)
+	ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error)
 	ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error)
+	ListWorkspaceAnnotations(ctx context.Context, req *ListWorkspaceAnnotationsReq) (*ListWorkspaceAnnotationsResp, error)
 	CreateAnnotation(ctx context.Context, req *CreateAnnotationReq) error
 	DeleteAnnotation(ctx context.Context, req *DeleteAnnotationReq) error
 	CreateManualAnnotation(ctx context.Context, req *CreateManualAnnotationReq) (*CreateManualAnnotationResp, error)
@@ -1064,6 +1095,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		Limit:           req.Limit,
 		DescByStartTime: req.DescByStartTime,
 		PageToken:       req.PageToken,
+		SelectColumns:   req.SelectColumns,
 	})
 	r.metrics.EmitListSpans(req.WorkspaceID, string(req.SpanListType), st, err != nil)
 	if err != nil {
@@ -1411,6 +1443,48 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	}, nil
 }
 
+func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {
+	listSpansResp, err := r.ListSpans(ctx, &ListSpansReq{
+		WorkspaceID:  req.WorkspaceID,
+		StartTime:    req.StartTime,
+		EndTime:      req.EndTime,
+		Filters:      req.Filters,
+		SpanListType: req.SpanListType,
+		PlatformType: req.PlatformType,
+		Limit:        int32(req.Limit),
+		SelectColumns: []string{
+			"tags_string",
+			"tags_long",
+			"tags_float",
+			"tags_bool",
+			"tags_byte",
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]string)
+	valueSetMap := make(map[string]map[string]bool)
+
+	for _, span := range listSpansResp.Spans {
+		customTags := span.GetCustomTags()
+		for key, value := range customTags {
+			if _, exists := valueSetMap[key]; !exists {
+				valueSetMap[key] = make(map[string]bool)
+			}
+			if !valueSetMap[key][value] {
+				valueSetMap[key][value] = true
+				result[key] = append(result[key], value)
+			}
+		}
+	}
+
+	return &ListMetadataResp{
+		KeyValuesetMap: result,
+	}, nil
+}
+
 func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error) {
 	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
 	if err != nil {
@@ -1431,6 +1505,34 @@ func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotat
 	}
 	return &ListAnnotationsResp{
 		Annotations: annotations,
+	}, nil
+}
+
+func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *ListWorkspaceAnnotationsReq) (*ListWorkspaceAnnotationsResp, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
+	if err != nil {
+		return nil, err
+	}
+	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:         tenants,
+		AnnotationType:  req.AnnotationType,
+		StartAt:         req.StartTime,
+		EndAt:           req.EndTime,
+		DescByUpdatedAt: req.DescByUpdatedAt,
+		Limit:           req.Limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	keyAnnotationsMap := make(map[string]loop_span.AnnotationList)
+	for _, anno := range annotations {
+		keyAnnotationsMap[anno.Key] = append(keyAnnotationsMap[anno.Key], anno)
+	}
+
+	return &ListWorkspaceAnnotationsResp{
+		KeyAnnotationsMap: keyAnnotationsMap,
 	}, nil
 }
 

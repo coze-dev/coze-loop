@@ -8,8 +8,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
@@ -37,11 +40,12 @@ import (
 )
 
 const (
-	MaxSpanLength         = 500
-	MaxListSpansLimit     = 1000
-	MaxTraceTreeLength    = 10000
-	MaxOApiListSpansLimit = 200
-	QueryLimitDefault     = 100
+	MaxSpanLength                  = 500
+	MaxListSpansLimit              = 1000
+	MaxTraceTreeLength             = 10000
+	MaxOApiListSpansLimit          = 200
+	QueryLimitDefault              = 100
+	MaxListMetadataSpansList int64 = 3000
 )
 
 //go:generate mockgen -destination=mocks/trace_application.go -package=mocks . ITraceApplication
@@ -604,6 +608,83 @@ func (t *TraceApplication) buildGetTracesMetaInfoReq(req *trace.GetTracesMetaInf
 	return ret
 }
 
+func (t *TraceApplication) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest) (*trace.ListMetadataResponse, error) {
+	if err := t.validateListMetadataReq(ctx, req); err != nil {
+		return nil, err
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+	sReq, err := t.buildListMetadataSvcReq(req)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("list metadata req is invalid"))
+	}
+	sResp, err := t.traceService.ListMetadata(ctx, sReq)
+	if err != nil {
+		return nil, err
+	}
+	logs.CtxInfo(ctx, "List metadata successfully, keys count: %d", len(sResp.KeyValuesetMap))
+	return &trace.ListMetadataResponse{
+		KeyValuesetMap: sResp.KeyValuesetMap,
+	}, nil
+}
+
+func (t *TraceApplication) validateListMetadataReq(ctx context.Context, req *trace.ListMetadataRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return err
+	}
+	req.SetStartTime(newStartTime)
+	req.SetEndTime(newEndTime)
+	if req.GetLimit() <= 0 || req.GetLimit() > MaxListMetadataSpansList {
+		req.SetLimit(gptr.Of(MaxListMetadataSpansList))
+	}
+	return nil
+}
+
+func (t *TraceApplication) buildListMetadataSvcReq(req *trace.ListMetadataRequest) (*service.ListMetadataReq, error) {
+	ret := &service.ListMetadataReq{
+		WorkspaceID: req.GetWorkspaceID(),
+		StartTime:   req.GetStartTime(),
+		EndTime:     req.GetEndTime(),
+		Limit:       req.GetLimit(),
+	}
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+	ret.PlatformType = platformType
+	switch req.GetSpanListType() {
+	case common.SpanListTypeRootSpan:
+		ret.SpanListType = loop_span.SpanListTypeRootSpan
+	case common.SpanListTypeAllSpan:
+		ret.SpanListType = loop_span.SpanListTypeAllSpan
+	case common.SpanListTypeLlmSpan:
+		ret.SpanListType = loop_span.SpanListTypeLLMSpan
+	default:
+		ret.SpanListType = loop_span.SpanListTypeRootSpan
+	}
+	if req.Filters != nil {
+		ret.Filters = convertor.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
+	}
+	return ret, nil
+}
+
 func (t *TraceApplication) CreateView(ctx context.Context, req *trace.CreateViewRequest) (*trace.CreateViewResponse, error) {
 	if req == nil {
 		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
@@ -871,6 +952,73 @@ func (t *TraceApplication) ListAnnotations(ctx context.Context, req *trace.ListA
 	})
 	return &trace.ListAnnotationsResponse{
 		Annotations: tconv.AnnotationListDO2DTO(resp.Annotations, dResp.UserMap, dResp.EvalMap, dResp.TagMap),
+	}, nil
+}
+
+func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *trace.ListWorkspaceAnnotationsRequest) (*trace.ListWorkspaceAnnotationsResponse, error) {
+	if req == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("request is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformCozeLoop
+	if req.PlatformType != nil {
+		platformType = loop_span.PlatformType(*req.PlatformType)
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          0,
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	svcReq := &service.ListWorkspaceAnnotationsReq{
+		WorkspaceID:     req.WorkspaceID,
+		StartTime:       startTime,
+		EndTime:         endTime,
+		DescByUpdatedAt: ptr.From(req.DescByUpdatedAt),
+		PlatformType:    platformType,
+		Limit:           ptr.From(req.Limit),
+	}
+	if req.AnnotationType != nil {
+		svcReq.AnnotationType = string(*req.AnnotationType)
+	}
+
+	resp, err := t.traceService.ListWorkspaceAnnotations(ctx, svcReq)
+	if err != nil {
+		return nil, err
+	}
+
+	var allAnnotations loop_span.AnnotationList
+	for _, annotations := range resp.KeyAnnotationsMap {
+		allAnnotations = append(allAnnotations, annotations...)
+	}
+
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		UserIDs:      allAnnotations.GetUserIDs(),
+		EvaluatorIDs: allAnnotations.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    allAnnotations.GetAnnotationTagIDs(),
+	})
+
+	keyAnnotationsMap := make(map[string][]*annotation.Annotation)
+	for key, annotations := range resp.KeyAnnotationsMap {
+		keyAnnotationsMap[key] = tconv.AnnotationListDO2DTO(annotations, dResp.UserMap, dResp.EvalMap, dResp.TagMap)
+	}
+
+	return &trace.ListWorkspaceAnnotationsResponse{
+		KeyAnnotationsMap: keyAnnotationsMap,
 	}, nil
 }
 
