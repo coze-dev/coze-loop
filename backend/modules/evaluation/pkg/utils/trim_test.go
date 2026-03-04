@@ -5,6 +5,7 @@ package utils
 
 import (
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -167,6 +168,11 @@ func TestSummarizeValue(t *testing.T) {
 			value:    "123456789",
 			expected: "12345...",
 		},
+		{
+			name:     "utf8 multi-byte chars - 按 rune 截断避免产生 \\ufffd",
+			value:    "你好世界12345",
+			expected: "你好世界1...",
+		},
 	}
 
 	for _, tt := range tests {
@@ -243,5 +249,13 @@ func TestTruncateJsonPreviewToSize(t *testing.T) {
 		json := []byte(`{"a":1}`)
 		got := TruncateJsonPreviewToSize(json, 0)
 		assert.Equal(t, json, got)
+	})
+	t.Run("utf8 truncation should not produce invalid utf8 or \\ufffd", func(t *testing.T) {
+		// 中文每个字符 3 字节，在字节边界截断可能产生无效 UTF-8
+		json := []byte(`{"msg":"` + "你好世界你好世界" + `"}`)
+		got := TruncateJsonPreviewToSize(json, 25)
+		gotStr := string(got)
+		assert.NotContains(t, gotStr, "\ufffd", "截断后不应包含 Unicode 替换字符")
+		assert.True(t, utf8.ValidString(gotStr), "截断后应为有效 UTF-8")
 	})
 }

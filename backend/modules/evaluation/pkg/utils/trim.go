@@ -5,6 +5,7 @@ package utils
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // countJsonArrayElements 计算 json array 中包含的元素数量
@@ -133,8 +134,9 @@ func summarizeValue(value string) string {
 	case '[':
 		return `"[...]"`
 	default:
-		if len(value) > 5 {
-			return value[:5] + "..."
+		runes := []rune(value)
+		if len(runes) > 5 {
+			return string(runes[:5]) + "..."
 		}
 		return value
 	}
@@ -175,8 +177,8 @@ func TruncateJsonPreviewToSize(jsonBytes []byte, maxBytes int64) []byte {
 	truncated := s
 	if len(truncated) > maxLen {
 		truncated = truncated[:maxLen]
-		// 回退到完整 UTF-8 字符边界
-		for len(truncated) > 0 && (truncated[len(truncated)-1]&0xC0) == 0x80 {
+		// 回退到完整 UTF-8 字符边界，避免产生无效 UTF-8 导致 \ufffd
+		for len(truncated) > 0 && !utf8.ValidString(truncated) {
 			truncated = truncated[:len(truncated)-1]
 		}
 	}
