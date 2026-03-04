@@ -53,7 +53,7 @@ func (a *AuthProviderImpl) CheckWorkspacePermission(ctx context.Context, action,
 	}
 	resp, err := a.cli.MCheckPermission(ctx, req)
 	if err != nil {
-		return errorx.WrapByCode(err, obErrorx.CommercialCommonRPCErrorCodeCode)
+		return err
 	} else if resp == nil {
 		logs.CtxWarn(ctx, "MCheckPermission returned nil response")
 		return errorx.NewByCode(obErrorx.CommercialCommonRPCErrorCodeCode)

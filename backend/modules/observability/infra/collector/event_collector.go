@@ -15,5 +15,5 @@ func NewEventCollectorProvider() collector.ICollectorProvider {
 	return &EventCollectorProviderImpl{}
 }
 
-func (p *EventCollectorProviderImpl) CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (p *EventCollectorProviderImpl) CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType, src string, spanSize int64, errorCode int, start time.Time, isError bool) {
 }
