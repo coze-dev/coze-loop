@@ -691,6 +691,7 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 	}
 	if recordDO.EvaluatorOutputData != nil &&
 		recordDO.EvaluatorOutputData.EvaluatorRunError != nil &&
+		recordDO.EvaluatorOutputData.EvaluatorRunError.Code != int32(errno.CustomRPCEvaluatorRunFailedCode) &&
 		len(recordDO.EvaluatorOutputData.EvaluatorRunError.Message) > 0 {
 		recordDO.EvaluatorOutputData.EvaluatorRunError.Message = e.cConfiger.GetErrCtrl(ctx).ConvertErrMsg(recordDO.EvaluatorOutputData.EvaluatorRunError.Message)
 	}

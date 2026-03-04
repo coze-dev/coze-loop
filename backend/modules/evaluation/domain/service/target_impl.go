@@ -323,12 +323,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 			},
 		}
-
-		if record.EvalTargetOutputData != nil &&
-			record.EvalTargetOutputData.EvalTargetRunError != nil &&
-			len(record.EvalTargetOutputData.EvalTargetRunError.Message) > 0 {
-			record.EvalTargetOutputData.EvalTargetRunError.Message = e.configer.GetErrCtrl(ctx).ConvertErrMsg(record.EvalTargetOutputData.EvalTargetRunError.Message)
-		}
+		e.convEvalTargetRunErr(ctx, record)
 
 		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record)
 		if errCreate != nil {
@@ -554,16 +549,25 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
-	if record.EvalTargetOutputData != nil &&
-		record.EvalTargetOutputData.EvalTargetRunError != nil &&
-		len(record.EvalTargetOutputData.EvalTargetRunError.Message) > 0 {
-		record.EvalTargetOutputData.EvalTargetRunError.Message = e.configer.GetErrCtrl(ctx).ConvertErrMsg(record.EvalTargetOutputData.EvalTargetRunError.Message)
-	}
+	e.convEvalTargetRunErr(ctx, record)
+
 	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
 		return nil, err
 	}
 
 	return record, nil
+}
+
+func (e *EvalTargetServiceImpl) convEvalTargetRunErr(ctx context.Context, record *entity.EvalTargetRecord) {
+	if record == nil || record.EvalTargetOutputData == nil || record.EvalTargetOutputData.EvalTargetRunError == nil {
+		return
+	}
+	if record.EvalTargetOutputData.EvalTargetRunError.Code == int32(errno.CustomEvalTargetInvokeFailCode) {
+		return
+	}
+	if len(record.EvalTargetOutputData.EvalTargetRunError.Message) > 0 {
+		record.EvalTargetOutputData.EvalTargetRunError.Message = e.configer.GetErrCtrl(ctx).ConvertErrMsg(record.EvalTargetOutputData.EvalTargetRunError.Message)
+	}
 }
 
 func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error) {
@@ -603,11 +607,8 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
-	if record.EvalTargetOutputData != nil &&
-		record.EvalTargetOutputData.EvalTargetRunError != nil &&
-		len(record.EvalTargetOutputData.EvalTargetRunError.Message) > 0 {
-		record.EvalTargetOutputData.EvalTargetRunError.Message = e.configer.GetErrCtrl(ctx).ConvertErrMsg(record.EvalTargetOutputData.EvalTargetRunError.Message)
-	}
+	e.convEvalTargetRunErr(ctx, record)
+
 	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
 		return err
 	}
