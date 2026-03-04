@@ -726,7 +726,7 @@ struct GetAnalysisRecordFeedbackVoteResponse {
 // 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
 struct MigrateExperimentLargeObjectsRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
-    2: required i64 experiment_id (api.path = 'experiment_id', api.js_conv = 'true', go.tag = 'json:"experiment_id"')
+    2: required list<i64> experiment_ids (api.body = 'experiment_ids', api.js_conv = 'true', go.tag = 'json:"experiment_ids"')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -839,7 +839,7 @@ service ExperimentService {
 
     // 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
     MigrateExperimentLargeObjectsResponse MigrateExperimentLargeObjects(1: MigrateExperimentLargeObjectsRequest req) (
-        api.post = "/api/evaluation/v1/experiments/:experiment_id/migrate_large_objects", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+        api.post = "/api/evaluation/v1/experiments/migrate_large_objects", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
     )
 
     // 实验模板

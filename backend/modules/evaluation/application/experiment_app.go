@@ -1930,23 +1930,39 @@ func (e *experimentApplication) MigrateExperimentLargeObjects(ctx context.Contex
 		}
 	}
 
-	got, err := e.manager.Get(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
+	exptIDs := req.GetExperimentIds()
+	if len(exptIDs) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_ids is required and cannot be empty"))
+	}
+
+	got, err := e.manager.MGet(ctx, exptIDs, req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}
-
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
-		OwnerID:         gptr.Of(got.CreatedBy),
-		ResourceSpaceID: req.GetWorkspaceID(),
+	exptMap := slices.ToMap(got, func(ex *entity.Experiment) (int64, *entity.Experiment) {
+		return ex.ID, ex
 	})
+
+	var authParams []*rpc.AuthorizationWithoutSPIParam
+	for _, exptID := range exptIDs {
+		if exptMap[exptID] == nil {
+			continue
+		}
+		authParams = append(authParams, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(exptID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+			OwnerID:         gptr.Of(exptMap[exptID].CreatedBy),
+			ResourceSpaceID: req.GetWorkspaceID(),
+		})
+	}
+
+	err = e.auth.MAuthorizeWithoutSPI(ctx, req.GetWorkspaceID(), authParams)
 	if err != nil {
 		return nil, err
 	}
 
-	targetMigrated, evaluatorMigrated, err := e.largeObjectMigrationService.MigrateExperimentLargeObjects(ctx, req.GetWorkspaceID(), req.GetExperimentID())
+	targetMigrated, evaluatorMigrated, err := e.largeObjectMigrationService.MigrateExperimentLargeObjects(ctx, req.GetWorkspaceID(), exptIDs)
 	if err != nil {
 		return nil, err
 	}

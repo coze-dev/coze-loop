@@ -258,14 +258,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					}
 					_experiments.PATCH("/:expt_id", append(_updateexperimentMw(handler), apis.UpdateExperiment)...)
 					_experiments.POST("/list", append(_listexperimentsMw(handler), apis.ListExperiments)...)
+					_experiments.POST("/migrate_large_objects", append(_migrateexperimentlargeobjectsMw(handler), apis.MigrateExperimentLargeObjects)...)
 					_experiments.POST("/submit", append(_submitexperimentMw(handler), apis.SubmitExperiment)...)
 					{
 						_aggr_results := _experiments.Group("/aggr_results", _aggr_resultsMw(handler)...)
 						_aggr_results.POST("/batch_get", append(_batchgetexperimentaggrresultMw(handler), apis.BatchGetExperimentAggrResult)...)
-					}
-					{
-						_experiment_id := _experiments.Group("/:experiment_id", _experiment_idMw(handler)...)
-						_experiment_id.POST("/migrate_large_objects", append(_migrateexperimentlargeobjectsMw(handler), apis.MigrateExperimentLargeObjects)...)
 					}
 					{
 						_insight_analysis_records0 := _experiments.Group("/insight_analysis_records", _insight_analysis_records0Mw(handler)...)
@@ -475,10 +472,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_templates0.POST("/update_meta", append(_updateexpttemplatemetaoapiMw(handler), apis.UpdateExptTemplateMetaOApi)...)
 				_evaluation0.POST("/experiments", append(_experiments0Mw(handler), apis.SubmitExperimentOApi)...)
 				_experiments0 := _evaluation0.Group("/experiments", _experiments0Mw(handler)...)
-				_experiments0.GET("/:experiment_id", append(_experiment_id0Mw(handler), apis.GetExperimentsOApi)...)
-				_experiment_id0 := _experiments0.Group("/:experiment_id", _experiment_id0Mw(handler)...)
-				_experiment_id0.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
-				_experiment_id0.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)
+				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
+				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
+				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)
 					_evaluator_records0.POST("/batch_get", append(_batchgetevaluatorrecordsoapiMw(handler), apis.BatchGetEvaluatorRecordsOApi)...)

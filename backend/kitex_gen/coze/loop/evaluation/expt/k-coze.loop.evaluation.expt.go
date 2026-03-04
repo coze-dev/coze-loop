@@ -24602,7 +24602,7 @@ func (p *MigrateExperimentLargeObjectsRequest) FastRead(buf []byte) (int, error)
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetExperimentID bool = false
+	var issetExperimentIds bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -24629,13 +24629,13 @@ func (p *MigrateExperimentLargeObjectsRequest) FastRead(buf []byte) (int, error)
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetExperimentID = true
+				issetExperimentIds = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -24685,7 +24685,7 @@ func (p *MigrateExperimentLargeObjectsRequest) FastRead(buf []byte) (int, error)
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetExperimentID {
+	if !issetExperimentIds {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -24717,14 +24717,24 @@ func (p *MigrateExperimentLargeObjectsRequest) FastReadField1(buf []byte) (int, 
 func (p *MigrateExperimentLargeObjectsRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
 		return offset, err
-	} else {
-		offset += l
-		_field = v
 	}
-	p.ExperimentID = _field
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem int64
+		if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.ExperimentIds = _field
 	return offset, nil
 }
 
@@ -24789,8 +24799,15 @@ func (p *MigrateExperimentLargeObjectsRequest) fastWriteField1(buf []byte, w thr
 
 func (p *MigrateExperimentLargeObjectsRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.ExperimentID)
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+	listBeginOffset := offset
+	offset += thrift.Binary.ListBeginLength()
+	var length int
+	for _, v := range p.ExperimentIds {
+		length++
+		offset += thrift.Binary.WriteI64(buf[offset:], v)
+	}
+	thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I64, length)
 	return offset
 }
 
@@ -24822,7 +24839,9 @@ func (p *MigrateExperimentLargeObjectsRequest) field1Length() int {
 func (p *MigrateExperimentLargeObjectsRequest) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	l += thrift.Binary.ListBeginLength()
+	l +=
+		thrift.Binary.I64Length() * len(p.ExperimentIds)
 	return l
 }
 
@@ -24852,7 +24871,14 @@ func (p *MigrateExperimentLargeObjectsRequest) DeepCopy(s interface{}) error {
 
 	p.WorkspaceID = src.WorkspaceID
 
-	p.ExperimentID = src.ExperimentID
+	if src.ExperimentIds != nil {
+		p.ExperimentIds = make([]int64, 0, len(src.ExperimentIds))
+		for _, elem := range src.ExperimentIds {
+			var _elem int64
+			_elem = elem
+			p.ExperimentIds = append(p.ExperimentIds, _elem)
+		}
+	}
 
 	var _session *common.Session
 	if src.Session != nil {

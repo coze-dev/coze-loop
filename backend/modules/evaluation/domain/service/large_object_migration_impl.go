@@ -12,7 +12,7 @@ import (
 
 // ILargeObjectMigrationService 大对象迁移服务：将已完成实验中的 target 记录和 evaluator 记录的大对象迁移到 TOS
 type ILargeObjectMigrationService interface {
-	MigrateExperimentLargeObjects(ctx context.Context, spaceID, exptID int64) (targetMigrated, evaluatorMigrated int64, err error)
+	MigrateExperimentLargeObjects(ctx context.Context, spaceID int64, exptIDs []int64) (targetMigrated, evaluatorMigrated int64, err error)
 }
 
 type LargeObjectMigrationServiceImpl struct {
@@ -33,7 +33,26 @@ func NewLargeObjectMigrationService(
 	}
 }
 
-func (s *LargeObjectMigrationServiceImpl) MigrateExperimentLargeObjects(ctx context.Context, spaceID, exptID int64) (targetMigrated, evaluatorMigrated int64, err error) {
+func (s *LargeObjectMigrationServiceImpl) MigrateExperimentLargeObjects(ctx context.Context, spaceID int64, exptIDs []int64) (targetMigrated, evaluatorMigrated int64, err error) {
+	if len(exptIDs) == 0 {
+		return 0, 0, nil
+	}
+
+	for _, exptID := range exptIDs {
+		t, e, err := s.migrateOneExperiment(ctx, spaceID, exptID)
+		if err != nil {
+			return targetMigrated, evaluatorMigrated, err
+		}
+		targetMigrated += t
+		evaluatorMigrated += e
+	}
+
+	logs.CtxInfo(ctx, "[MigrateLargeObjects] done expt_ids=%v, target_migrated=%v, evaluator_migrated=%v",
+		exptIDs, targetMigrated, evaluatorMigrated)
+	return targetMigrated, evaluatorMigrated, nil
+}
+
+func (s *LargeObjectMigrationServiceImpl) migrateOneExperiment(ctx context.Context, spaceID, exptID int64) (targetMigrated, evaluatorMigrated int64, err error) {
 	runIDs, err := s.exptRunLogRepo.ListCompletedRunIDsByExptID(ctx, spaceID, exptID)
 	if err != nil {
 		return 0, 0, err
@@ -67,7 +86,5 @@ func (s *LargeObjectMigrationServiceImpl) MigrateExperimentLargeObjects(ctx cont
 		evaluatorMigrated++
 	}
 
-	logs.CtxInfo(ctx, "[MigrateLargeObjects] done expt_id=%v, target_migrated=%v, evaluator_migrated=%v",
-		exptID, targetMigrated, evaluatorMigrated)
 	return targetMigrated, evaluatorMigrated, nil
 }

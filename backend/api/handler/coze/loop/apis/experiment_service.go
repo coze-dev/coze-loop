@@ -326,17 +326,7 @@ func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
 }
 
 // MigrateExperimentLargeObjects .
-// @router /api/evaluation/v1/experiments/:experiment_id/migrate_large_objects [POST]
+// @router /api/evaluation/v1/experiments/migrate_large_objects [POST]
 func MigrateExperimentLargeObjects(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req expt.MigrateExperimentLargeObjectsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(expt.MigrateExperimentLargeObjectsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, localExptSvc.MigrateExperimentLargeObjects)
 }

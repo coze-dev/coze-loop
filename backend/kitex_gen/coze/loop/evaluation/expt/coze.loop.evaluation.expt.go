@@ -33613,10 +33613,10 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) Field255DeepEqual(src *base.Base
 
 // 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
 type MigrateExperimentLargeObjectsRequest struct {
-	WorkspaceID  int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExperimentID int64           `thrift:"experiment_id,2,required" frugal:"2,required,i64" json:"experiment_id" path:"experiment_id,required" `
-	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID   int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExperimentIds []int64         `thrift:"experiment_ids,2,required" frugal:"2,required,list<i64>" json:"experiment_ids" form:"experiment_ids,required" `
+	Session       *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base          *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewMigrateExperimentLargeObjectsRequest() *MigrateExperimentLargeObjectsRequest {
@@ -33633,9 +33633,9 @@ func (p *MigrateExperimentLargeObjectsRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
-func (p *MigrateExperimentLargeObjectsRequest) GetExperimentID() (v int64) {
+func (p *MigrateExperimentLargeObjectsRequest) GetExperimentIds() (v []int64) {
 	if p != nil {
-		return p.ExperimentID
+		return p.ExperimentIds
 	}
 	return
 }
@@ -33666,8 +33666,8 @@ func (p *MigrateExperimentLargeObjectsRequest) GetBase() (v *base.Base) {
 func (p *MigrateExperimentLargeObjectsRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *MigrateExperimentLargeObjectsRequest) SetExperimentID(val int64) {
-	p.ExperimentID = val
+func (p *MigrateExperimentLargeObjectsRequest) SetExperimentIds(val []int64) {
+	p.ExperimentIds = val
 }
 func (p *MigrateExperimentLargeObjectsRequest) SetSession(val *common.Session) {
 	p.Session = val
@@ -33678,7 +33678,7 @@ func (p *MigrateExperimentLargeObjectsRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_MigrateExperimentLargeObjectsRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "experiment_id",
+	2:   "experiment_ids",
 	200: "session",
 	255: "Base",
 }
@@ -33695,7 +33695,7 @@ func (p *MigrateExperimentLargeObjectsRequest) Read(iprot thrift.TProtocol) (err
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetExperimentID bool = false
+	var issetExperimentIds bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -33721,11 +33721,11 @@ func (p *MigrateExperimentLargeObjectsRequest) Read(iprot thrift.TProtocol) (err
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetExperimentID = true
+				issetExperimentIds = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -33763,7 +33763,7 @@ func (p *MigrateExperimentLargeObjectsRequest) Read(iprot thrift.TProtocol) (err
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetExperimentID {
+	if !issetExperimentIds {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
@@ -33797,14 +33797,26 @@ func (p *MigrateExperimentLargeObjectsRequest) ReadField1(iprot thrift.TProtocol
 	return nil
 }
 func (p *MigrateExperimentLargeObjectsRequest) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
 		return err
-	} else {
-		_field = v
 	}
-	p.ExperimentID = _field
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ExperimentIds = _field
 	return nil
 }
 func (p *MigrateExperimentLargeObjectsRequest) ReadField200(iprot thrift.TProtocol) error {
@@ -33881,10 +33893,18 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *MigrateExperimentLargeObjectsRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 2); err != nil {
+	if err = oprot.WriteFieldBegin("experiment_ids", thrift.LIST, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.ExperimentID); err != nil {
+	if err := oprot.WriteListBegin(thrift.I64, len(p.ExperimentIds)); err != nil {
+		return err
+	}
+	for _, v := range p.ExperimentIds {
+		if err := oprot.WriteI64(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -33950,7 +33970,7 @@ func (p *MigrateExperimentLargeObjectsRequest) DeepEqual(ano *MigrateExperimentL
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.ExperimentID) {
+	if !p.Field2DeepEqual(ano.ExperimentIds) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -33969,10 +33989,16 @@ func (p *MigrateExperimentLargeObjectsRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *MigrateExperimentLargeObjectsRequest) Field2DeepEqual(src int64) bool {
+func (p *MigrateExperimentLargeObjectsRequest) Field2DeepEqual(src []int64) bool {
 
-	if p.ExperimentID != src {
+	if len(p.ExperimentIds) != len(src) {
 		return false
+	}
+	for i, v := range p.ExperimentIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }
