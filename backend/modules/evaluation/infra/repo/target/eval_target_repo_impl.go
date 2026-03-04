@@ -315,36 +315,6 @@ func (e *EvalTargetRepoImpl) GetEvalTargetRecordByIDAndSpaceID(ctx context.Conte
 	return do, nil
 }
 
-func (e *EvalTargetRepoImpl) GetEvalTargetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, targetID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error) {
-	recordPO, err := e.evalTargetRecordDao.GetByExperimentRunIDAndItemID(ctx, spaceID, targetID, experimentRunID, itemID, turnID)
-	if err != nil {
-		return nil, err
-	}
-	if recordPO == nil {
-		return nil, nil
-	}
-	do, err := convertor.EvalTargetRecordPO2DO(recordPO)
-	if err != nil {
-		return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
-	}
-	return do, nil
-}
-
-func (e *EvalTargetRepoImpl) GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error) {
-	recordPO, err := e.evalTargetRecordDao.GetByExperimentRunIDAndItemIDWithoutTargetID(ctx, spaceID, experimentRunID, itemID, turnID)
-	if err != nil {
-		return nil, err
-	}
-	if recordPO == nil {
-		return nil, nil
-	}
-	do, err := convertor.EvalTargetRecordPO2DO(recordPO)
-	if err != nil {
-		return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
-	}
-	return do, nil
-}
-
 func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	recordPOList, err := e.evalTargetRecordDao.ListByIDsAndSpaceID(ctx, recordIDs, spaceID)
 	if err != nil {

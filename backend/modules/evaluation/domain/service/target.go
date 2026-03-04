@@ -25,10 +25,8 @@ type IEvalTargetService interface {
 	DebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, err error)
 	AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error)
 	GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
-	GetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error)
 	CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
-	GetOutputFieldContent(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64, fieldKeys []string) (map[string]*entity.Content, error)
 	// LoadRecordOutputFields 从 TOS 加载 record 中指定 output 字段的完整内容（用于评估器输入需完整 target_output 的场景）
 	LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
 	ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error

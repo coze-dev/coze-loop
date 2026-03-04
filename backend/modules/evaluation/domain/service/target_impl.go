@@ -568,13 +568,6 @@ func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 
-func (e *EvalTargetServiceImpl) GetRecordByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*entity.EvalTargetRecord, error) {
-	if turnID < 0 {
-		turnID = 0
-	}
-	return e.evalTargetRepo.GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx, spaceID, experimentRunID, itemID, turnID)
-}
-
 func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	if spaceID == 0 || len(recordIDs) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -588,39 +581,6 @@ func (e *EvalTargetServiceImpl) LoadRecordOutputFields(ctx context.Context, reco
 		return nil
 	}
 	return e.evalTargetRepo.LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys)
-}
-
-func (e *EvalTargetServiceImpl) GetOutputFieldContent(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64, fieldKeys []string) (map[string]*entity.Content, error) {
-	if spaceID == 0 || experimentRunID == 0 || itemID == 0 || len(fieldKeys) == 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
-	}
-	if turnID < 0 {
-		turnID = 0
-	}
-	record, err := e.evalTargetRepo.GetEvalTargetRecordByExperimentRunIDAndItemIDWithoutTargetID(ctx, spaceID, experimentRunID, itemID, turnID)
-	if err != nil {
-		return nil, err
-	}
-	if record == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found"))
-	}
-	if err := e.evalTargetRepo.LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys); err != nil {
-		return nil, err
-	}
-	res := make(map[string]*entity.Content)
-	if record.EvalTargetOutputData == nil || record.EvalTargetOutputData.OutputFields == nil {
-		return res, nil
-	}
-	keySet := make(map[string]struct{}, len(fieldKeys))
-	for _, k := range fieldKeys {
-		keySet[k] = struct{}{}
-	}
-	for k, c := range record.EvalTargetOutputData.OutputFields {
-		if _, ok := keySet[k]; ok {
-			res[k] = c
-		}
-	}
-	return res, nil
 }
 
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {

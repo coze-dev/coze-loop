@@ -143,10 +143,8 @@ struct BatchGetEvalTargetRecordsResponse {
 // 按需查询 output 中的大对象完整内容
 struct GetEvalTargetOutputFieldContentRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: required i64 experiment_run_id (api.js_conv="true", go.tag = 'json:"experiment_run_id"')  // 实验运行ID
-    3: required i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')  // 评测集数据项ID
-    4: required list<string> field_keys (api.js_conv="true", go.tag = 'json:"field_keys"')  // output_fields 中待查询的字段 key
-    5: optional i64 turn_id (api.js_conv="true", go.tag = 'json:"turn_id"')  // 轮次ID，默认0
+    2: required i64 eval_target_record_id (api.js_conv="true", go.tag = 'json:"eval_target_record_id"')  // eval_target_record_id
+    3: required list<string> field_keys (api.js_conv="true", go.tag = 'json:"field_keys"')  // output_fields 中待查询的字段 key
 
     255: optional base.Base Base
 }

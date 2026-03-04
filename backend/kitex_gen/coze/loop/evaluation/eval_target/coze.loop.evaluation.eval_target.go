@@ -6383,15 +6383,11 @@ func (p *BatchGetEvalTargetRecordsResponse) Field255DeepEqual(src *base.BaseResp
 // 按需查询 output 中的大对象完整内容
 type GetEvalTargetOutputFieldContentRequest struct {
 	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
-	// 实验运行ID
-	ExperimentRunID int64 `thrift:"experiment_run_id,2,required" frugal:"2,required,i64" json:"experiment_run_id" form:"experiment_run_id,required" query:"experiment_run_id,required"`
-	// 评测集数据项ID
-	ItemID int64 `thrift:"item_id,3,required" frugal:"3,required,i64" json:"item_id" form:"item_id,required" query:"item_id,required"`
+	// eval_target_record_id
+	EvalTargetRecordID int64 `thrift:"eval_target_record_id,2,required" frugal:"2,required,i64" json:"eval_target_record_id" form:"eval_target_record_id,required" query:"eval_target_record_id,required"`
 	// output_fields 中待查询的字段 key
-	FieldKeys []string `thrift:"field_keys,4,required" frugal:"4,required,list<string>" json:"field_keys" form:"field_keys,required" query:"field_keys,required"`
-	// 轮次ID，默认0
-	TurnID *int64     `thrift:"turn_id,5,optional" frugal:"5,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
-	Base   *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	FieldKeys []string   `thrift:"field_keys,3,required" frugal:"3,required,list<string>" json:"field_keys" form:"field_keys,required" query:"field_keys,required"`
+	Base      *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetEvalTargetOutputFieldContentRequest() *GetEvalTargetOutputFieldContentRequest {
@@ -6408,16 +6404,9 @@ func (p *GetEvalTargetOutputFieldContentRequest) GetWorkspaceID() (v int64) {
 	return
 }
 
-func (p *GetEvalTargetOutputFieldContentRequest) GetExperimentRunID() (v int64) {
+func (p *GetEvalTargetOutputFieldContentRequest) GetEvalTargetRecordID() (v int64) {
 	if p != nil {
-		return p.ExperimentRunID
-	}
-	return
-}
-
-func (p *GetEvalTargetOutputFieldContentRequest) GetItemID() (v int64) {
-	if p != nil {
-		return p.ItemID
+		return p.EvalTargetRecordID
 	}
 	return
 }
@@ -6427,18 +6416,6 @@ func (p *GetEvalTargetOutputFieldContentRequest) GetFieldKeys() (v []string) {
 		return p.FieldKeys
 	}
 	return
-}
-
-var GetEvalTargetOutputFieldContentRequest_TurnID_DEFAULT int64
-
-func (p *GetEvalTargetOutputFieldContentRequest) GetTurnID() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetTurnID() {
-		return GetEvalTargetOutputFieldContentRequest_TurnID_DEFAULT
-	}
-	return *p.TurnID
 }
 
 var GetEvalTargetOutputFieldContentRequest_Base_DEFAULT *base.Base
@@ -6455,17 +6432,11 @@ func (p *GetEvalTargetOutputFieldContentRequest) GetBase() (v *base.Base) {
 func (p *GetEvalTargetOutputFieldContentRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetEvalTargetOutputFieldContentRequest) SetExperimentRunID(val int64) {
-	p.ExperimentRunID = val
-}
-func (p *GetEvalTargetOutputFieldContentRequest) SetItemID(val int64) {
-	p.ItemID = val
+func (p *GetEvalTargetOutputFieldContentRequest) SetEvalTargetRecordID(val int64) {
+	p.EvalTargetRecordID = val
 }
 func (p *GetEvalTargetOutputFieldContentRequest) SetFieldKeys(val []string) {
 	p.FieldKeys = val
-}
-func (p *GetEvalTargetOutputFieldContentRequest) SetTurnID(val *int64) {
-	p.TurnID = val
 }
 func (p *GetEvalTargetOutputFieldContentRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -6473,15 +6444,9 @@ func (p *GetEvalTargetOutputFieldContentRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_GetEvalTargetOutputFieldContentRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "experiment_run_id",
-	3:   "item_id",
-	4:   "field_keys",
-	5:   "turn_id",
+	2:   "eval_target_record_id",
+	3:   "field_keys",
 	255: "Base",
-}
-
-func (p *GetEvalTargetOutputFieldContentRequest) IsSetTurnID() bool {
-	return p.TurnID != nil
 }
 
 func (p *GetEvalTargetOutputFieldContentRequest) IsSetBase() bool {
@@ -6492,8 +6457,7 @@ func (p *GetEvalTargetOutputFieldContentRequest) Read(iprot thrift.TProtocol) (e
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetExperimentRunID bool = false
-	var issetItemID bool = false
+	var issetEvalTargetRecordID bool = false
 	var issetFieldKeys bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
@@ -6524,33 +6488,16 @@ func (p *GetEvalTargetOutputFieldContentRequest) Read(iprot thrift.TProtocol) (e
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetExperimentRunID = true
+				issetEvalTargetRecordID = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetItemID = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
 				issetFieldKeys = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -6580,18 +6527,13 @@ func (p *GetEvalTargetOutputFieldContentRequest) Read(iprot thrift.TProtocol) (e
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetExperimentRunID {
+	if !issetEvalTargetRecordID {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 
-	if !issetItemID {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
 	if !issetFieldKeys {
-		fieldId = 4
+		fieldId = 3
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -6631,21 +6573,10 @@ func (p *GetEvalTargetOutputFieldContentRequest) ReadField2(iprot thrift.TProtoc
 	} else {
 		_field = v
 	}
-	p.ExperimentRunID = _field
+	p.EvalTargetRecordID = _field
 	return nil
 }
 func (p *GetEvalTargetOutputFieldContentRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.ItemID = _field
-	return nil
-}
-func (p *GetEvalTargetOutputFieldContentRequest) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -6666,17 +6597,6 @@ func (p *GetEvalTargetOutputFieldContentRequest) ReadField4(iprot thrift.TProtoc
 		return err
 	}
 	p.FieldKeys = _field
-	return nil
-}
-func (p *GetEvalTargetOutputFieldContentRequest) ReadField5(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.TurnID = _field
 	return nil
 }
 func (p *GetEvalTargetOutputFieldContentRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -6704,14 +6624,6 @@ func (p *GetEvalTargetOutputFieldContentRequest) Write(oprot thrift.TProtocol) (
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6753,10 +6665,10 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *GetEvalTargetOutputFieldContentRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("experiment_run_id", thrift.I64, 2); err != nil {
+	if err = oprot.WriteFieldBegin("eval_target_record_id", thrift.I64, 2); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteI64(p.ExperimentRunID); err != nil {
+	if err := oprot.WriteI64(p.EvalTargetRecordID); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -6769,23 +6681,7 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetEvalTargetOutputFieldContentRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("item_id", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.ItemID); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *GetEvalTargetOutputFieldContentRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("field_keys", thrift.LIST, 4); err != nil {
+	if err = oprot.WriteFieldBegin("field_keys", thrift.LIST, 3); err != nil {
 		goto WriteFieldBeginError
 	}
 	if err := oprot.WriteListBegin(thrift.STRING, len(p.FieldKeys)); err != nil {
@@ -6804,27 +6700,9 @@ func (p *GetEvalTargetOutputFieldContentRequest) writeField4(oprot thrift.TProto
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *GetEvalTargetOutputFieldContentRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTurnID() {
-		if err = oprot.WriteFieldBegin("turn_id", thrift.I64, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.TurnID); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *GetEvalTargetOutputFieldContentRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -6862,16 +6740,10 @@ func (p *GetEvalTargetOutputFieldContentRequest) DeepEqual(ano *GetEvalTargetOut
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.ExperimentRunID) {
+	if !p.Field2DeepEqual(ano.EvalTargetRecordID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.ItemID) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.FieldKeys) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.TurnID) {
+	if !p.Field3DeepEqual(ano.FieldKeys) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -6889,19 +6761,12 @@ func (p *GetEvalTargetOutputFieldContentRequest) Field1DeepEqual(src int64) bool
 }
 func (p *GetEvalTargetOutputFieldContentRequest) Field2DeepEqual(src int64) bool {
 
-	if p.ExperimentRunID != src {
+	if p.EvalTargetRecordID != src {
 		return false
 	}
 	return true
 }
-func (p *GetEvalTargetOutputFieldContentRequest) Field3DeepEqual(src int64) bool {
-
-	if p.ItemID != src {
-		return false
-	}
-	return true
-}
-func (p *GetEvalTargetOutputFieldContentRequest) Field4DeepEqual(src []string) bool {
+func (p *GetEvalTargetOutputFieldContentRequest) Field3DeepEqual(src []string) bool {
 
 	if len(p.FieldKeys) != len(src) {
 		return false
@@ -6911,18 +6776,6 @@ func (p *GetEvalTargetOutputFieldContentRequest) Field4DeepEqual(src []string) b
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
-	}
-	return true
-}
-func (p *GetEvalTargetOutputFieldContentRequest) Field5DeepEqual(src *int64) bool {
-
-	if p.TurnID == src {
-		return true
-	} else if p.TurnID == nil || src == nil {
-		return false
-	}
-	if *p.TurnID != *src {
-		return false
 	}
 	return true
 }

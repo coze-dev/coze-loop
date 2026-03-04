@@ -413,16 +413,19 @@ func (e EvalTargetApplicationImpl) GetEvalTargetOutputFieldContent(ctx context.C
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+	if request.WorkspaceID == 0 || request.EvalTargetRecordID == 0 || len(request.FieldKeys) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id, eval_target_record_id and field_keys are required"))
+	}
 	resp := &eval_target.GetEvalTargetOutputFieldContentResponse{}
-	turnID := request.GetTurnID()
-	// 鉴权：先获取 record 拿到 target_id
-	record, err := e.evalTargetService.GetRecordByExperimentRunIDAndItemID(ctx, request.WorkspaceID, request.ExperimentRunID, request.ItemID, turnID)
+	// 通过 eval_target_record_id 查询 target_record
+	record, err := e.evalTargetService.GetRecordByID(ctx, request.WorkspaceID, request.EvalTargetRecordID)
 	if err != nil {
 		return nil, err
 	}
 	if record == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found"))
 	}
+	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(record.TargetID, 10),
 		SpaceID:       request.WorkspaceID,
@@ -431,9 +434,22 @@ func (e EvalTargetApplicationImpl) GetEvalTargetOutputFieldContent(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	fieldContents, err := e.evalTargetService.GetOutputFieldContent(ctx, request.WorkspaceID, request.ExperimentRunID, request.ItemID, turnID, request.FieldKeys)
-	if err != nil {
+	// 加载大对象完整内容
+	if err := e.evalTargetService.LoadRecordOutputFields(ctx, record, request.FieldKeys); err != nil {
 		return nil, err
+	}
+	// 提取请求的字段内容
+	fieldContents := make(map[string]*entity.Content)
+	if record.EvalTargetOutputData != nil && record.EvalTargetOutputData.OutputFields != nil {
+		keySet := make(map[string]struct{}, len(request.FieldKeys))
+		for _, k := range request.FieldKeys {
+			keySet[k] = struct{}{}
+		}
+		for k, c := range record.EvalTargetOutputData.OutputFields {
+			if _, ok := keySet[k]; ok {
+				fieldContents[k] = c
+			}
+		}
 	}
 	if len(fieldContents) == 0 {
 		resp.FieldContents = map[string]*common.Content{}

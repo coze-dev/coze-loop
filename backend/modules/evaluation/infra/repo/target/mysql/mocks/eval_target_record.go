@@ -56,36 +56,6 @@ func (mr *MockEvalTargetRecordDAOMockRecorder) Create(ctx, record any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).Create), ctx, record)
 }
 
-// GetByExperimentRunIDAndItemID mocks base method.
-func (m *MockEvalTargetRecordDAO) GetByExperimentRunIDAndItemID(ctx context.Context, spaceID, targetID, experimentRunID, itemID, turnID int64) (*model.TargetRecord, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByExperimentRunIDAndItemID", ctx, spaceID, targetID, experimentRunID, itemID, turnID)
-	ret0, _ := ret[0].(*model.TargetRecord)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetByExperimentRunIDAndItemID indicates an expected call of GetByExperimentRunIDAndItemID.
-func (mr *MockEvalTargetRecordDAOMockRecorder) GetByExperimentRunIDAndItemID(ctx, spaceID, targetID, experimentRunID, itemID, turnID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByExperimentRunIDAndItemID", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).GetByExperimentRunIDAndItemID), ctx, spaceID, targetID, experimentRunID, itemID, turnID)
-}
-
-// GetByExperimentRunIDAndItemIDWithoutTargetID mocks base method.
-func (m *MockEvalTargetRecordDAO) GetByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID, experimentRunID, itemID, turnID int64) (*model.TargetRecord, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByExperimentRunIDAndItemIDWithoutTargetID", ctx, spaceID, experimentRunID, itemID, turnID)
-	ret0, _ := ret[0].(*model.TargetRecord)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetByExperimentRunIDAndItemIDWithoutTargetID indicates an expected call of GetByExperimentRunIDAndItemIDWithoutTargetID.
-func (mr *MockEvalTargetRecordDAOMockRecorder) GetByExperimentRunIDAndItemIDWithoutTargetID(ctx, spaceID, experimentRunID, itemID, turnID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByExperimentRunIDAndItemIDWithoutTargetID", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).GetByExperimentRunIDAndItemIDWithoutTargetID), ctx, spaceID, experimentRunID, itemID, turnID)
-}
-
 // GetByIDAndSpaceID mocks base method.
 func (m *MockEvalTargetRecordDAO) GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error) {
 	m.ctrl.T.Helper()

@@ -25,8 +25,6 @@ type EvalTargetRecordDAO interface {
 	Update(ctx context.Context, record *model.TargetRecord) error
 	GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
-	GetByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, targetID int64, experimentRunID int64, itemID int64, turnID int64) (*model.TargetRecord, error)
-	GetByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*model.TargetRecord, error)
 }
 
 type EvalTargetRecordDAOImpl struct {
@@ -90,39 +88,3 @@ func (e *EvalTargetRecordDAOImpl) ListByIDsAndSpaceID(ctx context.Context, recor
 	return records, nil
 }
 
-func (e *EvalTargetRecordDAOImpl) GetByExperimentRunIDAndItemID(ctx context.Context, spaceID int64, targetID int64, experimentRunID int64, itemID int64, turnID int64) (*model.TargetRecord, error) {
-	q := e.query
-	first, err := q.WithContext(ctx).TargetRecord.Where(
-		q.TargetRecord.SpaceID.Eq(spaceID),
-		q.TargetRecord.TargetID.Eq(targetID),
-		q.TargetRecord.ExperimentRunID.Eq(experimentRunID),
-		q.TargetRecord.ItemID.Eq(itemID),
-		q.TargetRecord.TurnID.Eq(turnID),
-		q.TargetRecord.DeletedAt.IsNull(),
-	).First()
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
-	}
-	return first, nil
-}
-
-func (e *EvalTargetRecordDAOImpl) GetByExperimentRunIDAndItemIDWithoutTargetID(ctx context.Context, spaceID int64, experimentRunID int64, itemID int64, turnID int64) (*model.TargetRecord, error) {
-	q := e.query
-	first, err := q.WithContext(ctx).TargetRecord.Where(
-		q.TargetRecord.SpaceID.Eq(spaceID),
-		q.TargetRecord.ExperimentRunID.Eq(experimentRunID),
-		q.TargetRecord.ItemID.Eq(itemID),
-		q.TargetRecord.TurnID.Eq(turnID),
-		q.TargetRecord.DeletedAt.IsNull(),
-	).First()
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
-	}
-	return first, nil
-}
