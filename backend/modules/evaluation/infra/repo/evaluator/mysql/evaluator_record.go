@@ -24,6 +24,7 @@ type EvaluatorRecordDAO interface {
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
+	ListBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64, opts ...db.Option) ([]*model.EvaluatorRecord, error)
 }
 
 var (
@@ -100,6 +101,25 @@ func (dao *EvaluatorRecordDAOImpl) BatchGetEvaluatorRecord(ctx context.Context, 
 	}
 	if includeDeleted {
 		query = query.Unscoped() // 解除软删除过滤
+	}
+	err := query.Find(&pos).Error
+	if err != nil {
+		return nil, err
+	}
+	return pos, nil
+}
+
+func (dao *EvaluatorRecordDAOImpl) ListBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64, opts ...db.Option) ([]*model.EvaluatorRecord, error) {
+	if len(experimentRunIDs) == 0 {
+		return nil, nil
+	}
+	var pos []*model.EvaluatorRecord
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	query := dbsession.WithContext(ctx).Model(&model.EvaluatorRecord{}).
+		Where("space_id = ?", spaceID).
+		Where("experiment_run_id IN (?)", experimentRunIDs)
+	if contexts.CtxWriteDB(ctx) {
+		query = query.Clauses(dbresolver.Write)
 	}
 	err := query.Find(&pos).Error
 	if err != nil {

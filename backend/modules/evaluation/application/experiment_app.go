@@ -72,6 +72,9 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	// 大对象迁移服务
+	largeObjectMigrationService service.ILargeObjectMigrationService
 }
 
 func NewExperimentApplication(
@@ -92,6 +95,7 @@ func NewExperimentApplication(
 	exptInsightAnalysisService service.IExptInsightAnalysisService,
 	evaluatorService service.EvaluatorService,
 	templateManager service.IExptTemplateManager,
+	largeObjectMigrationService service.ILargeObjectMigrationService,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -111,6 +115,7 @@ func NewExperimentApplication(
 		IExptInsightAnalysisService: exptInsightAnalysisService,
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
+		largeObjectMigrationService: largeObjectMigrationService,
 	}
 }
 
@@ -1914,6 +1919,42 @@ func (e *experimentApplication) GetAnalysisRecordFeedbackVote(ctx context.Contex
 	return &expt.GetAnalysisRecordFeedbackVoteResponse{
 		Vote:     experiment.ExptInsightAnalysisFeedbackVoteDO2DTO(vote),
 		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
+func (e *experimentApplication) MigrateExperimentLargeObjects(ctx context.Context, req *expt.MigrateExperimentLargeObjectsRequest) (r *expt.MigrateExperimentLargeObjectsResponse, err error) {
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	got, err := e.manager.Get(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Edit), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+		OwnerID:         gptr.Of(got.CreatedBy),
+		ResourceSpaceID: req.GetWorkspaceID(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	targetMigrated, evaluatorMigrated, err := e.largeObjectMigrationService.MigrateExperimentLargeObjects(ctx, req.GetWorkspaceID(), req.GetExperimentID())
+	if err != nil {
+		return nil, err
+	}
+
+	return &expt.MigrateExperimentLargeObjectsResponse{
+		TargetRecordMigratedCount:    gptr.Of(targetMigrated),
+		EvaluatorRecordMigratedCount: gptr.Of(evaluatorMigrated),
+		BaseResp:                     base.NewBaseResp(),
 	}, nil
 }
 

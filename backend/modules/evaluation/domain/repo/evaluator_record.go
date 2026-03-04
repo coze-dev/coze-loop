@@ -15,4 +15,5 @@ type IEvaluatorRecordRepo interface {
 	CorrectEvaluatorRecord(ctx context.Context, evaluatorRecordDO *entity.EvaluatorRecord) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error)
+	ListEvaluatorRecordBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*entity.EvaluatorRecord, error)
 }

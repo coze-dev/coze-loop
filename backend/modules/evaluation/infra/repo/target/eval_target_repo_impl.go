@@ -336,6 +336,25 @@ func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Con
 	return res, nil
 }
 
+func (e *EvalTargetRepoImpl) ListEvalTargetRecordBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*entity.EvalTargetRecord, error) {
+	recordPOList, err := e.evalTargetRecordDao.ListBySpaceIDAndExperimentRunIDs(ctx, spaceID, experimentRunIDs)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*entity.EvalTargetRecord, 0)
+	if len(recordPOList) == 0 {
+		return res, nil
+	}
+	for _, recordPO := range recordPOList {
+		do, err := convertor.EvalTargetRecordPO2DO(recordPO)
+		if err != nil {
+			return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+		}
+		res = append(res, do)
+	}
+	return res, nil
+}
+
 func (e *EvalTargetRepoImpl) LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
 	if e.recordDataStorage == nil || record == nil || len(fieldKeys) == 0 {
 		return nil

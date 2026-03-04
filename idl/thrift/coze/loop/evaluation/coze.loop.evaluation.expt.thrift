@@ -723,6 +723,22 @@ struct GetAnalysisRecordFeedbackVoteResponse {
     255: base.BaseResp BaseResp
 }
 
+// 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
+struct MigrateExperimentLargeObjectsRequest {
+    1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    2: required i64 experiment_id (api.path = 'experiment_id', api.js_conv = 'true', go.tag = 'json:"experiment_id"')
+
+    200: optional common.Session session
+    255: optional base.Base Base
+}
+
+struct MigrateExperimentLargeObjectsResponse {
+    1: optional i64 target_record_migrated_count (api.body = 'target_record_migrated_count', api.js_conv = 'true', go.tag = 'json:"target_record_migrated_count"')
+    2: optional i64 evaluator_record_migrated_count (api.body = 'evaluator_record_migrated_count', api.js_conv = 'true', go.tag = 'json:"evaluator_record_migrated_count"')
+
+    255: base.BaseResp BaseResp
+}
+
 service ExperimentService {
 
     CheckExperimentNameResponse CheckExperimentName(1: CheckExperimentNameRequest req) (
@@ -820,6 +836,11 @@ service ExperimentService {
     FeedbackExptInsightAnalysisReportResponse FeedbackExptInsightAnalysisReport(1: FeedbackExptInsightAnalysisReportRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/feedback")
     ListExptInsightAnalysisCommentResponse ListExptInsightAnalysisComment(1: ListExptInsightAnalysisCommentRequest req) (api.post="/api/evaluation/v1/experiments/:expt_id/insight_analysis_records/:insight_analysis_record_id/comments/list")
     GetAnalysisRecordFeedbackVoteResponse GetAnalysisRecordFeedbackVote(1: GetAnalysisRecordFeedbackVoteRequest req) (api.get="/api/evaluation/v1/experiments/insight_analysis_records/:insight_analysis_record_id/feedback_vote")
+
+    // 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
+    MigrateExperimentLargeObjectsResponse MigrateExperimentLargeObjects(1: MigrateExperimentLargeObjectsRequest req) (
+        api.post = "/api/evaluation/v1/experiments/:experiment_id/migrate_large_objects", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'experiment'
+    )
 
     // 实验模板
     CreateExperimentTemplateResponse CreateExperimentTemplate(1: CreateExperimentTemplateRequest req) (

@@ -733,6 +733,29 @@ func (l *LocalExperimentService) GetAnalysisRecordFeedbackVote(ctx context.Conte
 	return result.GetSuccess(), nil
 }
 
+// MigrateExperimentLargeObjects
+// 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
+func (l *LocalExperimentService) MigrateExperimentLargeObjects(ctx context.Context, req *expt.MigrateExperimentLargeObjectsRequest, callOptions ...callopt.Option) (*expt.MigrateExperimentLargeObjectsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceMigrateExperimentLargeObjectsArgs)
+		result := out.(*expt.ExperimentServiceMigrateExperimentLargeObjectsResult)
+		resp, err := l.impl.MigrateExperimentLargeObjects(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceMigrateExperimentLargeObjectsArgs{Req: req}
+	result := &expt.ExperimentServiceMigrateExperimentLargeObjectsResult{}
+	ctx = l.injectRPCInfo(ctx, "MigrateExperimentLargeObjects")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CreateExperimentTemplate
 // 实验模板
 func (l *LocalExperimentService) CreateExperimentTemplate(ctx context.Context, req *expt.CreateExperimentTemplateRequest, callOptions ...callopt.Option) (*expt.CreateExperimentTemplateResponse, error) {

@@ -33611,6 +33611,711 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) Field255DeepEqual(src *base.Base
 	return true
 }
 
+// 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
+type MigrateExperimentLargeObjectsRequest struct {
+	WorkspaceID  int64           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExperimentID int64           `thrift:"experiment_id,2,required" frugal:"2,required,i64" json:"experiment_id" path:"experiment_id,required" `
+	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewMigrateExperimentLargeObjectsRequest() *MigrateExperimentLargeObjectsRequest {
+	return &MigrateExperimentLargeObjectsRequest{}
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) InitDefault() {
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) GetExperimentID() (v int64) {
+	if p != nil {
+		return p.ExperimentID
+	}
+	return
+}
+
+var MigrateExperimentLargeObjectsRequest_Session_DEFAULT *common.Session
+
+func (p *MigrateExperimentLargeObjectsRequest) GetSession() (v *common.Session) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSession() {
+		return MigrateExperimentLargeObjectsRequest_Session_DEFAULT
+	}
+	return p.Session
+}
+
+var MigrateExperimentLargeObjectsRequest_Base_DEFAULT *base.Base
+
+func (p *MigrateExperimentLargeObjectsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return MigrateExperimentLargeObjectsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *MigrateExperimentLargeObjectsRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *MigrateExperimentLargeObjectsRequest) SetExperimentID(val int64) {
+	p.ExperimentID = val
+}
+func (p *MigrateExperimentLargeObjectsRequest) SetSession(val *common.Session) {
+	p.Session = val
+}
+func (p *MigrateExperimentLargeObjectsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_MigrateExperimentLargeObjectsRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "experiment_id",
+	200: "session",
+	255: "Base",
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) IsSetSession() bool {
+	return p.Session != nil
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetExperimentID bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetExperimentID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 200:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField200(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetExperimentID {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MigrateExperimentLargeObjectsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_MigrateExperimentLargeObjectsRequest[fieldId]))
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.ExperimentID = _field
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsRequest) ReadField200(iprot thrift.TProtocol) error {
+	_field := common.NewSession()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Session = _field
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MigrateExperimentLargeObjectsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField200(oprot); err != nil {
+			fieldId = 200
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MigrateExperimentLargeObjectsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.ExperimentID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *MigrateExperimentLargeObjectsRequest) writeField200(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSession() {
+		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Session.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 200 end error: ", p), err)
+}
+func (p *MigrateExperimentLargeObjectsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MigrateExperimentLargeObjectsRequest(%+v)", *p)
+
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) DeepEqual(ano *MigrateExperimentLargeObjectsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExperimentID) {
+		return false
+	}
+	if !p.Field200DeepEqual(ano.Session) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *MigrateExperimentLargeObjectsRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *MigrateExperimentLargeObjectsRequest) Field2DeepEqual(src int64) bool {
+
+	if p.ExperimentID != src {
+		return false
+	}
+	return true
+}
+func (p *MigrateExperimentLargeObjectsRequest) Field200DeepEqual(src *common.Session) bool {
+
+	if !p.Session.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *MigrateExperimentLargeObjectsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type MigrateExperimentLargeObjectsResponse struct {
+	TargetRecordMigratedCount    *int64         `thrift:"target_record_migrated_count,1,optional" frugal:"1,optional,i64" json:"target_record_migrated_count" form:"target_record_migrated_count" `
+	EvaluatorRecordMigratedCount *int64         `thrift:"evaluator_record_migrated_count,2,optional" frugal:"2,optional,i64" json:"evaluator_record_migrated_count" form:"evaluator_record_migrated_count" `
+	BaseResp                     *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewMigrateExperimentLargeObjectsResponse() *MigrateExperimentLargeObjectsResponse {
+	return &MigrateExperimentLargeObjectsResponse{}
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) InitDefault() {
+}
+
+var MigrateExperimentLargeObjectsResponse_TargetRecordMigratedCount_DEFAULT int64
+
+func (p *MigrateExperimentLargeObjectsResponse) GetTargetRecordMigratedCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetRecordMigratedCount() {
+		return MigrateExperimentLargeObjectsResponse_TargetRecordMigratedCount_DEFAULT
+	}
+	return *p.TargetRecordMigratedCount
+}
+
+var MigrateExperimentLargeObjectsResponse_EvaluatorRecordMigratedCount_DEFAULT int64
+
+func (p *MigrateExperimentLargeObjectsResponse) GetEvaluatorRecordMigratedCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorRecordMigratedCount() {
+		return MigrateExperimentLargeObjectsResponse_EvaluatorRecordMigratedCount_DEFAULT
+	}
+	return *p.EvaluatorRecordMigratedCount
+}
+
+var MigrateExperimentLargeObjectsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *MigrateExperimentLargeObjectsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return MigrateExperimentLargeObjectsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *MigrateExperimentLargeObjectsResponse) SetTargetRecordMigratedCount(val *int64) {
+	p.TargetRecordMigratedCount = val
+}
+func (p *MigrateExperimentLargeObjectsResponse) SetEvaluatorRecordMigratedCount(val *int64) {
+	p.EvaluatorRecordMigratedCount = val
+}
+func (p *MigrateExperimentLargeObjectsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_MigrateExperimentLargeObjectsResponse = map[int16]string{
+	1:   "target_record_migrated_count",
+	2:   "evaluator_record_migrated_count",
+	255: "BaseResp",
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) IsSetTargetRecordMigratedCount() bool {
+	return p.TargetRecordMigratedCount != nil
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) IsSetEvaluatorRecordMigratedCount() bool {
+	return p.EvaluatorRecordMigratedCount != nil
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MigrateExperimentLargeObjectsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TargetRecordMigratedCount = _field
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EvaluatorRecordMigratedCount = _field
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MigrateExperimentLargeObjectsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetRecordMigratedCount() {
+		if err = oprot.WriteFieldBegin("target_record_migrated_count", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TargetRecordMigratedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MigrateExperimentLargeObjectsResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorRecordMigratedCount() {
+		if err = oprot.WriteFieldBegin("evaluator_record_migrated_count", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EvaluatorRecordMigratedCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *MigrateExperimentLargeObjectsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MigrateExperimentLargeObjectsResponse(%+v)", *p)
+
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) DeepEqual(ano *MigrateExperimentLargeObjectsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.TargetRecordMigratedCount) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvaluatorRecordMigratedCount) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *MigrateExperimentLargeObjectsResponse) Field1DeepEqual(src *int64) bool {
+
+	if p.TargetRecordMigratedCount == src {
+		return true
+	} else if p.TargetRecordMigratedCount == nil || src == nil {
+		return false
+	}
+	if *p.TargetRecordMigratedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *MigrateExperimentLargeObjectsResponse) Field2DeepEqual(src *int64) bool {
+
+	if p.EvaluatorRecordMigratedCount == src {
+		return true
+	} else if p.EvaluatorRecordMigratedCount == nil || src == nil {
+		return false
+	}
+	if *p.EvaluatorRecordMigratedCount != *src {
+		return false
+	}
+	return true
+}
+func (p *MigrateExperimentLargeObjectsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type ExperimentService interface {
 	CheckExperimentName(ctx context.Context, req *CheckExperimentNameRequest) (r *CheckExperimentNameResponse, err error)
 	// CreateExperiment 只创建，不提交运行
@@ -33677,6 +34382,8 @@ type ExperimentService interface {
 	ListExptInsightAnalysisComment(ctx context.Context, req *ListExptInsightAnalysisCommentRequest) (r *ListExptInsightAnalysisCommentResponse, err error)
 
 	GetAnalysisRecordFeedbackVote(ctx context.Context, req *GetAnalysisRecordFeedbackVoteRequest) (r *GetAnalysisRecordFeedbackVoteResponse, err error)
+	// 大对象迁移：将已完成实验的 target 记录和 evaluator 记录中的大对象迁移到 TOS
+	MigrateExperimentLargeObjects(ctx context.Context, req *MigrateExperimentLargeObjectsRequest) (r *MigrateExperimentLargeObjectsResponse, err error)
 	// 实验模板
 	CreateExperimentTemplate(ctx context.Context, req *CreateExperimentTemplateRequest) (r *CreateExperimentTemplateResponse, err error)
 
@@ -34016,6 +34723,15 @@ func (p *ExperimentServiceClient) GetAnalysisRecordFeedbackVote(ctx context.Cont
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *ExperimentServiceClient) MigrateExperimentLargeObjects(ctx context.Context, req *MigrateExperimentLargeObjectsRequest) (r *MigrateExperimentLargeObjectsResponse, err error) {
+	var _args ExperimentServiceMigrateExperimentLargeObjectsArgs
+	_args.Req = req
+	var _result ExperimentServiceMigrateExperimentLargeObjectsResult
+	if err = p.Client_().Call(ctx, "MigrateExperimentLargeObjects", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *ExperimentServiceClient) CreateExperimentTemplate(ctx context.Context, req *CreateExperimentTemplateRequest) (r *CreateExperimentTemplateResponse, err error) {
 	var _args ExperimentServiceCreateExperimentTemplateArgs
 	_args.Req = req
@@ -34133,6 +34849,7 @@ func NewExperimentServiceProcessor(handler ExperimentService) *ExperimentService
 	self.AddToProcessorMap("FeedbackExptInsightAnalysisReport", &experimentServiceProcessorFeedbackExptInsightAnalysisReport{handler: handler})
 	self.AddToProcessorMap("ListExptInsightAnalysisComment", &experimentServiceProcessorListExptInsightAnalysisComment{handler: handler})
 	self.AddToProcessorMap("GetAnalysisRecordFeedbackVote", &experimentServiceProcessorGetAnalysisRecordFeedbackVote{handler: handler})
+	self.AddToProcessorMap("MigrateExperimentLargeObjects", &experimentServiceProcessorMigrateExperimentLargeObjects{handler: handler})
 	self.AddToProcessorMap("CreateExperimentTemplate", &experimentServiceProcessorCreateExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("BatchGetExperimentTemplate", &experimentServiceProcessorBatchGetExperimentTemplate{handler: handler})
 	self.AddToProcessorMap("UpdateExperimentTemplateMeta", &experimentServiceProcessorUpdateExperimentTemplateMeta{handler: handler})
@@ -35727,6 +36444,54 @@ func (p *experimentServiceProcessorGetAnalysisRecordFeedbackVote) Process(ctx co
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetAnalysisRecordFeedbackVote", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type experimentServiceProcessorMigrateExperimentLargeObjects struct {
+	handler ExperimentService
+}
+
+func (p *experimentServiceProcessorMigrateExperimentLargeObjects) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExperimentServiceMigrateExperimentLargeObjectsArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("MigrateExperimentLargeObjects", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := ExperimentServiceMigrateExperimentLargeObjectsResult{}
+	var retval *MigrateExperimentLargeObjectsResponse
+	if retval, err2 = p.handler.MigrateExperimentLargeObjects(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing MigrateExperimentLargeObjects: "+err2.Error())
+		oprot.WriteMessageBegin("MigrateExperimentLargeObjects", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("MigrateExperimentLargeObjects", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -47425,6 +48190,350 @@ func (p *ExperimentServiceGetAnalysisRecordFeedbackVoteResult) DeepEqual(ano *Ex
 }
 
 func (p *ExperimentServiceGetAnalysisRecordFeedbackVoteResult) Field0DeepEqual(src *GetAnalysisRecordFeedbackVoteResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceMigrateExperimentLargeObjectsArgs struct {
+	Req *MigrateExperimentLargeObjectsRequest `thrift:"req,1" frugal:"1,default,MigrateExperimentLargeObjectsRequest"`
+}
+
+func NewExperimentServiceMigrateExperimentLargeObjectsArgs() *ExperimentServiceMigrateExperimentLargeObjectsArgs {
+	return &ExperimentServiceMigrateExperimentLargeObjectsArgs{}
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) InitDefault() {
+}
+
+var ExperimentServiceMigrateExperimentLargeObjectsArgs_Req_DEFAULT *MigrateExperimentLargeObjectsRequest
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) GetReq() (v *MigrateExperimentLargeObjectsRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return ExperimentServiceMigrateExperimentLargeObjectsArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) SetReq(val *MigrateExperimentLargeObjectsRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_ExperimentServiceMigrateExperimentLargeObjectsArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceMigrateExperimentLargeObjectsArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewMigrateExperimentLargeObjectsRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MigrateExperimentLargeObjects_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceMigrateExperimentLargeObjectsArgs(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) DeepEqual(ano *ExperimentServiceMigrateExperimentLargeObjectsArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsArgs) Field1DeepEqual(src *MigrateExperimentLargeObjectsRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ExperimentServiceMigrateExperimentLargeObjectsResult struct {
+	Success *MigrateExperimentLargeObjectsResponse `thrift:"success,0,optional" frugal:"0,optional,MigrateExperimentLargeObjectsResponse"`
+}
+
+func NewExperimentServiceMigrateExperimentLargeObjectsResult() *ExperimentServiceMigrateExperimentLargeObjectsResult {
+	return &ExperimentServiceMigrateExperimentLargeObjectsResult{}
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) InitDefault() {
+}
+
+var ExperimentServiceMigrateExperimentLargeObjectsResult_Success_DEFAULT *MigrateExperimentLargeObjectsResponse
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) GetSuccess() (v *MigrateExperimentLargeObjectsResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return ExperimentServiceMigrateExperimentLargeObjectsResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) SetSuccess(x interface{}) {
+	p.Success = x.(*MigrateExperimentLargeObjectsResponse)
+}
+
+var fieldIDToName_ExperimentServiceMigrateExperimentLargeObjectsResult = map[int16]string{
+	0: "success",
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExperimentServiceMigrateExperimentLargeObjectsResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewMigrateExperimentLargeObjectsResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MigrateExperimentLargeObjects_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExperimentServiceMigrateExperimentLargeObjectsResult(%+v)", *p)
+
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) DeepEqual(ano *ExperimentServiceMigrateExperimentLargeObjectsResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *ExperimentServiceMigrateExperimentLargeObjectsResult) Field0DeepEqual(src *MigrateExperimentLargeObjectsResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

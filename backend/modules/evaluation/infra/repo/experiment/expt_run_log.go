@@ -66,3 +66,7 @@ func (e *ExptRunLogImpl) Update(ctx context.Context, exptID, exptRunID int64, uf
 	}
 	return nil
 }
+
+func (e *ExptRunLogImpl) ListCompletedRunIDsByExptID(ctx context.Context, spaceID, exptID int64) ([]int64, error) {
+	return e.exptRunLogDAO.ListCompletedRunIDsByExptID(ctx, spaceID, exptID)
+}

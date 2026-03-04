@@ -106,3 +106,22 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 
 	return evaluatorRecords, nil
 }
+
+func (r *EvaluatorRecordRepoImpl) ListEvaluatorRecordBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*entity.EvaluatorRecord, error) {
+	if len(experimentRunIDs) == 0 {
+		return nil, nil
+	}
+	pos, err := r.evaluatorRecordDao.ListBySpaceIDAndExperimentRunIDs(ctx, spaceID, experimentRunIDs)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]*entity.EvaluatorRecord, 0, len(pos))
+	for _, po := range pos {
+		do, err := convertor.ConvertEvaluatorRecordPO2DO(po)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, do)
+	}
+	return res, nil
+}

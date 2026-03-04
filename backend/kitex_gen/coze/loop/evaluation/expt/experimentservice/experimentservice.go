@@ -244,6 +244,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"MigrateExperimentLargeObjects": kitex.NewMethodInfo(
+		migrateExperimentLargeObjectsHandler,
+		newExperimentServiceMigrateExperimentLargeObjectsArgs,
+		newExperimentServiceMigrateExperimentLargeObjectsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CreateExperimentTemplate": kitex.NewMethodInfo(
 		createExperimentTemplateHandler,
 		newExperimentServiceCreateExperimentTemplateArgs,
@@ -953,6 +960,25 @@ func newExperimentServiceGetAnalysisRecordFeedbackVoteResult() interface{} {
 	return expt.NewExperimentServiceGetAnalysisRecordFeedbackVoteResult()
 }
 
+func migrateExperimentLargeObjectsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceMigrateExperimentLargeObjectsArgs)
+	realResult := result.(*expt.ExperimentServiceMigrateExperimentLargeObjectsResult)
+	success, err := handler.(expt.ExperimentService).MigrateExperimentLargeObjects(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceMigrateExperimentLargeObjectsArgs() interface{} {
+	return expt.NewExperimentServiceMigrateExperimentLargeObjectsArgs()
+}
+
+func newExperimentServiceMigrateExperimentLargeObjectsResult() interface{} {
+	return expt.NewExperimentServiceMigrateExperimentLargeObjectsResult()
+}
+
 func createExperimentTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*expt.ExperimentServiceCreateExperimentTemplateArgs)
 	realResult := result.(*expt.ExperimentServiceCreateExperimentTemplateResult)
@@ -1423,6 +1449,16 @@ func (p *kClient) GetAnalysisRecordFeedbackVote(ctx context.Context, req *expt.G
 	_args.Req = req
 	var _result expt.ExperimentServiceGetAnalysisRecordFeedbackVoteResult
 	if err = p.c.Call(ctx, "GetAnalysisRecordFeedbackVote", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) MigrateExperimentLargeObjects(ctx context.Context, req *expt.MigrateExperimentLargeObjectsRequest) (r *expt.MigrateExperimentLargeObjectsResponse, err error) {
+	var _args expt.ExperimentServiceMigrateExperimentLargeObjectsArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceMigrateExperimentLargeObjectsResult
+	if err = p.c.Call(ctx, "MigrateExperimentLargeObjects", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

@@ -35,7 +35,8 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	NewSchedulerModeFactory,
 	NewExptTemplateManager,
 	NewEvaluationAnalysisService,
-	// Repo Sets
+	NewLargeObjectMigrationService,
+	// Repo Sets（evalTargetRepo、evaluatorRecordRepo 由 experimentSet 中的 TargetDomainServiceSet、EvaluatorDomainServiceSet 提供）
 	experimentrepo.ExperimentRepoSet,
 )
 

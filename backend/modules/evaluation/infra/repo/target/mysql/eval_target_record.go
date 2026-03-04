@@ -25,6 +25,7 @@ type EvalTargetRecordDAO interface {
 	Update(ctx context.Context, record *model.TargetRecord) error
 	GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
+	ListBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*model.TargetRecord, error)
 }
 
 type EvalTargetRecordDAOImpl struct {
@@ -79,6 +80,28 @@ func (e *EvalTargetRecordDAOImpl) ListByIDsAndSpaceID(ctx context.Context, recor
 		q = q.WriteDB()
 	}
 	records, err := q.WithContext(ctx).TargetRecord.Where(q.TargetRecord.ID.In(recordIDs...), q.TargetRecord.SpaceID.Eq(spaceID)).Find()
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
+	}
+	return records, nil
+}
+
+func (e *EvalTargetRecordDAOImpl) ListBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*model.TargetRecord, error) {
+	if len(experimentRunIDs) == 0 {
+		return nil, nil
+	}
+	q := e.query
+	if contexts.CtxWriteDB(ctx) {
+		q = q.WriteDB()
+	}
+	records, err := q.WithContext(ctx).TargetRecord.
+		Where(q.TargetRecord.SpaceID.Eq(spaceID)).
+		Where(q.TargetRecord.ExperimentRunID.In(experimentRunIDs...)).
+		Where(q.TargetRecord.DeletedAt.IsNull()).
+		Find()
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil
 	}

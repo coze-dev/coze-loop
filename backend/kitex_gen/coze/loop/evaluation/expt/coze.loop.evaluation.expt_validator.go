@@ -917,3 +917,24 @@ func (p *GetAnalysisRecordFeedbackVoteResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *MigrateExperimentLargeObjectsRequest) IsValid() error {
+	if p.Session != nil {
+		if err := p.Session.IsValid(); err != nil {
+			return fmt.Errorf("field Session not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MigrateExperimentLargeObjectsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
