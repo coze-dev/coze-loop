@@ -432,9 +432,10 @@ func (dao *ExptTurnResultDAOImpl) ListTargetResultIDsAndEvaluatorResultIDsBySpac
 		return targetResultIDs, nil, nil
 	}
 
-	// 2. 从 expt_turn_evaluator_result_ref 查出 evaluator_result_id（按 expt_turn_result_id 查询，有索引）
+	// 2. 从 expt_turn_evaluator_result_ref 查出 evaluator_result_id（space_id + expt_turn_result_id 走 idx_turn_evaluator_result 索引）
 	refQ := query.Use(db).ExptTurnEvaluatorResultRef
 	refs, err := refQ.WithContext(ctx).
+		Where(refQ.SpaceID.Eq(spaceID)).
 		Where(refQ.ExptTurnResultID.In(turnResultIDs...)).
 		Find()
 	if err != nil {
