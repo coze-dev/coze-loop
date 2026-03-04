@@ -1043,7 +1043,7 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 		return nil, errorx.NewByCode(errno.EvaluatorBenefitDenyCode)
 	}
 
-	// 检查uri是否正确
+	// 检查uri是否传递
 	err = e.checkURIs(ctx, request.InputData.InputFields)
 	if err != nil {
 		return nil, err
