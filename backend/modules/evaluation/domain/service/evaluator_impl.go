@@ -846,6 +846,12 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 		return errorx.NewByCode(errno.EvaluatorRecordNotFoundCode, errorx.WithExtraMsg("evaluator record not found"))
 	}
 
+	if existingRecord.SpaceID != param.SpaceID {
+		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] spaceID mismatch, recordID: %d, requestSpaceID: %d, recordSpaceID: %d",
+			param.RecordID, param.SpaceID, existingRecord.SpaceID)
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
+	}
+
 	mergedOutputData := param.OutputData
 	if mergedOutputData == nil {
 		mergedOutputData = &entity.EvaluatorOutputData{}
