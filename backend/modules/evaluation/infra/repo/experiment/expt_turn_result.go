@@ -321,3 +321,7 @@ func (e *ExptTurnResultRepoImpl) GetTurnEvaluatorResultRefByEvaluatorVersionID(c
 	}
 	return dos, nil
 }
+
+func (e *ExptTurnResultRepoImpl) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64) (targetResultIDs, evaluatorResultIDs []int64, err error) {
+	return e.exptTurnResultDAO.ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx, spaceID, exptID, exptRunIDs)
+}

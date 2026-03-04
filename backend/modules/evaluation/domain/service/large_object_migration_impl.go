@@ -17,17 +17,20 @@ type ILargeObjectMigrationService interface {
 
 type LargeObjectMigrationServiceImpl struct {
 	exptRunLogRepo       repo.IExptRunLogRepo
+	exptTurnResultRepo   repo.IExptTurnResultRepo
 	evalTargetRepo       repo.IEvalTargetRepo
 	evaluatorRecordRepo  repo.IEvaluatorRecordRepo
 }
 
 func NewLargeObjectMigrationService(
 	exptRunLogRepo repo.IExptRunLogRepo,
+	exptTurnResultRepo repo.IExptTurnResultRepo,
 	evalTargetRepo repo.IEvalTargetRepo,
 	evaluatorRecordRepo repo.IEvaluatorRecordRepo,
 ) ILargeObjectMigrationService {
 	return &LargeObjectMigrationServiceImpl{
 		exptRunLogRepo:      exptRunLogRepo,
+		exptTurnResultRepo:  exptTurnResultRepo,
 		evalTargetRepo:      evalTargetRepo,
 		evaluatorRecordRepo: evaluatorRecordRepo,
 	}
@@ -62,28 +65,41 @@ func (s *LargeObjectMigrationServiceImpl) migrateOneExperiment(ctx context.Conte
 		return 0, 0, nil
 	}
 
-	// 迁移 target 记录
-	targetRecords, err := s.evalTargetRepo.ListEvalTargetRecordBySpaceIDAndExperimentRunIDs(ctx, spaceID, runIDs)
+	// 从 expt_turn_result 查出 target_record_id 和 evaluator_record_id（按 ID 查询，避免无索引字段全表扫描）
+	targetResultIDs, evaluatorResultIDs, err := s.exptTurnResultRepo.ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx, spaceID, exptID, runIDs)
 	if err != nil {
 		return 0, 0, err
 	}
-	for _, record := range targetRecords {
-		if err := s.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
-			return targetMigrated, evaluatorMigrated, err
-		}
-		targetMigrated++
+	if len(targetResultIDs) == 0 && len(evaluatorResultIDs) == 0 {
+		return 0, 0, nil
 	}
 
-	// 迁移 evaluator 记录
-	evaluatorRecords, err := s.evaluatorRecordRepo.ListEvaluatorRecordBySpaceIDAndExperimentRunIDs(ctx, spaceID, runIDs)
-	if err != nil {
-		return targetMigrated, evaluatorMigrated, err
-	}
-	for _, record := range evaluatorRecords {
-		if err := s.evaluatorRecordRepo.CorrectEvaluatorRecord(ctx, record); err != nil {
+	// 按 ID 查询 target 记录并迁移
+	if len(targetResultIDs) > 0 {
+		targetRecords, err := s.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, targetResultIDs)
+		if err != nil {
 			return targetMigrated, evaluatorMigrated, err
 		}
-		evaluatorMigrated++
+		for _, record := range targetRecords {
+			if err := s.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
+				return targetMigrated, evaluatorMigrated, err
+			}
+			targetMigrated++
+		}
+	}
+
+	// 按 ID 查询 evaluator 记录并迁移
+	if len(evaluatorResultIDs) > 0 {
+		evaluatorRecords, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+		if err != nil {
+			return targetMigrated, evaluatorMigrated, err
+		}
+		for _, record := range evaluatorRecords {
+			if err := s.evaluatorRecordRepo.CorrectEvaluatorRecord(ctx, record); err != nil {
+				return targetMigrated, evaluatorMigrated, err
+			}
+			evaluatorMigrated++
+		}
 	}
 
 	return targetMigrated, evaluatorMigrated, nil

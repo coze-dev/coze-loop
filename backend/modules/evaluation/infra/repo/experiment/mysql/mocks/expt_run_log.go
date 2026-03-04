@@ -81,6 +81,26 @@ func (mr *MockIExptRunLogDAOMockRecorder) Get(ctx, exptID, exptRunID any, opts .
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptRunLogDAO)(nil).Get), varargs...)
 }
 
+// ListCompletedRunIDsByExptID mocks base method.
+func (m *MockIExptRunLogDAO) ListCompletedRunIDsByExptID(ctx context.Context, spaceID, exptID int64, opts ...db.Option) ([]int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListCompletedRunIDsByExptID", varargs...)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCompletedRunIDsByExptID indicates an expected call of ListCompletedRunIDsByExptID.
+func (mr *MockIExptRunLogDAOMockRecorder) ListCompletedRunIDsByExptID(ctx, spaceID, exptID any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCompletedRunIDsByExptID", reflect.TypeOf((*MockIExptRunLogDAO)(nil).ListCompletedRunIDsByExptID), varargs...)
+}
+
 // Save mocks base method.
 func (m *MockIExptRunLogDAO) Save(ctx context.Context, exptRunLog *model.ExptRunLog, opts ...db.Option) error {
 	m.ctrl.T.Helper()

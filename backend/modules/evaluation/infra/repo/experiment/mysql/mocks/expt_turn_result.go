@@ -180,6 +180,27 @@ func (mr *MockExptTurnResultDAOMockRecorder) GetItemTurnRunLogs(ctx, exptID, exp
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetItemTurnRunLogs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).GetItemTurnRunLogs), varargs...)
 }
 
+// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs mocks base method.
+func (m *MockExptTurnResultDAO) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64, opts ...db.Option) ([]int64, []int64, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, exptRunIDs}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs", varargs...)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].([]int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs indicates an expected call of ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs.
+func (mr *MockExptTurnResultDAOMockRecorder) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx, spaceID, exptID, exptRunIDs any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, exptRunIDs}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs), varargs...)
+}
+
 // ListTurnResult mocks base method.
 func (m *MockExptTurnResultDAO) ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error) {
 	m.ctrl.T.Helper()

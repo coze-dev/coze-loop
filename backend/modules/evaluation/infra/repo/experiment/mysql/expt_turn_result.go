@@ -42,6 +42,9 @@ type ExptTurnResultDAO interface {
 	SaveTurnRunLogs(ctx context.Context, turnResults []*model.ExptTurnResultRunLog, opts ...db.Option) error
 	UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any, opts ...db.Option) error
 	ScanTurnRunLogs(ctx context.Context, exptID, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptTurnResultRunLog, int64, error)
+
+	// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs 根据 space_id、expt_id、expt_run_ids 从 expt_turn_result 和 expt_turn_evaluator_result_ref 查出 target_record_id 和 evaluator_record_id
+	ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64, opts ...db.Option) (targetResultIDs, evaluatorResultIDs []int64, err error)
 }
 
 func NewExptTurnResultDAO(db db.Provider) ExptTurnResultDAO {
@@ -395,4 +398,53 @@ func (dao *ExptTurnResultDAOImpl) ListTurnResultByItemIDs(ctx context.Context, s
 
 func (dao *ExptTurnResultDAOImpl) GetExptTurnResultTable(ctx context.Context) *gorm.DB {
 	return dao.provider.NewSession(ctx).Table(model.TableNameExptTurnResult)
+}
+
+func (dao *ExptTurnResultDAOImpl) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64, opts ...db.Option) (targetResultIDs, evaluatorResultIDs []int64, err error) {
+	if len(exptRunIDs) == 0 {
+		return nil, nil, nil
+	}
+	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
+
+	// 1. 从 expt_turn_result 查出 target_result_id 和 id（使用 expt_id 索引）
+	q := query.Use(db).ExptTurnResult
+	turnResults, err := q.WithContext(ctx).
+		Where(q.SpaceID.Eq(spaceID)).
+		Where(q.ExptID.Eq(exptID)).
+		Where(q.ExptRunID.In(exptRunIDs...)).
+		Where(q.DeletedAt.IsNull()).
+		Find()
+	if err != nil {
+		return nil, nil, errorx.Wrapf(err, "ListTargetResultIDsBySpaceIDAndExptRunIDs fail, spaceID=%d, exptID=%d", spaceID, exptID)
+	}
+
+	targetResultIDs = make([]int64, 0, len(turnResults))
+	turnResultIDs := make([]int64, 0, len(turnResults))
+	for _, r := range turnResults {
+		targetResultIDs = append(targetResultIDs, r.TargetResultID)
+		turnResultIDs = append(turnResultIDs, r.ID)
+	}
+
+	if len(turnResultIDs) == 0 {
+		return targetResultIDs, nil, nil
+	}
+
+	// 2. 从 expt_turn_evaluator_result_ref 查出 evaluator_result_id（按 expt_turn_result_id 查询，有索引）
+	refQ := query.Use(db).ExptTurnEvaluatorResultRef
+	refs, err := refQ.WithContext(ctx).
+		Where(refQ.ExptTurnResultID.In(turnResultIDs...)).
+		Find()
+	if err != nil {
+		return targetResultIDs, nil, errorx.Wrapf(err, "ListEvaluatorResultIDsByExptTurnResultIDs fail")
+	}
+
+	evaluatorResultIDs = make([]int64, 0, len(refs))
+	for _, r := range refs {
+		evaluatorResultIDs = append(evaluatorResultIDs, r.EvaluatorResultID)
+	}
+
+	return targetResultIDs, evaluatorResultIDs, nil
 }

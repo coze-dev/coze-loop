@@ -761,6 +761,22 @@ func (mr *MockIExptTurnResultRepoMockRecorder) GetTurnEvaluatorResultRefByExptID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTurnEvaluatorResultRefByExptID", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).GetTurnEvaluatorResultRefByExptID), ctx, spaceID, exptID)
 }
 
+// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs mocks base method.
+func (m *MockIExptTurnResultRepo) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64) ([]int64, []int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs", ctx, spaceID, exptID, exptRunIDs)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].([]int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs indicates an expected call of ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs.
+func (mr *MockIExptTurnResultRepoMockRecorder) ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx, spaceID, exptID, exptRunIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs), ctx, spaceID, exptID, exptRunIDs)
+}
+
 // ListTurnResult mocks base method.
 func (m *MockIExptTurnResultRepo) ListTurnResult(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error) {
 	m.ctrl.T.Helper()
@@ -947,6 +963,21 @@ func (m *MockIExptRunLogRepo) Get(ctx context.Context, exptID, exptRunID int64) 
 func (mr *MockIExptRunLogRepoMockRecorder) Get(ctx, exptID, exptRunID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockIExptRunLogRepo)(nil).Get), ctx, exptID, exptRunID)
+}
+
+// ListCompletedRunIDsByExptID mocks base method.
+func (m *MockIExptRunLogRepo) ListCompletedRunIDsByExptID(ctx context.Context, spaceID, exptID int64) ([]int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCompletedRunIDsByExptID", ctx, spaceID, exptID)
+	ret0, _ := ret[0].([]int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCompletedRunIDsByExptID indicates an expected call of ListCompletedRunIDsByExptID.
+func (mr *MockIExptRunLogRepoMockRecorder) ListCompletedRunIDsByExptID(ctx, spaceID, exptID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCompletedRunIDsByExptID", reflect.TypeOf((*MockIExptRunLogRepo)(nil).ListCompletedRunIDsByExptID), ctx, spaceID, exptID)
 }
 
 // Save mocks base method.

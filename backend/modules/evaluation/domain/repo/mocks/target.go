@@ -193,6 +193,21 @@ func (mr *MockIEvalTargetRepoMockRecorder) ListEvalTargetRecordByIDsAndSpaceID(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvalTargetRecordByIDsAndSpaceID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).ListEvalTargetRecordByIDsAndSpaceID), ctx, spaceID, recordIDs)
 }
 
+// ListEvalTargetRecordBySpaceIDAndExperimentRunIDs mocks base method.
+func (m *MockIEvalTargetRepo) ListEvalTargetRecordBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvalTargetRecordBySpaceIDAndExperimentRunIDs", ctx, spaceID, experimentRunIDs)
+	ret0, _ := ret[0].([]*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEvalTargetRecordBySpaceIDAndExperimentRunIDs indicates an expected call of ListEvalTargetRecordBySpaceIDAndExperimentRunIDs.
+func (mr *MockIEvalTargetRepoMockRecorder) ListEvalTargetRecordBySpaceIDAndExperimentRunIDs(ctx, spaceID, experimentRunIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvalTargetRecordBySpaceIDAndExperimentRunIDs", reflect.TypeOf((*MockIEvalTargetRepo)(nil).ListEvalTargetRecordBySpaceIDAndExperimentRunIDs), ctx, spaceID, experimentRunIDs)
+}
+
 // LoadEvalTargetRecordOutputFields mocks base method.
 func (m *MockIEvalTargetRepo) LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
 	m.ctrl.T.Helper()

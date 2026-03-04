@@ -98,3 +98,18 @@ func (mr *MockIEvaluatorRecordRepoMockRecorder) GetEvaluatorRecord(ctx, evaluato
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).GetEvaluatorRecord), ctx, evaluatorRecordID, includeDeleted)
 }
+
+// ListEvaluatorRecordBySpaceIDAndExperimentRunIDs mocks base method.
+func (m *MockIEvaluatorRecordRepo) ListEvaluatorRecordBySpaceIDAndExperimentRunIDs(ctx context.Context, spaceID int64, experimentRunIDs []int64) ([]*entity.EvaluatorRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEvaluatorRecordBySpaceIDAndExperimentRunIDs", ctx, spaceID, experimentRunIDs)
+	ret0, _ := ret[0].([]*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEvaluatorRecordBySpaceIDAndExperimentRunIDs indicates an expected call of ListEvaluatorRecordBySpaceIDAndExperimentRunIDs.
+func (mr *MockIEvaluatorRecordRepoMockRecorder) ListEvaluatorRecordBySpaceIDAndExperimentRunIDs(ctx, spaceID, experimentRunIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorRecordBySpaceIDAndExperimentRunIDs", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).ListEvaluatorRecordBySpaceIDAndExperimentRunIDs), ctx, spaceID, experimentRunIDs)
+}

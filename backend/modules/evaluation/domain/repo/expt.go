@@ -77,6 +77,9 @@ type IExptTurnResultRepo interface {
 	BatchGetTurnEvaluatorResultRef(ctx context.Context, spaceID int64, exptTurnResultIDs []int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetTurnEvaluatorResultRefByExptID(ctx context.Context, spaceID, exptID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetTurnEvaluatorResultRefByEvaluatorVersionID(ctx context.Context, spaceID, exptID, evaluatorVersionID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
+
+	// ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs 根据 space_id、expt_id、expt_run_ids 从 expt_turn_result 查出 target_record_id 和 evaluator_record_id（用于按 ID 查询，避免无索引字段全表扫描）
+	ListTargetResultIDsAndEvaluatorResultIDsBySpaceIDAndExptRunIDs(ctx context.Context, spaceID, exptID int64, exptRunIDs []int64) (targetResultIDs, evaluatorResultIDs []int64, err error)
 }
 
 type IExptRunLogRepo interface {
