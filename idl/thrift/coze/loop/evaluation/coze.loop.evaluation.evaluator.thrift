@@ -539,7 +539,7 @@ service EvaluatorService {
 
     // 评估器执行结果
     UpdateEvaluatorRecordResponse UpdateEvaluatorRecord(1: UpdateEvaluatorRecordRequest req) (
-        api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+        api.patch="/api/evaluation/v1/evaluator_records/:evaluator_record_id", api.op_type = 'update', api.tag = 'volc-agentkit', api.category = 'evaluator'
     ) // 修正evaluator运行分数
     GetEvaluatorRecordResponse GetEvaluatorRecord(1: GetEvaluatorRecordRequest req)
     BatchGetEvaluatorRecordsResponse BatchGetEvaluatorRecords(1: BatchGetEvaluatorRecordsRequest req)
@@ -579,7 +579,7 @@ service EvaluatorService {
     UpdateBuiltinEvaluatorTagsResponse UpdateBuiltinEvaluatorTags(1: UpdateBuiltinEvaluatorTagsRequest req)
     // 查询Tag
     ListEvaluatorTagsResponse ListEvaluatorTags(1: ListEvaluatorTagsRequest req) (
-        api.post="/api/evaluation/v1/evaluators/list_tags", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
+        api.post="/api/evaluation/v1/evaluators/list_tags", api.op_type = 'list', api.tag = 'volc-agentkit', api.category = 'evaluator'
     )
 
 }
