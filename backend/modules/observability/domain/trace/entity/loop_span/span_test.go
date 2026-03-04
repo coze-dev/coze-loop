@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
+
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 
 	"github.com/stretchr/testify/assert"
@@ -1060,4 +1062,56 @@ func TestSpanList_FilterModelSpans(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestSpan_ExtractByJsonpathRaw(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	t.Run("multipart data preserved as original format", func(t *testing.T) {
+		multipartData := `[{"text":"# Input Data\n<Input_Image>\n","type":"text"},{"text":"[图片-1]\n","type":"text"},{"image_url":{"detail":{"image_resolution":"auto"},"url":"http://example.com/img.jpg"},"type":"image_url"}]`
+		span := &Span{
+			Input: `{"content":` + multipartData + `}`,
+		}
+
+		resultRaw, err := span.ExtractByJsonpathRaw(ctx, "Input", "content")
+		assert.NoError(t, err)
+		assert.Contains(t, resultRaw, `"detail":{"image_resolution":"auto"}`)
+		assert.Contains(t, resultRaw, `"type":"text"`)
+		assert.Contains(t, resultRaw, `"type":"image_url"`)
+		var parts []tracespec.ModelMessagePart
+		err = json.Unmarshal([]byte(resultRaw), &parts)
+		assert.Error(t, err)
+	})
+
+	t.Run("simple json should work same for both methods", func(t *testing.T) {
+		span := &Span{
+			Input: `{"name": "test", "value": 123}`,
+		}
+
+		resultRaw, err := span.ExtractByJsonpathRaw(ctx, "Input", "name")
+		assert.NoError(t, err)
+		assert.Equal(t, "test", resultRaw)
+
+		resultRecursive, err := span.ExtractByJsonpath(ctx, "Input", "name")
+		assert.NoError(t, err)
+		assert.Equal(t, "test", resultRecursive)
+	})
+
+	t.Run("real multipart use case from dataset import", func(t *testing.T) {
+		multipartJSON := `[{"text":"# Input Data\n\u003cInput_Image\u003e\n","type":"text"},{"text":"[图片-1]\n","type":"text"},{"image_url":{"detail":"{\"image_resolution\":\"auto\"}","url":""},"type":"image_url"}]`
+		span := &Span{
+			Input: `{"messages":[{"role":"user","content":` + multipartJSON + `}]}`,
+		}
+
+		result, err := span.ExtractByJsonpathRaw(ctx, "Input", "messages[0].content")
+		assert.NoError(t, err)
+
+		assert.Contains(t, result, `"type":"text"`)
+		assert.Contains(t, result, `"type":"image_url"`)
+		assert.Contains(t, result, `\u003cInput_Image\u003e`)
+		var parts []tracespec.ModelMessagePart
+		err = json.Unmarshal([]byte(result), &parts)
+		assert.NoError(t, err)
+	})
 }

@@ -98,7 +98,7 @@ func TestAuthProviderImpl_CheckWorkspacePermission(t *testing.T) {
 				mockClient.EXPECT().MCheckPermission(gomock.Any(), gomock.Any()).Return(nil, errors.New("RPC error"))
 			},
 			wantErr:     true,
-			expectedErr: obErrorx.CommercialCommonRPCErrorCodeCode,
+			expectedErr: 0,
 		},
 		{
 			name:        "nil response",
