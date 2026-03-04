@@ -246,7 +246,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			if ok {
 				outputData.EvalTargetRunError = &entity.EvalTargetRunError{
 					Code:    statusErr.Code(),
-					Message: statusErr.Error(),
+					Message: errorx.ErrorWithoutStack(err),
 				}
 				spanParam.ErrCode = strconv.FormatInt(int64(statusErr.Code()), 10)
 			} else {
