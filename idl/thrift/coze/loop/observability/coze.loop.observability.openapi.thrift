@@ -8,6 +8,10 @@ include "./domain/common.thrift"
 include "./domain/filter.thrift"
 include "coze.loop.observability.trace.thrift"
 
+struct Extra {
+    1: optional string src (api.header="src")
+}
+
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
 
@@ -77,6 +81,7 @@ struct SearchTraceOApiRequest {
     9: optional list<string> span_ids (api.body="span_ids")
     100: optional bool need_original_tags (api.body='need_original_tags')
 
+    254: optional Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -102,6 +107,7 @@ struct SearchTraceTreeOApiRequest {
     8: optional common.PlatformType platform_type (api.body="platform_type")
     10: optional filter.FilterFields filters (api.body="filters")
 
+    254: optional Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -131,6 +137,7 @@ struct ListSpansOApiRequest {
 
     100: optional bool need_original_tags (api.body='need_original_tags')
 
+    254: optional Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -157,6 +164,7 @@ struct ListPreSpanOApiRequest {
     5: optional string previous_response_id (api.body="previous_response_id")
     6: optional common.PlatformType platform_type (api.body="platform_type")
 
+    254: optional Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 

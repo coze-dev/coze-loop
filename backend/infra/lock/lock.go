@@ -30,6 +30,13 @@ type ILocker interface {
 	// 后退出续期。调用方做写操作前应检查 ctx.Done 以确认仍持有锁，发生错误时应调用 cancel 以主动释放锁。
 	LockBackoffWithRenew(parent context.Context, key string, ttl time.Duration, maxHold time.Duration) (locked bool, ctx context.Context, cancel func(), err error)
 	LockWithRenew(parent context.Context, key string, ttl time.Duration, maxHold time.Duration) (locked bool, ctx context.Context, cancel func(), err error)
+
+	BackoffLockWithValue(ctx context.Context, key, val string, expiresIn time.Duration, backoff time.Duration) (bool, string, error)
+	UnlockWithValue(ctx context.Context, key, val string) (bool, error)
+	// UnlockForce deletes the key without comparing its value.
+	UnlockForce(ctx context.Context, key string) (bool, error)
+	// Exists returns true if the key exists.
+	Exists(ctx context.Context, key string) (bool, error)
 }
 
 func NewRedisLocker(c redis.Cmdable) ILocker {
@@ -143,6 +150,35 @@ func (r *redisLocker) Unlock(key string) (bool, error) {
 	return rt == 1, nil
 }
 
+func (r *redisLocker) UnlockWithValue(ctx context.Context, key, val string) (bool, error) {
+	const unlockWithValueScript = `if redis.call('GET', KEYS[1]) == ARGV[1] then redis.call('DEL', KEYS[1]); return 1; end; return 0;`
+	result, err := r.c.Eval(ctx, unlockWithValueScript, []string{key}, val).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "unlock with lua script")
+	}
+	rt, ok := result.(int64)
+	if !ok {
+		return false, errors.Errorf("unknown result type %T", result)
+	}
+	return rt == 1, nil
+}
+
+func (r *redisLocker) UnlockForce(ctx context.Context, key string) (bool, error) {
+	n, err := r.c.Del(ctx, key).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "unlock force del")
+	}
+	return n > 0, nil
+}
+
+func (r *redisLocker) Exists(ctx context.Context, key string) (bool, error) {
+	n, err := r.c.Exists(ctx, key).Result()
+	if err != nil {
+		return false, errors.WithMessage(err, "exists")
+	}
+	return n > 0, nil
+}
+
 func (r *redisLocker) renewLock(ctx context.Context, key string, ttl time.Duration, maxHold time.Duration) {
 	t1 := time.After(maxHold)
 	t2 := time.NewTicker(gvalue.Max(time.Second, ttl>>2))
@@ -202,4 +238,60 @@ func (r *redisLocker) ExpireLockIn(key string, expiresIn time.Duration) (bool, e
 		return false, errors.New("unknown result type")
 	}
 	return rt == 1, nil
+}
+
+const setNXWithGetScript = `
+local ok = redis.call('SET', KEYS[1], ARGV[1], 'NX', 'PX', ARGV[2])
+if ok then
+  return {1, ARGV[1]}
+else
+  local cur = redis.call('GET', KEYS[1])
+  return {0, cur or ''}
+end
+`
+
+func (r *redisLocker) BackoffLockWithValue(ctx context.Context, key, val string, expiresIn time.Duration, maxWait time.Duration) (bool, string, error) {
+	if expiresIn < time.Second {
+		return false, "", fmt.Errorf("lock ttl too short")
+	}
+
+	var ok bool
+	var lastHolder string
+	bf := backoff.NewExponentialBackOff()
+	bf.InitialInterval = 50 * time.Millisecond
+	bf.MaxInterval = 300 * time.Millisecond
+	bf.MaxElapsedTime = maxWait
+
+	errNotLocked := errors.New("lock hold by others")
+	err := backoff.Retry(func() error {
+		result, err := r.c.Eval(ctx, setNXWithGetScript, []string{key}, val, int64(expiresIn/time.Millisecond)).Result()
+		if err != nil {
+			return errors.WithMessage(err, fmt.Sprintf("redis setnx with get fail, key: %v", key))
+		}
+		sl, okType := result.([]interface{})
+		if !okType || len(sl) != 2 {
+			return errors.Errorf("unexpected script result type %T or length", result)
+		}
+		locked, _ := sl[0].(int64)
+		if locked == 1 {
+			ok = true
+			return nil
+		}
+		switch v := sl[1].(type) {
+		case string:
+			lastHolder = v
+		case []byte:
+			lastHolder = string(v)
+		default:
+			return errors.Errorf("unexpected lua script result type %T or length, key: %v", sl[1], key)
+		}
+		return errNotLocked
+	}, bf)
+	if err != nil {
+		if errors.Is(err, errNotLocked) {
+			return false, lastHolder, nil
+		}
+		return false, "", err
+	}
+	return ok, val, nil
 }

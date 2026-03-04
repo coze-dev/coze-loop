@@ -294,6 +294,112 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 	})
 }
 
+func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	ctx := context.Background()
+	session := &entity.Session{UserID: "1"}
+	targetID := int64(100)
+	targetVersionID := int64(101)
+	param := &entity.CreateExptParam{
+		WorkspaceID:         1,
+		Name:                "expt_with_existing_target",
+		EvalSetID:           2,
+		EvalSetVersionID:    3,
+		TargetID:            &targetID,
+		TargetVersionID:     targetVersionID,
+		EvaluatorVersionIds: []int64{10},
+		ExptConf: &entity.EvaluationConfiguration{
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{
+					TargetVersionID: targetVersionID,
+					IngressConf: &entity.TargetIngressConf{
+						EvalSetAdapter: &entity.FieldAdapter{
+							FieldConfs: []*entity.FieldConf{{FromField: "field1"}},
+						},
+					},
+				},
+				EvaluatorsConf: &entity.EvaluatorsConf{
+					EvaluatorConf: []*entity.EvaluatorConf{
+						{
+							EvaluatorVersionID: 10,
+							IngressConf: &entity.EvaluatorIngressConf{
+								EvalSetAdapter: &entity.FieldAdapter{
+									FieldConfs: []*entity.FieldConf{{FromField: "field1"}},
+								},
+								TargetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+		EXPECT().
+		GetEvalTargetVersion(ctx, int64(1), targetVersionID, true).
+		Return(&entity.EvalTarget{
+			ID:             targetID,
+			EvalTargetType: 0,
+			EvalTargetVersion: &entity.EvalTargetVersion{
+				ID:             targetVersionID,
+				EvalTargetType: entity.EvalTargetTypeLoopTrace,
+				OutputSchema:   []*entity.ArgsSchema{},
+			},
+		}, nil)
+	version := &entity.EvaluationSetVersion{
+		ID:        3,
+		ItemCount: 1,
+		EvaluationSetSchema: &entity.EvaluationSetSchema{
+			FieldSchemas: []*entity.FieldSchema{{Name: "field1"}},
+		},
+	}
+	mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+		EXPECT().
+		GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(version, &entity.EvaluationSet{ID: 2}, nil)
+	mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
+		EXPECT().
+		BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]*entity.Evaluator{{
+			ID:            10,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          10,
+				EvaluatorID: 10,
+			},
+		}}, nil)
+	mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(ctx, 2).Return([]int64{1, 2}, nil)
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(ctx, gomock.Any(), session).Return(nil)
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(ctx, gomock.Any()).Return(nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil)
+	mgr.lwt.(*lwtMocks.MockILatestWriteTracker).EXPECT().SetWriteFlag(ctx, gomock.Any(), gomock.Any()).Return()
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, gomock.Any(), gomock.Any()).Return(nil, false, nil)
+	mgr.audit.(*auditMocks.MockIAuditService).
+		EXPECT().
+		Audit(gomock.Any(), gomock.Any()).
+		Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+	mgr.benefitService.(*benefitMocks.MockIBenefitService).
+		EXPECT().
+		CheckAndDeductEvalBenefit(ctx, gomock.Any()).
+		Return(&benefit.CheckAndDeductEvalBenefitResult{
+			IsFreeEvaluate: gptr.Of(true),
+		}, nil)
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
+		EXPECT().
+		Update(ctx, gomock.Any()).
+		Return(nil)
+
+	expt, err := mgr.CreateExpt(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, expt)
+	assert.Equal(t, targetID, expt.TargetID, "TargetID 应从 versionedTargetID 设置")
+	assert.Equal(t, targetVersionID, expt.TargetVersionID, "TargetVersionID 应从 versionedTargetID 设置")
+	assert.Equal(t, entity.EvalTargetTypeLoopTrace, expt.TargetType, "TargetType 应从 tuple.Target.EvalTargetVersion.EvalTargetType 设置")
+}
+
 func TestExptMangerImpl_Update(t *testing.T) {
 	tests := []struct {
 		name    string

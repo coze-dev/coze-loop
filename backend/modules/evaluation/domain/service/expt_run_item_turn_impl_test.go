@@ -1855,6 +1855,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 							},
 						},
 					},
+					Event: &entity.ExptItemEvalEvent{}, // Event required: CallEvaluators uses Event.IgnoreExistedResult()
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{
 					EvaluatorResults: map[int64]*entity.EvaluatorRecord{

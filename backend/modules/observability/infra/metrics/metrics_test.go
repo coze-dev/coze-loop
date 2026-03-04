@@ -203,6 +203,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 		workspaceId  int64
 		platformType string
 		spanType     string
+		src          string
 		spanSize     int64
 		errorCode    int
 		start        time.Time
@@ -221,7 +222,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: nil,
 				}
 			},
-			args: args{"ListSpans", 123, "coze", "llm", 1024, 0, time.Now(), false},
+			args: args{"ListSpans", 123, "coze", "llm", "", 1024, 0, time.Now(), false},
 		},
 		{
 			name: "should emit metrics with correct tags for ListSpans",
@@ -235,9 +236,10 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 						tagIsErr:        "false",
 						tagPlatformType: "coze",
 						tagSpanType:     "llm",
+						tagSrc:          "",
 						tagErrCode:      "0",
 					}
-					assert.Len(t, tags, 6)
+					assert.Len(t, tags, 7)
 					for _, tag := range tags {
 						expectedValue, exists := expectedTags[tag.Name]
 						assert.True(t, exists, "Unexpected tag: %s", tag.Name)
@@ -250,7 +252,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: m,
 				}
 			},
-			args: args{"ListSpans", 123, "coze", "llm", 1024, 0, time.Now(), false},
+			args: args{"ListSpans", 123, "coze", "llm", "", 1024, 0, time.Now(), false},
 		},
 		{
 			name: "should emit metrics with correct tags for GetTrace",
@@ -263,9 +265,10 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 						tagIsErr:        "false",
 						tagPlatformType: "dify",
 						tagSpanType:     "workflow",
+						tagSrc:          "",
 						tagErrCode:      "0",
 					}
-					assert.Len(t, tags, 6)
+					assert.Len(t, tags, 7)
 					for _, tag := range tags {
 						expectedValue, exists := expectedTags[tag.Name]
 						assert.True(t, exists, "Unexpected tag: %s", tag.Name)
@@ -276,7 +279,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: m,
 				}
 			},
-			args: args{"GetTrace", 456, "dify", "workflow", 2048, 0, time.Now(), false},
+			args: args{"GetTrace", 456, "dify", "workflow", "", 2048, 0, time.Now(), false},
 		},
 		{
 			name: "should emit metrics with error tags",
@@ -289,6 +292,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 						tagIsErr:        "true",
 						tagPlatformType: "openai",
 						tagSpanType:     "chat",
+						tagSrc:          "",
 						tagErrCode:      "500",
 					}
 					for _, tag := range tags {
@@ -301,7 +305,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: m,
 				}
 			},
-			args: args{"ListSpans", 789, "openai", "chat", 512, 500, time.Now(), true},
+			args: args{"ListSpans", 789, "openai", "chat", "", 512, 500, time.Now(), true},
 		},
 		{
 			name: "should handle empty method and platform type",
@@ -314,6 +318,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 						tagIsErr:        "false",
 						tagPlatformType: "",
 						tagSpanType:     "",
+						tagSrc:          "",
 						tagErrCode:      "0",
 					}
 					for _, tag := range tags {
@@ -326,7 +331,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: m,
 				}
 			},
-			args: args{"", 0, "", "", 0, 0, time.Now(), false},
+			args: args{"", 0, "", "", "", 0, 0, time.Now(), false},
 		},
 		{
 			name: "should handle negative span size",
@@ -340,7 +345,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 					spansMetrics: m,
 				}
 			},
-			args: args{"GetTrace", 999, "coze", "agent", -100, 0, time.Now(), false},
+			args: args{"GetTrace", 999, "coze", "agent", "", -100, 0, time.Now(), false},
 		},
 	}
 	for _, tt := range tests {
@@ -356,7 +361,7 @@ func TestTraceMetricsImpl_EmitTraceOapi(t *testing.T) {
 				spansMetrics: fields.spansMetrics,
 			}
 			assert.NotPanics(t, func() {
-				tr.EmitTraceOapi(tt.args.method, tt.args.workspaceId, tt.args.platformType, tt.args.spanType, tt.args.spanSize, tt.args.errorCode, tt.args.start, tt.args.isError)
+				tr.EmitTraceOapi(tt.args.method, tt.args.workspaceId, tt.args.platformType, tt.args.spanType, tt.args.src, tt.args.spanSize, tt.args.errorCode, tt.args.start, tt.args.isError)
 			})
 		})
 	}
@@ -388,7 +393,7 @@ func TestTraceMetricsImpl_EmitTraceOapi_MetricValues(t *testing.T) {
 	}
 
 	start := time.Now()
-	tr.EmitTraceOapi("TestMethod", 12345, "test_platform", "test_span", 1024, 200, start, true)
+	tr.EmitTraceOapi("TestMethod", 12345, "test_platform", "test_span", "test_src", 1024, 200, start, true)
 }
 
 func TestTraceMetricsImpl_EmitTraceOapi_Integration(t *testing.T) {
@@ -411,7 +416,7 @@ func TestTraceMetricsImpl_EmitTraceOapi_Integration(t *testing.T) {
 	start := time.Now()
 	domainMetrics.EmitListSpans(123, "llm", start, false)
 	domainMetrics.EmitGetTrace(456, start, true)
-	domainMetrics.EmitTraceOapi("TestMethod", 789, "coze", "workflow", 2048, 0, start, false)
+	domainMetrics.EmitTraceOapi("TestMethod", 789, "coze", "workflow", "test_src", 2048, 0, start, false)
 }
 
 func TestTraceMetricsImpl_ConcurrentAccess(t *testing.T) {
@@ -437,7 +442,7 @@ func TestTraceMetricsImpl_ConcurrentAccess(t *testing.T) {
 			workspaceId := int64(id + 1000)
 
 			// 并发调用EmitTraceOapi方法
-			tr.EmitTraceOapi("ConcurrentTest", workspaceId, "test_platform", "test_span", int64(id*10), id%2, start, id%2 == 1)
+			tr.EmitTraceOapi("ConcurrentTest", workspaceId, "test_platform", "test_span", "test_src", int64(id*10), id%2, start, id%2 == 1)
 		}(i)
 	}
 
@@ -459,10 +464,11 @@ func TestTraceQueryTagNames(t *testing.T) {
 		tagSpaceID,
 		tagPlatformType,
 		tagSpanType,
+		tagSrc,
 		tagIsErr,
 		tagErrCode,
 	}
 	result := traceQueryTagNames()
 	assert.Equal(t, expected, result)
-	assert.Len(t, result, 6)
+	assert.Len(t, result, 7)
 }

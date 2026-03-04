@@ -163,7 +163,7 @@ func (e *ExptSchedulerImpl) makeExptRunExecLockKey(exptID, exptRunID int64) stri
 func (e *ExptSchedulerImpl) HandleEventLock(next SchedulerEndPoint) SchedulerEndPoint {
 	return func(ctx context.Context, event *entity.ExptScheduleEvent) error {
 		key := e.makeExptRunExecLockKey(event.ExptID, event.ExptRunID)
-		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*20, time.Second*60*5)
+		locked, ctx, cancel, err := e.Mutex.LockWithRenew(ctx, key, time.Second*10, time.Second*60*5)
 		if err != nil {
 			return err
 		}
@@ -258,7 +258,14 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	complete = append(complete, zombies...)
+	logs.CtxInfo(ctx, "expt scheduler scan item, to_submit: %v, incomplete: %v, complete: %v",
+		entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs(), entity.ExptEvalItems(complete).GetItemIDs())
+
 	if err = e.recordEvalItemRunLogs(ctx, event, complete, mode); err != nil {
+		return err
+	}
+
+	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
@@ -269,10 +276,6 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 
 	nextTick, err := mode.ExptEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
 	if err != nil {
-		return err
-	}
-
-	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
 		return err
 	}
 
@@ -359,6 +362,7 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 			ExptRunMode:   event.ExptRunMode,
 			EvalSetItemID: ts.ItemID,
 			CreateAt:      now,
+			MaxRetryTimes: event.ItemRetryTimes,
 			Ext:           event.Ext,
 			Session:       event.Session,
 		})

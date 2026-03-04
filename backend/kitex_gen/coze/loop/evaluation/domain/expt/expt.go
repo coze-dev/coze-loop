@@ -988,6 +988,7 @@ type Experiment struct {
 	MaxAliveTime          *int64                   `thrift:"max_alive_time,41,optional" frugal:"41,optional,i64" form:"max_alive_time" json:"max_alive_time,omitempty" query:"max_alive_time"`
 	SourceType            *SourceType              `thrift:"source_type,42,optional" frugal:"42,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID              *string                  `thrift:"source_id,43,optional" frugal:"43,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	ItemRetryNum          *int32                   `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 	// 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 	EvaluatorIDVersionList []*evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_list,51,optional" frugal:"51,optional,list<evaluator.EvaluatorIDVersionItem>" form:"evaluator_id_version_list" json:"evaluator_id_version_list,omitempty" query:"evaluator_id_version_list"`
 	ExptTemplateMeta       *ExptTemplateMeta                   `thrift:"expt_template_meta,60,optional" frugal:"60,optional,ExptTemplateMeta" form:"expt_template_meta" json:"expt_template_meta,omitempty" query:"expt_template_meta"`
@@ -1315,6 +1316,18 @@ func (p *Experiment) GetSourceID() (v string) {
 	return *p.SourceID
 }
 
+var Experiment_ItemRetryNum_DEFAULT int32
+
+func (p *Experiment) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return Experiment_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
+
 var Experiment_EvaluatorIDVersionList_DEFAULT []*evaluator.EvaluatorIDVersionItem
 
 func (p *Experiment) GetEvaluatorIDVersionList() (v []*evaluator.EvaluatorIDVersionItem) {
@@ -1440,6 +1453,9 @@ func (p *Experiment) SetSourceType(val *SourceType) {
 func (p *Experiment) SetSourceID(val *string) {
 	p.SourceID = val
 }
+func (p *Experiment) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 func (p *Experiment) SetEvaluatorIDVersionList(val []*evaluator.EvaluatorIDVersionItem) {
 	p.EvaluatorIDVersionList = val
 }
@@ -1480,6 +1496,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	41: "max_alive_time",
 	42: "source_type",
 	43: "source_id",
+	45: "item_retry_num",
 	51: "evaluator_id_version_list",
 	60: "expt_template_meta",
 	61: "score_weight_config",
@@ -1588,6 +1605,10 @@ func (p *Experiment) IsSetSourceType() bool {
 
 func (p *Experiment) IsSetSourceID() bool {
 	return p.SourceID != nil
+}
+
+func (p *Experiment) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *Experiment) IsSetEvaluatorIDVersionList() bool {
@@ -1827,6 +1848,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 43:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField43(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 45:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField45(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2200,6 +2229,17 @@ func (p *Experiment) ReadField43(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
+func (p *Experiment) ReadField45(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 func (p *Experiment) ReadField51(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
@@ -2359,6 +2399,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField43(oprot); err != nil {
 			fieldId = 43
+			goto WriteFieldError
+		}
+		if err = p.writeField45(oprot); err != nil {
+			fieldId = 45
 			goto WriteFieldError
 		}
 		if err = p.writeField51(oprot); err != nil {
@@ -2887,6 +2931,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 43 end error: ", p), err)
 }
+func (p *Experiment) writeField45(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 45); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
+}
 func (p *Experiment) writeField51(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvaluatorIDVersionList() {
 		if err = oprot.WriteFieldBegin("evaluator_id_version_list", thrift.LIST, 51); err != nil {
@@ -3058,6 +3120,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field43DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field45DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
 	if !p.Field51DeepEqual(ano.EvaluatorIDVersionList) {
@@ -3356,6 +3421,18 @@ func (p *Experiment) Field43DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SourceID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field45DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true
@@ -4645,6 +4722,7 @@ type ExptFieldMapping struct {
 	EvaluatorFieldMapping []*EvaluatorFieldMapping `thrift:"evaluator_field_mapping,2,optional" frugal:"2,optional,list<EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty" query:"evaluator_field_mapping"`
 	TargetRuntimeParam    *common.RuntimeParam     `thrift:"target_runtime_param,3,optional" frugal:"3,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty" query:"target_runtime_param"`
 	ItemConcurNum         *int32                   `thrift:"item_concur_num,4,optional" frugal:"4,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+	ItemRetryNum          *int32                   `thrift:"item_retry_num,5,optional" frugal:"5,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty" query:"item_retry_num"`
 }
 
 func NewExptFieldMapping() *ExptFieldMapping {
@@ -4701,6 +4779,18 @@ func (p *ExptFieldMapping) GetItemConcurNum() (v int32) {
 	}
 	return *p.ItemConcurNum
 }
+
+var ExptFieldMapping_ItemRetryNum_DEFAULT int32
+
+func (p *ExptFieldMapping) GetItemRetryNum() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemRetryNum() {
+		return ExptFieldMapping_ItemRetryNum_DEFAULT
+	}
+	return *p.ItemRetryNum
+}
 func (p *ExptFieldMapping) SetTargetFieldMapping(val *TargetFieldMapping) {
 	p.TargetFieldMapping = val
 }
@@ -4713,12 +4803,16 @@ func (p *ExptFieldMapping) SetTargetRuntimeParam(val *common.RuntimeParam) {
 func (p *ExptFieldMapping) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
 }
+func (p *ExptFieldMapping) SetItemRetryNum(val *int32) {
+	p.ItemRetryNum = val
+}
 
 var fieldIDToName_ExptFieldMapping = map[int16]string{
 	1: "target_field_mapping",
 	2: "evaluator_field_mapping",
 	3: "target_runtime_param",
 	4: "item_concur_num",
+	5: "item_retry_num",
 }
 
 func (p *ExptFieldMapping) IsSetTargetFieldMapping() bool {
@@ -4735,6 +4829,10 @@ func (p *ExptFieldMapping) IsSetTargetRuntimeParam() bool {
 
 func (p *ExptFieldMapping) IsSetItemConcurNum() bool {
 	return p.ItemConcurNum != nil
+}
+
+func (p *ExptFieldMapping) IsSetItemRetryNum() bool {
+	return p.ItemRetryNum != nil
 }
 
 func (p *ExptFieldMapping) Read(iprot thrift.TProtocol) (err error) {
@@ -4782,6 +4880,14 @@ func (p *ExptFieldMapping) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4866,6 +4972,17 @@ func (p *ExptFieldMapping) ReadField4(iprot thrift.TProtocol) error {
 	p.ItemConcurNum = _field
 	return nil
 }
+func (p *ExptFieldMapping) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemRetryNum = _field
+	return nil
+}
 
 func (p *ExptFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -4887,6 +5004,10 @@ func (p *ExptFieldMapping) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -4987,6 +5108,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ExptFieldMapping) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemRetryNum() {
+		if err = oprot.WriteFieldBegin("item_retry_num", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemRetryNum); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ExptFieldMapping) String() string {
 	if p == nil {
@@ -5012,6 +5151,9 @@ func (p *ExptFieldMapping) DeepEqual(ano *ExptFieldMapping) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ItemConcurNum) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
 	return true
@@ -5052,6 +5194,18 @@ func (p *ExptFieldMapping) Field4DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemConcurNum != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptFieldMapping) Field5DeepEqual(src *int32) bool {
+
+	if p.ItemRetryNum == src {
+		return true
+	} else if p.ItemRetryNum == nil || src == nil {
+		return false
+	}
+	if *p.ItemRetryNum != *src {
 		return false
 	}
 	return true

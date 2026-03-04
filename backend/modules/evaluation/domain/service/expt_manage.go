@@ -39,8 +39,8 @@ type IExptConfigManager interface {
 // IExptExecutionManager 实验执行控制接口（负责实验的运行、监控和状态管理）
 type IExptExecutionManager interface {
 	CheckRun(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.ExptRunCheckOptionFn) error
-	Run(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error
-	RetryUnSuccess(ctx context.Context, exptID, runID, spaceID int64, session *entity.Session, ext map[string]string) error
+	Run(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error
+	RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error
 
 	Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error
 	Finish(ctx context.Context, exptID *entity.Experiment, exptRunID int64, session *entity.Session) error
@@ -48,11 +48,14 @@ type IExptExecutionManager interface {
 	PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 	PendExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 
+	// IsCompletingRun returns true if the given run is currently in the completing phase.
+	IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error)
 	CompleteRun(ctx context.Context, exptID, exptRunID int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 	CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 	// SetExptTerminating Set experiment/run_log status to "terminating".
 	SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 
-	LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, session *entity.Session) error
+	LogRun(ctx context.Context, exptID, exptRunID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) error
+	LogRetryItemsRun(ctx context.Context, exptID int64, mode entity.ExptRunMode, spaceID int64, itemIDs []int64, session *entity.Session) (int64, bool, error)
 	GetRunLog(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) (*entity.ExptRunLog, error)
 }

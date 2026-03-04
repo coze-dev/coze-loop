@@ -59,6 +59,18 @@ func (e ExptItemResultRepoImpl) GetItemTurnResults(ctx context.Context, spaceID,
 	return results, nil
 }
 
+func (e ExptItemResultRepoImpl) MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64) ([]*entity.ExptTurnResult, error) {
+	pos, err := e.exptItemResultDAO.MGetItemTurnResults(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		return nil, err
+	}
+	results := make([]*entity.ExptTurnResult, 0)
+	for _, po := range pos {
+		results = append(results, convert.NewExptTurnResultConvertor().PO2DO(po, nil))
+	}
+	return results, nil
+}
+
 func (e ExptItemResultRepoImpl) SaveItemResults(ctx context.Context, itemResults []*entity.ExptItemResult) error {
 	pos := make([]*model.ExptItemResult, 0)
 	for _, itemResult := range itemResults {
@@ -110,6 +122,18 @@ func (e ExptItemResultRepoImpl) ScanItemResults(ctx context.Context, exptID, cur
 		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
 	}
 	return results, ncursor, nil
+}
+
+func (e ExptItemResultRepoImpl) MGetItemResults(ctx context.Context, exptID int64, itemIDs []int64, spaceID int64) (results []*entity.ExptItemResult, err error) {
+	pos, err := e.exptItemResultDAO.MGetItemResults(ctx, spaceID, exptID, itemIDs)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "MGetItemResults fail, exptID=%d, spaceID=%d", exptID, spaceID)
+	}
+	results = make([]*entity.ExptItemResult, 0, len(pos))
+	for _, po := range pos {
+		results = append(results, convert.NewExptItemResultConvertor().PO2DO(po))
+	}
+	return results, nil
 }
 
 func (e ExptItemResultRepoImpl) GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) (itemIDList []int64, err error) {

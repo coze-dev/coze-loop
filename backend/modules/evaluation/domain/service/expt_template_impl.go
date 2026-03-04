@@ -869,6 +869,8 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 			}
 			em := &entity.EvaluatorFieldMapping{
 				EvaluatorVersionID: ec.EvaluatorVersionID,
+				EvaluatorID:        ec.EvaluatorID,
+				Version:            ec.Version,
 			}
 			if ec.IngressConf.EvalSetAdapter != nil {
 				for _, fc := range ec.IngressConf.EvalSetAdapter.FieldConfs {

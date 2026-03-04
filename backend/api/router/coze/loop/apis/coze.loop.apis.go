@@ -448,12 +448,50 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets1.DELETE("/:evaluation_set_id", append(_deleteevaluationsetoapiMw(handler), apis.DeleteEvaluationSetOApi)...)
 				_evaluation_sets1.GET("/:evaluation_set_id", append(_getevaluationsetoapiMw(handler), apis.GetEvaluationSetOApi)...)
 				_evaluation_sets1.PUT("/:evaluation_set_id", append(_updateevaluationsetoapiMw(handler), apis.UpdateEvaluationSetOApi)...)
+				_evaluation0.POST("/evaluators", append(_evaluators1Mw(handler), apis.CreateEvaluatorOApi)...)
+				_evaluators1 := _evaluation0.Group("/evaluators", _evaluators1Mw(handler)...)
+				_evaluators1.DELETE("/:evaluator_id", append(_evaluator_id1Mw(handler), apis.DeleteEvaluatorOApi)...)
+				_evaluator_id1 := _evaluators1.Group("/:evaluator_id", _evaluator_id1Mw(handler)...)
+				_evaluator_id1.POST("/submit_version", append(_submitevaluatorversionoapiMw(handler), apis.SubmitEvaluatorVersionOApi)...)
+				{
+					_versions3 := _evaluator_id1.Group("/versions", _versions3Mw(handler)...)
+					_versions3.POST("/list", append(_listevaluatorversionsoapiMw(handler), apis.ListEvaluatorVersionsOApi)...)
+				}
+				_evaluators1.PATCH("/:evaluator_id", append(_evaluator_id2Mw(handler), apis.UpdateEvaluatorOApi)...)
+				_evaluator_id2 := _evaluators1.Group("/:evaluator_id", _evaluator_id2Mw(handler)...)
+				_evaluator_id2.PATCH("/update_draft", append(_updateevaluatordraftoapiMw(handler), apis.UpdateEvaluatorDraftOApi)...)
+				_evaluation0.POST("/experiment_templates", append(_experiment_templates0Mw(handler), apis.CreateExptTemplateOApi)...)
+				_experiment_templates0 := _evaluation0.Group("/experiment_templates", _experiment_templates0Mw(handler)...)
+				_experiment_templates0.POST("/batch_get", append(_batchgetexpttemplatesoapiMw(handler), apis.BatchGetExptTemplatesOApi)...)
+				_experiment_templates0.POST("/list", append(_listexpttemplatesoapiMw(handler), apis.ListExptTemplatesOApi)...)
+				_experiment_templates0.POST("/submit_expt", append(_submitexptfromtemplateoapiMw(handler), apis.SubmitExptFromTemplateOApi)...)
+				_experiment_templates0.DELETE("/:template_id", append(_deleteexpttemplateoapiMw(handler), apis.DeleteExptTemplateOApi)...)
+				_experiment_templates0.PATCH("/:template_id", append(_updateexpttemplateoapiMw(handler), apis.UpdateExptTemplateOApi)...)
+				_experiment_templates0.POST("/update_meta", append(_updateexpttemplatemetaoapiMw(handler), apis.UpdateExptTemplateMetaOApi)...)
 				_evaluation0.POST("/experiments", append(_experiments0Mw(handler), apis.SubmitExperimentOApi)...)
 				_experiments0 := _evaluation0.Group("/experiments", _experiments0Mw(handler)...)
 				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+				{
+					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)
+					_evaluator_records0.POST("/batch_get", append(_batchgetevaluatorrecordsoapiMw(handler), apis.BatchGetEvaluatorRecordsOApi)...)
+					_evaluator_records0.PATCH("/:evaluator_record_id", append(_correctevaluatorrecordoapiMw(handler), apis.CorrectEvaluatorRecordOApi)...)
+				}
+				{
+					_evaluators2 := _evaluation0.Group("/evaluators", _evaluators2Mw(handler)...)
+					_evaluators2.POST("/batch_get", append(_batchgetevaluatorsoapiMw(handler), apis.BatchGetEvaluatorsOApi)...)
+					_evaluators2.POST("/list", append(_listevaluatorsoapiMw(handler), apis.ListEvaluatorsOApi)...)
+				}
+				{
+					_evaluators_versions0 := _evaluation0.Group("/evaluators_versions", _evaluators_versions0Mw(handler)...)
+					_evaluators_versions0.POST("/batch_get", append(_batchgetevaluatorversionsoapiMw(handler), apis.BatchGetEvaluatorVersionsOApi)...)
+					{
+						_evaluator_version_id0 := _evaluators_versions0.Group("/:evaluator_version_id", _evaluator_version_id0Mw(handler)...)
+						_evaluator_version_id0.POST("/run", append(_runevaluatoroapiMw(handler), apis.RunEvaluatorOApi)...)
+					}
+				}
 			}
 			{
 				_files := _loop.Group("/files", _filesMw(handler)...)
