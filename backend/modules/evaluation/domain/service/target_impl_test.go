@@ -777,6 +777,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).AnyTimes()
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.Session = &entity.Session{UserID: "user"}
 				param.OutputData = &entity.EvalTargetOutputData{
