@@ -1817,10 +1817,6 @@ func (e *ExptResultBuilder) getTurnTargetOutput(ctx context.Context, itemID, tur
 		return &entity.TurnTargetOutput{}
 	}
 
-	if turnTargetOutput.EvalTargetRecord != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError != nil {
-		turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError.Message = errno.ServiceInternalErrMsg
-	}
-
 	return turnTargetOutput
 }
 

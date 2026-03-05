@@ -18,6 +18,7 @@ import (
 	mqmocks "github.com/coze-dev/coze-loop/backend/infra/mq/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
+	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 
@@ -42,8 +43,8 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 	mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	mockErrConfiger := componentMocks.NewMockIConfiger(ctrl)
 
-	// 这里需要传递一个 EvaluatorSourceService 的 slice
 	service := NewEvaluatorServiceImpl(
 		mockIdgen,
 		mockLimiter,
@@ -56,6 +57,7 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 			entity.EvaluatorTypePrompt: mockSourceService,
 		},
 		mockPlainLimiter,
+		mockErrConfiger,
 	)
 
 	assert.IsType(t, &EvaluatorServiceImpl{}, service)
