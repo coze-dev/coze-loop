@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -43,6 +44,7 @@ func NewEvaluatorServiceImpl(
 	configer conf.IConfiger,
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService,
 	plainRateLimiter repo.IPlainRateLimiter,
+	cConfiger component.IConfiger,
 ) EvaluatorService {
 	onceEvaluatorService.Do(func() {
 		singletonEvaluatorService = &EvaluatorServiceImpl{
@@ -55,6 +57,7 @@ func NewEvaluatorServiceImpl(
 			configer:                configer,
 			evaluatorSourceServices: evaluatorSourceServices,
 			plainRateLimiter:        plainRateLimiter,
+			cConfiger:               cConfiger,
 		}
 	})
 	return singletonEvaluatorService
@@ -71,6 +74,8 @@ type EvaluatorServiceImpl struct {
 	configer                conf.IConfiger
 	evaluatorSourceServices map[entity.EvaluatorType]EvaluatorSourceService
 	plainRateLimiter        repo.IPlainRateLimiter
+
+	cConfiger component.IConfiger
 }
 
 // ListEvaluator 按查询条件查询 evaluator_version
@@ -683,6 +688,12 @@ func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity
 				UserID: gptr.Of(userIDInContext),
 			},
 		},
+	}
+	if recordDO.EvaluatorOutputData != nil &&
+		recordDO.EvaluatorOutputData.EvaluatorRunError != nil &&
+		recordDO.EvaluatorOutputData.EvaluatorRunError.Code != int32(errno.CustomRPCEvaluatorRunFailedCode) &&
+		len(recordDO.EvaluatorOutputData.EvaluatorRunError.Message) > 0 {
+		recordDO.EvaluatorOutputData.EvaluatorRunError.Message = e.cConfiger.GetErrCtrl(ctx).ConvertErrMsg(recordDO.EvaluatorOutputData.EvaluatorRunError.Message)
 	}
 	err = e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO)
 	if err != nil {
