@@ -66,6 +66,16 @@ func (p *ExecuteRequest) IsValid() error {
 			return fmt.Errorf("field ResponseAPIConfig not valid, %w", err)
 		}
 	}
+	if p.RequestExtra != nil {
+		if err := p.RequestExtra.IsValid(); err != nil {
+			return fmt.Errorf("field RequestExtra not valid, %w", err)
+		}
+	}
+	if p.CustomToolConfig != nil {
+		if err := p.CustomToolConfig.IsValid(); err != nil {
+			return fmt.Errorf("field CustomToolConfig not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -294,6 +304,20 @@ func (p *ModelConfig) IsValid() error {
 	return nil
 }
 func (p *ResponseAPIConfig) IsValid() error {
+	return nil
+}
+func (p *RequestExtra) IsValid() error {
+	return nil
+}
+func (p *SkyLarkAccountExtra) IsValid() error {
+	return nil
+}
+func (p *CustomAccount) IsValid() error {
+	if p.SkyLarkAccountExtra != nil {
+		if err := p.SkyLarkAccountExtra.IsValid(); err != nil {
+			return fmt.Errorf("field SkyLarkAccountExtra not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ParamConfigValue) IsValid() error {

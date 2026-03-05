@@ -358,6 +358,8 @@ func (p *PromptOpenAPIApplicationImpl) promptHubAllowBySpace(ctx context.Context
 }
 
 func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi.ExecuteRequest) (r *openapi.ExecuteResponse, err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
+	req = normalizeExecuteRequest(req)
 	var promptDO *entity.Prompt
 	var reply *entity.Reply
 	startTime := time.Now()
@@ -380,9 +382,10 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 			intputTokens = reply.Item.TokenUsage.InputTokens
 			outputTokens = reply.Item.TokenUsage.OutputTokens
 		}
+		p.emitExecuteMetrics(ctx, req, promptDO, reply, err, "Execute")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
 			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
+			PromptKey:    getRequestPromptKey(req),
 			Version:      version,
 			Stream:       false,
 			InputTokens:  intputTokens,
@@ -480,6 +483,8 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 }
 
 func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
+	req = normalizeExecuteRequest(req)
 	var promptDO *entity.Prompt
 	var aggregatedReply *entity.Reply
 	startTime := time.Now()
@@ -502,11 +507,12 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 			intputTokens = aggregatedReply.Item.TokenUsage.InputTokens
 			outputTokens = aggregatedReply.Item.TokenUsage.OutputTokens
 		}
+		p.emitExecuteMetrics(ctx, req, promptDO, aggregatedReply, err, "ExecuteStreaming")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
 			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
+			PromptKey:    getRequestPromptKey(req),
 			Version:      version,
-			Stream:       false,
+			Stream:       true,
 			InputTokens:  intputTokens,
 			OutputTokens: outputTokens,
 			StartedAt:    startTime,
@@ -566,6 +572,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 	// 执行prompt流式调用
 	resultStream := make(chan *entity.Reply)
+	receivedFirstToken := false
 	type replyResult struct {
 		Reply *entity.Reply
 		Err   error
@@ -607,6 +614,10 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	for reply := range resultStream {
 		if reply == nil || reply.Item == nil {
 			continue
+		}
+		if !receivedFirstToken {
+			receivedFirstToken = true
+			promptmetrics.WithPaasFirstTokenTime(ctx)
 		}
 		// Convert base64 files to download URLs
 		if reply.Item.Message != nil {
@@ -801,6 +812,118 @@ func (p *PromptOpenAPIApplicationImpl) finishPromptExecutorSpan(ctx context.Cont
 	span.Finish(ctx)
 }
 
+func normalizeExecuteRequest(req *openapi.ExecuteRequest) *openapi.ExecuteRequest {
+	if req == nil {
+		return req
+	}
+	needNormalize := req.GetReleaseLabel() != "" || req.CustomToolConfig != nil || (len(req.CustomTools) > 0 && req.CustomToolCallConfig == nil)
+	if !needNormalize {
+		return req
+	}
+
+	normalizedReq := openapi.NewExecuteRequest()
+	if err := normalizedReq.DeepCopy(req); err != nil {
+		// deep copy 失败时回退到原始请求，避免影响主流程
+		return req
+	}
+
+	if normalizedReq.GetReleaseLabel() != "" {
+		if normalizedReq.PromptIdentifier == nil {
+			normalizedReq.PromptIdentifier = openapi.NewPromptQuery()
+		}
+		if normalizedReq.PromptIdentifier.GetLabel() == "" {
+			normalizedReq.PromptIdentifier.Label = ptr.Of(normalizedReq.GetReleaseLabel())
+		}
+	}
+
+	if normalizedReq.CustomToolCallConfig == nil {
+		if normalizedReq.CustomToolConfig != nil {
+			// custom_tool_config 兼容字段优先级低于 custom_tool_call_config
+			normalizedReq.CustomToolCallConfig = normalizedReq.CustomToolConfig
+		} else if len(normalizedReq.CustomTools) > 0 {
+			normalizedReq.CustomToolCallConfig = &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			}
+		}
+	}
+
+	return normalizedReq
+}
+
+func getRequestPromptKey(req *openapi.ExecuteRequest) string {
+	if req == nil || req.GetPromptIdentifier() == nil {
+		return ""
+	}
+	return req.GetPromptIdentifier().GetPromptKey()
+}
+
+func (p *PromptOpenAPIApplicationImpl) emitExecuteMetrics(
+	ctx context.Context,
+	req *openapi.ExecuteRequest,
+	promptDO *entity.Prompt,
+	reply *entity.Reply,
+	err error,
+	method string,
+) {
+	if req == nil {
+		return
+	}
+
+	promptmetrics.WithPaasSpace(ctx, req.GetWorkspaceID())
+	promptmetrics.WithPaasStatus(ctx, err)
+	promptmetrics.WithPaasMethod(ctx, method)
+
+	if req.GetPromptIdentifier() != nil && req.GetPromptIdentifier().GetPromptKey() != "" {
+		promptmetrics.WithPaasPromptKey(ctx, req.GetPromptIdentifier().GetPromptKey())
+	}
+	if req.AccountMode != nil {
+		promptmetrics.WithPaaSAccountMode(ctx, req.GetAccountMode().String())
+	}
+	if req.UsageScenario != nil {
+		promptmetrics.WithPaasUsageScenario(ctx, req.GetUsageScenario().String())
+	}
+
+	// OpenAPI 使用 messages 承载上下文与当前提问，兼容 legacy tags 语义
+	hasMessage := len(req.Messages) > 0
+	hasContexts := len(req.Messages) > 1
+	promptmetrics.WithHasMessage(ctx, hasMessage)
+	promptmetrics.WithHasContexts(ctx, hasContexts)
+
+	if promptDO != nil {
+		promptmetrics.WithPaasPromptKey(ctx, promptDO.PromptKey)
+		promptmetrics.WithPaasVersion(ctx, promptDO.GetVersion())
+		promptmetrics.WithPaasSpace(ctx, promptDO.SpaceID)
+		if promptDO.PromptBasic != nil {
+			promptmetrics.WithPaasPromptType(ctx, promptTypeToMetricValue(promptDO.PromptBasic.PromptType))
+		}
+		if promptDO.PromptCommit != nil && promptDO.PromptCommit.PromptDetail != nil {
+			detail := promptDO.PromptCommit.PromptDetail
+			if detail.ModelConfig != nil {
+				if detail.ModelConfig.MaxTokens != nil {
+					promptmetrics.WithPaasMaxToken(ctx, *detail.ModelConfig.MaxTokens)
+				}
+				promptmetrics.WithPaaSModel(ctx, strconv.FormatInt(detail.ModelConfig.ModelID, 10))
+			}
+		}
+	}
+
+	if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
+		promptmetrics.WithPaasTokenConsumption(ctx, reply.Item.TokenUsage.InputTokens, reply.Item.TokenUsage.OutputTokens)
+	}
+	promptmetrics.EmitPaasMetric(ctx)
+}
+
+func promptTypeToMetricValue(promptType entity.PromptType) int64 {
+	switch promptType {
+	case entity.PromptTypeNormal:
+		return 1
+	case entity.PromptTypeSnippet:
+		return 2
+	default:
+		return 0
+	}
+}
+
 func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 	err := req.IsValid()
 	if err != nil {
@@ -849,7 +972,7 @@ func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Pro
 	}
 
 	// 检查是否需要应用任何自定义覆盖
-	needsOverride := req.CustomTools != nil || req.CustomToolCallConfig != nil || req.CustomModelConfig != nil
+	needsOverride := req.CustomTools != nil || req.CustomToolCallConfig != nil || req.CustomToolConfig != nil || req.CustomModelConfig != nil
 	if !needsOverride {
 		return promptDO, nil
 	}
@@ -877,9 +1000,19 @@ func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Pro
 	}
 
 	// 覆盖自定义工具调用配置
-	if req.CustomToolCallConfig != nil {
-		customToolCallConfig := convertor.OpenAPIToolCallConfigDTO2DO(req.CustomToolCallConfig)
+	customToolCallConfigDTO := req.CustomToolCallConfig
+	if customToolCallConfigDTO == nil {
+		// custom_tool_config 兼容字段优先级低于 custom_tool_call_config
+		customToolCallConfigDTO = req.CustomToolConfig
+	}
+	if customToolCallConfigDTO != nil {
+		customToolCallConfig := convertor.OpenAPIToolCallConfigDTO2DO(customToolCallConfigDTO)
 		clonedPrompt.PromptCommit.PromptDetail.ToolCallConfig = customToolCallConfig
+	} else if len(req.CustomTools) > 0 {
+		// 与 legacy Execute 行为保持一致：仅传 custom_tools 时，默认 auto
+		clonedPrompt.PromptCommit.PromptDetail.ToolCallConfig = &entity.ToolCallConfig{
+			ToolChoice: entity.ToolChoiceTypeAuto,
+		}
 	}
 
 	// 覆盖自定义模型配置（带验证）

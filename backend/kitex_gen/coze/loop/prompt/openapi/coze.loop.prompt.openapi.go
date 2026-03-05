@@ -286,6 +286,112 @@ func (p *ThinkingOption) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type AccountMode int64
+
+const (
+	// 使用共享模型账号
+	AccountMode_SharedAccount AccountMode = 1
+	// 使用自定义模型账号
+	AccountMode_CustomAccount AccountMode = 2
+)
+
+func (p AccountMode) String() string {
+	switch p {
+	case AccountMode_SharedAccount:
+		return "SharedAccount"
+	case AccountMode_CustomAccount:
+		return "CustomAccount"
+	}
+	return "<UNSET>"
+}
+
+func AccountModeFromString(s string) (AccountMode, error) {
+	switch s {
+	case "SharedAccount":
+		return AccountMode_SharedAccount, nil
+	case "CustomAccount":
+		return AccountMode_CustomAccount, nil
+	}
+	return AccountMode(0), fmt.Errorf("not a valid AccountMode string")
+}
+
+func AccountModePtr(v AccountMode) *AccountMode { return &v }
+func (p *AccountMode) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = AccountMode(result.Int64)
+	return
+}
+
+func (p *AccountMode) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+type UsageScenario int64
+
+const (
+	UsageScenario_Default          UsageScenario = 1
+	UsageScenario_Evaluation       UsageScenario = 2
+	UsageScenario_PromptAsAService UsageScenario = 3
+	UsageScenario_AIAnnotate       UsageScenario = 4
+	UsageScenario_AIScore          UsageScenario = 5
+	UsageScenario_AITag            UsageScenario = 6
+)
+
+func (p UsageScenario) String() string {
+	switch p {
+	case UsageScenario_Default:
+		return "Default"
+	case UsageScenario_Evaluation:
+		return "Evaluation"
+	case UsageScenario_PromptAsAService:
+		return "PromptAsAService"
+	case UsageScenario_AIAnnotate:
+		return "AIAnnotate"
+	case UsageScenario_AIScore:
+		return "AIScore"
+	case UsageScenario_AITag:
+		return "AITag"
+	}
+	return "<UNSET>"
+}
+
+func UsageScenarioFromString(s string) (UsageScenario, error) {
+	switch s {
+	case "Default":
+		return UsageScenario_Default, nil
+	case "Evaluation":
+		return UsageScenario_Evaluation, nil
+	case "PromptAsAService":
+		return UsageScenario_PromptAsAService, nil
+	case "AIAnnotate":
+		return UsageScenario_AIAnnotate, nil
+	case "AIScore":
+		return UsageScenario_AIScore, nil
+	case "AITag":
+		return UsageScenario_AITag, nil
+	}
+	return UsageScenario(0), fmt.Errorf("not a valid UsageScenario string")
+}
+
+func UsageScenarioPtr(v UsageScenario) *UsageScenario { return &v }
+func (p *UsageScenario) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = UsageScenario(result.Int64)
+	return
+}
+
+func (p *UsageScenario) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type PromptType = string
 
 type TemplateType = string
@@ -1263,7 +1369,19 @@ type ExecuteRequest struct {
 	CustomModelConfig *ModelConfig `thrift:"custom_model_config,22,optional" frugal:"22,optional,ModelConfig" form:"custom_model_config" json:"custom_model_config,omitempty"`
 	// response api 配置
 	ResponseAPIConfig *ResponseAPIConfig `thrift:"response_api_config,23,optional" frugal:"23,optional,ResponseAPIConfig" form:"response_api_config" json:"response_api_config,omitempty"`
-	Base              *base.Base         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 账号模式（兼容字段）
+	AccountMode *AccountMode `thrift:"account_mode,24,optional" frugal:"24,optional,AccountMode" form:"account_mode" json:"account_mode,omitempty"`
+	// 自定义模型账号（兼容字段）
+	CustomAccounts []*CustomAccount `thrift:"custom_accounts,25,optional" frugal:"25,optional,list<CustomAccount>" form:"custom_accounts" json:"custom_accounts,omitempty"`
+	// 使用场景（兼容字段）
+	UsageScenario *UsageScenario `thrift:"usage_scenario,26,optional" frugal:"26,optional,UsageScenario" form:"usage_scenario" json:"usage_scenario,omitempty"`
+	// 请求额外参数（兼容字段）
+	RequestExtra *RequestExtra `thrift:"request_extra,27,optional" frugal:"27,optional,RequestExtra" form:"request_extra" json:"request_extra,omitempty"`
+	// 发布标签（兼容字段）
+	ReleaseLabel *string `thrift:"release_label,28,optional" frugal:"28,optional,string" form:"release_label" json:"release_label,omitempty"`
+	// 自定义工具配置（兼容字段）
+	CustomToolConfig *ToolCallConfig `thrift:"custom_tool_config,29,optional" frugal:"29,optional,ToolCallConfig" form:"custom_tool_config" json:"custom_tool_config,omitempty"`
+	Base             *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -1369,6 +1487,78 @@ func (p *ExecuteRequest) GetResponseAPIConfig() (v *ResponseAPIConfig) {
 	return p.ResponseAPIConfig
 }
 
+var ExecuteRequest_AccountMode_DEFAULT AccountMode
+
+func (p *ExecuteRequest) GetAccountMode() (v AccountMode) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAccountMode() {
+		return ExecuteRequest_AccountMode_DEFAULT
+	}
+	return *p.AccountMode
+}
+
+var ExecuteRequest_CustomAccounts_DEFAULT []*CustomAccount
+
+func (p *ExecuteRequest) GetCustomAccounts() (v []*CustomAccount) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomAccounts() {
+		return ExecuteRequest_CustomAccounts_DEFAULT
+	}
+	return p.CustomAccounts
+}
+
+var ExecuteRequest_UsageScenario_DEFAULT UsageScenario
+
+func (p *ExecuteRequest) GetUsageScenario() (v UsageScenario) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetUsageScenario() {
+		return ExecuteRequest_UsageScenario_DEFAULT
+	}
+	return *p.UsageScenario
+}
+
+var ExecuteRequest_RequestExtra_DEFAULT *RequestExtra
+
+func (p *ExecuteRequest) GetRequestExtra() (v *RequestExtra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequestExtra() {
+		return ExecuteRequest_RequestExtra_DEFAULT
+	}
+	return p.RequestExtra
+}
+
+var ExecuteRequest_ReleaseLabel_DEFAULT string
+
+func (p *ExecuteRequest) GetReleaseLabel() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReleaseLabel() {
+		return ExecuteRequest_ReleaseLabel_DEFAULT
+	}
+	return *p.ReleaseLabel
+}
+
+var ExecuteRequest_CustomToolConfig_DEFAULT *ToolCallConfig
+
+func (p *ExecuteRequest) GetCustomToolConfig() (v *ToolCallConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCustomToolConfig() {
+		return ExecuteRequest_CustomToolConfig_DEFAULT
+	}
+	return p.CustomToolConfig
+}
+
 var ExecuteRequest_Base_DEFAULT *base.Base
 
 func (p *ExecuteRequest) GetBase() (v *base.Base) {
@@ -1404,6 +1594,24 @@ func (p *ExecuteRequest) SetCustomModelConfig(val *ModelConfig) {
 func (p *ExecuteRequest) SetResponseAPIConfig(val *ResponseAPIConfig) {
 	p.ResponseAPIConfig = val
 }
+func (p *ExecuteRequest) SetAccountMode(val *AccountMode) {
+	p.AccountMode = val
+}
+func (p *ExecuteRequest) SetCustomAccounts(val []*CustomAccount) {
+	p.CustomAccounts = val
+}
+func (p *ExecuteRequest) SetUsageScenario(val *UsageScenario) {
+	p.UsageScenario = val
+}
+func (p *ExecuteRequest) SetRequestExtra(val *RequestExtra) {
+	p.RequestExtra = val
+}
+func (p *ExecuteRequest) SetReleaseLabel(val *string) {
+	p.ReleaseLabel = val
+}
+func (p *ExecuteRequest) SetCustomToolConfig(val *ToolCallConfig) {
+	p.CustomToolConfig = val
+}
 func (p *ExecuteRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1417,6 +1625,12 @@ var fieldIDToName_ExecuteRequest = map[int16]string{
 	21:  "custom_tool_call_config",
 	22:  "custom_model_config",
 	23:  "response_api_config",
+	24:  "account_mode",
+	25:  "custom_accounts",
+	26:  "usage_scenario",
+	27:  "request_extra",
+	28:  "release_label",
+	29:  "custom_tool_config",
 	255: "Base",
 }
 
@@ -1450,6 +1664,30 @@ func (p *ExecuteRequest) IsSetCustomModelConfig() bool {
 
 func (p *ExecuteRequest) IsSetResponseAPIConfig() bool {
 	return p.ResponseAPIConfig != nil
+}
+
+func (p *ExecuteRequest) IsSetAccountMode() bool {
+	return p.AccountMode != nil
+}
+
+func (p *ExecuteRequest) IsSetCustomAccounts() bool {
+	return p.CustomAccounts != nil
+}
+
+func (p *ExecuteRequest) IsSetUsageScenario() bool {
+	return p.UsageScenario != nil
+}
+
+func (p *ExecuteRequest) IsSetRequestExtra() bool {
+	return p.RequestExtra != nil
+}
+
+func (p *ExecuteRequest) IsSetReleaseLabel() bool {
+	return p.ReleaseLabel != nil
+}
+
+func (p *ExecuteRequest) IsSetCustomToolConfig() bool {
+	return p.CustomToolConfig != nil
 }
 
 func (p *ExecuteRequest) IsSetBase() bool {
@@ -1533,6 +1771,54 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField24(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 25:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField25(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 26:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField26(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 27:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField27(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 28:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField28(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 29:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField29(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1687,6 +1973,80 @@ func (p *ExecuteRequest) ReadField23(iprot thrift.TProtocol) error {
 	p.ResponseAPIConfig = _field
 	return nil
 }
+func (p *ExecuteRequest) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field *AccountMode
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := AccountMode(v)
+		_field = &tmp
+	}
+	p.AccountMode = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField25(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*CustomAccount, 0, size)
+	values := make([]CustomAccount, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.CustomAccounts = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField26(iprot thrift.TProtocol) error {
+
+	var _field *UsageScenario
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := UsageScenario(v)
+		_field = &tmp
+	}
+	p.UsageScenario = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField27(iprot thrift.TProtocol) error {
+	_field := NewRequestExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.RequestExtra = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField28(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ReleaseLabel = _field
+	return nil
+}
+func (p *ExecuteRequest) ReadField29(iprot thrift.TProtocol) error {
+	_field := NewToolCallConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.CustomToolConfig = _field
+	return nil
+}
 func (p *ExecuteRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -1732,6 +2092,30 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
+			goto WriteFieldError
+		}
+		if err = p.writeField25(oprot); err != nil {
+			fieldId = 25
+			goto WriteFieldError
+		}
+		if err = p.writeField26(oprot); err != nil {
+			fieldId = 26
+			goto WriteFieldError
+		}
+		if err = p.writeField27(oprot); err != nil {
+			fieldId = 27
+			goto WriteFieldError
+		}
+		if err = p.writeField28(oprot); err != nil {
+			fieldId = 28
+			goto WriteFieldError
+		}
+		if err = p.writeField29(oprot); err != nil {
+			fieldId = 29
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1924,6 +2308,122 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
+func (p *ExecuteRequest) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAccountMode() {
+		if err = oprot.WriteFieldBegin("account_mode", thrift.I32, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.AccountMode)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField25(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomAccounts() {
+		if err = oprot.WriteFieldBegin("custom_accounts", thrift.LIST, 25); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.CustomAccounts)); err != nil {
+			return err
+		}
+		for _, v := range p.CustomAccounts {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 25 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField26(oprot thrift.TProtocol) (err error) {
+	if p.IsSetUsageScenario() {
+		if err = oprot.WriteFieldBegin("usage_scenario", thrift.I32, 26); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.UsageScenario)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 26 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField27(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRequestExtra() {
+		if err = oprot.WriteFieldBegin("request_extra", thrift.STRUCT, 27); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.RequestExtra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 27 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 27 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField28(oprot thrift.TProtocol) (err error) {
+	if p.IsSetReleaseLabel() {
+		if err = oprot.WriteFieldBegin("release_label", thrift.STRING, 28); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ReleaseLabel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 28 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 28 end error: ", p), err)
+}
+func (p *ExecuteRequest) writeField29(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCustomToolConfig() {
+		if err = oprot.WriteFieldBegin("custom_tool_config", thrift.STRUCT, 29); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.CustomToolConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 29 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 29 end error: ", p), err)
+}
 func (p *ExecuteRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1979,6 +2479,24 @@ func (p *ExecuteRequest) DeepEqual(ano *ExecuteRequest) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.ResponseAPIConfig) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.AccountMode) {
+		return false
+	}
+	if !p.Field25DeepEqual(ano.CustomAccounts) {
+		return false
+	}
+	if !p.Field26DeepEqual(ano.UsageScenario) {
+		return false
+	}
+	if !p.Field27DeepEqual(ano.RequestExtra) {
+		return false
+	}
+	if !p.Field28DeepEqual(ano.ReleaseLabel) {
+		return false
+	}
+	if !p.Field29DeepEqual(ano.CustomToolConfig) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -2062,6 +2580,69 @@ func (p *ExecuteRequest) Field22DeepEqual(src *ModelConfig) bool {
 func (p *ExecuteRequest) Field23DeepEqual(src *ResponseAPIConfig) bool {
 
 	if !p.ResponseAPIConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field24DeepEqual(src *AccountMode) bool {
+
+	if p.AccountMode == src {
+		return true
+	} else if p.AccountMode == nil || src == nil {
+		return false
+	}
+	if *p.AccountMode != *src {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field25DeepEqual(src []*CustomAccount) bool {
+
+	if len(p.CustomAccounts) != len(src) {
+		return false
+	}
+	for i, v := range p.CustomAccounts {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExecuteRequest) Field26DeepEqual(src *UsageScenario) bool {
+
+	if p.UsageScenario == src {
+		return true
+	} else if p.UsageScenario == nil || src == nil {
+		return false
+	}
+	if *p.UsageScenario != *src {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field27DeepEqual(src *RequestExtra) bool {
+
+	if !p.RequestExtra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field28DeepEqual(src *string) bool {
+
+	if p.ReleaseLabel == src {
+		return true
+	} else if p.ReleaseLabel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ReleaseLabel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExecuteRequest) Field29DeepEqual(src *ToolCallConfig) bool {
+
+	if !p.CustomToolConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -14450,7 +15031,7 @@ type PromptPublishInfo struct {
 	// 发布描述
 	PublishDescription string `thrift:"publish_description,2" frugal:"2,default,string" form:"publish_description" json:"publish_description" query:"publish_description"`
 	// 发布时间
-	PublishAt *int64 `thrift:"publish_at,3,optional" frugal:"3,optional,i64" form:"publish_at" json:"publish_at,omitempty" query:"publish_at"`
+	PublishAt *int64 `thrift:"publish_at,3,optional" frugal:"3,optional,i64" json:"publish_at" form:"publish_at" query:"publish_at"`
 }
 
 func NewPromptPublishInfo() *PromptPublishInfo {
@@ -14752,7 +15333,7 @@ func (p *PromptPublishInfo) Field3DeepEqual(src *int64) bool {
 
 type ThinkingConfig struct {
 	// thinking内容的最大输出token
-	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" form:"budget_tokens" json:"budget_tokens,omitempty" query:"budget_tokens"`
+	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" json:"budget_tokens" form:"budget_tokens" query:"budget_tokens"`
 	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,ThinkingOption" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
 	// 思考长度
 	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,ReasoningEffort" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
@@ -16386,6 +16967,854 @@ func (p *ResponseAPIConfig) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SessionID, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type RequestExtra struct {
+	// GPT OpenAPI 平台透传参数
+	GptOpenAPIExtra *string `thrift:"gpt_open_api_extra,1,optional" frugal:"1,optional,string" form:"gpt_open_api_extra" json:"gpt_open_api_extra,omitempty" query:"gpt_open_api_extra"`
+}
+
+func NewRequestExtra() *RequestExtra {
+	return &RequestExtra{}
+}
+
+func (p *RequestExtra) InitDefault() {
+}
+
+var RequestExtra_GptOpenAPIExtra_DEFAULT string
+
+func (p *RequestExtra) GetGptOpenAPIExtra() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetGptOpenAPIExtra() {
+		return RequestExtra_GptOpenAPIExtra_DEFAULT
+	}
+	return *p.GptOpenAPIExtra
+}
+func (p *RequestExtra) SetGptOpenAPIExtra(val *string) {
+	p.GptOpenAPIExtra = val
+}
+
+var fieldIDToName_RequestExtra = map[int16]string{
+	1: "gpt_open_api_extra",
+}
+
+func (p *RequestExtra) IsSetGptOpenAPIExtra() bool {
+	return p.GptOpenAPIExtra != nil
+}
+
+func (p *RequestExtra) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RequestExtra[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *RequestExtra) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.GptOpenAPIExtra = _field
+	return nil
+}
+
+func (p *RequestExtra) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("RequestExtra"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *RequestExtra) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetGptOpenAPIExtra() {
+		if err = oprot.WriteFieldBegin("gpt_open_api_extra", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.GptOpenAPIExtra); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *RequestExtra) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("RequestExtra(%+v)", *p)
+
+}
+
+func (p *RequestExtra) DeepEqual(ano *RequestExtra) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.GptOpenAPIExtra) {
+		return false
+	}
+	return true
+}
+
+func (p *RequestExtra) Field1DeepEqual(src *string) bool {
+
+	if p.GptOpenAPIExtra == src {
+		return true
+	} else if p.GptOpenAPIExtra == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.GptOpenAPIExtra, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type SkyLarkAccountExtra struct {
+	AccessKey *string `thrift:"access_key,1,optional" frugal:"1,optional,string" form:"access_key" json:"access_key,omitempty" query:"access_key"`
+	SecretKey *string `thrift:"secret_key,2,optional" frugal:"2,optional,string" form:"secret_key" json:"secret_key,omitempty" query:"secret_key"`
+}
+
+func NewSkyLarkAccountExtra() *SkyLarkAccountExtra {
+	return &SkyLarkAccountExtra{}
+}
+
+func (p *SkyLarkAccountExtra) InitDefault() {
+}
+
+var SkyLarkAccountExtra_AccessKey_DEFAULT string
+
+func (p *SkyLarkAccountExtra) GetAccessKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAccessKey() {
+		return SkyLarkAccountExtra_AccessKey_DEFAULT
+	}
+	return *p.AccessKey
+}
+
+var SkyLarkAccountExtra_SecretKey_DEFAULT string
+
+func (p *SkyLarkAccountExtra) GetSecretKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSecretKey() {
+		return SkyLarkAccountExtra_SecretKey_DEFAULT
+	}
+	return *p.SecretKey
+}
+func (p *SkyLarkAccountExtra) SetAccessKey(val *string) {
+	p.AccessKey = val
+}
+func (p *SkyLarkAccountExtra) SetSecretKey(val *string) {
+	p.SecretKey = val
+}
+
+var fieldIDToName_SkyLarkAccountExtra = map[int16]string{
+	1: "access_key",
+	2: "secret_key",
+}
+
+func (p *SkyLarkAccountExtra) IsSetAccessKey() bool {
+	return p.AccessKey != nil
+}
+
+func (p *SkyLarkAccountExtra) IsSetSecretKey() bool {
+	return p.SecretKey != nil
+}
+
+func (p *SkyLarkAccountExtra) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SkyLarkAccountExtra[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SkyLarkAccountExtra) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AccessKey = _field
+	return nil
+}
+func (p *SkyLarkAccountExtra) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SecretKey = _field
+	return nil
+}
+
+func (p *SkyLarkAccountExtra) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SkyLarkAccountExtra"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SkyLarkAccountExtra) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAccessKey() {
+		if err = oprot.WriteFieldBegin("access_key", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AccessKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SkyLarkAccountExtra) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSecretKey() {
+		if err = oprot.WriteFieldBegin("secret_key", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SecretKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SkyLarkAccountExtra) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SkyLarkAccountExtra(%+v)", *p)
+
+}
+
+func (p *SkyLarkAccountExtra) DeepEqual(ano *SkyLarkAccountExtra) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.AccessKey) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SecretKey) {
+		return false
+	}
+	return true
+}
+
+func (p *SkyLarkAccountExtra) Field1DeepEqual(src *string) bool {
+
+	if p.AccessKey == src {
+		return true
+	} else if p.AccessKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AccessKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkyLarkAccountExtra) Field2DeepEqual(src *string) bool {
+
+	if p.SecretKey == src {
+		return true
+	} else if p.SecretKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SecretKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type CustomAccount struct {
+	// 模型名称
+	ModelName *string `thrift:"model_name,1,optional" frugal:"1,optional,string" form:"model_name" json:"model_name,omitempty" query:"model_name"`
+	// 模型账号
+	APIKey *string `thrift:"api_key,2,optional" frugal:"2,optional,string" form:"api_key" json:"api_key,omitempty" query:"api_key"`
+	// SkyLark账号扩展
+	SkyLarkAccountExtra *SkyLarkAccountExtra `thrift:"sky_lark_account_extra,3,optional" frugal:"3,optional,SkyLarkAccountExtra" form:"sky_lark_account_extra" json:"sky_lark_account_extra,omitempty" query:"sky_lark_account_extra"`
+	// connector id
+	ConnectorID *int64 `thrift:"connector_id,4,optional" frugal:"4,optional,i64" json:"connector_id" form:"connector_id" query:"connector_id"`
+}
+
+func NewCustomAccount() *CustomAccount {
+	return &CustomAccount{}
+}
+
+func (p *CustomAccount) InitDefault() {
+}
+
+var CustomAccount_ModelName_DEFAULT string
+
+func (p *CustomAccount) GetModelName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModelName() {
+		return CustomAccount_ModelName_DEFAULT
+	}
+	return *p.ModelName
+}
+
+var CustomAccount_APIKey_DEFAULT string
+
+func (p *CustomAccount) GetAPIKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAPIKey() {
+		return CustomAccount_APIKey_DEFAULT
+	}
+	return *p.APIKey
+}
+
+var CustomAccount_SkyLarkAccountExtra_DEFAULT *SkyLarkAccountExtra
+
+func (p *CustomAccount) GetSkyLarkAccountExtra() (v *SkyLarkAccountExtra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkyLarkAccountExtra() {
+		return CustomAccount_SkyLarkAccountExtra_DEFAULT
+	}
+	return p.SkyLarkAccountExtra
+}
+
+var CustomAccount_ConnectorID_DEFAULT int64
+
+func (p *CustomAccount) GetConnectorID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetConnectorID() {
+		return CustomAccount_ConnectorID_DEFAULT
+	}
+	return *p.ConnectorID
+}
+func (p *CustomAccount) SetModelName(val *string) {
+	p.ModelName = val
+}
+func (p *CustomAccount) SetAPIKey(val *string) {
+	p.APIKey = val
+}
+func (p *CustomAccount) SetSkyLarkAccountExtra(val *SkyLarkAccountExtra) {
+	p.SkyLarkAccountExtra = val
+}
+func (p *CustomAccount) SetConnectorID(val *int64) {
+	p.ConnectorID = val
+}
+
+var fieldIDToName_CustomAccount = map[int16]string{
+	1: "model_name",
+	2: "api_key",
+	3: "sky_lark_account_extra",
+	4: "connector_id",
+}
+
+func (p *CustomAccount) IsSetModelName() bool {
+	return p.ModelName != nil
+}
+
+func (p *CustomAccount) IsSetAPIKey() bool {
+	return p.APIKey != nil
+}
+
+func (p *CustomAccount) IsSetSkyLarkAccountExtra() bool {
+	return p.SkyLarkAccountExtra != nil
+}
+
+func (p *CustomAccount) IsSetConnectorID() bool {
+	return p.ConnectorID != nil
+}
+
+func (p *CustomAccount) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomAccount[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *CustomAccount) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModelName = _field
+	return nil
+}
+func (p *CustomAccount) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.APIKey = _field
+	return nil
+}
+func (p *CustomAccount) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewSkyLarkAccountExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SkyLarkAccountExtra = _field
+	return nil
+}
+func (p *CustomAccount) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ConnectorID = _field
+	return nil
+}
+
+func (p *CustomAccount) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("CustomAccount"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *CustomAccount) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModelName() {
+		if err = oprot.WriteFieldBegin("model_name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModelName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomAccount) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAPIKey() {
+		if err = oprot.WriteFieldBegin("api_key", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.APIKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomAccount) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkyLarkAccountExtra() {
+		if err = oprot.WriteFieldBegin("sky_lark_account_extra", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SkyLarkAccountExtra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *CustomAccount) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetConnectorID() {
+		if err = oprot.WriteFieldBegin("connector_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ConnectorID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *CustomAccount) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("CustomAccount(%+v)", *p)
+
+}
+
+func (p *CustomAccount) DeepEqual(ano *CustomAccount) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ModelName) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.APIKey) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SkyLarkAccountExtra) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ConnectorID) {
+		return false
+	}
+	return true
+}
+
+func (p *CustomAccount) Field1DeepEqual(src *string) bool {
+
+	if p.ModelName == src {
+		return true
+	} else if p.ModelName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModelName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomAccount) Field2DeepEqual(src *string) bool {
+
+	if p.APIKey == src {
+		return true
+	} else if p.APIKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.APIKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomAccount) Field3DeepEqual(src *SkyLarkAccountExtra) bool {
+
+	if !p.SkyLarkAccountExtra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CustomAccount) Field4DeepEqual(src *int64) bool {
+
+	if p.ConnectorID == src {
+		return true
+	} else if p.ConnectorID == nil || src == nil {
+		return false
+	}
+	if *p.ConnectorID != *src {
 		return false
 	}
 	return true

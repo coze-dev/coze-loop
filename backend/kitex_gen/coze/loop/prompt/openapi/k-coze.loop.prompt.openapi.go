@@ -847,6 +847,90 @@ func (p *ExecuteRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 24:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 25:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField25(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 26:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField26(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 27:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField27(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 28:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField28(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 29:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField29(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -1016,6 +1100,101 @@ func (p *ExecuteRequest) FastReadField23(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExecuteRequest) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *AccountMode
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := AccountMode(v)
+		_field = &tmp
+	}
+	p.AccountMode = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField25(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*CustomAccount, 0, size)
+	values := make([]CustomAccount, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.CustomAccounts = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField26(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *UsageScenario
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := UsageScenario(v)
+		_field = &tmp
+	}
+	p.UsageScenario = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField27(buf []byte) (int, error) {
+	offset := 0
+	_field := NewRequestExtra()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.RequestExtra = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField28(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ReleaseLabel = _field
+	return offset, nil
+}
+
+func (p *ExecuteRequest) FastReadField29(buf []byte) (int, error) {
+	offset := 0
+	_field := NewToolCallConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.CustomToolConfig = _field
+	return offset, nil
+}
+
 func (p *ExecuteRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -1043,6 +1222,12 @@ func (p *ExecuteRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField23(buf[offset:], w)
+		offset += p.fastWriteField24(buf[offset:], w)
+		offset += p.fastWriteField25(buf[offset:], w)
+		offset += p.fastWriteField26(buf[offset:], w)
+		offset += p.fastWriteField27(buf[offset:], w)
+		offset += p.fastWriteField28(buf[offset:], w)
+		offset += p.fastWriteField29(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1060,6 +1245,12 @@ func (p *ExecuteRequest) BLength() int {
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
+		l += p.field24Length()
+		l += p.field25Length()
+		l += p.field26Length()
+		l += p.field27Length()
+		l += p.field28Length()
+		l += p.field29Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -1159,6 +1350,67 @@ func (p *ExecuteRequest) fastWriteField23(buf []byte, w thrift.NocopyWriter) int
 	return offset
 }
 
+func (p *ExecuteRequest) fastWriteField24(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAccountMode() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 24)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.AccountMode))
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField25(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomAccounts() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 25)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.CustomAccounts {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField26(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetUsageScenario() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 26)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.UsageScenario))
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField27(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRequestExtra() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 27)
+		offset += p.RequestExtra.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField28(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetReleaseLabel() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 28)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ReleaseLabel)
+	}
+	return offset
+}
+
+func (p *ExecuteRequest) fastWriteField29(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCustomToolConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 29)
+		offset += p.CustomToolConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *ExecuteRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -1248,6 +1500,64 @@ func (p *ExecuteRequest) field23Length() int {
 	if p.IsSetResponseAPIConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ResponseAPIConfig.BLength()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field24Length() int {
+	l := 0
+	if p.IsSetAccountMode() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field25Length() int {
+	l := 0
+	if p.IsSetCustomAccounts() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.CustomAccounts {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field26Length() int {
+	l := 0
+	if p.IsSetUsageScenario() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field27Length() int {
+	l := 0
+	if p.IsSetRequestExtra() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.RequestExtra.BLength()
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field28Length() int {
+	l := 0
+	if p.IsSetReleaseLabel() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ReleaseLabel)
+	}
+	return l
+}
+
+func (p *ExecuteRequest) field29Length() int {
+	l := 0
+	if p.IsSetCustomToolConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.CustomToolConfig.BLength()
 	}
 	return l
 }
@@ -1352,6 +1662,57 @@ func (p *ExecuteRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ResponseAPIConfig = _responseAPIConfig
+
+	if src.AccountMode != nil {
+		tmp := *src.AccountMode
+		p.AccountMode = &tmp
+	}
+
+	if src.CustomAccounts != nil {
+		p.CustomAccounts = make([]*CustomAccount, 0, len(src.CustomAccounts))
+		for _, elem := range src.CustomAccounts {
+			var _elem *CustomAccount
+			if elem != nil {
+				_elem = &CustomAccount{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.CustomAccounts = append(p.CustomAccounts, _elem)
+		}
+	}
+
+	if src.UsageScenario != nil {
+		tmp := *src.UsageScenario
+		p.UsageScenario = &tmp
+	}
+
+	var _requestExtra *RequestExtra
+	if src.RequestExtra != nil {
+		_requestExtra = &RequestExtra{}
+		if err := _requestExtra.DeepCopy(src.RequestExtra); err != nil {
+			return err
+		}
+	}
+	p.RequestExtra = _requestExtra
+
+	if src.ReleaseLabel != nil {
+		var tmp string
+		if *src.ReleaseLabel != "" {
+			tmp = kutils.StringDeepCopy(*src.ReleaseLabel)
+		}
+		p.ReleaseLabel = &tmp
+	}
+
+	var _customToolConfig *ToolCallConfig
+	if src.CustomToolConfig != nil {
+		_customToolConfig = &ToolCallConfig{}
+		if err := _customToolConfig.DeepCopy(src.CustomToolConfig); err != nil {
+			return err
+		}
+	}
+	p.CustomToolConfig = _customToolConfig
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -11524,6 +11885,586 @@ func (p *ResponseAPIConfig) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.SessionID)
 		}
 		p.SessionID = &tmp
+	}
+
+	return nil
+}
+
+func (p *RequestExtra) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_RequestExtra[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *RequestExtra) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.GptOpenAPIExtra = _field
+	return offset, nil
+}
+
+func (p *RequestExtra) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *RequestExtra) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *RequestExtra) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *RequestExtra) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetGptOpenAPIExtra() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.GptOpenAPIExtra)
+	}
+	return offset
+}
+
+func (p *RequestExtra) field1Length() int {
+	l := 0
+	if p.IsSetGptOpenAPIExtra() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.GptOpenAPIExtra)
+	}
+	return l
+}
+
+func (p *RequestExtra) DeepCopy(s interface{}) error {
+	src, ok := s.(*RequestExtra)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.GptOpenAPIExtra != nil {
+		var tmp string
+		if *src.GptOpenAPIExtra != "" {
+			tmp = kutils.StringDeepCopy(*src.GptOpenAPIExtra)
+		}
+		p.GptOpenAPIExtra = &tmp
+	}
+
+	return nil
+}
+
+func (p *SkyLarkAccountExtra) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SkyLarkAccountExtra[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SkyLarkAccountExtra) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.AccessKey = _field
+	return offset, nil
+}
+
+func (p *SkyLarkAccountExtra) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SecretKey = _field
+	return offset, nil
+}
+
+func (p *SkyLarkAccountExtra) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SkyLarkAccountExtra) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SkyLarkAccountExtra) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SkyLarkAccountExtra) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAccessKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AccessKey)
+	}
+	return offset
+}
+
+func (p *SkyLarkAccountExtra) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSecretKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SecretKey)
+	}
+	return offset
+}
+
+func (p *SkyLarkAccountExtra) field1Length() int {
+	l := 0
+	if p.IsSetAccessKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.AccessKey)
+	}
+	return l
+}
+
+func (p *SkyLarkAccountExtra) field2Length() int {
+	l := 0
+	if p.IsSetSecretKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SecretKey)
+	}
+	return l
+}
+
+func (p *SkyLarkAccountExtra) DeepCopy(s interface{}) error {
+	src, ok := s.(*SkyLarkAccountExtra)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.AccessKey != nil {
+		var tmp string
+		if *src.AccessKey != "" {
+			tmp = kutils.StringDeepCopy(*src.AccessKey)
+		}
+		p.AccessKey = &tmp
+	}
+
+	if src.SecretKey != nil {
+		var tmp string
+		if *src.SecretKey != "" {
+			tmp = kutils.StringDeepCopy(*src.SecretKey)
+		}
+		p.SecretKey = &tmp
+	}
+
+	return nil
+}
+
+func (p *CustomAccount) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_CustomAccount[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *CustomAccount) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ModelName = _field
+	return offset, nil
+}
+
+func (p *CustomAccount) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.APIKey = _field
+	return offset, nil
+}
+
+func (p *CustomAccount) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+	_field := NewSkyLarkAccountExtra()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SkyLarkAccountExtra = _field
+	return offset, nil
+}
+
+func (p *CustomAccount) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ConnectorID = _field
+	return offset, nil
+}
+
+func (p *CustomAccount) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *CustomAccount) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *CustomAccount) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *CustomAccount) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetModelName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ModelName)
+	}
+	return offset
+}
+
+func (p *CustomAccount) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAPIKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.APIKey)
+	}
+	return offset
+}
+
+func (p *CustomAccount) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSkyLarkAccountExtra() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.SkyLarkAccountExtra.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *CustomAccount) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetConnectorID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ConnectorID)
+	}
+	return offset
+}
+
+func (p *CustomAccount) field1Length() int {
+	l := 0
+	if p.IsSetModelName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ModelName)
+	}
+	return l
+}
+
+func (p *CustomAccount) field2Length() int {
+	l := 0
+	if p.IsSetAPIKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.APIKey)
+	}
+	return l
+}
+
+func (p *CustomAccount) field3Length() int {
+	l := 0
+	if p.IsSetSkyLarkAccountExtra() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SkyLarkAccountExtra.BLength()
+	}
+	return l
+}
+
+func (p *CustomAccount) field4Length() int {
+	l := 0
+	if p.IsSetConnectorID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *CustomAccount) DeepCopy(s interface{}) error {
+	src, ok := s.(*CustomAccount)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ModelName != nil {
+		var tmp string
+		if *src.ModelName != "" {
+			tmp = kutils.StringDeepCopy(*src.ModelName)
+		}
+		p.ModelName = &tmp
+	}
+
+	if src.APIKey != nil {
+		var tmp string
+		if *src.APIKey != "" {
+			tmp = kutils.StringDeepCopy(*src.APIKey)
+		}
+		p.APIKey = &tmp
+	}
+
+	var _skyLarkAccountExtra *SkyLarkAccountExtra
+	if src.SkyLarkAccountExtra != nil {
+		_skyLarkAccountExtra = &SkyLarkAccountExtra{}
+		if err := _skyLarkAccountExtra.DeepCopy(src.SkyLarkAccountExtra); err != nil {
+			return err
+		}
+	}
+	p.SkyLarkAccountExtra = _skyLarkAccountExtra
+
+	if src.ConnectorID != nil {
+		tmp := *src.ConnectorID
+		p.ConnectorID = &tmp
 	}
 
 	return nil

@@ -138,6 +138,54 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 		assert.Equal(t, ptr.Of(0.7), got.PromptCommit.PromptDetail.ModelConfig.Temperature)
 	})
 
+	t.Run("use custom_tool_config as compatibility field", func(t *testing.T) {
+		t.Parallel()
+
+		original := &entity.Prompt{
+			ID:        1,
+			SpaceID:   2,
+			PromptKey: "k",
+			PromptCommit: &entity.PromptCommit{
+				PromptDetail: &entity.PromptDetail{
+					ToolCallConfig: &entity.ToolCallConfig{ToolChoice: entity.ToolChoiceTypeNone},
+				},
+			},
+		}
+		req := &openapi.ExecuteRequest{
+			CustomToolConfig: &openapi.ToolCallConfig{
+				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			},
+		}
+
+		got, err := app.applyCustomOverrides(original, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, got.PromptCommit.PromptDetail.ToolCallConfig)
+		assert.Equal(t, entity.ToolChoiceTypeAuto, got.PromptCommit.PromptDetail.ToolCallConfig.ToolChoice)
+	})
+
+	t.Run("custom tools without config defaults to auto", func(t *testing.T) {
+		t.Parallel()
+
+		original := &entity.Prompt{
+			ID:        1,
+			SpaceID:   2,
+			PromptKey: "k",
+			PromptCommit: &entity.PromptCommit{
+				PromptDetail: &entity.PromptDetail{},
+			},
+		}
+		req := &openapi.ExecuteRequest{
+			CustomTools: []*openapi.Tool{
+				{Type: ptr.Of(openapi.ToolTypeFunction)},
+			},
+		}
+
+		got, err := app.applyCustomOverrides(original, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, got.PromptCommit.PromptDetail.ToolCallConfig)
+		assert.Equal(t, entity.ToolChoiceTypeAuto, got.PromptCommit.PromptDetail.ToolCallConfig.ToolChoice)
+	})
+
 	t.Run("custom model config with model_id unset/0 does not override", func(t *testing.T) {
 		t.Parallel()
 

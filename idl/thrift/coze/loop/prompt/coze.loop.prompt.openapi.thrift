@@ -40,6 +40,12 @@ struct ExecuteRequest {
     21: optional ToolCallConfig custom_tool_call_config (api.body="custom_tool_call_config") // 自定义工具调用配置
     22: optional ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
     23: optional ResponseAPIConfig response_api_config (api.body="response_api_config") // response api 配置
+    24: optional AccountMode account_mode (api.body="account_mode") // 账号模式（兼容字段）
+    25: optional list<CustomAccount> custom_accounts (api.body="custom_accounts") // 自定义模型账号（兼容字段）
+    26: optional UsageScenario usage_scenario (api.body="usage_scenario") // 使用场景（兼容字段）
+    27: optional RequestExtra request_extra (api.body="request_extra") // 请求额外参数（兼容字段）
+    28: optional string release_label (api.body="release_label") // 发布标签（兼容字段）
+    29: optional ToolCallConfig custom_tool_config (api.body="custom_tool_config") // 自定义工具配置（兼容字段）
 
     255: optional base.Base Base
 }
@@ -356,6 +362,36 @@ struct ResponseAPIConfig {
     1: optional string previous_response_id // 上一次响应的ID
     2: optional bool enable_caching // 是否开启缓存
     3: optional string session_id // 一轮会话的唯一标识
+}
+
+enum AccountMode {
+    SharedAccount = 1 // 使用共享模型账号
+    CustomAccount = 2 // 使用自定义模型账号
+}
+
+enum UsageScenario {
+    Default = 1
+    Evaluation = 2
+    PromptAsAService = 3
+    AIAnnotate = 4
+    AIScore = 5
+    AITag = 6
+}
+
+struct RequestExtra {
+    1: optional string gpt_open_api_extra // GPT OpenAPI 平台透传参数
+}
+
+struct SkyLarkAccountExtra {
+    1: optional string access_key
+    2: optional string secret_key
+}
+
+struct CustomAccount {
+    1: optional string model_name // 模型名称
+    2: optional string api_key // 模型账号
+    3: optional SkyLarkAccountExtra sky_lark_account_extra // SkyLark账号扩展
+    4: optional i64 connector_id (api.js_conv='true', go.tag='json:"connector_id"') // connector id
 }
 
 struct ParamConfigValue {
