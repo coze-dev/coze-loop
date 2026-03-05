@@ -378,21 +378,23 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 		if promptDO != nil {
 			version = promptDO.GetVersion()
 		}
-		if reply != nil && reply.Item != nil {
-			intputTokens = reply.Item.TokenUsage.InputTokens
-			outputTokens = reply.Item.TokenUsage.OutputTokens
-		}
+		intputTokens, outputTokens = getReplyTokenUsage(reply)
 		p.emitExecuteMetrics(ctx, req, promptDO, reply, err, "Execute")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
-			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    getRequestPromptKey(req),
-			Version:      version,
-			Stream:       false,
-			InputTokens:  intputTokens,
-			OutputTokens: outputTokens,
-			StartedAt:    startTime,
-			EndedAt:      time.Now(),
-			StatusCode:   errCode,
+			SpaceID:       req.GetWorkspaceID(),
+			PromptKey:     getRequestPromptKey(req),
+			Version:       version,
+			Method:        "Execute",
+			Stream:        false,
+			HasMessage:    len(req.Messages) > 0,
+			HasContexts:   len(req.Messages) > 1,
+			AccountMode:   getRequestAccountMode(req).String(),
+			UsageScenario: getRequestUsageScenario(req).String(),
+			InputTokens:   intputTokens,
+			OutputTokens:  outputTokens,
+			StartedAt:     startTime,
+			EndedAt:       time.Now(),
+			StatusCode:    errCode,
 		})
 	}()
 	r = openapi.NewExecuteResponse()
@@ -503,21 +505,23 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 		if promptDO != nil {
 			version = promptDO.GetVersion()
 		}
-		if aggregatedReply != nil && aggregatedReply.Item != nil {
-			intputTokens = aggregatedReply.Item.TokenUsage.InputTokens
-			outputTokens = aggregatedReply.Item.TokenUsage.OutputTokens
-		}
-		p.emitExecuteMetrics(ctx, req, promptDO, aggregatedReply, err, "ExecuteStreaming")
+		intputTokens, outputTokens = getReplyTokenUsage(aggregatedReply)
+		p.emitExecuteMetrics(ctx, req, promptDO, aggregatedReply, err, "StreamingExecute")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
-			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    getRequestPromptKey(req),
-			Version:      version,
-			Stream:       true,
-			InputTokens:  intputTokens,
-			OutputTokens: outputTokens,
-			StartedAt:    startTime,
-			EndedAt:      time.Now(),
-			StatusCode:   errCode,
+			SpaceID:       req.GetWorkspaceID(),
+			PromptKey:     getRequestPromptKey(req),
+			Version:       version,
+			Method:        "StreamingExecute",
+			Stream:        true,
+			HasMessage:    len(req.Messages) > 0,
+			HasContexts:   len(req.Messages) > 1,
+			AccountMode:   getRequestAccountMode(req).String(),
+			UsageScenario: getRequestUsageScenario(req).String(),
+			InputTokens:   intputTokens,
+			OutputTokens:  outputTokens,
+			StartedAt:     startTime,
+			EndedAt:       time.Now(),
+			StatusCode:    errCode,
 		})
 	}()
 	err = validateExecuteRequest(req)
@@ -573,6 +577,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 	// 执行prompt流式调用
 	resultStream := make(chan *entity.Reply)
 	receivedFirstToken := false
+	var latestInputTokens, latestOutputTokens int64
 	type replyResult struct {
 		Reply *entity.Reply
 		Err   error
@@ -615,6 +620,9 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		if reply == nil || reply.Item == nil {
 			continue
 		}
+		chunkInputTokens, chunkOutputTokens := getReplyTokenUsage(reply)
+		latestInputTokens = chunkInputTokens
+		latestOutputTokens = chunkOutputTokens
 		if !receivedFirstToken {
 			receivedFirstToken = true
 			promptmetrics.WithPaasFirstTokenTime(ctx)
@@ -638,9 +646,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "execute streaming canceled")
+				return promptDO, buildTokenUsageReply(latestInputTokens, latestOutputTokens), err
 			} else if errors.Is(err, context.DeadlineExceeded) {
 				err = nil
 				logs.CtxWarn(ctx, "execute streaming ctx deadline exceeded")
+				return promptDO, buildTokenUsageReply(latestInputTokens, latestOutputTokens), err
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
@@ -857,6 +867,38 @@ func getRequestPromptKey(req *openapi.ExecuteRequest) string {
 	return req.GetPromptIdentifier().GetPromptKey()
 }
 
+func getRequestAccountMode(req *openapi.ExecuteRequest) openapi.AccountMode {
+	if req == nil || req.AccountMode == nil {
+		return openapi.AccountMode_SharedAccount
+	}
+	return req.GetAccountMode()
+}
+
+func getRequestUsageScenario(req *openapi.ExecuteRequest) openapi.UsageScenario {
+	if req == nil || req.UsageScenario == nil {
+		return openapi.UsageScenario_PromptAsAService
+	}
+	return req.GetUsageScenario()
+}
+
+func getReplyTokenUsage(reply *entity.Reply) (inputTokens int64, outputTokens int64) {
+	if reply == nil || reply.Item == nil || reply.Item.TokenUsage == nil {
+		return 0, 0
+	}
+	return reply.Item.TokenUsage.InputTokens, reply.Item.TokenUsage.OutputTokens
+}
+
+func buildTokenUsageReply(inputTokens int64, outputTokens int64) *entity.Reply {
+	return &entity.Reply{
+		Item: &entity.ReplyItem{
+			TokenUsage: &entity.TokenUsage{
+				InputTokens:  inputTokens,
+				OutputTokens: outputTokens,
+			},
+		},
+	}
+}
+
 func (p *PromptOpenAPIApplicationImpl) emitExecuteMetrics(
 	ctx context.Context,
 	req *openapi.ExecuteRequest,
@@ -876,12 +918,8 @@ func (p *PromptOpenAPIApplicationImpl) emitExecuteMetrics(
 	if req.GetPromptIdentifier() != nil && req.GetPromptIdentifier().GetPromptKey() != "" {
 		promptmetrics.WithPaasPromptKey(ctx, req.GetPromptIdentifier().GetPromptKey())
 	}
-	if req.AccountMode != nil {
-		promptmetrics.WithPaaSAccountMode(ctx, req.GetAccountMode().String())
-	}
-	if req.UsageScenario != nil {
-		promptmetrics.WithPaasUsageScenario(ctx, req.GetUsageScenario().String())
-	}
+	promptmetrics.WithPaaSAccountMode(ctx, getRequestAccountMode(req).String())
+	promptmetrics.WithPaasUsageScenario(ctx, getRequestUsageScenario(req).String())
 
 	// OpenAPI 使用 messages 承载上下文与当前提问，兼容 legacy tags 语义
 	hasMessage := len(req.Messages) > 0
