@@ -225,3 +225,123 @@ struct ItemResult {
 struct ItemSystemInfo {
     1: optional ItemRunState run_state
 }
+
+// ===============================
+// 实验模板相关结构定义
+// ===============================
+
+// 实验模板基础信息
+struct ExptTemplateMeta {
+    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional string name
+    4: optional string description
+    5: optional ExperimentType expt_type   // 模板对应的实验类型，当前主要为 Offline
+}
+
+// 实验三元组配置
+struct ExptTuple {
+    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
+    3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
+    4: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    5: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_items (go.tag = 'json:"evaluator_id_version_items"')
+
+    // 兼容内部结构
+    7: optional eval_set.EvaluationSet eval_set
+    8: optional eval_target.EvalTarget eval_target
+    9: optional list<evaluator.Evaluator> evaluators
+}
+
+// 实验模板字段映射配置
+struct ExptFieldMapping {
+    1: optional TargetFieldMapping target_field_mapping
+    2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
+    3: optional common.RuntimeParam target_runtime_param
+    4: optional i32 item_concur_num
+}
+
+// 实验评估器得分加权配置（evaluator_id -> weight）
+struct ExptScoreWeight {
+    1: optional bool enable_weighted_score (go.tag = 'json:"enable_weighted_score"')
+    2: optional map<i64, double> evaluator_score_weights (api.js_conv = "true", go.tag = 'json:"evaluator_score_weights"')
+}
+
+// 实验模板
+struct ExptTemplate {
+    1: optional ExptTemplateMeta meta
+    2: optional ExptTuple triple_config
+    3: optional ExptFieldMapping field_mapping_config
+    4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
+
+    100: optional common.BaseInfo base_info
+}
+
+// ===============================
+// 筛选能力结构（与 domain/expt.thrift 结构一致）
+// ===============================
+
+// 筛选逻辑操作符（对应 domain/expt FilterLogicOp）
+typedef string FilterLogicOp(ts.enum="true")
+const FilterLogicOp FilterLogicOp_Unknown = "unknown"
+const FilterLogicOp FilterLogicOp_And = "and"
+const FilterLogicOp FilterLogicOp_Or = "or"
+
+// 筛选操作符类型（对应 domain/expt FilterOperatorType）
+typedef string FilterOperatorType(ts.enum="true")
+const FilterOperatorType FilterOperatorType_Unknown = "unknown"
+const FilterOperatorType FilterOperatorType_Equal = "equal"
+const FilterOperatorType FilterOperatorType_NotEqual = "not_equal"
+const FilterOperatorType FilterOperatorType_Greater = "greater"
+const FilterOperatorType FilterOperatorType_GreaterOrEqual = "greater_or_equal"
+const FilterOperatorType FilterOperatorType_Less = "less"
+const FilterOperatorType FilterOperatorType_LessOrEqual = "less_or_equal"
+const FilterOperatorType FilterOperatorType_In = "in"
+const FilterOperatorType FilterOperatorType_NotIn = "not_in"
+const FilterOperatorType FilterOperatorType_Like = "like"
+const FilterOperatorType FilterOperatorType_NotLike = "not_like"
+const FilterOperatorType FilterOperatorType_IsNull = "is_null"
+const FilterOperatorType FilterOperatorType_IsNotNull = "is_not_null"
+
+// 筛选字段类型（对应 domain/expt FieldType）
+typedef string FilterFieldType(ts.enum="true")
+const FilterFieldType FilterFieldType_Unknown = "unknown"
+const FilterFieldType FilterFieldType_CreatorBy = "creator_by"
+const FilterFieldType FilterFieldType_UpdatedBy = "updated_by"
+const FilterFieldType FilterFieldType_EvalSetID = "eval_set_id"
+const FilterFieldType FilterFieldType_TargetID = "target_id"
+const FilterFieldType FilterFieldType_EvaluatorID = "evaluator_id"
+const FilterFieldType FilterFieldType_TargetType = "target_type"
+const FilterFieldType FilterFieldType_ExptType = "expt_type"
+const FilterFieldType FilterFieldType_Name = "name"  // 模板名称模糊搜索
+
+// 筛选字段（对应 domain/expt FilterField）
+struct FilterField {
+    1: optional FilterFieldType field_type
+    2: optional string field_key  // 二级key
+}
+
+// 筛选条件（对应 domain/expt FilterCondition）
+struct FilterCondition {
+    1: optional FilterField field
+    2: optional FilterOperatorType operator
+    3: optional string value
+}
+
+// 关键词搜索（对应 domain/expt KeywordSearch）
+struct KeywordSearch {
+    1: optional string keyword
+    2: optional list<FilterField> filter_fields
+}
+
+// 通用筛选逻辑（对应 domain/expt Filters）
+struct Filters {
+    1: optional list<FilterCondition> filter_conditions
+    2: optional FilterLogicOp logic_op
+}
+
+// 实验模板筛选器（对应 domain/expt ExperimentTemplateFilter）
+struct ExperimentTemplateFilter {
+    1: optional Filters filters
+    2: optional KeywordSearch keyword_search
+}

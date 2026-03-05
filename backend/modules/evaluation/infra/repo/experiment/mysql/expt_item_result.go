@@ -29,10 +29,12 @@ type IExptItemResultDAO interface {
 	BatchGet(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptItemResult, error)
 	BatchCreateNX(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	ScanItemResults(ctx context.Context, exptID, cursor, limit int64, status []int32, spaceID int64, opts ...db.Option) (results []*model.ExptItemResult, ncursor int64, err error)
+	MGetItemResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) (results []*model.ExptItemResult, err error)
 	GetItemIDListByExptID(ctx context.Context, exptID, spaceID int64) (itemIDList []int64, err error)
 	ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error)
 	SaveItemResults(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error
 	GetItemTurnResults(ctx context.Context, spaceID, exptID, itemID int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
+	MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error)
 	UpdateItemsResult(ctx context.Context, spaceID, exptID int64, itemID []int64, ufields map[string]any, opts ...db.Option) error
 	GetMaxItemIdxByExptID(ctx context.Context, exptID, spaceID int64, opts ...db.Option) (int32, error)
 
@@ -88,6 +90,19 @@ func (dao *exptItemResultDAOImpl) GetItemTurnResults(ctx context.Context, spaceI
 		return nil, err
 	}
 	return finds, nil
+}
+
+func (dao *exptItemResultDAOImpl) MGetItemTurnResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) ([]*model.ExptTurnResult, error) {
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+	db := dao.provider.NewSession(ctx, opts...)
+	q := query.Use(db).ExptTurnResult
+	found, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...)).Find()
+	if err != nil {
+		return nil, err
+	}
+	return found, nil
 }
 
 func (dao *exptItemResultDAOImpl) SaveItemResults(ctx context.Context, itemResults []*model.ExptItemResult, opts ...db.Option) error {
@@ -191,6 +206,22 @@ func (dao *exptItemResultDAOImpl) ScanItemResults(ctx context.Context, exptID, c
 	return res, res[len(res)-1].ID, nil
 }
 
+func (dao *exptItemResultDAOImpl) MGetItemResults(ctx context.Context, spaceID, exptID int64, itemIDs []int64, opts ...db.Option) (results []*model.ExptItemResult, err error) {
+	if len(itemIDs) == 0 {
+		return nil, nil
+	}
+	db := dao.provider.NewSession(ctx, opts...)
+	if contexts.CtxWriteDB(ctx) {
+		db = db.Clauses(dbresolver.Write)
+	}
+	q := query.Use(db).ExptItemResult
+	res, err := q.WithContext(ctx).Where(q.SpaceID.Eq(spaceID), q.ExptID.Eq(exptID), q.ItemID.In(itemIDs...)).Find()
+	if err != nil {
+		return nil, errorx.Wrapf(err, "MGetItemResults fail, exptID=%d, spaceID=%d, itemIDs=%v", exptID, spaceID, itemIDs)
+	}
+	return res, nil
+}
+
 func (dao *exptItemResultDAOImpl) ListItemResultsByExptID(ctx context.Context, exptID, spaceID int64, page entity.Page, desc bool) ([]*model.ExptItemResult, int64, error) {
 	db := dao.provider.NewSession(ctx)
 	q := query.Use(db).ExptItemResult
@@ -254,21 +285,46 @@ func (dao *exptItemResultDAOImpl) GetItemIDListByExptID(ctx context.Context, exp
 }
 
 func (dao *exptItemResultDAOImpl) ScanItemRunLogs(ctx context.Context, exptID, exptRunID int64, filter *entity.ExptItemRunLogFilter, cursor, limit, spaceID int64, opts ...db.Option) ([]*model.ExptItemResultRunLog, int64, error) {
-	db := dao.provider.NewSession(ctx, opts...)
-	q := query.Use(db).ExptItemResultRunLog
+	if filter == nil {
+		filter = &entity.ExptItemRunLogFilter{}
+	}
+	session := dao.provider.NewSession(ctx, opts...)
+
+	// RawFilter: use raw gorm.DB Where(sql, vars...) to avoid gen clause conversion / unknown clause issues.
+	if filter.RawFilter && filter.RawCond.SQL != "" {
+		var res []*model.ExptItemResultRunLog
+		tx := session.WithContext(ctx).Model(&model.ExptItemResultRunLog{}).
+			Clauses(hints.ForceIndex("uk_expt_run_item_turn")).
+			Where("space_id = ? AND expt_id = ? AND expt_run_id = ?", spaceID, exptID, exptRunID).
+			Where(filter.RawCond.SQL, filter.RawCond.Vars...)
+		if cursor > 0 {
+			tx = tx.Where("id > ?", cursor)
+		}
+		tx = tx.Order("id asc")
+		if limit > 0 {
+			tx = tx.Limit(int(limit))
+		}
+		if err := tx.Find(&res).Error; err != nil {
+			return nil, 0, errorx.Wrapf(err, "ScanItemRunLogs fail, exptID=%d, exptRunID=%d, cursor=%d", exptID, exptRunID, cursor)
+		}
+		if len(res) == 0 {
+			return nil, 0, nil
+		}
+		return res, res[len(res)-1].ID, nil
+	}
+
+	q := query.Use(session).ExptItemResultRunLog
 	conds := []gen.Condition{
 		q.SpaceID.Eq(spaceID),
 		q.ExptID.Eq(exptID),
 		q.ExptRunID.Eq(exptRunID),
 	}
-
 	if filter.ResultState != nil {
 		conds = append(conds, q.ResultState.In(int32(filter.GetResultState())))
 	}
 	if len(filter.Status) > 0 {
 		conds = append(conds, q.Status.In(filter.GetStatus()...))
 	}
-
 	if cursor > 0 {
 		conds = append(conds, q.ID.Gt(cursor))
 	}

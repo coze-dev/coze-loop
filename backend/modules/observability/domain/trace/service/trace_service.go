@@ -1331,11 +1331,15 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 	resp := &GetTracesAdvanceInfoResp{
 		Infos: []*loop_span.TraceAdvanceInfo{},
 	}
+	workspaceID := strconv.FormatInt(req.WorkspaceID, 10)
+	if req.ThirdPartyWorkspaceID != "" {
+		workspaceID = req.ThirdPartyWorkspaceID
+	}
 	for _, v := range req.Traces {
 		g.Go(func() error {
 			defer goroutine.Recovery(ctx)
 			qReq := &repo.GetTraceParam{
-				WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+				WorkSpaceID:        workspaceID,
 				Tenants:            tenants,
 				TraceID:            v.TraceID,
 				StartAt:            v.StartTime,
@@ -1356,13 +1360,14 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				return err
 			}
 			processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
-				WorkspaceId:     req.WorkspaceID,
-				PlatformType:    req.PlatformType,
-				QueryStartTime:  v.StartTime,
-				QueryEndTime:    v.EndTime + defaultTimeRange,
-				SpanDoubleCheck: true,
-				QueryTenants:    tenants,
-				QueryTraceID:    v.TraceID,
+				WorkspaceId:           req.WorkspaceID,
+				ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+				PlatformType:          req.PlatformType,
+				QueryStartTime:        v.StartTime,
+				QueryEndTime:          v.EndTime + defaultTimeRange,
+				SpanDoubleCheck:       true,
+				QueryTenants:          tenants,
+				QueryTraceID:          v.TraceID,
 			})
 			if err != nil {
 				logs.CtxError(ctx, "Fail to build advance info processor, %v", err)

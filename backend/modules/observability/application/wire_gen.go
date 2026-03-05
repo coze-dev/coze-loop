@@ -74,6 +74,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -185,7 +186,8 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 	iAuthProvider := auth.NewAuthProvider(authClient)
 	iWorkSpaceProvider := workspace.NewWorkspaceProvider()
 	iCollectorProvider := collector.NewEventCollectorProvider()
-	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2, iTenantProvider, iWorkSpaceProvider, limiterFactory, iTraceConfig, iTraceMetrics, iCollectorProvider)
+	iTimeRangeProvider := time_range.NewTimeRangeProvider()
+	iObservabilityOpenAPIApplication, err := NewOpenAPIApplication(iTraceService, iAuthProvider, benefit2, iTenantProvider, iWorkSpaceProvider, limiterFactory, iTraceConfig, iTraceMetrics, iCollectorProvider, iTimeRangeProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -343,7 +345,7 @@ var (
 		NewIngestionCollectorFactory, producer.NewSpanWithAnnotationProducerImpl, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
-		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet,
+		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet, time_range.NewTimeRangeProvider,
 	)
 	taskSet = wire.NewSet(tracehub.NewTraceHubImpl, NewTaskApplication, auth.NewAuthProvider, user.NewUserRPCProvider, evaluation.NewEvaluationRPCProvider, NewTaskLocker,
 		traceDomainSet, service3.NewTaskCallbackServiceImpl,

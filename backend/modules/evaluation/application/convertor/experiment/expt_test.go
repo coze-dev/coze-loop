@@ -728,7 +728,7 @@ func TestAppendEvaluatorIDVersionItemsFromEvaluators(t *testing.T) {
 	}
 
 	var dst []*evaluatordto.EvaluatorIDVersionItem
-	appendEvaluatorIDVersionItemsFromEvaluators(template, &dst)
+	appendEvaluatorIDVersionItemsFromEvaluators(template, &dst, nil)
 
 	if assert.Len(t, dst, 1) {
 		it := dst[0]
@@ -755,7 +755,7 @@ func TestAppendEvaluatorIDVersionItemsFromVersionRef(t *testing.T) {
 	}
 
 	var dst []*evaluatordto.EvaluatorIDVersionItem
-	appendEvaluatorIDVersionItemsFromVersionRef(template, &dst)
+	appendEvaluatorIDVersionItemsFromVersionRef(template, &dst, nil)
 
 	if assert.Len(t, dst, 1) {
 		it := dst[0]

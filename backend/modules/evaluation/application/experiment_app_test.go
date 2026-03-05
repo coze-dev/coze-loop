@@ -694,6 +694,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 						validRunID,
 						gomock.Any(),
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 					).Return(nil)
 
@@ -703,6 +704,7 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 						validExptID,
 						validRunID,
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 						gomock.Any(),
 						gomock.Any(),
@@ -825,8 +827,8 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&entity.Experiment{ID: exptID}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(runID, nil)
-		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any()).Return(nil)
-		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
 			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
 			Return(nil)
@@ -861,8 +863,8 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&entity.Experiment{ID: exptID}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(runID, nil)
-		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any()).Return(nil)
-		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
 			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
 			Return(errors.New("update error"))
@@ -897,8 +899,8 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).
 			Return(&entity.Experiment{ID: exptID}, nil)
 		mockIDGen.EXPECT().GenID(gomock.Any()).Return(runID, nil)
-		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any()).Return(nil)
-		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		// 不应该调用 UpdateExptInfo
 		mockTemplateManager.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
@@ -2341,6 +2343,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validRunID,
 						entity.EvaluationModeSubmit,
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 					).Return(nil)
 
@@ -2351,6 +2354,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validExptID,
 						validRunID,
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 						entity.EvaluationModeSubmit,
 						gomock.Any(),
@@ -2386,6 +2390,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validRunID,
 						entity.EvaluationModeSubmit,
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 					).Return(nil)
 
@@ -2396,6 +2401,7 @@ func TestExperimentApplication_RunExperiment(t *testing.T) {
 						validExptID,
 						validRunID,
 						validWorkspaceID,
+						gomock.Any(),
 						&entity.Session{UserID: "789", AppID: 0},
 						entity.EvaluationModeSubmit,
 						gomock.Any(),
@@ -2462,11 +2468,12 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				ExptID:      gptr.Of(validExptID),
 			},
 			mockSetup: func() {
-				// 获取实验信息
+				itemRetryNum := 0
 				mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
 					ID:        validExptID,
 					SpaceID:   validWorkspaceID,
 					CreatedBy: strconv.FormatInt(validUserID, 10),
+					EvalConf:  &entity.EvaluationConfiguration{ItemRetryNum: &itemRetryNum},
 				}, nil)
 
 				// 权限验证
@@ -2482,10 +2489,10 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
 
 				// 记录运行日志
-				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any()).Return(nil)
+				mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeFailRetry, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
 
 				// 重试失败的实验
-				mockManager.EXPECT().RetryUnSuccess(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+				mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
 			wantResp: &exptpb.RetryExperimentResponse{
 				RunID:    gptr.Of(validRunID),

@@ -458,6 +458,11 @@ func (p *BatchDeleteEvaluationSetItemsResponse) IsValid() error {
 	return nil
 }
 func (p *ListEvaluationSetItemsRequest) IsValid() error {
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

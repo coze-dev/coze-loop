@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/stone/fornax/ml_flow/domain/filter"
 )
 
 var (
@@ -24,6 +25,7 @@ var (
 	_ = dataset_job.KitexUnusedProtection
 	_ = common.KitexUnusedProtection
 	_ = eval_set.KitexUnusedProtection
+	_ = filter.KitexUnusedProtection
 )
 
 // unused protection
@@ -9708,6 +9710,20 @@ func (p *ListEvaluationSetItemsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 201:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField201(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -9884,6 +9900,18 @@ func (p *ListEvaluationSetItemsRequest) FastReadField200(buf []byte) (int, error
 	return offset, nil
 }
 
+func (p *ListEvaluationSetItemsRequest) FastReadField201(buf []byte) (int, error) {
+	offset := 0
+	_field := filter.NewFilter()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Filter = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetItemsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -9911,6 +9939,7 @@ func (p *ListEvaluationSetItemsRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
+		offset += p.fastWriteField201(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -9928,6 +9957,7 @@ func (p *ListEvaluationSetItemsRequest) BLength() int {
 		l += p.field102Length()
 		l += p.field103Length()
 		l += p.field200Length()
+		l += p.field201Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -10016,6 +10046,15 @@ func (p *ListEvaluationSetItemsRequest) fastWriteField200(buf []byte, w thrift.N
 	return offset
 }
 
+func (p *ListEvaluationSetItemsRequest) fastWriteField201(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilter() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 201)
+		offset += p.Filter.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *ListEvaluationSetItemsRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -10099,6 +10138,15 @@ func (p *ListEvaluationSetItemsRequest) field200Length() int {
 	return l
 }
 
+func (p *ListEvaluationSetItemsRequest) field201Length() int {
+	l := 0
+	if p.IsSetFilter() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Filter.BLength()
+	}
+	return l
+}
+
 func (p *ListEvaluationSetItemsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -10165,6 +10213,15 @@ func (p *ListEvaluationSetItemsRequest) DeepCopy(s interface{}) error {
 		}
 	}
 
+	var _filter *filter.Filter
+	if src.Filter != nil {
+		_filter = &filter.Filter{}
+		if err := _filter.DeepCopy(src.Filter); err != nil {
+			return err
+		}
+	}
+	p.Filter = _filter
+
 	var _base *base.Base
 	if src.Base != nil {
 		_base = &base.Base{}
@@ -10225,6 +10282,20 @@ func (p *ListEvaluationSetItemsResponse) FastRead(buf []byte) (int, error) {
 		case 101:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField101(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField102(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -10321,6 +10392,20 @@ func (p *ListEvaluationSetItemsResponse) FastReadField101(buf []byte) (int, erro
 	return offset, nil
 }
 
+func (p *ListEvaluationSetItemsResponse) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return offset, nil
+}
+
 func (p *ListEvaluationSetItemsResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -10341,6 +10426,7 @@ func (p *ListEvaluationSetItemsResponse) FastWriteNocopy(buf []byte, w thrift.No
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -10355,6 +10441,7 @@ func (p *ListEvaluationSetItemsResponse) BLength() int {
 		l += p.field1Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -10395,6 +10482,15 @@ func (p *ListEvaluationSetItemsResponse) fastWriteField101(buf []byte, w thrift.
 	return offset
 }
 
+func (p *ListEvaluationSetItemsResponse) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilterTotal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 102)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.FilterTotal)
+	}
+	return offset
+}
+
 func (p *ListEvaluationSetItemsResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -10429,6 +10525,15 @@ func (p *ListEvaluationSetItemsResponse) field101Length() int {
 	if p.IsSetNextPageToken() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.NextPageToken)
+	}
+	return l
+}
+
+func (p *ListEvaluationSetItemsResponse) field102Length() int {
+	l := 0
+	if p.IsSetFilterTotal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -10472,6 +10577,11 @@ func (p *ListEvaluationSetItemsResponse) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.NextPageToken)
 		}
 		p.NextPageToken = &tmp
+	}
+
+	if src.FilterTotal != nil {
+		tmp := *src.FilterTotal
+		p.FilterTotal = &tmp
 	}
 
 	var _baseResp *base.BaseResp

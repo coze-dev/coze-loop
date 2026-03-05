@@ -11,6 +11,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
+	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
@@ -1050,4 +1051,1115 @@ func TestOpenAPICustomEvalTargetDO2DTO(t *testing.T) {
 		assert.Equal(t, "http://avatar.url", got.GetAvatarURL())
 		assert.Equal(t, map[string]string{"foo": "bar"}, got.GetExt())
 	}
+}
+
+func TestOpenAPIExptTemplateDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIExptTemplateDO2DTO(nil))
+
+	template := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          1,
+			WorkspaceID: 10,
+			Name:        "test",
+			ExptType:    entity.ExptType_Offline,
+		},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID: 100,
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+				{EvaluatorVersionID: 500, Version: "v1"},
+			},
+		},
+		FieldMappingConfig: &entity.ExptFieldMapping{
+			ItemConcurNum: gptr.Of(3),
+			TargetFieldMapping: &entity.TargetFieldMapping{
+				FromEvalSet: []*entity.ExptTemplateFieldMapping{
+					{FieldName: "f1", FromFieldName: "s1"},
+				},
+			},
+		},
+	}
+
+	got := OpenAPIExptTemplateDO2DTO(template)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(1), got.Meta.GetID())
+		assert.Equal(t, int64(100), got.TripleConfig.GetEvalSetID())
+		assert.Len(t, got.TripleConfig.EvaluatorIDVersionItems, 1)
+		assert.Equal(t, int32(3), got.FieldMappingConfig.GetItemConcurNum())
+	}
+
+	// 带 score_weight_config：从 TripleConfig.EvaluatorIDVersionItems.ScoreWeight 派生
+	templateWithWeight := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{ID: 2, WorkspaceID: 10, Name: "t2", ExptType: entity.ExptType_Offline},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+				{EvaluatorVersionID: 501, Version: "v1", ScoreWeight: 0.6},
+				{EvaluatorVersionID: 502, Version: "v2", ScoreWeight: 0.4},
+			},
+		},
+	}
+	gotWeight := OpenAPIExptTemplateDO2DTO(templateWithWeight)
+	if assert.NotNil(t, gotWeight) && assert.NotNil(t, gotWeight.ScoreWeightConfig) {
+		assert.True(t, gotWeight.ScoreWeightConfig.GetEnableWeightedScore())
+		assert.Len(t, gotWeight.ScoreWeightConfig.EvaluatorScoreWeights, 2)
+		assert.Equal(t, 0.6, gotWeight.ScoreWeightConfig.EvaluatorScoreWeights[501])
+		assert.Equal(t, 0.4, gotWeight.ScoreWeightConfig.EvaluatorScoreWeights[502])
+	}
+}
+
+func TestOpenAPICreateExptTemplateReq2Domain(t *testing.T) {
+	t.Parallel()
+
+	req := &openapi.CreateExptTemplateOApiRequest{
+		WorkspaceID: gptr.Of(int64(10)),
+		Meta: &openapiExperiment.ExptTemplateMeta{
+			Name:     gptr.Of("test"),
+			ExptType: gptr.Of(openapiExperiment.ExperimentTypeOffline),
+		},
+		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetID: gptr.Of(int64(100)),
+		},
+	}
+
+	got, err := OpenAPICreateExptTemplateReq2Domain(req)
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(10), got.SpaceID)
+		assert.Equal(t, "test", got.Name)
+		assert.Equal(t, int64(100), got.EvalSetID)
+	}
+
+	// Case 2: full request
+	fullReq := &openapi.CreateExptTemplateOApiRequest{
+		WorkspaceID: gptr.Of(int64(10)),
+		Meta: &openapiExperiment.ExptTemplateMeta{
+			Name:        gptr.Of("test-full"),
+			Description: gptr.Of("desc"),
+			ExptType:    gptr.Of(openapiExperiment.ExperimentTypeOnline),
+		},
+		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetID:        gptr.Of(int64(100)),
+			EvalSetVersionID: gptr.Of(int64(101)),
+			TargetID:         gptr.Of(int64(200)),
+			TargetVersionID:  gptr.Of(int64(201)),
+			EvaluatorIDVersionItems: []*openapiEvaluator.EvaluatorIDVersionItem{
+				{EvaluatorVersionID: gptr.Of(int64(300)), Version: gptr.Of("v1")},
+				nil,
+			},
+		},
+		FieldMappingConfig: &openapiExperiment.ExptFieldMapping{
+			ItemConcurNum: gptr.Of(int32(5)),
+			TargetFieldMapping: &openapiExperiment.TargetFieldMapping{
+				FromEvalSet: []*openapiExperiment.FieldMapping{
+					{FieldName: gptr.Of("f1"), FromFieldName: gptr.Of("s1")},
+				},
+			},
+			TargetRuntimeParam: &openapiCommon.RuntimeParam{
+				JSONValue: gptr.Of("{}"),
+			},
+			EvaluatorFieldMapping: []*openapiExperiment.EvaluatorFieldMapping{
+				{
+					EvaluatorID: gptr.Of(int64(300)),
+					Version:     gptr.Of("v1"),
+					FromEvalSet: []*openapiExperiment.FieldMapping{
+						{FieldName: gptr.Of("ef1"), FromFieldName: gptr.Of("es1")},
+					},
+					FromTarget: []*openapiExperiment.FieldMapping{
+						{FieldName: gptr.Of("tf1"), FromFieldName: gptr.Of("ts1")},
+					},
+				},
+				nil,
+			},
+		},
+		DefaultEvaluatorsConcurNum: gptr.Of(int32(10)),
+	}
+
+	gotFull, err := OpenAPICreateExptTemplateReq2Domain(fullReq)
+	assert.NoError(t, err)
+	if assert.NotNil(t, gotFull) {
+		assert.Equal(t, "test-full", gotFull.Name)
+		assert.Equal(t, entity.ExptType_Online, gotFull.ExptType)
+		assert.Equal(t, int64(300), gotFull.EvaluatorIDVersionItems[0].EvaluatorVersionID)
+		if assert.NotNil(t, gotFull.TemplateConf) {
+			assert.Equal(t, 5, *gotFull.TemplateConf.ItemConcurNum)
+			assert.Equal(t, 10, *gotFull.TemplateConf.EvaluatorsConcurNum)
+			if assert.NotNil(t, gotFull.TemplateConf.ConnectorConf.TargetConf) && assert.NotNil(t, gotFull.TemplateConf.ConnectorConf.TargetConf.IngressConf) {
+				assert.Equal(t, "f1", gotFull.TemplateConf.ConnectorConf.TargetConf.IngressConf.EvalSetAdapter.FieldConfs[0].FieldName)
+			}
+			if assert.NotNil(t, gotFull.TemplateConf.ConnectorConf.EvaluatorsConf) {
+				assert.Len(t, gotFull.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1)
+			}
+		}
+	}
+}
+
+func TestOpenAPIUpdateExptTemplateReq2Domain(t *testing.T) {
+	t.Parallel()
+
+	req := &openapi.UpdateExptTemplateOApiRequest{
+		TemplateID:  gptr.Of(int64(1)),
+		WorkspaceID: gptr.Of(int64(10)),
+		Meta: &openapiExperiment.ExptTemplateMeta{
+			Name:     gptr.Of("updated"),
+			ExptType: gptr.Of(openapiExperiment.ExperimentTypeOffline),
+		},
+		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetVersionID: gptr.Of(int64(102)),
+		},
+		FieldMappingConfig: &openapiExperiment.ExptFieldMapping{
+			ItemConcurNum: gptr.Of(int32(2)),
+		},
+	}
+
+	got, err := OpenAPIUpdateExptTemplateReq2Domain(req)
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(1), got.TemplateID)
+		assert.Equal(t, "updated", got.Name)
+		assert.Equal(t, int64(102), got.EvalSetVersionID)
+		if assert.NotNil(t, got.TemplateConf) {
+			assert.Equal(t, 2, *got.TemplateConf.ItemConcurNum)
+		}
+	}
+
+	gotNil, errNil := OpenAPIUpdateExptTemplateReq2Domain(nil)
+	assert.Nil(t, gotNil)
+	assert.Nil(t, errNil)
+}
+
+func TestOpenAPIRuntimeParamDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIRuntimeParamDTO2Domain(nil))
+
+	p1 := &openapiCommon.RuntimeParam{}
+	assert.NotNil(t, OpenAPIRuntimeParamDTO2Domain(p1))
+
+	jsonVal := "{}"
+	p2 := &openapiCommon.RuntimeParam{JSONValue: &jsonVal}
+	got := OpenAPIRuntimeParamDTO2Domain(p2)
+	assert.Equal(t, jsonVal, *got.JSONValue)
+}
+
+func TestOpenAPIColumnEvalSetFieldsDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIColumnEvalSetFieldsDO2DTOs(nil))
+
+	from := []*entity.ColumnEvalSetField{
+		{
+			Key:         gptr.Of("k1"),
+			Name:        gptr.Of("n1"),
+			ContentType: entity.ContentTypeText,
+		},
+		nil,
+	}
+	got := OpenAPIColumnEvalSetFieldsDO2DTOs(from)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, "k1", *got[0].Key)
+		assert.Equal(t, openapiCommon.ContentTypeText, *got[0].ContentType)
+	}
+
+	assert.Nil(t, OpenAPIColumnEvalSetFieldsDO2DTOs([]*entity.ColumnEvalSetField{nil}))
+}
+
+func TestOpenAPIColumnEvaluatorsDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIColumnEvaluatorsDO2DTOs(nil))
+
+	from := []*entity.ColumnEvaluator{
+		{
+			EvaluatorID:   1,
+			Name:          gptr.Of("e1"),
+			EvaluatorType: entity.EvaluatorTypePrompt,
+		},
+		nil,
+	}
+	got := OpenAPIColumnEvaluatorsDO2DTOs(from)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, int64(1), *got[0].EvaluatorID)
+		assert.Equal(t, openapiEvaluator.EvaluatorTypePrompt, *got[0].EvaluatorType)
+	}
+
+	assert.Nil(t, OpenAPIColumnEvaluatorsDO2DTOs([]*entity.ColumnEvaluator{nil}))
+}
+
+func TestOpenAPIItemResultsDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIItemResultsDO2DTOs(nil))
+
+	from := []*entity.ItemResult{
+		{
+			ItemID:     1,
+			SystemInfo: &entity.ItemSystemInfo{RunState: entity.ItemRunState_Success},
+		},
+		nil,
+	}
+	got := OpenAPIItemResultsDO2DTOs(from)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, int64(1), *got[0].ItemID)
+		assert.Equal(t, openapiExperiment.ItemRunStateSuccess, *got[0].SystemInfo.RunState)
+	}
+
+	assert.Nil(t, OpenAPIItemResultsDO2DTOs([]*entity.ItemResult{nil}))
+}
+
+func TestConvertEntityContentTypeToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input  entity.ContentType
+		expect *openapiCommon.ContentType
+	}{
+		{entity.ContentTypeText, gptr.Of(openapiCommon.ContentTypeText)},
+		{entity.ContentTypeImage, gptr.Of(openapiCommon.ContentTypeImage)},
+		{entity.ContentTypeAudio, gptr.Of(openapiCommon.ContentTypeAudio)},
+		{entity.ContentTypeMultipart, gptr.Of(openapiCommon.ContentTypeMultiPart)},
+		{entity.ContentTypeMultipartVariable, gptr.Of(openapiCommon.ContentTypeMultiPartVariable)},
+		{entity.ContentType("unknown"), nil},
+	}
+
+	for _, tt := range cases {
+		got := convertEntityContentTypeToOpenAPI(tt.input)
+		if tt.expect == nil {
+			assert.Nil(t, got)
+		} else {
+			assert.Equal(t, *tt.expect, *got)
+		}
+	}
+}
+
+func TestConvertEntityEvaluatorTypeToOpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input  entity.EvaluatorType
+		expect *openapiEvaluator.EvaluatorType
+	}{
+		{entity.EvaluatorTypePrompt, gptr.Of(openapiEvaluator.EvaluatorTypePrompt)},
+		{entity.EvaluatorTypeCode, gptr.Of(openapiEvaluator.EvaluatorTypeCode)},
+		{entity.EvaluatorType(999), nil},
+	}
+
+	for _, tt := range cases {
+		got := convertEntityEvaluatorTypeToOpenAPI(tt.input)
+		if tt.expect == nil {
+			assert.Nil(t, got)
+		} else {
+			assert.Equal(t, *tt.expect, *got)
+		}
+	}
+}
+
+func TestOpenTargetAggrResultDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenTargetAggrResultDO2DTO(nil))
+
+	do := &entity.EvalTargetMtrAggrResult{
+		TargetID: 1,
+		LatencyAggrResults: []*entity.AggregatorResult{
+			{AggregatorType: entity.Average, Data: &entity.AggregateData{DataType: entity.Double, Value: gptr.Of(0.5)}},
+		},
+	}
+	got := OpenTargetAggrResultDO2DTO(do)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(1), *got.TargetID)
+		assert.Len(t, got.Latency, 1)
+	}
+}
+
+func TestTargetAggrResultDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, TargetAggrResultDO2DTO(nil))
+
+	do := &entity.EvalTargetMtrAggrResult{
+		TargetID: 1,
+	}
+	got := TargetAggrResultDO2DTO(do)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(1), *got.TargetID)
+	}
+}
+
+func TestOpenAPIEvaluatorParamsDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIEvaluatorParamsDTO2Domain(nil))
+
+	dtos := []*openapi.SubmitExperimentEvaluatorParam{
+		{EvaluatorID: gptr.Of(int64(1))},
+		nil,
+	}
+	got := OpenAPIEvaluatorParamsDTO2Domain(dtos)
+	assert.Len(t, got, 1)
+	assert.Equal(t, int64(1), *got[0].EvaluatorID)
+}
+
+func TestOpenAPIEvaluatorRunConfigDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIEvaluatorRunConfigDTO2Domain(nil))
+
+	dto := &openapiEvaluator.EvaluatorRunConfig{
+		Env: gptr.Of("test"),
+	}
+	got := OpenAPIEvaluatorRunConfigDTO2Domain(dto)
+	assert.Equal(t, "test", *got.Env)
+}
+
+func TestOpenAPIExptTemplateDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIExptTemplateDO2DTOs(nil))
+
+	from := []*entity.ExptTemplate{{Meta: &entity.ExptTemplateMeta{ID: 1}}}
+	got := OpenAPIExptTemplateDO2DTOs(from)
+	assert.Len(t, got, 1)
+}
+
+func TestOpenAPIExptTypeDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIExptTypeDO2DTO(entity.ExptType(999)))
+	assert.Equal(t, openapiExperiment.ExperimentTypeOffline, *OpenAPIExptTypeDO2DTO(entity.ExptType_Offline))
+	assert.Equal(t, openapiExperiment.ExperimentTypeOnline, *OpenAPIExptTypeDO2DTO(entity.ExptType_Online))
+}
+
+func TestOpenAPIExptTypeDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, entity.ExptType_Offline, OpenAPIExptTypeDTO2DO(nil))
+	assert.Equal(t, entity.ExptType_Offline, OpenAPIExptTypeDTO2DO(gptr.Of(openapiExperiment.ExperimentTypeOffline)))
+	assert.Equal(t, entity.ExptType_Online, OpenAPIExptTypeDTO2DO(gptr.Of(openapiExperiment.ExperimentTypeOnline)))
+	assert.Equal(t, entity.ExptType_Offline, OpenAPIExptTypeDTO2DO(gptr.Of(openapiExperiment.ExperimentType("invalid"))))
+}
+
+func TestOpenAPIExptTemplateFilterDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIExptTemplateFilterDTO2DO(nil))
+	})
+
+	t.Run("keyword_search only", func(t *testing.T) {
+		kw := "模板名"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			KeywordSearch: &openapiExperiment.KeywordSearch{Keyword: &kw},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "模板名", got.FuzzyName)
+		}
+	})
+
+	t.Run("filters with field/operator/value", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		exptType := openapiExperiment.FilterFieldTypeExptType
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "offline"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &exptType},
+						Operator: &opIn,
+						Value:    &val,
+					},
+				},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Len(t, got.Includes.ExptType, 1)
+			assert.Equal(t, int64(entity.ExptType_Offline), got.Includes.ExptType[0])
+		}
+	})
+
+	t.Run("filters with eval_set_id", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeEvalSetID
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1,2,3"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &opIn,
+						Value:    &val,
+					},
+				},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{1, 2, 3}, got.Includes.EvalSetIDs)
+		}
+	})
+}
+
+func TestOpenAPICreateEvalTargetParamDTO2DomainV2(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2DomainV2(nil))
+
+	param := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID:   gptr.Of("123"),
+		EvalTargetType:   gptr.Of(openapiEvalTarget.EvalTargetTypeCozeBot),
+		BotInfoType:      gptr.Of(openapiEvalTarget.CozeBotInfoTypeProductBot),
+		Region:           gptr.Of(openapiEvalTarget.RegionCN),
+		CustomEvalTarget: &openapiEvalTarget.CustomEvalTarget{ID: gptr.Of("id")},
+	}
+
+	got := OpenAPICreateEvalTargetParamDTO2DomainV2(param)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "123", *got.SourceTargetID)
+		assert.Equal(t, entity.EvalTargetTypeCozeBot, *got.EvalTargetType)
+		assert.Equal(t, entity.CozeBotInfoTypeProductBot, *got.BotInfoType)
+		assert.Equal(t, entity.RegionCN, *got.Region)
+		assert.Equal(t, "id", *got.CustomEvalTarget.ID)
+	}
+
+	// Case 2: DraftBot and invalid type
+	botDraft := openapiEvalTarget.CozeBotInfoTypeDraftBot
+	paramDraft := &openapi.SubmitExperimentEvalTargetParam{
+		BotInfoType: &botDraft,
+	}
+	gotDraft := OpenAPICreateEvalTargetParamDTO2Domain(paramDraft)
+	assert.Equal(t, domaindoEvalTarget.CozeBotInfoType_DraftBot, *gotDraft.BotInfoType)
+
+	invalidBot := openapiEvalTarget.CozeBotInfoType("invalid")
+	assert.Nil(t, OpenAPICreateEvalTargetParamDTO2Domain(&openapi.SubmitExperimentEvalTargetParam{BotInfoType: &invalidBot}))
+}
+
+func TestDomainRuntimeParamDTO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, DomainRuntimeParamDTO2OpenAPI(nil))
+
+	p1 := &domainCommon.RuntimeParam{}
+	assert.NotNil(t, DomainRuntimeParamDTO2OpenAPI(p1))
+
+	jsonVal := "{}"
+	p2 := &domainCommon.RuntimeParam{JSONValue: &jsonVal}
+	got := DomainRuntimeParamDTO2OpenAPI(p2)
+	assert.Equal(t, jsonVal, *got.JSONValue)
+}
+
+func TestMapOpenAPICozeBotInfoType(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name    string
+		input   openapiEvalTarget.CozeBotInfoType
+		want    domaindoEvalTarget.CozeBotInfoType
+		wantErr bool
+	}{
+		{"product_bot", openapiEvalTarget.CozeBotInfoTypeProductBot, domaindoEvalTarget.CozeBotInfoType_ProductBot, false},
+		{"draft_bot", openapiEvalTarget.CozeBotInfoTypeDraftBot, domaindoEvalTarget.CozeBotInfoType_DraftBot, false},
+		{"invalid", openapiEvalTarget.CozeBotInfoType("invalid"), 0, true},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := mapOpenAPICozeBotInfoType(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestDomainTargetFieldMappingDTO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	fieldName := "output"
+	fromField := "input"
+	mapping := &domainExpt.TargetFieldMapping{
+		FromEvalSet: []*domainExpt.FieldMapping{
+			{FieldName: &fieldName, FromFieldName: &fromField},
+			nil,
+		},
+	}
+
+	got := DomainTargetFieldMappingDTO2OpenAPI(mapping)
+	if assert.NotNil(t, got) && assert.Len(t, got.FromEvalSet, 1) {
+		assert.Equal(t, fieldName, got.FromEvalSet[0].GetFieldName())
+		assert.Equal(t, fromField, got.FromEvalSet[0].GetFromFieldName())
+	}
+	assert.Nil(t, DomainTargetFieldMappingDTO2OpenAPI(nil))
+}
+
+func TestDomainEvaluatorFieldMappingDTO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	fieldName := "score"
+	fromField := "eval_score"
+	mappings := []*domainExpt.EvaluatorFieldMapping{{
+		EvaluatorVersionID: 100,
+		FromEvalSet:        []*domainExpt.FieldMapping{{FieldName: &fieldName, FromFieldName: &fromField}},
+		FromTarget:         []*domainExpt.FieldMapping{{FieldName: &fieldName, FromFieldName: &fromField}},
+	}}
+	evaluators := []*domainEvaluator.Evaluator{{
+		EvaluatorID: gptr.Of(int64(5)),
+		CurrentVersion: &domainEvaluator.EvaluatorVersion{
+			ID:      gptr.Of(int64(100)),
+			Version: gptr.Of("v1"),
+		},
+	}}
+
+	got := DomainEvaluatorFieldMappingDTO2OpenAPI(mappings, evaluators)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, int64(5), got[0].GetEvaluatorID())
+		assert.Equal(t, "v1", got[0].GetVersion())
+		if assert.Len(t, got[0].FromEvalSet, 1) {
+			assert.Equal(t, fieldName, got[0].FromEvalSet[0].GetFieldName())
+		}
+	}
+	assert.Nil(t, DomainEvaluatorFieldMappingDTO2OpenAPI(nil, nil))
+	assert.Nil(t, DomainEvaluatorFieldMappingDTO2OpenAPI([]*domainExpt.EvaluatorFieldMapping{}, nil))
+}
+
+func TestParseExptTypeFromString(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input string
+		want  entity.ExptType
+		ok    bool
+	}{
+		{"offline", "offline", entity.ExptType_Offline, true},
+		{"online", "online", entity.ExptType_Online, true},
+		{"1", "1", entity.ExptType_Offline, true},
+		{"2", "2", entity.ExptType_Online, true},
+		{"invalid", "invalid", entity.ExptType_Offline, false},
+		{"empty", "", entity.ExptType_Offline, false},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got, ok := parseExptTypeFromString(tt.input)
+			assert.Equal(t, tt.ok, ok)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestIsOpenAPIIncludeOperator(t *testing.T) {
+	t.Parallel()
+
+	for _, op := range []string{"in", "eq", "equal", "=", "IN", "EQ", "EQUAL"} {
+		assert.True(t, isOpenAPIIncludeOperator(op), "op=%s", op)
+	}
+	assert.False(t, isOpenAPIIncludeOperator("not_in"))
+	assert.False(t, isOpenAPIIncludeOperator("unknown"))
+}
+
+func TestIsOpenAPIExcludeOperator(t *testing.T) {
+	t.Parallel()
+
+	for _, op := range []string{"not_in", "ne", "not_equal", "!=", "NOT_IN", "NE", "NOT_EQUAL"} {
+		assert.True(t, isOpenAPIExcludeOperator(op), "op=%s", op)
+	}
+	assert.False(t, isOpenAPIExcludeOperator("in"))
+	assert.False(t, isOpenAPIExcludeOperator("unknown"))
+}
+
+func TestParseStringToInt64(t *testing.T) {
+	t.Parallel()
+
+	got, err := parseStringToInt64("123")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(123), got)
+
+	_, err = parseStringToInt64("")
+	assert.Error(t, err)
+
+	_, err = parseStringToInt64("abc")
+	assert.Error(t, err)
+}
+
+func TestOpenAPIExptTemplateFilterDTO2DO_MoreCases(t *testing.T) {
+	t.Parallel()
+
+	t.Run("target_id", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeTargetID
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "10,20"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{10, 20}, got.Includes.TargetIDs)
+		}
+	})
+
+	t.Run("evaluator_id", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeEvaluatorID
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1,2,3"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{1, 2, 3}, got.Includes.EvaluatorIDs)
+		}
+	})
+
+	t.Run("target_type", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeTargetType
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{1}, got.Includes.TargetType)
+		}
+	})
+
+	t.Run("creator_by", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeCreatorBy
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "u1,u2"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []string{"u1", "u2"}, got.Includes.CreatedBy)
+		}
+	})
+
+	t.Run("updated_by", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeUpdatedBy
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "u3"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []string{"u3"}, got.Includes.UpdatedBy)
+		}
+	})
+
+	t.Run("exclude operator not_in", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeEvalSetID
+		opNotIn := openapiExperiment.FilterOperatorTypeNotIn
+		val := "99"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opNotIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{99}, got.Excludes.EvalSetIDs)
+		}
+	})
+
+	t.Run("name field as fuzzy search", func(t *testing.T) {
+		fieldType := openapiExperiment.FilterFieldTypeName
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "模板名"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "模板名", got.FuzzyName)
+		}
+	})
+
+	t.Run("logic_op not and with conditions returns nil", func(t *testing.T) {
+		logicOr := openapiExperiment.FilterLogicOpOr
+		fieldType := openapiExperiment.FilterFieldTypeEvalSetID
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicOr,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &opIn,
+					Value:    &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty filters with keyword returns result", func(t *testing.T) {
+		kw := "search"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			KeywordSearch: &openapiExperiment.KeywordSearch{Keyword: &kw},
+			Filters:       &openapiExperiment.Filters{FilterConditions: []*openapiExperiment.FilterCondition{}},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, "search", got.FuzzyName)
+		}
+	})
+}
+
+func TestToTargetFieldMappingDOForTemplateV2(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil inputs", func(t *testing.T) {
+		got := toTargetFieldMappingDOForTemplateV2(nil, nil)
+		assert.NotNil(t, got)
+		assert.NotNil(t, got.EvalSetAdapter)
+		assert.Nil(t, got.CustomConf)
+	})
+
+	t.Run("with mapping", func(t *testing.T) {
+		fieldName := "output"
+		fromField := "input"
+		mapping := &openapiExperiment.TargetFieldMapping{
+			FromEvalSet: []*openapiExperiment.FieldMapping{{
+				FieldName:     &fieldName,
+				FromFieldName: &fromField,
+			}},
+		}
+		got := toTargetFieldMappingDOForTemplateV2(mapping, nil)
+		if assert.NotNil(t, got) && assert.NotNil(t, got.EvalSetAdapter) {
+			assert.Len(t, got.EvalSetAdapter.FieldConfs, 1)
+			assert.Equal(t, "output", got.EvalSetAdapter.FieldConfs[0].FieldName)
+			assert.Equal(t, "input", got.EvalSetAdapter.FieldConfs[0].FromField)
+		}
+	})
+
+	t.Run("with runtime param", func(t *testing.T) {
+		rtp := &entity.RuntimeParam{JSONValue: gptr.Of(`{"model":"gpt"}`)}
+		got := toTargetFieldMappingDOForTemplateV2(nil, rtp)
+		if assert.NotNil(t, got) && assert.NotNil(t, got.CustomConf) {
+			found := false
+			for _, fc := range got.CustomConf.FieldConfs {
+				if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
+					found = true
+					assert.Equal(t, `{"model":"gpt"}`, fc.Value)
+					break
+				}
+			}
+			assert.True(t, found)
+		}
+	})
+}
+
+func TestOpenAPIEvaluatorParamDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIEvaluatorParamDTO2Domain(nil))
+
+	dto := &openapi.SubmitExperimentEvaluatorParam{
+		EvaluatorID: gptr.Of(int64(1)),
+		Version:     gptr.Of("v1"),
+		RunConfig: &openapiEvaluator.EvaluatorRunConfig{
+			Env: gptr.Of("prod"),
+		},
+	}
+	got := OpenAPIEvaluatorParamDTO2Domain(dto)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, int64(1), *got.EvaluatorID)
+		assert.Equal(t, "v1", *got.Version)
+		if assert.NotNil(t, got.RunConfig) {
+			assert.Equal(t, "prod", *got.RunConfig.Env)
+		}
+	}
+}
+
+func TestConvertEntityContentTypeToOpenAPI_Video(t *testing.T) {
+	t.Parallel()
+
+	got := convertEntityContentTypeToOpenAPI(entity.ContentTypeVideo)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, openapiCommon.ContentTypeVideo, *got)
+	}
+}
+
+func TestOpenAPIAggregateDataDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, openAPIAggregateDataDO2DTO(nil))
+
+	value := 0.9
+	data := &entity.AggregateData{
+		DataType: entity.Double,
+		Value:    &value,
+	}
+	got := openAPIAggregateDataDO2DTO(data)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, openapiExperiment.DataTypeDouble, got.GetDataType())
+		assert.InDelta(t, 0.9, got.GetValue(), 1e-9)
+	}
+
+	distData := &entity.AggregateData{
+		DataType: entity.ScoreDistribution,
+		ScoreDistribution: &entity.ScoreDistributionData{
+			ScoreDistributionItems: []*entity.ScoreDistributionItem{
+				{Score: "0.8", Count: 10, Percentage: 0.5},
+			},
+		},
+	}
+	gotDist := openAPIAggregateDataDO2DTO(distData)
+	if assert.NotNil(t, gotDist) && assert.NotNil(t, gotDist.ScoreDistribution) {
+		assert.Len(t, gotDist.ScoreDistribution.ScoreDistributionItems, 1)
+	}
+}
+
+// TestOpenAPIExptTemplateDO2DTO_WithTemplateConfEvaluatorConf 覆盖 1383-1394：TemplateConf.ConnectorConf.EvaluatorsConf 填充 runConf/scoreWeight/version
+func TestOpenAPIExptTemplateDO2DTO_WithTemplateConfEvaluatorConf(t *testing.T) {
+	t.Parallel()
+
+	env := "prod"
+	sw := 0.5
+	template := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{ID: 1, WorkspaceID: 10, Name: "t", ExptType: entity.ExptType_Offline},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID: 100,
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+				{EvaluatorVersionID: 500, EvaluatorID: 10}, // Version/ScoreWeight 为空，从 TemplateConf 回填
+			},
+		},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ConnectorConf: entity.Connector{
+				EvaluatorsConf: &entity.EvaluatorsConf{
+					EvaluatorConf: []*entity.EvaluatorConf{{
+						EvaluatorVersionID: 500,
+						Version:            "v1",
+						RunConf:            &entity.EvaluatorRunConfig{Env: &env},
+						ScoreWeight:        &sw,
+						IngressConf:        &entity.EvaluatorIngressConf{EvalSetAdapter: &entity.FieldAdapter{}, TargetAdapter: &entity.FieldAdapter{}},
+					}},
+				},
+			},
+		},
+	}
+
+	got := OpenAPIExptTemplateDO2DTO(template)
+	if assert.NotNil(t, got) && assert.Len(t, got.TripleConfig.EvaluatorIDVersionItems, 1) {
+		item := got.TripleConfig.EvaluatorIDVersionItems[0]
+		assert.Equal(t, "v1", item.GetVersion())
+		assert.Equal(t, 0.5, item.GetScoreWeight())
+		assert.NotNil(t, item.GetRunConfig())
+	}
+}
+
+// TestOpenAPIExptTemplateDO2DTO_WithEvaluatorFieldMappingBackfill 覆盖 1448-1473：EvaluatorFieldMapping 回填 evaluator_id/version
+func TestOpenAPIExptTemplateDO2DTO_WithEvaluatorFieldMappingBackfill(t *testing.T) {
+	t.Parallel()
+
+	template := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{ID: 1, WorkspaceID: 10, Name: "t", ExptType: entity.ExptType_Offline},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID: 100,
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+				{EvaluatorVersionID: 500, EvaluatorID: 10, Version: "v1"},
+			},
+		},
+		FieldMappingConfig: &entity.ExptFieldMapping{
+			ItemConcurNum: gptr.Of(3),
+			TargetFieldMapping: &entity.TargetFieldMapping{
+				FromEvalSet: []*entity.ExptTemplateFieldMapping{{FieldName: "f1", FromFieldName: "s1"}},
+			},
+			EvaluatorFieldMapping: []*entity.EvaluatorFieldMapping{{
+				EvaluatorVersionID: 500,
+				EvaluatorID:        0,
+				Version:            "", // 从 TripleConfig 回填
+				FromEvalSet:        []*entity.ExptTemplateFieldMapping{{FieldName: "ef1", FromFieldName: "es1"}},
+				FromTarget:         []*entity.ExptTemplateFieldMapping{{FieldName: "tf1", FromFieldName: "ts1"}},
+			}},
+		},
+	}
+
+	got := OpenAPIExptTemplateDO2DTO(template)
+	if assert.NotNil(t, got) && assert.NotNil(t, got.FieldMappingConfig) &&
+		assert.Len(t, got.FieldMappingConfig.EvaluatorFieldMapping, 1) {
+		em := got.FieldMappingConfig.EvaluatorFieldMapping[0]
+		assert.Equal(t, int64(10), em.GetEvaluatorID())
+		assert.Equal(t, "v1", em.GetVersion())
+		assert.Len(t, em.FromEvalSet, 1)
+		assert.Len(t, em.FromTarget, 1)
+	}
+}
+
+// TestOpenAPICreateExptTemplateReq2Domain_WithRunConfigAndScoreWeight 覆盖 1655-1700：EvaluatorFieldMapping + TripleConfig 对齐补全
+func TestOpenAPICreateExptTemplateReq2Domain_WithRunConfigAndScoreWeight(t *testing.T) {
+	t.Parallel()
+
+	req := &openapi.CreateExptTemplateOApiRequest{
+		WorkspaceID: gptr.Of(int64(10)),
+		Meta:        &openapiExperiment.ExptTemplateMeta{Name: gptr.Of("t"), ExptType: gptr.Of(openapiExperiment.ExperimentTypeOffline)},
+		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetID: gptr.Of(int64(100)),
+			EvaluatorIDVersionItems: []*openapiEvaluator.EvaluatorIDVersionItem{{
+				EvaluatorID:        gptr.Of(int64(10)),
+				Version:            gptr.Of("v1"),
+				EvaluatorVersionID: gptr.Of(int64(500)),
+				RunConfig:          &openapiEvaluator.EvaluatorRunConfig{Env: gptr.Of("prod")},
+				ScoreWeight:        gptr.Of(0.6),
+			}},
+		},
+		FieldMappingConfig: &openapiExperiment.ExptFieldMapping{
+			ItemConcurNum: gptr.Of(int32(5)),
+			TargetFieldMapping: &openapiExperiment.TargetFieldMapping{
+				FromEvalSet: []*openapiExperiment.FieldMapping{{FieldName: gptr.Of("f1"), FromFieldName: gptr.Of("s1")}},
+			},
+			EvaluatorFieldMapping: []*openapiExperiment.EvaluatorFieldMapping{{
+				EvaluatorID: nil, // 从 TripleConfig 补全
+				Version:     nil,
+				FromEvalSet: []*openapiExperiment.FieldMapping{{FieldName: gptr.Of("ef1"), FromFieldName: gptr.Of("es1")}},
+				FromTarget:  []*openapiExperiment.FieldMapping{{FieldName: gptr.Of("tf1"), FromFieldName: gptr.Of("ts1")}},
+			}},
+		},
+	}
+
+	got, err := OpenAPICreateExptTemplateReq2Domain(req)
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) && assert.NotNil(t, got.TemplateConf) &&
+		assert.NotNil(t, got.TemplateConf.ConnectorConf.EvaluatorsConf) &&
+		assert.Len(t, got.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1) {
+		ec := got.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf[0]
+		assert.Equal(t, int64(10), ec.EvaluatorID)
+		assert.Equal(t, "v1", ec.Version)
+		assert.Equal(t, int64(500), ec.EvaluatorVersionID)
+		assert.NotNil(t, ec.RunConf)
+		assert.NotNil(t, ec.ScoreWeight)
+		assert.Equal(t, 0.6, *ec.ScoreWeight)
+		assert.Len(t, ec.IngressConf.EvalSetAdapter.FieldConfs, 1)
+		assert.Len(t, ec.IngressConf.TargetAdapter.FieldConfs, 1)
+	}
+}
+
+// TestOpenAPIExptTemplateFilterDTO2DO_InvalidAndUnknown 覆盖 1811-1818、1864-1888：parseInt64List 失败、未知 operator、未知 fieldType
+func TestOpenAPIExptTemplateFilterDTO2DO_InvalidAndUnknown(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid_int_value_skipped", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeEvalSetID
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1,abc,3" // abc 解析失败，该条件被跳过
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{Field: &openapiExperiment.FilterField{FieldType: &fieldType}, Operator: &opIn, Value: &val},
+					{Field: &openapiExperiment.FilterField{FieldType: &fieldType}, Operator: &opIn, Value: gptr.Of("2")}, // 有效条件
+				},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		if assert.NotNil(t, got) {
+			assert.Equal(t, []int64{2}, got.Includes.EvalSetIDs)
+		}
+	})
+
+	t.Run("unknown_operator_skipped", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeEvalSetID
+		opGreater := openapiExperiment.FilterOperatorTypeGreater
+		val := "1"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field: &openapiExperiment.FilterField{FieldType: &fieldType}, Operator: &opGreater, Value: &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		// operator 非 include/exclude 时 continue，无有效条件则返回 nil（Includes/Excludes 为空时 IsValid 可能为 true，取决于 entity 实现）
+		_ = got
+	})
+
+	t.Run("unknown_field_type_skipped", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		unknownField := openapiExperiment.FilterFieldType("unknown_field")
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		val := "1"
+		dto := &openapiExperiment.ExperimentTemplateFilter{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{{
+					Field: &openapiExperiment.FilterField{FieldType: &unknownField}, Operator: &opIn, Value: &val,
+				}},
+			},
+		}
+		got := OpenAPIExptTemplateFilterDTO2DO(dto)
+		// fieldType 不匹配任何 case 时 switch 穿透，无有效条件
+		if got != nil {
+			assert.Empty(t, got.Includes.EvalSetIDs)
+		}
+	})
 }

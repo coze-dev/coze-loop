@@ -19,6 +19,8 @@ import (
 type ExptRunMode int32
 
 const (
+	EvaluationModeUnknown ExptRunMode = 0
+
 	// EvaluationModeSubmit 创建后提交
 	EvaluationModeSubmit ExptRunMode = 1
 
@@ -27,6 +29,9 @@ const (
 
 	// EvaluationModeAppend 追加模式
 	EvaluationModeAppend ExptRunMode = 3
+
+	EvaluationModeRetryAll   ExptRunMode = 4
+	EvaluationModeRetryItems ExptRunMode = 5
 )
 
 type ItemRunState int64

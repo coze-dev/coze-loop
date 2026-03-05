@@ -521,6 +521,8 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			// default trajectory conf, not used in these cases (target type does not support trajectory)
 			deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+			// convEvalTargetRunErr (in ExecuteTarget defer) may call GetErrCtrl when record has EvalTargetRunError
+			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
 
 			var savedRecord *entity.EvalTargetRecord
@@ -775,6 +777,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).AnyTimes()
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
 
 				param.Session = &entity.Session{UserID: "user"}
 				param.OutputData = &entity.EvalTargetOutputData{
@@ -934,6 +937,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 
 			// main flow expectations (same as success case)
 			deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+			// convEvalTargetRunErr is called before SaveEvalTargetRecord when param.OutputData has EvalTargetRunError with Message
+			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
 			var saved *entity.EvalTargetRecord
 			deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
 				saved = rec
@@ -1353,6 +1358,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
 				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).Times(1)
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -1364,6 +1370,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
 				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.New("common error"))
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).Times(1)
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -1482,6 +1489,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 				evalTargetRepo: deps.repo,
 				idgen:          deps.idgen,
 				metric:         deps.metric,
+				configer:       deps.configer,
 				typedOperators: typedOps,
 			}
 

@@ -139,6 +139,139 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListEvaluatorsOApi": kitex.NewMethodInfo(
+		listEvaluatorsOApiHandler,
+		newEvaluationOpenAPIServiceListEvaluatorsOApiArgs,
+		newEvaluationOpenAPIServiceListEvaluatorsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetEvaluatorsOApi": kitex.NewMethodInfo(
+		batchGetEvaluatorsOApiHandler,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateEvaluatorOApi": kitex.NewMethodInfo(
+		createEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceCreateEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceCreateEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateEvaluatorOApi": kitex.NewMethodInfo(
+		updateEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceUpdateEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceUpdateEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateEvaluatorDraftOApi": kitex.NewMethodInfo(
+		updateEvaluatorDraftOApiHandler,
+		newEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs,
+		newEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteEvaluatorOApi": kitex.NewMethodInfo(
+		deleteEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceDeleteEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceDeleteEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListEvaluatorVersionsOApi": kitex.NewMethodInfo(
+		listEvaluatorVersionsOApiHandler,
+		newEvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs,
+		newEvaluationOpenAPIServiceListEvaluatorVersionsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetEvaluatorVersionsOApi": kitex.NewMethodInfo(
+		batchGetEvaluatorVersionsOApiHandler,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SubmitEvaluatorVersionOApi": kitex.NewMethodInfo(
+		submitEvaluatorVersionOApiHandler,
+		newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs,
+		newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RunEvaluatorOApi": kitex.NewMethodInfo(
+		runEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceRunEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceRunEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CorrectEvaluatorRecordOApi": kitex.NewMethodInfo(
+		correctEvaluatorRecordOApiHandler,
+		newEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs,
+		newEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetEvaluatorRecordsOApi": kitex.NewMethodInfo(
+		batchGetEvaluatorRecordsOApiHandler,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs,
+		newEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CreateExptTemplateOApi": kitex.NewMethodInfo(
+		createExptTemplateOApiHandler,
+		newEvaluationOpenAPIServiceCreateExptTemplateOApiArgs,
+		newEvaluationOpenAPIServiceCreateExptTemplateOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"BatchGetExptTemplatesOApi": kitex.NewMethodInfo(
+		batchGetExptTemplatesOApiHandler,
+		newEvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs,
+		newEvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateExptTemplateMetaOApi": kitex.NewMethodInfo(
+		updateExptTemplateMetaOApiHandler,
+		newEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs,
+		newEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"UpdateExptTemplateOApi": kitex.NewMethodInfo(
+		updateExptTemplateOApiHandler,
+		newEvaluationOpenAPIServiceUpdateExptTemplateOApiArgs,
+		newEvaluationOpenAPIServiceUpdateExptTemplateOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeleteExptTemplateOApi": kitex.NewMethodInfo(
+		deleteExptTemplateOApiHandler,
+		newEvaluationOpenAPIServiceDeleteExptTemplateOApiArgs,
+		newEvaluationOpenAPIServiceDeleteExptTemplateOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListExptTemplatesOApi": kitex.NewMethodInfo(
+		listExptTemplatesOApiHandler,
+		newEvaluationOpenAPIServiceListExptTemplatesOApiArgs,
+		newEvaluationOpenAPIServiceListExptTemplatesOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SubmitExptFromTemplateOApi": kitex.NewMethodInfo(
+		submitExptFromTemplateOApiHandler,
+		newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs,
+		newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -514,6 +647,367 @@ func newEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult() interface{} 
 	return openapi.NewEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult()
 }
 
+func listEvaluatorsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvaluatorsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvaluatorsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvaluatorsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvaluatorsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluatorsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvaluatorsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluatorsOApiResult()
+}
+
+func batchGetEvaluatorsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).BatchGetEvaluatorsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult()
+}
+
+func createEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).CreateEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceCreateEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCreateEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceCreateEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCreateEvaluatorOApiResult()
+}
+
+func updateEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluatorOApiResult()
+}
+
+func updateEvaluatorDraftOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateEvaluatorDraftOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult()
+}
+
+func deleteEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).DeleteEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceDeleteEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceDeleteEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteEvaluatorOApiResult()
+}
+
+func listEvaluatorVersionsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListEvaluatorVersionsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListEvaluatorVersionsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListEvaluatorVersionsOApiResult()
+}
+
+func batchGetEvaluatorVersionsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).BatchGetEvaluatorVersionsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult()
+}
+
+func submitEvaluatorVersionOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).SubmitEvaluatorVersionOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult()
+}
+
+func runEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).RunEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceRunEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceRunEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiResult()
+}
+
+func correctEvaluatorRecordOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).CorrectEvaluatorRecordOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult()
+}
+
+func batchGetEvaluatorRecordsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).BatchGetEvaluatorRecordsOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult()
+}
+
+func createExptTemplateOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).CreateExptTemplateOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceCreateExptTemplateOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCreateExptTemplateOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceCreateExptTemplateOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceCreateExptTemplateOApiResult()
+}
+
+func batchGetExptTemplatesOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).BatchGetExptTemplatesOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult()
+}
+
+func updateExptTemplateMetaOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateExptTemplateMetaOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult()
+}
+
+func updateExptTemplateOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).UpdateExptTemplateOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceUpdateExptTemplateOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptTemplateOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceUpdateExptTemplateOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceUpdateExptTemplateOApiResult()
+}
+
+func deleteExptTemplateOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).DeleteExptTemplateOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceDeleteExptTemplateOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteExptTemplateOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceDeleteExptTemplateOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceDeleteExptTemplateOApiResult()
+}
+
+func listExptTemplatesOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceListExptTemplatesOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceListExptTemplatesOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ListExptTemplatesOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceListExptTemplatesOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListExptTemplatesOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceListExptTemplatesOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceListExptTemplatesOApiResult()
+}
+
+func submitExptFromTemplateOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).SubmitExptFromTemplateOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -701,6 +1195,196 @@ func (p *kClient) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiResult
 	if err = p.c.Call(ctx, "GetExperimentAggrResultOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest) (r *openapi.ListEvaluatorsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvaluatorsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvaluatorsOApiResult
+	if err = p.c.Call(ctx, "ListEvaluatorsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetEvaluatorsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorsOApiRequest) (r *openapi.BatchGetEvaluatorsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceBatchGetEvaluatorsOApiResult
+	if err = p.c.Call(ctx, "BatchGetEvaluatorsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest) (r *openapi.CreateEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceCreateEvaluatorOApiResult
+	if err = p.c.Call(ctx, "CreateEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluatorOApi(ctx context.Context, req *openapi.UpdateEvaluatorOApiRequest) (r *openapi.UpdateEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateEvaluatorOApiResult
+	if err = p.c.Call(ctx, "UpdateEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateEvaluatorDraftOApi(ctx context.Context, req *openapi.UpdateEvaluatorDraftOApiRequest) (r *openapi.UpdateEvaluatorDraftOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateEvaluatorDraftOApiResult
+	if err = p.c.Call(ctx, "UpdateEvaluatorDraftOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteEvaluatorOApi(ctx context.Context, req *openapi.DeleteEvaluatorOApiRequest) (r *openapi.DeleteEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceDeleteEvaluatorOApiResult
+	if err = p.c.Call(ctx, "DeleteEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListEvaluatorVersionsOApi(ctx context.Context, req *openapi.ListEvaluatorVersionsOApiRequest) (r *openapi.ListEvaluatorVersionsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListEvaluatorVersionsOApiResult
+	if err = p.c.Call(ctx, "ListEvaluatorVersionsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetEvaluatorVersionsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorVersionsOApiRequest) (r *openapi.BatchGetEvaluatorVersionsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceBatchGetEvaluatorVersionsOApiResult
+	if err = p.c.Call(ctx, "BatchGetEvaluatorVersionsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SubmitEvaluatorVersionOApi(ctx context.Context, req *openapi.SubmitEvaluatorVersionOApiRequest) (r *openapi.SubmitEvaluatorVersionOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceSubmitEvaluatorVersionOApiResult
+	if err = p.c.Call(ctx, "SubmitEvaluatorVersionOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest) (r *openapi.RunEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceRunEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult
+	if err = p.c.Call(ctx, "RunEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest) (r *openapi.CorrectEvaluatorRecordOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult
+	if err = p.c.Call(ctx, "CorrectEvaluatorRecordOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetEvaluatorRecordsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorRecordsOApiRequest) (r *openapi.BatchGetEvaluatorRecordsOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceBatchGetEvaluatorRecordsOApiResult
+	if err = p.c.Call(ctx, "BatchGetEvaluatorRecordsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateExptTemplateOApi(ctx context.Context, req *openapi.CreateExptTemplateOApiRequest) (r *openapi.CreateExptTemplateOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceCreateExptTemplateOApiResult
+	if err = p.c.Call(ctx, "CreateExptTemplateOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetExptTemplatesOApi(ctx context.Context, req *openapi.BatchGetExptTemplatesOApiRequest) (r *openapi.BatchGetExptTemplatesOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceBatchGetExptTemplatesOApiResult
+	if err = p.c.Call(ctx, "BatchGetExptTemplatesOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExptTemplateMetaOApi(ctx context.Context, req *openapi.UpdateExptTemplateMetaOApiRequest) (r *openapi.UpdateExptTemplateMetaOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateExptTemplateMetaOApiResult
+	if err = p.c.Call(ctx, "UpdateExptTemplateMetaOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpdateExptTemplateOApi(ctx context.Context, req *openapi.UpdateExptTemplateOApiRequest) (r *openapi.UpdateExptTemplateOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceUpdateExptTemplateOApiResult
+	if err = p.c.Call(ctx, "UpdateExptTemplateOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeleteExptTemplateOApi(ctx context.Context, req *openapi.DeleteExptTemplateOApiRequest) (r *openapi.DeleteExptTemplateOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceDeleteExptTemplateOApiResult
+	if err = p.c.Call(ctx, "DeleteExptTemplateOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListExptTemplatesOApi(ctx context.Context, req *openapi.ListExptTemplatesOApiRequest) (r *openapi.ListExptTemplatesOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceListExptTemplatesOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceListExptTemplatesOApiResult
+	if err = p.c.Call(ctx, "ListExptTemplatesOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.SubmitExptFromTemplateOApiRequest) (r *openapi.SubmitExptFromTemplateOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult
+	if err = p.c.Call(ctx, "SubmitExptFromTemplateOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
