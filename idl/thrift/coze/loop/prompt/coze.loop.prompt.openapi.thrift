@@ -41,9 +41,7 @@ struct ExecuteRequest {
     22: optional ModelConfig custom_model_config (api.body="custom_model_config") // 自定义模型配置
     23: optional ResponseAPIConfig response_api_config (api.body="response_api_config") // response api 配置
     24: optional AccountMode account_mode (api.body="account_mode") // 账号模式（兼容字段）
-    25: optional list<CustomAccount> custom_accounts (api.body="custom_accounts") // 自定义模型账号（兼容字段）
     26: optional UsageScenario usage_scenario (api.body="usage_scenario") // 使用场景（兼容字段）
-    27: optional RequestExtra request_extra (api.body="request_extra") // 请求额外参数（兼容字段）
     28: optional string release_label (api.body="release_label") // 发布标签（兼容字段）
     29: optional ToolCallConfig custom_tool_config (api.body="custom_tool_config") // 自定义工具配置（兼容字段）
 
@@ -376,22 +374,6 @@ enum UsageScenario {
     AIAnnotate = 4
     AIScore = 5
     AITag = 6
-}
-
-struct RequestExtra {
-    1: optional string gpt_open_api_extra // GPT OpenAPI 平台透传参数
-}
-
-struct SkyLarkAccountExtra {
-    1: optional string access_key
-    2: optional string secret_key
-}
-
-struct CustomAccount {
-    1: optional string model_name // 模型名称
-    2: optional string api_key // 模型账号
-    3: optional SkyLarkAccountExtra sky_lark_account_extra // SkyLark账号扩展
-    4: optional i64 connector_id (api.js_conv='true', go.tag='json:"connector_id"') // connector id
 }
 
 struct ParamConfigValue {
