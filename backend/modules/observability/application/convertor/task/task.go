@@ -140,9 +140,11 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 		}
 	}
 	return &task.AutoEvaluateConfig{
-		EvaluatorVersionID: v.EvaluatorVersionID,
-		EvaluatorID:        v.EvaluatorID,
-		FieldMappings:      fieldMappings,
+		EvaluatorVersionID:   v.EvaluatorVersionID,
+		EvaluatorID:          v.EvaluatorID,
+		FieldMappings:        fieldMappings,
+		ItemConcurrencyCount: v.ItemConcurrencyCount,
+		ItemMaxRetryCount:    v.ItemMaxRetryCount,
 	}
 }
 
@@ -433,9 +435,11 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 
 		}
 		autoEvaluateConfigs = append(autoEvaluateConfigs, &entity.AutoEvaluateConfig{
-			EvaluatorVersionID: autoEvaluateConfig.EvaluatorVersionID,
-			EvaluatorID:        autoEvaluateConfig.EvaluatorID,
-			FieldMappings:      fieldMappings,
+			EvaluatorVersionID:   autoEvaluateConfig.EvaluatorVersionID,
+			EvaluatorID:          autoEvaluateConfig.EvaluatorID,
+			FieldMappings:        fieldMappings,
+			ItemConcurrencyCount: autoEvaluateConfig.ItemConcurrencyCount,
+			ItemMaxRetryCount:    autoEvaluateConfig.ItemMaxRetryCount,
 		})
 	}
 	dataReflowConfigs := make([]*entity.DataReflowConfig, 0, len(taskConfig.DataReflowConfig))

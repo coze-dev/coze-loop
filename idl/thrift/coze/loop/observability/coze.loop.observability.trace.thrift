@@ -271,10 +271,9 @@ struct ListAnnotationsResponse {
 
 struct ListWorkspaceAnnotationsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
-    3: optional common.PlatformType platform_type (api.body="platform_type")
-    5: optional annotation.AnnotationType annotation_type(api.body="annotation_type")
-    6: optional common.SpanListType span_list_type (api.body="span_list_type")
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional annotation.AnnotationType annotation_type(api.body="annotation_type")
+    4: optional common.SpanListType span_list_type (api.body="span_list_type")
 
     255: optional base.Base Base
 }
@@ -442,10 +441,8 @@ struct ListTrajectoryResponse {
 
 struct ListMetadataRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
-    2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
-    3: optional common.PlatformType platform_type (api.body="platform_type")
-    4: optional common.SpanListType span_list_type (api.body="span_list_type")
-
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional common.SpanListType span_list_type (api.body="span_list_type")
 
     255: optional base.Base Base
 }

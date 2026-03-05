@@ -12928,10 +12928,9 @@ func (p *ListAnnotationsResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 type ListWorkspaceAnnotationsRequest struct {
 	WorkspaceID    int64                      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	StartTime      int64                      `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
-	PlatformType   *common.PlatformType       `thrift:"platform_type,3,optional" frugal:"3,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	AnnotationType *annotation.AnnotationType `thrift:"annotation_type,5,optional" frugal:"5,optional,string" form:"annotation_type" json:"annotation_type,omitempty"`
-	SpanListType   *common.SpanListType       `thrift:"span_list_type,6,optional" frugal:"6,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	PlatformType   *common.PlatformType       `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	AnnotationType *annotation.AnnotationType `thrift:"annotation_type,3,optional" frugal:"3,optional,string" form:"annotation_type" json:"annotation_type,omitempty"`
+	SpanListType   *common.SpanListType       `thrift:"span_list_type,4,optional" frugal:"4,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
 	Base           *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -12945,13 +12944,6 @@ func (p *ListWorkspaceAnnotationsRequest) InitDefault() {
 func (p *ListWorkspaceAnnotationsRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
-	}
-	return
-}
-
-func (p *ListWorkspaceAnnotationsRequest) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
 	}
 	return
 }
@@ -13006,9 +12998,6 @@ func (p *ListWorkspaceAnnotationsRequest) GetBase() (v *base.Base) {
 func (p *ListWorkspaceAnnotationsRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ListWorkspaceAnnotationsRequest) SetStartTime(val int64) {
-	p.StartTime = val
-}
 func (p *ListWorkspaceAnnotationsRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
@@ -13024,10 +13013,9 @@ func (p *ListWorkspaceAnnotationsRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_ListWorkspaceAnnotationsRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "start_time",
-	3:   "platform_type",
-	5:   "annotation_type",
-	6:   "span_list_type",
+	2:   "platform_type",
+	3:   "annotation_type",
+	4:   "span_list_type",
 	255: "Base",
 }
 
@@ -13051,7 +13039,6 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetStartTime bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -13077,11 +13064,10 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -13093,17 +13079,9 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 5:
+		case 4:
 			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField6(iprot); err != nil {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13132,11 +13110,6 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 
 	if !issetWorkspaceID {
 		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetStartTime {
-		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -13170,17 +13143,6 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField1(iprot thrift.TProtocol) err
 }
 func (p *ListWorkspaceAnnotationsRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.StartTime = _field
-	return nil
-}
-func (p *ListWorkspaceAnnotationsRequest) ReadField3(iprot thrift.TProtocol) error {
-
 	var _field *common.PlatformType
 	if v, err := iprot.ReadString(); err != nil {
 		return err
@@ -13190,7 +13152,7 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField3(iprot thrift.TProtocol) err
 	p.PlatformType = _field
 	return nil
 }
-func (p *ListWorkspaceAnnotationsRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *ListWorkspaceAnnotationsRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *annotation.AnnotationType
 	if v, err := iprot.ReadString(); err != nil {
@@ -13201,7 +13163,7 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField5(iprot thrift.TProtocol) err
 	p.AnnotationType = _field
 	return nil
 }
-func (p *ListWorkspaceAnnotationsRequest) ReadField6(iprot thrift.TProtocol) error {
+func (p *ListWorkspaceAnnotationsRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *common.SpanListType
 	if v, err := iprot.ReadString(); err != nil {
@@ -13239,12 +13201,8 @@ func (p *ListWorkspaceAnnotationsRequest) Write(oprot thrift.TProtocol) (err err
 			fieldId = 3
 			goto WriteFieldError
 		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -13286,14 +13244,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *ListWorkspaceAnnotationsRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetPlatformType() {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PlatformType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -13302,11 +13262,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ListWorkspaceAnnotationsRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetPlatformType() {
-		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 3); err != nil {
+	if p.IsSetAnnotationType() {
+		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.PlatformType); err != nil {
+		if err := oprot.WriteString(*p.AnnotationType); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -13319,27 +13279,9 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListWorkspaceAnnotationsRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetAnnotationType() {
-		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.AnnotationType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
-func (p *ListWorkspaceAnnotationsRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ListWorkspaceAnnotationsRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSpanListType() {
-		if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 6); err != nil {
+		if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.SpanListType); err != nil {
@@ -13351,9 +13293,9 @@ func (p *ListWorkspaceAnnotationsRequest) writeField6(oprot thrift.TProtocol) (e
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ListWorkspaceAnnotationsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -13391,16 +13333,13 @@ func (p *ListWorkspaceAnnotationsRequest) DeepEqual(ano *ListWorkspaceAnnotation
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.StartTime) {
+	if !p.Field2DeepEqual(ano.PlatformType) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.PlatformType) {
+	if !p.Field3DeepEqual(ano.AnnotationType) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.AnnotationType) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.SpanListType) {
+	if !p.Field4DeepEqual(ano.SpanListType) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -13416,14 +13355,7 @@ func (p *ListWorkspaceAnnotationsRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *ListWorkspaceAnnotationsRequest) Field2DeepEqual(src int64) bool {
-
-	if p.StartTime != src {
-		return false
-	}
-	return true
-}
-func (p *ListWorkspaceAnnotationsRequest) Field3DeepEqual(src *common.PlatformType) bool {
+func (p *ListWorkspaceAnnotationsRequest) Field2DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
 		return true
@@ -13435,7 +13367,7 @@ func (p *ListWorkspaceAnnotationsRequest) Field3DeepEqual(src *common.PlatformTy
 	}
 	return true
 }
-func (p *ListWorkspaceAnnotationsRequest) Field5DeepEqual(src *annotation.AnnotationType) bool {
+func (p *ListWorkspaceAnnotationsRequest) Field3DeepEqual(src *annotation.AnnotationType) bool {
 
 	if p.AnnotationType == src {
 		return true
@@ -13447,7 +13379,7 @@ func (p *ListWorkspaceAnnotationsRequest) Field5DeepEqual(src *annotation.Annota
 	}
 	return true
 }
-func (p *ListWorkspaceAnnotationsRequest) Field6DeepEqual(src *common.SpanListType) bool {
+func (p *ListWorkspaceAnnotationsRequest) Field4DeepEqual(src *common.SpanListType) bool {
 
 	if p.SpanListType == src {
 		return true
@@ -21773,13 +21705,9 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListMetadataRequest struct {
-	WorkspaceID int64 `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	// ms
-	StartTime int64 `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
-	// ms
-	EndTime      int64                `thrift:"end_time,3,required" frugal:"3,required,i64" json:"end_time" form:"end_time,required" `
-	PlatformType *common.PlatformType `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	SpanListType *common.SpanListType `thrift:"span_list_type,7,optional" frugal:"7,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	PlatformType *common.PlatformType `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	SpanListType *common.SpanListType `thrift:"span_list_type,3,optional" frugal:"3,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -21793,20 +21721,6 @@ func (p *ListMetadataRequest) InitDefault() {
 func (p *ListMetadataRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
-	}
-	return
-}
-
-func (p *ListMetadataRequest) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
-	}
-	return
-}
-
-func (p *ListMetadataRequest) GetEndTime() (v int64) {
-	if p != nil {
-		return p.EndTime
 	}
 	return
 }
@@ -21849,12 +21763,6 @@ func (p *ListMetadataRequest) GetBase() (v *base.Base) {
 func (p *ListMetadataRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ListMetadataRequest) SetStartTime(val int64) {
-	p.StartTime = val
-}
-func (p *ListMetadataRequest) SetEndTime(val int64) {
-	p.EndTime = val
-}
 func (p *ListMetadataRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
@@ -21867,10 +21775,8 @@ func (p *ListMetadataRequest) SetBase(val *base.Base) {
 
 var fieldIDToName_ListMetadataRequest = map[int16]string{
 	1:   "workspace_id",
-	2:   "start_time",
-	3:   "end_time",
-	6:   "platform_type",
-	7:   "span_list_type",
+	2:   "platform_type",
+	3:   "span_list_type",
 	255: "Base",
 }
 
@@ -21890,8 +21796,6 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -21917,34 +21821,16 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetEndTime = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 7:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21973,16 +21859,6 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetWorkspaceID {
 		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetStartTime {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 3
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -22016,28 +21892,6 @@ func (p *ListMetadataRequest) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *ListMetadataRequest) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.StartTime = _field
-	return nil
-}
-func (p *ListMetadataRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.EndTime = _field
-	return nil
-}
-func (p *ListMetadataRequest) ReadField6(iprot thrift.TProtocol) error {
-
 	var _field *common.PlatformType
 	if v, err := iprot.ReadString(); err != nil {
 		return err
@@ -22047,7 +21901,7 @@ func (p *ListMetadataRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
-func (p *ListMetadataRequest) ReadField7(iprot thrift.TProtocol) error {
+func (p *ListMetadataRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *common.SpanListType
 	if v, err := iprot.ReadString(); err != nil {
@@ -22083,14 +21937,6 @@ func (p *ListMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
-			goto WriteFieldError
-		}
-		if err = p.writeField7(oprot); err != nil {
-			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -22132,40 +21978,8 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *ListMetadataRequest) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *ListMetadataRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("end_time", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EndTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *ListMetadataRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
-		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 6); err != nil {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.PlatformType); err != nil {
@@ -22177,13 +21991,13 @@ func (p *ListMetadataRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListMetadataRequest) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *ListMetadataRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSpanListType() {
-		if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 7); err != nil {
+		if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.SpanListType); err != nil {
@@ -22195,9 +22009,9 @@ func (p *ListMetadataRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ListMetadataRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -22235,16 +22049,10 @@ func (p *ListMetadataRequest) DeepEqual(ano *ListMetadataRequest) bool {
 	if !p.Field1DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.StartTime) {
+	if !p.Field2DeepEqual(ano.PlatformType) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.EndTime) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.PlatformType) {
-		return false
-	}
-	if !p.Field7DeepEqual(ano.SpanListType) {
+	if !p.Field3DeepEqual(ano.SpanListType) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -22260,21 +22068,7 @@ func (p *ListMetadataRequest) Field1DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field2DeepEqual(src int64) bool {
-
-	if p.StartTime != src {
-		return false
-	}
-	return true
-}
-func (p *ListMetadataRequest) Field3DeepEqual(src int64) bool {
-
-	if p.EndTime != src {
-		return false
-	}
-	return true
-}
-func (p *ListMetadataRequest) Field6DeepEqual(src *common.PlatformType) bool {
+func (p *ListMetadataRequest) Field2DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
 		return true
@@ -22286,7 +22080,7 @@ func (p *ListMetadataRequest) Field6DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field7DeepEqual(src *common.SpanListType) bool {
+func (p *ListMetadataRequest) Field3DeepEqual(src *common.SpanListType) bool {
 
 	if p.SpanListType == src {
 		return true

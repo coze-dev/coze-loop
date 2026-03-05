@@ -344,9 +344,6 @@ func (p *ListWorkspaceAnnotationsRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
-	if p.StartTime <= int64(0) {
-		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

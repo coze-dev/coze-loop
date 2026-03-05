@@ -3150,9 +3150,11 @@ func (p *DataReflowConfig) Field5DeepEqual(src *dataset0.DatasetCategory) bool {
 }
 
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID int64                   `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
-	EvaluatorID        int64                   `thrift:"evaluator_id,2,required" frugal:"2,required,i64" json:"evaluator_id" form:"evaluator_id,required" query:"evaluator_id,required"`
-	FieldMappings      []*EvaluateFieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<EvaluateFieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
+	EvaluatorVersionID   int64                   `thrift:"evaluator_version_id,1,required" frugal:"1,required,i64" json:"evaluator_version_id" form:"evaluator_version_id,required" query:"evaluator_version_id,required"`
+	EvaluatorID          int64                   `thrift:"evaluator_id,2,required" frugal:"2,required,i64" json:"evaluator_id" form:"evaluator_id,required" query:"evaluator_id,required"`
+	FieldMappings        []*EvaluateFieldMapping `thrift:"field_mappings,3,required" frugal:"3,required,list<EvaluateFieldMapping>" form:"field_mappings,required" json:"field_mappings,required" query:"field_mappings,required"`
+	ItemConcurrencyCount *int64                  `thrift:"item_concurrency_count,4,optional" frugal:"4,optional,i64" json:"item_concurrency_count" form:"item_concurrency_count" query:"item_concurrency_count"`
+	ItemMaxRetryCount    *int64                  `thrift:"item_max_retry_count,5,optional" frugal:"5,optional,i64" json:"item_max_retry_count" form:"item_max_retry_count" query:"item_max_retry_count"`
 }
 
 func NewAutoEvaluateConfig() *AutoEvaluateConfig {
@@ -3182,6 +3184,30 @@ func (p *AutoEvaluateConfig) GetFieldMappings() (v []*EvaluateFieldMapping) {
 	}
 	return
 }
+
+var AutoEvaluateConfig_ItemConcurrencyCount_DEFAULT int64
+
+func (p *AutoEvaluateConfig) GetItemConcurrencyCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemConcurrencyCount() {
+		return AutoEvaluateConfig_ItemConcurrencyCount_DEFAULT
+	}
+	return *p.ItemConcurrencyCount
+}
+
+var AutoEvaluateConfig_ItemMaxRetryCount_DEFAULT int64
+
+func (p *AutoEvaluateConfig) GetItemMaxRetryCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemMaxRetryCount() {
+		return AutoEvaluateConfig_ItemMaxRetryCount_DEFAULT
+	}
+	return *p.ItemMaxRetryCount
+}
 func (p *AutoEvaluateConfig) SetEvaluatorVersionID(val int64) {
 	p.EvaluatorVersionID = val
 }
@@ -3191,11 +3217,27 @@ func (p *AutoEvaluateConfig) SetEvaluatorID(val int64) {
 func (p *AutoEvaluateConfig) SetFieldMappings(val []*EvaluateFieldMapping) {
 	p.FieldMappings = val
 }
+func (p *AutoEvaluateConfig) SetItemConcurrencyCount(val *int64) {
+	p.ItemConcurrencyCount = val
+}
+func (p *AutoEvaluateConfig) SetItemMaxRetryCount(val *int64) {
+	p.ItemMaxRetryCount = val
+}
 
 var fieldIDToName_AutoEvaluateConfig = map[int16]string{
 	1: "evaluator_version_id",
 	2: "evaluator_id",
 	3: "field_mappings",
+	4: "item_concurrency_count",
+	5: "item_max_retry_count",
+}
+
+func (p *AutoEvaluateConfig) IsSetItemConcurrencyCount() bool {
+	return p.ItemConcurrencyCount != nil
+}
+
+func (p *AutoEvaluateConfig) IsSetItemMaxRetryCount() bool {
+	return p.ItemMaxRetryCount != nil
 }
 
 func (p *AutoEvaluateConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -3243,6 +3285,22 @@ func (p *AutoEvaluateConfig) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetFieldMappings = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -3336,6 +3394,28 @@ func (p *AutoEvaluateConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.FieldMappings = _field
 	return nil
 }
+func (p *AutoEvaluateConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemConcurrencyCount = _field
+	return nil
+}
+func (p *AutoEvaluateConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemMaxRetryCount = _field
+	return nil
+}
 
 func (p *AutoEvaluateConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3353,6 +3433,14 @@ func (p *AutoEvaluateConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -3429,6 +3517,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *AutoEvaluateConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemConcurrencyCount() {
+		if err = oprot.WriteFieldBegin("item_concurrency_count", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemConcurrencyCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *AutoEvaluateConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemMaxRetryCount() {
+		if err = oprot.WriteFieldBegin("item_max_retry_count", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemMaxRetryCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *AutoEvaluateConfig) String() string {
 	if p == nil {
@@ -3451,6 +3575,12 @@ func (p *AutoEvaluateConfig) DeepEqual(ano *AutoEvaluateConfig) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.FieldMappings) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ItemConcurrencyCount) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.ItemMaxRetryCount) {
 		return false
 	}
 	return true
@@ -3480,6 +3610,30 @@ func (p *AutoEvaluateConfig) Field3DeepEqual(src []*EvaluateFieldMapping) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *AutoEvaluateConfig) Field4DeepEqual(src *int64) bool {
+
+	if p.ItemConcurrencyCount == src {
+		return true
+	} else if p.ItemConcurrencyCount == nil || src == nil {
+		return false
+	}
+	if *p.ItemConcurrencyCount != *src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluateConfig) Field5DeepEqual(src *int64) bool {
+
+	if p.ItemMaxRetryCount == src {
+		return true
+	} else if p.ItemMaxRetryCount == nil || src == nil {
+		return false
+	}
+	if *p.ItemMaxRetryCount != *src {
+		return false
 	}
 	return true
 }

@@ -92,6 +92,8 @@ struct AutoEvaluateConfig {
     1: required i64 evaluator_version_id (api.js_conv="true", go.tag='json:"evaluator_version_id"')
     2: required i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
     3: required list<EvaluateFieldMapping> field_mappings
+    4: optional i64 item_concurrency_count (api.js_conv="true",  go.tag='json:"item_concurrency_count"')
+    5: optional i64 item_max_retry_count (api.js_conv="true", go.tag='json:"item_max_retry_count"')
 }
 
 // RunDetail

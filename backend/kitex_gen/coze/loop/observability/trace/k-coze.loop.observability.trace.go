@@ -9604,7 +9604,6 @@ func (p *ListWorkspaceAnnotationsRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetStartTime bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -9631,13 +9630,12 @@ func (p *ListWorkspaceAnnotationsRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -9659,23 +9657,9 @@ func (p *ListWorkspaceAnnotationsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 5:
+		case 4:
 			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField5(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField6(buf[offset:])
+				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -9714,11 +9698,6 @@ func (p *ListWorkspaceAnnotationsRequest) FastRead(buf []byte) (int, error) {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -9747,20 +9726,6 @@ func (p *ListWorkspaceAnnotationsRequest) FastReadField1(buf []byte) (int, error
 func (p *ListWorkspaceAnnotationsRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.StartTime = _field
-	return offset, nil
-}
-
-func (p *ListWorkspaceAnnotationsRequest) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-
 	var _field *common.PlatformType
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
@@ -9772,7 +9737,7 @@ func (p *ListWorkspaceAnnotationsRequest) FastReadField3(buf []byte) (int, error
 	return offset, nil
 }
 
-func (p *ListWorkspaceAnnotationsRequest) FastReadField5(buf []byte) (int, error) {
+func (p *ListWorkspaceAnnotationsRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *annotation.AnnotationType
@@ -9786,7 +9751,7 @@ func (p *ListWorkspaceAnnotationsRequest) FastReadField5(buf []byte) (int, error
 	return offset, nil
 }
 
-func (p *ListWorkspaceAnnotationsRequest) FastReadField6(buf []byte) (int, error) {
+func (p *ListWorkspaceAnnotationsRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *common.SpanListType
@@ -9822,8 +9787,7 @@ func (p *ListWorkspaceAnnotationsRequest) FastWriteNocopy(buf []byte, w thrift.N
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
-		offset += p.fastWriteField5(buf[offset:], w)
-		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -9836,8 +9800,7 @@ func (p *ListWorkspaceAnnotationsRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
-		l += p.field5Length()
-		l += p.field6Length()
+		l += p.field4Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -9853,33 +9816,26 @@ func (p *ListWorkspaceAnnotationsRequest) fastWriteField1(buf []byte, w thrift.N
 
 func (p *ListWorkspaceAnnotationsRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
-	return offset
-}
-
-func (p *ListWorkspaceAnnotationsRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
 	if p.IsSetPlatformType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
 	}
 	return offset
 }
 
-func (p *ListWorkspaceAnnotationsRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListWorkspaceAnnotationsRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetAnnotationType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AnnotationType)
 	}
 	return offset
 }
 
-func (p *ListWorkspaceAnnotationsRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListWorkspaceAnnotationsRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSpanListType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanListType)
 	}
 	return offset
@@ -9903,13 +9859,6 @@ func (p *ListWorkspaceAnnotationsRequest) field1Length() int {
 
 func (p *ListWorkspaceAnnotationsRequest) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
-	return l
-}
-
-func (p *ListWorkspaceAnnotationsRequest) field3Length() int {
-	l := 0
 	if p.IsSetPlatformType() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.PlatformType)
@@ -9917,7 +9866,7 @@ func (p *ListWorkspaceAnnotationsRequest) field3Length() int {
 	return l
 }
 
-func (p *ListWorkspaceAnnotationsRequest) field5Length() int {
+func (p *ListWorkspaceAnnotationsRequest) field3Length() int {
 	l := 0
 	if p.IsSetAnnotationType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -9926,7 +9875,7 @@ func (p *ListWorkspaceAnnotationsRequest) field5Length() int {
 	return l
 }
 
-func (p *ListWorkspaceAnnotationsRequest) field6Length() int {
+func (p *ListWorkspaceAnnotationsRequest) field4Length() int {
 	l := 0
 	if p.IsSetSpanListType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -9951,8 +9900,6 @@ func (p *ListWorkspaceAnnotationsRequest) DeepCopy(s interface{}) error {
 	}
 
 	p.WorkspaceID = src.WorkspaceID
-
-	p.StartTime = src.StartTime
 
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType
@@ -16215,8 +16162,6 @@ func (p *ListMetadataRequest) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -16243,13 +16188,12 @@ func (p *ListMetadataRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -16258,37 +16202,8 @@ func (p *ListMetadataRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField3(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-				issetEndTime = true
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 6:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField6(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 7:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField7(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -16327,16 +16242,6 @@ func (p *ListMetadataRequest) FastRead(buf []byte) (int, error) {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -16365,34 +16270,6 @@ func (p *ListMetadataRequest) FastReadField1(buf []byte) (int, error) {
 func (p *ListMetadataRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.StartTime = _field
-	return offset, nil
-}
-
-func (p *ListMetadataRequest) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-
-	var _field int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = v
-	}
-	p.EndTime = _field
-	return offset, nil
-}
-
-func (p *ListMetadataRequest) FastReadField6(buf []byte) (int, error) {
-	offset := 0
-
 	var _field *common.PlatformType
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
@@ -16404,7 +16281,7 @@ func (p *ListMetadataRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ListMetadataRequest) FastReadField7(buf []byte) (int, error) {
+func (p *ListMetadataRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *common.SpanListType
@@ -16440,8 +16317,6 @@ func (p *ListMetadataRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
-		offset += p.fastWriteField6(buf[offset:], w)
-		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -16454,8 +16329,6 @@ func (p *ListMetadataRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
-		l += p.field6Length()
-		l += p.field7Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -16471,31 +16344,17 @@ func (p *ListMetadataRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter)
 
 func (p *ListMetadataRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
-	return offset
-}
-
-func (p *ListMetadataRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EndTime)
-	return offset
-}
-
-func (p *ListMetadataRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
 	if p.IsSetPlatformType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PlatformType)
 	}
 	return offset
 }
 
-func (p *ListMetadataRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListMetadataRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSpanListType() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanListType)
 	}
 	return offset
@@ -16519,20 +16378,6 @@ func (p *ListMetadataRequest) field1Length() int {
 
 func (p *ListMetadataRequest) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
-	return l
-}
-
-func (p *ListMetadataRequest) field3Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
-	return l
-}
-
-func (p *ListMetadataRequest) field6Length() int {
-	l := 0
 	if p.IsSetPlatformType() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.PlatformType)
@@ -16540,7 +16385,7 @@ func (p *ListMetadataRequest) field6Length() int {
 	return l
 }
 
-func (p *ListMetadataRequest) field7Length() int {
+func (p *ListMetadataRequest) field3Length() int {
 	l := 0
 	if p.IsSetSpanListType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16565,10 +16410,6 @@ func (p *ListMetadataRequest) DeepCopy(s interface{}) error {
 	}
 
 	p.WorkspaceID = src.WorkspaceID
-
-	p.StartTime = src.StartTime
-
-	p.EndTime = src.EndTime
 
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType

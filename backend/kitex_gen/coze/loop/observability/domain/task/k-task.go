@@ -2305,6 +2305,34 @@ func (p *AutoEvaluateConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2392,6 +2420,34 @@ func (p *AutoEvaluateConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *AutoEvaluateConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemConcurrencyCount = _field
+	return offset, nil
+}
+
+func (p *AutoEvaluateConfig) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ItemMaxRetryCount = _field
+	return offset, nil
+}
+
 func (p *AutoEvaluateConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2401,6 +2457,8 @@ func (p *AutoEvaluateConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2413,6 +2471,8 @@ func (p *AutoEvaluateConfig) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2446,6 +2506,24 @@ func (p *AutoEvaluateConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
+func (p *AutoEvaluateConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemConcurrencyCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ItemConcurrencyCount)
+	}
+	return offset
+}
+
+func (p *AutoEvaluateConfig) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetItemMaxRetryCount() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ItemMaxRetryCount)
+	}
+	return offset
+}
+
 func (p *AutoEvaluateConfig) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -2467,6 +2545,24 @@ func (p *AutoEvaluateConfig) field3Length() int {
 	for _, v := range p.FieldMappings {
 		_ = v
 		l += v.BLength()
+	}
+	return l
+}
+
+func (p *AutoEvaluateConfig) field4Length() int {
+	l := 0
+	if p.IsSetItemConcurrencyCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *AutoEvaluateConfig) field5Length() int {
+	l := 0
+	if p.IsSetItemMaxRetryCount() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
 	}
 	return l
 }
@@ -2494,6 +2590,16 @@ func (p *AutoEvaluateConfig) DeepCopy(s interface{}) error {
 
 			p.FieldMappings = append(p.FieldMappings, _elem)
 		}
+	}
+
+	if src.ItemConcurrencyCount != nil {
+		tmp := *src.ItemConcurrencyCount
+		p.ItemConcurrencyCount = &tmp
+	}
+
+	if src.ItemMaxRetryCount != nil {
+		tmp := *src.ItemMaxRetryCount
+		p.ItemMaxRetryCount = &tmp
 	}
 
 	return nil

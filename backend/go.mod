@@ -99,7 +99,6 @@ require (
 require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 
 require (
-	code.byted.org/security/go-polaris/sql v1.33.1
 	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/coze-dev/coze-loop/backend/modules/observability/lib v0.0.0-00010101000000-000000000000
 	github.com/coze-dev/cozeloop-go v0.1.16

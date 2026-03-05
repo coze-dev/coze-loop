@@ -113,9 +113,11 @@ type TaskConfig struct {
 	DataReflowConfig    []*DataReflowConfig
 }
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID int64                   `json:"evaluator_version_id"`
-	EvaluatorID        int64                   `json:"evaluator_id"`
-	FieldMappings      []*EvaluateFieldMapping `json:"field_mappings"`
+	EvaluatorVersionID   int64                   `json:"evaluator_version_id"`
+	EvaluatorID          int64                   `json:"evaluator_id"`
+	FieldMappings        []*EvaluateFieldMapping `json:"field_mappings"`
+	ItemConcurrencyCount *int64                  `json:"item_concurrency_count,omitempty"`
+	ItemMaxRetryCount    *int64                  `json:"item_max_retry_count,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束

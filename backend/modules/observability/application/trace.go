@@ -634,25 +634,15 @@ func (t *TraceApplication) validateListMetadataReq(ctx context.Context, req *tra
 	} else if req.GetWorkspaceID() <= 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	}
-	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
-		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
-	}
-	newStartTime, newEndTime, err := v.CorrectDate()
-	if err != nil {
-		return err
-	}
-	req.SetStartTime(newStartTime)
-	req.SetEndTime(newEndTime)
 	return nil
 }
 
 func (t *TraceApplication) buildListMetadataSvcReq(req *trace.ListMetadataRequest) (*service.ListMetadataReq, error) {
+	// default 3 days
 	ret := &service.ListMetadataReq{
 		WorkspaceID: req.GetWorkspaceID(),
-		StartTime:   req.GetStartTime(),
-		EndTime:     req.GetEndTime(),
+		StartTime:   time.Now().Add(-3 * 24 * time.Hour).UnixMilli(),
+		EndTime:     time.Now().UnixMilli(),
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
@@ -960,22 +950,12 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 		platformType = loop_span.PlatformType(*req.PlatformType)
 	}
 
-	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          0,
-		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
-	}
-	startTime, endTime, err := v.CorrectDate()
-	if err != nil {
-		return nil, err
-	}
-
 	svcReq := &service.ListWorkspaceAnnotationsReq{
 		WorkspaceID:  req.WorkspaceID,
-		StartTime:    startTime,
+		StartTime:    time.Now().Add(-3 * 24 * time.Hour).UnixMilli(),
 		PlatformType: platformType,
 	}
-	_ = endTime
+
 	if req.AnnotationType != nil {
 		svcReq.AnnotationType = string(*req.AnnotationType)
 	}
