@@ -8,11 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
@@ -625,9 +622,9 @@ func (t *TraceApplication) ListMetadata(ctx context.Context, req *trace.ListMeta
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "List metadata successfully, keys count: %d", len(sResp.KeyValuesetMap))
+	logs.CtxInfo(ctx, "List metadata successfully, items count: %d", len(sResp.MetadataItemList))
 	return &trace.ListMetadataResponse{
-		KeyValuesetMap: sResp.KeyValuesetMap,
+		MetadataItemList: sResp.MetadataItemList,
 	}, nil
 }
 
@@ -648,9 +645,6 @@ func (t *TraceApplication) validateListMetadataReq(ctx context.Context, req *tra
 	}
 	req.SetStartTime(newStartTime)
 	req.SetEndTime(newEndTime)
-	if req.GetLimit() <= 0 || req.GetLimit() > MaxListMetadataSpansList {
-		req.SetLimit(gptr.Of(MaxListMetadataSpansList))
-	}
 	return nil
 }
 
@@ -659,7 +653,6 @@ func (t *TraceApplication) buildListMetadataSvcReq(req *trace.ListMetadataReques
 		WorkspaceID: req.GetWorkspaceID(),
 		StartTime:   req.GetStartTime(),
 		EndTime:     req.GetEndTime(),
-		Limit:       req.GetLimit(),
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
@@ -675,12 +668,6 @@ func (t *TraceApplication) buildListMetadataSvcReq(req *trace.ListMetadataReques
 		ret.SpanListType = loop_span.SpanListTypeLLMSpan
 	default:
 		ret.SpanListType = loop_span.SpanListTypeRootSpan
-	}
-	if req.Filters != nil {
-		ret.Filters = convertor.FilterFieldsDTO2DO(req.Filters)
-		if err := ret.Filters.Validate(); err != nil {
-			return nil, err
-		}
 	}
 	return ret, nil
 }
@@ -984,15 +971,23 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 	}
 
 	svcReq := &service.ListWorkspaceAnnotationsReq{
-		WorkspaceID:     req.WorkspaceID,
-		StartTime:       startTime,
-		EndTime:         endTime,
-		DescByUpdatedAt: ptr.From(req.DescByUpdatedAt),
-		PlatformType:    platformType,
-		Limit:           ptr.From(req.Limit),
+		WorkspaceID:  req.WorkspaceID,
+		StartTime:    startTime,
+		PlatformType: platformType,
 	}
+	_ = endTime
 	if req.AnnotationType != nil {
 		svcReq.AnnotationType = string(*req.AnnotationType)
+	}
+	switch req.GetSpanListType() {
+	case common.SpanListTypeRootSpan:
+		svcReq.SpanListType = loop_span.SpanListTypeRootSpan
+	case common.SpanListTypeAllSpan:
+		svcReq.SpanListType = loop_span.SpanListTypeAllSpan
+	case common.SpanListTypeLlmSpan:
+		svcReq.SpanListType = loop_span.SpanListTypeLLMSpan
+	default:
+		svcReq.SpanListType = loop_span.SpanListTypeRootSpan
 	}
 
 	resp, err := t.traceService.ListWorkspaceAnnotations(ctx, svcReq)
@@ -1000,25 +995,8 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 		return nil, err
 	}
 
-	var allAnnotations loop_span.AnnotationList
-	for _, annotations := range resp.KeyAnnotationsMap {
-		allAnnotations = append(allAnnotations, annotations...)
-	}
-
-	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
-		WorkspaceID:  req.GetWorkspaceID(),
-		UserIDs:      allAnnotations.GetUserIDs(),
-		EvaluatorIDs: allAnnotations.GetEvaluatorVersionIDs(),
-		TagKeyIDs:    allAnnotations.GetAnnotationTagIDs(),
-	})
-
-	keyAnnotationsMap := make(map[string][]*annotation.Annotation)
-	for key, annotations := range resp.KeyAnnotationsMap {
-		keyAnnotationsMap[key] = tconv.AnnotationListDO2DTO(annotations, dResp.UserMap, dResp.EvalMap, dResp.TagMap)
-	}
-
 	return &trace.ListWorkspaceAnnotationsResponse{
-		KeyAnnotationsMap: keyAnnotationsMap,
+		SimpleAnnotationList: resp.SimpleAnnotationList,
 	}, nil
 }
 

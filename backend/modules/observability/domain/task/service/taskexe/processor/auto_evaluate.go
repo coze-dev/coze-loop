@@ -275,12 +275,14 @@ func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskex
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
-		if err := p.taskHookProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
-			Task:    param.Task,
-			TaskRun: param.TaskRun,
-		}); err != nil {
-			logs.CtxError(ctx, "taskHookProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
-			return err
+		if p.taskHookProvider != nil {
+			if err := p.taskHookProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+				Task:    param.Task,
+				TaskRun: param.TaskRun,
+			}); err != nil {
+				logs.CtxError(ctx, "taskHookProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
+				return err
+			}
 		}
 		if err := p.taskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(param.Task.WorkspaceID, 10), param.Task.ID); err != nil {
 			logs.CtxError(ctx, "RemoveNonFinalTask failed, taskID:%d, err:%v", param.Task.ID, err)

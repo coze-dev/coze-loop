@@ -182,31 +182,11 @@ func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 // ListWorkspaceAnnotations .
 // @router /api/observability/v1/annotations/list_by_workspace [POST]
 func ListWorkspaceAnnotations(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.ListWorkspaceAnnotationsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.ListWorkspaceAnnotationsResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.ListWorkspaceAnnotations)
 }
 
 // ListMetadata .
 // @router /api/observability/v1/traces/metadata/list [POST]
 func ListMetadata(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.ListMetadataRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.ListMetadataResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.ListMetadata)
 }

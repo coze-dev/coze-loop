@@ -50,6 +50,7 @@ const (
 
 	AnnotationOpenAPIFeedbackFieldPrefix = "feedback_openapi_"
 	AnnotationManualFeedbackFieldPrefix  = "manual_feedback_"
+	AnnotationAutoEvaluateFieldPrefix    = "auto_evaluate_"
 )
 
 type AnnotationValue struct {

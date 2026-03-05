@@ -11,9 +11,10 @@ import (
 )
 
 type Trigger struct {
-	Task    *entity.ObservabilityTask
-	Span    *loop_span.Span
-	TaskRun *entity.TaskRun
+	Task       *entity.ObservabilityTask
+	Span       *loop_span.Span
+	TaskRun    *entity.TaskRun
+	Trajectory *loop_span.Trajectory
 }
 
 type OnTaskRunCreatedReq struct {

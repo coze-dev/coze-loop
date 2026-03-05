@@ -32,7 +32,8 @@ const TaskFieldName TaskFieldName_TaskName = "task_name"
 const TaskFieldName TaskFieldName_TaskType = "task_type"
 const TaskFieldName TaskFieldName_SampleRate = "sample_rate"
 const TaskFieldName TaskFieldName_CreatedBy = "created_by"
-
+const TaskFieldName TaskFieldName_TaskID = "task_id"
+const TaskFieldName TaskFieldName_WorkflowID = "workflow_id"
 
 struct FilterFields {
     1: optional QueryRelation query_and_or

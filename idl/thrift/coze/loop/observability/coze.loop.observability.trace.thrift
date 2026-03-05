@@ -273,15 +273,14 @@ struct ListWorkspaceAnnotationsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
     2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time", vt.gt="0")
     3: optional common.PlatformType platform_type (api.body="platform_type")
-    4: optional bool desc_by_updated_at (api.body="desc_by_updated_at")
     5: optional annotation.AnnotationType annotation_type(api.body="annotation_type")
     6: optional common.SpanListType span_list_type (api.body="span_list_type")
-    7: optional i64 limit (api.js_conv='true', go.tag='json:"limit"', api.body="limit", vt.gt="0")
+
     255: optional base.Base Base
 }
 
 struct ListWorkspaceAnnotationsResponse {
-    1: required map<string, list<annotation.Annotation>> key_annotations_map
+    1: required list<annotation.SimpleAnnotationInfo> simple_annotation_list
 
     255: optional base.BaseResp BaseResp
 }
@@ -334,6 +333,7 @@ struct PreviewExportTracesToDatasetRequest {
     7: optional common.PlatformType platform_type (api.body="platform_type")
     8: required export_dataset.ExportType export_type (api.body="export_type")                 // 导入方式，不填默认为追加
     9: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
+    10: optional filter.FilterFields filters (api.body="filters")
 
     255: optional base.Base Base (api.none="true")
 }
@@ -443,19 +443,19 @@ struct ListTrajectoryResponse {
 struct ListMetadataRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
     2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time") // ms
-    3: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")  // ms
-    4: optional filter.FilterFields filters (api.body="filters")
-    5: optional list<common.OrderBy> order_bys (api.body="order_bys")
-    6: optional common.PlatformType platform_type (api.body="platform_type")
-    7: optional common.SpanListType span_list_type (api.body="span_list_type")
-    8: optional i64 limit (api.js_conv='true', go.tag='json:"limit"', api.body="limit", vt.gt="0")
+    3: optional common.PlatformType platform_type (api.body="platform_type")
+    4: optional common.SpanListType span_list_type (api.body="span_list_type")
 
 
     255: optional base.Base Base
 }
 
+struct MetadataItemInfo {
+    1: required string key
+    2: optional string value
+}
 struct ListMetadataResponse {
-    1: required map<string, list<string>> key_valueset_map,
+    1: required list<MetadataItemInfo> metadataItemList ,
 
     255: optional base.BaseResp BaseResp
 }

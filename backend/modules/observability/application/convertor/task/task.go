@@ -66,6 +66,7 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		Rule:        RuleDO2DTO(v.SpanFilter, v.EffectiveTime, v.Sampler, v.BackfillEffectiveTime),
 		TaskConfig:  TaskConfigDO2DTO(v.TaskConfig),
 		TaskDetail:  taskDetail,
+		WorkflowID:  v.WorkflowID,
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(v.UpdatedAt.UnixMilli()),

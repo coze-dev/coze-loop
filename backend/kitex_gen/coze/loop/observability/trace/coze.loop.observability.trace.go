@@ -12927,14 +12927,12 @@ func (p *ListAnnotationsResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListWorkspaceAnnotationsRequest struct {
-	WorkspaceID     int64                      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	StartTime       int64                      `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
-	PlatformType    *common.PlatformType       `thrift:"platform_type,3,optional" frugal:"3,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	DescByUpdatedAt *bool                      `thrift:"desc_by_updated_at,4,optional" frugal:"4,optional,bool" form:"desc_by_updated_at" json:"desc_by_updated_at,omitempty"`
-	AnnotationType  *annotation.AnnotationType `thrift:"annotation_type,5,optional" frugal:"5,optional,string" form:"annotation_type" json:"annotation_type,omitempty"`
-	SpanListType    *common.SpanListType       `thrift:"span_list_type,6,optional" frugal:"6,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
-	Limit           *int64                     `thrift:"limit,7,optional" frugal:"7,optional,i64" json:"limit" form:"limit" `
-	Base            *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID    int64                      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	StartTime      int64                      `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
+	PlatformType   *common.PlatformType       `thrift:"platform_type,3,optional" frugal:"3,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	AnnotationType *annotation.AnnotationType `thrift:"annotation_type,5,optional" frugal:"5,optional,string" form:"annotation_type" json:"annotation_type,omitempty"`
+	SpanListType   *common.SpanListType       `thrift:"span_list_type,6,optional" frugal:"6,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	Base           *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListWorkspaceAnnotationsRequest() *ListWorkspaceAnnotationsRequest {
@@ -12970,18 +12968,6 @@ func (p *ListWorkspaceAnnotationsRequest) GetPlatformType() (v common.PlatformTy
 	return *p.PlatformType
 }
 
-var ListWorkspaceAnnotationsRequest_DescByUpdatedAt_DEFAULT bool
-
-func (p *ListWorkspaceAnnotationsRequest) GetDescByUpdatedAt() (v bool) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDescByUpdatedAt() {
-		return ListWorkspaceAnnotationsRequest_DescByUpdatedAt_DEFAULT
-	}
-	return *p.DescByUpdatedAt
-}
-
 var ListWorkspaceAnnotationsRequest_AnnotationType_DEFAULT annotation.AnnotationType
 
 func (p *ListWorkspaceAnnotationsRequest) GetAnnotationType() (v annotation.AnnotationType) {
@@ -13006,18 +12992,6 @@ func (p *ListWorkspaceAnnotationsRequest) GetSpanListType() (v common.SpanListTy
 	return *p.SpanListType
 }
 
-var ListWorkspaceAnnotationsRequest_Limit_DEFAULT int64
-
-func (p *ListWorkspaceAnnotationsRequest) GetLimit() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetLimit() {
-		return ListWorkspaceAnnotationsRequest_Limit_DEFAULT
-	}
-	return *p.Limit
-}
-
 var ListWorkspaceAnnotationsRequest_Base_DEFAULT *base.Base
 
 func (p *ListWorkspaceAnnotationsRequest) GetBase() (v *base.Base) {
@@ -13038,17 +13012,11 @@ func (p *ListWorkspaceAnnotationsRequest) SetStartTime(val int64) {
 func (p *ListWorkspaceAnnotationsRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *ListWorkspaceAnnotationsRequest) SetDescByUpdatedAt(val *bool) {
-	p.DescByUpdatedAt = val
-}
 func (p *ListWorkspaceAnnotationsRequest) SetAnnotationType(val *annotation.AnnotationType) {
 	p.AnnotationType = val
 }
 func (p *ListWorkspaceAnnotationsRequest) SetSpanListType(val *common.SpanListType) {
 	p.SpanListType = val
-}
-func (p *ListWorkspaceAnnotationsRequest) SetLimit(val *int64) {
-	p.Limit = val
 }
 func (p *ListWorkspaceAnnotationsRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -13058,19 +13026,13 @@ var fieldIDToName_ListWorkspaceAnnotationsRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "start_time",
 	3:   "platform_type",
-	4:   "desc_by_updated_at",
 	5:   "annotation_type",
 	6:   "span_list_type",
-	7:   "limit",
 	255: "Base",
 }
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
-}
-
-func (p *ListWorkspaceAnnotationsRequest) IsSetDescByUpdatedAt() bool {
-	return p.DescByUpdatedAt != nil
 }
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetAnnotationType() bool {
@@ -13079,10 +13041,6 @@ func (p *ListWorkspaceAnnotationsRequest) IsSetAnnotationType() bool {
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetSpanListType() bool {
 	return p.SpanListType != nil
-}
-
-func (p *ListWorkspaceAnnotationsRequest) IsSetLimit() bool {
-	return p.Limit != nil
 }
 
 func (p *ListWorkspaceAnnotationsRequest) IsSetBase() bool {
@@ -13135,14 +13093,6 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 4:
-			if fieldTypeId == thrift.BOOL {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
@@ -13154,14 +13104,6 @@ func (p *ListWorkspaceAnnotationsRequest) Read(iprot thrift.TProtocol) (err erro
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 7:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13248,17 +13190,6 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField3(iprot thrift.TProtocol) err
 	p.PlatformType = _field
 	return nil
 }
-func (p *ListWorkspaceAnnotationsRequest) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *bool
-	if v, err := iprot.ReadBool(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.DescByUpdatedAt = _field
-	return nil
-}
 func (p *ListWorkspaceAnnotationsRequest) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *annotation.AnnotationType
@@ -13279,17 +13210,6 @@ func (p *ListWorkspaceAnnotationsRequest) ReadField6(iprot thrift.TProtocol) err
 		_field = &v
 	}
 	p.SpanListType = _field
-	return nil
-}
-func (p *ListWorkspaceAnnotationsRequest) ReadField7(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Limit = _field
 	return nil
 }
 func (p *ListWorkspaceAnnotationsRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -13319,20 +13239,12 @@ func (p *ListWorkspaceAnnotationsRequest) Write(oprot thrift.TProtocol) (err err
 			fieldId = 3
 			goto WriteFieldError
 		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
-			goto WriteFieldError
-		}
-		if err = p.writeField7(oprot); err != nil {
-			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -13407,24 +13319,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListWorkspaceAnnotationsRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDescByUpdatedAt() {
-		if err = oprot.WriteFieldBegin("desc_by_updated_at", thrift.BOOL, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteBool(*p.DescByUpdatedAt); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
 func (p *ListWorkspaceAnnotationsRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAnnotationType() {
 		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 5); err != nil {
@@ -13460,24 +13354,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
-}
-func (p *ListWorkspaceAnnotationsRequest) writeField7(oprot thrift.TProtocol) (err error) {
-	if p.IsSetLimit() {
-		if err = oprot.WriteFieldBegin("limit", thrift.I64, 7); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.Limit); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 func (p *ListWorkspaceAnnotationsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -13521,16 +13397,10 @@ func (p *ListWorkspaceAnnotationsRequest) DeepEqual(ano *ListWorkspaceAnnotation
 	if !p.Field3DeepEqual(ano.PlatformType) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.DescByUpdatedAt) {
-		return false
-	}
 	if !p.Field5DeepEqual(ano.AnnotationType) {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.SpanListType) {
-		return false
-	}
-	if !p.Field7DeepEqual(ano.Limit) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -13565,18 +13435,6 @@ func (p *ListWorkspaceAnnotationsRequest) Field3DeepEqual(src *common.PlatformTy
 	}
 	return true
 }
-func (p *ListWorkspaceAnnotationsRequest) Field4DeepEqual(src *bool) bool {
-
-	if p.DescByUpdatedAt == src {
-		return true
-	} else if p.DescByUpdatedAt == nil || src == nil {
-		return false
-	}
-	if *p.DescByUpdatedAt != *src {
-		return false
-	}
-	return true
-}
 func (p *ListWorkspaceAnnotationsRequest) Field5DeepEqual(src *annotation.AnnotationType) bool {
 
 	if p.AnnotationType == src {
@@ -13601,18 +13459,6 @@ func (p *ListWorkspaceAnnotationsRequest) Field6DeepEqual(src *common.SpanListTy
 	}
 	return true
 }
-func (p *ListWorkspaceAnnotationsRequest) Field7DeepEqual(src *int64) bool {
-
-	if p.Limit == src {
-		return true
-	} else if p.Limit == nil || src == nil {
-		return false
-	}
-	if *p.Limit != *src {
-		return false
-	}
-	return true
-}
 func (p *ListWorkspaceAnnotationsRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -13622,8 +13468,8 @@ func (p *ListWorkspaceAnnotationsRequest) Field255DeepEqual(src *base.Base) bool
 }
 
 type ListWorkspaceAnnotationsResponse struct {
-	KeyAnnotationsMap map[string][]*annotation.Annotation `thrift:"key_annotations_map,1,required" frugal:"1,required,map<string:list<annotation.Annotation>>" form:"key_annotations_map,required" json:"key_annotations_map,required" query:"key_annotations_map,required"`
-	BaseResp          *base.BaseResp                      `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+	SimpleAnnotationList []*annotation.SimpleAnnotationInfo `thrift:"simple_annotation_list,1,required" frugal:"1,required,list<annotation.SimpleAnnotationInfo>" form:"simple_annotation_list,required" json:"simple_annotation_list,required" query:"simple_annotation_list,required"`
+	BaseResp             *base.BaseResp                     `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
 func NewListWorkspaceAnnotationsResponse() *ListWorkspaceAnnotationsResponse {
@@ -13633,9 +13479,9 @@ func NewListWorkspaceAnnotationsResponse() *ListWorkspaceAnnotationsResponse {
 func (p *ListWorkspaceAnnotationsResponse) InitDefault() {
 }
 
-func (p *ListWorkspaceAnnotationsResponse) GetKeyAnnotationsMap() (v map[string][]*annotation.Annotation) {
+func (p *ListWorkspaceAnnotationsResponse) GetSimpleAnnotationList() (v []*annotation.SimpleAnnotationInfo) {
 	if p != nil {
-		return p.KeyAnnotationsMap
+		return p.SimpleAnnotationList
 	}
 	return
 }
@@ -13651,15 +13497,15 @@ func (p *ListWorkspaceAnnotationsResponse) GetBaseResp() (v *base.BaseResp) {
 	}
 	return p.BaseResp
 }
-func (p *ListWorkspaceAnnotationsResponse) SetKeyAnnotationsMap(val map[string][]*annotation.Annotation) {
-	p.KeyAnnotationsMap = val
+func (p *ListWorkspaceAnnotationsResponse) SetSimpleAnnotationList(val []*annotation.SimpleAnnotationInfo) {
+	p.SimpleAnnotationList = val
 }
 func (p *ListWorkspaceAnnotationsResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
 var fieldIDToName_ListWorkspaceAnnotationsResponse = map[int16]string{
-	1:   "key_annotations_map",
+	1:   "simple_annotation_list",
 	255: "BaseResp",
 }
 
@@ -13670,7 +13516,7 @@ func (p *ListWorkspaceAnnotationsResponse) IsSetBaseResp() bool {
 func (p *ListWorkspaceAnnotationsResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetKeyAnnotationsMap bool = false
+	var issetSimpleAnnotationList bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -13687,11 +13533,11 @@ func (p *ListWorkspaceAnnotationsResponse) Read(iprot thrift.TProtocol) (err err
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetKeyAnnotationsMap = true
+				issetSimpleAnnotationList = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -13716,7 +13562,7 @@ func (p *ListWorkspaceAnnotationsResponse) Read(iprot thrift.TProtocol) (err err
 		goto ReadStructEndError
 	}
 
-	if !issetKeyAnnotationsMap {
+	if !issetSimpleAnnotationList {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -13739,44 +13585,26 @@ RequiredFieldNotSetError:
 }
 
 func (p *ListWorkspaceAnnotationsResponse) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[string][]*annotation.Annotation, size)
+	_field := make([]*annotation.SimpleAnnotationInfo, 0, size)
+	values := make([]annotation.SimpleAnnotationInfo, size)
 	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-		_, size, err := iprot.ReadListBegin()
-		if err != nil {
-			return err
-		}
-		_val := make([]*annotation.Annotation, 0, size)
-		values := make([]annotation.Annotation, size)
-		for i := 0; i < size; i++ {
-			_elem := &values[i]
-			_elem.InitDefault()
+		_elem := &values[i]
+		_elem.InitDefault()
 
-			if err := _elem.Read(iprot); err != nil {
-				return err
-			}
-
-			_val = append(_val, _elem)
-		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
 		}
 
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.KeyAnnotationsMap = _field
+	p.SimpleAnnotationList = _field
 	return nil
 }
 func (p *ListWorkspaceAnnotationsResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -13821,29 +13649,18 @@ WriteStructEndError:
 }
 
 func (p *ListWorkspaceAnnotationsResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("key_annotations_map", thrift.MAP, 1); err != nil {
+	if err = oprot.WriteFieldBegin("simple_annotation_list", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.KeyAnnotationsMap)); err != nil {
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.SimpleAnnotationList)); err != nil {
 		return err
 	}
-	for k, v := range p.KeyAnnotationsMap {
-		if err := oprot.WriteString(k); err != nil {
-			return err
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
-			return err
-		}
-		for _, v := range v {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
+	for _, v := range p.SimpleAnnotationList {
+		if err := v.Write(oprot); err != nil {
 			return err
 		}
 	}
-	if err := oprot.WriteMapEnd(); err != nil {
+	if err := oprot.WriteListEnd(); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -13888,7 +13705,7 @@ func (p *ListWorkspaceAnnotationsResponse) DeepEqual(ano *ListWorkspaceAnnotatio
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.KeyAnnotationsMap) {
+	if !p.Field1DeepEqual(ano.SimpleAnnotationList) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -13897,21 +13714,15 @@ func (p *ListWorkspaceAnnotationsResponse) DeepEqual(ano *ListWorkspaceAnnotatio
 	return true
 }
 
-func (p *ListWorkspaceAnnotationsResponse) Field1DeepEqual(src map[string][]*annotation.Annotation) bool {
+func (p *ListWorkspaceAnnotationsResponse) Field1DeepEqual(src []*annotation.SimpleAnnotationInfo) bool {
 
-	if len(p.KeyAnnotationsMap) != len(src) {
+	if len(p.SimpleAnnotationList) != len(src) {
 		return false
 	}
-	for k, v := range p.KeyAnnotationsMap {
-		_src := src[k]
-		if len(v) != len(_src) {
+	for i, v := range p.SimpleAnnotationList {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
-		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if !v.DeepEqual(_src1) {
-				return false
-			}
 		}
 	}
 	return true
@@ -16096,6 +15907,7 @@ type PreviewExportTracesToDatasetRequest struct {
 	// 导入方式，不填默认为追加
 	ExportType    dataset0.ExportType      `thrift:"export_type,8,required" frugal:"8,required,string" form:"export_type,required" json:"export_type,required"`
 	FieldMappings []*dataset0.FieldMapping `thrift:"field_mappings,9,optional" frugal:"9,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty"`
+	Filters       *filter.FilterFields     `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
 	Base          *base.Base               `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`
 }
 
@@ -16184,6 +15996,18 @@ func (p *PreviewExportTracesToDatasetRequest) GetFieldMappings() (v []*dataset0.
 	return p.FieldMappings
 }
 
+var PreviewExportTracesToDatasetRequest_Filters_DEFAULT *filter.FilterFields
+
+func (p *PreviewExportTracesToDatasetRequest) GetFilters() (v *filter.FilterFields) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilters() {
+		return PreviewExportTracesToDatasetRequest_Filters_DEFAULT
+	}
+	return p.Filters
+}
+
 var PreviewExportTracesToDatasetRequest_Base_DEFAULT *base.Base
 
 func (p *PreviewExportTracesToDatasetRequest) GetBase() (v *base.Base) {
@@ -16222,6 +16046,9 @@ func (p *PreviewExportTracesToDatasetRequest) SetExportType(val dataset0.ExportT
 func (p *PreviewExportTracesToDatasetRequest) SetFieldMappings(val []*dataset0.FieldMapping) {
 	p.FieldMappings = val
 }
+func (p *PreviewExportTracesToDatasetRequest) SetFilters(val *filter.FilterFields) {
+	p.Filters = val
+}
 func (p *PreviewExportTracesToDatasetRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -16236,6 +16063,7 @@ var fieldIDToName_PreviewExportTracesToDatasetRequest = map[int16]string{
 	7:   "platform_type",
 	8:   "export_type",
 	9:   "field_mappings",
+	10:  "filters",
 	255: "Base",
 }
 
@@ -16249,6 +16077,10 @@ func (p *PreviewExportTracesToDatasetRequest) IsSetPlatformType() bool {
 
 func (p *PreviewExportTracesToDatasetRequest) IsSetFieldMappings() bool {
 	return p.FieldMappings != nil
+}
+
+func (p *PreviewExportTracesToDatasetRequest) IsSetFilters() bool {
+	return p.Filters != nil
 }
 
 func (p *PreviewExportTracesToDatasetRequest) IsSetBase() bool {
@@ -16354,6 +16186,14 @@ func (p *PreviewExportTracesToDatasetRequest) Read(iprot thrift.TProtocol) (err 
 		case 9:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16552,6 +16392,14 @@ func (p *PreviewExportTracesToDatasetRequest) ReadField9(iprot thrift.TProtocol)
 	p.FieldMappings = _field
 	return nil
 }
+func (p *PreviewExportTracesToDatasetRequest) ReadField10(iprot thrift.TProtocol) error {
+	_field := filter.NewFilterFields()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filters = _field
+	return nil
+}
 func (p *PreviewExportTracesToDatasetRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -16601,6 +16449,10 @@ func (p *PreviewExportTracesToDatasetRequest) Write(oprot thrift.TProtocol) (err
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -16789,6 +16641,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
+func (p *PreviewExportTracesToDatasetRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilters() {
+		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filters.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *PreviewExportTracesToDatasetRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -16847,6 +16717,9 @@ func (p *PreviewExportTracesToDatasetRequest) DeepEqual(ano *PreviewExportTraces
 		return false
 	}
 	if !p.Field9DeepEqual(ano.FieldMappings) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.Filters) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -16932,6 +16805,13 @@ func (p *PreviewExportTracesToDatasetRequest) Field9DeepEqual(src []*dataset0.Fi
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *PreviewExportTracesToDatasetRequest) Field10DeepEqual(src *filter.FilterFields) bool {
+
+	if !p.Filters.DeepEqual(src) {
+		return false
 	}
 	return true
 }
@@ -21898,11 +21778,8 @@ type ListMetadataRequest struct {
 	StartTime int64 `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" `
 	// ms
 	EndTime      int64                `thrift:"end_time,3,required" frugal:"3,required,i64" json:"end_time" form:"end_time,required" `
-	Filters      *filter.FilterFields `thrift:"filters,4,optional" frugal:"4,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
-	OrderBys     []*common.OrderBy    `thrift:"order_bys,5,optional" frugal:"5,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
 	PlatformType *common.PlatformType `thrift:"platform_type,6,optional" frugal:"6,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	SpanListType *common.SpanListType `thrift:"span_list_type,7,optional" frugal:"7,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
-	Limit        *int64               `thrift:"limit,8,optional" frugal:"8,optional,i64" json:"limit" form:"limit" `
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -21934,30 +21811,6 @@ func (p *ListMetadataRequest) GetEndTime() (v int64) {
 	return
 }
 
-var ListMetadataRequest_Filters_DEFAULT *filter.FilterFields
-
-func (p *ListMetadataRequest) GetFilters() (v *filter.FilterFields) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetFilters() {
-		return ListMetadataRequest_Filters_DEFAULT
-	}
-	return p.Filters
-}
-
-var ListMetadataRequest_OrderBys_DEFAULT []*common.OrderBy
-
-func (p *ListMetadataRequest) GetOrderBys() (v []*common.OrderBy) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetOrderBys() {
-		return ListMetadataRequest_OrderBys_DEFAULT
-	}
-	return p.OrderBys
-}
-
 var ListMetadataRequest_PlatformType_DEFAULT common.PlatformType
 
 func (p *ListMetadataRequest) GetPlatformType() (v common.PlatformType) {
@@ -21982,18 +21835,6 @@ func (p *ListMetadataRequest) GetSpanListType() (v common.SpanListType) {
 	return *p.SpanListType
 }
 
-var ListMetadataRequest_Limit_DEFAULT int64
-
-func (p *ListMetadataRequest) GetLimit() (v int64) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetLimit() {
-		return ListMetadataRequest_Limit_DEFAULT
-	}
-	return *p.Limit
-}
-
 var ListMetadataRequest_Base_DEFAULT *base.Base
 
 func (p *ListMetadataRequest) GetBase() (v *base.Base) {
@@ -22014,20 +21855,11 @@ func (p *ListMetadataRequest) SetStartTime(val int64) {
 func (p *ListMetadataRequest) SetEndTime(val int64) {
 	p.EndTime = val
 }
-func (p *ListMetadataRequest) SetFilters(val *filter.FilterFields) {
-	p.Filters = val
-}
-func (p *ListMetadataRequest) SetOrderBys(val []*common.OrderBy) {
-	p.OrderBys = val
-}
 func (p *ListMetadataRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
 func (p *ListMetadataRequest) SetSpanListType(val *common.SpanListType) {
 	p.SpanListType = val
-}
-func (p *ListMetadataRequest) SetLimit(val *int64) {
-	p.Limit = val
 }
 func (p *ListMetadataRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -22037,20 +21869,9 @@ var fieldIDToName_ListMetadataRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "start_time",
 	3:   "end_time",
-	4:   "filters",
-	5:   "order_bys",
 	6:   "platform_type",
 	7:   "span_list_type",
-	8:   "limit",
 	255: "Base",
-}
-
-func (p *ListMetadataRequest) IsSetFilters() bool {
-	return p.Filters != nil
-}
-
-func (p *ListMetadataRequest) IsSetOrderBys() bool {
-	return p.OrderBys != nil
 }
 
 func (p *ListMetadataRequest) IsSetPlatformType() bool {
@@ -22059,10 +21880,6 @@ func (p *ListMetadataRequest) IsSetPlatformType() bool {
 
 func (p *ListMetadataRequest) IsSetSpanListType() bool {
 	return p.SpanListType != nil
-}
-
-func (p *ListMetadataRequest) IsSetLimit() bool {
-	return p.Limit != nil
 }
 
 func (p *ListMetadataRequest) IsSetBase() bool {
@@ -22117,22 +21934,6 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 4:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 5:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
 		case 6:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField6(iprot); err != nil {
@@ -22144,14 +21945,6 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 7:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField7(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 8:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField8(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22243,37 +22036,6 @@ func (p *ListMetadataRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.EndTime = _field
 	return nil
 }
-func (p *ListMetadataRequest) ReadField4(iprot thrift.TProtocol) error {
-	_field := filter.NewFilterFields()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Filters = _field
-	return nil
-}
-func (p *ListMetadataRequest) ReadField5(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]*common.OrderBy, 0, size)
-	values := make([]common.OrderBy, size)
-	for i := 0; i < size; i++ {
-		_elem := &values[i]
-		_elem.InitDefault()
-
-		if err := _elem.Read(iprot); err != nil {
-			return err
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
-		return err
-	}
-	p.OrderBys = _field
-	return nil
-}
 func (p *ListMetadataRequest) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *common.PlatformType
@@ -22294,17 +22056,6 @@ func (p *ListMetadataRequest) ReadField7(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.SpanListType = _field
-	return nil
-}
-func (p *ListMetadataRequest) ReadField8(iprot thrift.TProtocol) error {
-
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Limit = _field
 	return nil
 }
 func (p *ListMetadataRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -22334,24 +22085,12 @@ func (p *ListMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 3
 			goto WriteFieldError
 		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField5(oprot); err != nil {
-			fieldId = 5
-			goto WriteFieldError
-		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField7(oprot); err != nil {
 			fieldId = 7
-			goto WriteFieldError
-		}
-		if err = p.writeField8(oprot); err != nil {
-			fieldId = 8
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -22424,50 +22163,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ListMetadataRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetFilters() {
-		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Filters.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *ListMetadataRequest) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetOrderBys() {
-		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 5); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OrderBys)); err != nil {
-			return err
-		}
-		for _, v := range p.OrderBys {
-			if err := v.Write(oprot); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
-}
 func (p *ListMetadataRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
 		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 6); err != nil {
@@ -22503,24 +22198,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
-}
-func (p *ListMetadataRequest) writeField8(oprot thrift.TProtocol) (err error) {
-	if p.IsSetLimit() {
-		if err = oprot.WriteFieldBegin("limit", thrift.I64, 8); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteI64(*p.Limit); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
 func (p *ListMetadataRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -22564,19 +22241,10 @@ func (p *ListMetadataRequest) DeepEqual(ano *ListMetadataRequest) bool {
 	if !p.Field3DeepEqual(ano.EndTime) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.Filters) {
-		return false
-	}
-	if !p.Field5DeepEqual(ano.OrderBys) {
-		return false
-	}
 	if !p.Field6DeepEqual(ano.PlatformType) {
 		return false
 	}
 	if !p.Field7DeepEqual(ano.SpanListType) {
-		return false
-	}
-	if !p.Field8DeepEqual(ano.Limit) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -22606,26 +22274,6 @@ func (p *ListMetadataRequest) Field3DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field4DeepEqual(src *filter.FilterFields) bool {
-
-	if !p.Filters.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *ListMetadataRequest) Field5DeepEqual(src []*common.OrderBy) bool {
-
-	if len(p.OrderBys) != len(src) {
-		return false
-	}
-	for i, v := range p.OrderBys {
-		_src := src[i]
-		if !v.DeepEqual(_src) {
-			return false
-		}
-	}
-	return true
-}
 func (p *ListMetadataRequest) Field6DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
@@ -22650,18 +22298,6 @@ func (p *ListMetadataRequest) Field7DeepEqual(src *common.SpanListType) bool {
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field8DeepEqual(src *int64) bool {
-
-	if p.Limit == src {
-		return true
-	} else if p.Limit == nil || src == nil {
-		return false
-	}
-	if *p.Limit != *src {
-		return false
-	}
-	return true
-}
 func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
@@ -22670,56 +22306,56 @@ func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type ListMetadataResponse struct {
-	KeyValuesetMap map[string][]string `thrift:"key_valueset_map,1,required" frugal:"1,required,map<string:list<string>>" form:"key_valueset_map,required" json:"key_valueset_map,required" query:"key_valueset_map,required"`
-	BaseResp       *base.BaseResp      `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+type MetadataItemInfo struct {
+	Key   string  `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
+	Value *string `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
 }
 
-func NewListMetadataResponse() *ListMetadataResponse {
-	return &ListMetadataResponse{}
+func NewMetadataItemInfo() *MetadataItemInfo {
+	return &MetadataItemInfo{}
 }
 
-func (p *ListMetadataResponse) InitDefault() {
+func (p *MetadataItemInfo) InitDefault() {
 }
 
-func (p *ListMetadataResponse) GetKeyValuesetMap() (v map[string][]string) {
+func (p *MetadataItemInfo) GetKey() (v string) {
 	if p != nil {
-		return p.KeyValuesetMap
+		return p.Key
 	}
 	return
 }
 
-var ListMetadataResponse_BaseResp_DEFAULT *base.BaseResp
+var MetadataItemInfo_Value_DEFAULT string
 
-func (p *ListMetadataResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *MetadataItemInfo) GetValue() (v string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetBaseResp() {
-		return ListMetadataResponse_BaseResp_DEFAULT
+	if !p.IsSetValue() {
+		return MetadataItemInfo_Value_DEFAULT
 	}
-	return p.BaseResp
+	return *p.Value
 }
-func (p *ListMetadataResponse) SetKeyValuesetMap(val map[string][]string) {
-	p.KeyValuesetMap = val
+func (p *MetadataItemInfo) SetKey(val string) {
+	p.Key = val
 }
-func (p *ListMetadataResponse) SetBaseResp(val *base.BaseResp) {
-	p.BaseResp = val
-}
-
-var fieldIDToName_ListMetadataResponse = map[int16]string{
-	1:   "key_valueset_map",
-	255: "BaseResp",
+func (p *MetadataItemInfo) SetValue(val *string) {
+	p.Value = val
 }
 
-func (p *ListMetadataResponse) IsSetBaseResp() bool {
-	return p.BaseResp != nil
+var fieldIDToName_MetadataItemInfo = map[int16]string{
+	1: "key",
+	2: "value",
 }
 
-func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *MetadataItemInfo) IsSetValue() bool {
+	return p.Value != nil
+}
+
+func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetKeyValuesetMap bool = false
+	var issetKey bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -22736,11 +22372,261 @@ func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.MAP {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetKeyValuesetMap = true
+				issetKey = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetKey {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetadataItemInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_MetadataItemInfo[fieldId]))
+}
+
+func (p *MetadataItemInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Key = _field
+	return nil
+}
+func (p *MetadataItemInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Value = _field
+	return nil
+}
+
+func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MetadataItemInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MetadataItemInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Key); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MetadataItemInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetValue() {
+		if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Value); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *MetadataItemInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MetadataItemInfo(%+v)", *p)
+
+}
+
+func (p *MetadataItemInfo) DeepEqual(ano *MetadataItemInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Value) {
+		return false
+	}
+	return true
+}
+
+func (p *MetadataItemInfo) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Key, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *MetadataItemInfo) Field2DeepEqual(src *string) bool {
+
+	if p.Value == src {
+		return true
+	} else if p.Value == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Value, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type ListMetadataResponse struct {
+	MetadataItemList []*MetadataItemInfo `thrift:"metadataItemList,1,required" frugal:"1,required,list<MetadataItemInfo>" form:"metadataItemList,required" json:"metadataItemList,required" query:"metadataItemList,required"`
+	BaseResp         *base.BaseResp      `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewListMetadataResponse() *ListMetadataResponse {
+	return &ListMetadataResponse{}
+}
+
+func (p *ListMetadataResponse) InitDefault() {
+}
+
+func (p *ListMetadataResponse) GetMetadataItemList() (v []*MetadataItemInfo) {
+	if p != nil {
+		return p.MetadataItemList
+	}
+	return
+}
+
+var ListMetadataResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListMetadataResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListMetadataResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListMetadataResponse) SetMetadataItemList(val []*MetadataItemInfo) {
+	p.MetadataItemList = val
+}
+func (p *ListMetadataResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListMetadataResponse = map[int16]string{
+	1:   "metadataItemList",
+	255: "BaseResp",
+}
+
+func (p *ListMetadataResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetMetadataItemList bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetMetadataItemList = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22765,7 +22651,7 @@ func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetKeyValuesetMap {
+	if !issetMetadataItemList {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -22788,44 +22674,26 @@ RequiredFieldNotSetError:
 }
 
 func (p *ListMetadataResponse) ReadField1(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
+	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make(map[string][]string, size)
+	_field := make([]*MetadataItemInfo, 0, size)
+	values := make([]MetadataItemInfo, size)
 	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-		_, size, err := iprot.ReadListBegin()
-		if err != nil {
-			return err
-		}
-		_val := make([]string, 0, size)
-		for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
 
-			var _elem string
-			if v, err := iprot.ReadString(); err != nil {
-				return err
-			} else {
-				_elem = v
-			}
-
-			_val = append(_val, _elem)
-		}
-		if err := iprot.ReadListEnd(); err != nil {
+		if err := _elem.Read(iprot); err != nil {
 			return err
 		}
 
-		_field[_key] = _val
+		_field = append(_field, _elem)
 	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.KeyValuesetMap = _field
+	p.MetadataItemList = _field
 	return nil
 }
 func (p *ListMetadataResponse) ReadField255(iprot thrift.TProtocol) error {
@@ -22870,29 +22738,18 @@ WriteStructEndError:
 }
 
 func (p *ListMetadataResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("key_valueset_map", thrift.MAP, 1); err != nil {
+	if err = oprot.WriteFieldBegin("metadataItemList", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.KeyValuesetMap)); err != nil {
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MetadataItemList)); err != nil {
 		return err
 	}
-	for k, v := range p.KeyValuesetMap {
-		if err := oprot.WriteString(k); err != nil {
-			return err
-		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
-			return err
-		}
-		for _, v := range v {
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
+	for _, v := range p.MetadataItemList {
+		if err := v.Write(oprot); err != nil {
 			return err
 		}
 	}
-	if err := oprot.WriteMapEnd(); err != nil {
+	if err := oprot.WriteListEnd(); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -22937,7 +22794,7 @@ func (p *ListMetadataResponse) DeepEqual(ano *ListMetadataResponse) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.KeyValuesetMap) {
+	if !p.Field1DeepEqual(ano.MetadataItemList) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -22946,21 +22803,15 @@ func (p *ListMetadataResponse) DeepEqual(ano *ListMetadataResponse) bool {
 	return true
 }
 
-func (p *ListMetadataResponse) Field1DeepEqual(src map[string][]string) bool {
+func (p *ListMetadataResponse) Field1DeepEqual(src []*MetadataItemInfo) bool {
 
-	if len(p.KeyValuesetMap) != len(src) {
+	if len(p.MetadataItemList) != len(src) {
 		return false
 	}
-	for k, v := range p.KeyValuesetMap {
-		_src := src[k]
-		if len(v) != len(_src) {
+	for i, v := range p.MetadataItemList {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
 			return false
-		}
-		for i, v := range v {
-			_src1 := _src[i]
-			if strings.Compare(v, _src1) != 0 {
-				return false
-			}
 		}
 	}
 	return true

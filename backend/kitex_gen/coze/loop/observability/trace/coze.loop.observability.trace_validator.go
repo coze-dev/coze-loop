@@ -347,11 +347,6 @@ func (p *ListWorkspaceAnnotationsRequest) IsValid() error {
 	if p.StartTime <= int64(0) {
 		return fmt.Errorf("field StartTime gt rule failed, current value: %v", p.StartTime)
 	}
-	if p.Limit != nil {
-		if *p.Limit <= int64(0) {
-			return fmt.Errorf("field Limit gt rule failed, current value: %v", *p.Limit)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -435,6 +430,11 @@ func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
 	}
 	if len(p.FieldMappings) > int(100) {
 		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -620,21 +620,14 @@ func (p *ListTrajectoryResponse) IsValid() error {
 	return nil
 }
 func (p *ListMetadataRequest) IsValid() error {
-	if p.Filters != nil {
-		if err := p.Filters.IsValid(); err != nil {
-			return fmt.Errorf("field Filters not valid, %w", err)
-		}
-	}
-	if p.Limit != nil {
-		if *p.Limit <= int64(0) {
-			return fmt.Errorf("field Limit gt rule failed, current value: %v", *p.Limit)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *MetadataItemInfo) IsValid() error {
 	return nil
 }
 func (p *ListMetadataResponse) IsValid() error {

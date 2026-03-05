@@ -270,6 +270,56 @@ func TestSpan_ExtractByJsonpath(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, result, "42")
 
+	// 测试从Metadata字段提取数据
+	// Metadata 应该取自 TagsString, TagsLong 等字段
+	metadataSpan := &Span{
+		TagsString: map[string]string{
+			"metadata_key": "metadata_value",
+		},
+		Annotations: []*Annotation{
+			{
+				AnnotationType: AnnotationTypeManualFeedback,
+				Key:            "feedback_key",
+				Value:          NewBoolValue(true),
+			},
+		},
+	}
+	// Metadata 直接查 Tags
+	result, err = metadataSpan.ExtractByJsonpath(ctx, "Metadata.metadata_key", "")
+	assert.NoError(t, err)
+	assert.Equal(t, "metadata_value", result)
+
+	// 测试从Feedback字段提取数据
+	// Feedback前缀为 "manual_feedback_"
+	result, err = metadataSpan.ExtractByJsonpath(ctx, "Feedback.manual_feedback_feedback_key", "")
+	assert.NoError(t, err)
+	// AnnotationValueTypeBool
+	assert.Equal(t, "true", result)
+
+	// 测试Metadata时间字段格式化 (从 TagsLong 提取)
+	timeSpan := &Span{
+		TagsLong: map[string]int64{
+			SpanFieldLatencyFirstResp: 1000000, // 1s in micros
+		},
+	}
+	result, err = timeSpan.ExtractByJsonpath(ctx, "Metadata."+SpanFieldLatencyFirstResp, "")
+	assert.NoError(t, err)
+	assert.Equal(t, "1000", result) // should be converted to millis
+
+	// 测试Feedback时间字段格式化 (从 Annotations 提取)
+	timeFeedbackSpan := &Span{
+		Annotations: []*Annotation{
+			{
+				AnnotationType: AnnotationTypeManualFeedback,
+				Key:            SpanFieldDuration,
+				Value:          NewLongValue(2000000), // 2s in micros
+			},
+		},
+	}
+	result, err = timeFeedbackSpan.ExtractByJsonpath(ctx, "Feedback.manual_feedback_"+SpanFieldDuration, "")
+	assert.NoError(t, err)
+	assert.Equal(t, "2000", result) // should be converted to millis
+
 	// 测试空jsonpath的处理
 	result, err = span.ExtractByJsonpath(ctx, "Input", "")
 	assert.NoError(t, err)

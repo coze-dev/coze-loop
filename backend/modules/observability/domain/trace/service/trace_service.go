@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -128,14 +129,12 @@ type ListMetadataReq struct {
 	WorkspaceID  int64
 	StartTime    int64 // ms
 	EndTime      int64 // ms
-	Filters      *loop_span.FilterFields
 	SpanListType loop_span.SpanListType
 	PlatformType loop_span.PlatformType
-	Limit        int64
 }
 
 type ListMetadataResp struct {
-	KeyValuesetMap map[string][]string
+	MetadataItemList []*trace.MetadataItemInfo
 }
 
 type SearchTraceOApiReq struct {
@@ -289,17 +288,15 @@ type ListAnnotationsResp struct {
 }
 
 type ListWorkspaceAnnotationsReq struct {
-	WorkspaceID     int64
-	StartTime       int64
-	EndTime         int64
-	AnnotationType  string
-	DescByUpdatedAt bool
-	PlatformType    loop_span.PlatformType
-	Limit           int64
+	WorkspaceID    int64
+	StartTime      int64
+	AnnotationType string
+	SpanListType   loop_span.SpanListType
+	PlatformType   loop_span.PlatformType
 }
 
 type ListWorkspaceAnnotationsResp struct {
-	KeyAnnotationsMap map[string]loop_span.AnnotationList
+	SimpleAnnotationList []*annotation.SimpleAnnotationInfo
 }
 
 type ChangeEvaluatorScoreRequest struct {
@@ -1444,14 +1441,14 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 }
 
 func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {
+	const maxListMetadataSpansList = 3000
 	listSpansResp, err := r.ListSpans(ctx, &ListSpansReq{
 		WorkspaceID:  req.WorkspaceID,
 		StartTime:    req.StartTime,
 		EndTime:      req.EndTime,
-		Filters:      req.Filters,
 		SpanListType: req.SpanListType,
 		PlatformType: req.PlatformType,
-		Limit:        int32(req.Limit),
+		Limit:        maxListMetadataSpansList,
 		SelectColumns: []string{
 			"tags_string",
 			"tags_long",
@@ -1480,9 +1477,21 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		}
 	}
 
-	return &ListMetadataResp{
-		KeyValuesetMap: result,
-	}, nil
+	keys := lo.Keys(result)
+	sort.Strings(keys)
+	items := make([]*trace.MetadataItemInfo, 0)
+	for _, key := range keys {
+		values := result[key]
+		sort.Strings(values)
+		for _, value := range values {
+			items = append(items, &trace.MetadataItemInfo{
+				Key:   key,
+				Value: gptr.Of(value),
+			})
+		}
+	}
+
+	return &ListMetadataResp{MetadataItemList: items}, nil
 }
 
 func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error) {
@@ -1513,26 +1522,63 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 	if err != nil {
 		return nil, err
 	}
+	const (
+		defaultLimit           = 1000
+		defaultDescByUpdatedAt = true
+	)
 	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         tenants,
 		AnnotationType:  req.AnnotationType,
 		StartAt:         req.StartTime,
-		EndAt:           req.EndTime,
-		DescByUpdatedAt: req.DescByUpdatedAt,
-		Limit:           req.Limit,
+		EndAt:           time.Now().UnixMilli(),
+		DescByUpdatedAt: defaultDescByUpdatedAt,
+		Limit:           defaultLimit,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	keyAnnotationsMap := make(map[string]loop_span.AnnotationList)
+	simpleList := make([]*annotation.SimpleAnnotationInfo, 0, len(annotations))
 	for _, anno := range annotations {
-		keyAnnotationsMap[anno.Key] = append(keyAnnotationsMap[anno.Key], anno)
+		if anno == nil {
+			continue
+		}
+		valueStr := ""
+		valueType := annotation.ValueTypeString
+		switch anno.Value.ValueType {
+		case loop_span.AnnotationValueTypeLong:
+			valueType = annotation.ValueTypeLong
+			valueStr = strconv.FormatInt(anno.Value.LongValue, 10)
+		case loop_span.AnnotationValueTypeDouble, loop_span.AnnotationValueTypeNumber:
+			if anno.Value.ValueType == loop_span.AnnotationValueTypeNumber {
+				valueType = annotation.ValueTypeNumber
+			} else {
+				valueType = annotation.ValueTypeDouble
+			}
+			valueStr = strconv.FormatFloat(anno.Value.FloatValue, 'f', -1, 64)
+		case loop_span.AnnotationValueTypeBool:
+			valueType = annotation.ValueTypeBool
+			valueStr = strconv.FormatBool(anno.Value.BoolValue)
+		case loop_span.AnnotationValueTypeCategory:
+			valueType = annotation.ValueTypeCategory
+			valueStr = anno.Value.StringValue
+		case loop_span.AnnotationValueTypeString:
+			valueType = annotation.ValueTypeString
+			valueStr = anno.Value.StringValue
+		default:
+			valueStr = ""
+		}
+		simpleList = append(simpleList, &annotation.SimpleAnnotationInfo{
+			Key:            anno.Key,
+			Value:          valueStr,
+			AnnotationType: gptr.Of(annotation.AnnotationType(anno.AnnotationType)),
+			ValueType:      gptr.Of(valueType),
+		})
 	}
 
 	return &ListWorkspaceAnnotationsResp{
-		KeyAnnotationsMap: keyAnnotationsMap,
+		SimpleAnnotationList: simpleList,
 	}, nil
 }
 
