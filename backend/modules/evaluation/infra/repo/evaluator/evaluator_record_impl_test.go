@@ -17,7 +17,27 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	evaluatormocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 )
+
+func TestNewEvaluatorRecordRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	recordDataStorage := storage.NewRecordDataStorage(nil, nil)
+
+	repo := NewEvaluatorRecordRepo(mockIDGen, mockDBProvider, mockEvaluatorRecordDAO, recordDataStorage)
+
+	impl, ok := repo.(*EvaluatorRecordRepoImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockEvaluatorRecordDAO, impl.evaluatorRecordDao)
+	assert.Equal(t, mockDBProvider, impl.dbProvider)
+	assert.Equal(t, mockIDGen, impl.idgen)
+	assert.Equal(t, recordDataStorage, impl.recordDataStorage)
+}
 
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -466,6 +486,46 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_WithFullContent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	recordDataStorage := storage.NewRecordDataStorage(nil, nil)
+
+	mockEvaluatorRecordDAO.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+		Return([]*model.EvaluatorRecord{
+			{
+				ID:                 1,
+				SpaceID:            1,
+				EvaluatorVersionID: 1,
+				ExperimentID:       gptr.Of(int64(1)),
+				ExperimentRunID:    1,
+				ItemID:             1,
+				TurnID:             1,
+				TraceID:            "trace_full_content",
+				LogID:              gptr.Of("log_full_content"),
+				Status:             int32(entity.EvaluatorRunStatusSuccess),
+			},
+		}, nil)
+
+	repo := &EvaluatorRecordRepoImpl{
+		evaluatorRecordDao: mockEvaluatorRecordDAO,
+		dbProvider:         mockDBProvider,
+		idgen:              mockIDGen,
+		recordDataStorage:  recordDataStorage,
+	}
+
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false, true)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int64(1), result[0].ID)
+	assert.Equal(t, "trace_full_content", result[0].TraceID)
 }
 
 func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_EmptyIDs(t *testing.T) {

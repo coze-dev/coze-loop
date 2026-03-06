@@ -2390,3 +2390,111 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalTargetService := mocks.NewMockIEvalTargetService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth:              mockAuth,
+		evalTargetService: mockEvalTargetService,
+	}
+
+	workspaceID := int64(100)
+	recordID := int64(200)
+	targetID := int64(300)
+	fieldKeys := []string{"actual_output", "trajectory"}
+	mockContent := &entity.Content{
+		ContentType: gptr.Of(entity.ContentTypeText),
+		Text:        gptr.Of("full content"),
+	}
+	mockRecord := &entity.EvalTargetRecord{
+		TargetID: targetID,
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"actual_output": mockContent,
+				"trajectory":   mockContent,
+			},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaltargetapi.GetEvalTargetOutputFieldContentRequest
+		mockSetup   func()
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - load and return field contents",
+			req: &evaltargetapi.GetEvalTargetOutputFieldContentRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetRecordID:  recordID,
+				FieldKeys:           fieldKeys,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(mockRecord, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(targetID, 10),
+					SpaceID:       workspaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationTarget)}},
+				}).Return(nil)
+				mockEvalTargetService.EXPECT().LoadRecordOutputFields(gomock.Any(), mockRecord, fieldKeys).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "error - nil request",
+			req:  nil,
+			mockSetup: func() {
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - missing required fields",
+			req: &evaltargetapi.GetEvalTargetOutputFieldContentRequest{
+				WorkspaceID: workspaceID,
+			},
+			mockSetup: func() {
+			},
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - record not found",
+			req: &evaltargetapi.GetEvalTargetOutputFieldContentRequest{
+				WorkspaceID:         workspaceID,
+				EvalTargetRecordID:  recordID,
+				FieldKeys:           fieldKeys,
+			},
+			mockSetup: func() {
+				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(nil, nil)
+			},
+			wantErr:     true,
+			wantErrCode: errno.ResourceNotFoundCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			resp, err := app.GetEvalTargetOutputFieldContent(context.Background(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+			assert.NotNil(t, resp.FieldContents)
+		})
+	}
+}

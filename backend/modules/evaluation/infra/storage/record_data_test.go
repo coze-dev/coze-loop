@@ -263,6 +263,94 @@ func Test_SaveAndLoad_EvalTargetRecordData(t *testing.T) {
     assert.Equal(t, "0123456789abcdef", rec.EvalTargetOutputData.OutputFields["b"].GetText())
 }
 
+func Test_LoadEvalTargetRecordData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+
+	mockS3.EXPECT().Read(gomock.Any(), "key-a").Return(newNopReader([]byte("loaded-a")), nil)
+	mockS3.EXPECT().Read(gomock.Any(), "key-b").Return(newNopReader([]byte("loaded-b")), nil)
+
+	s := &RecordDataStorage{batchStorage: mockS3}
+	rec := &entity.EvalTargetRecord{
+		EvalTargetInputData: &entity.EvalTargetInputData{
+			InputFields: map[string]*entity.Content{
+				"a": {
+					ContentType:      gptr.Of(entity.ContentTypeText),
+					Text:             gptr.Of(""),
+					ContentOmitted:   gptr.Of(true),
+					FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-a")},
+					FullContentBytes: gptr.Of(int32(8)),
+				},
+			},
+		},
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"b": {
+					ContentType:      gptr.Of(entity.ContentTypeText),
+					Text:             gptr.Of(""),
+					ContentOmitted:   gptr.Of(true),
+					FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-b")},
+					FullContentBytes: gptr.Of(int32(8)),
+				},
+			},
+		},
+	}
+	err := s.LoadEvalTargetRecordData(context.Background(), rec)
+	assert.NoError(t, err)
+	assert.Equal(t, "loaded-a", rec.EvalTargetInputData.InputFields["a"].GetText())
+	assert.Equal(t, "loaded-b", rec.EvalTargetOutputData.OutputFields["b"].GetText())
+}
+
+func Test_LoadEvalTargetRecordData_guard(t *testing.T) {
+	s := &RecordDataStorage{}
+	assert.NoError(t, s.LoadEvalTargetRecordData(context.Background(), nil))
+	assert.NoError(t, s.LoadEvalTargetRecordData(context.Background(), &entity.EvalTargetRecord{}))
+}
+
+func Test_processEvalTargetInputData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 2}}}
+	s := &RecordDataStorage{batchStorage: mockS3, configer: &fakeConfiger{cfg: cfg}}
+
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"x": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longtext")},
+		},
+	}
+	err := s.processEvalTargetInputData(context.Background(), input, 2)
+	assert.NoError(t, err)
+	assert.True(t, gptr.Indirect(input.InputFields["x"].ContentOmitted))
+}
+
+func Test_loadContentFromS3_skip_when_not_omitted(t *testing.T) {
+	s := &RecordDataStorage{}
+	c := &entity.Content{
+		ContentType:    gptr.Of(entity.ContentTypeText),
+		Text:           gptr.Of("short"),
+		ContentOmitted: gptr.Of(false),
+	}
+	err := s.loadContentFromS3(context.Background(), c)
+	assert.NoError(t, err)
+	assert.Equal(t, "short", c.GetText())
+
+	c2 := &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("x")}
+	err = s.loadContentFromS3(context.Background(), c2)
+	assert.NoError(t, err)
+
+	c3 := &entity.Content{
+		ContentType:    gptr.Of(entity.ContentTypeText),
+		ContentOmitted: gptr.Of(true),
+		FullContent:    &entity.ObjectStorage{URI: nil},
+	}
+	err = s.loadContentFromS3(context.Background(), c3)
+	assert.NoError(t, err)
+}
+
 func Test_SaveEvaluatorRecordData_guard(t *testing.T) {
     // batchStorage=nil -> no-op
     s := NewRecordDataStorage(nil, &fakeConfiger{cfg: &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 10}}}})

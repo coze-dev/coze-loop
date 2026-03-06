@@ -583,6 +583,58 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "content_omitted triggers LoadRecordOutputFields",
+			prepare: func() {
+				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvalTargetService.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{"field1"}).Return(nil)
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
+				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
+			},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					EvalSetItem: &entity.EvaluationSetItem{ID: 1, ItemID: 2},
+					Event:       &entity.ExptItemEvalEvent{Session: &entity.Session{UserID: "u"}, ExptID: 1, SpaceID: 2},
+					Expt: &entity.Experiment{
+						ID: 1, SpaceID: 2,
+						Evaluators: []*entity.Evaluator{{
+							ID: 1, EvaluatorType: entity.EvaluatorTypePrompt,
+							PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+						}},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								EvaluatorsConf: &entity.EvaluatorsConf{
+									EvaluatorConcurNum: gptr.Of(1),
+									EvaluatorConf: []*entity.EvaluatorConf{{
+										EvaluatorVersionID: 1,
+										IngressConf: &entity.EvaluatorIngressConf{
+											EvalSetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
+											TargetAdapter:   &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
+										},
+									}},
+								},
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+				Turn: &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
+			},
+			target: &entity.EvalTargetRecord{
+				EvalTargetOutputData: &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{
+						"field1": {
+							ContentType:      gptr.Of(entity.ContentTypeText),
+							Text:             gptr.Of(""),
+							ContentOmitted:   gptr.Of(true),
+							FullContent:      &entity.ObjectStorage{URI: gptr.Of("key")},
+							FullContentBytes: gptr.Of(int32(0)),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name:    "no target config - skip call",
 			prepare: func() {},
 			etec: &entity.ExptTurnEvalCtx{
@@ -2324,6 +2376,40 @@ func TestDefaultExptTurnEvaluationImpl_callEvaluators_EdgeCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_deepCopyEvaluatorInputData(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil input returns nil", func(t *testing.T) {
+		got := deepCopyEvaluatorInputData(nil)
+		assert.Nil(t, got)
+	})
+
+	t.Run("deep copy produces independent copy", func(t *testing.T) {
+		in := &entity.EvaluatorInputData{
+			InputFields: map[string]*entity.Content{
+				"a": {Text: gptr.Of("x")},
+			},
+			EvaluateDatasetFields: map[string]*entity.Content{
+				"b": {Text: gptr.Of("y")},
+			},
+			EvaluateTargetOutputFields: map[string]*entity.Content{
+				"c": {Text: gptr.Of("z")},
+			},
+			Ext: map[string]string{"k": "v"},
+		}
+		got := deepCopyEvaluatorInputData(in)
+		assert.NotNil(t, got)
+		assert.NotSame(t, in, got)
+		assert.Equal(t, in.InputFields["a"].GetText(), got.InputFields["a"].GetText())
+		assert.Equal(t, in.EvaluateDatasetFields["b"].GetText(), got.EvaluateDatasetFields["b"].GetText())
+		assert.Equal(t, in.EvaluateTargetOutputFields["c"].GetText(), got.EvaluateTargetOutputFields["c"].GetText())
+		assert.Equal(t, in.Ext, got.Ext)
+		// 修改 copy 不应影响原对象
+		got.InputFields["a"].SetText("modified")
+		assert.Equal(t, "x", in.InputFields["a"].GetText())
+	})
 }
 
 func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *testing.T) {
