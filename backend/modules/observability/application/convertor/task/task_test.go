@@ -144,10 +144,8 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 	dto := &kitTask.TaskConfig{
 		AutoEvaluateConfigs: []*kitTask.AutoEvaluateConfig{
 			{
-				EvaluatorVersionID:   1,
-				EvaluatorID:          2,
-				ItemConcurrencyCount: gptr.Of(int64(3)),
-				ItemMaxRetryCount:    gptr.Of(int64(4)),
+				EvaluatorVersionID: 1,
+				EvaluatorID:        2,
 				FieldMappings: []*kitTask.EvaluateFieldMapping{
 					{
 						FieldSchema:        schema,
@@ -166,6 +164,10 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 					},
 				},
 			},
+		},
+		EvaluationExperimentConfig: &kitTask.EvaluationExperimentConfig{
+			ItemConcurrencyCount: gptr.Of(int32(3)),
+			ItemMaxRetryCount:    gptr.Of(int32(4)),
 		},
 		DataReflowConfig: []*kitTask.DataReflowConfig{
 			{
@@ -187,8 +189,10 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 
 	cfg := TaskConfigDTO2DO(dto)
 	if assert.NotNil(t, cfg) && assert.Len(t, cfg.AutoEvaluateConfigs, 1) {
-		assert.Equal(t, int64(3), ptr.From(cfg.AutoEvaluateConfigs[0].ItemConcurrencyCount))
-		assert.Equal(t, int64(4), ptr.From(cfg.AutoEvaluateConfigs[0].ItemMaxRetryCount))
+		if assert.NotNil(t, cfg.EvaluationExperimentConfig) {
+			assert.Equal(t, int64(3), ptr.From(cfg.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int64(4), ptr.From(cfg.EvaluationExperimentConfig.ItemMaxRetryCount))
+		}
 		mappings := cfg.AutoEvaluateConfigs[0].FieldMappings
 		if assert.Len(t, mappings, 3) {
 			assert.Equal(t, "result", ptr.From(mappings[0].EvalSetName))
@@ -205,21 +209,21 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 	}
 }
 
-func TestAutoEvaluateConfigDO2DTO(t *testing.T) {
+func TestTaskConfigDO2DTO_EvaluationExperimentConfig(t *testing.T) {
 	t.Parallel()
 
-	do := &entity.AutoEvaluateConfig{
-		EvaluatorVersionID:   11,
-		EvaluatorID:          22,
-		ItemConcurrencyCount: gptr.Of(int64(5)),
-		ItemMaxRetryCount:    gptr.Of(int64(6)),
+	do := &entity.TaskConfig{
+		EvaluationExperimentConfig: &entity.EvaluationExperimentConfig{
+			ItemConcurrencyCount: gptr.Of(int32(5)),
+			ItemMaxRetryCount:    gptr.Of(int32(6)),
+		},
 	}
-	dto := AutoEvaluateConfigDO2DTO(do)
+	dto := TaskConfigDO2DTO(do)
 	if assert.NotNil(t, dto) {
-		assert.Equal(t, int64(11), dto.EvaluatorVersionID)
-		assert.Equal(t, int64(22), dto.EvaluatorID)
-		assert.Equal(t, int64(5), ptr.From(dto.ItemConcurrencyCount))
-		assert.Equal(t, int64(6), ptr.From(dto.ItemMaxRetryCount))
+		if assert.NotNil(t, dto.EvaluationExperimentConfig) {
+			assert.Equal(t, int64(5), ptr.From(dto.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int64(6), ptr.From(dto.EvaluationExperimentConfig.ItemMaxRetryCount))
+		}
 	}
 }
 

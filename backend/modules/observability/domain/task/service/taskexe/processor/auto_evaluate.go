@@ -387,6 +387,10 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
 		Session:               sessionInfo,
 	}
+	if currentTask.TaskConfig.EvaluationExperimentConfig != nil {
+		submitExperimentReq.ItemRetryNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemMaxRetryCount
+		submitExperimentReq.ItemConcurNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemConcurrencyCount
+	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
 	if err != nil {

@@ -73,11 +73,15 @@ struct EffectiveTime {
     2: optional i64 end_at (api.js_conv="true", go.tag='json:"end_at"')          // ms timestamp
 }
 
-
+struct EvaluationExperimentConfig {
+    1: optional i32 item_concurrency_count (api.js_conv="true",  go.tag='json:"item_concurrency_count"')
+    2: optional i32 item_max_retry_count (api.js_conv="true", go.tag='json:"item_max_retry_count"')
+}
 // TaskConfig
 struct TaskConfig {
-    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息
+    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息 evaluator 维度
     2: optional list<DataReflowConfig> data_reflow_config                    // 配置的数据回流的数据集信息
+    3: optional EvaluationExperimentConfig evaluation_experiment_config      // 评测实验配置 task 维度
 }
 
 struct DataReflowConfig {
@@ -92,8 +96,6 @@ struct AutoEvaluateConfig {
     1: required i64 evaluator_version_id (api.js_conv="true", go.tag='json:"evaluator_version_id"')
     2: required i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
     3: required list<EvaluateFieldMapping> field_mappings
-    4: optional i64 item_concurrency_count (api.js_conv="true",  go.tag='json:"item_concurrency_count"')
-    5: optional i64 item_max_retry_count (api.js_conv="true", go.tag='json:"item_max_retry_count"')
 }
 
 // RunDetail

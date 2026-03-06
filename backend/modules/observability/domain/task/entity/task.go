@@ -109,15 +109,19 @@ type Sampler struct {
 	CycleTimeUnit TimeUnit `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
-	AutoEvaluateConfigs []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
-	DataReflowConfig    []*DataReflowConfig
+	AutoEvaluateConfigs        []*AutoEvaluateConfig       `json:"auto_evaluate_configs"`
+	DataReflowConfig           []*DataReflowConfig         `json:"data_reflow_config,omitempty"`
+	EvaluationExperimentConfig *EvaluationExperimentConfig `json:"evaluation_experiment_config,omitempty"`
 }
 type AutoEvaluateConfig struct {
-	EvaluatorVersionID   int64                   `json:"evaluator_version_id"`
-	EvaluatorID          int64                   `json:"evaluator_id"`
-	FieldMappings        []*EvaluateFieldMapping `json:"field_mappings"`
-	ItemConcurrencyCount *int64                  `json:"item_concurrency_count,omitempty"`
-	ItemMaxRetryCount    *int64                  `json:"item_max_retry_count,omitempty"`
+	EvaluatorVersionID int64                   `json:"evaluator_version_id"`
+	EvaluatorID        int64                   `json:"evaluator_id"`
+	FieldMappings      []*EvaluateFieldMapping `json:"field_mappings"`
+}
+
+type EvaluationExperimentConfig struct {
+	ItemConcurrencyCount *int32 `json:"item_concurrency_count,omitempty"`
+	ItemMaxRetryCount    *int32 `json:"item_max_retry_count,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束

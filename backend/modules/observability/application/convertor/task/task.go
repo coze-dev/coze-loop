@@ -118,9 +118,14 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 			dataReflowConfigs = append(dataReflowConfigs, DataReflowConfigDO2DTO(config))
 		}
 	}
+	var evaluationExperimentConfig *task.EvaluationExperimentConfig
+	if v.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = EvaluationExperimentConfigDO2DTO(v.EvaluationExperimentConfig)
+	}
 	return &task.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
 	}
 }
 
@@ -140,9 +145,17 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 		}
 	}
 	return &task.AutoEvaluateConfig{
-		EvaluatorVersionID:   v.EvaluatorVersionID,
-		EvaluatorID:          v.EvaluatorID,
-		FieldMappings:        fieldMappings,
+		EvaluatorVersionID: v.EvaluatorVersionID,
+		EvaluatorID:        v.EvaluatorID,
+		FieldMappings:      fieldMappings,
+	}
+}
+
+func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *task.EvaluationExperimentConfig {
+	if v == nil {
+		return nil
+	}
+	return &task.EvaluationExperimentConfig{
 		ItemConcurrencyCount: v.ItemConcurrencyCount,
 		ItemMaxRetryCount:    v.ItemMaxRetryCount,
 	}
@@ -435,11 +448,9 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 
 		}
 		autoEvaluateConfigs = append(autoEvaluateConfigs, &entity.AutoEvaluateConfig{
-			EvaluatorVersionID:   autoEvaluateConfig.EvaluatorVersionID,
-			EvaluatorID:          autoEvaluateConfig.EvaluatorID,
-			FieldMappings:        fieldMappings,
-			ItemConcurrencyCount: autoEvaluateConfig.ItemConcurrencyCount,
-			ItemMaxRetryCount:    autoEvaluateConfig.ItemMaxRetryCount,
+			EvaluatorVersionID: autoEvaluateConfig.EvaluatorVersionID,
+			EvaluatorID:        autoEvaluateConfig.EvaluatorID,
+			FieldMappings:      fieldMappings,
 		})
 	}
 	dataReflowConfigs := make([]*entity.DataReflowConfig, 0, len(taskConfig.DataReflowConfig))
@@ -462,9 +473,17 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 			DatasetCategory: dataReflowConfig.DatasetCategory,
 		})
 	}
+	var evaluationExperimentConfig *entity.EvaluationExperimentConfig
+	if taskConfig.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = &entity.EvaluationExperimentConfig{
+			ItemConcurrencyCount: taskConfig.EvaluationExperimentConfig.ItemConcurrencyCount,
+			ItemMaxRetryCount:    taskConfig.EvaluationExperimentConfig.ItemMaxRetryCount,
+		}
+	}
 	return &entity.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
 	}
 }
 
