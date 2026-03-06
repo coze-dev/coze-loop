@@ -450,6 +450,14 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 				}
 			}
 		}
+	case entity.EvaluatorTypeAgent:
+		res.EvaluateDatasetFields = fromEvalSet
+		res.EvaluateTargetOutputFields = fromTarget
+		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+			for key, content := range fieldCnt {
+				res.InputFields[key] = content
+			}
+		}
 	default:
 		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 			for key, content := range fieldCnt {
