@@ -36,6 +36,15 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 
 	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo, mockEvalSetItemSvc)
 	assert.NotNil(t, eval)
+
+	impl, ok := eval.(*DefaultExptTurnEvaluationImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockMetric, impl.metric)
+	assert.Equal(t, mockEvalTargetService, impl.evalTargetService)
+	assert.Equal(t, mockEvaluatorService, impl.evaluatorService)
+	assert.Equal(t, mockBenefitService, impl.benefitService)
+	assert.Equal(t, mockEvalAsyncRepo, impl.evalAsyncRepo)
+	assert.Equal(t, mockEvalSetItemSvc, impl.evalSetItemSvc)
 }
 
 func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
@@ -680,6 +689,92 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			},
+			target:  mockTargetResult,
+			wantErr: true,
+		},
+		{
+			name: "evaluator conf not found",
+			prepare: func() {
+				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+			},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{Session: &entity.Session{UserID: "u"}, ExptID: 1, SpaceID: 2},
+					Expt: &entity.Experiment{
+						SpaceID: 2,
+						Evaluators: []*entity.Evaluator{
+							{
+								ID:            1,
+								EvaluatorType: entity.EvaluatorTypePrompt,
+								PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+							},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ItemConcurNum: gptr.Of(1),
+							ConnectorConf: entity.Connector{
+								EvaluatorsConf: &entity.EvaluatorsConf{
+									EvaluatorConcurNum: gptr.Of(1),
+									EvaluatorConf: []*entity.EvaluatorConf{
+										{EvaluatorVersionID: 999, IngressConf: &entity.EvaluatorIngressConf{TargetAdapter: &entity.FieldAdapter{}}},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+				Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
+			},
+			target:  mockTargetResult,
+			wantErr: true,
+		},
+		{
+			name: "RunEvaluator error",
+			prepare: func() {
+				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run evaluator failed"))
+				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
+			},
+			etec: &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: 1},
+					Event:       &entity.ExptItemEvalEvent{Session: &entity.Session{UserID: "u"}, ExptID: 1, SpaceID: 2},
+					Expt: &entity.Experiment{
+						SpaceID: 2,
+						Evaluators: []*entity.Evaluator{
+							{
+								ID:            1,
+								EvaluatorType: entity.EvaluatorTypePrompt,
+								PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
+							},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ItemConcurNum: gptr.Of(1),
+							ConnectorConf: entity.Connector{
+								EvaluatorsConf: &entity.EvaluatorsConf{
+									EvaluatorConcurNum: gptr.Of(1),
+									EvaluatorConf: []*entity.EvaluatorConf{
+										{
+											EvaluatorVersionID: 1,
+											IngressConf: &entity.EvaluatorIngressConf{
+												EvalSetAdapter: &entity.FieldAdapter{
+													FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+												},
+												TargetAdapter: &entity.FieldAdapter{
+													FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+				Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
 			},
 			target:  mockTargetResult,
 			wantErr: true,
