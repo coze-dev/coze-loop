@@ -975,7 +975,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
@@ -1114,7 +1114,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{
 					EvaluationSetVersion: &entity.EvaluationSetVersion{
@@ -1475,7 +1475,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 					},
 				}, nil).AnyTimes()
 				mockEvaluationSetItemService.EXPECT().BatchGetEvaluationSetItems(gomock.Any(), gomock.Any()).Return([]*entity.EvaluationSetItem{}, nil).AnyTimes()
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
@@ -2321,7 +2321,7 @@ func TestPayloadBuilder_BuildTurnResultFilter(t *testing.T) {
 				}, nil)
 
 				// 3. buildEvaluatorResult -> EvaluatorRecordService.BatchGetEvaluatorRecord
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).Return([]*entity.EvaluatorRecord{
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).Return([]*entity.EvaluatorRecord{
 					{
 						ID:                 1001,
 						EvaluatorVersionID: 201,
@@ -2589,7 +2589,7 @@ func TestExptResultServiceImpl_UpsertExptTurnResultFilter(t *testing.T) {
 			}, nil)
 
 			// 3. buildEvaluatorResult -> EvaluatorRecordService.BatchGetEvaluatorRecord
-			mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{
+			mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{
 				{
 					ID:                 1001,
 					EvaluatorVersionID: 201,
@@ -2803,7 +2803,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 				},
 			},
 		}, nil).AnyTimes()
-		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{
+		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{
 			{
 				ID:                 1,
 				SpaceID:            0,
@@ -4340,7 +4340,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4413,7 +4413,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4487,7 +4487,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4568,7 +4568,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4634,7 +4634,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4699,7 +4699,7 @@ func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 					}, nil)
 
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1001}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID:                 1001,
@@ -4845,7 +4845,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(ctx, []int64{1}, false).
+			BatchGetEvaluatorRecord(ctx, []int64{1}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID:                 1,
@@ -5088,8 +5088,8 @@ func TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore(t *testi
 		score1 := 0.8
 		score2 := 0.9
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(ctx, gomock.Any(), false).
-			DoAndReturn(func(_ context.Context, ids []int64, _ bool) ([]*entity.EvaluatorRecord, error) {
+			BatchGetEvaluatorRecord(ctx, gomock.Any(), false, false).
+			DoAndReturn(func(_ context.Context, ids []int64, _ bool, _ bool) ([]*entity.EvaluatorRecord, error) {
 				// 根据传入的ID顺序返回对应的记录
 				records := make([]*entity.EvaluatorRecord, 0, len(ids))
 				for _, id := range ids {
@@ -5234,7 +5234,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore(t *testi
 
 		// Mock BatchGetEvaluatorRecord - 返回错误
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(ctx, []int64{1}, false).
+			BatchGetEvaluatorRecord(ctx, []int64{1}, false, false).
 			Return(nil, errors.New("db error"))
 
 		// Mock idgen
@@ -5707,7 +5707,7 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		score1 := 0.8
 		score2 := 0.9
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false).
+			BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID:                 1,

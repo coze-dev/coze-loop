@@ -1533,7 +1533,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(records, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -1545,7 +1545,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(nil, nil)
 			},
 			wantErr: false,
@@ -1556,7 +1556,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(nil, errors.New("db error"))
 			},
 			wantErr: true,

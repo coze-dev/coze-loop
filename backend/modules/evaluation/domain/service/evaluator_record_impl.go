@@ -189,7 +189,7 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	}
 
 	// 5. 批量获取 evaluator_record
-	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	if err != nil {
 		return err
 	}
@@ -230,8 +230,8 @@ func (s *EvaluatorRecordServiceImpl) GetEvaluatorRecord(ctx context.Context, eva
 	return s.evaluatorRecordRepo.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted)
 }
 
-func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error) {
-	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted)
+func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
 	if err != nil {
 		return nil, err
 	}

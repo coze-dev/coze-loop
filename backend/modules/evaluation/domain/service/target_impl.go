@@ -591,6 +591,20 @@ func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID
 	return e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
 }
 
+func (e *EvalTargetServiceImpl) LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	if record == nil || len(fieldKeys) == 0 {
+		return nil
+	}
+	return e.evalTargetRepo.LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys)
+}
+
+func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error {
+	if record == nil {
+		return nil
+	}
+	return e.evalTargetRepo.LoadEvalTargetRecordFullData(ctx, record)
+}
+
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {
 	record, err := e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID)
 	if err != nil {

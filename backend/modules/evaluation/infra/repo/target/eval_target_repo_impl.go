@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -32,18 +33,20 @@ type EvalTargetRepoImpl struct {
 	evalTargetDao        mysql.EvalTargetDAO
 	evalTargetVersionDao mysql.EvalTargetVersionDAO
 	evalTargetRecordDao  mysql.EvalTargetRecordDAO
+	recordDataStorage    *storage.RecordDataStorage
 
 	idgen      idgen.IIDGenerator
 	dbProvider db.Provider
 	lwt        platestwrite.ILatestWriteTracker
 }
 
-func NewEvalTargetRepo(idgen idgen.IIDGenerator, provider db.Provider, evalTargetDao mysql.EvalTargetDAO, evalTargetVersionDao mysql.EvalTargetVersionDAO, evalTargetRecordDao mysql.EvalTargetRecordDAO, lwt platestwrite.ILatestWriteTracker) repo.IEvalTargetRepo {
+func NewEvalTargetRepo(idgen idgen.IIDGenerator, provider db.Provider, evalTargetDao mysql.EvalTargetDAO, evalTargetVersionDao mysql.EvalTargetVersionDAO, evalTargetRecordDao mysql.EvalTargetRecordDAO, recordDataStorage *storage.RecordDataStorage, lwt platestwrite.ILatestWriteTracker) repo.IEvalTargetRepo {
 	evalTargetRepoOnce.Do(func() {
 		singletonEvalTargetRepo = &EvalTargetRepoImpl{
 			evalTargetDao:        evalTargetDao,
 			evalTargetVersionDao: evalTargetVersionDao,
 			evalTargetRecordDao:  evalTargetRecordDao,
+			recordDataStorage:   recordDataStorage,
 			idgen:                idgen,
 			dbProvider:           provider,
 			lwt:                  lwt,
@@ -281,6 +284,11 @@ func (e *EvalTargetRepoImpl) BatchGetEvalTargetVersion(ctx context.Context, spac
 }
 
 func (e *EvalTargetRepoImpl) CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) (int64, error) {
+	if e.recordDataStorage != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
+			return 0, err
+		}
+	}
 	po, err := convertor.EvalTargetRecordDO2PO(record)
 	if err != nil {
 		return 0, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
@@ -303,6 +311,7 @@ func (e *EvalTargetRepoImpl) GetEvalTargetRecordByIDAndSpaceID(ctx context.Conte
 	if err != nil {
 		return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
 	}
+	// List/Get 不加载大对象完整内容，仅返回 MySQL 中的剪裁预览；大对象按需通过 GetEvalTargetOutputFieldContent 查询
 	return do, nil
 }
 
@@ -320,13 +329,33 @@ func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Con
 		if err != nil {
 			return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
 		}
+		// List/Get 不加载大对象完整内容，仅返回 MySQL 中的剪裁预览；大对象按需通过 GetEvalTargetOutputFieldContent 查询
 		res = append(res, do)
 	}
 
 	return res, nil
 }
 
+func (e *EvalTargetRepoImpl) LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	if e.recordDataStorage == nil || record == nil || len(fieldKeys) == 0 {
+		return nil
+	}
+	return e.recordDataStorage.LoadEvalTargetOutputFields(ctx, record, fieldKeys)
+}
+
+func (e *EvalTargetRepoImpl) LoadEvalTargetRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error {
+	if e.recordDataStorage == nil || record == nil {
+		return nil
+	}
+	return e.recordDataStorage.LoadEvalTargetRecordData(ctx, record)
+}
+
 func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	if e.recordDataStorage != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
+			return err
+		}
+	}
 	po, err := convertor.EvalTargetRecordDO2PO(record)
 	if err != nil {
 		return err
@@ -335,6 +364,11 @@ func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *e
 }
 
 func (e *EvalTargetRepoImpl) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
+	if e.recordDataStorage != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
+			return err
+		}
+	}
 	po, err := convertor.EvalTargetRecordDO2PO(record)
 	if err != nil {
 		return err

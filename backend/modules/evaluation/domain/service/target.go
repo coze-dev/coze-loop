@@ -27,6 +27,10 @@ type IEvalTargetService interface {
 	GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
 	CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
+	// LoadRecordOutputFields 从 TOS 加载 record 中指定 output 字段的完整内容（用于评估器输入需完整 target_output 的场景）
+	LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
+	// LoadRecordFullData 从 TOS 加载 record 中所有被省略的大对象完整内容（用于导出等需要完整字段的场景）
+	LoadRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error
 	ReportInvokeRecords(ctx context.Context, recordID2Params *entity.ReportTargetRecordParam) error
 	ValidateRuntimeParam(ctx context.Context, targetType entity.EvalTargetType, runtimeParam string) error
 	GenerateMockOutputData(outputSchemas []*entity.ArgsSchema) (map[string]string, error)

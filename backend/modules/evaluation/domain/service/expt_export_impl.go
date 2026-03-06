@@ -266,10 +266,12 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	for {
 		page := entity.NewPage(pageNum, pageSize)
 		param := &entity.MGetExperimentResultParam{
-			SpaceID:    spaceID,
-			ExptIDs:    []int64{exptID},
-			BaseExptID: ptr.Of(exptID),
-			Page:       page,
+			SpaceID:           spaceID,
+			ExptIDs:           []int64{exptID},
+			BaseExptID:        ptr.Of(exptID),
+			Page:              page,
+			ExportFullContent: true,  // 导出时从 TOS 加载完整字段，避免 RDS 剪裁内容
+			FullTrajectory:    true,  // 导出时保留完整 trajectory
 		}
 		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
 		if err != nil {

@@ -290,6 +290,29 @@ func (l *LocalEvalTargetService) BatchGetEvalTargetRecords(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// GetEvalTargetOutputFieldContent
+// 按需查询 output 中大对象的完整内容
+func (l *LocalEvalTargetService) GetEvalTargetOutputFieldContent(ctx context.Context, request *eval_target.GetEvalTargetOutputFieldContentRequest, callOptions ...callopt.Option) (*eval_target.GetEvalTargetOutputFieldContentResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentArgs)
+		result := out.(*eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentResult)
+		resp, err := l.impl.GetEvalTargetOutputFieldContent(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentArgs{Request: request}
+	result := &eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvalTargetOutputFieldContent")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // DebugEvalTarget
 // debug
 func (l *LocalEvalTargetService) DebugEvalTarget(ctx context.Context, request *eval_target.DebugEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.DebugEvalTargetResponse, error) {

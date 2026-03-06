@@ -447,7 +447,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 				idgen:              mockIDGen,
 			}
 
-			result, err := repo.BatchGetEvaluatorRecord(context.Background(), tt.recordIDs, tt.includeDeleted)
+			result, err := repo.BatchGetEvaluatorRecord(context.Background(), tt.recordIDs, tt.includeDeleted, false)
 			assert.Equal(t, tt.expectedError, err)
 			if err == nil {
 				assert.Equal(t, len(tt.expectedResult), len(result))
@@ -482,7 +482,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_EmptyIDs(t *testing.T) 
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{}, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{}, false, false)
 	assert.NoError(t, err)
 	assert.Len(t, result, 0)
 }
@@ -584,7 +584,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), recordIDs, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), recordIDs, false, false)
 	assert.NoError(t, err)
 	assert.Len(t, result, 150)
 	assert.Equal(t, int64(1), result[0].ID)
@@ -629,7 +629,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_ConvertError(t *testing
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false, false)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 }

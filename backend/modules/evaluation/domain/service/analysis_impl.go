@@ -23,6 +23,6 @@ func (e evaluationAnalysisServiceImpl) BatchGetAnalysisRecordByUniqueKeys(ctx co
 	return nil, err
 }
 
-func (e evaluationAnalysisServiceImpl) TrajectoryAnalysis(ctx context.Context, param TrajectoryAnalysisParam) (recordID int64, err error) {
+func (e evaluationAnalysisServiceImpl) TrajectoryAnalysis(ctx context.Context, param entity.TrajectoryAnalysisParam) (recordID int64, err error) {
 	return 0, err
 }

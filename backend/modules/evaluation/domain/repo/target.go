@@ -25,6 +25,10 @@ type IEvalTargetRepo interface {
 	UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
 	GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
 	ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
+	// LoadEvalTargetRecordOutputFields 从 S3 加载 record output 中指定字段的大对象完整内容
+	LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
+	// LoadEvalTargetRecordFullData 从 TOS 加载 record 中所有被省略的大对象完整内容（用于导出等需要完整字段的场景）
+	LoadEvalTargetRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error
 	// target record end
 }
 

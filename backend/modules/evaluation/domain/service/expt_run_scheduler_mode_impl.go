@@ -872,7 +872,7 @@ func (e *exptBaseExec) publishResult(ctx context.Context, turnEvaluatorRefs []*e
 	for _, ref := range turnEvaluatorRefs {
 		evaluatorResultIDs = append(evaluatorResultIDs, ref.EvaluatorResultID)
 	}
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, true)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, true, false)
 	if err != nil {
 		return err
 	}

@@ -1184,7 +1184,7 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 
 func (e *EvaluatorHandlerImpl) BatchGetEvaluatorRecords(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorRecordsRequest) (resp *evaluatorservice.BatchGetEvaluatorRecordsResponse, err error) {
 	evaluatorRecordIDs := request.GetEvaluatorRecordIds()
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, request.GetIncludeDeleted())
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, request.GetIncludeDeleted(), false)
 	if err != nil {
 		return nil, err
 	}
