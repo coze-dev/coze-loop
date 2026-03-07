@@ -3,8 +3,12 @@
 
 package rpc
 
-import "context"
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+)
 
 type IWorkflowProvider interface {
-	BatchGetWorkflows(ctx context.Context, spaceIDs []string) (map[string]string, error)
+	BatchGetWorkflows(ctx context.Context, spans loop_span.SpanList) (map[string]string, error)
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 type WorkflowProvider struct {
@@ -16,6 +17,6 @@ func NewWorkflowProvider() rpc.IWorkflowProvider {
 	return &WorkflowProvider{}
 }
 
-func (w *WorkflowProvider) BatchGetWorkflows(ctx context.Context, spaceIDs []string) (map[string]string, error) {
+func (w *WorkflowProvider) BatchGetWorkflows(ctx context.Context, spans loop_span.SpanList) (map[string]string, error) {
 	return make(map[string]string), nil
 }

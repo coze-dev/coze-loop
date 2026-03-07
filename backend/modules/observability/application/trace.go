@@ -265,7 +265,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		UserIDs:      sResp.Spans.GetUserIDs(),
 		EvaluatorIDs: sResp.Spans.GetEvaluatorVersionIDs(),
 		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
-		SpaceIDs:     sResp.Spans.GetSpaceIDsWithWorkflow(),
+		Spans:        sResp.Spans,
 	})
 	return &trace.GetTraceResponse{
 		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
@@ -1161,7 +1161,7 @@ type GetDisplayInfoRequest struct {
 	UserIDs      []string
 	EvaluatorIDs []int64
 	TagKeyIDs    []string
-	SpaceIDs     []string // space_id 列表，用于获取 workflow
+	Spans        loop_span.SpanList
 }
 
 type GetDisplayInfoResponse struct {
@@ -1172,7 +1172,7 @@ type GetDisplayInfoResponse struct {
 }
 
 func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayInfoRequest) GetDisplayInfoResponse {
-	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 && len(req.SpaceIDs) == 0 {
+	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 && len(req.Spans) == 0 {
 		return GetDisplayInfoResponse{}
 	}
 	var (
@@ -1202,8 +1202,8 @@ func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayIn
 	})
 	g.Go(func() error {
 		defer goroutine.Recovery(ctx)
-		if len(req.SpaceIDs) > 0 {
-			workflowMap, _ = t.workflowSvc.BatchGetWorkflows(ctx, req.SpaceIDs)
+		if len(req.Spans) > 0 {
+			workflowMap, _ = t.workflowSvc.BatchGetWorkflows(ctx, req.Spans)
 		}
 		return nil
 	})

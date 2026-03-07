@@ -837,16 +837,6 @@ func (s SpanList) GetEvaluatorVersionIDs() []int64 {
 	return lo.Uniq(ret)
 }
 
-func (s SpanList) GetSpaceIDsWithWorkflow() []string {
-	ret := make([]string, 0)
-	for _, span := range s {
-		if span.WorkspaceID != "" && span.Encryption != nil && span.Encryption.NeedWorkflow {
-			ret = append(ret, span.WorkspaceID)
-		}
-	}
-	return lo.Uniq(ret)
-}
-
 func (s SpanList) Uniq() SpanList {
 	return lo.UniqBy(s, func(item *Span) string {
 		return fmt.Sprintf("%s_%s", item.SpanID, item.TraceID)

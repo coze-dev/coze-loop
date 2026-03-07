@@ -4,6 +4,7 @@
 package trace
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -129,7 +130,8 @@ func SpanDO2DTO(
 	if s.Encryption != nil {
 		encryptionInfo := &span.EncryptionInfo{}
 		if workflowMap != nil {
-			if workflowURL, ok := workflowMap[s.WorkspaceID]; ok {
+			key := fmt.Sprintf("%s-%s", s.WorkspaceID, s.TraceID)
+			if workflowURL, ok := workflowMap[key]; ok {
 				encryptionInfo.Workflow = &workflowURL
 			}
 		}
