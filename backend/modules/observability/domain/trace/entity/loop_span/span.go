@@ -136,10 +136,10 @@ type Span struct {
 	TagsBool map[string]bool   `json:"tags_bool"`
 	TagsByte map[string]string `json:"tags_byte"`
 
-	AttrTos         *AttrTos        `json:"-"`
-	LogicDeleteTime int64           `json:"-"` // us
-	Annotations     AnnotationList  `json:"-"`
-	Encryption      *EncryptionInfo `json:"-"`
+	AttrTos         *AttrTos       `json:"-"`
+	LogicDeleteTime int64          `json:"-"` // us
+	Annotations     AnnotationList `json:"-"`
+	Encryption      EncryptionInfo `json:"-"`
 }
 
 type ObjectStorage struct {

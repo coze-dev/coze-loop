@@ -127,15 +127,13 @@ func SpanDO2DTO(
 			outSpan.Annotations = annotationDTOList
 		}
 	}
-	if s.Encryption != nil {
-		encryptionInfo := &span.EncryptionInfo{}
-		if workflowMap != nil {
-			key := fmt.Sprintf("%s-%s", s.WorkspaceID, s.TraceID)
-			if workflowURL, ok := workflowMap[key]; ok {
-				encryptionInfo.Workflow = &workflowURL
+	if s.Encryption.NeedWorkflow {
+		key := fmt.Sprintf("%s-%s", s.WorkspaceID, s.TraceID)
+		if workflowURL, ok := workflowMap[key]; ok {
+			outSpan.Encryption = &span.EncryptionInfo{
+				Workflow: &workflowURL,
 			}
 		}
-		outSpan.Encryption = encryptionInfo
 	}
 	return outSpan
 }
