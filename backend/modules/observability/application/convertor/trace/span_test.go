@@ -253,7 +253,7 @@ func TestSpanListConversions(t *testing.T) {
 	span2 := &loop_span.Span{SpanID: "2"}
 	list := loop_span.SpanList{span1, span2}
 
-	dto := SpanListDO2DTO(list, nil, nil, nil, false)
+	dto := SpanListDO2DTO(list, nil, nil, nil, nil, false)
 	assert.Len(t, dto, 2)
 	assert.Equal(t, span1.SpanID, dto[0].SpanID)
 	assert.Equal(t, span2.SpanID, dto[1].SpanID)

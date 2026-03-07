@@ -23,6 +23,7 @@ func SpanDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	workflowMap map[string]string,
 	needOriginalTags bool,
 ) *span.OutputSpan {
 	outSpan := &span.OutputSpan{
@@ -125,6 +126,15 @@ func SpanDO2DTO(
 			outSpan.Annotations = annotationDTOList
 		}
 	}
+	if s.Encryption != nil {
+		encryptionInfo := &span.EncryptionInfo{}
+		if workflowMap != nil {
+			if workflowURL, ok := workflowMap[s.WorkspaceID]; ok {
+				encryptionInfo.Workflow = &workflowURL
+			}
+		}
+		outSpan.Encryption = encryptionInfo
+	}
 	return outSpan
 }
 
@@ -170,11 +180,12 @@ func SpanListDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
+	workflowMap map[string]string,
 	needOriginalTags bool,
 ) []*span.OutputSpan {
 	ret := make([]*span.OutputSpan, len(spans))
 	for i, s := range spans {
-		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, needOriginalTags)
+		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, workflowMap, needOriginalTags)
 	}
 	return ret
 }

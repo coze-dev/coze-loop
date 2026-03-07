@@ -62,6 +62,7 @@ func NewTraceApplication(
 	evalService rpc.IEvaluatorRPCAdapter,
 	userService rpc.IUserProvider,
 	tagService rpc.ITagRPCAdapter,
+	workflowService rpc.IWorkflowProvider,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
 		traceService:       traceService,
@@ -75,6 +76,7 @@ func NewTraceApplication(
 		evalSvc:            evalService,
 		userSvc:            userService,
 		tagSvc:             tagService,
+		workflowSvc:        workflowService,
 	}, nil
 }
 
@@ -90,6 +92,7 @@ type TraceApplication struct {
 	evalSvc            rpc.IEvaluatorRPCAdapter
 	userSvc            rpc.IUserProvider
 	tagSvc             rpc.ITagRPCAdapter
+	workflowSvc        rpc.IWorkflowProvider
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
@@ -112,7 +115,7 @@ func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSp
 	}
 
 	return &trace.ListPreSpanResponse{
-		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil, false),
+		Spans: tconv.SpanListDO2DTO(preSpan.Spans, nil, nil, nil, nil, false),
 	}, nil
 }
 
@@ -169,7 +172,7 @@ func (t *TraceApplication) ListSpans(ctx context.Context, req *trace.ListSpansRe
 		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
 	})
 	return &trace.ListSpansResponse{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
@@ -262,9 +265,10 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		UserIDs:      sResp.Spans.GetUserIDs(),
 		EvaluatorIDs: sResp.Spans.GetEvaluatorVersionIDs(),
 		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
+		SpaceIDs:     sResp.Spans.GetSpaceIDsWithWorkflow(),
 	})
 	return &trace.GetTraceResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -343,7 +347,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
 	})
 	return &trace.SearchTraceTreeResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
 			Tokens: &trace.TokenCost{
@@ -1157,23 +1161,26 @@ type GetDisplayInfoRequest struct {
 	UserIDs      []string
 	EvaluatorIDs []int64
 	TagKeyIDs    []string
+	SpaceIDs     []string // space_id 列表，用于获取 workflow
 }
 
 type GetDisplayInfoResponse struct {
-	UserMap map[string]*commdo.UserInfo
-	EvalMap map[int64]*rpc.Evaluator
-	TagMap  map[int64]*rpc.TagInfo
+	UserMap     map[string]*commdo.UserInfo
+	EvalMap     map[int64]*rpc.Evaluator
+	TagMap      map[int64]*rpc.TagInfo
+	WorkflowMap map[string]string
 }
 
 func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayInfoRequest) GetDisplayInfoResponse {
-	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 {
+	if len(req.UserIDs) == 0 && len(req.EvaluatorIDs) == 0 && len(req.TagKeyIDs) == 0 && len(req.SpaceIDs) == 0 {
 		return GetDisplayInfoResponse{}
 	}
 	var (
-		g       errgroup.Group
-		userMap map[string]*commdo.UserInfo
-		evalMap map[int64]*rpc.Evaluator
-		tagMap  map[int64]*rpc.TagInfo
+		g           errgroup.Group
+		userMap     map[string]*commdo.UserInfo
+		evalMap     map[int64]*rpc.Evaluator
+		tagMap      map[int64]*rpc.TagInfo
+		workflowMap map[string]string
 	)
 	g.Go(func() error {
 		defer goroutine.Recovery(ctx)
@@ -1193,10 +1200,18 @@ func (t *TraceApplication) GetDisplayInfo(ctx context.Context, req *GetDisplayIn
 		tagMap, _ = t.tagSvc.BatchGetTagInfo(ctx, req.WorkspaceID, req.TagKeyIDs)
 		return nil
 	})
+	g.Go(func() error {
+		defer goroutine.Recovery(ctx)
+		if len(req.SpaceIDs) > 0 {
+			workflowMap, _ = t.workflowSvc.BatchGetWorkflows(ctx, req.SpaceIDs)
+		}
+		return nil
+	})
 	_ = g.Wait()
 	return GetDisplayInfoResponse{
-		UserMap: userMap,
-		EvalMap: evalMap,
-		TagMap:  tagMap,
+		UserMap:     userMap,
+		EvalMap:     evalMap,
+		TagMap:      tagMap,
+		WorkflowMap: workflowMap,
 	}
 }

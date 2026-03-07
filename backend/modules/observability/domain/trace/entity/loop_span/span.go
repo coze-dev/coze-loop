@@ -136,9 +136,10 @@ type Span struct {
 	TagsBool map[string]bool   `json:"tags_bool"`
 	TagsByte map[string]string `json:"tags_byte"`
 
-	AttrTos         *AttrTos       `json:"-"`
-	LogicDeleteTime int64          `json:"-"` // us
-	Annotations     AnnotationList `json:"-"`
+	AttrTos         *AttrTos        `json:"-"`
+	LogicDeleteTime int64           `json:"-"` // us
+	Annotations     AnnotationList  `json:"-"`
+	Encryption      *EncryptionInfo `json:"-"`
 }
 
 type ObjectStorage struct {
@@ -164,6 +165,10 @@ type AttrTos struct {
 	InputDataURL   string
 	OutputDataURL  string
 	MultimodalData map[string]string
+}
+
+type EncryptionInfo struct {
+	NeedWorkflow bool
 }
 
 func (s *Span) GetSystemTags() map[string]string {
@@ -828,6 +833,16 @@ func (s SpanList) GetEvaluatorVersionIDs() []int64 {
 	ret := make([]int64, 0)
 	for _, span := range s {
 		ret = append(ret, span.Annotations.GetEvaluatorVersionIDs()...)
+	}
+	return lo.Uniq(ret)
+}
+
+func (s SpanList) GetSpaceIDsWithWorkflow() []string {
+	ret := make([]string, 0)
+	for _, span := range s {
+		if span.WorkspaceID != "" && span.Encryption != nil && span.Encryption.NeedWorkflow {
+			ret = append(ret, span.WorkspaceID)
+		}
 	}
 	return lo.Uniq(ret)
 }
