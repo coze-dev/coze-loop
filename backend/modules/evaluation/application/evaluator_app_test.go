@@ -33,6 +33,7 @@ import (
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	userinfomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf/mocks"
@@ -1403,13 +1404,11 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
 	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
 
 	app := &EvaluatorHandlerImpl{
 		auth:                   mockAuth,
-		evaluatorService:       mockEvaluatorService,
 		evaluatorRecordService: mockEvaluatorRecordService,
 		userInfoService:        mockUserInfoService,
 	}
@@ -1422,11 +1421,6 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 		EvaluatorVersionID: versionID,
 		SpaceID:            spaceID,
 	}
-	evaluatorDO := &entity.Evaluator{
-		ID:      1,
-		SpaceID: spaceID,
-	}
-
 	tests := []struct {
 		name      string
 		req       *evaluatorservice.GetEvaluatorRecordRequest
@@ -1441,8 +1435,6 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 			mockSetup: func() {
 				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
 					Return(record, nil)
-				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
-					Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
 			},
@@ -1467,8 +1459,8 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 			mockSetup: func() {
 				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
 					Return(record, nil)
-				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
-					Return(nil, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
 			},
 			wantErr: false,
 		},
@@ -1480,8 +1472,6 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 			mockSetup: func() {
 				mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).
 					Return(record, nil)
-				mockEvaluatorService.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), versionID, false, false).
-					Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("auth failed"))
 			},
 			wantErr: true,
@@ -1637,6 +1627,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
 				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+				mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
 				mockExptResultService := mocks.NewMockExptResultService(ctrl)
 				handler := NewEvaluatorHandlerImpl(
@@ -1653,6 +1644,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockFileProvider,
 					make(map[entity.EvaluatorType]service.EvaluatorSourceService),
 					mockExptResultService,
+					mockEvalAsyncRepo,
 				)
 
 				// 测试复杂的调试场景，涉及多个服务交互
@@ -2182,6 +2174,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				mockAuditClient := auditmocks.NewMockIAuditService(ctrl)
 				mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 				mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+				mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 
 				mockExptResultService := mocks.NewMockExptResultService(ctrl)
 				handler := NewEvaluatorHandlerImpl(
@@ -2198,6 +2191,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					mockFileProvider,
 					make(map[entity.EvaluatorType]service.EvaluatorSourceService),
 					mockExptResultService,
+					mockEvalAsyncRepo,
 				)
 
 				// 模拟完整的评估器生命周期：创建 -> 更新 -> 提交版本 -> 运行 -> 删除

@@ -1480,7 +1480,7 @@ func TestEvaluatorRepoImpl_BatchDeleteEvaluator(t *testing.T) {
 					BatchDeleteEvaluatorVersionByEvaluatorIDs(gomock.Any(), []int64{1, 2}, "test_user", gomock.Any()).
 					Return(nil)
 				mockTagDAO.EXPECT().
-					DeleteEvaluatorTagsByConditions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DeleteEvaluatorTagsByConditions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).Times(2)
 			},
 			expectedError: nil,
