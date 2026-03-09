@@ -14,7 +14,9 @@ import (
 func TestNewWorkflowProvider(t *testing.T) {
 	provider := NewWorkflowProvider()
 	assert.NotNil(t, provider)
-	assert.Implements(t, (*interface{ BatchGetWorkflows(context.Context, loop_span.SpanList) (map[string]string, error) })(nil), provider)
+	assert.Implements(t, (*interface {
+		BatchGetWorkflows(context.Context, loop_span.SpanList) (map[string]string, error)
+	})(nil), provider)
 }
 
 func TestWorkflowProvider_BatchGetWorkflows(t *testing.T) {
@@ -34,7 +36,7 @@ func TestWorkflowProvider_BatchGetWorkflows(t *testing.T) {
 			wantSize: 0,
 		},
 		{
-			name: "nil spans list",
+			name:     "nil spans list",
 			spans:    nil,
 			wantErr:  false,
 			wantSize: 0,

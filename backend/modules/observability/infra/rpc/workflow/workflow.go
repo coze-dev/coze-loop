@@ -10,8 +10,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
-type WorkflowProvider struct {
-}
+type WorkflowProvider struct{}
 
 func NewWorkflowProvider() rpc.IWorkflowProvider {
 	return &WorkflowProvider{}
