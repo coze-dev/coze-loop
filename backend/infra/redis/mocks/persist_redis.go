@@ -339,6 +339,34 @@ func (mr *MockPersistentCmdableMockRecorder) IncrBy(ctx, key, value any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IncrBy", reflect.TypeOf((*MockPersistentCmdable)(nil).IncrBy), ctx, key, value)
 }
 
+// LRange mocks base method.
+func (m *MockPersistentCmdable) LRange(ctx context.Context, key string, start, stop int64) *redis0.StringSliceCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LRange", ctx, key, start, stop)
+	ret0, _ := ret[0].(*redis0.StringSliceCmd)
+	return ret0
+}
+
+// LRange indicates an expected call of LRange.
+func (mr *MockPersistentCmdableMockRecorder) LRange(ctx, key, start, stop any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LRange", reflect.TypeOf((*MockPersistentCmdable)(nil).LRange), ctx, key, start, stop)
+}
+
+// LTrim mocks base method.
+func (m *MockPersistentCmdable) LTrim(ctx context.Context, key string, start, stop int64) *redis0.StatusCmd {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LTrim", ctx, key, start, stop)
+	ret0, _ := ret[0].(*redis0.StatusCmd)
+	return ret0
+}
+
+// LTrim indicates an expected call of LTrim.
+func (mr *MockPersistentCmdableMockRecorder) LTrim(ctx, key, start, stop any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LTrim", reflect.TypeOf((*MockPersistentCmdable)(nil).LTrim), ctx, key, start, stop)
+}
+
 // MGet mocks base method.
 func (m *MockPersistentCmdable) MGet(ctx context.Context, keys ...string) *redis0.SliceCmd {
 	m.ctrl.T.Helper()
