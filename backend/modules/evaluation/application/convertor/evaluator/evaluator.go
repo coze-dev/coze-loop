@@ -669,7 +669,7 @@ func ConvertAgentConfigDO2DTO(do *evaluatordo.AgentConfig) *commondto.AgentConfi
 		return nil
 	}
 	return &commondto.AgentConfig{
-		AgentType: (*commondto.AgentType)(gptr.Of(string(do.AgentType))),
+		AgentType: gptr.Of(string(do.AgentType)),
 	}
 }
 

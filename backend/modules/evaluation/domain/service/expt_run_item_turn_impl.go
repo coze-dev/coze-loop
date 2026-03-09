@@ -385,8 +385,14 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
-func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(ctx context.Context, ev *entity.Evaluator, ec *entity.EvaluatorConf,
-	etec *entity.ExptTurnEvalCtx, inputData *entity.EvaluatorInputData, recordMap *sync.Map) error {
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
+	ctx context.Context,
+	ev *entity.Evaluator,
+	ec *entity.EvaluatorConf,
+	etec *entity.ExptTurnEvalCtx,
+	inputData *entity.EvaluatorInputData,
+	recordMap *sync.Map,
+) error {
 	var err error
 	defer e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil)
 

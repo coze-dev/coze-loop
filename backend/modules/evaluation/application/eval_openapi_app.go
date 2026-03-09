@@ -31,7 +31,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
-	evaluatorconvertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
@@ -1930,7 +1929,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
 		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID())
 
-	outputData := evaluatorconvertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
+	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
 	if outputData != nil {
 		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
 	}
@@ -1939,7 +1938,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		SpaceID:    req.GetWorkspaceID(),
 		RecordID:   req.GetInvokeID(),
 		OutputData: outputData,
-		Status:     evaluatorconvertor.ToEvaluatorRunStatusDO(req.GetStatus()),
+		Status:     evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus()),
 	}); err != nil {
 		return nil, err
 	}

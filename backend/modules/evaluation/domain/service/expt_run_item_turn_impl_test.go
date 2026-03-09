@@ -172,16 +172,16 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 	}
 
 	tests := []struct {
-		name           string
-		evaluatorType  entity.EvaluatorType
-		ec             *entity.EvaluatorConf
-		turnFields     map[string]*entity.Content
-		targetFields   map[string]*entity.Content
-		inputSchemas   []*entity.ArgsSchema
-		ext            map[string]string
-		wantInputData  *entity.EvaluatorInputData
-		wantErr        bool
-		mockSetup      func(mockEvalSetItemSvc *svcmocks.MockEvaluationSetItemService)
+		name          string
+		evaluatorType entity.EvaluatorType
+		ec            *entity.EvaluatorConf
+		turnFields    map[string]*entity.Content
+		targetFields  map[string]*entity.Content
+		inputSchemas  []*entity.ArgsSchema
+		ext           map[string]string
+		wantInputData *entity.EvaluatorInputData
+		wantErr       bool
+		mockSetup     func(mockEvalSetItemSvc *svcmocks.MockEvaluationSetItemService)
 	}{
 		{
 			name:          "Agent evaluator - with full dataset context",

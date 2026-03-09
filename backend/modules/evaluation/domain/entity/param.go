@@ -252,11 +252,11 @@ type GetAsyncDebugEvaluatorInvokeResultRequest struct {
 }
 
 type GetAsyncDebugEvaluatorInvokeResultResponse struct {
-	SpaceID      int64                `json:"space_id"`
-	Status       EvaluatorRunStatus   `json:"status"`
-	OutputData   *EvaluatorOutputData `json:"output_data,omitempty"`
-	EvaluatorDO  *Evaluator           `json:"evaluator_do,omitempty"`
-	InputData    *EvaluatorInputData  `json:"input_data,omitempty"`
+	SpaceID     int64                `json:"space_id"`
+	Status      EvaluatorRunStatus   `json:"status"`
+	OutputData  *EvaluatorOutputData `json:"output_data,omitempty"`
+	EvaluatorDO *Evaluator           `json:"evaluator_do,omitempty"`
+	InputData   *EvaluatorInputData  `json:"input_data,omitempty"`
 }
 
 type ReportEvaluatorRecordParam struct {
