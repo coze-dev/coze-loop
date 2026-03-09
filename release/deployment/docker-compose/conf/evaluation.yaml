@@ -3,8 +3,6 @@ evaluation_record_storage:
   providers:
     - provider: 'RDS'
       max_size: 204800
-    - provider: 'S3'
-      max_size: 2097152
 
 expt_consumer_conf:
   space_expt_exec_conf:
