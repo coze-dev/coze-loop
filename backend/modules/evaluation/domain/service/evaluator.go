@@ -46,7 +46,7 @@ type EvaluatorService interface {
 	BatchGetEvaluatorByIDAndVersion(ctx context.Context, pairs [][2]interface{}) ([]*entity.Evaluator, error)
 	// GetEvaluatorVersion 按 version id 单个查询 evaluator_version version
 	// withTags=true 时查询并回填标签（用于内置评估器），需传入 spaceID；否则查询普通评估器
-	GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error)
+	GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted, withTags bool) (*entity.Evaluator, error)
 	// BatchGetEvaluatorVersion 按 version id 批量查询 evaluator_version version
 	BatchGetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionIDs []int64, includeDeleted bool) ([]*entity.Evaluator, error)
 	// ListEvaluatorVersion 按条件查询 evaluator_version version
@@ -67,8 +67,8 @@ type EvaluatorRecordService interface {
 	CorrectEvaluatorRecord(ctx context.Context, evaluatorRecordDO *entity.EvaluatorRecord, correctionDO *entity.Correction) error
 	// GetEvaluatorRecord 按 id 查询单个 evaluator_version 运行结果
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
-	// BatchGetEvaluatorRecord 按 id 批量查询 evaluator_version 运行结果
-	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error)
+	// BatchGetEvaluatorRecord 按 id 批量查询 evaluator_version 运行结果，withFullContent 为 true 时从 TOS 加载完整内容
+	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error)
 }
 
 //type ListEvaluatorRequest struct {

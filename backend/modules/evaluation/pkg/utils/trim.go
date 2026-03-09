@@ -5,6 +5,7 @@ package utils
 
 import (
 	"strings"
+	"unicode/utf8"
 )
 
 // countJsonArrayElements 计算 json array 中包含的元素数量
@@ -133,8 +134,9 @@ func summarizeValue(value string) string {
 	case '[':
 		return `"[...]"`
 	default:
-		if len(value) > 5 {
-			return value[:5] + "..."
+		runes := []rune(value)
+		if len(runes) > 5 {
+			return string(runes[:5]) + "..."
 		}
 		return value
 	}
@@ -148,4 +150,37 @@ func GenerateTextPreview(content string) string {
 		return content
 	}
 	return string(runes[:previewContentLength]) + "..."
+}
+
+// TruncateJsonPreviewToSize 将 JSON 剪裁为不超过 maxBytes 的预览，用于 MySQL 存储
+// 小对象直接返回原内容；大对象先尝试 GenerateJsonObjectPreview，若仍超长则按字节截断
+func TruncateJsonPreviewToSize(jsonBytes []byte, maxBytes int64) []byte {
+	if maxBytes <= 0 || int64(len(jsonBytes)) <= maxBytes {
+		return jsonBytes
+	}
+	s := string(jsonBytes)
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 && s[0] == '{' && s[len(s)-1] == '}' {
+		s = GenerateJsonObjectPreview(s)
+	} else {
+		s = GenerateTextPreview(s)
+	}
+	if int64(len(s)) <= maxBytes {
+		return []byte(s)
+	}
+	// 按字节截断，确保不切断 UTF-8 序列
+	const suffix = "..."
+	maxLen := int(maxBytes) - len(suffix)
+	if maxLen <= 0 {
+		return []byte(suffix)
+	}
+	truncated := s
+	if len(truncated) > maxLen {
+		truncated = truncated[:maxLen]
+		// 回退到完整 UTF-8 字符边界，避免产生无效 UTF-8 导致 \ufffd
+		for len(truncated) > 0 && !utf8.ValidString(truncated) {
+			truncated = truncated[:len(truncated)-1]
+		}
+	}
+	return append([]byte(truncated), suffix...)
 }

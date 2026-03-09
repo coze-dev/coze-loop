@@ -4837,7 +4837,7 @@ func TestExperimentApplication_UpdateAnnotateRecord(t *testing.T) {
 			// 模拟更新记录
 			mockAnnotateService.EXPECT().
 				UpdateAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ int64, recordDO *entity.AnnotateRecord) error {
+				DoAndReturn(func(_ context.Context, _, _ int64, recordDO *entity.AnnotateRecord) error {
 					// 验证 Score 被正确解析和四舍五入
 					if recordDO.AnnotateData != nil && recordDO.AnnotateData.Score != nil {
 						assert.NotNil(t, recordDO.AnnotateData.Score)
@@ -4870,7 +4870,7 @@ func TestExperimentApplication_UpdateAnnotateRecord(t *testing.T) {
 				Return(nil)
 			mockAnnotateService.EXPECT().
 				UpdateAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ int64, recordDO *entity.AnnotateRecord) error {
+				DoAndReturn(func(_ context.Context, _, _ int64, recordDO *entity.AnnotateRecord) error {
 					// 验证 Score 被正确解析和四舍五入
 					assert.NotNil(t, recordDO.AnnotateData)
 					assert.NotNil(t, recordDO.AnnotateData.Score)
@@ -4944,7 +4944,7 @@ func TestExperimentApplication_UpdateAnnotateRecord(t *testing.T) {
 				Return(nil)
 			mockAnnotateService.EXPECT().
 				UpdateAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ int64, recordDO *entity.AnnotateRecord) error {
+				DoAndReturn(func(_ context.Context, _, _ int64, recordDO *entity.AnnotateRecord) error {
 					// 验证 Score 被正确解析和四舍五入
 					assert.NotNil(t, recordDO.AnnotateData)
 					assert.NotNil(t, recordDO.AnnotateData.Score)
@@ -4973,7 +4973,7 @@ func TestExperimentApplication_UpdateAnnotateRecord(t *testing.T) {
 		mockSetup: func() {
 			mockManager.EXPECT().
 				Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, exptID int64, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
+				DoAndReturn(func(_ context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {
 					return &entity.Experiment{
 						ID:        exptID,
 						SpaceID:   spaceID,
@@ -5067,7 +5067,7 @@ func TestExperimentApplication_CreateAnnotateRecord(t *testing.T) {
 			// 模拟创建记录
 			mockAnnotateService.EXPECT().
 				SaveAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, recordDO *entity.AnnotateRecord) error {
+				DoAndReturn(func(_ context.Context, _, _, _ int64, recordDO *entity.AnnotateRecord) error {
 					// 验证 Score 被正确解析和四舍五入
 					if recordDO.AnnotateData != nil && recordDO.AnnotateData.Score != nil {
 						// Score 应该已经被四舍五入到两位小数
@@ -5124,7 +5124,7 @@ func TestExperimentApplication_CreateAnnotateRecord(t *testing.T) {
 				Return(validRecordID, nil)
 			mockAnnotateService.EXPECT().
 				SaveAnnotateRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ int64, _ int64, _ int64, recordDO *entity.AnnotateRecord) error {
+				DoAndReturn(func(_ context.Context, _, _, _ int64, recordDO *entity.AnnotateRecord) error {
 					// 验证 Score 被正确解析和四舍五入
 					assert.NotNil(t, recordDO.AnnotateData)
 					assert.NotNil(t, recordDO.AnnotateData.Score)

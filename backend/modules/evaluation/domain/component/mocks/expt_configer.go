@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	component "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -95,6 +96,20 @@ func (m *MockIConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err 
 func (mr *MockIConfigerMockRecorder) GetErrRetryConf(ctx, spaceID, err any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetErrRetryConf", reflect.TypeOf((*MockIConfiger)(nil).GetErrRetryConf), ctx, spaceID, err)
+}
+
+// GetEvaluationRecordStorage mocks base method.
+func (m *MockIConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluationRecordStorage", ctx)
+	ret0, _ := ret[0].(*component.EvaluationRecordStorage)
+	return ret0
+}
+
+// GetEvaluationRecordStorage indicates an expected call of GetEvaluationRecordStorage.
+func (mr *MockIConfigerMockRecorder) GetEvaluationRecordStorage(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationRecordStorage", reflect.TypeOf((*MockIConfiger)(nil).GetEvaluationRecordStorage), ctx)
 }
 
 // GetExptExecConf mocks base method.

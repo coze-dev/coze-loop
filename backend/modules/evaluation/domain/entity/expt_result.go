@@ -349,6 +349,8 @@ type MGetExperimentResultParam struct {
 	Page               Page
 	// FullTrajectory 表示在构建 eval_target_result 时是否需要包含轨迹（trajectory）相关信息
 	FullTrajectory bool
+	// ExportFullContent 表示导出场景下需要从 TOS 加载完整字段内容（RDS 中大对象会被剪裁）
+	ExportFullContent bool
 }
 
 type MGetExperimentReportResult struct {

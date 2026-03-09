@@ -1523,7 +1523,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(records, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -1535,7 +1535,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(nil, nil)
 			},
 			wantErr: false,
@@ -1546,7 +1546,7 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 				EvaluatorRecordIds: recordIDs,
 			},
 			mockSetup: func() {
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false).
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), recordIDs, false, false).
 					Return(nil, errors.New("db error"))
 			},
 			wantErr: true,
@@ -1921,7 +1921,7 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 				callCount := 0
 				mockEvaluatorService.EXPECT().
 					GetEvaluatorVersion(gomock.Any(), gomock.Any(), int64(123), false, gomock.Any()).
-					DoAndReturn(func(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error) {
+					DoAndReturn(func(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted, withTags bool) (*entity.Evaluator, error) {
 						callCount++
 						if callCount == 1 {
 							return nil, errors.New("temporary database error")

@@ -4,7 +4,10 @@
 package evaluator
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,11 +16,82 @@ import (
 	"go.uber.org/mock/gomock"
 
 	dbmocks "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
+	fsMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	evaluatormocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 )
+
+func TestNewEvaluatorRecordRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	recordDataStorage := storage.NewRecordDataStorage(nil, nil)
+
+	repo := NewEvaluatorRecordRepo(mockIDGen, mockDBProvider, mockEvaluatorRecordDAO, recordDataStorage)
+
+	impl, ok := repo.(*EvaluatorRecordRepoImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockEvaluatorRecordDAO, impl.evaluatorRecordDao)
+	assert.Equal(t, mockDBProvider, impl.dbProvider)
+	assert.Equal(t, mockIDGen, impl.idgen)
+	assert.Equal(t, recordDataStorage, impl.recordDataStorage)
+}
+
+// fakeEvaluatorRecordStorageConfiger 用于 RecordDataStorage 的测试 configer
+type fakeEvaluatorRecordStorageConfiger struct {
+	cfg *component.EvaluationRecordStorage
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+	return f.cfg
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
+	return nil
+}
 
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -101,6 +175,48 @@ func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 			assert.Equal(t, tt.expectedError, err)
 		})
 	}
+
+	t.Run("recordDataStorage SaveEvaluatorRecordData error returns err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		mockDBProvider := dbmocks.NewMockProvider(ctrl)
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
+
+		record := &entity.EvaluatorRecord{
+			ID:                 1,
+			SpaceID:            1,
+			EvaluatorVersionID: 1,
+			ExperimentID:       1,
+			ExperimentRunID:    1,
+			ItemID:             1,
+			TurnID:             1,
+			TraceID:            "trace",
+			LogID:              "log",
+			Status:             entity.EvaluatorRunStatusSuccess,
+			EvaluatorInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"f": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longinputcontent")},
+				},
+			},
+			BaseInfo: &entity.BaseInfo{UpdatedBy: &entity.UserInfo{UserID: gptr.Of("user")}},
+		}
+
+		repo := &EvaluatorRecordRepoImpl{
+			evaluatorRecordDao: mockEvaluatorRecordDAO,
+			dbProvider:         mockDBProvider,
+			idgen:              mockIDGen,
+			recordDataStorage:  recordDataStorage,
+		}
+		err := repo.CreateEvaluatorRecord(context.Background(), record)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "process evaluator input data")
+	})
 }
 
 func TestEvaluatorRecordRepoImpl_CorrectEvaluatorRecord(t *testing.T) {
@@ -185,6 +301,48 @@ func TestEvaluatorRecordRepoImpl_CorrectEvaluatorRecord(t *testing.T) {
 			assert.Equal(t, tt.expectedError, err)
 		})
 	}
+
+	t.Run("recordDataStorage SaveEvaluatorRecordData error returns err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		mockDBProvider := dbmocks.NewMockProvider(ctrl)
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeEvaluatorRecordStorageConfiger{cfg: cfg})
+
+		record := &entity.EvaluatorRecord{
+			ID:                 1,
+			SpaceID:            1,
+			EvaluatorVersionID: 1,
+			ExperimentID:       1,
+			ExperimentRunID:    1,
+			ItemID:             1,
+			TurnID:             1,
+			TraceID:            "trace",
+			LogID:              "log",
+			Status:             entity.EvaluatorRunStatusSuccess,
+			EvaluatorInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"f": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longinputcontent")},
+				},
+			},
+			BaseInfo: &entity.BaseInfo{UpdatedBy: &entity.UserInfo{UserID: gptr.Of("user")}},
+		}
+
+		repo := &EvaluatorRecordRepoImpl{
+			evaluatorRecordDao: mockEvaluatorRecordDAO,
+			dbProvider:         mockDBProvider,
+			idgen:              mockIDGen,
+			recordDataStorage:  recordDataStorage,
+		}
+		err := repo.CorrectEvaluatorRecord(context.Background(), record)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "process evaluator input data")
+	})
 }
 
 func TestEvaluatorRecordRepoImpl_GetEvaluatorRecord(t *testing.T) {
@@ -293,7 +451,121 @@ func TestEvaluatorRecordRepoImpl_GetEvaluatorRecord(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("recordDataStorage LoadEvaluatorRecordData success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		mockDBProvider := dbmocks.NewMockProvider(ctrl)
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Read(gomock.Any(), gomock.Any()).Return(&nopReader{buf: bytes.NewReader([]byte("loaded-full"))}, nil)
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, nil)
+
+		inputDataBytes, _ := json.Marshal(&entity.EvaluatorInputData{
+			InputFields: map[string]*entity.Content{
+				"f": {
+					ContentType:      gptr.Of(entity.ContentTypeText),
+					Text:             gptr.Of("short"),
+					ContentOmitted:   gptr.Of(true),
+					FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-f")},
+					FullContentBytes: gptr.Of(int32(13)),
+				},
+			},
+		})
+		mockEvaluatorRecordDAO.EXPECT().
+			GetEvaluatorRecord(gomock.Any(), int64(1), false).
+			Return(&model.EvaluatorRecord{
+				ID:                 1,
+				SpaceID:            1,
+				EvaluatorVersionID: 1,
+				ExperimentID:       gptr.Of(int64(1)),
+				ExperimentRunID:    1,
+				ItemID:             1,
+				TurnID:             1,
+				TraceID:            "trace",
+				LogID:              gptr.Of("log"),
+				Status:             int32(entity.EvaluatorRunStatusSuccess),
+				InputData:          &inputDataBytes,
+				CreatedAt:          time.Unix(0, 0),
+				UpdatedAt:          time.Unix(0, 0),
+				CreatedBy:          "creator",
+				UpdatedBy:          "updater",
+			}, nil)
+
+		repo := &EvaluatorRecordRepoImpl{
+			evaluatorRecordDao: mockEvaluatorRecordDAO,
+			dbProvider:         mockDBProvider,
+			idgen:              mockIDGen,
+			recordDataStorage:  recordDataStorage,
+		}
+		result, err := repo.GetEvaluatorRecord(context.Background(), 1, false)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		assert.Equal(t, "loaded-full", result.EvaluatorInputData.InputFields["f"].GetText())
+	})
+
+	t.Run("recordDataStorage LoadEvaluatorRecordData error returns err", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+		mockDBProvider := dbmocks.NewMockProvider(ctrl)
+		mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Read(gomock.Any(), gomock.Any()).Return(nil, errors.New("s3 read err"))
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, nil)
+
+		inputDataBytes, _ := json.Marshal(&entity.EvaluatorInputData{
+			InputFields: map[string]*entity.Content{
+				"f": {
+					ContentType:      gptr.Of(entity.ContentTypeText),
+					Text:             gptr.Of("short"),
+					ContentOmitted:   gptr.Of(true),
+					FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-f")},
+					FullContentBytes: gptr.Of(int32(50)),
+				},
+			},
+		})
+		mockEvaluatorRecordDAO.EXPECT().
+			GetEvaluatorRecord(gomock.Any(), int64(1), false).
+			Return(&model.EvaluatorRecord{
+				ID:                 1,
+				SpaceID:            1,
+				EvaluatorVersionID: 1,
+				ExperimentID:       gptr.Of(int64(1)),
+				ExperimentRunID:    1,
+				ItemID:             1,
+				TurnID:             1,
+				TraceID:            "trace",
+				LogID:              gptr.Of("log"),
+				Status:             int32(entity.EvaluatorRunStatusSuccess),
+				InputData:          &inputDataBytes,
+				CreatedAt:          time.Unix(0, 0),
+				UpdatedAt:          time.Unix(0, 0),
+				CreatedBy:          "creator",
+				UpdatedBy:          "updater",
+			}, nil)
+
+		repo := &EvaluatorRecordRepoImpl{
+			evaluatorRecordDao: mockEvaluatorRecordDAO,
+			dbProvider:         mockDBProvider,
+			idgen:              mockIDGen,
+			recordDataStorage:  recordDataStorage,
+		}
+		result, err := repo.GetEvaluatorRecord(context.Background(), 1, false)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "load evaluator input omitted content")
+		assert.Nil(t, result)
+	})
 }
+
+type nopReader struct{ buf *bytes.Reader }
+
+func (r *nopReader) Read(p []byte) (int, error)              { return r.buf.Read(p) }
+func (r *nopReader) ReadAt(p []byte, off int64) (int, error) { return r.buf.ReadAt(p, off) }
+func (r *nopReader) Close() error                            { return nil }
 
 func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -447,7 +719,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 				idgen:              mockIDGen,
 			}
 
-			result, err := repo.BatchGetEvaluatorRecord(context.Background(), tt.recordIDs, tt.includeDeleted)
+			result, err := repo.BatchGetEvaluatorRecord(context.Background(), tt.recordIDs, tt.includeDeleted, false)
 			assert.Equal(t, tt.expectedError, err)
 			if err == nil {
 				assert.Equal(t, len(tt.expectedResult), len(result))
@@ -468,6 +740,46 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 	}
 }
 
+func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_WithFullContent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	recordDataStorage := storage.NewRecordDataStorage(nil, nil)
+
+	mockEvaluatorRecordDAO.EXPECT().
+		BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+		Return([]*model.EvaluatorRecord{
+			{
+				ID:                 1,
+				SpaceID:            1,
+				EvaluatorVersionID: 1,
+				ExperimentID:       gptr.Of(int64(1)),
+				ExperimentRunID:    1,
+				ItemID:             1,
+				TurnID:             1,
+				TraceID:            "trace_full_content",
+				LogID:              gptr.Of("log_full_content"),
+				Status:             int32(entity.EvaluatorRunStatusSuccess),
+			},
+		}, nil)
+
+	repo := &EvaluatorRecordRepoImpl{
+		evaluatorRecordDao: mockEvaluatorRecordDAO,
+		dbProvider:         mockDBProvider,
+		idgen:              mockIDGen,
+		recordDataStorage:  recordDataStorage,
+	}
+
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false, true)
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, int64(1), result[0].ID)
+	assert.Equal(t, "trace_full_content", result[0].TraceID)
+}
+
 func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_EmptyIDs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -482,7 +794,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_EmptyIDs(t *testing.T) 
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{}, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{}, false, false)
 	assert.NoError(t, err)
 	assert.Len(t, result, 0)
 }
@@ -584,7 +896,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_Pagination(t *testing.T
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), recordIDs, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), recordIDs, false, false)
 	assert.NoError(t, err)
 	assert.Len(t, result, 150)
 	assert.Equal(t, int64(1), result[0].ID)
@@ -629,7 +941,7 @@ func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord_ConvertError(t *testing
 		idgen:              mockIDGen,
 	}
 
-	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false)
+	result, err := repo.BatchGetEvaluatorRecord(context.Background(), []int64{1}, false, false)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 }

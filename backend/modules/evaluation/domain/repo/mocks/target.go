@@ -193,6 +193,34 @@ func (mr *MockIEvalTargetRepoMockRecorder) ListEvalTargetRecordByIDsAndSpaceID(c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvalTargetRecordByIDsAndSpaceID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).ListEvalTargetRecordByIDsAndSpaceID), ctx, spaceID, recordIDs)
 }
 
+// LoadEvalTargetRecordFullData mocks base method.
+func (m *MockIEvalTargetRepo) LoadEvalTargetRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadEvalTargetRecordFullData", ctx, record)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LoadEvalTargetRecordFullData indicates an expected call of LoadEvalTargetRecordFullData.
+func (mr *MockIEvalTargetRepoMockRecorder) LoadEvalTargetRecordFullData(ctx, record any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEvalTargetRecordFullData", reflect.TypeOf((*MockIEvalTargetRepo)(nil).LoadEvalTargetRecordFullData), ctx, record)
+}
+
+// LoadEvalTargetRecordOutputFields mocks base method.
+func (m *MockIEvalTargetRepo) LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadEvalTargetRecordOutputFields", ctx, record, fieldKeys)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// LoadEvalTargetRecordOutputFields indicates an expected call of LoadEvalTargetRecordOutputFields.
+func (mr *MockIEvalTargetRepoMockRecorder) LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadEvalTargetRecordOutputFields", reflect.TypeOf((*MockIEvalTargetRepo)(nil).LoadEvalTargetRecordOutputFields), ctx, record, fieldKeys)
+}
+
 // SaveEvalTargetRecord mocks base method.
 func (m *MockIEvalTargetRepo) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
 	m.ctrl.T.Helper()

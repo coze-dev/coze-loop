@@ -1560,7 +1560,7 @@ func (e *EvalOpenAPIApplication) BatchGetEvaluatorRecordsOApi(ctx context.Contex
 		return nil, err
 	}
 
-	dos, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, req.EvaluatorRecordIds, req.GetIncludeDeleted())
+	dos, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, req.EvaluatorRecordIds, req.GetIncludeDeleted(), false)
 	if err != nil {
 		return nil, err
 	}

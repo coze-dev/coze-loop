@@ -173,6 +173,7 @@ func InitEvaluationHandler(
 	fileClient fileservice.Client,
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
+	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	tracerFactory func() observabilitytraceservice.Client,
 ) (*EvaluationHandler, error) {

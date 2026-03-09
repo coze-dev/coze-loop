@@ -220,7 +220,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 			}
 
 			if len(evaluatorResultIDs) > 0 {
-				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 				if err != nil {
 					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
 						exptID, exptRunID, itemID, tid, err)
@@ -857,6 +857,8 @@ type PayloadBuilder struct {
 
 	// 控制是否在构建 eval_target_result 时保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容
+	ExportFullContent bool
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -885,8 +887,9 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
-		ExptAnnotateRepo: exptAnnotateRepo,
-		FullTrajectory:   param.FullTrajectory,
+		ExptAnnotateRepo:  exptAnnotateRepo,
+		FullTrajectory:    param.FullTrajectory,
+		ExportFullContent: param.ExportFullContent,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -1008,6 +1011,8 @@ type ExptResultBuilder struct {
 
 	// 控制是否保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容
+	ExportFullContent bool
 }
 
 // 1.确定当前分页下数据范围
@@ -1031,6 +1036,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
 			analysisService:          b.AnalysisService,
 			FullTrajectory:           b.FullTrajectory,
+			ExportFullContent:        b.ExportFullContent,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1107,6 +1113,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		turnResultDO:             b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:         b.ExptAnnotateRepo,
 		FullTrajectory:           b.FullTrajectory,
+		ExportFullContent:        b.ExportFullContent,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1397,7 +1404,7 @@ func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
 		evaluatorResultID2TurnResultID[turnEvaluatorResultRef.EvaluatorResultID] = turnEvaluatorResultRef.ExptTurnResultID
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, e.ExportFullContent)
 	if err != nil {
 		return err
 	}
@@ -1764,6 +1771,17 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 	targetRecords, err := e.evalTargetService.BatchGetRecordByIDs(ctx, e.SpaceID, targetResultIDs)
 	if err != nil {
 		return err
+	}
+
+	// 导出场景下从 TOS 加载完整字段内容
+	if e.ExportFullContent {
+		for _, targetRecord := range targetRecords {
+			if targetRecord != nil {
+				if err := e.evalTargetService.LoadRecordFullData(ctx, targetRecord); err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	turnResultID2TargetOutput := make(map[int64]*entity.TurnTargetOutput) // turn_result_id -> version_id -> result
@@ -2791,7 +2809,7 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 	}
 
 	// 批量获取评估器记录
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	if err != nil {
 		return err
 	}

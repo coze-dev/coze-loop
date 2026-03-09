@@ -184,6 +184,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_eval_target_records := _v11.Group("/eval_target_records", _eval_target_recordsMw(handler)...)
 					_eval_target_records.POST("/batch_get", append(_batchgetevaltargetrecordsMw(handler), apis.BatchGetEvalTargetRecords)...)
 					_eval_target_records.GET("/:eval_target_record_id", append(_getevaltargetrecordMw(handler), apis.GetEvalTargetRecord)...)
+					_eval_target_records.POST("/output_fields", append(_getevaltargetoutputfieldcontentMw(handler), apis.GetEvalTargetOutputFieldContent)...)
 				}
 				{
 					_eval_target_versions := _v11.Group("/eval_target_versions", _eval_target_versionsMw(handler)...)

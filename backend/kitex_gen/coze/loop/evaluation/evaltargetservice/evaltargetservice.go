@@ -98,6 +98,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetEvalTargetOutputFieldContent": kitex.NewMethodInfo(
+		getEvalTargetOutputFieldContentHandler,
+		newEvalTargetServiceGetEvalTargetOutputFieldContentArgs,
+		newEvalTargetServiceGetEvalTargetOutputFieldContentResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"DebugEvalTarget": kitex.NewMethodInfo(
 		debugEvalTargetHandler,
 		newEvalTargetServiceDebugEvalTargetArgs,
@@ -380,6 +387,25 @@ func newEvalTargetServiceBatchGetEvalTargetRecordsResult() interface{} {
 	return eval_target.NewEvalTargetServiceBatchGetEvalTargetRecordsResult()
 }
 
+func getEvalTargetOutputFieldContentHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentArgs)
+	realResult := result.(*eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentResult)
+	success, err := handler.(eval_target.EvalTargetService).GetEvalTargetOutputFieldContent(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceGetEvalTargetOutputFieldContentArgs() interface{} {
+	return eval_target.NewEvalTargetServiceGetEvalTargetOutputFieldContentArgs()
+}
+
+func newEvalTargetServiceGetEvalTargetOutputFieldContentResult() interface{} {
+	return eval_target.NewEvalTargetServiceGetEvalTargetOutputFieldContentResult()
+}
+
 func debugEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*eval_target.EvalTargetServiceDebugEvalTargetArgs)
 	realResult := result.(*eval_target.EvalTargetServiceDebugEvalTargetResult)
@@ -564,6 +590,16 @@ func (p *kClient) BatchGetEvalTargetRecords(ctx context.Context, request *eval_t
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceBatchGetEvalTargetRecordsResult
 	if err = p.c.Call(ctx, "BatchGetEvalTargetRecords", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvalTargetOutputFieldContent(ctx context.Context, request *eval_target.GetEvalTargetOutputFieldContentRequest) (r *eval_target.GetEvalTargetOutputFieldContentResponse, err error) {
+	var _args eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceGetEvalTargetOutputFieldContentResult
+	if err = p.c.Call(ctx, "GetEvalTargetOutputFieldContent", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

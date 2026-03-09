@@ -1717,7 +1717,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				mgr.exptResultService.(*svcMocks.MockExptResultService).
 					EXPECT().
 					UpsertExptTurnResultFilter(ctx, int64(789), int64(123), gomock.Any()).
-					DoAndReturn(func(_ context.Context, _ int64, _ int64, itemIDs []int64) error {
+					DoAndReturn(func(_ context.Context, _, _ int64, itemIDs []int64) error {
 						// Verify that itemIDs contains 10 and 20 (order may vary)
 						if len(itemIDs) != 2 {
 							return fmt.Errorf("expected 2 itemIDs, got %d", len(itemIDs))

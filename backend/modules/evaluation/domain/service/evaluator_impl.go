@@ -526,7 +526,7 @@ func buildListEvaluatorVersionRequest(ctx context.Context, request *entity.ListE
 }
 
 // GetEvaluatorVersion 按 id 和版本号单个查询 evaluator_version version
-func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted bool, withTags bool) (*entity.Evaluator, error) {
+func (e *EvaluatorServiceImpl) GetEvaluatorVersion(ctx context.Context, spaceID *int64, evaluatorVersionID int64, includeDeleted, withTags bool) (*entity.Evaluator, error) {
 	// 合并调用，根据 withTags 控制是否回填 tags
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, spaceID, []int64{evaluatorVersionID}, includeDeleted, withTags)
 	if err != nil {
@@ -627,6 +627,7 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)
 	// 使用 BatchGetEvaluatorByVersionID 查询，不传 spaceID，允许查询所有空间的 evaluator
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {

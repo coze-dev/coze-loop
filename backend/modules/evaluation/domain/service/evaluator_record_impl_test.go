@@ -325,16 +325,16 @@ func TestEvaluatorRecordServiceImpl_BatchGetEvaluatorRecord(t *testing.T) {
 			{ID: 1, SpaceID: 100},
 			{ID: 2, SpaceID: 101},
 		}
-		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false).Return(records, nil)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false, false).Return(records, nil)
 		mockUserInfoService.EXPECT().PackUserInfo(ctx, gomock.Any()).Return()
-		result, err := s.BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false)
+		result, err := s.BatchGetEvaluatorRecord(ctx, []int64{1, 2}, false, false)
 		assert.NoError(t, err)
 		assert.Equal(t, records, result)
 	})
 
 	t.Run("批量获取评估记录失败", func(t *testing.T) {
-		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{3, 4}, true).Return(nil, errors.New("db error"))
-		result, err := s.BatchGetEvaluatorRecord(ctx, []int64{3, 4}, true)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{3, 4}, true, false).Return(nil, errors.New("db error"))
+		result, err := s.BatchGetEvaluatorRecord(ctx, []int64{3, 4}, true, false)
 		assert.Error(t, err)
 		assert.Nil(t, result)
 	})
@@ -421,7 +421,7 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
 		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
 		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return(refs, nil)
-		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{evaluatorRecordID}, false).Return(records, nil)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{evaluatorRecordID}, false, false).Return(records, nil)
 		mockExptTurnResultRepo.EXPECT().UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil)
 
 		err := s.recalculateWeightedScoreForTurn(ctx, rec)
