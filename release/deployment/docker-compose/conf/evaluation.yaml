@@ -1,3 +1,9 @@
+# 评测记录大对象存储配置：200KB 以下 RDS，200KB 以上 S3
+evaluation_record_storage:
+  providers:
+    - provider: 'RDS'
+      max_size: 204800
+
 expt_consumer_conf:
   space_expt_exec_conf:
     "7485314682719338497":

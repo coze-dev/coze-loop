@@ -46,7 +46,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 	})
 }
 
-func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id int64, jobID int64, err error) {
+func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id, jobID int64, err error) {
 	if param == nil {
 		return 0, 0, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}

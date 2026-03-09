@@ -2367,7 +2367,7 @@ func TestExptBaseExec_publishResult(t *testing.T) {
 				event: &entity.ExptScheduleEvent{},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101}, true).Return(nil, errors.New("db error"))
+				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101}, true, false).Return(nil, errors.New("db error"))
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {
@@ -2384,7 +2384,7 @@ func TestExptBaseExec_publishResult(t *testing.T) {
 				event: &entity.ExptScheduleEvent{},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101}, true).Return([]*entity.EvaluatorRecord{
+				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101}, true, false).Return([]*entity.EvaluatorRecord{
 					{ID: 101, Status: entity.EvaluatorRunStatusSuccess},
 				}, nil)
 				f.publisher.EXPECT().PublishExptOnlineEvalResult(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("publish error"))
@@ -2406,7 +2406,7 @@ func TestExptBaseExec_publishResult(t *testing.T) {
 				event: &entity.ExptScheduleEvent{},
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
-				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101, 102, 103}, true).Return([]*entity.EvaluatorRecord{
+				f.evaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{101, 102, 103}, true, false).Return([]*entity.EvaluatorRecord{
 					{
 						ID:     101,
 						Status: entity.EvaluatorRunStatusSuccess,

@@ -105,7 +105,7 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 			evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID] = append(evaluatorVersionID2ResultIDs[turnEvaluatorResultRef.EvaluatorVersionID], turnEvaluatorResultRef.EvaluatorResultID)
 		}
 
-		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 		if err != nil {
 			return err
 		}
@@ -395,7 +395,7 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 		evaluatorResultIDs = append(evaluatorResultIDs, turnEvaluatorResultRef.EvaluatorResultID)
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	// evalResults, err := e.evalCall.BatchGetEvaluatorRecord(ctx, spaceID, evaluatorResultIDs)
 	if err != nil {
 		return err
@@ -1231,7 +1231,7 @@ func (a *AggregatorGroup) Result() *entity.AggregateResult {
 			aggregatorResults = append(aggregatorResults, &aggregatorResult)
 		}
 	}
-	gslice.SortBy(aggregatorResults, func(l *entity.AggregatorResult, r *entity.AggregatorResult) bool {
+	gslice.SortBy(aggregatorResults, func(l, r *entity.AggregatorResult) bool {
 		return l.AggregatorType < r.AggregatorType
 	})
 	return &entity.AggregateResult{
@@ -1338,7 +1338,7 @@ func (a *ScoreDistributionAggregator) Result() map[entity.AggregatorType]*entity
 		}
 		data.ScoreDistribution.ScoreDistributionItems = append(data.ScoreDistribution.ScoreDistributionItems, scoreDistributionItem)
 	}
-	gslice.SortBy(data.ScoreDistribution.ScoreDistributionItems, func(l *entity.ScoreDistributionItem, r *entity.ScoreDistributionItem) bool {
+	gslice.SortBy(data.ScoreDistribution.ScoreDistributionItems, func(l, r *entity.ScoreDistributionItem) bool {
 		return l.Score < r.Score
 	})
 

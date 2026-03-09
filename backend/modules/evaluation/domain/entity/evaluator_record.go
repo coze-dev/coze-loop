@@ -17,8 +17,7 @@ type EvaluatorRecord struct {
 	EvaluatorOutputData *EvaluatorOutputData `json:"evaluator_output_data"`
 	Status              EvaluatorRunStatus   `json:"status"`
 	BaseInfo            *BaseInfo            `json:"base_info"`
-
-	Ext map[string]string `json:"ext,omitempty"`
+	Ext                 map[string]string    `json:"ext,omitempty"`
 }
 
 type EvaluatorInputData struct {
