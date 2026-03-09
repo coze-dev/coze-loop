@@ -56,6 +56,7 @@ func (s *RecordDataStorage) SaveEvaluatorRecordData(ctx context.Context, record 
 	}
 	if record.EvaluatorOutputData != nil {
 		// EvaluatorOutputData 无 Content 字段，仅 EvaluatorResult.Reasoning 等，暂不处理
+		_ = record.EvaluatorOutputData
 	}
 	return nil
 }
@@ -328,7 +329,7 @@ func (s *RecordDataStorage) loadContentFromS3(ctx context.Context, content *enti
 	if err != nil {
 		return errors.WithMessagef(err, "read field from S3, key=%s", key)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		return errors.WithMessagef(err, "read field body, key=%s", key)

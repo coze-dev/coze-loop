@@ -4314,11 +4314,11 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 						ID:       1,
 						ExptType: entity.ExptType_Offline,
 					},
-					SpaceID:            100,
-					ExportFullContent:  true,
-					turnResultDO:       []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}, {ID: 11, TargetResultID: 2}},
-					evalTargetService:  mockEvalTargetService,
-					FullTrajectory:     false,
+					SpaceID:           100,
+					ExportFullContent: true,
+					turnResultDO:      []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}, {ID: 11, TargetResultID: 2}},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
 				}
 				return builder, mockEvalTargetService
 			},
@@ -4356,11 +4356,11 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 						ID:       1,
 						ExptType: entity.ExptType_Offline,
 					},
-					SpaceID:            100,
-					ExportFullContent:  true,
-					turnResultDO:       []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}},
-					evalTargetService:  mockEvalTargetService,
-					FullTrajectory:     false,
+					SpaceID:           100,
+					ExportFullContent: true,
+					turnResultDO:      []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}},
+					evalTargetService: mockEvalTargetService,
+					FullTrajectory:    false,
 				}
 				return builder, mockEvalTargetService
 			},
@@ -5177,7 +5177,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore(t *testi
 		score2 := 0.9
 		mockEvaluatorRecordService.EXPECT().
 			BatchGetEvaluatorRecord(ctx, gomock.Any(), false, false).
-			DoAndReturn(func(_ context.Context, ids []int64, _ bool, _ bool) ([]*entity.EvaluatorRecord, error) {
+			DoAndReturn(func(_ context.Context, ids []int64, _, _ bool) ([]*entity.EvaluatorRecord, error) {
 				// 根据传入的ID顺序返回对应的记录
 				records := make([]*entity.EvaluatorRecord, 0, len(ids))
 				for _, id := range ids {

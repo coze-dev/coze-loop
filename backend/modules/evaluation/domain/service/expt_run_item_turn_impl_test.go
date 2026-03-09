@@ -616,8 +616,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 									EvaluatorConf: []*entity.EvaluatorConf{{
 										EvaluatorVersionID: 1,
 										IngressConf: &entity.EvaluatorIngressConf{
-											EvalSetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
-											TargetAdapter:   &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
+											EvalSetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
+											TargetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{{FieldName: "field1", FromField: "field1"}}},
 										},
 									}},
 								},
@@ -626,7 +626,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 					},
 				},
 				ExptTurnRunResult: &entity.ExptTurnRunResult{},
-				Turn: &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
+				Turn:              &entity.Turn{FieldDataList: []*entity.FieldData{{Name: "field1", Content: mockContent}}},
 			},
 			target: &entity.EvalTargetRecord{
 				EvalTargetOutputData: &entity.EvalTargetOutputData{
@@ -706,8 +706,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{
-								ID:            1,
-								EvaluatorType: entity.EvaluatorTypePrompt,
+								ID:                     1,
+								EvaluatorType:          entity.EvaluatorTypePrompt,
 								PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
 							},
 						},
@@ -745,8 +745,8 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 						SpaceID: 2,
 						Evaluators: []*entity.Evaluator{
 							{
-								ID:            1,
-								EvaluatorType: entity.EvaluatorTypePrompt,
+								ID:                     1,
+								EvaluatorType:          entity.EvaluatorTypePrompt,
 								PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 1},
 							},
 						},
@@ -1349,7 +1349,7 @@ func TestDefaultExptTurnEvaluationImpl_callTarget_Async(t *testing.T) {
 	mockMetric.EXPECT().EmitTurnExecTargetResult(spaceID, false)
 
 	mockEvalTargetService.EXPECT().AsyncExecuteTarget(gomock.Any(), spaceID, targetID, targetVersionID, gomock.Any(), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ int64, param *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
+		func(_ context.Context, _, _, _ int64, param *entity.ExecuteTargetCtx, input *entity.EvalTargetInputData) (*entity.EvalTargetRecord, string, error) {
 			assert.Equal(t, int64(777), gptr.Indirect(param.ExperimentRunID))
 			assert.Equal(t, int64(888), param.ItemID)
 			assert.Equal(t, int64(999), param.TurnID)
@@ -1648,9 +1648,9 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 		"json_field": mockJSONContent,
 	}
 	sourceFieldsWithActualOutput := map[string]*entity.Content{
-		"field1":         mockContent1,
-		"field2":         mockContent2,
-		"json_field":     mockJSONContent,
+		"field1":        mockContent1,
+		"field2":        mockContent2,
+		"json_field":    mockJSONContent,
 		"actual_output": actualOutputContent,
 	}
 
@@ -1746,8 +1746,8 @@ func TestDefaultExptTurnEvaluationImpl_buildFieldsFromSource(t *testing.T) {
 			sourceFields:  sourceFieldsWithActualOutput,
 			evaluatorType: entity.EvaluatorTypePrompt,
 			wantResult: map[string]*entity.Content{
-				"output1":        mockContent1,
-				"actual_output":  actualOutputContent,
+				"output1":       mockContent1,
+				"actual_output": actualOutputContent,
 			},
 			wantErr: false,
 		},
@@ -1983,7 +1983,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 	service := &DefaultExptTurnEvaluationImpl{
 		metric:            mockMetric,
 		evaluatorService:  mockEvaluatorService,
-		benefitService:   mockBenefitService,
+		benefitService:    mockBenefitService,
 		evalTargetService: mockEvalTargetService,
 	}
 

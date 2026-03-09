@@ -16,7 +16,7 @@ type EvaluationRecordStorage struct {
 
 // EvaluationRecordProviderConfig 单个存储 Provider 配置
 type EvaluationRecordProviderConfig struct {
-	Provider string `mapstructure:"provider" json:"provider"`  // RDS, S3 等
+	Provider string `mapstructure:"provider" json:"provider"` // RDS, S3 等
 	MaxSize  int64  `mapstructure:"max_size" json:"max_size"`
 }
 

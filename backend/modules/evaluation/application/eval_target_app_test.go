@@ -2416,7 +2416,7 @@ func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T)
 		EvalTargetOutputData: &entity.EvalTargetOutputData{
 			OutputFields: map[string]*entity.Content{
 				"actual_output": mockContent,
-				"trajectory":   mockContent,
+				"trajectory":    mockContent,
 			},
 		},
 	}
@@ -2431,9 +2431,9 @@ func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T)
 		{
 			name: "success - load and return field contents",
 			req: &evaltargetapi.GetEvalTargetOutputFieldContentRequest{
-				WorkspaceID:         workspaceID,
-				EvalTargetRecordID:  recordID,
-				FieldKeys:           fieldKeys,
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+				FieldKeys:          fieldKeys,
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(mockRecord, nil)
@@ -2467,9 +2467,9 @@ func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T)
 		{
 			name: "error - record not found",
 			req: &evaltargetapi.GetEvalTargetOutputFieldContentRequest{
-				WorkspaceID:         workspaceID,
-				EvalTargetRecordID:  recordID,
-				FieldKeys:           fieldKeys,
+				WorkspaceID:        workspaceID,
+				EvalTargetRecordID: recordID,
+				FieldKeys:          fieldKeys,
 			},
 			mockSetup: func() {
 				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), workspaceID, recordID).Return(nil, nil)

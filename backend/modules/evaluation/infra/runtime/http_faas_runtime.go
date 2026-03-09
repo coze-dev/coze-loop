@@ -153,7 +153,7 @@ function return_val(value) {
 }
 
 // RunCode 通过HTTP调用FaaS服务执行代码
-func (adapter *HTTPFaaSRuntimeAdapter) RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
+func (adapter *HTTPFaaSRuntimeAdapter) RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
 	if code == "" {
 		return nil, fmt.Errorf("代码不能为空")
 	}

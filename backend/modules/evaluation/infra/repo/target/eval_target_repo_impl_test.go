@@ -1993,19 +1993,26 @@ func TestEvalTargetRepoImpl_LoadEvalTargetRecordFullData(t *testing.T) {
 }
 
 // fakeRecordStorageConfiger 用于 RecordDataStorage 的测试 configer
-type fakeRecordStorageConfiger struct{ cfg *component.EvaluationRecordStorage }
+type fakeRecordStorageConfiger struct {
+	cfg *component.EvaluationRecordStorage
+}
 
 func (f *fakeRecordStorageConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
 	return f.cfg
 }
-func (f *fakeRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf { return nil }
-func (f *fakeRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl           { return nil }
+
+func (f *fakeRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf {
+	return nil
+}
+func (f *fakeRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl { return nil }
 func (f *fakeRecordStorageConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return nil
 }
+
 func (f *fakeRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
 	return nil
 }
+
 func (f *fakeRecordStorageConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
 	return nil
 }
@@ -2013,10 +2020,15 @@ func (f *fakeRecordStorageConfiger) GetCKDBName(ctx context.Context) *entity.CKD
 func (f *fakeRecordStorageConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
 	return nil
 }
-func (f *fakeRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool { return nil }
+
+func (f *fakeRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	return nil
+}
+
 func (f *fakeRecordStorageConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
 	return nil
 }
+
 func (f *fakeRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
 	return nil
 }
@@ -2159,9 +2171,9 @@ func TestEvalTargetRepoImpl_UpdateEvalTargetRecord(t *testing.T) {
 		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeRecordStorageConfiger{cfg: cfg})
 
 		recWithLargeContent := &entity.EvalTargetRecord{
-			SpaceID:         validSpaceID,
-			TargetID:        validTargetID,
-			TargetVersionID: validVersionID,
+			SpaceID:             validSpaceID,
+			TargetID:            validTargetID,
+			TargetVersionID:     validVersionID,
 			EvalTargetInputData: &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{}},
 			EvalTargetOutputData: &entity.EvalTargetOutputData{
 				OutputFields: map[string]*entity.Content{

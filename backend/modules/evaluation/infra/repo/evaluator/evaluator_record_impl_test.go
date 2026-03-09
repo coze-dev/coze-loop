@@ -45,30 +45,50 @@ func TestNewEvaluatorRecordRepo(t *testing.T) {
 }
 
 // fakeEvaluatorRecordStorageConfiger 用于 RecordDataStorage 的测试 configer
-type fakeEvaluatorRecordStorageConfiger struct{ cfg *component.EvaluationRecordStorage }
+type fakeEvaluatorRecordStorageConfiger struct {
+	cfg *component.EvaluationRecordStorage
+}
 
 func (f *fakeEvaluatorRecordStorageConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
 	return f.cfg
 }
-func (f *fakeEvaluatorRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf { return nil }
-func (f *fakeEvaluatorRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl           { return nil }
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf {
+	return nil
+}
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
 	return nil
 }
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
 	return nil
 }
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
 	return nil
 }
-func (f *fakeEvaluatorRecordStorageConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig { return nil }
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
 	return nil
 }
-func (f *fakeEvaluatorRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool { return nil }
+
+func (f *fakeEvaluatorRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	return nil
+}
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
 	return nil
 }
+
 func (f *fakeEvaluatorRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
 	return nil
 }
@@ -543,9 +563,9 @@ func TestEvaluatorRecordRepoImpl_GetEvaluatorRecord(t *testing.T) {
 
 type nopReader struct{ buf *bytes.Reader }
 
-func (r *nopReader) Read(p []byte) (int, error)    { return r.buf.Read(p) }
+func (r *nopReader) Read(p []byte) (int, error)              { return r.buf.Read(p) }
 func (r *nopReader) ReadAt(p []byte, off int64) (int, error) { return r.buf.ReadAt(p, off) }
-func (r *nopReader) Close() error                  { return nil }
+func (r *nopReader) Close() error                            { return nil }
 
 func TestEvaluatorRecordRepoImpl_BatchGetEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)

@@ -70,7 +70,7 @@ func (pr *PythonRuntime) GetLanguageType() entity.LanguageType {
 }
 
 // RunCode 执行Python代码
-func (pr *PythonRuntime) RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
+func (pr *PythonRuntime) RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
 	if code == "" {
 		return nil, fmt.Errorf("代码不能为空")
 	}
@@ -85,7 +85,7 @@ func (pr *PythonRuntime) RunCode(ctx context.Context, code string, language stri
 }
 
 // ValidateCode 验证Python代码语法
-func (pr *PythonRuntime) ValidateCode(ctx context.Context, code string, language string) bool {
+func (pr *PythonRuntime) ValidateCode(ctx context.Context, code, language string) bool {
 	if code == "" {
 		return false
 	}

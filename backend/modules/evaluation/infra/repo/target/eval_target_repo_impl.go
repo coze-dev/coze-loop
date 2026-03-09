@@ -46,7 +46,7 @@ func NewEvalTargetRepo(idgen idgen.IIDGenerator, provider db.Provider, evalTarge
 			evalTargetDao:        evalTargetDao,
 			evalTargetVersionDao: evalTargetVersionDao,
 			evalTargetRecordDao:  evalTargetRecordDao,
-			recordDataStorage:   recordDataStorage,
+			recordDataStorage:    recordDataStorage,
 			idgen:                idgen,
 			dbProvider:           provider,
 			lwt:                  lwt,

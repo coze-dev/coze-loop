@@ -230,7 +230,7 @@ func (s *EvaluatorRecordServiceImpl) GetEvaluatorRecord(ctx context.Context, eva
 	return s.evaluatorRecordRepo.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted)
 }
 
-func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
 	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
 	if err != nil {
 		return nil, err

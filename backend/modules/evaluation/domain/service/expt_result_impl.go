@@ -887,8 +887,8 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
-		ExptAnnotateRepo: exptAnnotateRepo,
-		FullTrajectory:   param.FullTrajectory,
+		ExptAnnotateRepo:  exptAnnotateRepo,
+		FullTrajectory:    param.FullTrajectory,
 		ExportFullContent: param.ExportFullContent,
 	}
 
@@ -1036,7 +1036,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
 			analysisService:          b.AnalysisService,
 			FullTrajectory:           b.FullTrajectory,
-			ExportFullContent:       b.ExportFullContent,
+			ExportFullContent:        b.ExportFullContent,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1113,7 +1113,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		turnResultDO:             b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:         b.ExptAnnotateRepo,
 		FullTrajectory:           b.FullTrajectory,
-		ExportFullContent:       b.ExportFullContent,
+		ExportFullContent:        b.ExportFullContent,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)

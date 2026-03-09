@@ -1525,7 +1525,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 	t.Parallel()
 
-	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
+	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
 
 	tests := []struct {
 		name         string
@@ -1537,7 +1537,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 	}{
 		{
 			name: "nil input data",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				// Do not set any mock, as it will fail during parameter validation
 			},
 			wantErr:     true,
@@ -1545,7 +1545,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "nil param",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				// Do not set any mock, as it will fail during parameter validation
 			},
 			wantErr:     true,
@@ -1553,7 +1553,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "get eval target version failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr:     true,
@@ -1561,7 +1561,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "unsupported target type",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1583,7 +1583,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1606,7 +1606,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "async execute failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1631,7 +1631,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "create record failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1657,7 +1657,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
