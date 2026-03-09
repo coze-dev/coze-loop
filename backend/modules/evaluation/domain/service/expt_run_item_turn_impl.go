@@ -451,7 +451,13 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 			}
 		}
 	case entity.EvaluatorTypeAgent:
-		res.EvaluateDatasetFields = fromEvalSet
+		// For Agent evaluators, we need to provide the full dataset context, not just the mapped fields.
+		// This ensures the agent has access to all available information for its reasoning process.
+		allEvalSetFields, err := e.getAllEvalSetFields(ctx, spaceID, evalSetTurn)
+		if err != nil {
+			return nil, err
+		}
+		res.EvaluateDatasetFields = allEvalSetFields
 		res.EvaluateTargetOutputFields = fromTarget
 		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 			for key, content := range fieldCnt {
@@ -577,4 +583,35 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[strin
 	}
 
 	return builtExt
+}
+
+func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context, spaceID int64, evalSetTurn *entity.Turn) (map[string]*entity.Content, error) {
+	if evalSetTurn == nil {
+		return nil, nil
+	}
+
+	result := make(map[string]*entity.Content, len(evalSetTurn.FieldDataList))
+	for _, field := range evalSetTurn.FieldDataList {
+		content := field.Content
+		if content == nil {
+			continue
+		}
+		if content.IsContentOmitted() {
+			req := &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: evalSetTurn.EvalSetID,
+				ItemPK:          evalSetTurn.ItemID,
+				FieldName:       field.Name,
+				TurnID:          gptr.Of(evalSetTurn.ID),
+			}
+			logs.CtxInfo(ctx, "found omitted content turn in getAllEvalSetFields, turn_info: %v", json.Jsonify(req))
+			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+			content = fd.Content
+		}
+		result[field.Name] = content
+	}
+	return result, nil
 }
