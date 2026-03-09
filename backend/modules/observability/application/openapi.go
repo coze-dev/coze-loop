@@ -100,7 +100,7 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 	if err := o.validateIngestTracesReq(ctx, req); err != nil {
 		return nil, err
 	}
-	// unpack
+	// unpack space
 	spanMap := o.unpackSpace(ctx, req.Spans)
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
 	for workspaceId := range spanMap {
@@ -112,46 +112,54 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 		if err = o.auth.CheckIngestPermission(ctx, workspaceId); err != nil {
 			return nil, err
 		}
-		// check benefit
-		benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: connectorUid,
-			SpaceID:      workSpaceIdNum,
-		})
-		if err != nil {
-			logs.CtxError(ctx, "Fail to check benefit, %v", err)
-		}
-		if benefitRes == nil {
-			benefitRes = &benefit.CheckTraceBenefitResult{
-				AccountAvailable: true,
-				IsEnough:         true,
-				StorageDuration:  3,
-				WhichIsEnough:    -1,
+		// unpack source
+		sourceMap := o.unpackSource(ctx, spanMap[workspaceId])
+		for source := range sourceMap {
+			// check benefit
+			benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+				Source:       source,
+				ConnectorUID: connectorUid,
+				SpaceID:      workSpaceIdNum,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "Fail to check benefit, %v", err)
 			}
-		}
-		if !benefitRes.IsEnough {
-			return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-		} else if !benefitRes.AccountAvailable {
-			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-		}
-
-		spans := tconv.SpanListDTO2DO(spanMap[workspaceId])
-		for i := range spans {
-			spans[i].CallType = "Custom"
-		}
-		tenantSpanMap := o.unpackTenant(ctx, spans)
-		for ingestTenant := range tenantSpanMap {
-			if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
-				return nil, err
+			if benefitRes == nil {
+				benefitRes = &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  3,
+					WhichIsEnough:    -1,
+				}
 			}
-			if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-				Tenant:           ingestTenant,
-				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-				WhichIsEnough:    benefitRes.WhichIsEnough,
-				CozeAccountId:    connectorUid,
-				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            tenantSpanMap[ingestTenant],
-			}); err != nil {
-				return nil, err
+			if !benefitRes.IsEnough {
+				if benefitRes.WhichIsEnough == 3 {
+					continue
+				}
+				return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
+			} else if !benefitRes.AccountAvailable {
+				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
+			}
+			// ingest
+			spans := tconv.SpanListDTO2DO(sourceMap[source])
+			for i := range spans {
+				spans[i].CallType = "Custom"
+			}
+			tenantSpanMap := o.unpackTenant(ctx, spans)
+			for ingestTenant := range tenantSpanMap {
+				if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
+					return nil, err
+				}
+				if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+					Tenant:           ingestTenant,
+					TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+					WhichIsEnough:    benefitRes.WhichIsEnough,
+					CozeAccountId:    connectorUid,
+					VolcanoAccountID: benefitRes.VolcanoAccountID,
+					Spans:            tenantSpanMap[ingestTenant],
+				}); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
@@ -174,6 +182,28 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 			spansMap[workspaceID] = make([]*span.InputSpan, 0)
 		}
 		spansMap[workspaceID] = append(spansMap[workspaceID], spans[i])
+	}
+	return spansMap
+}
+
+func (o *OpenAPIApplication) unpackSource(ctx context.Context, spans []*span.InputSpan) map[int64][]*span.InputSpan {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[int64][]*span.InputSpan)
+	for i := range spans {
+		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
+			Tags:       spans[i].TagsString,
+			SystemTags: spans[i].SystemTagsString,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
+			continue
+		}
+		if spansMap[result.Source] == nil {
+			spansMap[result.Source] = make([]*span.InputSpan, 0)
+		}
+		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
 	}
 	return spansMap
 }
