@@ -6,7 +6,9 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
@@ -149,6 +151,235 @@ func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := &DefaultExptTurnEvaluationImpl{}
+
+	mockContent1 := &entity.Content{Text: gptr.Of("value1")}
+	mockContent2 := &entity.Content{Text: gptr.Of("value2")}
+
+	turnFields := map[string]*entity.Content{
+		"turn_field1": mockContent1,
+		"turn_field2": mockContent2,
+	}
+
+	targetFields := map[string]*entity.Content{
+		"target_field1": mockContent1,
+	}
+
+	tests := []struct {
+		name           string
+		evaluatorType  entity.EvaluatorType
+		ec             *entity.EvaluatorConf
+		turnFields     map[string]*entity.Content
+		targetFields   map[string]*entity.Content
+		inputSchemas   []*entity.ArgsSchema
+		ext            map[string]string
+		wantInputData  *entity.EvaluatorInputData
+		wantErr        bool
+		mockSetup      func(mockEvalSetItemSvc *svcmocks.MockEvaluationSetItemService)
+	}{
+		{
+			name:          "Agent evaluator - with full dataset context",
+			evaluatorType: entity.EvaluatorTypeAgent,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "eval_field", FromField: "turn_field1"},
+						},
+					},
+					TargetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{
+							{FieldName: "target_field", FromField: "target_field1"},
+						},
+					},
+				},
+			},
+			turnFields:   turnFields,
+			targetFields: targetFields,
+			wantInputData: &entity.EvaluatorInputData{
+				HistoryMessages: nil,
+				InputFields: map[string]*entity.Content{
+					"eval_field":   mockContent1,
+					"target_field": mockContent1,
+				},
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"turn_field1": mockContent1,
+					"turn_field2": mockContent2,
+				},
+				EvaluateTargetOutputFields: map[string]*entity.Content{
+					"target_field": mockContent1,
+				},
+				Ext: make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "Agent evaluator - with omitted content",
+			evaluatorType: entity.EvaluatorTypeAgent,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+					TargetAdapter:  &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+				},
+			},
+			turnFields: map[string]*entity.Content{
+				"omitted_field": {
+					ContentType:    gptr.Of(entity.ContentTypeText),
+					Text:           nil,
+					ContentOmitted: gptr.Of(true),
+				},
+			},
+			targetFields: targetFields,
+			wantInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{},
+				EvaluateDatasetFields: map[string]*entity.Content{
+					"omitted_field": mockContent1,
+				},
+				EvaluateTargetOutputFields: map[string]*entity.Content{},
+				Ext:                        make(map[string]string),
+			},
+			wantErr: false,
+			mockSetup: func(mockEvalSetItemSvc *svcmocks.MockEvaluationSetItemService) {
+				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(&entity.FieldData{
+					Content: mockContent1,
+				}, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+			if tt.mockSetup != nil {
+				tt.mockSetup(mockEvalSetItemSvc)
+			}
+			service.evalSetItemSvc = mockEvalSetItemSvc
+
+			turn := &entity.Turn{
+				ID:            1,
+				FieldDataList: []*entity.FieldData{},
+			}
+			for key, c := range tt.turnFields {
+				turn.FieldDataList = append(turn.FieldDataList, &entity.FieldData{
+					Name:    key,
+					Content: c,
+				})
+			}
+
+			got, err := service.buildEvaluatorInputData(ctx, 0, tt.evaluatorType, tt.ec, turn, tt.targetFields, tt.inputSchemas, tt.ext)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantInputData.HistoryMessages, got.HistoryMessages)
+			assert.Equal(t, tt.wantInputData.InputFields, got.InputFields)
+			assert.Equal(t, tt.wantInputData.EvaluateDatasetFields, got.EvaluateDatasetFields)
+			assert.Equal(t, tt.wantInputData.EvaluateTargetOutputFields, got.EvaluateTargetOutputFields)
+			assert.Equal(t, tt.wantInputData.Ext, got.Ext)
+		})
+	}
+}
+
+func TestDefaultExptTurnEvaluationImpl_asyncCallEvaluator_Agent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvaluatorService := svcmocks.NewMockEvaluatorService(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:           mockMetric,
+		evaluatorService: mockEvaluatorService,
+		evalAsyncRepo:    mockEvalAsyncRepo,
+	}
+
+	ev := &entity.Evaluator{
+		ID:            1,
+		EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+			ID: 101,
+		},
+	}
+	ec := &entity.EvaluatorConf{
+		RunConf: &entity.EvaluatorRunConfig{},
+	}
+	etec := &entity.ExptTurnEvalCtx{
+		ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+			Event: &entity.ExptItemEvalEvent{
+				SpaceID:   1,
+				ExptID:    2,
+				ExptRunID: 3,
+				Session:   &entity.Session{UserID: "test_user"},
+			},
+			EvalSetItem: &entity.EvaluationSetItem{
+				ItemID: 4,
+			},
+		},
+		Turn: &entity.Turn{
+			ID: 5,
+		},
+		Ext: map[string]string{"key": "val"},
+	}
+	inputData := &entity.EvaluatorInputData{
+		InputFields: map[string]*entity.Content{},
+	}
+	var recordMap sync.Map
+
+	mockEvaluatorRecord := &entity.EvaluatorRecord{
+		ID:     202,
+		Status: entity.EvaluatorRunStatusAsyncInvoking,
+	}
+
+	// Expectations
+	mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), false)
+
+	mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+			assert.Equal(t, int64(1), req.SpaceID)
+			assert.Equal(t, int64(101), req.EvaluatorVersionID)
+			assert.Equal(t, inputData, req.InputData)
+			assert.Equal(t, int64(2), req.ExperimentID)
+			assert.Equal(t, int64(3), req.ExperimentRunID)
+			assert.Equal(t, int64(4), req.ItemID)
+			assert.Equal(t, int64(5), req.TurnID)
+			assert.Equal(t, etec.Ext, req.Ext)
+			return mockEvaluatorRecord, nil
+		},
+	)
+
+	mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, key string, val *entity.EvalAsyncCtx) error {
+			assert.Equal(t, "evaluator:202", key)
+			assert.Equal(t, int64(202), val.RecordID)
+			assert.Equal(t, int64(101), val.EvaluatorVersionID)
+			assert.Equal(t, etec.Event, val.Event)
+			// Check timestamp
+			assert.True(t, val.AsyncUnixMS <= time.Now().UnixMilli())
+			assert.True(t, val.AsyncUnixMS > time.Now().Add(-time.Minute).UnixMilli())
+			return nil
+		},
+	)
+
+	err := service.asyncCallEvaluator(context.Background(), ev, ec, etec, inputData, &recordMap)
+	assert.NoError(t, err)
+
+	// verify recordMap
+	val, ok := recordMap.Load(int64(101))
+	assert.True(t, ok)
+	assert.Equal(t, mockEvaluatorRecord, val)
 }
 
 func TestDefaultExptTurnEvaluationImpl_CallTarget(t *testing.T) {
