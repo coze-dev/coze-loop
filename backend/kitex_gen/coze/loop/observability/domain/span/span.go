@@ -418,6 +418,187 @@ func (p *AttrTos) Field3DeepEqual(src map[string]string) bool {
 	return true
 }
 
+type EncryptionInfo struct {
+	Workflow *string `thrift:"workflow,1,optional" frugal:"1,optional,string" json:"workflow" form:"workflow" query:"workflow"`
+}
+
+func NewEncryptionInfo() *EncryptionInfo {
+	return &EncryptionInfo{}
+}
+
+func (p *EncryptionInfo) InitDefault() {
+}
+
+var EncryptionInfo_Workflow_DEFAULT string
+
+func (p *EncryptionInfo) GetWorkflow() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkflow() {
+		return EncryptionInfo_Workflow_DEFAULT
+	}
+	return *p.Workflow
+}
+func (p *EncryptionInfo) SetWorkflow(val *string) {
+	p.Workflow = val
+}
+
+var fieldIDToName_EncryptionInfo = map[int16]string{
+	1: "workflow",
+}
+
+func (p *EncryptionInfo) IsSetWorkflow() bool {
+	return p.Workflow != nil
+}
+
+func (p *EncryptionInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EncryptionInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EncryptionInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Workflow = _field
+	return nil
+}
+
+func (p *EncryptionInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EncryptionInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EncryptionInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkflow() {
+		if err = oprot.WriteFieldBegin("workflow", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Workflow); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EncryptionInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EncryptionInfo(%+v)", *p)
+
+}
+
+func (p *EncryptionInfo) DeepEqual(ano *EncryptionInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Workflow) {
+		return false
+	}
+	return true
+}
+
+func (p *EncryptionInfo) Field1DeepEqual(src *string) bool {
+
+	if p.Workflow == src {
+		return true
+	} else if p.Workflow == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Workflow, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 type OutputSpan struct {
 	TraceID          string                   `thrift:"trace_id,1,required" frugal:"1,required,string" form:"trace_id,required" json:"trace_id,required" query:"trace_id,required"`
 	SpanID           string                   `thrift:"span_id,2,required" frugal:"2,required,string" form:"span_id,required" json:"span_id,required" query:"span_id,required"`
@@ -447,6 +628,7 @@ type OutputSpan struct {
 	AttrTos          *AttrTos                 `thrift:"attr_tos,102,optional" frugal:"102,optional,AttrTos" form:"attr_tos" json:"attr_tos,omitempty" query:"attr_tos"`
 	SystemTags       map[string]string        `thrift:"system_tags,103,optional" frugal:"103,optional,map<string:string>" form:"system_tags" json:"system_tags,omitempty" query:"system_tags"`
 	Annotations      []*annotation.Annotation `thrift:"annotations,104,optional" frugal:"104,optional,list<annotation.Annotation>" form:"annotations" json:"annotations,omitempty" query:"annotations"`
+	Encryption       *EncryptionInfo          `thrift:"encryption,105,optional" frugal:"105,optional,EncryptionInfo" form:"encryption" json:"encryption,omitempty" query:"encryption"`
 }
 
 func NewOutputSpan() *OutputSpan {
@@ -731,6 +913,18 @@ func (p *OutputSpan) GetAnnotations() (v []*annotation.Annotation) {
 	}
 	return p.Annotations
 }
+
+var OutputSpan_Encryption_DEFAULT *EncryptionInfo
+
+func (p *OutputSpan) GetEncryption() (v *EncryptionInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEncryption() {
+		return OutputSpan_Encryption_DEFAULT
+	}
+	return p.Encryption
+}
 func (p *OutputSpan) SetTraceID(val string) {
 	p.TraceID = val
 }
@@ -815,6 +1009,9 @@ func (p *OutputSpan) SetSystemTags(val map[string]string) {
 func (p *OutputSpan) SetAnnotations(val []*annotation.Annotation) {
 	p.Annotations = val
 }
+func (p *OutputSpan) SetEncryption(val *EncryptionInfo) {
+	p.Encryption = val
+}
 
 var fieldIDToName_OutputSpan = map[int16]string{
 	1:   "trace_id",
@@ -845,6 +1042,7 @@ var fieldIDToName_OutputSpan = map[int16]string{
 	102: "attr_tos",
 	103: "system_tags",
 	104: "annotations",
+	105: "encryption",
 }
 
 func (p *OutputSpan) IsSetLogicDeleteDate() bool {
@@ -909,6 +1107,10 @@ func (p *OutputSpan) IsSetSystemTags() bool {
 
 func (p *OutputSpan) IsSetAnnotations() bool {
 	return p.Annotations != nil
+}
+
+func (p *OutputSpan) IsSetEncryption() bool {
+	return p.Encryption != nil
 }
 
 func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
@@ -1172,6 +1374,14 @@ func (p *OutputSpan) Read(iprot thrift.TProtocol) (err error) {
 		case 104:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField104(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 105:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField105(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1764,6 +1974,14 @@ func (p *OutputSpan) ReadField104(iprot thrift.TProtocol) error {
 	p.Annotations = _field
 	return nil
 }
+func (p *OutputSpan) ReadField105(iprot thrift.TProtocol) error {
+	_field := NewEncryptionInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Encryption = _field
+	return nil
+}
 
 func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1881,6 +2099,10 @@ func (p *OutputSpan) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField104(oprot); err != nil {
 			fieldId = 104
+			goto WriteFieldError
+		}
+		if err = p.writeField105(oprot); err != nil {
+			fieldId = 105
 			goto WriteFieldError
 		}
 	}
@@ -2499,6 +2721,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 104 end error: ", p), err)
 }
+func (p *OutputSpan) writeField105(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEncryption() {
+		if err = oprot.WriteFieldBegin("encryption", thrift.STRUCT, 105); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Encryption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 105 end error: ", p), err)
+}
 
 func (p *OutputSpan) String() string {
 	if p == nil {
@@ -2596,6 +2836,9 @@ func (p *OutputSpan) DeepEqual(ano *OutputSpan) bool {
 		return false
 	}
 	if !p.Field104DeepEqual(ano.Annotations) {
+		return false
+	}
+	if !p.Field105DeepEqual(ano.Encryption) {
 		return false
 	}
 	return true
@@ -2880,6 +3123,13 @@ func (p *OutputSpan) Field104DeepEqual(src []*annotation.Annotation) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *OutputSpan) Field105DeepEqual(src *EncryptionInfo) bool {
+
+	if !p.Encryption.DeepEqual(src) {
+		return false
 	}
 	return true
 }
