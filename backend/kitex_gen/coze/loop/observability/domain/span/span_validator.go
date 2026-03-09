@@ -24,10 +24,18 @@ var (
 func (p *AttrTos) IsValid() error {
 	return nil
 }
+func (p *EncryptionInfo) IsValid() error {
+	return nil
+}
 func (p *OutputSpan) IsValid() error {
 	if p.AttrTos != nil {
 		if err := p.AttrTos.IsValid(); err != nil {
 			return fmt.Errorf("field AttrTos not valid, %w", err)
+		}
+	}
+	if p.Encryption != nil {
+		if err := p.Encryption.IsValid(); err != nil {
+			return fmt.Errorf("field Encryption not valid, %w", err)
 		}
 	}
 	return nil
