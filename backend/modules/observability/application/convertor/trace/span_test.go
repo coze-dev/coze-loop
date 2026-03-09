@@ -116,7 +116,7 @@ func TestSpanDO2DTO(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := SpanDO2DTO(tt.span, nil, nil, nil, tt.needOriginalTags)
+			got := SpanDO2DTO(tt.span, nil, nil, nil, nil, tt.needOriginalTags)
 
 			assert.Equal(t, tt.span.TraceID, got.TraceID)
 			assert.Equal(t, tt.span.SpanID, got.SpanID)
@@ -265,6 +265,145 @@ func TestSpanListConversions(t *testing.T) {
 	assert.Len(t, doList, 2)
 	assert.Equal(t, input1.SpanID, doList[0].SpanID)
 	assert.Equal(t, input2.SpanID, doList[1].SpanID)
+}
+
+func TestSpanDO2DTO_WithWorkflow(t *testing.T) {
+	workflowURL := "https://workflow.example.com/123"
+	workflowMap := map[string]string{
+		"workspace-1-trace-1": workflowURL,
+	}
+
+	tests := []struct {
+		name             string
+		span             *loop_span.Span
+		workflowMap      map[string]string
+		needOriginalTags bool
+		wantWorkflow     *string
+	}{
+		{
+			name: "with need workflow and found in map",
+			span: &loop_span.Span{
+				TraceID:     "trace-1",
+				SpanID:      "span-1",
+				WorkspaceID: "workspace-1",
+				SpanName:    "test-span",
+				Encryption: loop_span.EncryptionInfo{
+					NeedWorkflow: true,
+				},
+			},
+			workflowMap:      workflowMap,
+			needOriginalTags: false,
+			wantWorkflow:     &workflowURL,
+		},
+		{
+			name: "with need workflow but not found in map",
+			span: &loop_span.Span{
+				TraceID:     "trace-2",
+				SpanID:      "span-2",
+				WorkspaceID: "workspace-2",
+				SpanName:    "test-span",
+				Encryption: loop_span.EncryptionInfo{
+					NeedWorkflow: true,
+				},
+			},
+			workflowMap:      workflowMap,
+			needOriginalTags: false,
+			wantWorkflow:     nil,
+		},
+		{
+			name: "without need workflow",
+			span: &loop_span.Span{
+				TraceID:     "trace-1",
+				SpanID:      "span-3",
+				WorkspaceID: "workspace-1",
+				SpanName:    "test-span",
+				Encryption: loop_span.EncryptionInfo{
+					NeedWorkflow: false,
+				},
+			},
+			workflowMap:      workflowMap,
+			needOriginalTags: false,
+			wantWorkflow:     nil,
+		},
+		{
+			name: "with empty encryption",
+			span: &loop_span.Span{
+				TraceID:     "trace-1",
+				SpanID:      "span-4",
+				WorkspaceID: "workspace-1",
+				SpanName:    "test-span",
+				Encryption:  loop_span.EncryptionInfo{},
+			},
+			workflowMap:      workflowMap,
+			needOriginalTags: false,
+			wantWorkflow:     nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SpanDO2DTO(tt.span, nil, nil, nil, tt.workflowMap, tt.needOriginalTags)
+			if tt.wantWorkflow != nil {
+				assert.NotNil(t, got.Encryption)
+				assert.Equal(t, *tt.wantWorkflow, *got.Encryption.Workflow)
+			} else {
+				if got.Encryption != nil {
+					assert.Nil(t, got.Encryption.Workflow)
+				}
+			}
+		})
+	}
+}
+
+func TestSpanListDO2DTO_WithWorkflow(t *testing.T) {
+	workflowURL1 := "https://workflow.example.com/1"
+	workflowURL2 := "https://workflow.example.com/2"
+	workflowMap := map[string]string{
+		"ws-1-trace-1": workflowURL1,
+		"ws-2-trace-2": workflowURL2,
+	}
+
+	spans := loop_span.SpanList{
+		{
+			TraceID:     "trace-1",
+			SpanID:      "span-1",
+			WorkspaceID: "ws-1",
+			SpanName:    "span-1",
+			Encryption: loop_span.EncryptionInfo{
+				NeedWorkflow: true,
+			},
+		},
+		{
+			TraceID:     "trace-2",
+			SpanID:      "span-2",
+			WorkspaceID: "ws-2",
+			SpanName:    "span-2",
+			Encryption: loop_span.EncryptionInfo{
+				NeedWorkflow: true,
+			},
+		},
+		{
+			TraceID:     "trace-3",
+			SpanID:      "span-3",
+			WorkspaceID: "ws-3",
+			SpanName:    "span-3",
+			Encryption: loop_span.EncryptionInfo{
+				NeedWorkflow: true,
+			},
+		},
+	}
+
+	dto := SpanListDO2DTO(spans, nil, nil, nil, workflowMap, false)
+
+	assert.Len(t, dto, 3)
+	// First span should have workflow
+	assert.NotNil(t, dto[0].Encryption)
+	assert.Equal(t, workflowURL1, *dto[0].Encryption.Workflow)
+	// Second span should have workflow
+	assert.NotNil(t, dto[1].Encryption)
+	assert.Equal(t, workflowURL2, *dto[1].Encryption.Workflow)
+	// Third span should not have workflow (not in map), so Encryption should be nil
+	assert.Nil(t, dto[2].Encryption)
 }
 
 func TestFilterFieldsDTO2DO(t *testing.T) {
