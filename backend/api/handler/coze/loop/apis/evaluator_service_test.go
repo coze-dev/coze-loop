@@ -247,3 +247,63 @@ func TestEvaluatorService_Handlers(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluatorService_AsyncHandlers(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name       string
+		body       string
+		handler    func(context.Context, *app.RequestContext)
+		wantStatus int
+	}{
+		{
+			name:       "AsyncRunEvaluator bad json",
+			body:       "{invalid",
+			handler:    AsyncRunEvaluator,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "AsyncRunEvaluator ok",
+			body: `{"workspace_id":1,"evaluator_version_id":2,"input_data":{"input_fields":{}}}`,
+			handler:    AsyncRunEvaluator,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "AsyncDebugEvaluator bad json",
+			body:       "{invalid",
+			handler:    AsyncDebugEvaluator,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name: "AsyncDebugEvaluator ok",
+			body: `{"workspace_id":1,"evaluator_type":2,"evaluator_content":{"code_evaluator":{"code_content":"print(1)","language_type":"Python"}},"input_data":{"input_fields":{}}}`,
+			handler:    AsyncDebugEvaluator,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "UpdateBuiltinEvaluatorTags tolerant body",
+			body:       `{"workspace_id":"x"}`,
+			handler:    UpdateBuiltinEvaluatorTags,
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "UpdateBuiltinEvaluatorTags ok",
+			body:       `{}`,
+			handler:    UpdateBuiltinEvaluatorTags,
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			c := newJSONCtxWithBody(tc.body)
+			tc.handler(ctx, c)
+			assert.Equal(t, tc.wantStatus, c.Response.StatusCode())
+		})
+	}
+}

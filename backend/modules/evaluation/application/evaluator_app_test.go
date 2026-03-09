@@ -2703,6 +2703,120 @@ func TestEvaluatorHandlerImpl_GetTemplateInfo(t *testing.T) {
 	})
 }
 
+func TestBuildSrvListEvaluatorRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   *evaluatorservice.ListEvaluatorsRequest
+		want *entity.ListEvaluatorRequest
+	}{
+		{
+			name: "basic",
+			in: &evaluatorservice.ListEvaluatorsRequest{
+				WorkspaceID:  123,
+				SearchName:   gptr.Of("n"),
+				CreatorIds:   []int64{1},
+				PageSize:     gptr.Of(int32(10)),
+				PageNumber:   gptr.Of(int32(2)),
+				WithVersion:  gptr.Of(true),
+				EvaluatorType: []evaluatordto.EvaluatorType{
+					evaluatordto.EvaluatorType_Prompt,
+					evaluatordto.EvaluatorType_Code,
+				},
+				OrderBys: []*common.OrderBy{
+					{Field: gptr.Of("updated_at"), IsAsc: gptr.Of(true)},
+				},
+			},
+			want: &entity.ListEvaluatorRequest{
+				SpaceID:     123,
+				SearchName:  "n",
+				CreatorIDs:  []int64{1},
+				PageSize:    10,
+				PageNum:     2,
+				WithVersion: true,
+				EvaluatorType: []entity.EvaluatorType{
+					entity.EvaluatorTypePrompt,
+					entity.EvaluatorTypeCode,
+				},
+				OrderBys: []*entity.OrderBy{
+					{Field: gptr.Of("updated_at"), IsAsc: gptr.Of(true)},
+				},
+			},
+		},
+		{
+			name: "nil filter option",
+			in: &evaluatorservice.ListEvaluatorsRequest{
+				WorkspaceID:  1,
+				FilterOption: nil,
+			},
+			want: &entity.ListEvaluatorRequest{
+				SpaceID:     1,
+				SearchName:  "",
+				CreatorIDs:  nil,
+				PageSize:    0,
+				PageNum:     0,
+				WithVersion: false,
+				EvaluatorType: []entity.EvaluatorType{},
+				OrderBys:       []*entity.OrderBy{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := buildSrvListEvaluatorRequest(tc.in)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestBuildSrvListBuiltinEvaluatorRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   *evaluatorservice.ListEvaluatorsRequest
+		want *entity.ListBuiltinEvaluatorRequest
+	}{
+		{
+			name: "basic",
+			in: &evaluatorservice.ListEvaluatorsRequest{
+				PageSize:    gptr.Of(int32(10)),
+				PageNumber:  gptr.Of(int32(2)),
+				WithVersion: gptr.Of(true),
+			},
+			want: &entity.ListBuiltinEvaluatorRequest{
+				PageSize:    10,
+				PageNum:     2,
+				WithVersion: true,
+			},
+		},
+		{
+			name: "nil filter option",
+			in: &evaluatorservice.ListEvaluatorsRequest{
+				FilterOption: nil,
+			},
+			want: &entity.ListBuiltinEvaluatorRequest{
+				PageSize:    0,
+				PageNum:     0,
+				WithVersion: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := buildSrvListBuiltinEvaluatorRequest(tc.in)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 // 新增：运行配置参数透传与扩展字段注入
 func TestEvaluatorHandlerImpl_DebugEvaluator_Comprehensive(t *testing.T) {
 	ctrl := gomock.NewController(t)

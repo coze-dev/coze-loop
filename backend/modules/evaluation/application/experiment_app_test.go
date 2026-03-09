@@ -5830,3 +5830,84 @@ func TestExperimentApplication_UpsertExptTurnResultFilter(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestBuildExptTurnResultFilter(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *exptpb.BatchGetExperimentResultRequest
+		wantErr bool
+		assert  func(t *testing.T, param *entity.MGetExperimentResultParam)
+	}{
+		{
+			name: "use accelerator",
+			req: &exptpb.BatchGetExperimentResultRequest{
+				UseAccelerator: gptr.Of(true),
+				Filters: map[int64]*expt.ExperimentFilter{
+					1: {},
+				},
+			},
+			assert: func(t *testing.T, param *entity.MGetExperimentResultParam) {
+				assert.True(t, param.UseAccelerator)
+				assert.Nil(t, param.Filters)
+				if assert.NotNil(t, param.FilterAccelerators) {
+					assert.NotNil(t, param.FilterAccelerators[int64(1)])
+				}
+			},
+		},
+		{
+			name: "no accelerator",
+			req: &exptpb.BatchGetExperimentResultRequest{
+				UseAccelerator: gptr.Of(false),
+				Filters: map[int64]*expt.ExperimentFilter{
+					2: {},
+				},
+			},
+			assert: func(t *testing.T, param *entity.MGetExperimentResultParam) {
+				assert.False(t, param.UseAccelerator)
+				assert.Nil(t, param.FilterAccelerators)
+				if assert.NotNil(t, param.Filters) {
+					assert.NotNil(t, param.Filters[int64(2)])
+				}
+			},
+		},
+		{
+			name: "accelerator convert error",
+			req: &exptpb.BatchGetExperimentResultRequest{
+				UseAccelerator: gptr.Of(true),
+				Filters: map[int64]*expt.ExperimentFilter{
+					3: {Filters: &expt.Filters{FilterConditions: []*expt.FilterCondition{{}}, LogicOp: gptr.Of(expt.FilterLogicOp_Or)}},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "normal convert error",
+			req: &exptpb.BatchGetExperimentResultRequest{
+				UseAccelerator: gptr.Of(false),
+				Filters: map[int64]*expt.ExperimentFilter{
+					4: {Filters: &expt.Filters{FilterConditions: []*expt.FilterCondition{{}}, LogicOp: gptr.Of(expt.FilterLogicOp_Or)}},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			param := &entity.MGetExperimentResultParam{}
+			err := buildExptTurnResultFilter(tc.req, param)
+			if tc.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			if tc.assert != nil {
+				tc.assert(t, param)
+			}
+		})
+	}
+}
