@@ -78,6 +78,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 				authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
 				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(&benefit.GetTraceBenefitSourceResult{Source: 1}, nil).AnyTimes()
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
 					AccountAvailable: true,
 					IsEnough:         true,
@@ -1070,6 +1071,7 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 				authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
 				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(&benefit.GetTraceBenefitSourceResult{Source: 1}, nil).AnyTimes()
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
 					AccountAvailable: true,
 					IsEnough:         false,
@@ -1114,6 +1116,7 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 				authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
 				authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil)
 				benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+				benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(&benefit.GetTraceBenefitSourceResult{Source: 1}, nil).AnyTimes()
 				benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
 					AccountAvailable: false,
 					IsEnough:         true,
