@@ -350,7 +350,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		} else {
 			pool.Add(func() error {
 				var err error
-				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+				defer func() { e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil) }()
 
 				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
 					SpaceID:            spaceID,
@@ -394,7 +394,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	recordMap *sync.Map,
 ) error {
 	var err error
-	defer e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil)
+	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
 
 	ts := time.Now()
 
@@ -414,7 +414,7 @@ func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
 	}
 
 	asyncCtxKey := fmt.Sprintf("evaluator:%d", evaluatorRecord.ID)
-	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+	if err = e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
 		Event:              etec.Event,
 		RecordID:           evaluatorRecord.ID,
 		AsyncUnixMS:        ts.UnixMilli(),
