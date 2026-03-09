@@ -246,11 +246,11 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 			},
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				InputFields: map[string]*entity.Content{},
+				InputFields: targetFields,
 				EvaluateDatasetFields: map[string]*entity.Content{
 					"omitted_field": mockContent1,
 				},
-				EvaluateTargetOutputFields: map[string]*entity.Content{},
+				EvaluateTargetOutputFields: targetFields,
 				Ext:                        make(map[string]string),
 			},
 			wantErr: false,
