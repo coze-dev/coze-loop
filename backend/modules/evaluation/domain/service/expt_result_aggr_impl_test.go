@@ -55,7 +55,7 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 
 				// Mock BatchGetEvaluatorRecord
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID: 1,
@@ -230,7 +230,7 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult(t *testing.T) {
 
 				// Mock BatchGetEvaluatorRecord
 				mockEvaluatorRecordService.EXPECT().
-					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 					Return([]*entity.EvaluatorRecord{
 						{
 							ID: 1,
@@ -3093,7 +3093,7 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID: 1,
@@ -3181,7 +3181,7 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID: 1,
@@ -3279,7 +3279,7 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID: 1,
@@ -3354,7 +3354,7 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 
 		// Mock BatchGetEvaluatorRecord
 		mockEvaluatorRecordService.EXPECT().
-			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false).
+			BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
 			Return([]*entity.EvaluatorRecord{
 				{
 					ID: 1,

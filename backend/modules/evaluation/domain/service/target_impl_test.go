@@ -1525,7 +1525,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 	t.Parallel()
 
-	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
+	type prepareFunc func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData)
 
 	tests := []struct {
 		name         string
@@ -1537,7 +1537,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 	}{
 		{
 			name: "nil input data",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				// Do not set any mock, as it will fail during parameter validation
 			},
 			wantErr:     true,
@@ -1545,7 +1545,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "nil param",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				// Do not set any mock, as it will fail during parameter validation
 			},
 			wantErr:     true,
@@ -1553,7 +1553,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "get eval target version failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
 			},
 			wantErr:     true,
@@ -1561,7 +1561,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "unsupported target type",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1583,7 +1583,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "validate input failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1606,7 +1606,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "async execute failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1631,7 +1631,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "create record failed",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1657,7 +1657,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 		},
 		{
 			name: "success",
-			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID int64, targetID int64, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
+			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, spaceID, targetID, targetVersionID int64, param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData) {
 				evalTarget := &entity.EvalTarget{
 					ID:             targetID,
 					SpaceID:        spaceID,
@@ -1789,4 +1789,75 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 			require.NotNil(t, record.BaseInfo.UpdatedAt)
 		})
 	}
+}
+
+func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRecordFullData(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	repo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	svc := NewEvalTargetServiceImpl(
+		repo,
+		idgenmocks.NewMockIIDGenerator(ctrl),
+		metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		map[entity.EvalTargetType]ISourceEvalTargetOperateService{},
+		trajectorymocks.NewMockITrajectoryAdapter(ctrl),
+		componentmocks.NewMockIConfiger(ctrl),
+	)
+
+	t.Run("BatchGetRecordByIDs_spaceID_zero", func(t *testing.T) {
+		_, err := svc.BatchGetRecordByIDs(ctx, 0, []int64{1, 2})
+		require.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		require.True(t, ok)
+		assert.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
+	})
+
+	t.Run("BatchGetRecordByIDs_recordIDs_empty", func(t *testing.T) {
+		_, err := svc.BatchGetRecordByIDs(ctx, 1, nil)
+		require.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		require.True(t, ok)
+		assert.Equal(t, int32(errno.CommonInvalidParamCode), statusErr.Code())
+	})
+
+	t.Run("BatchGetRecordByIDs_success", func(t *testing.T) {
+		records := []*entity.EvalTargetRecord{{ID: 1}, {ID: 2}}
+		repo.EXPECT().ListEvalTargetRecordByIDsAndSpaceID(gomock.Any(), int64(1), []int64{1, 2}).Return(records, nil)
+		got, err := svc.BatchGetRecordByIDs(ctx, 1, []int64{1, 2})
+		assert.NoError(t, err)
+		assert.Equal(t, records, got)
+	})
+
+	t.Run("LoadRecordOutputFields_record_nil", func(t *testing.T) {
+		err := svc.LoadRecordOutputFields(ctx, nil, []string{"f1"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("LoadRecordOutputFields_fieldKeys_empty", func(t *testing.T) {
+		err := svc.LoadRecordOutputFields(ctx, &entity.EvalTargetRecord{}, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("LoadRecordOutputFields_success", func(t *testing.T) {
+		rec := &entity.EvalTargetRecord{ID: 1}
+		repo.EXPECT().LoadEvalTargetRecordOutputFields(ctx, rec, []string{"f1"}).Return(nil)
+		err := svc.LoadRecordOutputFields(ctx, rec, []string{"f1"})
+		assert.NoError(t, err)
+	})
+
+	t.Run("LoadRecordFullData_record_nil", func(t *testing.T) {
+		err := svc.LoadRecordFullData(ctx, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("LoadRecordFullData_success", func(t *testing.T) {
+		rec := &entity.EvalTargetRecord{ID: 1}
+		repo.EXPECT().LoadEvalTargetRecordFullData(ctx, rec).Return(nil)
+		err := svc.LoadRecordFullData(ctx, rec)
+		assert.NoError(t, err)
+	})
 }

@@ -19,7 +19,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		return nil, nil
 	}
 
-	// 处理输入数据序列化
+	// 处理输入数据序列化（大字段已在 Save 时剪裁并放回结构体）
 	var inputData []byte
 	if e.EvalTargetInputData != nil {
 		data, err := json.Marshal(e.EvalTargetInputData)
@@ -29,7 +29,7 @@ func EvalTargetRecordDO2PO(e *entity.EvalTargetRecord) (*model.TargetRecord, err
 		inputData = data
 	}
 
-	// 处理输出数据序列化
+	// 处理输出数据序列化（大字段已在 Save 时剪裁并放回结构体）
 	var outputData []byte
 	if e.EvalTargetOutputData != nil {
 		data, err := json.Marshal(e.EvalTargetOutputData)
@@ -73,7 +73,7 @@ func EvalTargetRecordPO2DO(m *model.TargetRecord) (*entity.EvalTargetRecord, err
 		return nil, nil
 	}
 
-	// 处理输入数据反序列化
+	// 处理输入数据反序列化（含剪裁预览，Load 会从 S3 填充完整内容）
 	var targetInputData *entity.EvalTargetInputData
 	if m.InputData != nil && len(*m.InputData) > 0 {
 		var input entity.EvalTargetInputData

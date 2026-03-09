@@ -63,7 +63,7 @@ func (a *DatasetRPCAdapter) CreateDataset(ctx context.Context, param *rpc.Create
 	return resp.GetDatasetID(), nil
 }
 
-func (a *DatasetRPCAdapter) CreateDatasetWithImport(ctx context.Context, param *rpc.CreateDatasetWithImportParam) (id int64, jobID int64, err error) {
+func (a *DatasetRPCAdapter) CreateDatasetWithImport(ctx context.Context, param *rpc.CreateDatasetWithImportParam) (id, jobID int64, err error) {
 	return 0, 0, nil
 }
 
@@ -358,7 +358,7 @@ func (a *DatasetRPCAdapter) BatchDeleteDatasetItems(ctx context.Context, spaceID
 	return nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetItems(ctx, &dataset.ListDatasetItemsRequest{
 		WorkspaceID: &param.SpaceID,
 		DatasetID:   param.EvaluationSetID,
@@ -381,7 +381,7 @@ func (a *DatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.Lis
 	return convert2EvaluationSetItems(ctx, resp.Items), resp.Total, resp.FilterTotal, resp.NextPageToken, nil
 }
 
-func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total *int64, filterTotal *int64, nextPageToken *string, err error) {
+func (a *DatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error) {
 	resp, err := a.client.ListDatasetItemsByVersion(ctx, &dataset.ListDatasetItemsByVersionRequest{
 		WorkspaceID: &param.SpaceID,
 		DatasetID:   param.EvaluationSetID,

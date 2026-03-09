@@ -486,7 +486,7 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 
 // UpdateExptInfo 更新实验模板的 ExptInfo
 // adjustCount: 实验数量的增量（创建实验时为 +1，删除实验时为 -1，状态变更时为 0）
-func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID, spaceID int64, exptID int64, exptStatus entity.ExptStatus, adjustCount int64) error {
+func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID, spaceID, exptID int64, exptStatus entity.ExptStatus, adjustCount int64) error {
 	// 获取现有模板
 	existingTemplate, err := e.templateRepo.GetByID(ctx, templateID, &spaceID)
 	if err != nil {

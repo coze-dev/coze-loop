@@ -74,7 +74,7 @@ func (jr *JavaScriptRuntime) GetLanguageType() entity.LanguageType {
 }
 
 // RunCode 执行JavaScript代码
-func (jr *JavaScriptRuntime) RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
+func (jr *JavaScriptRuntime) RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
 	if code == "" {
 		return nil, fmt.Errorf("代码不能为空")
 	}
@@ -89,7 +89,7 @@ func (jr *JavaScriptRuntime) RunCode(ctx context.Context, code string, language 
 }
 
 // ValidateCode 验证JavaScript代码语法
-func (jr *JavaScriptRuntime) ValidateCode(ctx context.Context, code string, language string) bool {
+func (jr *JavaScriptRuntime) ValidateCode(ctx context.Context, code, language string) bool {
 	if code == "" {
 		return false
 	}

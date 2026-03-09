@@ -4525,7 +4525,7 @@ func TestEvalOpenAPIApplication_BatchGetEvaluatorRecordsOApi(t *testing.T) {
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("batch get failed"))
+				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("batch get failed"))
 			},
 			wantErr: -1,
 		},
@@ -4537,7 +4537,7 @@ func TestEvalOpenAPIApplication_BatchGetEvaluatorRecordsOApi(t *testing.T) {
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, recordSvc *servicemocks.MockEvaluatorRecordService) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{100, 200}, gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil)
+				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{100, 200}, gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil)
 			},
 		},
 	}
@@ -4562,7 +4562,7 @@ func TestEvalOpenAPIApplication_BatchGetEvaluatorRecordsOApi(t *testing.T) {
 
 			if tc.name == "nil request" {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
-				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				recordSvc.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			} else {
 				tc.setup(auth, recordSvc)
 			}

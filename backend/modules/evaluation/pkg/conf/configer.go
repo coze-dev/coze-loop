@@ -30,6 +30,21 @@ type configer struct {
 	loader conf.IConfigLoader
 }
 
+func (c *configer) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+	const key = "evaluation_record_storage"
+	var cfg *component.EvaluationRecordStorage
+	if c.loader.UnmarshalKey(ctx, key, &cfg) == nil && cfg != nil && len(cfg.Providers) > 0 {
+		return cfg
+	}
+	// 默认配置：200KB 以下 RDS，200KB 以上 S3
+	return &component.EvaluationRecordStorage{
+		Providers: []*component.EvaluationRecordProviderConfig{
+			{Provider: "RDS", MaxSize: 204800},
+			{Provider: "S3", MaxSize: 1 << 30},
+		},
+	}
+}
+
 func (c *configer) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
 	const key = "eval_target_trajectory_conf"
 	cfg := &entity.TargetTrajectoryConf{}
