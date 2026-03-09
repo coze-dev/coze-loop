@@ -1167,7 +1167,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 		evaluatorService:  mockEvaluatorService,
 		benefitService:    mockBenefitService,
 		evalTargetService: mockEvalTargetService,
-		evalAsyncRepo:    mockEvalAsyncRepo,
+		evalAsyncRepo:     mockEvalAsyncRepo,
 	}
 
 	mockContent := &entity.Content{Text: gptr.Of("value1")}
