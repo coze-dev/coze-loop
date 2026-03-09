@@ -128,7 +128,7 @@ func SpanDO2DTO(
 		}
 	}
 	if s.Encryption.NeedWorkflow {
-		key := fmt.Sprintf("%s-%s", s.WorkspaceID, s.TraceID)
+		key := fmt.Sprintf("%s-%s", s.TraceID, s.SpanID)
 		if workflowURL, ok := workflowMap[key]; ok {
 			outSpan.Encryption = &span.EncryptionInfo{
 				Workflow: &workflowURL,

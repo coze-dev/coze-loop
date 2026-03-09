@@ -270,7 +270,7 @@ func TestSpanListConversions(t *testing.T) {
 func TestSpanDO2DTO_WithWorkflow(t *testing.T) {
 	workflowURL := "https://workflow.example.com/123"
 	workflowMap := map[string]string{
-		"workspace-1-trace-1": workflowURL,
+		"trace-1-span-1": workflowURL,
 	}
 
 	tests := []struct {
@@ -359,8 +359,8 @@ func TestSpanListDO2DTO_WithWorkflow(t *testing.T) {
 	workflowURL1 := "https://workflow.example.com/1"
 	workflowURL2 := "https://workflow.example.com/2"
 	workflowMap := map[string]string{
-		"ws-1-trace-1": workflowURL1,
-		"ws-2-trace-2": workflowURL2,
+		"trace-1-span-1": workflowURL1,
+		"trace-2-span-2": workflowURL2,
 	}
 
 	spans := loop_span.SpanList{
