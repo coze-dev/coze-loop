@@ -5320,11 +5320,11 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			metric := &fakeOpenAPIMetric{}
 
 			app := &EvalOpenAPIApplication{
-				auth:            auth,
-				asyncRepo:       asyncRepo,
+				auth:             auth,
+				asyncRepo:        asyncRepo,
 				evaluatorService: evaluatorSvc,
-				publisher:       publisher,
-				metric:          metric,
+				publisher:        publisher,
+				metric:           metric,
 			}
 
 			tc.setup(auth, asyncRepo, evaluatorSvc, publisher)

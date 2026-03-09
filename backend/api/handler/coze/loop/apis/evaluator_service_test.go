@@ -266,8 +266,8 @@ func TestEvaluatorService_AsyncHandlers(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name: "AsyncRunEvaluator ok",
-			body: `{"workspace_id":1,"evaluator_version_id":2,"input_data":{"input_fields":{}}}`,
+			name:       "AsyncRunEvaluator ok",
+			body:       `{"workspace_id":1,"evaluator_version_id":2,"input_data":{"input_fields":{}}}`,
 			handler:    AsyncRunEvaluator,
 			wantStatus: http.StatusOK,
 		},
@@ -278,8 +278,8 @@ func TestEvaluatorService_AsyncHandlers(t *testing.T) {
 			wantStatus: http.StatusBadRequest,
 		},
 		{
-			name: "AsyncDebugEvaluator ok",
-			body: `{"workspace_id":1,"evaluator_type":2,"evaluator_content":{"code_evaluator":{"code_content":"print(1)","language_type":"Python"}},"input_data":{"input_fields":{}}}`,
+			name:       "AsyncDebugEvaluator ok",
+			body:       `{"workspace_id":1,"evaluator_type":2,"evaluator_content":{"code_evaluator":{"code_content":"print(1)","language_type":"Python"}},"input_data":{"input_fields":{}}}`,
 			handler:    AsyncDebugEvaluator,
 			wantStatus: http.StatusOK,
 		},
