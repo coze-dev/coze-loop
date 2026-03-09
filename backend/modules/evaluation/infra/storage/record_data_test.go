@@ -308,6 +308,64 @@ func Test_LoadEvalTargetRecordData_guard(t *testing.T) {
 	assert.NoError(t, s.LoadEvalTargetRecordData(context.Background(), &entity.EvalTargetRecord{}))
 }
 
+func Test_LoadEvalTargetOutputFields_guard(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+	s := &RecordDataStorage{batchStorage: mockS3}
+	rec := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{"a": {Text: gptr.Of("x")}},
+		},
+	}
+
+	// batchStorage nil
+	sNil := &RecordDataStorage{}
+	assert.NoError(t, sNil.LoadEvalTargetOutputFields(context.Background(), rec, []string{"a"}))
+
+	// record nil
+	assert.NoError(t, s.LoadEvalTargetOutputFields(context.Background(), nil, []string{"a"}))
+
+	// empty fieldKeys
+	assert.NoError(t, s.LoadEvalTargetOutputFields(context.Background(), rec, nil))
+	assert.NoError(t, s.LoadEvalTargetOutputFields(context.Background(), rec, []string{}))
+
+	// EvalTargetOutputData nil
+	recNoOutput := &entity.EvalTargetRecord{}
+	assert.NoError(t, s.LoadEvalTargetOutputFields(context.Background(), recNoOutput, []string{"a"}))
+
+	// OutputFields nil
+	recNilFields := &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{}}
+	assert.NoError(t, s.LoadEvalTargetOutputFields(context.Background(), recNilFields, []string{"a"}))
+}
+
+func Test_loadContentFromS3_multipart_recursive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+	mockS3.EXPECT().Read(gomock.Any(), "key-part").Return(newNopReader([]byte("loaded from multipart")), nil)
+
+	s := &RecordDataStorage{batchStorage: mockS3}
+	part := &entity.Content{
+		ContentType:      gptr.Of(entity.ContentTypeText),
+		Text:             gptr.Of("short"),
+		ContentOmitted:   gptr.Of(true),
+		FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-part")},
+		FullContentBytes: gptr.Of(int32(21)),
+	}
+	c := &entity.Content{
+		ContentType: gptr.Of(entity.ContentTypeMultipart),
+		MultiPart:   []*entity.Content{part},
+	}
+
+	err := s.loadContentFromS3(context.Background(), c)
+	assert.NoError(t, err)
+	assert.Equal(t, "loaded from multipart", part.GetText())
+	assert.False(t, gptr.Indirect(part.ContentOmitted))
+	assert.Nil(t, part.FullContent)
+	assert.Nil(t, part.FullContentBytes)
+}
+
 func Test_processEvalTargetInputData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -392,6 +450,8 @@ func Test_loadOmittedContentFromInputData(t *testing.T) {
 
 func Test_loadContentFromS3_skip_when_not_omitted(t *testing.T) {
 	s := &RecordDataStorage{}
+	// nil content returns nil (lines 315-316)
+	assert.NoError(t, s.loadContentFromS3(context.Background(), nil))
 	c := &entity.Content{
 		ContentType:    gptr.Of(entity.ContentTypeText),
 		Text:           gptr.Of("short"),
