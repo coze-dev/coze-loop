@@ -327,6 +327,69 @@ func Test_processEvalTargetInputData(t *testing.T) {
 	assert.True(t, gptr.Indirect(input.InputFields["x"].ContentOmitted))
 }
 
+func Test_processEvalTargetInputData_withHistoryMessages(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+	// InputFields 1 个 + HistoryMessages 1 个 = 2 次 Upload
+	mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
+
+	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
+	s := &RecordDataStorage{batchStorage: mockS3, configer: &fakeConfiger{cfg: cfg}}
+
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"a": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longinputfield")},
+		},
+		HistoryMessages: []*entity.Message{
+			{Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longhistorymsg")}},
+		},
+	}
+	err := s.processEvalTargetInputData(context.Background(), input, 5)
+	assert.NoError(t, err)
+	assert.True(t, gptr.Indirect(input.InputFields["a"].ContentOmitted))
+	assert.True(t, gptr.Indirect(input.HistoryMessages[0].Content.ContentOmitted))
+}
+
+func Test_loadOmittedContentFromInputData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+	mockS3.EXPECT().Read(gomock.Any(), "key-in").Return(newNopReader([]byte("loaded-input")), nil)
+	mockS3.EXPECT().Read(gomock.Any(), "key-msg").Return(newNopReader([]byte("loaded-msg")), nil)
+
+	s := &RecordDataStorage{batchStorage: mockS3}
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"in": {
+				ContentType:      gptr.Of(entity.ContentTypeText),
+				Text:             gptr.Of(""),
+				ContentOmitted:   gptr.Of(true),
+				FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-in")},
+				FullContentBytes: gptr.Of(int32(12)),
+			},
+		},
+		HistoryMessages: []*entity.Message{
+			{
+				Content: &entity.Content{
+					ContentType:      gptr.Of(entity.ContentTypeText),
+					Text:             gptr.Of(""),
+					ContentOmitted:   gptr.Of(true),
+					FullContent:      &entity.ObjectStorage{URI: gptr.Of("key-msg")},
+					FullContentBytes: gptr.Of(int32(9)),
+				},
+			},
+		},
+	}
+	err := s.loadOmittedContentFromInputData(context.Background(), input)
+	assert.NoError(t, err)
+	assert.Equal(t, "loaded-input", input.InputFields["in"].GetText())
+	assert.False(t, gptr.Indirect(input.InputFields["in"].ContentOmitted))
+	assert.Equal(t, "loaded-msg", input.HistoryMessages[0].Content.GetText())
+	assert.False(t, gptr.Indirect(input.HistoryMessages[0].Content.ContentOmitted))
+}
+
+
 func Test_loadContentFromS3_skip_when_not_omitted(t *testing.T) {
 	s := &RecordDataStorage{}
 	c := &entity.Content{

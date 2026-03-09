@@ -2692,6 +2692,123 @@ func TestDefaultExptTurnEvaluationImpl_getFieldContent_EdgeCases(t *testing.T) {
 	}
 }
 
+func TestDefaultExptTurnEvaluationImpl_buildEvalSetFields(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	service := &DefaultExptTurnEvaluationImpl{
+		evalSetItemSvc: mockEvalSetItemSvc,
+	}
+	ctx := context.Background()
+	spaceID := int64(100)
+	evalSetID := int64(200)
+	itemID := int64(300)
+	turnID := int64(10)
+
+	tests := []struct {
+		name      string
+		fcs       []*entity.FieldConf
+		evalTurn  *entity.Turn
+		mockSetup func()
+		wantErr   bool
+		validate  func(t *testing.T, result map[string]*entity.Content)
+	}{
+		{
+			name: "load omitted content from eval set before field conf processing",
+			fcs:  []*entity.FieldConf{{FieldName: "out", FromField: "f1"}},
+			evalTurn: &entity.Turn{
+				ID:        turnID,
+				EvalSetID: evalSetID,
+				ItemID:    itemID,
+				FieldDataList: []*entity.FieldData{
+					{
+						Name: "f1",
+						Content: &entity.Content{
+							ContentType:      gptr.Of(entity.ContentTypeText),
+							Text:             gptr.Of("short"),
+							ContentOmitted:   gptr.Of(true),
+							FullContent:      &entity.ObjectStorage{URI: gptr.Of("key")},
+							FullContentBytes: gptr.Of(int32(100)),
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockEvalSetItemSvc.EXPECT().
+					GetEvaluationSetItemField(gomock.Any(), &entity.GetEvaluationSetItemFieldParam{
+						SpaceID:         spaceID,
+						EvaluationSetID: evalSetID,
+						ItemPK:          itemID,
+						FieldName:       "f1",
+						TurnID:          gptr.Of(turnID),
+					}).
+					Return(&entity.FieldData{
+						Name:    "f1",
+						Content: &entity.Content{ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("full content from eval set")},
+					}, nil)
+			},
+			wantErr: false,
+			validate: func(t *testing.T, result map[string]*entity.Content) {
+				assert.NotNil(t, result)
+				assert.Contains(t, result, "out")
+				assert.Equal(t, "full content from eval set", result["out"].GetText())
+			},
+		},
+		{
+			name: "GetEvaluationSetItemField error returns err",
+			fcs:  []*entity.FieldConf{{FieldName: "out", FromField: "f1"}},
+			evalTurn: &entity.Turn{
+				ID:        turnID,
+				EvalSetID: evalSetID,
+				ItemID:    itemID,
+				FieldDataList: []*entity.FieldData{
+					{Name: "f1", Content: &entity.Content{
+						ContentType:      gptr.Of(entity.ContentTypeText),
+						Text:             gptr.Of("x"),
+						ContentOmitted:   gptr.Of(true),
+						FullContent:      &entity.ObjectStorage{URI: gptr.Of("k")},
+						FullContentBytes: gptr.Of(int32(50)),
+					}},
+				},
+			},
+			mockSetup: func() {
+				mockEvalSetItemSvc.EXPECT().
+					GetEvaluationSetItemField(gomock.Any(), gomock.Any()).
+					Return(nil, errors.New("svc err"))
+			},
+			wantErr: true,
+		},
+		{
+			name:     "nil evalSetTurn with empty fcs returns empty",
+			fcs:      []*entity.FieldConf{},
+			evalTurn: nil,
+			mockSetup: func() {
+			},
+			wantErr: false,
+			validate: func(t *testing.T, result map[string]*entity.Content) {
+				assert.NotNil(t, result)
+				assert.Empty(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			got, err := service.buildEvalSetFields(ctx, spaceID, tt.fcs, tt.evalTurn)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			if tt.validate != nil {
+				tt.validate(t, got)
+			}
+		})
+	}
+}
+
 func TestDefaultExptTurnEvaluationImpl_CheckBenefit_EdgeCases(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)

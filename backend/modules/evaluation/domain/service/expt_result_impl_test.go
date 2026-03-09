@@ -4278,6 +4278,94 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 				assert.NotNil(t, targetOutput)
 			},
 		},
+		{
+			name:           "ExportFullContent=true should LoadRecordFullData for each target record",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				targetRecord1 := &entity.EvalTargetRecord{
+					ID: 1,
+					EvalTargetOutputData: &entity.EvalTargetOutputData{
+						OutputFields: map[string]*entity.Content{
+							"actual_output": {Text: gptr.Of("output1")},
+						},
+					},
+				}
+				targetRecord2 := &entity.EvalTargetRecord{
+					ID: 2,
+					EvalTargetOutputData: &entity.EvalTargetOutputData{
+						OutputFields: map[string]*entity.Content{
+							"actual_output": {Text: gptr.Of("output2")},
+						},
+					},
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1, 2}).
+					Return([]*entity.EvalTargetRecord{targetRecord1, targetRecord2}, nil)
+				mockEvalTargetService.EXPECT().
+					LoadRecordFullData(gomock.Any(), targetRecord1).
+					Return(nil)
+				mockEvalTargetService.EXPECT().
+					LoadRecordFullData(gomock.Any(), targetRecord2).
+					Return(nil)
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID:            100,
+					ExportFullContent:  true,
+					turnResultDO:       []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}, {ID: 11, TargetResultID: 2}},
+					evalTargetService:  mockEvalTargetService,
+					FullTrajectory:     false,
+				}
+				return builder, mockEvalTargetService
+			},
+			wantErr: false,
+			checkFunc: func(t *testing.T, builder *ExptResultBuilder) {
+				assert.NotNil(t, builder.turnResultID2TargetOutput)
+				_, ok1 := builder.turnResultID2TargetOutput[10]
+				_, ok2 := builder.turnResultID2TargetOutput[11]
+				assert.True(t, ok1)
+				assert.True(t, ok2)
+			},
+		},
+		{
+			name:           "ExportFullContent=true LoadRecordFullData error returns err",
+			exptType:       entity.ExptType_Offline,
+			fullTrajectory: false,
+			setup: func(ctrl *gomock.Controller) (*ExptResultBuilder, *svcMocks.MockIEvalTargetService) {
+				mockEvalTargetService := svcMocks.NewMockIEvalTargetService(ctrl)
+				targetRecord := &entity.EvalTargetRecord{
+					ID: 1,
+					EvalTargetOutputData: &entity.EvalTargetOutputData{
+						OutputFields: map[string]*entity.Content{
+							"actual_output": {Text: gptr.Of("output")},
+						},
+					},
+				}
+				mockEvalTargetService.EXPECT().
+					BatchGetRecordByIDs(gomock.Any(), int64(100), []int64{1}).
+					Return([]*entity.EvalTargetRecord{targetRecord}, nil)
+				mockEvalTargetService.EXPECT().
+					LoadRecordFullData(gomock.Any(), targetRecord).
+					Return(errors.New("load full data err"))
+				builder := &ExptResultBuilder{
+					exptDO: &entity.Experiment{
+						ID:       1,
+						ExptType: entity.ExptType_Offline,
+					},
+					SpaceID:            100,
+					ExportFullContent:  true,
+					turnResultDO:       []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}},
+					evalTargetService:  mockEvalTargetService,
+					FullTrajectory:     false,
+				}
+				return builder, mockEvalTargetService
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
