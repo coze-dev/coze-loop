@@ -138,7 +138,7 @@ type Span struct {
 
 	AttrTos         *AttrTos       `json:"-"`
 	LogicDeleteTime int64          `json:"-"` // us
-	Annotations     AnnotationList `json:"-"`
+	Annotations     AnnotationList `json:"annotations"`
 	Encryption      EncryptionInfo `json:"-"`
 }
 
