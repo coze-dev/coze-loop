@@ -267,9 +267,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 					ContentOmitted: gptr.Of(true),
 				},
 			},
-			targetFields: targetFields,
+			targetFields:  targetFields,
 			wantInputData: nil,
-			wantErr: true,
+			wantErr:       true,
 			mockSetup: func(mockEvalSetItemSvc *svcmocks.MockEvaluationSetItemService) {
 				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(nil, errors.New("get field error"))
 			},
@@ -1138,9 +1138,6 @@ func TestDefaultExptTurnEvaluationImpl_getContentByJsonPath_Errors(t *testing.T)
 			_, err := service.getContentByJsonPath(tt.content, tt.jsonPath)
 			if tt.wantErr {
 				assert.Error(t, err)
-			} else {
-				// We don't strictly check for no error here because "invalid..path" might error depending on implementation
-				// but "Invalid JSON" definitely should error.
 			}
 		})
 	}
