@@ -2443,8 +2443,7 @@ func (t *TraceFilterProcessorBuilderImpl) buildProcessors(
 
 	scene := defaultScene
 	if set.Scene != "" {
-		// 如果指定了 Scene，直接使用指定的 Scene
-		scene = entity.ProcessorScene(set.Scene)
+		scene = set.Scene
 	}
 
 	factories, ok := t.processorFactories[scene]
