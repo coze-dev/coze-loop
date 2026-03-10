@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -80,6 +81,7 @@ func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record
 		return nil
 	}
 	fieldMaxSize := s.getFieldMaxSize(ctx)
+	logs.CtxInfo(ctx, "Saving evaluator record field max size: %d", fieldMaxSize)
 	if fieldMaxSize <= 0 {
 		return nil
 	}
@@ -229,6 +231,7 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 		return nil
 	}
 	text := *content.Text
+	logs.CtxInfo(ctx, "judging Content need for tos storage, text: %s, int64(len(text)): %v, fieldMaxSize: %v", text, int64(len(text)), fieldMaxSize)
 	if int64(len(text)) <= fieldMaxSize {
 		return nil
 	}
@@ -237,6 +240,7 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 	if err := s.batchStorage.Upload(ctx, key, bytes.NewReader([]byte(text))); err != nil {
 		return errors.WithMessagef(err, "upload field to S3, key=%s", key)
 	}
+	logs.CtxInfo(ctx, "upload successful for tos storage, key=%s", key)
 	// 剪裁后放回 Text，设置 ContentOmitted、FullContent
 	preview := utils.TruncateJsonPreviewToSize([]byte(text), fieldMaxSize)
 	content.Text = gptr.Of(string(preview))
