@@ -366,9 +366,10 @@ type ReportTargetRecordParam struct {
 }
 
 type DebugTargetParam struct {
-	SpaceID      int64
-	PatchyTarget *EvalTarget
-	InputData    *EvalTargetInputData
+	SpaceID             int64
+	PatchyTarget        *EvalTarget
+	InputData           *EvalTargetInputData
+	TruncateLargeContent *bool // 是否对大对象剪裁，nil 时默认剪裁
 }
 
 // CreateEvaluatorTemplateRequest 创建评估器模板请求

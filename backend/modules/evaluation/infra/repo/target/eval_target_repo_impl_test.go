@@ -711,7 +711,7 @@ func TestEvalTargetRepoImpl_CreateEvalTargetRecord(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			got, err := repo.CreateEvalTargetRecord(context.Background(), tt.record)
+			got, err := repo.CreateEvalTargetRecord(context.Background(), tt.record, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -2075,7 +2075,7 @@ func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 			lwt:                  mockLWT,
 		}
 		mockEvalTargetRecordDao.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
-		err := repo.SaveEvalTargetRecord(context.Background(), record)
+		err := repo.SaveEvalTargetRecord(context.Background(), record, nil)
 		assert.NoError(t, err)
 	})
 
@@ -2112,7 +2112,7 @@ func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 			dbProvider:           mockDBProvider,
 			lwt:                  mockLWT,
 		}
-		err := repo.SaveEvalTargetRecord(context.Background(), recWithLargeContent)
+		err := repo.SaveEvalTargetRecord(context.Background(), recWithLargeContent, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "process eval target input data")
 	})
@@ -2160,7 +2160,7 @@ func TestEvalTargetRepoImpl_UpdateEvalTargetRecord(t *testing.T) {
 			lwt:                  mockLWT,
 		}
 		mockEvalTargetRecordDao.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
-		err := repo.UpdateEvalTargetRecord(context.Background(), record)
+		err := repo.UpdateEvalTargetRecord(context.Background(), record, nil)
 		assert.NoError(t, err)
 	})
 
@@ -2197,7 +2197,7 @@ func TestEvalTargetRepoImpl_UpdateEvalTargetRecord(t *testing.T) {
 			dbProvider:           mockDBProvider,
 			lwt:                  mockLWT,
 		}
-		err := repo.UpdateEvalTargetRecord(context.Background(), recWithLargeContent)
+		err := repo.UpdateEvalTargetRecord(context.Background(), recWithLargeContent, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "process eval target output data")
 	})

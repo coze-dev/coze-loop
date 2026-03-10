@@ -77,8 +77,12 @@ func (s *RecordDataStorage) LoadEvaluatorRecordData(ctx context.Context, record 
 }
 
 // SaveEvalTargetRecordData 遍历 Content，大字段上传 S3 并剪裁后放回，整结构存 MySQL
-func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record *entity.EvalTargetRecord) error {
+// truncateLargeContent 为 false 时跳过剪裁，nil 或 true 时执行剪裁
+func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
 	if record == nil || s.batchStorage == nil {
+		return nil
+	}
+	if truncateLargeContent != nil && !*truncateLargeContent {
 		return nil
 	}
 	fieldMaxSize := s.getFieldMaxSize(ctx)

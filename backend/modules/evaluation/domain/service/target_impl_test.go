@@ -312,7 +312,7 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
 				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(999), "callee", nil)
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, target.SpaceID, target.EvalTargetVersion.ID).Return(target, nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			expectCallee: "callee",
@@ -526,7 +526,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
 
 			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) (int64, error) {
+			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
 				savedRecord = rec
 				return rec.ID, nil
 			})
@@ -686,7 +686,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 				Return(outputData, entity.EvalTargetRunStatusSuccess, nil)
 
 			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) (int64, error) {
+			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
 				savedRecord = rec
 				return rec.ID, nil
 			})
@@ -767,14 +767,13 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				status := entity.EvalTargetRunStatusAsyncInvoking
 				record.Status = &status
 				record.EvalTargetOutputData = &entity.EvalTargetOutputData{}
-				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
-				var saved *entity.EvalTargetRecord
-				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
+			deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+			var saved *entity.EvalTargetRecord
+				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) error {
 					saved = rec
 					return nil
 				})
-				// deps.repo.EXPECT().GetEvalTargetVersion(gomock.Any(), record.SpaceID, record.TargetVersionID).Return(&entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeCustomRPCServer}, nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).AnyTimes()
+				deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
@@ -940,13 +939,11 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 			// convEvalTargetRunErr is called before SaveEvalTargetRecord when param.OutputData has EvalTargetRunError with Message
 			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).AnyTimes()
 			var saved *entity.EvalTargetRecord
-			deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
+			deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) error {
 				saved = rec
 				return nil
 			})
-			// deps.repo.EXPECT().GetEvalTargetVersion(gomock.Any(), record.SpaceID, record.TargetVersionID).
-			// 	Return(&entity.EvalTarget{EvalTargetType: entity.EvalTargetTypeCustomRPCServer}, nil)
-			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).AnyTimes()
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
 			// trajectory extraction path
@@ -961,9 +958,9 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 
 			// use channel to safely observe async UpdateEvalTargetRecord calls from goroutine
 			updatedCh := make(chan *entity.EvalTargetRecord, 1)
-			deps.repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any()).
+			deps.repo.EXPECT().UpdateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).
 				AnyTimes().
-				DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) error {
+				DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) error {
 					// non-blocking send in case of multiple updates
 					select {
 					case updatedCh <- rec:
@@ -1360,7 +1357,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).Times(1)
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantStatus: entity.EvalTargetRunStatusFail,
@@ -1372,7 +1369,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(nil, entity.EvalTargetRunStatusFail, errorx.New("common error"))
 				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{}).Times(1)
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantStatus: entity.EvalTargetRunStatusFail,
@@ -1400,7 +1397,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 					return outputData, entity.EvalTargetRunStatusSuccess, nil
 				})
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantStatus: entity.EvalTargetRunStatusSuccess,
@@ -1422,7 +1419,7 @@ func TestEvalTargetServiceImpl_DebugTarget(t *testing.T) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
 				deps.operator.EXPECT().Execute(ctx, param.SpaceID, gomock.Any()).Return(&entity.EvalTargetOutputData{}, entity.EvalTargetRunStatusSuccess, nil)
 				deps.idgen.EXPECT().GenID(ctx).Return(int64(999), nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantErr:     true,
@@ -1648,7 +1645,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil).Times(2)
 				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
 				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(999), "callee", nil)
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantErr:      true,
@@ -1683,7 +1680,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 					assert.Equal(t, evalTarget, execParam.EvalTarget)
 					return int64(999), "callee", nil
 				})
-				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).Return(int64(999), nil)
+				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			expectCallee: "callee",
