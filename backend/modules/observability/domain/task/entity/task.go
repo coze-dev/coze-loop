@@ -335,3 +335,7 @@ func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
 	}
 	return loop_span.PlatformDefault
 }
+
+func (t *ObservabilityTask) IsNewWorkflowTask() bool {
+	return t.WorkflowID != nil
+}
