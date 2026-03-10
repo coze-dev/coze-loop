@@ -3204,7 +3204,8 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_EvaluatorLevelLimitAndSourceMiss
 				plain      *repomocks.MockIPlainRateLimiter
 				source     *mocks.MockEvaluatorSourceService
 				recordRepo *repomocks.MockIEvaluatorRecordRepo
-			}) {
+			},
+			) {
 				deps.repo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).
 					Return([]*entity.Evaluator{evaluatorDO}, nil)
 				deps.limiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
@@ -3221,7 +3222,8 @@ func TestEvaluatorServiceImpl_AsyncRunEvaluator_EvaluatorLevelLimitAndSourceMiss
 				plain      *repomocks.MockIPlainRateLimiter
 				source     *mocks.MockEvaluatorSourceService
 				recordRepo *repomocks.MockIEvaluatorRecordRepo
-			}) {
+			},
+			) {
 				s.evaluatorSourceServices = map[entity.EvaluatorType]EvaluatorSourceService{}
 				deps.repo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).
 					Return([]*entity.Evaluator{evaluatorDO}, nil)
