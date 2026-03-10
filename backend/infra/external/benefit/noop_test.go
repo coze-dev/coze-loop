@@ -30,4 +30,3 @@ func TestNoopBenefitServiceImpl_CheckTraceBenefit(t *testing.T) {
 	assert.Equal(t, int64(365), res.StorageDuration)
 	assert.Equal(t, -1, res.WhichIsEnough)
 }
-

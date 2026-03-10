@@ -36,4 +36,3 @@ func TestCheckTraceBenefitParams_JSONTags(t *testing.T) {
 	assert.Equal(t, "u", got["connector_uid"])
 	assert.Equal(t, float64(3), got["space_id"])
 }
-
