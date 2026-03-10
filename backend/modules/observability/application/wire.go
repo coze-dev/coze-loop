@@ -370,7 +370,7 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskHookProvider taskhook.ITaskHookProvider,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskHookProvider taskhook.IWorkflowProvider,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluateProcessor(
@@ -478,7 +478,7 @@ func InitTaskApplication(
 	taskProcessor task_processor.TaskProcessor,
 	aid int32,
 	persistentCmdable redis.PersistentCmdable,
-	taskHookProvider taskhook.ITaskHookProvider,
+	taskHookProvider taskhook.IWorkflowProvider,
 ) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil

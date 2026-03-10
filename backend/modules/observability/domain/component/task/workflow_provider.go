@@ -9,20 +9,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 )
 
-//go:generate mockgen -destination=mocks/task_hook.go -package=mocks . ITaskHookProvider
+//go:generate mockgen -destination=mocks/task_hook.go -package=mocks . IWorkflowProvider
 
 type WorkflowCallbackParam struct {
 	Task    *entity.ObservabilityTask
 	TaskRun *entity.TaskRun
 }
 
-type ITaskHookProvider interface {
+type IWorkflowProvider interface {
 	WorkflowCallback(ctx context.Context, event *WorkflowCallbackParam) error
 }
 
 type NoopTaskHookProvider struct{}
 
-func NewNoopTaskHookProvider() ITaskHookProvider {
+func NewNoopTaskHookProvider() IWorkflowProvider {
 	return &NoopTaskHookProvider{}
 }
 

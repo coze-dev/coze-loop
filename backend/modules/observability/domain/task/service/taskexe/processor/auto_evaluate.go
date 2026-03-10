@@ -44,7 +44,7 @@ type AutoEvaluateProcessor struct {
 	taskRepo              repo.ITaskRepo
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
-	taskHookProvider      taskhook.ITaskHookProvider
+	workflowProvider      taskhook.IWorkflowProvider
 }
 
 func NewAutoEvaluateProcessor(
@@ -54,10 +54,10 @@ func NewAutoEvaluateProcessor(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
-	taskHookProvider taskhook.ITaskHookProvider,
+	workflowProvider taskhook.IWorkflowProvider,
 ) *AutoEvaluateProcessor {
-	if taskHookProvider == nil {
-		taskHookProvider = taskhook.NewNoopTaskHookProvider()
+	if workflowProvider == nil {
+		workflowProvider = taskhook.NewNoopTaskHookProvider()
 	}
 	return &AutoEvaluateProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
@@ -66,7 +66,7 @@ func NewAutoEvaluateProcessor(
 		taskRepo:              taskRepo,
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
-		taskHookProvider:      taskHookProvider,
+		workflowProvider:      workflowProvider,
 	}
 }
 
@@ -275,12 +275,12 @@ func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskex
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
-		if p.taskHookProvider != nil {
-			if err := p.taskHookProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+		if p.workflowProvider != nil {
+			if err := p.workflowProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
 				Task:    param.Task,
 				TaskRun: param.TaskRun,
 			}); err != nil {
-				logs.CtxError(ctx, "taskHookProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
+				logs.CtxError(ctx, "workflowProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
 				return err
 			}
 		}

@@ -256,7 +256,7 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, stor
 	return iTraceIngestionApplication, nil
 }
 
-func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, ckDb ck.Provider, meter metrics.Meter, redis3 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, fileClient fileservice.Client, taskProcessor processor.TaskProcessor, aid int32, persistentCmdable redis.PersistentCmdable, taskHookProvider taskhook.ITaskHookProvider) (ITaskApplication, error) {
+func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFactory conf.IConfigLoaderFactory, benefit2 benefit.IBenefitService, ckDb ck.Provider, meter metrics.Meter, redis3 redis.Cmdable, mqFactory mq.IFactory, userClient userservice.Client, authClient authservice.Client, evalService evaluatorservice.Client, evalSetService evaluationsetservice.Client, exptService experimentservice.Client, datasetService datasetservice.Client, fileClient fileservice.Client, taskProcessor processor.TaskProcessor, aid int32, persistentCmdable redis.PersistentCmdable, taskHookProvider taskhook.IWorkflowProvider) (ITaskApplication, error) {
 	iTaskDao := mysql.NewTaskDaoImpl(db2)
 	iTaskDAO := redis2.NewTaskDAO(redis3)
 	iTaskRunDao := mysql.NewTaskRunDaoImpl(db2)
@@ -464,7 +464,7 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo4.ITaskRepo, taskHookProvider taskhook.ITaskHookProvider,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo4.ITaskRepo, taskHookProvider taskhook.IWorkflowProvider,
 ) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
 	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluateProcessor(

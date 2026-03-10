@@ -1309,7 +1309,7 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	assert.Equal(t, evalMock, proc.evalSvc)
 	assert.Equal(t, evaluationMock, proc.evaluationSvc)
 	assert.Equal(t, taskRepo, proc.taskRepo)
-	assert.NotNil(t, proc.taskHookProvider)
+	assert.NotNil(t, proc.workflowProvider)
 }
 
 // fakeEvaluatorAdapter 是 IEvaluatorRPCAdapter 的fake实现
