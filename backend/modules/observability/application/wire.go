@@ -220,28 +220,28 @@ func NewTraceProcessorBuilder(
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
 ) service.TraceFilterProcessorBuilder {
-	processorFactories := map[service.ProcessorScene][]span_processor.Factory{
-		service.SceneGetTrace: {
+	processorFactories := map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewCheckProcessorFactory(),
 			span_processor.NewAttrTosProcessorFactory(fileProvider),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		},
-		service.SceneListSpans: {
+		entity.SceneListSpans: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		},
-		service.SceneAdvanceInfo: {
+		entity.SceneAdvanceInfo: {
 			span_processor.NewCheckProcessorFactory(),
 		},
-		service.SceneIngestTrace: {},
-		service.SceneSearchTraceOApi: {
+		entity.SceneIngestTrace: {},
+		entity.SceneSearchTraceOApi: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewCheckProcessorFactory(),
 			span_processor.NewAttrTosProcessorFactory(fileProvider),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		},
-		service.SceneListSpansOApi: {
+		entity.SceneListSpansOApi: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
 		},

@@ -56,6 +56,7 @@ type ListSpansReq struct {
 	PlatformType          loop_span.PlatformType
 	SpanListType          loop_span.SpanListType
 	Source                span_filter.SourceType
+	Scene                 entity.ProcessorScene
 }
 
 type ListSpansResp struct {
@@ -1076,6 +1077,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
 		QueryTenants:   tenants,
+		Scene:          req.Scene,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -2409,18 +2411,6 @@ func processLatencyFilter(f *loop_span.FilterField) error {
 	return nil
 }
 
-// ProcessorScene 定义处理器场景类型
-type ProcessorScene string
-
-const (
-	SceneGetTrace        ProcessorScene = "get_trace"
-	SceneListSpans       ProcessorScene = "list_spans"
-	SceneAdvanceInfo     ProcessorScene = "advance_info"
-	SceneIngestTrace     ProcessorScene = "ingest_trace"
-	SceneSearchTraceOApi ProcessorScene = "search_trace_oapi"
-	SceneListSpansOApi   ProcessorScene = "list_spans_oapi"
-)
-
 //go:generate mockgen -destination=mocks/span_processor.go -package=mocks . TraceFilterProcessorBuilder
 type TraceFilterProcessorBuilder interface {
 	BuildPlatformRelatedFilter(context.Context, loop_span.PlatformType) (span_filter.Filter, error)
@@ -2434,7 +2424,7 @@ type TraceFilterProcessorBuilder interface {
 
 type TraceFilterProcessorBuilderImpl struct {
 	platformFilterFactory span_filter.PlatformFilterFactory
-	processorFactories    map[ProcessorScene][]span_processor.Factory
+	processorFactories    map[entity.ProcessorScene][]span_processor.Factory
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildPlatformRelatedFilter(
@@ -2447,14 +2437,14 @@ func (t *TraceFilterProcessorBuilderImpl) BuildPlatformRelatedFilter(
 func (t *TraceFilterProcessorBuilderImpl) buildProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
-	defaultScene ProcessorScene,
+	defaultScene entity.ProcessorScene,
 ) ([]span_processor.Processor, error) {
 	ret := make([]span_processor.Processor, 0)
 
 	scene := defaultScene
 	if set.Scene != "" {
 		// 如果指定了 Scene，直接使用指定的 Scene
-		scene = ProcessorScene(set.Scene)
+		scene = entity.ProcessorScene(set.Scene)
 	}
 
 	factories, ok := t.processorFactories[scene]
@@ -2475,47 +2465,47 @@ func (t *TraceFilterProcessorBuilderImpl) BuildGetTraceProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneGetTrace)
+	return t.buildProcessors(ctx, set, entity.SceneGetTrace)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildListSpansProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneListSpans)
+	return t.buildProcessors(ctx, set, entity.SceneListSpans)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildAdvanceInfoProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneAdvanceInfo)
+	return t.buildProcessors(ctx, set, entity.SceneAdvanceInfo)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildIngestTraceProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneIngestTrace)
+	return t.buildProcessors(ctx, set, entity.SceneIngestTrace)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildSearchTraceOApiProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneSearchTraceOApi)
+	return t.buildProcessors(ctx, set, entity.SceneSearchTraceOApi)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildListSpansOApiProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, SceneListSpansOApi)
+	return t.buildProcessors(ctx, set, entity.SceneListSpansOApi)
 }
 
 func NewTraceFilterProcessorBuilder(
 	platformFilterFactory span_filter.PlatformFilterFactory,
-	processorFactories map[ProcessorScene][]span_processor.Factory,
+	processorFactories map[entity.ProcessorScene][]span_processor.Factory,
 ) TraceFilterProcessorBuilder {
 	return &TraceFilterProcessorBuilderImpl{
 		platformFilterFactory: platformFilterFactory,
