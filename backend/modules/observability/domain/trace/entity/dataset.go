@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"strconv"
 
 	"github.com/bytedance/gg/gptr"
@@ -80,6 +81,8 @@ type Dataset struct {
 	EvaluationBizCategory *EvaluationBizCategory
 	Seesion               *common.Session
 	UserID                *string
+	// 数据集属性
+	Visibility dataset.DatasetVisibility
 }
 
 type DatasetVersion struct {
@@ -119,12 +122,16 @@ type FieldSchema struct {
 	DisplayFormat FieldDisplayFormat
 }
 
-func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session, evaluationBizCategory *EvaluationBizCategory) *Dataset {
+func NewDataset(id, spaceID int64, name string, category DatasetCategory,
+	schema DatasetSchema,
+	session *common.Session,
+	evaluationBizCategory *EvaluationBizCategory,
+	isNewWorkflowTask bool) *Dataset {
 	var userID *string
 	if session != nil {
 		userID = ptr.Of(strconv.FormatInt(*session.UserID, 10))
 	}
-	dataset := &Dataset{
+	ds := &Dataset{
 		ID:          id,
 		WorkspaceID: spaceID,
 		Name:        name,
@@ -136,7 +143,10 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema
 		Seesion:               session,
 		UserID:                userID,
 	}
-	return dataset
+	if isNewWorkflowTask {
+		ds.Visibility = dataset.DatasetVisibility_System
+	}
+	return ds
 }
 
 func (d *Dataset) GetFieldSchemaKeyByName(fieldSchemaName string) string {
