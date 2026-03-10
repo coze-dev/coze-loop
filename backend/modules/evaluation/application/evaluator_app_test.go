@@ -1492,6 +1492,208 @@ func TestEvaluatorHandlerImpl_GetEvaluatorRecord(t *testing.T) {
 	}
 }
 
+func TestEvaluatorHandlerImpl_GetEvaluatorRecord_ExtraOutputURIToURL(t *testing.T) {
+	recordID := int64(10)
+	spaceID := int64(100)
+
+	tests := []struct {
+		name         string
+		record       *entity.EvaluatorRecord
+		mgetResp     map[string]string
+		mgetErr      error
+		wantCallMGet bool
+		wantURL      *string
+	}{
+		{
+			name:         "extra_output_nil_no_call",
+			record:       &entity.EvaluatorRecord{ID: recordID, SpaceID: spaceID},
+			wantCallMGet: false,
+		},
+		{
+			name: "extra_output_uri_filled",
+			record: &entity.EvaluatorRecord{
+				ID:      recordID,
+				SpaceID: spaceID,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					ExtraOutput: &entity.EvaluatorExtraOutputContent{
+						URI: gptr.Of("uri1"),
+					},
+				},
+			},
+			mgetResp:     map[string]string{"uri1": "url1"},
+			wantCallMGet: true,
+			wantURL:      gptr.Of("url1"),
+		},
+		{
+			name: "extra_output_uri_convert_error_swallowed",
+			record: &entity.EvaluatorRecord{
+				ID:      recordID,
+				SpaceID: spaceID,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					ExtraOutput: &entity.EvaluatorExtraOutputContent{
+						URI: gptr.Of("uri1"),
+					},
+				},
+			},
+			mgetErr:      errors.New("mget failed"),
+			wantCallMGet: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+			mockEvaluatorRecordService := mocks.NewMockEvaluatorRecordService(ctrl)
+			mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+			app := &EvaluatorHandlerImpl{
+				auth:                   mockAuth,
+				evaluatorRecordService: mockEvaluatorRecordService,
+				userInfoService:        mockUserInfoService,
+				fileProvider:           mockFileProvider,
+			}
+
+			mockEvaluatorRecordService.EXPECT().GetEvaluatorRecord(gomock.Any(), recordID, false).Return(tt.record, nil)
+			mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			if tt.wantCallMGet {
+				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(tt.mgetResp, tt.mgetErr)
+			}
+			mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+
+			resp, err := app.GetEvaluatorRecord(context.Background(), &evaluatorservice.GetEvaluatorRecordRequest{
+				EvaluatorRecordID: recordID,
+			})
+			assert.NoError(t, err)
+			assert.NotNil(t, resp)
+
+			if tt.wantURL != nil {
+				if assert.NotNil(t, resp.GetRecord()) &&
+					assert.NotNil(t, resp.GetRecord().GetEvaluatorOutputData()) &&
+					assert.NotNil(t, resp.GetRecord().GetEvaluatorOutputData().GetExtraOutput()) {
+					assert.Equal(t, gptr.Indirect(tt.wantURL), gptr.Indirect(resp.GetRecord().GetEvaluatorOutputData().GetExtraOutput().URL))
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_transformURIsToURLs(t *testing.T) {
+	tests := []struct {
+		name        string
+		buildInput  func() map[string]*common.Content
+		mockSetup   func(t *testing.T, fp *rpcmocks.MockIFileProvider)
+		wantErr     bool
+		wantErrCode int32
+		assertFn    func(t *testing.T, input map[string]*common.Content)
+	}{
+		{
+			name: "fill_audio_video_image_urls",
+			buildInput: func() map[string]*common.Content {
+				return map[string]*common.Content{
+					"img": {
+						ContentType: gptr.Of(common.ContentTypeImage),
+						Image:       &common.Image{URI: gptr.Of("img_uri")},
+					},
+					"audio": {
+						ContentType: gptr.Of(common.ContentTypeAudio),
+						Audio:       &common.Audio{URI: gptr.Of("aud_uri")},
+					},
+					"video": {
+						ContentType: gptr.Of(common.ContentTypeVideo),
+						Video:       &common.Video{URI: gptr.Of("vid_uri")},
+					},
+					"nested": {
+						ContentType: gptr.Of(common.ContentTypeMultiPart),
+						MultiPart: []*common.Content{
+							{
+								ContentType: gptr.Of(common.ContentTypeImage),
+								Image:       &common.Image{URI: gptr.Of("img2_uri")},
+							},
+							nil,
+							{
+								ContentType: gptr.Of(common.ContentTypeAudio),
+								Audio:       &common.Audio{URI: gptr.Of("")},
+							},
+						},
+					},
+				}
+			},
+			mockSetup: func(t *testing.T, fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, uris []string) (map[string]string, error) {
+					assert.ElementsMatch(t, []string{"img_uri", "aud_uri", "vid_uri", "img2_uri"}, uris)
+					return map[string]string{
+						"img_uri":  "img_url",
+						"aud_uri":  "aud_url",
+						"vid_uri":  "vid_url",
+						"img2_uri": "img2_url",
+					}, nil
+				})
+			},
+			assertFn: func(t *testing.T, input map[string]*common.Content) {
+				assert.Equal(t, "img_url", gptr.Indirect(input["img"].GetImage().URL))
+				assert.Equal(t, "aud_url", gptr.Indirect(input["audio"].GetAudio().URL))
+				assert.Equal(t, "vid_url", gptr.Indirect(input["video"].GetVideo().URL))
+				assert.Equal(t, "img2_url", gptr.Indirect(input["nested"].GetMultiPart()[0].GetImage().URL))
+				assert.Nil(t, input["nested"].GetMultiPart()[2].GetAudio().URL)
+			},
+		},
+		{
+			name: "file_provider_error_to_status_error",
+			buildInput: func() map[string]*common.Content {
+				return map[string]*common.Content{
+					"img": {
+						ContentType: gptr.Of(common.ContentTypeImage),
+						Image:       &common.Image{URI: gptr.Of("img_uri")},
+					},
+				}
+			},
+			mockSetup: func(_ *testing.T, fp *rpcmocks.MockIFileProvider) {
+				fp.EXPECT().MGetFileURL(gomock.Any(), gomock.Any()).Return(nil, errors.New("mget failed"))
+			},
+			wantErr:     true,
+			wantErrCode: int32(errno.FileURLRetrieveFailedCode),
+		},
+		{
+			name: "empty_input_fields_no_call",
+			buildInput: func() map[string]*common.Content {
+				return map[string]*common.Content{}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+			app := &EvaluatorHandlerImpl{fileProvider: mockFileProvider}
+
+			inputFields := tt.buildInput()
+			if tt.mockSetup != nil {
+				tt.mockSetup(t, mockFileProvider)
+			}
+
+			err := app.transformURIsToURLs(context.Background(), inputFields)
+			if tt.wantErr {
+				assert.Error(t, err)
+				statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				return
+			}
+			assert.NoError(t, err)
+			if tt.assertFn != nil {
+				tt.assertFn(t, inputFields)
+			}
+		})
+	}
+}
+
 func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -6000,11 +6202,14 @@ func TestEvaluatorHandlerImpl_UpdateEvaluator_Comprehensive(t *testing.T) {
 		SpaceID: workspaceID,
 	}
 
+	var gotUpdateReq *entity.UpdateEvaluatorMetaRequest
+
 	tests := []struct {
-		name      string
-		req       *evaluatorservice.UpdateEvaluatorRequest
-		mockSetup func()
-		wantErr   bool
+		name        string
+		req         *evaluatorservice.UpdateEvaluatorRequest
+		mockSetup   func()
+		wantErr     bool
+		wantBoxType *entity.EvaluatorBoxType
 	}{
 		{
 			name: "success",
@@ -6179,14 +6384,44 @@ func TestEvaluatorHandlerImpl_UpdateEvaluator_Comprehensive(t *testing.T) {
 				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
-				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
+					gotUpdateReq = req
+					return nil
+				})
 			},
 			wantErr: false,
+			wantBoxType: func() *entity.EvaluatorBoxType {
+				bt := entity.EvaluatorBoxTypeBlack
+				return &bt
+			}(),
+		},
+		{
+			name: "success_with_unknown_box_type_default_white",
+			req: &evaluatorservice.UpdateEvaluatorRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: evaluatorID,
+				BoxType:     gptr.Of(evaluatordto.EvaluatorBoxType("Grey")),
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).Return(evaluatorDO, nil)
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockAuditClient.EXPECT().Audit(gomock.Any(), gomock.Any()).Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil)
+				mockEvaluatorService.EXPECT().UpdateEvaluatorMeta(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, req *entity.UpdateEvaluatorMetaRequest) error {
+					gotUpdateReq = req
+					return nil
+				})
+			},
+			wantErr: false,
+			wantBoxType: func() *entity.EvaluatorBoxType {
+				bt := entity.EvaluatorBoxTypeWhite
+				return &bt
+			}(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			gotUpdateReq = nil
 			tt.mockSetup()
 			resp, err := app.UpdateEvaluator(ctx, tt.req)
 			if tt.wantErr {
@@ -6194,6 +6429,11 @@ func TestEvaluatorHandlerImpl_UpdateEvaluator_Comprehensive(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
+				if tt.wantBoxType != nil {
+					if assert.NotNil(t, gotUpdateReq) && assert.NotNil(t, gotUpdateReq.BoxType) {
+						assert.Equal(t, *tt.wantBoxType, *gotUpdateReq.BoxType)
+					}
+				}
 			}
 		})
 	}
