@@ -2409,6 +2409,18 @@ func processLatencyFilter(f *loop_span.FilterField) error {
 	return nil
 }
 
+// ProcessorScene 定义处理器场景类型
+type ProcessorScene string
+
+const (
+	SceneGetTrace        ProcessorScene = "get_trace"
+	SceneListSpans       ProcessorScene = "list_spans"
+	SceneAdvanceInfo     ProcessorScene = "advance_info"
+	SceneIngestTrace     ProcessorScene = "ingest_trace"
+	SceneSearchTraceOApi ProcessorScene = "search_trace_oapi"
+	SceneListSpansOApi   ProcessorScene = "list_spans_oapi"
+)
+
 //go:generate mockgen -destination=mocks/span_processor.go -package=mocks . TraceFilterProcessorBuilder
 type TraceFilterProcessorBuilder interface {
 	BuildPlatformRelatedFilter(context.Context, loop_span.PlatformType) (span_filter.Filter, error)
@@ -2421,13 +2433,8 @@ type TraceFilterProcessorBuilder interface {
 }
 
 type TraceFilterProcessorBuilderImpl struct {
-	platformFilterFactory             span_filter.PlatformFilterFactory
-	getTraceProcessorFactories        []span_processor.Factory
-	listSpansProcessorFactories       []span_processor.Factory
-	advanceInfoProcessorFactories     []span_processor.Factory
-	ingestTraceProcessorFactories     []span_processor.Factory
-	searchTraceOApiProcessorFactories []span_processor.Factory
-	listSpansOApiProcessorFactories   []span_processor.Factory
+	platformFilterFactory span_filter.PlatformFilterFactory
+	processorFactories    map[ProcessorScene][]span_processor.Factory
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildPlatformRelatedFilter(
@@ -2437,12 +2444,24 @@ func (t *TraceFilterProcessorBuilderImpl) BuildPlatformRelatedFilter(
 	return t.platformFilterFactory.GetFilter(ctx, platformType)
 }
 
-func (t *TraceFilterProcessorBuilderImpl) BuildGetTraceProcessors(
+func (t *TraceFilterProcessorBuilderImpl) buildProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
+	defaultScene ProcessorScene,
 ) ([]span_processor.Processor, error) {
 	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.getTraceProcessorFactories {
+
+	scene := defaultScene
+	if set.Scene != "" {
+		// 如果指定了 Scene，直接使用指定的 Scene
+		scene = ProcessorScene(set.Scene)
+	}
+
+	factories, ok := t.processorFactories[scene]
+	if !ok {
+		return nil, fmt.Errorf("processor factories not found for scene: %s", scene)
+	}
+	for _, factory := range factories {
 		p, err := factory.CreateProcessor(ctx, set)
 		if err != nil {
 			return nil, err
@@ -2450,99 +2469,56 @@ func (t *TraceFilterProcessorBuilderImpl) BuildGetTraceProcessors(
 		ret = append(ret, p)
 	}
 	return ret, nil
+}
+
+func (t *TraceFilterProcessorBuilderImpl) BuildGetTraceProcessors(
+	ctx context.Context,
+	set span_processor.Settings,
+) ([]span_processor.Processor, error) {
+	return t.buildProcessors(ctx, set, SceneGetTrace)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildListSpansProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.listSpansProcessorFactories {
-		p, err := factory.CreateProcessor(ctx, set)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, p)
-	}
-	return ret, nil
+	return t.buildProcessors(ctx, set, SceneListSpans)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildAdvanceInfoProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.advanceInfoProcessorFactories {
-		p, err := factory.CreateProcessor(ctx, set)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, p)
-	}
-	return ret, nil
+	return t.buildProcessors(ctx, set, SceneAdvanceInfo)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildIngestTraceProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.ingestTraceProcessorFactories {
-		p, err := factory.CreateProcessor(ctx, set)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, p)
-	}
-	return ret, nil
+	return t.buildProcessors(ctx, set, SceneIngestTrace)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildSearchTraceOApiProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.searchTraceOApiProcessorFactories {
-		p, err := factory.CreateProcessor(ctx, set)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, p)
-	}
-	return ret, nil
+	return t.buildProcessors(ctx, set, SceneSearchTraceOApi)
 }
 
 func (t *TraceFilterProcessorBuilderImpl) BuildListSpansOApiProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	ret := make([]span_processor.Processor, 0)
-	for _, factory := range t.listSpansOApiProcessorFactories {
-		p, err := factory.CreateProcessor(ctx, set)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, p)
-	}
-	return ret, nil
+	return t.buildProcessors(ctx, set, SceneListSpansOApi)
 }
 
 func NewTraceFilterProcessorBuilder(
 	platformFilterFactory span_filter.PlatformFilterFactory,
-	getTraceProcessorFactories []span_processor.Factory,
-	listSpansProcessorFactories []span_processor.Factory,
-	advanceInfoProcessorFactories []span_processor.Factory,
-	ingestTraceProcessorFactories []span_processor.Factory,
-	searchTraceOApiProcessorFactories []span_processor.Factory,
-	listSpansOApiProcessorFactories []span_processor.Factory,
+	processorFactories map[ProcessorScene][]span_processor.Factory,
 ) TraceFilterProcessorBuilder {
 	return &TraceFilterProcessorBuilderImpl{
-		platformFilterFactory:             platformFilterFactory,
-		getTraceProcessorFactories:        getTraceProcessorFactories,
-		listSpansProcessorFactories:       listSpansProcessorFactories,
-		advanceInfoProcessorFactories:     advanceInfoProcessorFactories,
-		ingestTraceProcessorFactories:     ingestTraceProcessorFactories,
-		searchTraceOApiProcessorFactories: searchTraceOApiProcessorFactories,
-		listSpansOApiProcessorFactories:   listSpansOApiProcessorFactories,
+		platformFilterFactory: platformFilterFactory,
+		processorFactories:    processorFactories,
 	}
 }

@@ -71,10 +71,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workflow"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workflow"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -404,18 +404,41 @@ func NewTraceProcessorBuilder(
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
 ) service.TraceFilterProcessorBuilder {
-	return service.NewTraceFilterProcessorBuilder(span_filter.NewPlatformFilterFactory(
-		[]span_filter.Factory{span_filter.NewCozeLoopFilterFactory(), span_filter.NewPromptFilterFactory(traceConfig), span_filter.NewEvaluatorFilterFactory(), span_filter.NewEvalTargetFilterFactory()}), []span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewCheckProcessorFactory(), span_processor.NewAttrTosProcessorFactory(fileProvider), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
-
-		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
-
-		[]span_processor.Factory{span_processor.NewCheckProcessorFactory()},
-
-		[]span_processor.Factory{},
-
-		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewCheckProcessorFactory(), span_processor.NewAttrTosProcessorFactory(fileProvider), span_processor.NewExpireErrorProcessorFactory(benefitSvc)},
-
-		[]span_processor.Factory{span_processor.NewPlatformProcessorFactory(traceConfig), span_processor.NewExpireErrorProcessorFactory(benefitSvc)})
+	processorFactories := map[service.ProcessorScene][]span_processor.Factory{
+		service.SceneGetTrace: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		service.SceneListSpans: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		service.SceneAdvanceInfo: {
+			span_processor.NewCheckProcessorFactory(),
+		},
+		service.SceneIngestTrace: {},
+		service.SceneSearchTraceOApi: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		service.SceneListSpansOApi: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+	}
+	return service.NewTraceFilterProcessorBuilder(
+		span_filter.NewPlatformFilterFactory(
+			[]span_filter.Factory{
+				span_filter.NewCozeLoopFilterFactory(),
+				span_filter.NewPromptFilterFactory(traceConfig),
+				span_filter.NewEvaluatorFilterFactory(),
+				span_filter.NewEvalTargetFilterFactory(),
+			}),
+		processorFactories)
 }
 
 func NewMetricsPlatformConfig() *entity.PlatformMetrics {

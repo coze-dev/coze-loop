@@ -20,6 +20,8 @@ type Settings struct {
 	SpanDoubleCheck       bool
 	QueryTraceID          string
 	QueryLogID            string
+	// Scene 指定处理器场景，如果设置则优先使用该场景的处理器
+	Scene string
 }
 
 type Factory interface {
