@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -81,10 +82,11 @@ func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record
 		return nil
 	}
 	fieldMaxSize := s.getFieldMaxSize(ctx)
-	logs.CtxInfo(ctx, "Saving evaluator record field max size: %d", fieldMaxSize)
+	logs.CtxInfo(ctx, "SaveEvalTargetRecordData field max size: %d", fieldMaxSize)
 	if fieldMaxSize <= 0 {
 		return nil
 	}
+	logs.CtxInfo(ctx, "SaveEvalTargetRecordData record: %v", json.Jsonify(record))
 	if record.EvalTargetInputData != nil {
 		if err := s.processEvalTargetInputData(ctx, record.EvalTargetInputData, fieldMaxSize); err != nil {
 			return errors.WithMessage(err, "process eval target input data")
