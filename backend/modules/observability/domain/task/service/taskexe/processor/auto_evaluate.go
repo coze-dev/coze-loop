@@ -360,7 +360,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		category,
 		schema,
 		sessionInfo,
-		ptr.Of(entity.BizCategoryFromOnlineTrace),
+		ptr.Of(entity.BizCategoryFromOnlineTrace), false,
 	))
 	if err != nil {
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
