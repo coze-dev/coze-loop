@@ -122,22 +122,22 @@ func InitLLMHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provi
 	return llmHandler, nil
 }
 
-func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, ckDb ck.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, tracerFactory func() observabilitytraceservice.Client) (*EvaluationHandler, error) {
+func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, ckDb ck.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, tracerFactory func() observabilitytraceservice.Client) (*EvaluationHandler, error) {
 	evaluationSetService := application4.InitEvaluationSetApplication(client, authClient, meter, userClient)
-	evaluatorService, err := application4.InitEvaluatorApplication(ctx, idgen2, authClient, db2, configFactory, mqFactory, llmClient, meter, userClient, auditClient, cmdable, benefitSvc, limiterFactory, fileClient, plainLimiterFactory, ckDb, tagClient, promptClient, pec, client, tracerFactory)
+	evaluatorService, err := application4.InitEvaluatorApplication(ctx, idgen2, authClient, db2, configFactory, mqFactory, llmClient, meter, userClient, auditClient, cmdable, benefitSvc, limiterFactory, fileClient, plainLimiterFactory, ckDb, tagClient, promptClient, pec, client, tracerFactory, batchObjectStorage)
 	if err != nil {
 		return nil, err
 	}
 	iTrajectoryAdapter := trajectory.NewAdapter(tracerFactory)
-	evalTargetService, err := application4.InitEvalTargetApplication(ctx, idgen2, db2, promptClient, pec, authClient, cmdable, meter, iTrajectoryAdapter, configFactory)
+	evalTargetService, err := application4.InitEvalTargetApplication(ctx, idgen2, db2, promptClient, pec, authClient, cmdable, meter, iTrajectoryAdapter, configFactory, batchObjectStorage)
 	if err != nil {
 		return nil, err
 	}
-	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, objectStorage, plainLimiterFactory, iTrajectoryAdapter)
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter)
 	if err != nil {
 		return nil, err
 	}
-	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter)
 	if err != nil {
 		return nil, err
 	}

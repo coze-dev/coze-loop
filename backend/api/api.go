@@ -112,6 +112,7 @@ func Init(
 		lofile.NewLocalFileService(foundationHandler.FileService),
 		lotag.NewLocalTagService(dataHandler.TagService),
 		objectStorage,
+		batchObjectStorage,
 		plainLimiterFactory,
 		func() observabilitytraceservice.Client {
 			return lotrace.NewLocalTraceService(observabilityHandler.ITraceApplication)

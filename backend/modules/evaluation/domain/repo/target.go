@@ -20,11 +20,15 @@ type IEvalTargetRepo interface {
 	BatchGetEvalTargetVersion(ctx context.Context, spaceID int64, versionIDs []int64) (dos []*entity.EvalTarget, err error)
 
 	// target record start
-	CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) (int64, error)
-	SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
-	UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error
-	GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error)
+	CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) (int64, error)
+	SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error
+	UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error
+	GetEvalTargetRecordByIDAndSpaceID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error)
 	ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error)
+	// LoadEvalTargetRecordOutputFields 从 S3 加载 record output 中指定字段的大对象完整内容
+	LoadEvalTargetRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error
+	// LoadEvalTargetRecordFullData 从 TOS 加载 record 中所有被省略的大对象完整内容（用于导出等需要完整字段的场景）
+	LoadEvalTargetRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error
 	// target record end
 }
 

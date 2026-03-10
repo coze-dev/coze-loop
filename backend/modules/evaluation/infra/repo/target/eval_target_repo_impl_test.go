@@ -5,6 +5,7 @@ package target
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -15,13 +16,16 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/db"
 	dbmock "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
+	fsMocks "github.com/coze-dev/coze-loop/backend/infra/fileserver/mocks"
 	idgen "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	platestwrite_mocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repointerface "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/gorm_gen/model"
 	mysqlmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/target/mysql/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
@@ -707,7 +711,7 @@ func TestEvalTargetRepoImpl_CreateEvalTargetRecord(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.mockSetup()
 
-			got, err := repo.CreateEvalTargetRecord(context.Background(), tt.record)
+			got, err := repo.CreateEvalTargetRecord(context.Background(), tt.record, nil)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -1875,4 +1879,351 @@ func TestEvalTargetRepoImpl_ListEvalTargetRecordByIDsAndSpaceID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalTargetRepoImpl_LoadEvalTargetRecordOutputFields(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+	mockDBProvider := dbmock.NewMockProvider(ctrl)
+	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
+	record := &entity.EvalTargetRecord{
+		EvalTargetOutputData: &entity.EvalTargetOutputData{
+			OutputFields: map[string]*entity.Content{
+				"actual_output": {Text: gptr.Of("content")},
+			},
+		},
+	}
+	fieldKeys := []string{"actual_output"}
+
+	t.Run("recordDataStorage nil returns nil", func(t *testing.T) {
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    nil,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.LoadEvalTargetRecordOutputFields(context.Background(), record, fieldKeys)
+		assert.NoError(t, err)
+	})
+
+	t.Run("record nil returns nil", func(t *testing.T) {
+		storage := storage.NewRecordDataStorage(nil, nil)
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    storage,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.LoadEvalTargetRecordOutputFields(context.Background(), nil, fieldKeys)
+		assert.NoError(t, err)
+	})
+
+	t.Run("empty fieldKeys returns nil", func(t *testing.T) {
+		storage := storage.NewRecordDataStorage(nil, nil)
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    storage,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.LoadEvalTargetRecordOutputFields(context.Background(), record, nil)
+		assert.NoError(t, err)
+	})
+}
+
+func TestEvalTargetRepoImpl_LoadEvalTargetRecordFullData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+	mockDBProvider := dbmock.NewMockProvider(ctrl)
+	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
+	record := &entity.EvalTargetRecord{
+		EvalTargetInputData:  &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{}},
+		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+	}
+
+	t.Run("recordDataStorage nil returns nil", func(t *testing.T) {
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    nil,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.LoadEvalTargetRecordFullData(context.Background(), record)
+		assert.NoError(t, err)
+	})
+
+	t.Run("record nil returns nil", func(t *testing.T) {
+		storage := storage.NewRecordDataStorage(nil, nil)
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    storage,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.LoadEvalTargetRecordFullData(context.Background(), nil)
+		assert.NoError(t, err)
+	})
+}
+
+// fakeRecordStorageConfiger 用于 RecordDataStorage 的测试 configer
+type fakeRecordStorageConfiger struct {
+	cfg *component.EvaluationRecordStorage
+}
+
+func (f *fakeRecordStorageConfiger) GetEvaluationRecordStorage(ctx context.Context) *component.EvaluationRecordStorage {
+	return f.cfg
+}
+
+func (f *fakeRecordStorageConfiger) GetConsumerConf(ctx context.Context) *entity.ExptConsumerConf {
+	return nil
+}
+func (f *fakeRecordStorageConfiger) GetErrCtrl(ctx context.Context) *entity.ExptErrCtrl { return nil }
+func (f *fakeRecordStorageConfiger) GetExptExecConf(ctx context.Context, spaceID int64) *entity.ExptExecConf {
+	return nil
+}
+
+func (f *fakeRecordStorageConfiger) GetErrRetryConf(ctx context.Context, spaceID int64, err error) *entity.RetryConf {
+	return nil
+}
+
+func (f *fakeRecordStorageConfiger) GetExptTurnResultFilterBmqProducerCfg(ctx context.Context) *entity.BmqProducerCfg {
+	return nil
+}
+func (f *fakeRecordStorageConfiger) GetCKDBName(ctx context.Context) *entity.CKDBConfig { return nil }
+func (f *fakeRecordStorageConfiger) GetExptExportWhiteList(ctx context.Context) *entity.ExptExportWhiteList {
+	return nil
+}
+
+func (f *fakeRecordStorageConfiger) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	return nil
+}
+
+func (f *fakeRecordStorageConfiger) GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl {
+	return nil
+}
+
+func (f *fakeRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf {
+	return nil
+}
+
+func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+	mockDBProvider := dbmock.NewMockProvider(ctrl)
+	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
+	validSpaceID := int64(123)
+	validRecordID := int64(456)
+	validTargetID := int64(789)
+	validVersionID := int64(101)
+
+	record := &entity.EvalTargetRecord{
+		ID:                   validRecordID,
+		SpaceID:              validSpaceID,
+		TargetID:             validTargetID,
+		TargetVersionID:      validVersionID,
+		EvalTargetInputData:  &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{}},
+		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{},
+			UpdatedBy: &entity.UserInfo{},
+			CreatedAt: gptr.Of(time.Now().UnixMilli()),
+			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+		},
+	}
+
+	t.Run("recordDataStorage nil delegates to dao only", func(t *testing.T) {
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    nil,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		mockEvalTargetRecordDao.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil)
+		err := repo.SaveEvalTargetRecord(context.Background(), record, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("recordDataStorage SaveEvalTargetRecordData error returns err", func(t *testing.T) {
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeRecordStorageConfiger{cfg: cfg})
+
+		recWithLargeContent := &entity.EvalTargetRecord{
+			SpaceID:         validSpaceID,
+			TargetID:        validTargetID,
+			TargetVersionID: validVersionID,
+			EvalTargetInputData: &entity.EvalTargetInputData{
+				InputFields: map[string]*entity.Content{
+					"a": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longinputcontent")},
+				},
+			},
+			EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{},
+				UpdatedBy: &entity.UserInfo{},
+				CreatedAt: gptr.Of(time.Now().UnixMilli()),
+				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+			},
+		}
+
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    recordDataStorage,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.SaveEvalTargetRecord(context.Background(), recWithLargeContent, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "process eval target input data")
+	})
+}
+
+func TestEvalTargetRepoImpl_UpdateEvalTargetRecord(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+	mockDBProvider := dbmock.NewMockProvider(ctrl)
+	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+
+	validSpaceID := int64(123)
+	validRecordID := int64(456)
+	validTargetID := int64(789)
+	validVersionID := int64(101)
+
+	record := &entity.EvalTargetRecord{
+		ID:                   validRecordID,
+		SpaceID:              validSpaceID,
+		TargetID:             validTargetID,
+		TargetVersionID:      validVersionID,
+		EvalTargetInputData:  &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{}},
+		EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: map[string]*entity.Content{}},
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{},
+			UpdatedBy: &entity.UserInfo{},
+			CreatedAt: gptr.Of(time.Now().UnixMilli()),
+			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+		},
+	}
+
+	t.Run("recordDataStorage nil delegates to dao only", func(t *testing.T) {
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    nil,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		mockEvalTargetRecordDao.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+		err := repo.UpdateEvalTargetRecord(context.Background(), record, nil)
+		assert.NoError(t, err)
+	})
+
+	t.Run("recordDataStorage SaveEvalTargetRecordData error returns err", func(t *testing.T) {
+		mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
+		mockS3.EXPECT().Upload(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("upload err"))
+		cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 5}}}
+		recordDataStorage := storage.NewRecordDataStorage(mockS3, &fakeRecordStorageConfiger{cfg: cfg})
+
+		recWithLargeContent := &entity.EvalTargetRecord{
+			SpaceID:             validSpaceID,
+			TargetID:            validTargetID,
+			TargetVersionID:     validVersionID,
+			EvalTargetInputData: &entity.EvalTargetInputData{InputFields: map[string]*entity.Content{}},
+			EvalTargetOutputData: &entity.EvalTargetOutputData{
+				OutputFields: map[string]*entity.Content{
+					"b": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("longoutputcontent")},
+				},
+			},
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{},
+				UpdatedBy: &entity.UserInfo{},
+				CreatedAt: gptr.Of(time.Now().UnixMilli()),
+				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
+			},
+		}
+
+		repo := &EvalTargetRepoImpl{
+			evalTargetDao:        mockEvalTargetDao,
+			evalTargetVersionDao: mockEvalTargetVersionDao,
+			evalTargetRecordDao:  mockEvalTargetRecordDao,
+			recordDataStorage:    recordDataStorage,
+			idgen:                mockIDGen,
+			dbProvider:           mockDBProvider,
+			lwt:                  mockLWT,
+		}
+		err := repo.UpdateEvalTargetRecord(context.Background(), recWithLargeContent, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "process eval target output data")
+	})
+}
+
+func TestNewEvalTargetRepo(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetDao := mysqlmocks.NewMockEvalTargetDAO(ctrl)
+	mockEvalTargetVersionDao := mysqlmocks.NewMockEvalTargetVersionDAO(ctrl)
+	mockEvalTargetRecordDao := mysqlmocks.NewMockEvalTargetRecordDAO(ctrl)
+	mockIDGen := idgen.NewMockIIDGenerator(ctrl)
+	mockDBProvider := dbmock.NewMockProvider(ctrl)
+	mockLWT := platestwrite_mocks.NewMockILatestWriteTracker(ctrl)
+	recordDataStorage := storage.NewRecordDataStorage(nil, nil)
+
+	got := NewEvalTargetRepo(mockIDGen, mockDBProvider, mockEvalTargetDao, mockEvalTargetVersionDao, mockEvalTargetRecordDao, recordDataStorage, mockLWT)
+	assert.NotNil(t, got)
+	impl, ok := got.(*EvalTargetRepoImpl)
+	assert.True(t, ok)
+	assert.Equal(t, mockEvalTargetDao, impl.evalTargetDao)
+	assert.Equal(t, mockEvalTargetVersionDao, impl.evalTargetVersionDao)
+	assert.Equal(t, mockEvalTargetRecordDao, impl.evalTargetRecordDao)
+	assert.Equal(t, recordDataStorage, impl.recordDataStorage)
+	assert.Equal(t, mockIDGen, impl.idgen)
+	assert.Equal(t, mockDBProvider, impl.dbProvider)
+	assert.Equal(t, mockLWT, impl.lwt)
 }

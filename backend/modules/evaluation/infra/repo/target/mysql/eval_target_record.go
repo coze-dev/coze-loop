@@ -23,7 +23,7 @@ type EvalTargetRecordDAO interface {
 	Create(ctx context.Context, record *model.TargetRecord) (id int64, err error)
 	Save(ctx context.Context, record *model.TargetRecord) error
 	Update(ctx context.Context, record *model.TargetRecord) error
-	GetByIDAndSpaceID(ctx context.Context, recordID int64, spaceID int64) (*model.TargetRecord, error)
+	GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
 }
 

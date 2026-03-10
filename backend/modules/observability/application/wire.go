@@ -72,6 +72,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workflow"
 	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
@@ -122,6 +123,7 @@ var (
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
+		workflow.NewWorkflowProvider,
 		traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(

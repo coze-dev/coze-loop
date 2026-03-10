@@ -55,8 +55,8 @@ func (m *mockRuntimeFactory) GetMetrics() map[string]interface{} {
 // mockRuntime 模拟运行时
 type mockRuntime struct {
 	getLanguageTypeFunc       func() entity.LanguageType
-	runCodeFunc               func(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error)
-	validateCodeFunc          func(ctx context.Context, code string, language string) bool
+	runCodeFunc               func(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error)
+	validateCodeFunc          func(ctx context.Context, code, language string) bool
 	getSupportedLanguagesFunc func() []entity.LanguageType
 	getHealthStatusFunc       func() map[string]interface{}
 	getMetricsFunc            func() map[string]interface{}
@@ -70,14 +70,14 @@ func (m *mockRuntime) GetLanguageType() entity.LanguageType {
 	return entity.LanguageType("")
 }
 
-func (m *mockRuntime) RunCode(ctx context.Context, code string, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
+func (m *mockRuntime) RunCode(ctx context.Context, code, language string, timeoutMS int64, ext map[string]string) (*entity.ExecutionResult, error) {
 	if m.runCodeFunc != nil {
 		return m.runCodeFunc(ctx, code, language, timeoutMS, ext)
 	}
 	return nil, errors.New("not implemented")
 }
 
-func (m *mockRuntime) ValidateCode(ctx context.Context, code string, language string) bool {
+func (m *mockRuntime) ValidateCode(ctx context.Context, code, language string) bool {
 	if m.validateCodeFunc != nil {
 		return m.validateCodeFunc(ctx, code, language)
 	}

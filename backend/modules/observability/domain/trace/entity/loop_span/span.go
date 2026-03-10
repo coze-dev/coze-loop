@@ -138,7 +138,8 @@ type Span struct {
 
 	AttrTos         *AttrTos       `json:"-"`
 	LogicDeleteTime int64          `json:"-"` // us
-	Annotations     AnnotationList `json:"-"`
+	Annotations     AnnotationList `json:"annotations"`
+	Encryption      EncryptionInfo `json:"-"`
 }
 
 type ObjectStorage struct {
@@ -164,6 +165,10 @@ type AttrTos struct {
 	InputDataURL   string
 	OutputDataURL  string
 	MultimodalData map[string]string
+}
+
+type EncryptionInfo struct {
+	NeedWorkflow bool
 }
 
 func (s *Span) GetSystemTags() map[string]string {

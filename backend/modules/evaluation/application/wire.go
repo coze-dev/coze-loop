@@ -47,6 +47,7 @@ import (
 	notifyrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -74,6 +75,7 @@ var (
 		NewLock,
 		flagSet,
 		domainservice.NewDefaultURLProcessor,
+		storage.StorageSet,
 	)
 
 	evaluatorSet = wire.NewSet(
@@ -94,6 +96,7 @@ var (
 		evaltargetmetrics.EvalTargetMetricsSet,
 		evalconf.NewConfiger,
 		flagSet,
+		storage.StorageSet,
 	)
 
 	evaluationSetSet = wire.NewSet(
@@ -115,6 +118,7 @@ var (
 		foundationrpc.FoundationRPCSet,
 		experimentrepo.ExperimentRepoSet,
 		flagSet,
+		storage.StorageSet,
 	)
 
 	evalOpenAPISet = wire.NewSet(
@@ -152,6 +156,7 @@ func InitExperimentApplication(
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
 	objectStorage fileserver.ObjectStorage,
+	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 ) (IExperimentApplication, error) {
@@ -184,6 +189,7 @@ func InitEvaluatorApplication(
 	pec promptexecuteservice.Client,
 	dataClient datasetservice.Client,
 	tracerFactory func() observabilitytraceservice.Client,
+	batchObjectStorage fileserver.BatchObjectStorage,
 ) (evaluation.EvaluatorService, error) {
 	wire.Build(
 		evaluatorSet,
@@ -212,6 +218,7 @@ func InitEvalTargetApplication(ctx context.Context,
 	meter metrics.Meter,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	configFactory conf.IConfigLoaderFactory,
+	batchObjectStorage fileserver.BatchObjectStorage,
 ) (evaluation.EvalTargetService, error) {
 	wire.Build(
 		evalTargetSet,
@@ -237,6 +244,7 @@ func InitEvalOpenAPIApplication(
 	tagClient tagservice.Client,
 	limiterFactory limiter.IRateLimiterFactory,
 	objectStorage fileserver.ObjectStorage,
+	batchObjectStorage fileserver.BatchObjectStorage,
 	auditClient audit.IAuditService,
 	benefitService benefit.IBenefitService,
 	ckProvider ck.Provider,

@@ -194,7 +194,7 @@ func Test_ExptItemEvalCtxExecutor_Eval(t *testing.T) {
 				mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false, RetryTimes: 1, RetryIntervalSecond: 1})
 				mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
-				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 			},
 			wantErr: false,
 		},
@@ -489,7 +489,7 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		}
 		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 123}, nil)
-		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock batchget error"))
+		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("mock batchget error"))
 		_, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "mock batchget error")
@@ -505,7 +505,7 @@ func Test_buildExptTurnEvalCtx(t *testing.T) {
 		}
 		mockItemResultRepo.EXPECT().BatchGet(gomock.Any(), int64(1), int64(1), []int64{1}).Return([]*entity.ExptItemResult{}, nil)
 		mockEvalTargetService.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 123}, nil)
-		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}}, nil)
+		mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{{ID: 100, EvaluatorVersionID: 1}}, nil)
 		etec, err := executor.buildExptTurnEvalCtx(context.Background(), turn, execCtx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, etec)

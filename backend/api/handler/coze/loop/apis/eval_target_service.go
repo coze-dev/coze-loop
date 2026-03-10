@@ -98,3 +98,9 @@ func AsyncDebugEvalTarget(ctx context.Context, c *app.RequestContext) {
 func MockEvalTargetOutput(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalTargetSvc.MockEvalTargetOutput)
 }
+
+// GetEvalTargetOutputFieldContent .
+// @router /api/evaluation/v1/eval_target_records/output_fields [POST]
+func GetEvalTargetOutputFieldContent(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalTargetSvc.GetEvalTargetOutputFieldContent)
+}
