@@ -1071,13 +1071,18 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	if err != nil {
 		return nil, err
 	}
-	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, req)
+	env := &span_filter.SpanEnv{
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		Source:                req.Source,
+	}
+	builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, req.SpanListType)
 	if err != nil {
 		return nil, err
 	} else if builtinFilter == nil {
 		return &ListSpansResp{Spans: loop_span.SpanList{}}, nil
 	}
-	filters := r.combineFilters(builtinFilter, req.Filters)
+	filters := CombineFilters(builtinFilter, req.Filters)
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -1184,17 +1189,17 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 	if err != nil {
 		return nil, err
 	}
-	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+	env := &span_filter.SpanEnv{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
-		SpanListType:          req.SpanListType,
-	})
+	}
+	builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, req.SpanListType)
 	if err != nil {
 		return nil, err
 	} else if builtinFilter == nil {
 		return &ListSpansOApiResp{Spans: loop_span.SpanList{}}, nil
 	}
-	filters := r.combineFilters(builtinFilter, req.Filters)
+	filters := CombineFilters(builtinFilter, req.Filters)
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         req.Tenants,
@@ -1971,65 +1976,6 @@ func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller st
 	return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
 }
 
-func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
-	filters := make([]*loop_span.FilterField, 0)
-	env := &span_filter.SpanEnv{
-		WorkspaceID:           req.WorkspaceID,
-		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
-		Source:                req.Source,
-	}
-	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
-	if err != nil {
-		return nil, err
-	} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
-		return nil, nil
-	}
-	filters = append(filters, basicFilter...)
-	switch req.SpanListType {
-	case loop_span.SpanListTypeRootSpan:
-		subFilter, err := f.BuildRootSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	case loop_span.SpanListTypeLLMSpan:
-		subFilter, err := f.BuildLLMSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	case loop_span.SpanListTypeAllSpan:
-		subFilter, err := f.BuildALLSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	default:
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span list type: %s"))
-	}
-	filterAggr := &loop_span.FilterFields{
-		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-		FilterFields: filters,
-	}
-	return filterAggr, nil
-}
-
-func (r *TraceServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields {
-	filterAggr := &loop_span.FilterFields{
-		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-	}
-	for _, f := range filters {
-		if f == nil {
-			continue
-		}
-		filterAggr.FilterFields = append(filterAggr.FilterFields, &loop_span.FilterField{
-			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-			SubFilter:  f,
-		})
-	}
-	return filterAggr
-}
-
 func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType, opts ...tenant.OptFn) ([]string, error) {
 	return r.tenantProvider.GetTenantsByPlatformType(ctx, platform, opts...)
 }
@@ -2487,74 +2433,6 @@ func buildContent(value string) *dataset.Content {
 		}
 	}
 	return content
-}
-
-func processSpecificFilter(f *loop_span.FilterField) error {
-	switch f.FieldName {
-	case loop_span.SpanFieldStatus:
-		if err := processStatusFilter(f); err != nil {
-			return err
-		}
-	case loop_span.SpanFieldDuration,
-		loop_span.SpanFieldLatencyFirstResp,
-		loop_span.SpanFieldStartTimeFirstResp,
-		loop_span.SpanFieldStartTimeFirstTokenResp,
-		loop_span.SpanFieldLatencyFirstTokenResp,
-		loop_span.SpanFieldReasoningDuration:
-		if err := processLatencyFilter(f); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func processStatusFilter(f *loop_span.FilterField) error {
-	if f.QueryType == nil || *f.QueryType != loop_span.QueryTypeEnumIn {
-		return fmt.Errorf("status filter should use in operator")
-	}
-	f.FieldName = loop_span.SpanFieldStatusCode
-	f.FieldType = loop_span.FieldTypeLong
-	checkSuccess, checkError := false, false
-	for _, val := range f.Values {
-		switch val {
-		case loop_span.SpanStatusSuccess:
-			checkSuccess = true
-		case loop_span.SpanStatusError:
-			checkError = true
-		default:
-			return fmt.Errorf("invalid status code field value")
-		}
-	}
-	if checkSuccess && checkError {
-		f.QueryType = ptr.Of(loop_span.QueryTypeEnumAlwaysTrue)
-		f.Values = nil
-	} else if checkSuccess {
-		f.Values = []string{"0"}
-	} else if checkError {
-		f.QueryType = ptr.Of(loop_span.QueryTypeEnumNotIn)
-		f.Values = []string{"0"}
-	} else {
-		return fmt.Errorf("invalid status code query")
-	}
-	return nil
-}
-
-// ms -> us
-func processLatencyFilter(f *loop_span.FilterField) error {
-	if f.FieldType != loop_span.FieldTypeLong {
-		return fmt.Errorf("latency field type should be long ")
-	}
-	micros := make([]string, 0)
-	for _, val := range f.Values {
-		integer, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return fmt.Errorf("fail to parse long value %s, %v", val, err)
-		}
-		integer = timeutil.MillSec2MicroSec(integer)
-		micros = append(micros, strconv.FormatInt(integer, 10))
-	}
-	f.Values = micros
-	return nil
 }
 
 //go:generate mockgen -destination=mocks/span_processor.go -package=mocks . TraceFilterProcessorBuilder

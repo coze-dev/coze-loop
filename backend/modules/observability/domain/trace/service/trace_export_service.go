@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -19,8 +21,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -46,6 +50,7 @@ type ExportTracesToDatasetRequest struct {
 	// 导入方式，不填默认为追加
 	ExportType    ExportType
 	FieldMappings []entity.FieldMapping
+	SpanFilters   *filter.SpanFilterFields
 }
 
 type ExportTracesToDatasetResponse struct {
@@ -130,7 +135,7 @@ func (r *TraceExportServiceImpl) ExportTracesToDataset(ctx context.Context, req 
 ) {
 	resp := &ExportTracesToDatasetResponse{}
 
-	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.SpanFilters, req.StartTime, req.EndTime, req.PlatformType)
 	if err != nil {
 		return resp, err
 	}
@@ -196,7 +201,7 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	*PreviewExportTracesToDatasetResponse, error,
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
-	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.SpanFilters, req.StartTime, req.EndTime, req.PlatformType)
 	if err != nil {
 		return resp, err
 	}
@@ -288,17 +293,18 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 	return r.getDatasetProvider(category).GetDataset(ctx, workspaceID, datasetID, category)
 }
 
-func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64, sids []SpanID, startTime, endTime int64, platformType loop_span.PlatformType) (loop_span.SpanList, error) {
+func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64, sids []SpanID, spanFilters *filter.SpanFilterFields, startTime, endTime int64, platformType loop_span.PlatformType) (loop_span.SpanList, error) {
 	tenant, err := r.tenantProvider.GetTenantsByPlatformType(ctx, platformType)
 	if err != nil {
 		return nil, err
 	}
-	spanIDs := lo.Map(sids, func(s SpanID, _ int) string { return s.SpanID })
-	traceIDs := lo.UniqMap(sids, func(s SpanID, _ int) string { return s.TraceID })
-	result, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		WorkSpaceID: strconv.FormatInt(workspaceID, 10),
-		Tenants:     tenant,
-		Filters: &loop_span.FilterFields{
+	var filters *loop_span.FilterFields
+	var limit int32 = 10
+
+	if len(sids) > 0 {
+		spanIDs := lo.Map(sids, func(s SpanID, _ int) string { return s.SpanID })
+		traceIDs := lo.UniqMap(sids, func(s SpanID, _ int) string { return s.TraceID })
+		filters = &loop_span.FilterFields{
 			FilterFields: []*loop_span.FilterField{
 				{
 					FieldName: "trace_id",
@@ -313,12 +319,47 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 					QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
 				},
 			},
-		},
-		StartAt: startTime,
-		EndAt:   endTime,
+		}
+		limit = int32(len(sids)) * 2
+	} else {
+		// align with ListSpans logic
+		var userFilters *loop_span.FilterFields
+		var spanListType loop_span.SpanListType
+		if spanFilters != nil {
+			userFilters = convertFilterFieldsDTO2DO(spanFilters.Filters)
+			if err := userFilters.Traverse(processSpecificFilter); err != nil {
+				return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid filter"))
+			}
+			if spanFilters.SpanListType != nil {
+				spanListType = loop_span.SpanListType(spanFilters.GetSpanListType())
+			}
+		}
+
+		platformFilter, err := r.buildHelper.BuildPlatformRelatedFilter(ctx, platformType)
+		if err != nil {
+			return nil, err
+		}
+		env := &span_filter.SpanEnv{
+			WorkspaceID: workspaceID,
+		}
+		builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, spanListType)
+		if err != nil {
+			return nil, err
+		} else if builtinFilter == nil {
+			return loop_span.SpanList{}, nil
+		}
+		filters = CombineFilters(builtinFilter, userFilters)
+	}
+
+	result, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		WorkSpaceID: strconv.FormatInt(workspaceID, 10),
+		Tenants:     tenant,
+		Filters:     filters,
+		StartAt:     startTime,
+		EndAt:       endTime,
 		// May have duplicate Spans
 		// wider limit to avoid emit
-		Limit: int32(len(sids)) * 2,
+		Limit: limit,
 	})
 	if err != nil {
 		return nil, err
@@ -342,16 +383,20 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	}
 
 	// sort by sids
-	spanMap := lo.SliceToMap(spans, func(s *loop_span.Span) (string, *loop_span.Span) {
-		return s.SpanID, s
-	})
-	sortedSpans := make(loop_span.SpanList, 0, len(sids))
-	for _, sid := range sids {
-		if span, ok := spanMap[sid.SpanID]; ok {
-			sortedSpans = append(sortedSpans, span)
+	if len(sids) > 0 {
+		spanMap := lo.SliceToMap(spans, func(s *loop_span.Span) (string, *loop_span.Span) {
+			return s.SpanID, s
+		})
+		sortedSpans := make(loop_span.SpanList, 0, len(sids))
+		for _, sid := range sids {
+			if span, ok := spanMap[sid.SpanID]; ok {
+				sortedSpans = append(sortedSpans, span)
+			}
 		}
+		return sortedSpans, nil
 	}
-	return sortedSpans, nil
+
+	return spans, nil
 }
 
 func (r *TraceExportServiceImpl) clearDataset(ctx context.Context, datasetID int64, req *ExportTracesToDatasetRequest) error {
@@ -579,4 +624,35 @@ func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCatego
 		return rpc.NoopDatasetProvider
 	}
 	return datasetProvider
+}
+
+func convertFilterFieldsDTO2DO(dto *filter.FilterFields) *loop_span.FilterFields {
+	if dto == nil {
+		return nil
+	}
+	do := &loop_span.FilterFields{
+		QueryAndOr:   (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
+		FilterFields: make([]*loop_span.FilterField, len(dto.FilterFields)),
+	}
+	for i, f := range dto.FilterFields {
+		do.FilterFields[i] = convertFilterFieldDTO2DO(f)
+	}
+	return do
+}
+
+func convertFilterFieldDTO2DO(dto *filter.FilterField) *loop_span.FilterField {
+	if dto == nil {
+		return nil
+	}
+	do := &loop_span.FilterField{
+		FieldName:  gptr.Indirect(dto.FieldName),
+		FieldType:  loop_span.FieldType(gptr.Indirect(dto.FieldType)),
+		Values:     dto.Values,
+		QueryType:  (*loop_span.QueryTypeEnum)(dto.QueryType),
+		QueryAndOr: (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
+		SubFilter:  convertFilterFieldsDTO2DO(dto.SubFilter),
+		IsCustom:   gptr.Indirect(dto.IsCustom),
+		ExtraInfo:  dto.ExtraInfo,
+	}
+	return do
 }
