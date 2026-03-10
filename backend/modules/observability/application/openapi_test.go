@@ -1246,6 +1246,122 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 	}
 }
 
+func TestOpenAPIApplication_unpackSource(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+	benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
+			assert.Equal(t, "sys", param.SystemTags["sys"])
+			switch param.Tags["src"] {
+			case "a":
+				return &benefit.GetTraceBenefitSourceResult{Source: 1}, nil
+			case "b":
+				return &benefit.GetTraceBenefitSourceResult{Source: 2}, nil
+			default:
+				return &benefit.GetTraceBenefitSourceResult{Source: 0}, nil
+			}
+		},
+	).AnyTimes()
+
+	app := &OpenAPIApplication{benefit: benefitMock}
+	sourceMap := app.unpackSource(context.Background(), []*span.InputSpan{
+		{TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
+		{TagsString: map[string]string{"src": "b"}, SystemTagsString: map[string]string{"sys": "sys"}},
+		{TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
+	})
+	assert.Len(t, sourceMap, 2)
+	assert.Len(t, sourceMap[1], 2)
+	assert.Len(t, sourceMap[2], 1)
+}
+
+func TestOpenAPIApplication_IngestTraces_SkipWhichIsEnough3(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+	authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+	authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+	authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+	workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+	workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("1").AnyTimes()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("t").AnyTimes()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil).AnyTimes()
+
+	benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+	benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
+			switch param.Tags["src"] {
+			case "skip":
+				return &benefit.GetTraceBenefitSourceResult{Source: 1}, nil
+			case "ingest":
+				return &benefit.GetTraceBenefitSourceResult{Source: 2}, nil
+			default:
+				return &benefit.GetTraceBenefitSourceResult{Source: 0}, nil
+			}
+		},
+	).AnyTimes()
+	benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, param *benefit.CheckTraceBenefitParams) (*benefit.CheckTraceBenefitResult, error) {
+			switch param.Source {
+			case 1:
+				return &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         false,
+					StorageDuration:  3,
+					WhichIsEnough:    3,
+				}, nil
+			case 2:
+				return &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  7,
+					WhichIsEnough:    -1,
+				}, nil
+			default:
+				return &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  3,
+					WhichIsEnough:    -1,
+				}, nil
+			}
+		},
+	).AnyTimes()
+
+	traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, req *service.IngestTracesReq) error {
+			assert.Equal(t, loop_span.TTLFromInteger(7), req.TTL)
+			assert.Len(t, req.Spans, 1)
+			return nil
+		},
+	).Times(1)
+
+	app := &OpenAPIApplication{
+		traceService: traceServiceMock,
+		auth:         authMock,
+		benefit:      benefitMock,
+		tenant:       tenantMock,
+		workspace:    workspaceMock,
+		traceConfig:  traceConfigMock,
+	}
+
+	_, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
+		Spans: []*span.InputSpan{
+			{SpanID: "s1", TagsString: map[string]string{"src": "skip"}},
+			{SpanID: "s2", TagsString: map[string]string{"src": "skip"}},
+			{SpanID: "s3", TagsString: map[string]string{"src": "ingest"}},
+		},
+	})
+	assert.NoError(t, err)
+}
+
 // 补充CreateAnnotation的更多测试场景
 func TestOpenAPIApplication_CreateAnnotation_AdditionalScenarios(t *testing.T) {
 	type fields struct {
