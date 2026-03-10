@@ -16,6 +16,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 const (
@@ -75,14 +77,20 @@ func (s *RecordDataStorage) LoadEvaluatorRecordData(ctx context.Context, record 
 }
 
 // SaveEvalTargetRecordData 遍历 Content，大字段上传 S3 并剪裁后放回，整结构存 MySQL
-func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record *entity.EvalTargetRecord) error {
+// truncateLargeContent 为 false 时跳过剪裁，nil 或 true 时执行剪裁
+func (s *RecordDataStorage) SaveEvalTargetRecordData(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
 	if record == nil || s.batchStorage == nil {
 		return nil
 	}
+	if truncateLargeContent != nil && !*truncateLargeContent {
+		return nil
+	}
 	fieldMaxSize := s.getFieldMaxSize(ctx)
+	logs.CtxInfo(ctx, "SaveEvalTargetRecordData field max size: %d", fieldMaxSize)
 	if fieldMaxSize <= 0 {
 		return nil
 	}
+	logs.CtxInfo(ctx, "SaveEvalTargetRecordData record: %v", json.Jsonify(record))
 	if record.EvalTargetInputData != nil {
 		if err := s.processEvalTargetInputData(ctx, record.EvalTargetInputData, fieldMaxSize); err != nil {
 			return errors.WithMessage(err, "process eval target input data")
@@ -229,6 +237,7 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 		return nil
 	}
 	text := *content.Text
+	logs.CtxInfo(ctx, "judging Content need for tos storage, text: %s, int64(len(text)): %v, fieldMaxSize: %v", text, int64(len(text)), fieldMaxSize)
 	if int64(len(text)) <= fieldMaxSize {
 		return nil
 	}
@@ -237,6 +246,7 @@ func (s *RecordDataStorage) processContent(ctx context.Context, content *entity.
 	if err := s.batchStorage.Upload(ctx, key, bytes.NewReader([]byte(text))); err != nil {
 		return errors.WithMessagef(err, "upload field to S3, key=%s", key)
 	}
+	logs.CtxInfo(ctx, "upload successful for tos storage, key=%s", key)
 	// 剪裁后放回 Text，设置 ContentOmitted、FullContent
 	preview := utils.TruncateJsonPreviewToSize([]byte(text), fieldMaxSize)
 	content.Text = gptr.Of(string(preview))
