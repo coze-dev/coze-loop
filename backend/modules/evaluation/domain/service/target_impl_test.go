@@ -767,8 +767,8 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				status := entity.EvalTargetRunStatusAsyncInvoking
 				record.Status = &status
 				record.EvalTargetOutputData = &entity.EvalTargetOutputData{}
-			deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
-			var saved *entity.EvalTargetRecord
+				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+				var saved *entity.EvalTargetRecord
 				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) error {
 					saved = rec
 					return nil
@@ -1583,7 +1583,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			expectCallee: "callee",
-			expectID:    999,
+			expectID:     999,
 		},
 		{
 			name: "success with TruncateLargeContent false",
@@ -1596,7 +1596,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			expectCallee: "proxy-callee",
-			expectID:    888,
+			expectID:     888,
 		},
 	}
 
@@ -1697,10 +1697,10 @@ func TestEvalTargetServiceImpl_CreateRecord(t *testing.T) {
 		{
 			name: "create record error",
 			record: &entity.EvalTargetRecord{
-				ID:        1,
-				SpaceID:   1,
-				TargetID:  2,
-				Status:    gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+				ID:       1,
+				SpaceID:  1,
+				TargetID: 2,
+				Status:   gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
 			},
 			prepare: func(deps *evalTargetServiceTestDeps, record *entity.EvalTargetRecord) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, record, nil).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
@@ -1711,10 +1711,10 @@ func TestEvalTargetServiceImpl_CreateRecord(t *testing.T) {
 		{
 			name: "success",
 			record: &entity.EvalTargetRecord{
-				ID:        999,
-				SpaceID:   100,
-				TargetID:  200,
-				Status:    gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
+				ID:       999,
+				SpaceID:  100,
+				TargetID: 200,
+				Status:   gptr.Of(entity.EvalTargetRunStatusAsyncInvoking),
 			},
 			prepare: func(deps *evalTargetServiceTestDeps, record *entity.EvalTargetRecord) {
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, record, nil).Return(int64(999), nil)
