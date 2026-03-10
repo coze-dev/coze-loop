@@ -55,6 +55,10 @@ var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 	EvaluatorTypeAgent:     {},
 }
 
+func (e *Evaluator) IsAsync() bool {
+	return e.EvaluatorType == EvaluatorTypeAgent
+}
+
 // UpdateEvaluatorMetaRequest 用于更新评估器元信息的参数
 type UpdateEvaluatorMetaRequest struct {
 	ID                    int64

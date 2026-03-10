@@ -364,7 +364,7 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		// 若共享同一 inputData 的 *Content 指针，先完成的 evaluator 会污染未执行 evaluator 的输入，导致 content_omitted。
 		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
 		ecForCapture := ec
-		if ev.EvaluatorType == entity.EvaluatorTypeAgent {
+		if evForCapture.IsAsync() {
 			pool.Add(func() error {
 				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)
 			})
