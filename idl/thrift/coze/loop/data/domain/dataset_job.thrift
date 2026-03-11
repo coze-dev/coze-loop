@@ -101,6 +101,7 @@ struct DatasetIOJob {
 
 struct DatasetIOJobOption {
     1: optional bool overwrite_dataset // 覆盖数据集
+    2: optional list<dataset.FieldWriteOption> fieldWriteOptions
 }
 
 struct DatasetIOJobProgress {
