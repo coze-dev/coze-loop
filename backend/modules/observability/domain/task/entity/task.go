@@ -80,7 +80,7 @@ type ObservabilityTask struct {
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
 	TaskSource            *string           // 创建来源
-	WorkflowID            *int64            // 关联 workflow ID
+	WorkflowID            int64             // 关联 workflow ID
 	TaskRuns              []*TaskRun
 }
 
@@ -337,5 +337,5 @@ func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
 }
 
 func (t *ObservabilityTask) IsNewWorkflowTask() bool {
-	return t.WorkflowID != nil
+	return t.WorkflowID != 0
 }

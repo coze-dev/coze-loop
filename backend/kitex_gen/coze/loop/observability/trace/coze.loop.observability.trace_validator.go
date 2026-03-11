@@ -411,8 +411,8 @@ func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
-	if len(p.SpanIds) < int(1) && p.Filters == nil {
-		return fmt.Errorf("field SpanIds and field filters are both empty")
+	if len(p.SpanIds) < int(1) {
+		return fmt.Errorf("field SpanIds MinLen rule failed, current value: %v", p.SpanIds)
 	}
 	if len(p.SpanIds) > int(500) {
 		return fmt.Errorf("field SpanIds MaxLen rule failed, current value: %v", p.SpanIds)
@@ -428,9 +428,9 @@ func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
 	if len(p.FieldMappings) > int(100) {
 		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
 	}
-	if p.Filters != nil {
-		if err := p.Filters.IsValid(); err != nil {
-			return fmt.Errorf("field Filters not valid, %w", err)
+	if p.SpanFilters != nil {
+		if err := p.SpanFilters.IsValid(); err != nil {
+			return fmt.Errorf("field SpanFilters not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

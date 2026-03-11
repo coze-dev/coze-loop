@@ -66,7 +66,6 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		Rule:        RuleDO2DTO(v.SpanFilter, v.EffectiveTime, v.Sampler, v.BackfillEffectiveTime),
 		TaskConfig:  TaskConfigDO2DTO(v.TaskConfig),
 		TaskDetail:  taskDetail,
-		WorkflowID:  v.WorkflowID,
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(v.UpdatedAt.UnixMilli()),
@@ -77,6 +76,10 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 
 	if v.TaskSource != nil {
 		taskInfo.TaskSource = gptr.Of(*v.TaskSource)
+	}
+
+	if v.WorkflowID != 0 {
+		taskInfo.WorkflowID = ptr.Of(v.WorkflowID)
 	}
 
 	return taskInfo
@@ -358,7 +361,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		CreatedBy:             createdBy,
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
-		WorkflowID:            taskDTO.WorkflowID,
+		WorkflowID:            gptr.Indirect(taskDTO.WorkflowID),
 	}
 
 	if taskDTO.TaskSource != nil {

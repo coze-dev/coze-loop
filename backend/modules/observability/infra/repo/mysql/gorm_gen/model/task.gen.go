@@ -29,7 +29,7 @@ type ObservabilityTask struct {
 	CreatedBy             string    `gorm:"column:created_by;type:varchar(128);not null;comment:创建人" json:"created_by"`                                                                                     // 创建人
 	UpdatedBy             string    `gorm:"column:updated_by;type:varchar(128);not null;comment:更新人" json:"updated_by"`                                                                                     // 更新人
 	TaskSource            *string   `gorm:"column:task_source;type:varchar(50);default:user;comment:任务来源" json:"task_source"`                                                                               // 任务来源
-	WorkflowID            *int64    `gorm:"column:workflow_id;type:bigint(20) unsigned;comment:相关工作流ID" json:"workflow_id"`                                                                                 // 相关工作流ID
+	WorkflowID            int64     `gorm:"column:workflow_id;type:bigint(20) unsigned;not null;comment:相关工作流ID" json:"workflow_id"`                                                                        // 相关工作流ID
 }
 
 // TableName ObservabilityTask's table name

@@ -109,6 +109,10 @@ func PreviewRequestDTO2DO(req *trace.PreviewExportTracesToDatasetRequest) *servi
 		result.FieldMappings = ConvertFieldMappingsDTO2DO(req.GetFieldMappings())
 	}
 
+	if req.IsSetSpanFilters() {
+		result.SpanFilters = req.SpanFilters
+	}
+
 	return result
 }
 

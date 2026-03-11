@@ -332,7 +332,7 @@ struct PreviewExportTracesToDatasetRequest {
     7: optional common.PlatformType platform_type (api.body="platform_type")
     8: required export_dataset.ExportType export_type (api.body="export_type")                 // 导入方式，不填默认为追加
     9: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
-    10: optional filter.FilterFields filters (api.body="filters")
+    10: optional filter.SpanFilterFields span_filters (api.body="span_filters")
 
     255: optional base.Base Base (api.none="true")
 }

@@ -12126,13 +12126,13 @@ func (p *PreviewExportTracesToDatasetRequest) FastReadField9(buf []byte) (int, e
 
 func (p *PreviewExportTracesToDatasetRequest) FastReadField10(buf []byte) (int, error) {
 	offset := 0
-	_field := filter.NewFilterFields()
+	_field := filter.NewSpanFilterFields()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 	}
-	p.Filters = _field
+	p.SpanFilters = _field
 	return offset, nil
 }
 
@@ -12273,9 +12273,9 @@ func (p *PreviewExportTracesToDatasetRequest) fastWriteField9(buf []byte, w thri
 
 func (p *PreviewExportTracesToDatasetRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetFilters() {
+	if p.IsSetSpanFilters() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
-		offset += p.Filters.FastWriteNocopy(buf[offset:], w)
+		offset += p.SpanFilters.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -12366,9 +12366,9 @@ func (p *PreviewExportTracesToDatasetRequest) field9Length() int {
 
 func (p *PreviewExportTracesToDatasetRequest) field10Length() int {
 	l := 0
-	if p.IsSetFilters() {
+	if p.IsSetSpanFilters() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.Filters.BLength()
+		l += p.SpanFilters.BLength()
 	}
 	return l
 }
@@ -12442,14 +12442,14 @@ func (p *PreviewExportTracesToDatasetRequest) DeepCopy(s interface{}) error {
 		}
 	}
 
-	var _filters *filter.FilterFields
-	if src.Filters != nil {
-		_filters = &filter.FilterFields{}
-		if err := _filters.DeepCopy(src.Filters); err != nil {
+	var _spanFilters *filter.SpanFilterFields
+	if src.SpanFilters != nil {
+		_spanFilters = &filter.SpanFilterFields{}
+		if err := _spanFilters.DeepCopy(src.SpanFilters); err != nil {
 			return err
 		}
 	}
-	p.Filters = _filters
+	p.SpanFilters = _spanFilters
 
 	var _base *base.Base
 	if src.Base != nil {

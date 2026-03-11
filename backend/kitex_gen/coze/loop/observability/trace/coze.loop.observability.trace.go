@@ -15839,7 +15839,7 @@ type PreviewExportTracesToDatasetRequest struct {
 	// 导入方式，不填默认为追加
 	ExportType    dataset0.ExportType      `thrift:"export_type,8,required" frugal:"8,required,string" form:"export_type,required" json:"export_type,required"`
 	FieldMappings []*dataset0.FieldMapping `thrift:"field_mappings,9,optional" frugal:"9,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty"`
-	Filters       *filter.FilterFields     `thrift:"filters,10,optional" frugal:"10,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
+	SpanFilters   *filter.SpanFilterFields `thrift:"span_filters,10,optional" frugal:"10,optional,filter.SpanFilterFields" form:"span_filters" json:"span_filters,omitempty"`
 	Base          *base.Base               `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"-" json:"-" query:"-"`
 }
 
@@ -15928,16 +15928,16 @@ func (p *PreviewExportTracesToDatasetRequest) GetFieldMappings() (v []*dataset0.
 	return p.FieldMappings
 }
 
-var PreviewExportTracesToDatasetRequest_Filters_DEFAULT *filter.FilterFields
+var PreviewExportTracesToDatasetRequest_SpanFilters_DEFAULT *filter.SpanFilterFields
 
-func (p *PreviewExportTracesToDatasetRequest) GetFilters() (v *filter.FilterFields) {
+func (p *PreviewExportTracesToDatasetRequest) GetSpanFilters() (v *filter.SpanFilterFields) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetFilters() {
-		return PreviewExportTracesToDatasetRequest_Filters_DEFAULT
+	if !p.IsSetSpanFilters() {
+		return PreviewExportTracesToDatasetRequest_SpanFilters_DEFAULT
 	}
-	return p.Filters
+	return p.SpanFilters
 }
 
 var PreviewExportTracesToDatasetRequest_Base_DEFAULT *base.Base
@@ -15978,8 +15978,8 @@ func (p *PreviewExportTracesToDatasetRequest) SetExportType(val dataset0.ExportT
 func (p *PreviewExportTracesToDatasetRequest) SetFieldMappings(val []*dataset0.FieldMapping) {
 	p.FieldMappings = val
 }
-func (p *PreviewExportTracesToDatasetRequest) SetFilters(val *filter.FilterFields) {
-	p.Filters = val
+func (p *PreviewExportTracesToDatasetRequest) SetSpanFilters(val *filter.SpanFilterFields) {
+	p.SpanFilters = val
 }
 func (p *PreviewExportTracesToDatasetRequest) SetBase(val *base.Base) {
 	p.Base = val
@@ -15995,7 +15995,7 @@ var fieldIDToName_PreviewExportTracesToDatasetRequest = map[int16]string{
 	7:   "platform_type",
 	8:   "export_type",
 	9:   "field_mappings",
-	10:  "filters",
+	10:  "span_filters",
 	255: "Base",
 }
 
@@ -16011,8 +16011,8 @@ func (p *PreviewExportTracesToDatasetRequest) IsSetFieldMappings() bool {
 	return p.FieldMappings != nil
 }
 
-func (p *PreviewExportTracesToDatasetRequest) IsSetFilters() bool {
-	return p.Filters != nil
+func (p *PreviewExportTracesToDatasetRequest) IsSetSpanFilters() bool {
+	return p.SpanFilters != nil
 }
 
 func (p *PreviewExportTracesToDatasetRequest) IsSetBase() bool {
@@ -16325,11 +16325,11 @@ func (p *PreviewExportTracesToDatasetRequest) ReadField9(iprot thrift.TProtocol)
 	return nil
 }
 func (p *PreviewExportTracesToDatasetRequest) ReadField10(iprot thrift.TProtocol) error {
-	_field := filter.NewFilterFields()
+	_field := filter.NewSpanFilterFields()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.Filters = _field
+	p.SpanFilters = _field
 	return nil
 }
 func (p *PreviewExportTracesToDatasetRequest) ReadField255(iprot thrift.TProtocol) error {
@@ -16574,11 +16574,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 func (p *PreviewExportTracesToDatasetRequest) writeField10(oprot thrift.TProtocol) (err error) {
-	if p.IsSetFilters() {
-		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 10); err != nil {
+	if p.IsSetSpanFilters() {
+		if err = oprot.WriteFieldBegin("span_filters", thrift.STRUCT, 10); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.Filters.Write(oprot); err != nil {
+		if err := p.SpanFilters.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -16651,7 +16651,7 @@ func (p *PreviewExportTracesToDatasetRequest) DeepEqual(ano *PreviewExportTraces
 	if !p.Field9DeepEqual(ano.FieldMappings) {
 		return false
 	}
-	if !p.Field10DeepEqual(ano.Filters) {
+	if !p.Field10DeepEqual(ano.SpanFilters) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -16740,9 +16740,9 @@ func (p *PreviewExportTracesToDatasetRequest) Field9DeepEqual(src []*dataset0.Fi
 	}
 	return true
 }
-func (p *PreviewExportTracesToDatasetRequest) Field10DeepEqual(src *filter.FilterFields) bool {
+func (p *PreviewExportTracesToDatasetRequest) Field10DeepEqual(src *filter.SpanFilterFields) bool {
 
-	if !p.Filters.DeepEqual(src) {
+	if !p.SpanFilters.DeepEqual(src) {
 		return false
 	}
 	return true

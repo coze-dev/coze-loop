@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS `task` (
                         `created_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '创建人',
                         `updated_by` varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '更新人',
                         `task_source` VARCHAR(50) DEFAULT 'user' COMMENT '任务来源',
-                        `workflow_id` bigint unsigned DEFAULT NULL COMMENT '相关工作流ID',
+                        `workflow_id` bigint unsigned NOT NULL DEFAULT 0 COMMENT '相关工作流ID',
                         PRIMARY KEY (`id`),
                         KEY `idx_space_id_status` (`workspace_id`,`task_status`),
                         KEY `idx_space_id_type` (`workspace_id`,`task_type`)
