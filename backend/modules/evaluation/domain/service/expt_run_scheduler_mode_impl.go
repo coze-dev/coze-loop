@@ -716,7 +716,7 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		}
 		return false, nil
 	}
-	logs.CtxInfo(ctx, "expt scheduler scan item, to_submit: %v, incomplete: %v", toSubmit, incomplete)
+	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v", toSubmit, incomplete)
 	// 若未结束且有新数据，则发送下一次 tick；否则不发送
 	return toSubmit > 0 || incomplete > 0, nil
 }
