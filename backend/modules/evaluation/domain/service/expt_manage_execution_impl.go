@@ -289,9 +289,10 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 
 	// 在线实验：抢心跳锁成功才发送 MQ daemon，与 Invoke 一致。Store cancel 供 ExptEnd 结束时释放
 	if expt.ExptType == entity.ExptType_Online {
+		maxHold := e.computeDaemonLockMaxHold(expt)
 		lockKey := e.makeOnlineExptDaemonLockKey(exptID, runID)
 		logs.CtxInfo(ctx, "[Run] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
-		locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, time.Minute)
+		locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
 		if err != nil {
 			logs.CtxError(ctx, "[Run] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", exptID, runID, spaceID, err)
 			return err
@@ -835,9 +836,10 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	}
 
 	// singleflight mutex: 抢锁成功才发送 MQ daemon，使用 LockWithRenew 与 consumer 一致。Store cancel 供 ExptEnd 结束时释放
+	maxHold := e.computeDaemonLockMaxHold(expt)
 	lockKey := e.makeOnlineExptDaemonLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
 	logs.CtxInfo(ctx, "[Invoke] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
-	locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, time.Minute)
+	locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
 	if err != nil {
 		logs.CtxError(ctx, "[Invoke] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID, err)
 		return err
