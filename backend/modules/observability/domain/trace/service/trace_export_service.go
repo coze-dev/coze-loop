@@ -205,6 +205,10 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	if len(req.SpanIds) > 0 {
 		spans, err = r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
 	} else {
+		spanListType := loop_span.SpanListTypeRootSpan
+		if req.SpanFilters.IsSetSpanListType() {
+			spanListType = loop_span.SpanListType(req.SpanFilters.GetSpanListType())
+		}
 		listResp, err := r.traceService.ListSpans(ctx, &ListSpansReq{
 			WorkspaceID:     req.WorkspaceID,
 			StartTime:       req.StartTime,
@@ -212,8 +216,8 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 			Filters:         convertor.FilterFieldsDTO2DO(req.SpanFilters.Filters),
 			Limit:           10,
 			DescByStartTime: true,
-			PlatformType:    loop_span.PlatformType(req.SpanFilters.GetPlatformType()),
-			SpanListType:    loop_span.SpanListType(req.SpanFilters.GetSpanListType()),
+			PlatformType:    req.PlatformType,
+			SpanListType:    spanListType,
 		})
 		if err != nil {
 			return resp, err
