@@ -763,7 +763,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 
 	// 数据锁：阻塞直到抢锁成功，加锁后追加数据
 	dataLockKey := e.makeOnlineExptDataLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
-	locked, err := e.mutex.LockBackoff(ctx, dataLockKey, time.Second*30, time.Minute*5)
+	locked, err := e.mutex.LockBackoff(ctx, dataLockKey, time.Second*30, time.Minute*10)
 	if err != nil {
 		logs.CtxError(ctx, "[ScheduleLock][Data][Invoke] online expt data lock err, expt_id: %v, run_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, err)
 		return err
@@ -772,6 +772,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		logs.CtxError(ctx, "[ScheduleLock][Data][Invoke] online expt data lock timeout, expt_id: %v, run_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID)
 		return errorx.New("[Invoke] online expt data lock timeout")
 	}
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][Invoke] online expt data lock acquired, expt_id: %v, run_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID)
 	defer func() {
 		if _, uerr := e.mutex.Unlock(dataLockKey); uerr != nil {
 			logs.CtxWarn(ctx, "[ScheduleLock][Data][Invoke] online expt data unlock err, expt_id: %v, run_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, uerr)
