@@ -38,6 +38,7 @@ type ListTaskParam struct {
 	ReqLimit     int32
 	ReqOffset    int32
 	OrderBy      *common.OrderBy
+	NeedOnlyOld  bool
 }
 
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskDao
@@ -120,6 +121,9 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 	var total int64
 	if len(param.WorkspaceIDs) != 0 {
 		qd = qd.Where(q.ObservabilityTask.WorkspaceID.In(param.WorkspaceIDs...))
+	}
+	if param.NeedOnlyOld {
+		qd.Where(q.ObservabilityTask.WorkflowID.IsNull())
 	}
 	// 应用过滤条件
 	qdf, err := v.applyTaskFilters(q, param.TaskFilters)

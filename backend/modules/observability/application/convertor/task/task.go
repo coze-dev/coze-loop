@@ -66,6 +66,7 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		Rule:        RuleDO2DTO(v.SpanFilter, v.EffectiveTime, v.Sampler, v.BackfillEffectiveTime),
 		TaskConfig:  TaskConfigDO2DTO(v.TaskConfig),
 		TaskDetail:  taskDetail,
+		WorkflowID:  v.WorkflowID,
 		BaseInfo: &common.BaseInfo{
 			CreatedAt: gptr.Of(v.CreatedAt.UnixMilli()),
 			UpdatedAt: gptr.Of(v.UpdatedAt.UnixMilli()),
@@ -117,9 +118,14 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 			dataReflowConfigs = append(dataReflowConfigs, DataReflowConfigDO2DTO(config))
 		}
 	}
+	var evaluationExperimentConfig *task.EvaluationExperimentConfig
+	if v.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = EvaluationExperimentConfigDO2DTO(v.EvaluationExperimentConfig)
+	}
 	return &task.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
 	}
 }
 
@@ -145,6 +151,16 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 	}
 }
 
+func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *task.EvaluationExperimentConfig {
+	if v == nil {
+		return nil
+	}
+	return &task.EvaluationExperimentConfig{
+		ItemConcurrencyCount: v.ItemConcurrencyCount,
+		ItemMaxRetryCount:    v.ItemMaxRetryCount,
+	}
+}
+
 func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 	if v == nil {
 		return nil
@@ -156,10 +172,11 @@ func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 		}
 	}
 	return &task.DataReflowConfig{
-		DatasetID:     v.DatasetID,
-		DatasetName:   v.DatasetName,
-		DatasetSchema: ptr.Of(v.DatasetSchema),
-		FieldMappings: fieldMappings,
+		DatasetID:       v.DatasetID,
+		DatasetName:     v.DatasetName,
+		DatasetSchema:   ptr.Of(v.DatasetSchema),
+		FieldMappings:   fieldMappings,
+		DatasetCategory: v.DatasetCategory,
 	}
 }
 
@@ -341,6 +358,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		CreatedBy:             createdBy,
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
+		WorkflowID:            taskDTO.WorkflowID,
 	}
 
 	if taskDTO.TaskSource != nil {
@@ -448,15 +466,24 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 			}
 		}
 		dataReflowConfigs = append(dataReflowConfigs, &entity.DataReflowConfig{
-			DatasetID:     dataReflowConfig.DatasetID,
-			DatasetName:   dataReflowConfig.DatasetName,
-			DatasetSchema: *dataReflowConfig.DatasetSchema,
-			FieldMappings: fieldMappings,
+			DatasetID:       dataReflowConfig.DatasetID,
+			DatasetName:     dataReflowConfig.DatasetName,
+			DatasetSchema:   *dataReflowConfig.DatasetSchema,
+			FieldMappings:   fieldMappings,
+			DatasetCategory: dataReflowConfig.DatasetCategory,
 		})
 	}
+	var evaluationExperimentConfig *entity.EvaluationExperimentConfig
+	if taskConfig.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = &entity.EvaluationExperimentConfig{
+			ItemConcurrencyCount: taskConfig.EvaluationExperimentConfig.ItemConcurrencyCount,
+			ItemMaxRetryCount:    taskConfig.EvaluationExperimentConfig.ItemMaxRetryCount,
+		}
+	}
 	return &entity.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
 	}
 }
 

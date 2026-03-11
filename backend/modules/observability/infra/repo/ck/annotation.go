@@ -76,14 +76,19 @@ func (a *AnnotationCkDaoImpl) Get(ctx context.Context, params *dao.GetAnnotation
 }
 
 func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *dao.ListAnnotationsParam) ([]*dao.Annotation, error) {
-	if params == nil || len(params.SpanIDs) == 0 {
+	if params == nil {
+		return nil, nil
+	}
+	if len(params.SpanIDs) == 0 && params.WorkspaceID == "" {
 		return nil, nil
 	}
 	db, err := a.buildSql(ctx, &annoSqlParam{
 		Tables:          params.Tables,
+		WorkspaceID:     params.WorkspaceID,
 		StartTime:       params.StartTime,
 		EndTime:         params.EndTime,
 		SpanIDs:         params.SpanIDs,
+		AnnotationType:  params.AnnotationType,
 		DescByUpdatedAt: params.DescByUpdatedAt,
 		Limit:           params.Limit,
 	})
@@ -102,10 +107,12 @@ func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *dao.ListAnnotati
 
 type annoSqlParam struct {
 	Tables          []string
+	WorkspaceID     string
 	StartTime       int64
 	EndTime         int64
 	ID              string
 	SpanIDs         []string
+	AnnotationType  string
 	DescByUpdatedAt bool
 	Limit           int32
 }
@@ -156,8 +163,14 @@ func (a *AnnotationCkDaoImpl) buildSingleSql(ctx context.Context, db *gorm.DB, t
 	if param.ID != "" {
 		sqlQuery = sqlQuery.Where("id = ?", param.ID)
 	}
+	if param.WorkspaceID != "" {
+		sqlQuery = sqlQuery.Where("space_id = ?", param.WorkspaceID)
+	}
 	if len(param.SpanIDs) > 0 {
 		sqlQuery = sqlQuery.Where("span_id IN (?)", param.SpanIDs)
+	}
+	if param.AnnotationType != "" {
+		sqlQuery = sqlQuery.Where("annotation_type = ?", param.AnnotationType)
 	}
 	sqlQuery = sqlQuery.
 		Where("start_time >= ?", param.StartTime).

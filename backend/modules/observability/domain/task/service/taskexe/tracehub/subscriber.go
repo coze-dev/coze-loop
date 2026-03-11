@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -30,6 +31,20 @@ type spanSubscriber struct {
 	runType      entity.TaskRunType
 	buildHelper  service.TraceFilterProcessorBuilder
 	traceService service.ITraceService
+}
+
+func (s *spanSubscriber) hasTrajectory() bool {
+	if s.t == nil || s.t.TaskConfig == nil {
+		return false
+	}
+	for _, config := range s.t.TaskConfig.DataReflowConfig {
+		for _, mapping := range config.FieldMappings {
+			if mapping.FieldSchema.SchemaKey != nil && *mapping.FieldSchema.SchemaKey == datadataset.SchemaKey_Trajectory {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Sampled determines whether a span is sampled based on the sampling rate; the sample size will be validated during flush.
@@ -210,6 +225,7 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 	}
 	trigger := &taskexe.Trigger{Task: s.t, Span: span, TaskRun: taskRunConfig}
 	logs.CtxDebug(ctx, "invoke processor, trigger: %v", trigger)
+	// For response API
 	// New Data 在这里处理
 	// Back fill 在前置批量处理
 	if s.runType == entity.TaskRunTypeNewData {
@@ -219,6 +235,21 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 			return err
 		}
 	}
+
+	// 轨迹计算
+	if s.hasTrajectory() {
+		startAt := time.Now().Add(-7 * 24 * time.Hour).UnixMilli()
+		endAt := time.Now().UnixMilli()
+		trajectoryMap, err := s.traceService.GetTrajectories(ctx, s.t.WorkspaceID, []string{span.TraceID}, startAt, endAt, s.t.GetPlatformType())
+		if err != nil {
+			logs.CtxError(ctx, "get trajectories failed, task_id=%d, trace_id=%s err: %v", s.t.ID, span.TraceID, err)
+			return err
+		}
+		if trajectory, ok := trajectoryMap[span.TraceID]; ok {
+			trigger.Trajectory = trajectory
+		}
+	}
+
 	err = s.processor.Invoke(ctx, trigger)
 	if err != nil {
 		logs.CtxWarn(ctx, "invoke processor failed, trace_id=%s, span_id=%s, err: %v", span.TraceID, span.SpanID, err)

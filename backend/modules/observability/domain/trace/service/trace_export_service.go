@@ -5,8 +5,11 @@ package service
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"strconv"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
@@ -46,6 +49,7 @@ type ExportTracesToDatasetRequest struct {
 	// 导入方式，不填默认为追加
 	ExportType    ExportType
 	FieldMappings []entity.FieldMapping
+	SpanFilters   *filter.SpanFilterFields
 }
 
 type ExportTracesToDatasetResponse struct {
@@ -196,12 +200,30 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	*PreviewExportTracesToDatasetResponse, error,
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
-	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	spans := loop_span.SpanList{}
+	var err error
+	if len(req.SpanIds) > 0 {
+		spans, err = r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	} else {
+		listResp, err := r.traceService.ListSpans(ctx, &ListSpansReq{
+			WorkspaceID:     req.WorkspaceID,
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
+			Filters:         convertor.FilterFieldsDTO2DO(req.SpanFilters.Filters),
+			Limit:           10,
+			DescByStartTime: true,
+			PlatformType:    loop_span.PlatformType(req.SpanFilters.GetPlatformType()),
+			SpanListType:    loop_span.SpanListType(req.SpanFilters.GetSpanListType()),
+		})
+		if err != nil {
+			return resp, err
+		}
+		spans = listResp.Spans
+	}
 	if err != nil {
 		return resp, err
 	}
 	logs.CtxInfo(ctx, "Get spans success, total count:%v", len(spans))
-
 	dataset, err := r.buildPreviewDataset(ctx, req.WorkspaceID, req.Category, req.Config)
 	if err != nil {
 		return resp, err
@@ -253,7 +275,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 			*config.DatasetName,
 			category,
 			config.DatasetSchema,
-			nil, nil,
+			nil, nil, false,
 		))
 		if err != nil {
 			return nil, err
@@ -277,7 +299,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 				"",
 				category,
 				config.DatasetSchema,
-				nil, nil,
+				nil, nil, false,
 			)); err != nil {
 				return nil, err
 			}
@@ -353,7 +375,6 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	}
 	return sortedSpans, nil
 }
-
 func (r *TraceExportServiceImpl) clearDataset(ctx context.Context, datasetID int64, req *ExportTracesToDatasetRequest) error {
 	if req.ExportType == ExportType_Overwrite && !req.Config.IsNewDataset {
 		err := r.getDatasetProvider(req.Category).ClearDatasetItems(ctx, req.WorkspaceID, datasetID, req.Category)
@@ -543,7 +564,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 		"",
 		category,
 		schema,
-		nil, nil,
+		nil, nil, false,
 	)
 	if config.DatasetID != nil {
 		dataset.ID = *config.DatasetID
@@ -579,4 +600,35 @@ func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCatego
 		return rpc.NoopDatasetProvider
 	}
 	return datasetProvider
+}
+
+func convertFilterFieldsDTO2DO(dto *filter.FilterFields) *loop_span.FilterFields {
+	if dto == nil {
+		return nil
+	}
+	do := &loop_span.FilterFields{
+		QueryAndOr:   (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
+		FilterFields: make([]*loop_span.FilterField, len(dto.FilterFields)),
+	}
+	for i, f := range dto.FilterFields {
+		do.FilterFields[i] = convertFilterFieldDTO2DO(f)
+	}
+	return do
+}
+
+func convertFilterFieldDTO2DO(dto *filter.FilterField) *loop_span.FilterField {
+	if dto == nil {
+		return nil
+	}
+	do := &loop_span.FilterField{
+		FieldName:  gptr.Indirect(dto.FieldName),
+		FieldType:  loop_span.FieldType(gptr.Indirect(dto.FieldType)),
+		Values:     dto.Values,
+		QueryType:  (*loop_span.QueryTypeEnum)(dto.QueryType),
+		QueryAndOr: (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
+		SubFilter:  convertFilterFieldsDTO2DO(dto.SubFilter),
+		IsCustom:   gptr.Indirect(dto.IsCustom),
+		ExtraInfo:  dto.ExtraInfo,
+	}
+	return do
 }

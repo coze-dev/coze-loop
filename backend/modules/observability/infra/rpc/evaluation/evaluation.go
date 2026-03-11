@@ -42,7 +42,6 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 		TargetID:              param.TargetID,
 		TargetFieldMapping:    param.TargetFieldMapping,
 		EvaluatorFieldMapping: param.EvaluatorFieldMapping,
-		ItemConcurNum:         param.ItemConcurNum,
 		EvaluatorsConcurNum:   param.EvaluatorsConcurNum,
 		CreateEvalTargetParam: param.CreateEvalTargetParam,
 		ExptType:              param.ExptType,
@@ -50,6 +49,9 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 		SourceType:            param.SourceType,
 		SourceID:              param.SourceID,
 		Session:               param.Session,
+
+		ItemConcurNum: param.ItemConcurNum,
+		ItemRetryNum:  param.ItemRetryNum,
 	})
 	if err != nil {
 		logs.CtxError(ctx, "SubmitExperiment failed, err: %v", err)

@@ -26,6 +26,7 @@ type Client interface {
 	UpdateManualAnnotation(ctx context.Context, req *trace.UpdateManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.UpdateManualAnnotationResponse, err error)
 	DeleteManualAnnotation(ctx context.Context, req *trace.DeleteManualAnnotationRequest, callOptions ...callopt.Option) (r *trace.DeleteManualAnnotationResponse, err error)
 	ListAnnotations(ctx context.Context, req *trace.ListAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListAnnotationsResponse, err error)
+	ListWorkspaceAnnotations(ctx context.Context, req *trace.ListWorkspaceAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListWorkspaceAnnotationsResponse, err error)
 	ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.ExportTracesToDatasetResponse, err error)
 	PreviewExportTracesToDataset(ctx context.Context, req *trace.PreviewExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.PreviewExportTracesToDatasetResponse, err error)
 	ChangeEvaluatorScore(ctx context.Context, req *trace.ChangeEvaluatorScoreRequest, callOptions ...callopt.Option) (r *trace.ChangeEvaluatorScoreResponse, err error)
@@ -34,6 +35,7 @@ type Client interface {
 	UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertTrajectoryConfigResponse, err error)
 	GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.GetTrajectoryConfigResponse, err error)
 	ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error)
+	ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -140,6 +142,11 @@ func (p *kTraceServiceClient) ListAnnotations(ctx context.Context, req *trace.Li
 	return p.kClient.ListAnnotations(ctx, req)
 }
 
+func (p *kTraceServiceClient) ListWorkspaceAnnotations(ctx context.Context, req *trace.ListWorkspaceAnnotationsRequest, callOptions ...callopt.Option) (r *trace.ListWorkspaceAnnotationsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListWorkspaceAnnotations(ctx, req)
+}
+
 func (p *kTraceServiceClient) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (r *trace.ExportTracesToDatasetResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ExportTracesToDataset(ctx, req)
@@ -178,4 +185,9 @@ func (p *kTraceServiceClient) GetTrajectoryConfig(ctx context.Context, req *trac
 func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTrajectory(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMetadata(ctx, req)
 }
