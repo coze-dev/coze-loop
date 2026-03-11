@@ -33,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
@@ -155,6 +156,7 @@ func InitExperimentApplication(
 	benefitSvc benefit.IBenefitService,
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
+	taskClient taskservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
@@ -250,6 +252,7 @@ func InitEvalOpenAPIApplication(
 	ckProvider ck.Provider,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
+	taskClient taskservice.Client,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

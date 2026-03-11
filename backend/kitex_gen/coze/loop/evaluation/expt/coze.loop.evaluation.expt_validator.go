@@ -426,6 +426,11 @@ func (p *CreateExperimentTemplateRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
