@@ -45,8 +45,8 @@ type IExptExecutionManager interface {
 	Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error
 	Finish(ctx context.Context, exptID *entity.Experiment, exptRunID int64, session *entity.Session) error
 
-	PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
-	PendExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
+	// RecordExptData 记录实验数据：在无数据且未完成时，计算并更新 run_log 与 expt_stats
+	RecordExptData(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 
 	// IsCompletingRun returns true if the given run is currently in the completing phase.
 	IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error)

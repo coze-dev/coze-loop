@@ -62,6 +62,7 @@ func NewExptManager(
 	templateManager IExptTemplateManager,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
+	daemonLockCancelStore OnlineDaemonLockCancelStore,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -90,6 +91,7 @@ func NewExptManager(
 		templateManager:             templateManager,
 		notifyRPCAdapter:            notifyRPCAdapter,
 		userProvider:                userProvider,
+		daemonLockCancelStore:       daemonLockCancelStore,
 	}
 }
 
@@ -120,6 +122,7 @@ type ExptMangerImpl struct {
 	templateManager             IExptTemplateManager
 	notifyRPCAdapter            rpc.INotifyRPCAdapter
 	userProvider                rpc.IUserProvider
+	daemonLockCancelStore       OnlineDaemonLockCancelStore
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -318,6 +321,16 @@ func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 
 func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
 	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
+}
+
+// makeOnlineExptDaemonLockKey 在线实验 MQ daemon 生命周期心跳锁，singleflight 防止重复发送
+func (e *ExptMangerImpl) makeOnlineExptDaemonLockKey(exptID, runID int64) string {
+	return fmt.Sprintf("expt_online_daemon_lock:%d:%d", exptID, runID)
+}
+
+// makeOnlineExptDataLockKey 在线实验数据锁，数据驱动，协调 Invoke 追加与 schedule 检查
+func (e *ExptMangerImpl) makeOnlineExptDataLockKey(exptID, runID int64) string {
+	return fmt.Sprintf("expt_online_data_lock:%d:%d", exptID, runID)
 }
 
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {

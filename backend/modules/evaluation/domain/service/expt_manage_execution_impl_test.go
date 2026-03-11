@@ -2319,6 +2319,11 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					GenMultiIDs(ctx, 2).
 					Return([]int64{1001, 1002}, nil)
 
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*5).
+					Return(true, nil)
+
 				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
 					EXPECT().
 					BatchCreateNX(ctx, gomock.Any()).
@@ -2350,6 +2355,16 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					LockWithRenew(ctx, "expt_online_daemon_lock:1:2", time.Second*5, time.Minute).
+					Return(true, ctx, func() {}, nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock("expt_online_data_lock:1:2").
+					Return(true, nil)
 
 				// Mock GetDetail
 				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).
@@ -2429,6 +2444,11 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					GenMultiIDs(ctx, 2).
 					Return([]int64{1001, 1002}, nil)
 
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*5).
+					Return(true, nil)
+
 				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
 					EXPECT().
 					BatchCreateNX(ctx, gomock.Any()).
@@ -2457,6 +2477,16 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 					EXPECT().
 					ArithOperateCount(ctx, int64(1), int64(100), gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					LockWithRenew(ctx, "expt_online_daemon_lock:1:2", time.Second*5, time.Minute).
+					Return(true, ctx, func() {}, nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock("expt_online_data_lock:1:2").
+					Return(true, nil)
 
 				// Mock GetDetail
 				mgr.lwt.(*lwtMocks.MockILatestWriteTracker).

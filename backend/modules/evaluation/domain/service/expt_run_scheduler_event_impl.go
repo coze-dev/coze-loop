@@ -48,7 +48,7 @@ type ExptSchedulerImpl struct {
 	ResultSvc                ExptResultService
 	IDGen                    idgen.IIDGenerator
 	evaluationSetItemService EvaluationSetItemService
-	schedulerModeFactory     SchedulerModeFactory
+	schedulerModeFactory SchedulerModeFactory
 }
 
 func NewExptSchedulerSvc(
@@ -266,11 +266,6 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	if err = e.handleToSubmits(ctx, event, toSubmit); err != nil {
-		return err
-	}
-
-	err = mode.ScheduleEnd(ctx, event, exptDetail, len(toSubmit), len(incomplete))
-	if err != nil {
 		return err
 	}
 

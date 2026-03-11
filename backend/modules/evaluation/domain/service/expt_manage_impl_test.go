@@ -1113,6 +1113,7 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
+		nil, // daemonLockCancelStore
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)
