@@ -659,23 +659,23 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 
 	// 数据锁加锁，加锁后重新扫描 item
 	dataLockKey := fmt.Sprintf("expt_online_data_lock:%d:%d", event.ExptID, event.ExptRunID)
-	logs.CtxInfo(ctx, "[ExptEval] online expt data lock acquiring, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock acquiring, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 	locked, err := e.mutex.LockBackoff(ctx, dataLockKey, time.Second*30, time.Minute*5)
 	if err != nil {
-		logs.CtxError(ctx, "[ExptEval] online expt data lock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		logs.CtxError(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 		return false, err
 	}
 	if !locked {
-		logs.CtxError(ctx, "[ExptEval] online expt data lock timeout, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		logs.CtxError(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock timeout, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
 		return false, errorx.New("[ExptEval] online expt data lock timeout")
 	}
-	logs.CtxInfo(ctx, "[ExptEval] online expt data lock acquired, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock acquired, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 	defer func() {
-		logs.CtxInfo(ctx, "[ExptEval] online expt data lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 		if _, uerr := e.mutex.Unlock(dataLockKey); uerr != nil {
-			logs.CtxWarn(ctx, "[ExptEval] online expt data unlock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
+			logs.CtxWarn(ctx, "[ScheduleLock][Data][ExptEval] online expt data unlock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
 		} else {
-			logs.CtxInfo(ctx, "[ExptEval] online expt data lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+			logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 		}
 	}()
 
@@ -709,9 +709,9 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		if e.daemonLockCancelStore != nil {
 			lockKey := fmt.Sprintf("expt_online_daemon_lock:%d:%d", event.ExptID, event.ExptRunID)
 			if cancel, ok := e.daemonLockCancelStore.LoadAndDelete(lockKey); ok && cancel != nil {
-				logs.CtxInfo(ctx, "[ExptEval] online expt heartbeat lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+				logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 				cancel()
-				logs.CtxInfo(ctx, "[ExptEval] online expt heartbeat lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+				logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 			}
 		}
 		return false, nil
