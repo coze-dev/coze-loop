@@ -3970,6 +3970,101 @@ func TestTraceFilterProcessorBuilderImpl_BuildSearchTraceOApiProcessors_ErrorHan
 	}
 }
 
+func TestTraceFilterProcessorBuilderImpl_buildProcessors(t *testing.T) {
+	tests := []struct {
+		name               string
+		processorFactories map[entity.ProcessorScene][]span_processor.Factory
+		settings           span_processor.Settings
+		defaultScene       entity.ProcessorScene
+		want               int
+		wantErr            bool
+		errMsg             string
+	}{
+		{
+			name: "use default scene successfully",
+			processorFactories: map[entity.ProcessorScene][]span_processor.Factory{
+				entity.SceneListSpans: {
+					span_processor.NewCheckProcessorFactory(),
+				},
+			},
+			settings:     span_processor.Settings{},
+			defaultScene: entity.SceneListSpans,
+			want:         1,
+			wantErr:      false,
+		},
+		{
+			name: "use settings scene successfully",
+			processorFactories: map[entity.ProcessorScene][]span_processor.Factory{
+				entity.SceneGetTrace: {
+					span_processor.NewCheckProcessorFactory(),
+					span_processor.NewExpireErrorProcessorFactory(nil),
+				},
+			},
+			settings: span_processor.Settings{
+				Scene: entity.SceneGetTrace,
+			},
+			defaultScene: entity.SceneListSpans,
+			want:         2,
+			wantErr:      false,
+		},
+		{
+			name: "settings scene not found returns error",
+			processorFactories: map[entity.ProcessorScene][]span_processor.Factory{
+				entity.SceneListSpans: {
+					span_processor.NewCheckProcessorFactory(),
+				},
+			},
+			settings: span_processor.Settings{
+				Scene: "non_existent_scene",
+			},
+			defaultScene: entity.SceneListSpans,
+			want:         0,
+			wantErr:      true,
+			errMsg:       "processor factories not found for scene: non_existent_scene",
+		},
+		{
+			name: "empty factories returns empty processors",
+			processorFactories: map[entity.ProcessorScene][]span_processor.Factory{
+				entity.SceneListSpans: {},
+			},
+			settings:     span_processor.Settings{},
+			defaultScene: entity.SceneListSpans,
+			want:         0,
+			wantErr:      false,
+		},
+		{
+			name:               "default scene not found returns error",
+			processorFactories: map[entity.ProcessorScene][]span_processor.Factory{},
+			settings:           span_processor.Settings{},
+			defaultScene:       entity.SceneListSpans,
+			want:               0,
+			wantErr:            true,
+			errMsg:             "processor factories not found for scene: list_spans",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+			builder := NewTraceFilterProcessorBuilder(
+				filterFactoryMock,
+				tt.processorFactories,
+			).(*TraceFilterProcessorBuilderImpl)
+
+			got, err := builder.buildProcessors(context.Background(), tt.settings, tt.defaultScene)
+
+			assert.Equal(t, tt.wantErr, err != nil)
+			if tt.wantErr {
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.Equal(t, tt.want, len(got))
+			}
+		})
+	}
+}
+
 func TestTraceServiceImpl_ListAnnotationEvaluators(t *testing.T) {
 	type fields struct {
 		taskRepo taskRepo.ITaskRepo
