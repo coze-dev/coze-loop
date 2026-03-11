@@ -227,6 +227,9 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 }
 
 func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptScheduleEvent) error {
+	if event.ExptRunMode == entity.EvaluationModeAppend {
+		logs.CtxInfo(ctx, "[ExptEval] consume schedule event (Append), expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+	}
 	exptDetail, err := e.Manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
 	if err != nil {
 		return err
@@ -275,10 +278,13 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 	}
 
 	if !nextTick {
+		if event.ExptRunMode == entity.EvaluationModeAppend {
+			logs.CtxInfo(ctx, "[ExptEval] online expt daemon ended, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		}
 		return nil
 	}
 
-	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, event: %v", event.ExptID, event)
+	logs.CtxInfo(ctx, "[ExptEval] expt daemon with next tick, expt_id: %v, expt_run_id: %v, space_id: %v, to_submit: %v, incomplete: %v", event.ExptID, event.ExptRunID, event.SpaceID, entity.ExptEvalItems(toSubmit).GetItemIDs(), entity.ExptEvalItems(incomplete).GetItemIDs())
 
 	select {
 	case <-time.After(time.Second * 3):
