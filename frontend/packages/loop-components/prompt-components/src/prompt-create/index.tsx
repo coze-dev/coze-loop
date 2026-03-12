@@ -161,14 +161,14 @@ export function PromptCreate({
                   ? `${data?.prompt_key}_copy`
                   : data?.prompt_key
               }`
-            : data?.prompt_key,
+            : data?.prompt_key || 'prompt_key_0',
           prompt_name: isCopy
             ? `${
                 (data?.prompt_basic?.display_name?.length || 0) < 95
                   ? `${data?.prompt_basic?.display_name}_copy`
                   : data?.prompt_basic?.display_name
               }`
-            : data?.prompt_basic?.display_name,
+            : data?.prompt_basic?.display_name || 'prompt_demo_name_0',
           prompt_description: data?.prompt_basic?.description,
         }}
       >
