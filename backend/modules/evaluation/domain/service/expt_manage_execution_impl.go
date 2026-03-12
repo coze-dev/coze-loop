@@ -856,7 +856,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	} else {
 		defer cancel()
 	}
-
+	logs.CtxInfo(ctx, "[Invoke] PublishExptScheduleEvent, exptID: %v ", invokeExptReq.ExptID)
 	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
 		ExptID:      invokeExptReq.ExptID,
