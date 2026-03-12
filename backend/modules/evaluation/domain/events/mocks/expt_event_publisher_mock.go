@@ -99,17 +99,17 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptOnlineEvalResult(ctx, e
 }
 
 // PublishExptRecordEvalEvent mocks base method.
-func (m *MockExptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration) error {
+func (m *MockExptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration, modifyFunc func(*entity.ExptItemEvalEvent)) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishExptRecordEvalEvent", ctx, event, duration)
+	ret := m.ctrl.Call(m, "PublishExptRecordEvalEvent", ctx, event, duration, modifyFunc)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PublishExptRecordEvalEvent indicates an expected call of PublishExptRecordEvalEvent.
-func (mr *MockExptEventPublisherMockRecorder) PublishExptRecordEvalEvent(ctx, event, duration any) *gomock.Call {
+func (mr *MockExptEventPublisherMockRecorder) PublishExptRecordEvalEvent(ctx, event, duration, modifyFunc any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptRecordEvalEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptRecordEvalEvent), ctx, event, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptRecordEvalEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptRecordEvalEvent), ctx, event, duration, modifyFunc)
 }
 
 // PublishExptScheduleEvent mocks base method.
