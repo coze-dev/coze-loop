@@ -48,6 +48,7 @@ type Client interface {
 	DeleteExptTemplateOApi(ctx context.Context, req *openapi.DeleteExptTemplateOApiRequest, callOptions ...callopt.Option) (r *openapi.DeleteExptTemplateOApiResponse, err error)
 	ListExptTemplatesOApi(ctx context.Context, req *openapi.ListExptTemplatesOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExptTemplatesOApiResponse, err error)
 	SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.SubmitExptFromTemplateOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExptFromTemplateOApiResponse, err error)
+	ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -262,4 +263,9 @@ func (p *kEvaluationOpenAPIServiceClient) ListExptTemplatesOApi(ctx context.Cont
 func (p *kEvaluationOpenAPIServiceClient) SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.SubmitExptFromTemplateOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExptFromTemplateOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SubmitExptFromTemplateOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ReportEvaluatorInvokeResult_(ctx, req)
 }

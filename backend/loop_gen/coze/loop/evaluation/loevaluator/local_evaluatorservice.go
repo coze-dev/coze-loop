@@ -408,6 +408,48 @@ func (l *LocalEvaluatorService) BatchDebugEvaluator(ctx context.Context, req *ev
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluatorService) AsyncRunEvaluator(ctx context.Context, req *evaluator.AsyncRunEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.AsyncRunEvaluatorResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceAsyncRunEvaluatorArgs)
+		result := out.(*evaluator.EvaluatorServiceAsyncRunEvaluatorResult)
+		resp, err := l.impl.AsyncRunEvaluator(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceAsyncRunEvaluatorArgs{Req: req}
+	result := &evaluator.EvaluatorServiceAsyncRunEvaluatorResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncRunEvaluator")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalEvaluatorService) AsyncDebugEvaluator(ctx context.Context, req *evaluator.AsyncDebugEvaluatorRequest, callOptions ...callopt.Option) (*evaluator.AsyncDebugEvaluatorResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceAsyncDebugEvaluatorArgs)
+		result := out.(*evaluator.EvaluatorServiceAsyncDebugEvaluatorResult)
+		resp, err := l.impl.AsyncDebugEvaluator(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceAsyncDebugEvaluatorArgs{Req: req}
+	result := &evaluator.EvaluatorServiceAsyncDebugEvaluatorResult{}
+	ctx = l.injectRPCInfo(ctx, "AsyncDebugEvaluator")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // UpdateEvaluatorRecord
 // 评估器执行结果
 func (l *LocalEvaluatorService) UpdateEvaluatorRecord(ctx context.Context, req *evaluator.UpdateEvaluatorRecordRequest, callOptions ...callopt.Option) (*evaluator.UpdateEvaluatorRecordResponse, error) {

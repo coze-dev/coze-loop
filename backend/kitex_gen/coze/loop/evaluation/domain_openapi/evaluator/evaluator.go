@@ -8084,3 +8084,418 @@ func (p *EvaluatorFilterOption) Field2DeepEqual(src *EvaluatorFilters) bool {
 	}
 	return true
 }
+
+type EvaluatorProgressMessage struct {
+	// 如 system, assistant
+	Role *string `thrift:"role,1,optional" frugal:"1,optional,string" form:"role" json:"role,omitempty" query:"role"`
+	// 如 tool_use, tool_result
+	Type *string `thrift:"type,2,optional" frugal:"2,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 如 Check current user identity and working directory
+	Message     *string `thrift:"message,3,optional" frugal:"3,optional,string" form:"message" json:"message,omitempty" query:"message"`
+	CreatedAtMs *int64  `thrift:"created_at_ms,4,optional" frugal:"4,optional,i64" form:"created_at_ms" json:"created_at_ms,omitempty" query:"created_at_ms"`
+}
+
+func NewEvaluatorProgressMessage() *EvaluatorProgressMessage {
+	return &EvaluatorProgressMessage{}
+}
+
+func (p *EvaluatorProgressMessage) InitDefault() {
+}
+
+var EvaluatorProgressMessage_Role_DEFAULT string
+
+func (p *EvaluatorProgressMessage) GetRole() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRole() {
+		return EvaluatorProgressMessage_Role_DEFAULT
+	}
+	return *p.Role
+}
+
+var EvaluatorProgressMessage_Type_DEFAULT string
+
+func (p *EvaluatorProgressMessage) GetType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetType() {
+		return EvaluatorProgressMessage_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var EvaluatorProgressMessage_Message_DEFAULT string
+
+func (p *EvaluatorProgressMessage) GetMessage() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessage() {
+		return EvaluatorProgressMessage_Message_DEFAULT
+	}
+	return *p.Message
+}
+
+var EvaluatorProgressMessage_CreatedAtMs_DEFAULT int64
+
+func (p *EvaluatorProgressMessage) GetCreatedAtMs() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCreatedAtMs() {
+		return EvaluatorProgressMessage_CreatedAtMs_DEFAULT
+	}
+	return *p.CreatedAtMs
+}
+func (p *EvaluatorProgressMessage) SetRole(val *string) {
+	p.Role = val
+}
+func (p *EvaluatorProgressMessage) SetType(val *string) {
+	p.Type = val
+}
+func (p *EvaluatorProgressMessage) SetMessage(val *string) {
+	p.Message = val
+}
+func (p *EvaluatorProgressMessage) SetCreatedAtMs(val *int64) {
+	p.CreatedAtMs = val
+}
+
+var fieldIDToName_EvaluatorProgressMessage = map[int16]string{
+	1: "role",
+	2: "type",
+	3: "message",
+	4: "created_at_ms",
+}
+
+func (p *EvaluatorProgressMessage) IsSetRole() bool {
+	return p.Role != nil
+}
+
+func (p *EvaluatorProgressMessage) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *EvaluatorProgressMessage) IsSetMessage() bool {
+	return p.Message != nil
+}
+
+func (p *EvaluatorProgressMessage) IsSetCreatedAtMs() bool {
+	return p.CreatedAtMs != nil
+}
+
+func (p *EvaluatorProgressMessage) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluatorProgressMessage[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluatorProgressMessage) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Role = _field
+	return nil
+}
+func (p *EvaluatorProgressMessage) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Type = _field
+	return nil
+}
+func (p *EvaluatorProgressMessage) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Message = _field
+	return nil
+}
+func (p *EvaluatorProgressMessage) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CreatedAtMs = _field
+	return nil
+}
+
+func (p *EvaluatorProgressMessage) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluatorProgressMessage"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluatorProgressMessage) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRole() {
+		if err = oprot.WriteFieldBegin("role", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Role); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluatorProgressMessage) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err = oprot.WriteFieldBegin("type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Type); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluatorProgressMessage) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessage() {
+		if err = oprot.WriteFieldBegin("message", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Message); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluatorProgressMessage) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCreatedAtMs() {
+		if err = oprot.WriteFieldBegin("created_at_ms", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CreatedAtMs); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *EvaluatorProgressMessage) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluatorProgressMessage(%+v)", *p)
+
+}
+
+func (p *EvaluatorProgressMessage) DeepEqual(ano *EvaluatorProgressMessage) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Role) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Message) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.CreatedAtMs) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluatorProgressMessage) Field1DeepEqual(src *string) bool {
+
+	if p.Role == src {
+		return true
+	} else if p.Role == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Role, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorProgressMessage) Field2DeepEqual(src *string) bool {
+
+	if p.Type == src {
+		return true
+	} else if p.Type == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Type, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorProgressMessage) Field3DeepEqual(src *string) bool {
+
+	if p.Message == src {
+		return true
+	} else if p.Message == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Message, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluatorProgressMessage) Field4DeepEqual(src *int64) bool {
+
+	if p.CreatedAtMs == src {
+		return true
+	} else if p.CreatedAtMs == nil || src == nil {
+		return false
+	}
+	if *p.CreatedAtMs != *src {
+		return false
+	}
+	return true
+}

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -791,7 +792,8 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
-			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, "file_name", true)
+			out := filepath.Join(t.TempDir(), "file_name")
+			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, out, true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DoExportCSV() error = %v, wantErr %v", err, tt.wantErr)
 			}

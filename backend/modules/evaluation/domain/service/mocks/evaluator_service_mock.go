@@ -41,6 +41,36 @@ func (m *MockEvaluatorService) EXPECT() *MockEvaluatorServiceMockRecorder {
 	return m.recorder
 }
 
+// AsyncDebugEvaluator mocks base method.
+func (m *MockEvaluatorService) AsyncDebugEvaluator(ctx context.Context, request *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncDebugEvaluator", ctx, request)
+	ret0, _ := ret[0].(*entity.AsyncDebugEvaluatorResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AsyncDebugEvaluator indicates an expected call of AsyncDebugEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) AsyncDebugEvaluator(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncDebugEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).AsyncDebugEvaluator), ctx, request)
+}
+
+// AsyncRunEvaluator mocks base method.
+func (m *MockEvaluatorService) AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AsyncRunEvaluator", ctx, request)
+	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// AsyncRunEvaluator indicates an expected call of AsyncRunEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) AsyncRunEvaluator(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AsyncRunEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).AsyncRunEvaluator), ctx, request)
+}
+
 // BatchGetBuiltinEvaluator mocks base method.
 func (m *MockEvaluatorService) BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error) {
 	m.ctrl.T.Helper()
@@ -266,6 +296,20 @@ func (m *MockEvaluatorService) ListEvaluatorVersion(ctx context.Context, request
 func (mr *MockEvaluatorServiceMockRecorder) ListEvaluatorVersion(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEvaluatorVersion", reflect.TypeOf((*MockEvaluatorService)(nil).ListEvaluatorVersion), ctx, request)
+}
+
+// ReportEvaluatorInvokeResult mocks base method.
+func (m *MockEvaluatorService) ReportEvaluatorInvokeResult(ctx context.Context, param *entity.ReportEvaluatorRecordParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReportEvaluatorInvokeResult", ctx, param)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReportEvaluatorInvokeResult indicates an expected call of ReportEvaluatorInvokeResult.
+func (mr *MockEvaluatorServiceMockRecorder) ReportEvaluatorInvokeResult(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportEvaluatorInvokeResult", reflect.TypeOf((*MockEvaluatorService)(nil).ReportEvaluatorInvokeResult), ctx, param)
 }
 
 // RunEvaluator mocks base method.
