@@ -691,7 +691,7 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 	toSubmit = len(toSubmitItems)
 	incomplete = len(incompleteItems)
 	complete := len(completeItems)
-
+	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmit, incomplete, complete)
 	// 用新的 toSubmit、incomplete、complete 判断是否结束，需 Complete 数量也为零才不发送下一个心跳
 	if toSubmit == 0 && incomplete == 0 && complete == 0 {
 
@@ -717,7 +717,7 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		}
 		return false, nil
 	}
-	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmit, incomplete, complete)
+
 	// 若未结束且有新数据或待 Complete，则发送下一次 tick；否则不发送
 	return toSubmit > 0 || incomplete > 0 || complete > 0, nil
 }
