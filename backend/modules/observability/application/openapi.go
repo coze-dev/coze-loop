@@ -103,6 +103,7 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 	// unpack space
 	spanMap := o.unpackSpace(ctx, req.Spans)
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
+	hasErr := false
 	for workspaceId := range spanMap {
 		workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
 		if err != nil {
@@ -133,10 +134,8 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 				}
 			}
 			if !benefitRes.IsEnough {
-				if benefitRes.WhichIsEnough == 3 {
-					continue
-				}
-				return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
+				hasErr = true
+				continue
 			} else if !benefitRes.AccountAvailable {
 				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
 			}
@@ -162,6 +161,9 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 				}
 			}
 		}
+	}
+	if hasErr {
+		return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
 	}
 	return openapi.NewIngestTracesResponse(), nil
 }
