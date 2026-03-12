@@ -20,8 +20,8 @@ func TestGetTraceBenefitSourceParams_JSONTags(t *testing.T) {
 	var got map[string]any
 	err = json.Unmarshal(b, &got)
 	assert.NoError(t, err)
-	assert.Contains(t, got, "source")
-	assert.Contains(t, got, "connector_uid")
+	assert.Contains(t, got, "tags")
+	assert.Contains(t, got, "system_tags")
 }
 
 func TestCheckTraceBenefitParams_JSONTags(t *testing.T) {
