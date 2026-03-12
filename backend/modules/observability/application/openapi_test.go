@@ -2107,13 +2107,39 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 
 		// Set expectations.
 		authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
-			AccountAvailable: true,
-			IsEnough:         true,
-			StorageDuration:  3,
-		}, nil).AnyTimes()
+		benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
+				switch param.Tags["src"] {
+				case "a":
+					return &benefit.GetTraceBenefitSourceResult{Source: 1}, nil
+				case "b":
+					return &benefit.GetTraceBenefitSourceResult{Source: 2}, nil
+				default:
+					return &benefit.GetTraceBenefitSourceResult{Source: 0}, nil
+				}
+			},
+		).AnyTimes()
+		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *benefit.CheckTraceBenefitParams) (*benefit.CheckTraceBenefitResult, error) {
+				switch param.Source {
+				case 1:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: true, StorageDuration: 3}, nil
+				case 2:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: true, StorageDuration: 7}, nil
+				default:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: true, StorageDuration: 3}, nil
+				}
+			},
+		).AnyTimes()
 		tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1").AnyTimes()
-		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		ttls := make([]loop_span.TTL, 0)
+		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.IngestTracesReq) error {
+				ttls = append(ttls, req.TTL)
+				assert.Len(t, req.Spans, 1)
+				return nil
+			},
+		).Times(2)
 
 		app := &OpenAPIApplication{
 			traceService: traceServiceMock,
@@ -2129,15 +2155,149 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 
 		// Create test request.
 		req := &openapi.OtelIngestTracesRequest{
-			WorkspaceID:     "123",
+			WorkspaceID:     "1",
 			ContentType:     "application/json",
 			ContentEncoding: "",
-			Body:            []byte(`{"resourceSpans":[]}`),
+			Body: []byte(`{
+				"resourceSpans":[
+					{
+						"scopeSpans":[
+							{
+								"spans":[
+									{
+										"traceId":"t1",
+										"spanId":"s1",
+										"name":"n1",
+										"startTimeUnixNano":"1",
+										"endTimeUnixNano":"2",
+										"attributes":[{"key":"src","value":{"stringValue":"a"}}]
+									},
+									{
+										"traceId":"t2",
+										"spanId":"s2",
+										"name":"n2",
+										"startTimeUnixNano":"1",
+										"endTimeUnixNano":"2",
+										"attributes":[{"key":"src","value":{"stringValue":"b"}}]
+									}
+								]
+							}
+						]
+					}
+				]
+			}`),
 		}
 
 		resp, err := app.OtelIngestTraces(context.Background(), req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
+		assert.ElementsMatch(t, []loop_span.TTL{loop_span.TTLFromInteger(3), loop_span.TTLFromInteger(7)}, ttls)
+	})
+
+	t.Run("otel ingest rejects spans when benefit not enough", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
+				switch param.Tags["src"] {
+				case "a":
+					return &benefit.GetTraceBenefitSourceResult{Source: 1}, nil
+				case "b":
+					return &benefit.GetTraceBenefitSourceResult{Source: 2}, nil
+				default:
+					return &benefit.GetTraceBenefitSourceResult{Source: 0}, nil
+				}
+			},
+		).AnyTimes()
+		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *benefit.CheckTraceBenefitParams) (*benefit.CheckTraceBenefitResult, error) {
+				switch param.Source {
+				case 1:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: false, StorageDuration: 3}, nil
+				case 2:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: true, StorageDuration: 7}, nil
+				default:
+					return &benefit.CheckTraceBenefitResult{AccountAvailable: true, IsEnough: true, StorageDuration: 3}, nil
+				}
+			},
+		).AnyTimes()
+		tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1").AnyTimes()
+		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.IngestTracesReq) error {
+				assert.Equal(t, loop_span.TTLFromInteger(7), req.TTL)
+				assert.Len(t, req.Spans, 1)
+				return nil
+			},
+		).Times(1)
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			benefit:      benefitMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiterMock,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+		}
+
+		req := &openapi.OtelIngestTracesRequest{
+			WorkspaceID:     "1",
+			ContentType:     "application/json",
+			ContentEncoding: "",
+			Body: []byte(`{
+				"resourceSpans":[
+					{
+						"scopeSpans":[
+							{
+								"spans":[
+									{
+										"traceId":"t1",
+										"spanId":"s1",
+										"name":"n1",
+										"startTimeUnixNano":"1",
+										"endTimeUnixNano":"2",
+										"attributes":[{"key":"src","value":{"stringValue":"a"}}]
+									},
+									{
+										"traceId":"t2",
+										"spanId":"s2",
+										"name":"n2",
+										"startTimeUnixNano":"1",
+										"endTimeUnixNano":"2",
+										"attributes":[{"key":"src","value":{"stringValue":"b"}}]
+									}
+								]
+							}
+						]
+					}
+				]
+			}`),
+		}
+
+		resp, err := app.OtelIngestTraces(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		pbResp := &coltracepb.ExportTraceServiceResponse{}
+		assert.NoError(t, proto.Unmarshal(resp.Body, pbResp))
+		assert.NotNil(t, pbResp.PartialSuccess)
+		assert.Equal(t, int64(1), pbResp.PartialSuccess.RejectedSpans)
+		assert.Contains(t, pbResp.PartialSuccess.ErrorMessage, "TraceNoCapacityAvailable")
 	})
 
 	t.Run("invalid request", func(t *testing.T) {

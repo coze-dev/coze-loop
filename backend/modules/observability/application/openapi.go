@@ -210,6 +210,28 @@ func (o *OpenAPIApplication) unpackSource(ctx context.Context, spans []*span.Inp
 	return spansMap
 }
 
+func (o *OpenAPIApplication) unpackOtelSource(ctx context.Context, spans []*loop_span.Span) map[int64][]*loop_span.Span {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[int64][]*loop_span.Span)
+	for i := range spans {
+		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
+			Tags:       spans[i].TagsString,
+			SystemTags: spans[i].SystemTagsString,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
+			continue
+		}
+		if spansMap[result.Source] == nil {
+			spansMap[result.Source] = make([]*loop_span.Span, 0)
+		}
+		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
+	}
+	return spansMap
+}
+
 func (o *OpenAPIApplication) unpackTenant(ctx context.Context, spans []*loop_span.Span) map[string][]*loop_span.Span {
 	if spans == nil {
 		return nil
@@ -283,43 +305,52 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 			return nil, e
 		}
 		connectorUid := session.UserIDInCtxOrEmpty(ctx)
-		benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: connectorUid,
-			SpaceID:      workSpaceIdNum,
-		})
-		if e != nil {
-			logs.CtxError(ctx, "Fail to check benefit, %v", e)
-		}
-		if benefitRes == nil {
-			benefitRes = &benefit.CheckTraceBenefitResult{
-				AccountAvailable: true,
-				IsEnough:         true,
-				StorageDuration:  3,
-				WhichIsEnough:    -1,
+
+		spans := tconv.OtelSpans2LoopSpans(otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans))
+		sourceSpanMap := o.unpackOtelSource(ctx, spans)
+		for source := range sourceSpanMap {
+			benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+				Source:       source,
+				ConnectorUID: connectorUid,
+				SpaceID:      workSpaceIdNum,
+			})
+			if e != nil {
+				logs.CtxError(ctx, "Fail to check benefit, %v", e)
 			}
-		}
-		if !benefitRes.IsEnough {
-			return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-		} else if !benefitRes.AccountAvailable {
-			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-		}
-
-		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
-
-		tenantSpanMap := o.unpackTenant(ctx, tconv.OtelSpans2LoopSpans(spans))
-		for ingestTenant := range tenantSpanMap {
-			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-				Tenant:           ingestTenant,
-				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-				WhichIsEnough:    benefitRes.WhichIsEnough,
-				CozeAccountId:    connectorUid,
-				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            tenantSpanMap[ingestTenant],
-			}); e != nil {
-				logs.CtxError(ctx, "IngestTraces err: %v", e)
-				partialFailSpanNumber += len(tenantSpanMap[ingestTenant])
-				partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
+			if benefitRes == nil {
+				benefitRes = &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  3,
+					WhichIsEnough:    -1,
+				}
+			}
+			if !benefitRes.IsEnough {
+				if benefitRes.WhichIsEnough != 3 {
+					partialFailSpanNumber += len(sourceSpanMap[source])
+					if partialErrMessage == "" {
+						partialErrMessage = "TraceNoCapacityAvailable"
+					}
+				}
 				continue
+			} else if !benefitRes.AccountAvailable {
+				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
+			}
+			tenantSpanMap := o.unpackTenant(ctx, sourceSpanMap[source])
+			for ingestTenant := range tenantSpanMap {
+				if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+					Tenant:           ingestTenant,
+					TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+					WhichIsEnough:    benefitRes.WhichIsEnough,
+					CozeAccountId:    connectorUid,
+					VolcanoAccountID: benefitRes.VolcanoAccountID,
+					Spans:            tenantSpanMap[ingestTenant],
+				}); e != nil {
+					logs.CtxError(ctx, "IngestTraces err: %v", e)
+					partialFailSpanNumber += len(tenantSpanMap[ingestTenant])
+					partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
+					continue
+				}
 			}
 		}
 	}
