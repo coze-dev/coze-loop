@@ -114,9 +114,11 @@ func (e *exptEventPublisher) PublishExptScheduleEvent(ctx context.Context, event
 	return e.batchSend(ctx, rocket.ExptScheduleEventRMQKey, []any{event}, duration)
 }
 
-func (e *exptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration) error {
+func (e *exptEventPublisher) PublishExptRecordEvalEvent(ctx context.Context, event *entity.ExptItemEvalEvent, duration *time.Duration, modifyFunc func(event *entity.ExptItemEvalEvent)) error {
 	if copied, ok := deepcopy.Copy(event).(*entity.ExptItemEvalEvent); ok {
-		copied.AsyncReportTrigger = true
+		if modifyFunc != nil {
+			modifyFunc(copied)
+		}
 		event = copied
 	}
 	return e.batchSend(ctx, rocket.ExptRecordEvalEventRMQKey, []any{event}, duration)
