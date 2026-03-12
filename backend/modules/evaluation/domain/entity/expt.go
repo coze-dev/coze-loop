@@ -175,7 +175,7 @@ func (e *Experiment) AsyncCallEvaluators() bool {
 		return false
 	}
 	for _, ev := range e.Evaluators {
-		if ev.EvaluatorType == EvaluatorTypeAgent {
+		if ev.IsAsync() {
 			return true
 		}
 	}
