@@ -956,7 +956,7 @@ func (e *ExptMangerImpl) RecordExptData(ctx context.Context, exptID, exptRunID, 
 	if err := e.calculateRunLogStats(ctx, exptID, exptRunID, runLog, spaceID, session); err != nil {
 		return err
 	}
-
+	runLog.Status = int64(entity.ExptStatus_Processing)
 	logs.CtxInfo(ctx, "[ExptEval] RecordExptData run_log, expt_id: %v, expt_run_id: %v, status: %v", exptID, exptRunID, runLog.Status)
 
 	if err := e.runLogRepo.Save(ctx, runLog); err != nil {
