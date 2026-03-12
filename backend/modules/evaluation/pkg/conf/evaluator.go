@@ -37,6 +37,8 @@ type IConfiger interface {
 	GetEvaluatorTagConf(ctx context.Context) (etf map[evaluatordto.EvaluatorTagKey][]string)
 	// 检查当前空间是否可写自定义RPC评估器
 	CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error)
+	// 检查当前空间是否可写Agent评估器
+	CheckAgentEvaluatorWritable(ctx context.Context) (bool, error)
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -271,5 +273,9 @@ func (c *evaluatorConfiger) CheckCustomRPCEvaluatorWritable(ctx context.Context,
 		return true, nil
 	}
 	// otherwise, not writable
+	return false, nil
+}
+
+func (c *evaluatorConfiger) CheckAgentEvaluatorWritable(ctx context.Context) (bool, error) {
 	return false, nil
 }

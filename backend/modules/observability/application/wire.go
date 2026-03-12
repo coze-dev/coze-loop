@@ -71,10 +71,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workflow"
 	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workflow"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/workspace"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/google/wire"
@@ -220,6 +220,32 @@ func NewTraceProcessorBuilder(
 	fileProvider rpc.IFileProvider,
 	benefitSvc benefit.IBenefitService,
 ) service.TraceFilterProcessorBuilder {
+	processorFactories := map[entity.ProcessorScene][]span_processor.Factory{
+		entity.SceneGetTrace: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		entity.SceneListSpans: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		entity.SceneAdvanceInfo: {
+			span_processor.NewCheckProcessorFactory(),
+		},
+		entity.SceneIngestTrace: {},
+		entity.SceneSearchTraceOApi: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		entity.SceneListSpansOApi: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+	}
 	return service.NewTraceFilterProcessorBuilder(
 		span_filter.NewPlatformFilterFactory(
 			[]span_filter.Factory{
@@ -228,36 +254,7 @@ func NewTraceProcessorBuilder(
 				span_filter.NewEvaluatorFilterFactory(),
 				span_filter.NewEvalTargetFilterFactory(),
 			}),
-		// get trace processors
-		[]span_processor.Factory{
-			span_processor.NewPlatformProcessorFactory(traceConfig),
-			span_processor.NewCheckProcessorFactory(),
-			span_processor.NewAttrTosProcessorFactory(fileProvider),
-			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-		},
-		// list spans processors
-		[]span_processor.Factory{
-			span_processor.NewPlatformProcessorFactory(traceConfig),
-			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-		},
-		// batch get advance info processors
-		[]span_processor.Factory{
-			span_processor.NewCheckProcessorFactory(),
-		},
-		// ingest trace processors
-		[]span_processor.Factory{},
-		// search trace open api processors
-		[]span_processor.Factory{
-			span_processor.NewPlatformProcessorFactory(traceConfig),
-			span_processor.NewCheckProcessorFactory(),
-			span_processor.NewAttrTosProcessorFactory(fileProvider),
-			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-		},
-		// list trace open api processors
-		[]span_processor.Factory{
-			span_processor.NewPlatformProcessorFactory(traceConfig),
-			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
-		})
+		processorFactories)
 }
 
 func NewMetricsPlatformConfig() *metrics_entity.PlatformMetrics {

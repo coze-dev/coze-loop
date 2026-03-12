@@ -367,6 +367,10 @@ const (
 	CustomEvalTargetRunFailedCode              = 601205067 // the custom eval target run failed, check if the configuration is correct
 	customEvalTargetRunFailedMessage           = "custom eval target run failed"
 	customEvalTargetRunFailedNoAffectStability = true
+
+	AgentEvaluatorRunFailedCode              = 601205068 // the agent evaluator run failed, check if the configuration is correct
+	agentEvaluatorRunFailedMessage           = "agent evaluator run failed"
+	agentEvaluatorRunFailedNoAffectStability = true
 )
 
 func init() {
@@ -909,6 +913,12 @@ func init() {
 		CustomEvalTargetRunFailedCode,
 		customEvalTargetRunFailedMessage,
 		code.WithAffectStability(!customEvalTargetRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		AgentEvaluatorRunFailedCode,
+		agentEvaluatorRunFailedMessage,
+		code.WithAffectStability(!agentEvaluatorRunFailedNoAffectStability),
 	)
 
 }
