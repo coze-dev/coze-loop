@@ -1,0 +1,26 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/evaluation/experiments/create
+      description: 评测实验创建页 — v1 PromptCreate 通过全局配置注入的新建入口
+
+验收场景:
+
+- v1 PromptCreate 新建模式默认值预填
+  - case: 评测模块中 v1 组件预填 Prompt Key 默认值
+    - pc: 用户已登录并进入评测模块的实验创建页面
+      - ts: 1. 在实验创建流程中找到 Prompt 选择/创建区域 2. 点击创建新 Prompt 的入口 3. 等待 PromptCreate (v1) Modal 弹出
+        - ✅ Prompt Key 输入框显示预填值 "prompt_key_0"
+        - ✅ Prompt 名称输入框显示预填值 "prompt_demo_name_0"
+        - ✅ Prompt 描述为空
+        - ❌ Prompt Key 不应为空
+
+  - case: v1 与 v2 默认值行为一致
+    - pc: 用户已登录
+      - ts: 1. 进入评测模块创建页面，触发 v1 PromptCreate 新建 Modal 2. 记录 Prompt Key 和名称的预填值 3. 返回 Prompt 列表页，点击「创建空白 Prompt」触发 v2 PromptCreateModal 4. 对比两者的预填值
+        - ✅ v1 的 Prompt Key 默认值 "prompt_key_0" 与 v2 一致
+        - ✅ v1 的 Prompt 名称默认值 "prompt_demo_name_0" 与 v2 一致
+        - ❌ 两个版本的默认值不应不同

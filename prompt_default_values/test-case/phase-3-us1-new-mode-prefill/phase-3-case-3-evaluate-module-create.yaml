@@ -1,0 +1,19 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/evaluation/experiments/create
+      description: 评测模块实验创建页 — US-001 评测模块 v1 PromptCreate 入口
+
+验收场景:
+
+- US-001 评测模块新建入口预填默认值
+  - case: 评测模块通过全局配置注入的 v1 PromptCreate 预填默认值
+    - pc: 用户已登录并进入评测模块的实验创建页面
+      - ts: 1. 在实验创建流程中找到 Prompt 相关配置区域 2. 触发创建新 Prompt 的操作（如点击创建按钮） 3. 等待 PromptCreate (v1) 组件的 Modal 弹出 4. 检查表单字段初始值
+        - ✅ Prompt Key 输入框显示 "prompt_key_0"
+        - ✅ Prompt 名称输入框显示 "prompt_demo_name_0"
+        - ✅ Prompt 描述为空
+        - ❌ 表单字段不应为空（v1 组件未传 data，应触发默认值）

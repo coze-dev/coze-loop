@@ -1,0 +1,25 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — 编辑模式验证默认值不干扰
+
+验收场景:
+
+- 编辑模式不受默认值影响
+  - case: 编辑模式显示已有 Prompt Key
+    - pc: 用户已登录，Prompt 列表中存在一个已有 Prompt（如 Prompt Key 为 "existing_key"）
+      - ts: 1. 在 Prompt 列表中找到目标 Prompt 2. 点击该 Prompt 的「编辑」按钮 3. 等待编辑表单 Modal 弹出
+        - ✅ Prompt Key 输入框显示已有值 "existing_key"（而非 "prompt_key_0"）
+        - ✅ Prompt Key 输入框处于禁用状态（不可修改）
+        - ❌ Prompt Key 不应显示默认值 "prompt_key_0"
+
+  - case: 编辑模式显示已有 Prompt 名称
+    - pc: 用户已登录，Prompt 列表中存在一个已有 Prompt（如名称为 "Existing Name"）
+      - ts: 1. 在 Prompt 列表中找到目标 Prompt 2. 点击该 Prompt 的「编辑」按钮 3. 等待编辑表单 Modal 弹出
+        - ✅ Prompt 名称输入框显示已有值 "Existing Name"（而非 "prompt_demo_name_0"）
+        - ✅ Prompt 名称输入框处于可编辑状态
+        - ❌ Prompt 名称不应显示默认值 "prompt_demo_name_0"

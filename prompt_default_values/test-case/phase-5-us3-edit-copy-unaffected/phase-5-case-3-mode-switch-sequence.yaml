@@ -1,0 +1,35 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-003 模式切换操作序列验证
+
+验收场景:
+
+- US-003 编辑→取消→新建操作序列
+  - case: 编辑模式取消后新建模式恢复默认值
+    - pc: 用户已登录，Prompt 列表中存在已有 Prompt
+      - ts: 1. 点击已有 Prompt 的「编辑」按钮 2. 确认编辑 Modal 中 Prompt Key 显示已有值（如 "existing_key"） 3. 点击取消关闭 Modal 4. 点击「创建空白 Prompt」按钮打开新建 Modal
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值，非上次编辑的已有值）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"（默认值）
+        - ❌ 不应残留编辑模式的 "existing_key"
+
+- US-003 复制→取消→新建操作序列
+  - case: 复制模式取消后新建模式恢复默认值且 isCopyPrompt 重置
+    - pc: 用户已登录，Prompt 列表中存在已有 Prompt
+      - ts: 1. 点击已有 Prompt 的「复制」按钮 2. 确认复制 Modal 中 Prompt Key 显示 "existing_key_copy" 3. 点击取消关闭 Modal（触发 isCopyPrompt 重置为 false） 4. 点击「创建空白 Prompt」按钮打开新建 Modal
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值，非 "existing_key_copy"）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"（默认值）
+        - ✅ isCopyPrompt 状态已正确重置（不走复制分支逻辑）
+        - ❌ 不应残留复制模式的 "_copy" 后缀数据
+
+- US-003 新建→取消→复制→取消→新建操作序列
+  - case: 多次模式切换后默认值仍然正确
+    - pc: 用户已登录，Prompt 列表中存在已有 Prompt
+      - ts: 1. 点击「创建空白 Prompt」，确认默认值 "prompt_key_0" 2. 取消关闭 3. 点击已有 Prompt 的「复制」按钮 4. 确认显示 "_copy" 后缀 5. 取消关闭 6. 再次点击「创建空白 Prompt」
+        - ✅ 最终 Prompt Key 显示 "prompt_key_0"
+        - ✅ 最终 Prompt 名称显示 "prompt_demo_name_0"
+        - ❌ 不应有任何模式的残留数据

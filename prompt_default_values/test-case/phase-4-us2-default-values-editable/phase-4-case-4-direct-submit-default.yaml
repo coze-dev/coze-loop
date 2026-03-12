@@ -1,0 +1,20 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-002 不修改默认值直接提交
+
+验收场景:
+
+- US-002 默认值可直接提交
+  - case: 不修改任何默认值直接点击确认提交
+    - pc: 用户已打开新建模式的创建表单 Modal，且 prompt_key_0 未被占用
+      - ts: 1. 确认 Prompt Key 显示 "prompt_key_0" 2. 确认 Prompt 名称显示 "prompt_demo_name_0" 3. 不修改任何字段 4. 点击确认/提交按钮
+        - ✅ 表单验证通过（默认值符合所有校验规则）
+        - ✅ 调用 CreatePrompt API，prompt_key 为 "prompt_key_0"
+        - ✅ 调用 CreatePrompt API，prompt_name 为 "prompt_demo_name_0"
+        - ✅ 创建成功后关闭 Modal
+        - ❌ 不应因默认值格式问题阻止提交

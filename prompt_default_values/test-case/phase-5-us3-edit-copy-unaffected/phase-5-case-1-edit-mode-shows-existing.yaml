@@ -1,0 +1,21 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-003 编辑模式显示已有数据
+
+验收场景:
+
+- US-003 编辑模式显示已有数据而非默认值
+  - case: 编辑已有 Prompt 时 Key 和名称显示原有值
+    - pc: 用户已登录，Prompt 列表中存在 Prompt（如 Key="existing_key"，名称="Existing Name"）
+      - ts: 1. 在 Prompt 列表中找到该 Prompt 2. 点击「编辑」按钮 3. 等待编辑表单 Modal 弹出 4. 检查 Prompt Key 和名称字段的值
+        - ✅ Prompt Key 显示 "existing_key"（已有值）
+        - ✅ Prompt Key 输入框为禁用状态（编辑模式下不可修改 Key）
+        - ✅ Prompt 名称显示 "Existing Name"（已有值）
+        - ✅ Prompt 描述显示已有描述内容
+        - ❌ Prompt Key 不应显示默认值 "prompt_key_0"
+        - ❌ Prompt 名称不应显示默认值 "prompt_demo_name_0"

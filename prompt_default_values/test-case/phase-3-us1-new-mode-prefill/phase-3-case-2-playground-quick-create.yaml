@@ -1,0 +1,18 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/playground
+      description: Playground 页面 — US-001 快速创建入口（空字符串场景）
+
+验收场景:
+
+- US-001 Playground 快速创建预填默认值
+  - case: Playground 快速创建时空字符串 prompt_key 触发默认值
+    - pc: 用户已登录并进入 Playground 页面
+      - ts: 1. 在 Playground 页面找到「快速创建」按钮 2. 点击「快速创建」按钮 3. 等待创建表单 Modal 弹出（此时 data.prompt_key 为空字符串 ""）4. 检查表单字段的初始值
+        - ✅ Prompt Key 输入框显示 "prompt_key_0"（|| 运算符正确处理空字符串 ""）
+        - ✅ Prompt 名称输入框显示 "prompt_demo_name_0"
+        - ❌ Prompt Key 不应显示为空（空字符串不应作为有效值保留）

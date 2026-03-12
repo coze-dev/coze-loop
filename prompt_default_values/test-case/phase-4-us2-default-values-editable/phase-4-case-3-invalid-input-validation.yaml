@@ -1,0 +1,32 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-002 修改后的值校验失败场景
+
+验收场景:
+
+- US-002 修改后的值仍需通过表单验证
+  - case: 输入不合法的 Prompt Key 触发校验错误
+    - pc: 用户已打开新建模式的创建表单 Modal
+      - ts: 1. 清除 Prompt Key 默认值 "prompt_key_0" 2. 输入不合法的值 "123_invalid"（以数字开头） 3. 点击确认/提交按钮
+        - ✅ 表单验证失败
+        - ✅ 显示 Prompt Key 格式错误提示信息
+        - ❌ 不应允许以数字开头的 Key 提交成功
+
+  - case: 清空 Prompt Key 不输入任何值触发必填校验
+    - pc: 用户已打开新建模式的创建表单 Modal
+      - ts: 1. 选中 Prompt Key 输入框 2. 清除默认值 "prompt_key_0" 3. 不输入任何内容 4. 点击确认/提交按钮
+        - ✅ 表单验证失败
+        - ✅ 显示 Prompt Key 必填错误提示
+        - ❌ 不应允许空 Key 提交
+
+  - case: 输入以下划线开头的 Prompt 名称触发校验错误
+    - pc: 用户已打开新建模式的创建表单 Modal
+      - ts: 1. 清除 Prompt 名称默认值 "prompt_demo_name_0" 2. 输入 "_invalid_name"（以下划线开头） 3. 点击确认/提交按钮
+        - ✅ 表单验证失败
+        - ✅ 显示 Prompt 名称格式错误提示
+        - ❌ 不应允许以 _.— 开头的名称提交

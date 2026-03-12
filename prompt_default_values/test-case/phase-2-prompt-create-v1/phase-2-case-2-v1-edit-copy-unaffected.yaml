@@ -1,0 +1,27 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/evaluation/experiments/create
+      description: 评测实验创建页 — v1 PromptCreate 编辑/复制模式验证
+
+验收场景:
+
+- v1 PromptCreate 编辑模式不受默认值影响
+  - case: v1 编辑模式显示已有数据
+    - pc: 用户已登录，评测模块中存在已创建的 Prompt
+      - ts: 1. 在评测模块中以编辑模式打开 PromptCreate (v1) 2. 确认 data 中包含有效的 prompt_key 和 display_name
+        - ✅ Prompt Key 显示已有值（如 "existing_key"），非默认值 "prompt_key_0"
+        - ✅ Prompt Key 输入框为禁用状态
+        - ✅ Prompt 名称显示已有值，非默认值 "prompt_demo_name_0"
+        - ❌ 编辑模式不应显示默认值
+
+- v1 PromptCreate 复制模式不受默认值影响
+  - case: v1 复制模式显示带 _copy 后缀的值
+    - pc: 用户已登录，评测模块中存在已创建的 Prompt
+      - ts: 1. 在评测模块中以复制模式打开 PromptCreate (v1) 2. 确认 isCopy=true 且 data 包含有效数据
+        - ✅ Prompt Key 显示已有值加 "_copy" 后缀
+        - ✅ Prompt 名称显示已有值加 "_copy" 后缀
+        - ❌ 复制模式不应显示默认值 "prompt_key_0" 或 "prompt_demo_name_0"

@@ -1,0 +1,32 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — 验证默认值符合表单校验规则
+
+验收场景:
+
+- 默认值符合表单验证规则
+  - case: prompt_key_0 通过 Prompt Key 格式校验
+    - pc: 用户已打开新建模式的创建表单 Modal
+      - ts: 1. 确认 Prompt Key 输入框显示 "prompt_key_0" 2. 不修改任何内容，直接观察是否有校验错误提示
+        - ✅ 无格式校验错误提示（满足正则 ^[a-zA-Z][a-zA-Z0-9_.]*$）
+        - ✅ 无长度校验错误提示（长度 14，远小于 100）
+        - ❌ 不应出现 "Prompt Key 格式错误" 等提示
+
+  - case: prompt_demo_name_0 通过 Prompt 名称格式校验
+    - pc: 用户已打开新建模式的创建表单 Modal
+      - ts: 1. 确认 Prompt 名称输入框显示 "prompt_demo_name_0" 2. 不修改任何内容，直接观察是否有校验错误提示
+        - ✅ 无格式校验错误提示（满足正则 ^[\u4e00-\u9fa5a-zA-Z0-9_.-]+$）
+        - ✅ 无 "不能以 _.— 开头" 的校验提示（以字母 p 开头）
+        - ❌ 不应出现任何校验错误信息
+
+  - case: 默认值可直接提交
+    - pc: 用户已打开新建模式的创建表单 Modal，且 prompt_key_0 未被占用
+      - ts: 1. 确认 Prompt Key 显示 "prompt_key_0"，Prompt 名称显示 "prompt_demo_name_0" 2. 不修改任何字段 3. 点击确认/提交按钮
+        - ✅ 表单验证通过，无任何校验错误
+        - ✅ 成功调用 CreatePrompt API
+        - ❌ 不应因默认值格式问题导致提交失败

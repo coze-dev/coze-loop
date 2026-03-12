@@ -1,0 +1,20 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-001 端到端验证（列表页创建入口）
+
+验收场景:
+
+- US-001 列表页新建入口预填默认值
+  - case: 列表页点击创建空白 Prompt 后表单预填默认值
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 找到页面上的「创建空白 Prompt」按钮 2. 点击该按钮 3. 等待创建表单 Modal 弹出 4. 检查所有表单字段的初始值
+        - ✅ Prompt Key 输入框显示 "prompt_key_0"
+        - ✅ Prompt 名称输入框显示 "prompt_demo_name_0"
+        - ✅ Prompt 描述输入框为空
+        - ✅ 所有预填字段处于可编辑状态
+        - ❌ 任何预填字段不应为空
