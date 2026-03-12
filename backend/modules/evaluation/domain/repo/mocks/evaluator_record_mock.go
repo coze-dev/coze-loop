@@ -42,18 +42,18 @@ func (m *MockIEvaluatorRecordRepo) EXPECT() *MockIEvaluatorRecordRepoMockRecorde
 }
 
 // BatchGetEvaluatorRecord mocks base method.
-func (m *MockIEvaluatorRecordRepo) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error) {
+func (m *MockIEvaluatorRecordRepo) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecord", ctx, evaluatorRecordIDs, includeDeleted)
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecord", ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
 	ret0, _ := ret[0].([]*entity.EvaluatorRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetEvaluatorRecord indicates an expected call of BatchGetEvaluatorRecord.
-func (mr *MockIEvaluatorRecordRepoMockRecorder) BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted any) *gomock.Call {
+func (mr *MockIEvaluatorRecordRepoMockRecorder) BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).BatchGetEvaluatorRecord), ctx, evaluatorRecordIDs, includeDeleted)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).BatchGetEvaluatorRecord), ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
 }
 
 // CorrectEvaluatorRecord mocks base method.
@@ -97,4 +97,18 @@ func (m *MockIEvaluatorRecordRepo) GetEvaluatorRecord(ctx context.Context, evalu
 func (mr *MockIEvaluatorRecordRepoMockRecorder) GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).GetEvaluatorRecord), ctx, evaluatorRecordID, includeDeleted)
+}
+
+// UpdateEvaluatorRecordResult mocks base method.
+func (m *MockIEvaluatorRecordRepo) UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status entity.EvaluatorRunStatus, outputData *entity.EvaluatorOutputData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEvaluatorRecordResult", ctx, recordID, status, outputData)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEvaluatorRecordResult indicates an expected call of UpdateEvaluatorRecordResult.
+func (mr *MockIEvaluatorRecordRepoMockRecorder) UpdateEvaluatorRecordResult(ctx, recordID, status, outputData any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).UpdateEvaluatorRecordResult), ctx, recordID, status, outputData)
 }

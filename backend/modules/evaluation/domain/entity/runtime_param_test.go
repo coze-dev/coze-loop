@@ -25,7 +25,7 @@ func TestPromptRuntimeParam_GetJSONDemo(t *testing.T) {
 func TestPromptRuntimeParam_GetJSONValue(t *testing.T) {
 	param := &PromptRuntimeParam{
 		ModelConfig: &ModelConfig{
-			ModelID:     123,
+			ModelID:     gptr.Of(int64(123)),
 			ModelName:   "test_model",
 			MaxTokens:   gptr.Of(int32(100)),
 			Temperature: gptr.Of(0.7),
@@ -92,7 +92,7 @@ func TestPromptRuntimeParam_ParseFromJSON(t *testing.T) {
 
 func TestNewPromptRuntimeParam(t *testing.T) {
 	modelConfig := &ModelConfig{
-		ModelID:   123,
+		ModelID:   gptr.Of(int64(123)),
 		ModelName: "test_model",
 	}
 

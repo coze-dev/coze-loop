@@ -63,6 +63,7 @@ enum InvokeEvalTargetStatus {
 // 新增
 struct InvokeEvalTargetOutput {
     1: optional Content actual_output
+    2: optional map<string, Content> ext_output // 额外输出，用户可自定义评测对象的输出字段和结构
 
     20: optional map<string, string> ext     // 扩展字段，用户如果想返回一些额外信息可以塞在这个字段
 }
@@ -72,15 +73,27 @@ struct Content {
     10: optional string text // 当content_type=text，则从此字段中取值
     11: optional Image image    // 当content_type=image，则从此字段中取图片信息
     12: optional list<Content> multi_part   // 当content_type=multi_part，则从此字段遍历获取多模态的值
+    13: optional Audio audio
+    14: optional Video video
 }
 
 typedef string ContentType(ts.enum="true")
 const ContentType ContentType_Text = "text" // 文本类型：string、integer、float、boolean、object、array都属于文本类型
 const ContentType ContentType_Image = "image"
+const ContentType ContentType_Audio = "audio"
+const ContentType ContentType_Video = "video"
 const ContentType ContentType_MultiPart = "multi_part"  // 多模态，例如图+文
 
 struct Image {
     1: optional string url
+}
+
+struct Video {
+    1: optional string url
+}
+
+struct Audio {
+  1: optional string url
 }
 
 struct InvokeEvalTargetUsage {
@@ -127,6 +140,8 @@ struct InvokeEvaluatorOutputData {
     1: optional InvokeEvaluatorResult evaluator_result
     2: optional InvokeEvaluatorUsage evaluator_usage
     3: optional InvokeEvaluatorRunError evaluator_run_error
+
+    12: optional EvaluatorExtraOutputContent extra_output
 }
 
 // the result data structure for custom evaluator
@@ -145,6 +160,16 @@ struct InvokeEvaluatorUsage {
 struct InvokeEvaluatorRunError {
     1: optional i32 code
     2: optional string message
+}
+
+typedef string EvaluatorExtraOutputType(ts.enum="true")
+const EvaluatorExtraOutputType EvaluatorExtraOutputType_HTML = "html"
+const EvaluatorExtraOutputType EvaluatorExtraOutputType_Markdown = "markdown"
+
+struct EvaluatorExtraOutputContent {
+    1: optional EvaluatorExtraOutputType output_type
+    2: optional string uri
+    3: optional string url
 }
 
 // invoke custom evaluator request

@@ -209,21 +209,6 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) CreateDatasetWithImport(ctx, param
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDatasetWithImport", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).CreateDatasetWithImport), ctx, param)
 }
 
-// ParseImportSourceFile mocks base method.
-func (m *MockIDatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseImportSourceFile", ctx, param)
-	ret0, _ := ret[0].(*entity.ParseImportSourceFileResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ParseImportSourceFile indicates an expected call of ParseImportSourceFile.
-func (mr *MockIDatasetRPCAdapterMockRecorder) ParseImportSourceFile(ctx, param any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ParseImportSourceFile), ctx, param)
-}
-
 // DeleteDataset mocks base method.
 func (m *MockIDatasetRPCAdapter) DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) error {
 	m.ctrl.T.Helper()
@@ -285,14 +270,15 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) GetDatasetVersion(ctx, spaceID, ve
 }
 
 // ListDatasetItems mocks base method.
-func (m *MockIDatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) ([]*entity.EvaluationSetItem, *int64, *string, error) {
+func (m *MockIDatasetRPCAdapter) ListDatasetItems(ctx context.Context, param *rpc.ListDatasetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDatasetItems", ctx, param)
 	ret0, _ := ret[0].([]*entity.EvaluationSetItem)
 	ret1, _ := ret[1].(*int64)
-	ret2, _ := ret[2].(*string)
-	ret3, _ := ret[3].(error)
-	return ret0, ret1, ret2, ret3
+	ret2, _ := ret[2].(*int64)
+	ret3, _ := ret[3].(*string)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
 }
 
 // ListDatasetItems indicates an expected call of ListDatasetItems.
@@ -302,14 +288,15 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasetItems(ctx, param any) *
 }
 
 // ListDatasetItemsByVersion mocks base method.
-func (m *MockIDatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) ([]*entity.EvaluationSetItem, *int64, *string, error) {
+func (m *MockIDatasetRPCAdapter) ListDatasetItemsByVersion(ctx context.Context, param *rpc.ListDatasetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListDatasetItemsByVersion", ctx, param)
 	ret0, _ := ret[0].([]*entity.EvaluationSetItem)
 	ret1, _ := ret[1].(*int64)
-	ret2, _ := ret[2].(*string)
-	ret3, _ := ret[3].(error)
-	return ret0, ret1, ret2, ret3
+	ret2, _ := ret[2].(*int64)
+	ret3, _ := ret[3].(*string)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
 }
 
 // ListDatasetItemsByVersion indicates an expected call of ListDatasetItemsByVersion.
@@ -350,6 +337,21 @@ func (m *MockIDatasetRPCAdapter) ListDatasets(ctx context.Context, param *rpc.Li
 func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasets(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ListDatasets), ctx, param)
+}
+
+// ParseImportSourceFile mocks base method.
+func (m *MockIDatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ParseImportSourceFile", ctx, param)
+	ret0, _ := ret[0].(*entity.ParseImportSourceFileResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ParseImportSourceFile indicates an expected call of ParseImportSourceFile.
+func (mr *MockIDatasetRPCAdapterMockRecorder) ParseImportSourceFile(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ParseImportSourceFile), ctx, param)
 }
 
 // QueryItemSnapshotMappings mocks base method.

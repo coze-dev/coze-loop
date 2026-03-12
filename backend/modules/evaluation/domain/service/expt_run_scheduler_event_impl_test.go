@@ -1228,3 +1228,40 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 		})
 	}
 }
+
+func TestExptSchedulerImpl_Schedule_ContextCancelled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := svcmocks.NewMockIExptManager(ctrl)
+	mockFactory := svcmocks.NewMockSchedulerModeFactory(ctrl)
+	mockConfiger := configmocks.NewMockIConfiger(ctrl)
+	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
+
+	svc := &ExptSchedulerImpl{
+		Manager:              mockManager,
+		schedulerModeFactory: mockFactory,
+		Configer:             mockConfiger,
+		ResultSvc:            mockResultSvc,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	event := &entity.ExptScheduleEvent{ExptID: 1, SpaceID: 1, ExptRunMode: 1}
+	exptDetail := &entity.Experiment{ID: 1}
+	mockMode := entitymocks.NewMockExptSchedulerMode(ctrl)
+
+	mockManager.EXPECT().GetDetail(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(exptDetail, nil)
+	mockFactory.EXPECT().NewSchedulerMode(gomock.Any()).Return(mockMode, nil)
+	mockMode.EXPECT().ExptStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mockMode.EXPECT().ScheduleStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mockMode.EXPECT().ScanEvalItems(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil, nil, nil)
+	mockConfiger.EXPECT().GetConsumerConf(gomock.Any()).Return(&entity.ExptConsumerConf{}).AnyTimes()
+	mockMode.EXPECT().ScheduleEnd(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mockMode.EXPECT().ExptEnd(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil)
+
+	err := svc.schedule(ctx, event)
+	assert.Error(t, err)
+	assert.True(t, errors.Is(err, context.DeadlineExceeded))
+}

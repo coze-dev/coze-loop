@@ -12737,6 +12737,20 @@ func (p *ListDatasetItemsResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField102(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -12822,6 +12836,20 @@ func (p *ListDatasetItemsResponse) FastReadField101(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListDatasetItemsResponse) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return offset, nil
+}
+
 func (p *ListDatasetItemsResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -12842,6 +12870,7 @@ func (p *ListDatasetItemsResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWr
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField101(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -12856,6 +12885,7 @@ func (p *ListDatasetItemsResponse) BLength() int {
 		l += p.field1Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -12896,6 +12926,15 @@ func (p *ListDatasetItemsResponse) fastWriteField101(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *ListDatasetItemsResponse) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilterTotal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 102)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.FilterTotal)
+	}
+	return offset
+}
+
 func (p *ListDatasetItemsResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -12928,6 +12967,15 @@ func (p *ListDatasetItemsResponse) field100Length() int {
 func (p *ListDatasetItemsResponse) field101Length() int {
 	l := 0
 	if p.IsSetTotal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListDatasetItemsResponse) field102Length() int {
+	l := 0
+	if p.IsSetFilterTotal() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -12973,6 +13021,11 @@ func (p *ListDatasetItemsResponse) DeepCopy(s interface{}) error {
 	if src.Total != nil {
 		tmp := *src.Total
 		p.Total = &tmp
+	}
+
+	if src.FilterTotal != nil {
+		tmp := *src.FilterTotal
+		p.FilterTotal = &tmp
 	}
 
 	var _baseResp *base.BaseResp
@@ -13572,6 +13625,20 @@ func (p *ListDatasetItemsByVersionResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 102:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField102(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -13657,6 +13724,20 @@ func (p *ListDatasetItemsByVersionResponse) FastReadField101(buf []byte) (int, e
 	return offset, nil
 }
 
+func (p *ListDatasetItemsByVersionResponse) FastReadField102(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FilterTotal = _field
+	return offset, nil
+}
+
 func (p *ListDatasetItemsByVersionResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -13677,6 +13758,7 @@ func (p *ListDatasetItemsByVersionResponse) FastWriteNocopy(buf []byte, w thrift
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField101(buf[offset:], w)
+		offset += p.fastWriteField102(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -13691,6 +13773,7 @@ func (p *ListDatasetItemsByVersionResponse) BLength() int {
 		l += p.field1Length()
 		l += p.field100Length()
 		l += p.field101Length()
+		l += p.field102Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -13731,6 +13814,15 @@ func (p *ListDatasetItemsByVersionResponse) fastWriteField101(buf []byte, w thri
 	return offset
 }
 
+func (p *ListDatasetItemsByVersionResponse) fastWriteField102(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFilterTotal() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 102)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.FilterTotal)
+	}
+	return offset
+}
+
 func (p *ListDatasetItemsByVersionResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -13763,6 +13855,15 @@ func (p *ListDatasetItemsByVersionResponse) field100Length() int {
 func (p *ListDatasetItemsByVersionResponse) field101Length() int {
 	l := 0
 	if p.IsSetTotal() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListDatasetItemsByVersionResponse) field102Length() int {
+	l := 0
+	if p.IsSetFilterTotal() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -13808,6 +13909,11 @@ func (p *ListDatasetItemsByVersionResponse) DeepCopy(s interface{}) error {
 	if src.Total != nil {
 		tmp := *src.Total
 		p.Total = &tmp
+	}
+
+	if src.FilterTotal != nil {
+		tmp := *src.FilterTotal
+		p.FilterTotal = &tmp
 	}
 
 	var _baseResp *base.BaseResp

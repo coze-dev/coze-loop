@@ -11,9 +11,12 @@ import (
 type Literal string
 
 const (
-	TextLiteral     Literal = "text"
-	ImageLiteral    Literal = "image"
-	ImageUrlLiteral Literal = "image_url"
+	TextLiteral             Literal = "text"
+	ImageLiteral            Literal = "image"
+	ImageUrlLiteral         Literal = "image_url"
+	ReasoningLiteral        Literal = "reasoning"
+	ToolCallLiteral         Literal = "tool_call"
+	ToolCallResponseLiteral Literal = "tool_call_response"
 )
 
 type ModelMessagePartType string
@@ -67,15 +70,18 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 		modelMsg["reasoning_content"] = c
 	}
 
-	// contents
+	// contents or parts
 	var contents []interface{}
-	if c, ok := msg["contents"].([]interface{}); ok && len(c) > 0 {
-		contents = c
-	} else if c, ok := msg["content"].([]interface{}); ok && len(c) > 0 {
-		contents = c
+	partsKey := []string{"contents", "content", "parts"}
+	for _, key := range partsKey {
+		if parts, ok := msg[key].([]interface{}); ok && len(parts) > 0 {
+			contents = parts
+			break
+		}
 	}
 	if len(contents) > 0 {
 		parts := make([]interface{}, 0, len(contents))
+		toolCalls := make([]interface{}, 0)
 		for _, content := range contents {
 			if mc, ok := content.(map[string]interface{}); ok {
 				mcContent, ok := mc["message_content"].(map[string]interface{})
@@ -84,6 +90,9 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 				}
 				typ, _ := mcContent["type"]
 				text, _ := mcContent["text"]
+				if text == nil {
+					text, _ = mcContent["content"]
+				}
 				image, _ := mcContent["image_url"]
 				part := map[string]interface{}{}
 				switch typ {
@@ -97,10 +106,41 @@ func convertModelMsg(msg map[string]interface{}) map[string]interface{} {
 						url, _ := imageMap["url"]
 						part["image_url"] = map[string]interface{}{"url": url}
 					}
+				case string(ReasoningLiteral):
+					modelMsg["reasoning_content"] = text
+					part = nil
+				case string(ToolCallLiteral):
+					toolCallId, _ := mcContent["id"]
+					toolCallName, _ := mcContent["name"]
+					toolCallArguments, _ := mcContent["arguments"]
+					modelCall := map[string]interface{}{
+						"type": "function",
+						"id":   toolCallId,
+						"function": map[string]interface{}{
+							"name":      toolCallName,
+							"arguments": toolCallArguments,
+						},
+					}
+					toolCalls = append(toolCalls, modelCall)
+					part = nil
+				case string(ToolCallResponseLiteral):
+					toolCallId, _ := mcContent["id"]
+					toolCallResult, _ := mcContent["response"]
+					if toolCallResult == nil {
+						toolCallResult, _ = mcContent["result"]
+					}
+					modelMsg["content"] = toolCallResult
+					modelMsg["tool_call_id"] = toolCallId
+					part = nil
 				default:
 				}
-				parts = append(parts, part)
+				if part != nil {
+					parts = append(parts, part)
+				}
 			}
+		}
+		if len(toolCalls) > 0 {
+			modelMsg["tool_calls"] = toolCalls
 		}
 		if len(parts) > 0 {
 			modelMsg["parts"] = parts

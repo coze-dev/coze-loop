@@ -390,6 +390,42 @@ func TestConvertContent2Ob(t *testing.T) {
 			},
 		},
 		{
+			name: "audio content",
+			content: &commonentity.Content{
+				ContentType: gptr.Of(commonentity.ContentTypeAudio),
+				Audio: &commonentity.Audio{
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
+				},
+			},
+			expected: &tracespec.ModelMessagePart{
+				Type: tracespec.ModelMessagePartType("audio_url"),
+				Text: "",
+				AudioURL: &tracespec.ModelAudioURL{
+					Name: "test.jpg",
+					URL:  "https://example.com/test.jpg",
+				},
+			},
+		},
+		{
+			name: "video content",
+			content: &commonentity.Content{
+				ContentType: gptr.Of(commonentity.ContentTypeVideo),
+				Video: &commonentity.Video{
+					Name: gptr.Of("test.jpg"),
+					URL:  gptr.Of("https://example.com/test.jpg"),
+				},
+			},
+			expected: &tracespec.ModelMessagePart{
+				Type: tracespec.ModelMessagePartType("video_url"),
+				Text: "",
+				VideoURL: &tracespec.ModelVideoURL{
+					Name: "test.jpg",
+					URL:  "https://example.com/test.jpg",
+				},
+			},
+		},
+		{
 			name: "multipart variable content",
 			content: &commonentity.Content{
 				ContentType: gptr.Of(commonentity.ContentTypeMultipartVariable),
@@ -626,6 +662,48 @@ func TestContentToSpanParts(t *testing.T) {
 				{
 					Type: tracespec.ModelMessagePartTypeImage,
 					ImageURL: &tracespec.ModelImageURL{
+						URL:  "https://example.com/test.jpg",
+						Name: "test.jpg",
+					},
+				},
+			},
+		},
+		{
+			name: "audio part",
+			parts: []*commonentity.Content{
+				{
+					ContentType: gptr.Of(commonentity.ContentTypeAudio),
+					Audio: &commonentity.Audio{
+						Name: gptr.Of("test.jpg"),
+						URL:  gptr.Of("https://example.com/test.jpg"),
+					},
+				},
+			},
+			expected: []*tracespec.ModelMessagePart{
+				{
+					Type: tracespec.ModelMessagePartTypeAudio,
+					AudioURL: &tracespec.ModelAudioURL{
+						URL:  "https://example.com/test.jpg",
+						Name: "test.jpg",
+					},
+				},
+			},
+		},
+		{
+			name: "video part",
+			parts: []*commonentity.Content{
+				{
+					ContentType: gptr.Of(commonentity.ContentTypeVideo),
+					Video: &commonentity.Video{
+						Name: gptr.Of("test.jpg"),
+						URL:  gptr.Of("https://example.com/test.jpg"),
+					},
+				},
+			},
+			expected: []*tracespec.ModelMessagePart{
+				{
+					Type: tracespec.ModelMessagePartTypeVideo,
+					VideoURL: &tracespec.ModelVideoURL{
 						URL:  "https://example.com/test.jpg",
 						Name: "test.jpg",
 					},

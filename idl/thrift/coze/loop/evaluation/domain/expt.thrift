@@ -62,6 +62,7 @@ struct Experiment {
     41: optional i64 max_alive_time
     42: optional SourceType source_type
     43: optional string source_id
+    45: optional i32 item_retry_num
 
     51: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list // 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑
 
@@ -78,7 +79,6 @@ struct ExptTemplateMeta {
     3: optional string name
     4: optional string desc
     5: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
-
 }
 
 // 实验三元组配置
@@ -99,6 +99,7 @@ struct ExptFieldMapping {
     2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
     3: optional common.RuntimeParam target_runtime_param
     4: optional i32 item_concur_num
+    5: optional i32 item_retry_num
 }
 
 // 实验评估器得分加权配置
@@ -229,6 +230,9 @@ struct ColumnEvalTarget {
     1: optional string name
     2: optional string description
     3: optional string label
+    4: optional common.ContentType content_type
+    5: optional string text_schema
+    6: optional dataset.SchemaKey schema_key
 }
 
 struct ColumnEvalSetField {
@@ -567,9 +571,11 @@ struct ExptResultExportRecord {
     5: optional common.BaseInfo base_info
     6: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
     7: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
+    // deprecated, cause not match snake name
     8: optional string URL
     9: optional bool expired
     10: optional RunError error
+    11: optional string url
 }
 
 // 分析任务状态

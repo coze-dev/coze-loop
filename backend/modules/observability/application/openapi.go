@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -66,6 +67,7 @@ func NewOpenAPIApplication(
 	traceConfig config.ITraceConfig,
 	metrics metrics.ITraceMetrics,
 	collector collector.ICollectorProvider,
+	timeRange time_range.ITimeRangeProvider,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -77,6 +79,7 @@ func NewOpenAPIApplication(
 		traceConfig:  traceConfig,
 		metrics:      metrics,
 		collector:    collector,
+		timeRange:    timeRange,
 	}, nil
 }
 
@@ -90,6 +93,7 @@ type OpenAPIApplication struct {
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
 	collector    collector.ICollectorProvider
+	timeRange    time_range.ITimeRangeProvider
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -499,8 +503,12 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	errCode := 0
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
@@ -535,7 +543,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, req.GetNeedOriginalTags()),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -554,17 +562,7 @@ func (o *OpenAPIApplication) validateSearchTraceOApiReq(ctx context.Context, req
 	} else if req.Limit > MaxListSpansLimit || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
 	}
-	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
-		EarliestDays: 365,
-	}
-	newStartTime, newEndTime, err := v.CorrectDate()
-	if err != nil {
-		return err
-	}
-	req.SetStartTime(newStartTime)
-	req.SetEndTime(newEndTime)
+
 	return nil
 }
 
@@ -574,14 +572,35 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		platformType = loop_span.PlatformCozeLoop
 	}
 
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+
+	if startTime == 0 && endTime == 0 {
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.WorkspaceID, 10), req.GetLogid(), req.GetTraceID(), 1000*60*60*24)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
+
+	v := utils.DateValidator{
+		Start:        startTime,
+		End:          endTime,
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
 	ret := &service.SearchTraceOApiReq{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
 		LogID:                 req.GetLogid(),
-		StartTime:             req.GetStartTime(),
-		EndTime:               req.GetEndTime(),
+		StartTime:             newStartTime,
+		EndTime:               newEndTime,
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
 		WithDetail:            true,
@@ -602,8 +621,12 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 	errCode := 0
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
@@ -641,7 +664,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 
 	return &openapi.SearchTraceTreeOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, false),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -713,8 +736,12 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	resp := openapi.NewListSpansOApiResponse()
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 	if err = o.validateListSpansOApi(ctx, req); err != nil {
@@ -746,7 +773,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	spansSize = loop_span.SizeofSpans(sResp.Spans)
 
 	resp.Data = &openapi.ListSpansOApiData{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, req.GetNeedOriginalTags()),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}
@@ -824,8 +851,12 @@ func (o *OpenAPIApplication) ListPreSpanOApi(ctx context.Context, req *openapi.L
 	st := time.Now()
 	errCode := 0
 	defer func() {
-		o.metrics.EmitTraceOapi("ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
-		o.collector.CollectTraceOpenAPIEvent(ctx, "ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		src := ""
+		if req.Extra != nil {
+			src = req.Extra.GetSrc()
+		}
+		o.metrics.EmitTraceOapi("ListPreSpanOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListPreSpanOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListPreSpanOApiReq(ctx, req); err != nil {
@@ -856,7 +887,7 @@ func (o *OpenAPIApplication) ListPreSpanOApi(ctx context.Context, req *openapi.L
 		return nil, err
 	}
 	return &openapi.ListPreSpanOApiResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, false),
 	}, nil
 }
 
@@ -919,8 +950,8 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	st := time.Now()
 	errCode := 0
 	defer func() {
-		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
-		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", "", 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTracesOApi", req.WorkspaceID, "", "", "", 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListTracesOApiReq(ctx, req); err != nil {

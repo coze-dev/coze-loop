@@ -42,13 +42,13 @@ func (m *MockICollectorProvider) EXPECT() *MockICollectorProviderMockRecorder {
 }
 
 // CollectTraceOpenAPIEvent mocks base method.
-func (m *MockICollectorProvider) CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (m *MockICollectorProvider) CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType, src string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CollectTraceOpenAPIEvent", ctx, method, workspaceId, platformType, spanListType, spanSize, errorCode, start, isError)
+	m.ctrl.Call(m, "CollectTraceOpenAPIEvent", ctx, method, workspaceId, platformType, spanListType, src, spanSize, errorCode, start, isError)
 }
 
 // CollectTraceOpenAPIEvent indicates an expected call of CollectTraceOpenAPIEvent.
-func (mr *MockICollectorProviderMockRecorder) CollectTraceOpenAPIEvent(ctx, method, workspaceId, platformType, spanListType, spanSize, errorCode, start, isError any) *gomock.Call {
+func (mr *MockICollectorProviderMockRecorder) CollectTraceOpenAPIEvent(ctx, method, workspaceId, platformType, spanListType, src, spanSize, errorCode, start, isError any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CollectTraceOpenAPIEvent", reflect.TypeOf((*MockICollectorProvider)(nil).CollectTraceOpenAPIEvent), ctx, method, workspaceId, platformType, spanListType, spanSize, errorCode, start, isError)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CollectTraceOpenAPIEvent", reflect.TypeOf((*MockICollectorProvider)(nil).CollectTraceOpenAPIEvent), ctx, method, workspaceId, platformType, spanListType, src, spanSize, errorCode, start, isError)
 }

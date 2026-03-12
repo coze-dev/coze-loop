@@ -59,7 +59,7 @@ func (p PromptRPCAdapter) ExecutePrompt(ctx context.Context, spaceID int64, para
 		if runtimeParam != nil && runtimeParam.ModelConfig != nil {
 			req.OverridePromptParams = &prompt.OverridePromptParams{
 				ModelConfig: &prompt.ModelConfig{
-					ModelID:     gptr.Of(runtimeParam.ModelConfig.ModelID),
+					ModelID:     runtimeParam.ModelConfig.ModelID,
 					MaxTokens:   runtimeParam.ModelConfig.MaxTokens,
 					Temperature: runtimeParam.ModelConfig.Temperature,
 					TopP:        runtimeParam.ModelConfig.TopP,

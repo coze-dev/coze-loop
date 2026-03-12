@@ -5,6 +5,8 @@ package trace
 import (
 	"testing"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -498,7 +500,7 @@ func TestConvertDatasetSchemaDTO2DO(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertDatasetSchemaDTO2DO(tt.schema)
+			got := ConvertDatasetSchemaDTO2DO(tt.schema)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -980,7 +982,7 @@ func TestConvertContentTypeDTO2DO(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertContentTypeDTO2DO(tt.contentType)
+			got := evaluationset.ConvertContentTypeDTO2DO(tt.contentType)
 			assert.Equal(t, tt.want, got)
 		})
 	}

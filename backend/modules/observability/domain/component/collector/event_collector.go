@@ -9,5 +9,5 @@ import (
 
 //go:generate mockgen -destination=mocks/event_collector.go -package=mocks . ICollectorProvider
 type ICollectorProvider interface {
-	CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool)
+	CollectTraceOpenAPIEvent(ctx context.Context, method string, workspaceId int64, platformType, spanListType, src string, spanSize int64, errorCode int, start time.Time, isError bool)
 }

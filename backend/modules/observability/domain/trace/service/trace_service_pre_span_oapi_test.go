@@ -8,10 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -22,7 +24,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_Success(t *testing.T) {
 
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	// 预先从Redis取到两个pre响应顺序
 	repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(
@@ -87,7 +89,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_Success(t *testing.T) {
 	resp, err := r.ListPreSpanOApi(context.Background(), req)
 	assert.NoError(t, err)
 	if assert.NotNil(t, resp) {
-		// 顺序应按 respIDByOrder：resp-2 在前、resp-1 在后
+		// 顺序应按 RespIDByOrder：resp-2 在前、resp-1 在后
 		got := make([]string, 0, len(resp.Spans))
 		for _, s := range resp.Spans {
 			got = append(got, s.SpanID)
@@ -102,7 +104,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_GetPreSpanIDsError(t *testing.T) {
 
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return(nil, nil, assert.AnError)
 
@@ -133,7 +135,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_BatchGetError(t *testing.T) {
 
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	// GetPreSpanIDs 正常
 	repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return([]string{"a"}, []string{"r"}, nil)
@@ -168,7 +170,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_AuthFail_NoWorkspaceAccess(t *testing.
 
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	// GetPreSpanIDs 正常
 	repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return([]string{"pre-1"}, []string{"resp-1"}, nil)
@@ -223,7 +225,7 @@ func TestTraceServiceImpl_ListPreSpanOApi_AuthSuccess_SameSpace(t *testing.T) {
 
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	// GetPreSpanIDs 正常
 	repoMock.EXPECT().GetPreSpanIDs(gomock.Any(), gomock.Any()).Return([]string{"pre-1"}, []string{"resp-1"}, nil)

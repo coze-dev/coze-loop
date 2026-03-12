@@ -266,10 +266,12 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	for {
 		page := entity.NewPage(pageNum, pageSize)
 		param := &entity.MGetExperimentResultParam{
-			SpaceID:    spaceID,
-			ExptIDs:    []int64{exptID},
-			BaseExptID: ptr.Of(exptID),
-			Page:       page,
+			SpaceID:           spaceID,
+			ExptIDs:           []int64{exptID},
+			BaseExptID:        ptr.Of(exptID),
+			Page:              page,
+			ExportFullContent: true, // 导出时从 TOS 加载完整字段，避免 RDS 剪裁内容
+			FullTrajectory:    true, // 导出时保留完整 trajectory
 		}
 		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
 		if err != nil {
@@ -664,7 +666,19 @@ func formatMultiPartData(data *entity.Content) string {
 				url = fmt.Sprintf("<ref_image_url:%s>\n", *content.Image.URL)
 			}
 			builder.WriteString(url)
-		case entity.ContentTypeAudio, entity.ContentTypeMultipart:
+		case entity.ContentTypeAudio:
+			url := ""
+			if content.Audio != nil && content.Audio.URL != nil {
+				url = fmt.Sprintf("<ref_audio_url:%s>\n", *content.Audio.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeVideo:
+			url := ""
+			if content.Video != nil && content.Video.URL != nil {
+				url = fmt.Sprintf("<ref_video_url:%s>\n", *content.Video.URL)
+			}
+			builder.WriteString(url)
+		case entity.ContentTypeMultipart:
 			continue
 		default:
 			continue

@@ -4859,6 +4859,7 @@ type FieldData struct {
 	Key     *string         `thrift:"key,1,optional" frugal:"1,optional,string" form:"key" json:"key,omitempty" query:"key"`
 	Name    *string         `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
 	Content *common.Content `thrift:"content,3,optional" frugal:"3,optional,common.Content" form:"content" json:"content,omitempty" query:"content"`
+	TraceID *string         `thrift:"trace_id,4,optional" frugal:"4,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
 }
 
 func NewFieldData() *FieldData {
@@ -4903,6 +4904,18 @@ func (p *FieldData) GetContent() (v *common.Content) {
 	}
 	return p.Content
 }
+
+var FieldData_TraceID_DEFAULT string
+
+func (p *FieldData) GetTraceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceID() {
+		return FieldData_TraceID_DEFAULT
+	}
+	return *p.TraceID
+}
 func (p *FieldData) SetKey(val *string) {
 	p.Key = val
 }
@@ -4912,11 +4925,15 @@ func (p *FieldData) SetName(val *string) {
 func (p *FieldData) SetContent(val *common.Content) {
 	p.Content = val
 }
+func (p *FieldData) SetTraceID(val *string) {
+	p.TraceID = val
+}
 
 var fieldIDToName_FieldData = map[int16]string{
 	1: "key",
 	2: "name",
 	3: "content",
+	4: "trace_id",
 }
 
 func (p *FieldData) IsSetKey() bool {
@@ -4929,6 +4946,10 @@ func (p *FieldData) IsSetName() bool {
 
 func (p *FieldData) IsSetContent() bool {
 	return p.Content != nil
+}
+
+func (p *FieldData) IsSetTraceID() bool {
+	return p.TraceID != nil
 }
 
 func (p *FieldData) Read(iprot thrift.TProtocol) (err error) {
@@ -4968,6 +4989,14 @@ func (p *FieldData) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5032,6 +5061,17 @@ func (p *FieldData) ReadField3(iprot thrift.TProtocol) error {
 	p.Content = _field
 	return nil
 }
+func (p *FieldData) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TraceID = _field
+	return nil
+}
 
 func (p *FieldData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -5049,6 +5089,10 @@ func (p *FieldData) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -5123,6 +5167,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *FieldData) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceID() {
+		if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TraceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *FieldData) String() string {
 	if p == nil {
@@ -5145,6 +5207,9 @@ func (p *FieldData) DeepEqual(ano *FieldData) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.Content) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.TraceID) {
 		return false
 	}
 	return true
@@ -5177,6 +5242,18 @@ func (p *FieldData) Field2DeepEqual(src *string) bool {
 func (p *FieldData) Field3DeepEqual(src *common.Content) bool {
 
 	if !p.Content.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *FieldData) Field4DeepEqual(src *string) bool {
+
+	if p.TraceID == src {
+		return true
+	} else if p.TraceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TraceID, *src) != 0 {
 		return false
 	}
 	return true

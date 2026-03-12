@@ -7,7 +7,7 @@
 🧭 **CozeLoop** - 智能化的 AI 提示工程与评估平台
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../../LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.1-green.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-1.5.1-green.svg)](package.json)
 [![React](https://img.shields.io/badge/React-18.2.0-61dafb.svg)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-blue.svg)](https://www.typescriptlang.org/)
 
@@ -25,9 +25,9 @@ CozeLoop 是一个专业的 AI 提示工程与评估平台，为开发者和研�
 - **Playground**: 实时测试和调试提示效果
 - **版本管理**: 提示版本控制和历史记录追踪
 
-### 📊 评估系统 (Evaluation)
+### 📊 评测系统 (Evaluation)
 
-- **评估数据集**: 创建和管理测试数据集
+- **评测数据集**: 创建和管理测试数据集
 - **评估器**: 自定义评估指标和规则
 - **实验管理**: 批量实验执行和结果分析
 

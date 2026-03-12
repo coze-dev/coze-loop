@@ -66,7 +66,6 @@ func (h *TraceHubServiceImpl) withTaskRunCreateLock(
 
 func (h *TraceHubServiceImpl) SpanTrigger(ctx context.Context, span *loop_span.Span) error {
 	logSuffix := fmt.Sprintf("log_id=%s, trace_id=%s, span_id=%s", span.LogID, span.TraceID, span.SpanID)
-
 	// 1. perform initial filtering based on space_id
 	// 1.1 Filter out spans that do not belong to any space or bot
 	cacheInfo := h.localCache.LoadTaskCache(ctx)
@@ -144,13 +143,14 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			return nil, err
 		}
 		subscribers = append(subscribers, &spanSubscriber{
-			taskID:      taskDO.ID,
-			t:           taskDO,
-			processor:   proc,
-			taskRepo:    h.taskRepo,
-			runType:     entity.TaskRunTypeNewData,
-			buildHelper: h.buildHelper,
-			tenants:     tenants,
+			taskID:       taskDO.ID,
+			t:            taskDO,
+			processor:    proc,
+			taskRepo:     h.taskRepo,
+			runType:      entity.TaskRunTypeNewData,
+			buildHelper:  h.buildHelper,
+			tenants:      tenants,
+			traceService: h.traceService,
 		})
 	}
 

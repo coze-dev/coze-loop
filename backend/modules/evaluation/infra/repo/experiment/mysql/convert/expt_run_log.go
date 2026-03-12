@@ -73,9 +73,13 @@ func NewExptRunLogConvertor() ExptRunLogConvertor {
 	return ExptRunLogConvertor{}
 }
 
-func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) *model.ExptRunLog {
+func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) (*model.ExptRunLog, error) {
 	if log == nil {
-		return nil
+		return nil, nil
+	}
+	itemIDsBytes, err := json.Marshal(log.ItemIds)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "ExptRunLogItems list json marshal fail")
 	}
 	return &model.ExptRunLog{
 		ID:            log.ID,
@@ -83,7 +87,7 @@ func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) *model.ExptRunLog {
 		CreatedBy:     log.CreatedBy,
 		ExptID:        log.ExptID,
 		ExptRunID:     log.ExptRunID,
-		ItemIds:       gptr.Of(log.ItemIds),
+		ItemIds:       gptr.Of(itemIDsBytes),
 		Mode:          gptr.Of(log.Mode),
 		Status:        gptr.Of(log.Status),
 		PendingCnt:    log.PendingCnt,
@@ -96,20 +100,28 @@ func (ExptRunLogConvertor) DO2PO(log *entity.ExptRunLog) *model.ExptRunLog {
 		TerminatedCnt: log.TerminatedCnt,
 		CreatedAt:     log.CreatedAt,
 		UpdatedAt:     log.UpdatedAt,
-	}
+	}, nil
 }
 
-func (ExptRunLogConvertor) PO2DO(log *model.ExptRunLog) *entity.ExptRunLog {
+func (ExptRunLogConvertor) PO2DO(log *model.ExptRunLog) (*entity.ExptRunLog, error) {
 	if log == nil {
-		return nil
+		return nil, nil
 	}
+
+	var itemIDs []entity.ExptRunLogItems
+	if log.ItemIds != nil && len(*log.ItemIds) > 0 {
+		if err := json.Unmarshal(*log.ItemIds, &itemIDs); err != nil {
+			return nil, errorx.Wrapf(err, "ExptRunLogItems list json unmarshal fail")
+		}
+	}
+
 	return &entity.ExptRunLog{
 		ID:            log.ID,
 		SpaceID:       log.SpaceID,
 		CreatedBy:     log.CreatedBy,
 		ExptID:        log.ExptID,
 		ExptRunID:     log.ExptRunID,
-		ItemIds:       gptr.Indirect(log.ItemIds),
+		ItemIds:       itemIDs,
 		Mode:          gptr.Indirect(log.Mode),
 		Status:        gptr.Indirect(log.Status),
 		PendingCnt:    log.PendingCnt,
@@ -122,5 +134,5 @@ func (ExptRunLogConvertor) PO2DO(log *model.ExptRunLog) *entity.ExptRunLog {
 		TerminatedCnt: log.TerminatedCnt,
 		CreatedAt:     log.CreatedAt,
 		UpdatedAt:     log.UpdatedAt,
-	}
+	}, nil
 }

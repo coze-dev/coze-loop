@@ -7,6 +7,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/evaluationset"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -15,11 +19,11 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
-	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func getCategory(taskType task.TaskType) entity.DatasetCategory {
@@ -100,56 +104,24 @@ func getBasicEvaluationSetSchema(basicColumns []string) (*dataset0.DatasetSchema
 	return evaluationSetSchema, fromEvalSet
 }
 
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-// convertDatasetSchemaDTO2DO 转换数据集模式
 func convertDatasetSchemaDTO2DO(schema *dataset0.DatasetSchema) entity.DatasetSchema {
 	if schema == nil {
 		return entity.DatasetSchema{}
 	}
-
-	result := entity.DatasetSchema{}
-
+	result := trace.ConvertDatasetSchemaDTO2DO(schema)
 	if schema.IsSetFieldSchemas() {
 		fieldSchemas := schema.GetFieldSchemas()
-		result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
+		// result.FieldSchemas = make([]entity.FieldSchema, len(fieldSchemas))
 		for i, fs := range fieldSchemas {
 			key := fs.GetKey()
 			if key == "" {
 				key = fs.GetName()
 			}
-			name := fs.GetName()
-			description := fs.GetDescription()
-			textSchema := fs.GetTextSchema()
-			schemaKey := fs.GetSchemaKey()
-			result.FieldSchemas[i] = entity.FieldSchema{
-				Key:         &key,
-				Name:        name,
-				Description: description,
-				ContentType: convertContentTypeDTO2DO(fs.GetContentType()),
-				TextSchema:  textSchema,
-				SchemaKey:   entity.SchemaKey(schemaKey),
-			}
+			result.FieldSchemas[i].Key = &key
 		}
 	}
 
 	return result
-}
-
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-// convertContentTypeDTO2DO 转换内容类型
-func convertContentTypeDTO2DO(contentType common.ContentType) entity.ContentType {
-	switch contentType {
-	case common.ContentTypeText:
-		return entity.ContentType_Text
-	case common.ContentTypeImage:
-		return entity.ContentType_Image
-	case common.ContentTypeAudio:
-		return entity.ContentType_Audio
-	case common.ContentTypeMultiPart:
-		return entity.ContentType_MultiPart
-	default:
-		return entity.ContentType_Text
-	}
 }
 
 // todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
@@ -221,72 +193,29 @@ func buildItem(ctx context.Context, span *loop_span.Span, fieldMappings []*task_
 					logs.CtxInfo(ctx, "Evaluator field key is empty, name:%v", fieldSchema.Name)
 					continue
 				}
-				value, err := span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+				var value string
+				var err error
+				if fieldSchema.ContentType == entity.ContentType_MultiPart {
+					value, err = span.ExtractByJsonpathRaw(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+				} else {
+					value, err = span.ExtractByJsonpath(ctx, mapping.TraceFieldKey, mapping.TraceFieldJsonpath)
+				}
 				if err != nil {
 					logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 					continue
 				}
-				content, err := GetContentInfo(ctx, fieldSchema.ContentType, value)
-				if err != nil {
-					logs.CtxInfo(ctx, "GetContentInfo failed, err:%v", err)
+				content, errCode := entity.GetContentInfo(ctx, fieldSchema.ContentType, value)
+				if errCode == entity.DatasetErrorType_MismatchSchema {
+					logs.CtxInfo(ctx, "GetContentInfo failed")
 					return nil
 				}
 				fieldDatas = append(fieldDatas, &eval_set.FieldData{
 					Key:     key,
 					Name:    gptr.Of(fieldSchema.Name),
-					Content: content,
+					Content: evaluationset.ConvertContentDO2DTO(content),
 				})
 			}
 		}
 	}
 	return fieldDatas
-}
-
-// todo:[xun]和手动回流的代码逻辑一样，需要抽取公共代码
-func GetContentInfo(ctx context.Context, contentType entity.ContentType, value string) (*common.Content, error) {
-	var content *common.Content
-	switch contentType {
-	case entity.ContentType_MultiPart:
-		var parts []tracespec.ModelMessagePart
-		err := json.Unmarshal([]byte(value), &parts)
-		if err != nil {
-			logs.CtxInfo(ctx, "Unmarshal multi part failed, err:%v", err)
-			return nil, err
-		}
-		var multiPart []*common.Content
-		for _, part := range parts {
-			// 本期仅支持回流图片的多模态数据，非ImageURL信息的，打包放进text
-			switch part.Type {
-			case tracespec.ModelMessagePartTypeImage:
-				if part.ImageURL == nil {
-					continue
-				}
-				multiPart = append(multiPart, &common.Content{
-					ContentType: gptr.Of(common.ContentTypeImage),
-					Image: &common.Image{
-						Name: gptr.Of(part.ImageURL.Name),
-						URL:  gptr.Of(part.ImageURL.URL),
-					},
-				})
-			case tracespec.ModelMessagePartTypeText, tracespec.ModelMessagePartTypeFile:
-				multiPart = append(multiPart, &common.Content{
-					ContentType: gptr.Of(common.ContentTypeText),
-					Text:        gptr.Of(part.Text),
-				})
-			default:
-				logs.CtxWarn(ctx, "Unsupported part type: %s", part.Type)
-				return nil, err
-			}
-		}
-		content = &common.Content{
-			ContentType: gptr.Of(common.ContentTypeMultiPart),
-			MultiPart:   multiPart,
-		}
-	default:
-		content = &common.Content{
-			ContentType: gptr.Of(common.ContentTypeText),
-			Text:        gptr.Of(value),
-		}
-	}
-	return content, nil
 }

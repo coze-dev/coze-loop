@@ -199,12 +199,18 @@ func TestConvertAudioDTO2DO(t *testing.T) {
 		{
 			name: "complete audio",
 			input: &commondto.Audio{
-				Format: gptr.Of("mp3"),
-				URL:    gptr.Of("https://example.com/audio.mp3"),
+				Format:          gptr.Of("mp3"),
+				URL:             gptr.Of("https://example.com/audio.mp3"),
+				Name:            gptr.Of("audio_test.mp3"),
+				URI:             gptr.Of("example_dir/audio.mp3"),
+				StorageProvider: gptr.Of(dataset.StorageProvider_ImageX),
 			},
 			expected: &commonentity.Audio{
-				Format: gptr.Of("mp3"),
-				URL:    gptr.Of("https://example.com/audio.mp3"),
+				Format:          gptr.Of("mp3"),
+				URL:             gptr.Of("https://example.com/audio.mp3"),
+				Name:            gptr.Of("audio_test.mp3"),
+				URI:             gptr.Of("example_dir/audio.mp3"),
+				StorageProvider: gptr.Of(commonentity.StorageProvider_ImageX),
 			},
 		},
 		{
@@ -243,12 +249,18 @@ func TestConvertAudioDO2DTO(t *testing.T) {
 		{
 			name: "complete audio",
 			input: &commonentity.Audio{
-				Format: gptr.Of("mp3"),
-				URL:    gptr.Of("https://example.com/audio.mp3"),
+				Format:          gptr.Of("mp3"),
+				URL:             gptr.Of("https://example.com/audio.mp3"),
+				Name:            gptr.Of("audio_test.mp3"),
+				URI:             gptr.Of("example_dir/audio.mp3"),
+				StorageProvider: gptr.Of(commonentity.StorageProvider_ImageX),
 			},
 			expected: &commondto.Audio{
-				Format: gptr.Of("mp3"),
-				URL:    gptr.Of("https://example.com/audio.mp3"),
+				Format:          gptr.Of("mp3"),
+				URL:             gptr.Of("https://example.com/audio.mp3"),
+				Name:            gptr.Of("audio_test.mp3"),
+				URI:             gptr.Of("example_dir/audio.mp3"),
+				StorageProvider: gptr.Of(dataset.StorageProvider(commonentity.StorageProvider_ImageX)),
 			},
 		},
 		{
@@ -266,6 +278,106 @@ func TestConvertAudioDO2DTO(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			result := ConvertAudioDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertVideoDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commondto.Video
+		expected *commonentity.Video
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "complete video",
+			input: &commondto.Video{
+				Name:            gptr.Of("test.mp4"),
+				URL:             gptr.Of("https://example.com/test.mp4"),
+				URI:             gptr.Of("uri://test.mp4"),
+				ThumbURL:        gptr.Of("https://example.com/thumb.mp4"),
+				StorageProvider: gptr.Of(dataset.StorageProvider_ImageX),
+			},
+			expected: &commonentity.Video{
+				Name:            gptr.Of("test.mp4"),
+				URL:             gptr.Of("https://example.com/test.mp4"),
+				URI:             gptr.Of("uri://test.mp4"),
+				ThumbURL:        gptr.Of("https://example.com/thumb.mp4"),
+				StorageProvider: gptr.Of(commonentity.StorageProvider_ImageX),
+			},
+		},
+		{
+			name: "minimal video",
+			input: &commondto.Video{
+				Name: gptr.Of("minimal.mp4"),
+			},
+			expected: &commonentity.Video{
+				Name: gptr.Of("minimal.mp4"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ConvertVideoDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestConvertVideoDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commonentity.Video
+		expected *commondto.Video
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "complete video",
+			input: &commonentity.Video{
+				Name:            gptr.Of("test.mp4"),
+				URL:             gptr.Of("https://example.com/test.mp4"),
+				URI:             gptr.Of("uri://test.mp4"),
+				ThumbURL:        gptr.Of("https://example.com/thumb.mp4"),
+				StorageProvider: gptr.Of(commonentity.StorageProvider_S3),
+			},
+			expected: &commondto.Video{
+				Name:            gptr.Of("test.mp4"),
+				URL:             gptr.Of("https://example.com/test.mp4"),
+				URI:             gptr.Of("uri://test.mp4"),
+				ThumbURL:        gptr.Of("https://example.com/thumb.mp4"),
+				StorageProvider: gptr.Of(dataset.StorageProvider(commonentity.StorageProvider_S3)),
+			},
+		},
+		{
+			name: "minimal video",
+			input: &commonentity.Video{
+				Name: gptr.Of("minimal.mp4"),
+			},
+			expected: &commondto.Video{
+				Name: gptr.Of("minimal.mp4"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := ConvertVideoDO2DTO(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -1146,7 +1258,7 @@ func TestConvertModelConfigDTO2DO(t *testing.T) {
 				TopP:        gptr.Of(0.9),
 			},
 			expected: &commonentity.ModelConfig{
-				ModelID:     123,
+				ModelID:     gptr.Of(int64(123)),
 				ModelName:   "gpt-4",
 				Temperature: gptr.Of(0.7),
 				MaxTokens:   gptr.Of(int32(2048)),
@@ -1159,7 +1271,7 @@ func TestConvertModelConfigDTO2DO(t *testing.T) {
 				ModelID: gptr.Of(int64(456)),
 			},
 			expected: &commonentity.ModelConfig{
-				ModelID: 456,
+				ModelID: gptr.Of(int64(456)),
 			},
 		},
 	}
@@ -1189,7 +1301,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "complete model config with model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:     123,
+				ModelID:     gptr.Of(int64(123)),
 				ModelName:   "gpt-4",
 				Temperature: gptr.Of(0.7),
 				MaxTokens:   gptr.Of(int32(2048)),
@@ -1206,7 +1318,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "model config with provider model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:         0,
+				ModelID:         gptr.Of(int64(0)),
 				ProviderModelID: gptr.Of("456"),
 				ModelName:       "claude-3",
 				Temperature:     gptr.Of(0.5),
@@ -1220,7 +1332,7 @@ func TestConvertModelConfigDO2DTO(t *testing.T) {
 		{
 			name: "model config with invalid provider model ID",
 			input: &commonentity.ModelConfig{
-				ModelID:         0,
+				ModelID:         gptr.Of(int64(0)),
 				ProviderModelID: gptr.Of("invalid"),
 				ModelName:       "claude-3",
 			},

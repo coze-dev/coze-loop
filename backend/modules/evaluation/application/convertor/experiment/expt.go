@@ -55,6 +55,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 		}
 		ec.ConnectorConf.EvaluatorsConf = evalsConf
 	}
+	if cer.GetItemRetryNum() > 0 {
+		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
+	}
 	return ec, nil
 }
 
@@ -361,8 +364,15 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EndAt != nil {
 		res.EndTime = gptr.Of(experiment.EndAt.Unix())
 	}
-	if experiment.EvalConf != nil && experiment.EvalConf.ItemConcurNum != nil {
-		res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
+	if experiment.EvalConf != nil {
+		if experiment.EvalConf.ItemConcurNum != nil {
+			res.ItemConcurNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemConcurNum)))
+		}
+		if experiment.EvalConf.ItemRetryNum != nil {
+			res.ItemRetryNum = gptr.Of(int32(gptr.Indirect(experiment.EvalConf.ItemRetryNum)))
+		} else {
+			res.ItemRetryNum = gptr.Of(int32(0))
+		}
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）
@@ -490,6 +500,18 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetExptTemplateID() {
 		param.ExptTemplateID = cer.GetExptTemplateID()
 	}
-
 	return param, nil
+}
+
+func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
+	switch m {
+	case domain_expt.ExptRetryMode_RetryFailure:
+		return entity.EvaluationModeFailRetry
+	case domain_expt.ExptRetryMode_RetryAll:
+		return entity.EvaluationModeRetryAll
+	case domain_expt.ExptRetryMode_RetryTargetItems:
+		return entity.EvaluationModeRetryItems
+	default:
+		return entity.EvaluationModeUnknown
+	}
 }

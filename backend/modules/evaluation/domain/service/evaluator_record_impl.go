@@ -189,7 +189,7 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	}
 
 	// 5. 批量获取 evaluator_record
-	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	if err != nil {
 		return err
 	}
@@ -199,6 +199,8 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 			version2Record[r.EvaluatorVersionID] = r
 		}
 	}
+	// 用当前已校正的 record 覆盖，避免主从延迟或读从库时 BatchGet 拿到旧数据，导致重算加权分仍用旧分
+	version2Record[rec.EvaluatorVersionID] = rec
 
 	// 6. 构建权重映射
 	scoreWeights := make(map[int64]float64)
@@ -228,8 +230,8 @@ func (s *EvaluatorRecordServiceImpl) GetEvaluatorRecord(ctx context.Context, eva
 	return s.evaluatorRecordRepo.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted)
 }
 
-func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool) ([]*entity.EvaluatorRecord, error) {
-	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted)
+func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+	records, err := s.evaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
 	if err != nil {
 		return nil, err
 	}

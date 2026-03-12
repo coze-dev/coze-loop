@@ -104,6 +104,7 @@ struct FieldData {
     1: optional string key,
     2: optional string name,
     3: optional common.Content content,
+    4: optional string trace_id,
 }
 
 

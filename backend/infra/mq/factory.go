@@ -31,6 +31,9 @@ type ProducerConfig struct {
 	FlushFrequency time.Duration
 	// How long to wait for the cluster to settle between retries
 	RetryBackoff time.Duration
+
+	AccessKey    *string
+	AccessSecret *string
 }
 
 type ConsumerConfig struct {
@@ -50,6 +53,9 @@ type ConsumerConfig struct {
 	ConsumeTimeout time.Duration
 	EnablePPE      *bool
 	IsEnabled      *bool
+
+	AccessKey    *string
+	AccessSecret *string
 }
 
 type CompressionCodec int

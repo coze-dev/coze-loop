@@ -6,6 +6,7 @@ package experiment
 import (
 	"fmt"
 
+	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -232,6 +233,7 @@ func buildTemplateConfForCreate(
 	templateConf := &entity.ExptTemplateConfiguration{
 		ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+		ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
@@ -472,6 +474,20 @@ func buildTemplateTripleConfigDTO(template *entity.ExptTemplate) *domain_expt.Ex
 	}
 }
 
+// getScoreWeightFromTemplateConf 从 TemplateConf.EvaluatorConf 中根据 evaluator_version_id 获取权重
+func getScoreWeightFromTemplateConf(template *entity.ExptTemplate, evalVerID int64) float64 {
+	if template == nil || template.TemplateConf == nil ||
+		template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
+		return 0
+	}
+	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+		if ec != nil && ec.EvaluatorVersionID == evalVerID && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+			return *ec.ScoreWeight
+		}
+	}
+	return 0
+}
+
 // 拆分子函数：根据模板信息构建 EvaluatorIDVersionItems DTO 列表
 func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluatorpkg.EvaluatorIDVersionItem {
 	evaluatorIDVersionItems := make([]*evaluatorpkg.EvaluatorIDVersionItem, 0)
@@ -511,8 +527,11 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 				item.Version = gptr.Of(entityItem.Version)
 			}
 			item.EvaluatorVersionID = gptr.Of(entityItem.EvaluatorVersionID)
+			// 权重：优先 entityItem，否则从 TemplateConf.EvaluatorConf 回填
 			if entityItem.ScoreWeight > 0 {
 				item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
+			} else if w := getScoreWeightFromTemplateConf(template, entityItem.EvaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
 			}
 			// 透传 RunConfig：根据 evaluator_version_id 在 TemplateConf 中查找
 			if rc := buildRunConfigDTO(entityItem.EvaluatorVersionID); rc != nil {
@@ -524,12 +543,12 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 	}
 
 	if len(template.Evaluators) > 0 {
-		appendEvaluatorIDVersionItemsFromEvaluators(template, &evaluatorIDVersionItems)
+		appendEvaluatorIDVersionItemsFromEvaluators(template, &evaluatorIDVersionItems, buildRunConfigDTO)
 		return evaluatorIDVersionItems
 	}
 
 	if len(template.EvaluatorVersionRef) > 0 {
-		appendEvaluatorIDVersionItemsFromVersionRef(template, &evaluatorIDVersionItems)
+		appendEvaluatorIDVersionItemsFromVersionRef(template, &evaluatorIDVersionItems, buildRunConfigDTO)
 	}
 
 	return evaluatorIDVersionItems
@@ -539,6 +558,7 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 func appendEvaluatorIDVersionItemsFromEvaluators(
 	template *entity.ExptTemplate,
 	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
+	buildRunConfigDTO func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig,
 ) {
 	for _, evaluator := range template.Evaluators {
 		if evaluator == nil {
@@ -555,12 +575,24 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 		item.Version = gptr.Of(version)
 		item.EvaluatorVersionID = gptr.Of(evaluatorVersionID)
 
+		// 权重：优先 TripleConfig.EvaluatorIDVersionItems，否则从 TemplateConf 回填
 		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
 				if entityItem != nil && entityItem.EvaluatorVersionID == evaluatorVersionID && entityItem.ScoreWeight > 0 {
 					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
 					break
 				}
+			}
+		}
+		if item.ScoreWeight == nil {
+			if w := getScoreWeightFromTemplateConf(template, evaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
+			}
+		}
+		// RunConfig：从 TemplateConf.EvaluatorConf 透传
+		if buildRunConfigDTO != nil {
+			if rc := buildRunConfigDTO(evaluatorVersionID); rc != nil {
+				item.RunConfig = rc
 			}
 		}
 		*dst = append(*dst, item)
@@ -571,6 +603,7 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 func appendEvaluatorIDVersionItemsFromVersionRef(
 	template *entity.ExptTemplate,
 	dst *[]*evaluatorpkg.EvaluatorIDVersionItem,
+	buildRunConfigDTO func(evalVerID int64) *evaluatorpkg.EvaluatorRunConfig,
 ) {
 	for _, ref := range template.EvaluatorVersionRef {
 		if ref.EvaluatorID <= 0 || ref.EvaluatorVersionID <= 0 {
@@ -580,12 +613,24 @@ func appendEvaluatorIDVersionItemsFromVersionRef(
 		item.EvaluatorID = gptr.Of(ref.EvaluatorID)
 		item.EvaluatorVersionID = gptr.Of(ref.EvaluatorVersionID)
 
+		// 权重：优先 TripleConfig.EvaluatorIDVersionItems，否则从 TemplateConf 回填
 		if template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 			for _, entityItem := range template.TripleConfig.EvaluatorIDVersionItems {
 				if entityItem != nil && entityItem.EvaluatorVersionID == ref.EvaluatorVersionID && entityItem.ScoreWeight > 0 {
 					item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
 					break
 				}
+			}
+		}
+		if item.ScoreWeight == nil {
+			if w := getScoreWeightFromTemplateConf(template, ref.EvaluatorVersionID); w > 0 {
+				item.ScoreWeight = gptr.Of(w)
+			}
+		}
+		// RunConfig：从 TemplateConf.EvaluatorConf 透传
+		if buildRunConfigDTO != nil {
+			if rc := buildRunConfigDTO(ref.EvaluatorVersionID); rc != nil {
+				item.RunConfig = rc
 			}
 		}
 		*dst = append(*dst, item)
@@ -598,8 +643,15 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 		return nil
 	}
 
+	var itemRetryNum *int32
+	if template.TemplateConf != nil && gptr.Indirect(template.TemplateConf.ItemRetryNum) > 0 {
+		itemRetryNum = gptr.Of(int32(gptr.Indirect(template.TemplateConf.ItemRetryNum)))
+	} else {
+		itemRetryNum = gptr.Of(int32(0))
+	}
 	fieldMapping := &domain_expt.ExptFieldMapping{
 		ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+		ItemRetryNum:  itemRetryNum,
 	}
 
 	if template.FieldMappingConfig.TargetFieldMapping != nil {
@@ -722,6 +774,66 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 		EnableWeightedScore:   gptr.Of(hasWeightedScore),
 		EvaluatorScoreWeights: evaluatorScoreWeights,
 	}
+}
+
+// TemplateToSubmitExperimentRequest 将实验模板转换为 SubmitExperimentRequest，用于根据模板提交实验
+func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name string, workspaceID int64) *expt.SubmitExperimentRequest {
+	if template == nil {
+		return nil
+	}
+	req := &expt.SubmitExperimentRequest{
+		WorkspaceID:    workspaceID,
+		Name:           gptr.Of(name),
+		ExptTemplateID: gptr.Of(template.Meta.ID),
+	}
+
+	if template.TripleConfig == nil {
+		return req
+	}
+
+	req.EvalSetID = gptr.Of(template.TripleConfig.EvalSetID)
+	req.EvalSetVersionID = gptr.Of(template.TripleConfig.EvalSetVersionID)
+	if template.TripleConfig.TargetID > 0 || template.TripleConfig.TargetVersionID > 0 {
+		req.TargetID = gptr.Of(template.TripleConfig.TargetID)
+		req.TargetVersionID = gptr.Of(template.TripleConfig.TargetVersionID)
+	}
+
+	// 评估器版本 ID 列表
+	evaluatorVersionIDs := make([]int64, 0)
+	for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
+		if item != nil && item.EvaluatorVersionID > 0 {
+			evaluatorVersionIDs = append(evaluatorVersionIDs, item.EvaluatorVersionID)
+		}
+	}
+	req.EvaluatorVersionIds = evaluatorVersionIDs
+
+	// EvaluatorIDVersionList（含 RunConfig、ScoreWeight）
+	req.EvaluatorIDVersionList = buildEvaluatorIDVersionItemsDTO(template)
+
+	// 字段映射
+	fieldMapping := buildTemplateFieldMappingDTO(template)
+	if fieldMapping != nil {
+		req.TargetFieldMapping = fieldMapping.TargetFieldMapping
+		req.EvaluatorFieldMapping = fieldMapping.EvaluatorFieldMapping
+		req.TargetRuntimeParam = fieldMapping.TargetRuntimeParam
+		req.ItemConcurNum = fieldMapping.ItemConcurNum
+	}
+
+	// 评估器并发数
+	if template.TemplateConf != nil && template.TemplateConf.EvaluatorsConcurNum != nil {
+		req.EvaluatorsConcurNum = gptr.Of(int32(*template.TemplateConf.EvaluatorsConcurNum))
+	}
+
+	// 实验类型、分数权重（权重从 EvaluatorIDVersionList 的 ScoreWeight 解析）
+	if template.Meta != nil {
+		req.ExptType = gptr.Of(domain_expt.ExptType(template.Meta.ExptType))
+	}
+	scoreWeight := buildTemplateScoreWeightConfigDTO(template)
+	if scoreWeight != nil && scoreWeight.IsSetEnableWeightedScore() && scoreWeight.GetEnableWeightedScore() {
+		req.EnableWeightedScore = gptr.Of(true)
+	}
+
+	return req
 }
 
 // 细分：从 TemplateConf 中抽取权重
@@ -958,6 +1070,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 		templateConf := &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
+			ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 		}
 
 		// 构建 ConnectorConf

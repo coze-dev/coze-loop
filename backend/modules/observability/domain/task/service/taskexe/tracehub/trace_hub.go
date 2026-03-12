@@ -36,6 +36,7 @@ func NewTraceHubImpl(
 	backfillProducer mq.IBackfillProducer,
 	locker lock.ILocker,
 	config config.ITraceConfig,
+	traceService service.ITraceService,
 ) (ITraceHubService, error) {
 	impl := &TraceHubServiceImpl{
 		taskRepo:         tRepo,
@@ -48,6 +49,7 @@ func NewTraceHubImpl(
 		locker:           locker,
 		config:           config,
 		localCache:       NewLocalCache(),
+		traceService:     traceService,
 	}
 	return impl, nil
 }
@@ -61,7 +63,7 @@ type TraceHubServiceImpl struct {
 	backfillProducer mq.IBackfillProducer
 	locker           lock.ILocker
 	config           config.ITraceConfig
-
+	traceService     service.ITraceService
 	// Local cache - caching non-terminal task information
 	localCache *LocalCache
 

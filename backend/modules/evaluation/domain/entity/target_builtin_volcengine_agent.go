@@ -11,6 +11,7 @@ type VolcengineAgent struct {
 	VolcengineAgentEndpoints []*VolcengineAgentEndpoint
 	BaseInfo                 *BaseInfo `json:"-"` // 基础信息
 	Protocol                 *VolcengineAgentProtocol
+	RuntimeID                *string
 }
 
 type VolcengineAgentEndpoint struct {

@@ -124,6 +124,14 @@ const (
 	duplicateCalcExptAggrResultErrorMessage           = "aggregated result calculation is already in progress"
 	duplicateCalcExptAggrResultErrorNoAffectStability = true
 
+	EvalItemAlreadyRetryingCode              = 601204015 // item already has been retrying
+	evalItemAlreadyRetryingMessage           = "item already has been retrying"
+	evalItemAlreadyRetryingNoAffectStability = true
+
+	ExperimentIsCompletingCode              = 601204016 // experiment is completing, please try later
+	experimentIsCompletingMessage           = "experiment is completing, please try later"
+	experimentIsCompletingNoAffectStability = true
+
 	ContentTypeNotSupportedCode              = 601205000 // content type is not supported
 	contentTypeNotSupportedMessage           = "content type is not supported"
 	contentTypeNotSupportedNoAffectStability = true
@@ -355,6 +363,14 @@ const (
 	UnsupportedCustomRPCEvaluatorCode              = 601205066 // the custom rpc evaluator is not supported, check if the configuration is correct
 	unsupportedCustomRPCEvaluatorMessage           = "unsupported custom rpc evaluator"
 	unsupportedCustomRPCEvaluatorNoAffectStability = true
+
+	CustomEvalTargetRunFailedCode              = 601205067 // the custom eval target run failed, check if the configuration is correct
+	customEvalTargetRunFailedMessage           = "custom eval target run failed"
+	customEvalTargetRunFailedNoAffectStability = true
+
+	AgentEvaluatorRunFailedCode              = 601205068 // the agent evaluator run failed, check if the configuration is correct
+	agentEvaluatorRunFailedMessage           = "agent evaluator run failed"
+	agentEvaluatorRunFailedNoAffectStability = true
 )
 
 func init() {
@@ -531,6 +547,18 @@ func init() {
 		DuplicateCalcExptAggrResultErrorCode,
 		duplicateCalcExptAggrResultErrorMessage,
 		code.WithAffectStability(!duplicateCalcExptAggrResultErrorNoAffectStability),
+	)
+
+	code.Register(
+		EvalItemAlreadyRetryingCode,
+		evalItemAlreadyRetryingMessage,
+		code.WithAffectStability(!evalItemAlreadyRetryingNoAffectStability),
+	)
+
+	code.Register(
+		ExperimentIsCompletingCode,
+		experimentIsCompletingMessage,
+		code.WithAffectStability(!experimentIsCompletingNoAffectStability),
 	)
 
 	code.Register(
@@ -879,6 +907,18 @@ func init() {
 		UnsupportedCustomRPCEvaluatorCode,
 		unsupportedCustomRPCEvaluatorMessage,
 		code.WithAffectStability(!unsupportedCustomRPCEvaluatorNoAffectStability),
+	)
+
+	code.Register(
+		CustomEvalTargetRunFailedCode,
+		customEvalTargetRunFailedMessage,
+		code.WithAffectStability(!customEvalTargetRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		AgentEvaluatorRunFailedCode,
+		agentEvaluatorRunFailedMessage,
+		code.WithAffectStability(!agentEvaluatorRunFailedNoAffectStability),
 	)
 
 }

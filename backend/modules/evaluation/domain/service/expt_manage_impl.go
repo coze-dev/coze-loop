@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -59,6 +60,8 @@ func NewExptManager(
 	exptAggrResultService ExptAggrResultService,
 	templateRepo repo.IExptTemplateRepo,
 	templateManager IExptTemplateManager,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -85,6 +88,8 @@ func NewExptManager(
 		exptAggrResultService:       exptAggrResultService,
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
+		notifyRPCAdapter:            notifyRPCAdapter,
+		userProvider:                userProvider,
 	}
 }
 
@@ -113,6 +118,8 @@ type ExptMangerImpl struct {
 	benefitService              benefit.IBenefitService
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
+	notifyRPCAdapter            rpc.INotifyRPCAdapter
+	userProvider                rpc.IUserProvider
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -307,6 +314,10 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 
 func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 	return fmt.Sprintf("expt_run_mutex_lock:%d", exptID)
+}
+
+func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
+	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
 }
 
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {
@@ -518,10 +529,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 
 	res := make([]*entity.ExptTuple, 0, len(tupleIDs))
 	for _, tupleIDs := range tupleIDs {
-		//cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
-		//for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
+		// cevaluators := make([]*entity.Evaluator, 0, len(tupleIDs.EvaluatorVersionIDs))
+		// for _, evaluatorVersionID := range tupleIDs.EvaluatorVersionIDs {
 		//	cevaluators = append(cevaluators, evaluatorMap[evaluatorVersionID])
-		//}
+		// }
 		tuple := &entity.ExptTuple{
 			EvalSet: evalSetMap[tupleIDs.VersionedEvalSetID.VersionID],
 			// Evaluators: cevaluators,
@@ -543,10 +554,10 @@ func (e *ExptMangerImpl) mgetExptTupleByID(ctx context.Context, tupleIDs []*enti
 }
 
 func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experiment) *entity.ExptTupleID {
-	//evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
-	//for _, ref := range expt.EvaluatorVersionRef {
+	// evaluatorVersionIDs := make([]int64, 0, len(expt.EvaluatorVersionRef))
+	// for _, ref := range expt.EvaluatorVersionRef {
 	//	evaluatorVersionIDs = append(evaluatorVersionIDs, ref.EvaluatorVersionID)
-	//}
+	// }
 
 	exptTupleID := &entity.ExptTupleID{
 		VersionedEvalSetID: &entity.VersionedEvalSetID{
@@ -603,6 +614,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		versionedTargetID = &entity.VersionedTargetID{
 			TargetID:  targetID,
 			VersionID: targetVersionID,
+		}
+	} else if req.TargetID != nil && *req.TargetID > 0 && req.TargetVersionID > 0 {
+		// 使用已有 target（如从模板提交实验时）
+		versionedTargetID = &entity.VersionedTargetID{
+			TargetID:  *req.TargetID,
+			VersionID: req.TargetVersionID,
 		}
 	}
 
@@ -679,11 +696,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		}
 	}
 
-	if !req.CreateEvalTargetParam.IsNull() {
-		do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
-		if versionedTargetID != nil {
-			do.TargetID = versionedTargetID.TargetID
-			do.TargetVersionID = versionedTargetID.VersionID
+	if versionedTargetID != nil {
+		do.TargetID = versionedTargetID.TargetID
+		do.TargetVersionID = versionedTargetID.VersionID
+		if !req.CreateEvalTargetParam.IsNull() {
+			do.TargetType = gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		} else if tuple.Target != nil {
+			if tuple.Target.EvalTargetVersion != nil {
+				do.TargetType = tuple.Target.EvalTargetVersion.EvalTargetType
+			} else {
+				do.TargetType = tuple.Target.EvalTargetType
+			}
 		}
 		if do.EvalConf != nil && do.EvalConf.ConnectorConf.TargetConf != nil {
 			do.EvalConf.ConnectorConf.TargetConf.TargetVersionID = do.TargetVersionID

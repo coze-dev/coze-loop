@@ -30,6 +30,7 @@ type FieldData struct {
 	Key     string   `json:"key,omitempty"`
 	Name    string   `json:"name,omitempty"`
 	Content *Content `json:"content,omitempty"`
+	TraceID string   `json:"trace_id,omitempty"`
 }
 
 type ItemErrorGroup struct {

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 	"github.com/bytedance/gg/gslice"
@@ -26,7 +28,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -219,7 +220,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 			}
 
 			if len(evaluatorResultIDs) > 0 {
-				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 				if err != nil {
 					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
 						exptID, exptRunID, itemID, tid, err)
@@ -351,7 +352,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, sortedExpts, param.FullTrajectory)
+	columnsEvalTarget, err := e.getExptColumnsEvalTarget(ctx, spaceID, sortedExpts, param.FullTrajectory)
 	if err != nil {
 		return nil, err
 	}
@@ -587,10 +588,10 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 }
 
 var (
-	columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
-		Name:  consts.ReportColumnNameEvalTargetActualOutput,
-		Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
-	}
+	// columnEvalTargetActualOutput = &entity.ColumnEvalTarget{
+	// 	Name:  consts.ReportColumnNameEvalTargetActualOutput,
+	// 	Label: gptr.Of(consts.ReportColumnLabelEvalTargetActualOutput),
+	// }
 	columnEvalTargetTrajectory = &entity.ColumnEvalTarget{
 		Name:  consts.ReportColumnNameEvalTargetTrajectory,
 		Label: gptr.Of(consts.ReportColumnLabelEvalTargetTrajectory),
@@ -603,13 +604,53 @@ var (
 	}
 )
 
-func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
+func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spaceID int64, expts []*entity.Experiment, fullTrajectory bool) ([]*entity.ExptColumnEvalTarget, error) {
+	// 查询评估对象信息
+	versionIDs := make([]int64, 0)
+	for _, expt := range expts {
+		if expt.ContainsEvalTarget() {
+			versionIDs = append(versionIDs, expt.TargetVersionID)
+		}
+	}
+	versionID2TargetInfo := make(map[int64]*entity.EvalTarget)
+	if len(versionIDs) > 0 {
+		targetInfos, err := e.evalTargetService.BatchGetEvalTargetVersion(ctx, spaceID, versionIDs, false)
+		if err != nil {
+			return nil, err
+		}
+		for _, info := range targetInfos {
+			if info.EvalTargetVersion == nil {
+				continue
+			}
+			versionID2TargetInfo[info.EvalTargetVersion.ID] = info
+		}
+	}
 	res := make([]*entity.ExptColumnEvalTarget, 0, len(expts))
 	for _, expt := range expts {
 		if !expt.ContainsEvalTarget() {
 			continue
 		}
-		columns := []*entity.ColumnEvalTarget{columnEvalTargetActualOutput}
+		columns := make([]*entity.ColumnEvalTarget, 0)
+		if info, ok := versionID2TargetInfo[expt.TargetVersionID]; ok {
+			if info.EvalTargetVersion != nil {
+				for _, s := range info.EvalTargetVersion.OutputSchema {
+					lable := consts.ReportColumnLabelEvalTargetActualOutput
+					if gptr.Indirect(s.Key) != consts.ReportColumnNameEvalTargetActualOutput {
+						lable = consts.ReportColumnLabelEvalTargetExtOutput
+					}
+					c := &entity.ColumnEvalTarget{
+						Name:       gptr.Indirect(s.Key),
+						TextSchema: s.JsonSchema,
+						Label:      gptr.Of(lable),
+					}
+					if len(s.SupportContentTypes) > 0 {
+						// 评测对象字段类型就一个，所以这里取第一个就可以
+						c.ContentType = gptr.Of(s.SupportContentTypes[0])
+					}
+					columns = append(columns, c)
+				}
+			}
+		}
 		// 当 fullTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
 		if expt.TargetType.SupptTrajectory() {
 			columns = append(columns, columnEvalTargetTrajectory)
@@ -816,6 +857,8 @@ type PayloadBuilder struct {
 
 	// 控制是否在构建 eval_target_result 时保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容
+	ExportFullContent bool
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -844,8 +887,9 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
-		ExptAnnotateRepo: exptAnnotateRepo,
-		FullTrajectory:   param.FullTrajectory,
+		ExptAnnotateRepo:  exptAnnotateRepo,
+		FullTrajectory:    param.FullTrajectory,
+		ExportFullContent: param.ExportFullContent,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -967,6 +1011,8 @@ type ExptResultBuilder struct {
 
 	// 控制是否保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容
+	ExportFullContent bool
 }
 
 // 1.确定当前分页下数据范围
@@ -990,6 +1036,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			ExptAnnotateRepo:         b.ExptAnnotateRepo,
 			analysisService:          b.AnalysisService,
 			FullTrajectory:           b.FullTrajectory,
+			ExportFullContent:        b.ExportFullContent,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1066,6 +1113,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		turnResultDO:             b.BaseExptTurnResultDO,
 		ExptAnnotateRepo:         b.ExptAnnotateRepo,
 		FullTrajectory:           b.FullTrajectory,
+		ExportFullContent:        b.ExportFullContent,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1356,7 +1404,7 @@ func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
 		evaluatorResultID2TurnResultID[turnEvaluatorResultRef.EvaluatorResultID] = turnEvaluatorResultRef.ExptTurnResultID
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, e.ExportFullContent)
 	if err != nil {
 		return err
 	}
@@ -1725,6 +1773,17 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		return err
 	}
 
+	// 导出场景下从 TOS 加载完整字段内容
+	if e.ExportFullContent {
+		for _, targetRecord := range targetRecords {
+			if targetRecord != nil {
+				if err := e.evalTargetService.LoadRecordFullData(ctx, targetRecord); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	turnResultID2TargetOutput := make(map[int64]*entity.TurnTargetOutput) // turn_result_id -> version_id -> result
 	for _, targetRecord := range targetRecords {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
@@ -1774,10 +1833,6 @@ func (e *ExptResultBuilder) getTurnTargetOutput(ctx context.Context, itemID, tur
 	turnTargetOutput, ok := e.turnResultID2TargetOutput[turnResultID]
 	if !ok {
 		return &entity.TurnTargetOutput{}
-	}
-
-	if turnTargetOutput.EvalTargetRecord != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError != nil {
-		turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError.Message = errno.ServiceInternalErrMsg
 	}
 
 	return turnTargetOutput
@@ -2754,7 +2809,7 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 	}
 
 	// 批量获取评估器记录
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	if err != nil {
 		return err
 	}

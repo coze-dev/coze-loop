@@ -49,6 +49,11 @@ func TestConvertOpenAPIContentTypeToDO(t *testing.T) {
 			expected: entity.ContentTypeMultipart,
 		},
 		{
+			name:     "multi-part-variable",
+			input:    ptr[common.ContentType](common.ContentTypeMultiPartVariable),
+			expected: entity.ContentTypeMultipartVariable,
+		},
+		{
 			name:     "unknown",
 			input:    ptr[common.ContentType](common.ContentType("unknown")),
 			expected: entity.ContentTypeText,
@@ -100,7 +105,7 @@ func TestConvertDOContentTypeToOpenAPI(t *testing.T) {
 		{
 			name:     "multipart variable",
 			input:    entity.ContentTypeMultipartVariable,
-			expected: ptr[common.ContentType](common.ContentTypeMultiPart),
+			expected: ptr[common.ContentType](common.ContentTypeMultiPartVariable),
 		},
 		{
 			name:     "unknown",
@@ -383,6 +388,7 @@ func TestBaseInfoAndUserInfoConversions(t *testing.T) {
 	assert.Nil(t, OpenAPIUserInfoDO2DTO(nil))
 }
 
+// TestOpenAPIItemConversions tests the conversion between EvaluationSetItem DO and DTO.
 func TestOpenAPIItemConversions(t *testing.T) {
 	t.Parallel()
 
@@ -396,6 +402,18 @@ func TestOpenAPIItemConversions(t *testing.T) {
 		ContentType: ptr[common.ContentType](common.ContentTypeText),
 		Text:        ptr("part"),
 	}
+	multipartContent1 := &common.Content{
+		ContentType: ptr[common.ContentType](common.ContentTypeAudio),
+		Audio: &common.Audio{
+			Name: &imageName,
+		},
+	}
+	multipartContent2 := &common.Content{
+		ContentType: ptr[common.ContentType](common.ContentTypeVideo),
+		Video: &common.Video{
+			Name: &imageName,
+		},
+	}
 
 	contentDTO := &common.Content{
 		ContentType: ptr[common.ContentType](common.ContentTypeMultiPart),
@@ -405,7 +423,7 @@ func TestOpenAPIItemConversions(t *testing.T) {
 			URL:      &imageURL,
 			ThumbURL: &thumbURL,
 		},
-		MultiPart: []*common.Content{multipartContent},
+		MultiPart: []*common.Content{multipartContent, multipartContent1, multipartContent2},
 	}
 
 	turnDTO := &openapi_eval_set.Turn{
@@ -437,6 +455,18 @@ func TestOpenAPIItemConversions(t *testing.T) {
 			{
 				ContentType: ptr(entity.ContentTypeText),
 				Text:        ptr("part"),
+			},
+			{
+				ContentType: ptr(entity.ContentTypeAudio),
+				Audio: &entity.Audio{
+					Name: &imageName,
+				},
+			},
+			{
+				ContentType: ptr(entity.ContentTypeVideo),
+				Video: &entity.Video{
+					Name: &imageName,
+				},
 			},
 		},
 	}
@@ -508,6 +538,10 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 			Format: &audioFormat,
 			URL:    &audioURL,
 		},
+		Video: &entity.Video{
+			Name: &imageName,
+			URL:  &imageURL,
+		},
 	}
 
 	do := &entity.EvaluationSetItem{
@@ -545,6 +579,8 @@ func TestOpenAPIItemDOToDTOConversions(t *testing.T) {
 								URL:      &imageURL,
 								ThumbURL: &thumbURL,
 							},
+							Audio: &common.Audio{Format: &audioFormat, URL: &audioURL},
+							Video: &common.Video{Name: &imageName, URL: &imageURL},
 							MultiPart: []*common.Content{
 								{
 									ContentType: ptr[common.ContentType](common.ContentTypeText),

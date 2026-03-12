@@ -31,6 +31,7 @@ const (
 	tagSpaceID      = "workspace_id"
 	tagPlatformType = "platform_type"
 	tagSpanType     = "span_list_type"
+	tagSrc          = "src"
 	tagIsErr        = "is_err"
 	tagErrCode      = "err_code"
 )
@@ -41,6 +42,7 @@ func traceQueryTagNames() []string {
 		tagSpaceID,
 		tagPlatformType,
 		tagSpanType,
+		tagSrc,
 		tagIsErr,
 		tagErrCode,
 	}
@@ -103,7 +105,7 @@ func (t *TraceMetricsImpl) EmitGetTrace(workspaceId int64, start time.Time, isEr
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(getTraceSuffix+latencySuffix)))
 }
 
-func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platformType, spanListType string, spanSize int64, errorCode int, start time.Time, isError bool) {
+func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platformType, spanListType, src string, spanSize int64, errorCode int, start time.Time, isError bool) {
 	if t.spansMetrics == nil {
 		return
 	}
@@ -114,6 +116,7 @@ func (t *TraceMetricsImpl) EmitTraceOapi(method string, workspaceId int64, platf
 			{Name: tagIsErr, Value: strconv.FormatBool(isError)},
 			{Name: tagPlatformType, Value: platformType},
 			{Name: tagSpanType, Value: spanListType},
+			{Name: tagSrc, Value: src},
 			{Name: tagErrCode, Value: strconv.Itoa(errorCode)},
 		},
 		metrics.Counter(1, metrics.WithSuffix(traceOApiSuffix+throughputSuffix)),
