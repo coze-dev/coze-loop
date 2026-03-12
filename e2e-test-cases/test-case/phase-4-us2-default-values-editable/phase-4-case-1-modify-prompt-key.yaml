@@ -1,0 +1,26 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-002 用户修改 Prompt Key 默认值
+
+验收场景:
+
+- US-002 Prompt Key 默认值可修改
+  - case: 用户清除默认 Prompt Key 并输入自定义值
+    - pc: 用户已打开新建模式的创建表单 Modal，Prompt Key 显示 "prompt_key_0"
+      - ts: 1. 选中 Prompt Key 输入框中的 "prompt_key_0" 2. 清除内容 3. 输入 "my_custom_key" 4. 观察输入框显示和校验状态
+        - ✅ Prompt Key 输入框显示 "my_custom_key"
+        - ✅ 无格式校验错误提示
+        - ❌ 修改后不应仍显示默认值 "prompt_key_0"
+
+  - case: 修改后的 Prompt Key 通过表单验证并用于 API 调用
+    - pc: 用户已将 Prompt Key 修改为 "my_custom_key"
+      - ts: 1. 确认 Prompt Key 显示 "my_custom_key" 2. 保留 Prompt 名称默认值 "prompt_demo_name_0" 3. 点击确认/提交按钮
+        - ✅ 表单验证通过
+        - ✅ CreatePrompt API 的 prompt_key 参数为 "my_custom_key"（非默认值）
+        - ✅ CreatePrompt API 的 prompt_name 参数为 "prompt_demo_name_0"（保留默认值）
+        - ❌ API 参数不应仍为默认值 "prompt_key_0"

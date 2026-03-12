@@ -1,0 +1,25 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — 复制模式验证默认值不干扰
+
+验收场景:
+
+- 复制模式不受默认值影响
+  - case: 复制模式显示已有值加 _copy 后缀
+    - pc: 用户已登录，Prompt 列表中存在一个已有 Prompt（如 Prompt Key 为 "existing_key"，长度 < 95）
+      - ts: 1. 在 Prompt 列表中找到目标 Prompt 2. 点击该 Prompt 的「复制」按钮 3. 等待复制表单 Modal 弹出
+        - ✅ Prompt Key 输入框显示 "existing_key_copy"
+        - ✅ Prompt 名称输入框显示已有名称加 "_copy" 后缀
+        - ❌ Prompt Key 不应显示默认值 "prompt_key_0"
+        - ❌ Prompt 名称不应显示默认值 "prompt_demo_name_0"
+
+  - case: 复制模式长 Key 不添加后缀
+    - pc: 用户已登录，Prompt 列表中存在一个 Prompt Key 长度 >= 95 的 Prompt
+      - ts: 1. 在 Prompt 列表中找到该长 Key 的 Prompt 2. 点击「复制」按钮 3. 等待复制表单 Modal 弹出
+        - ✅ Prompt Key 显示原 Key 值（不添加 "_copy" 后缀，因为加后缀会超长）
+        - ❌ Prompt Key 不应显示默认值 "prompt_key_0"

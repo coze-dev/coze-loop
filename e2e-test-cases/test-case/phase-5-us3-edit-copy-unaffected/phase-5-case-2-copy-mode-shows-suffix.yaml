@@ -1,0 +1,26 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-003 复制模式显示带后缀的值
+
+验收场景:
+
+- US-003 复制模式显示带 _copy 后缀的已有数据
+  - case: 复制 Prompt 时 Key 和名称显示原有值加 _copy
+    - pc: 用户已登录，Prompt 列表中存在 Prompt（如 Key="existing_key"，名称="Existing Name"，Key 长度 < 95）
+      - ts: 1. 在 Prompt 列表中找到该 Prompt 2. 点击「复制」按钮 3. 等待复制表单 Modal 弹出 4. 检查 Prompt Key 和名称字段的值
+        - ✅ Prompt Key 显示 "existing_key_copy"
+        - ✅ Prompt 名称显示 "Existing Name_copy"
+        - ✅ Prompt Key 输入框处于可编辑状态（复制模式下 Key 可修改）
+        - ❌ Prompt Key 不应显示默认值 "prompt_key_0"
+        - ❌ Prompt 名称不应显示默认值 "prompt_demo_name_0"
+
+  - case: 复制长 Key 的 Prompt 时不添加 _copy 后缀
+    - pc: 用户已登录，Prompt 列表中存在 Key 长度 >= 95 的 Prompt
+      - ts: 1. 找到该长 Key 的 Prompt 2. 点击「复制」按钮 3. 等待复制表单 Modal 弹出
+        - ✅ Prompt Key 显示原 Key 值（不添加 "_copy"，避免超长）
+        - ❌ 不应显示默认值 "prompt_key_0"

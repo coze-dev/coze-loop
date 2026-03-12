@@ -1,0 +1,32 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — Modal 关闭后重新打开恢复默认值
+
+验收场景:
+
+- Modal 关闭后重新打开恢复默认值
+  - case: 修改后取消再重新打开恢复默认值
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击「创建空白 Prompt」按钮 2. 在弹出的 Modal 中修改 Prompt Key 为 "modified_key" 3. 点击取消按钮关闭 Modal 4. 再次点击「创建空白 Prompt」按钮
+        - ✅ Prompt Key 输入框显示 "prompt_key_0"（默认值恢复，非上次修改的 "modified_key"）
+        - ✅ Prompt 名称输入框显示 "prompt_demo_name_0"（默认值恢复）
+        - ❌ 不应残留上次编辑的值
+
+  - case: 编辑模式取消后新建恢复默认值
+    - pc: 用户已登录，Prompt 列表中存在已有 Prompt
+      - ts: 1. 点击已有 Prompt 的「编辑」按钮 2. 确认编辑 Modal 显示已有数据 3. 点击取消关闭 Modal 4. 点击「创建空白 Prompt」按钮
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值，非编辑模式的已有值）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"
+        - ❌ 不应显示编辑模式残留的已有数据
+
+  - case: 复制模式取消后新建恢复默认值且 isCopyPrompt 正确重置
+    - pc: 用户已登录，Prompt 列表中存在已有 Prompt
+      - ts: 1. 点击已有 Prompt 的「复制」按钮 2. 确认复制 Modal 显示 "_copy" 后缀数据 3. 点击取消关闭 Modal 4. 点击「创建空白 Prompt」按钮
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值，非复制模式的数据）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"
+        - ❌ 不应显示复制模式残留的 "_copy" 后缀数据

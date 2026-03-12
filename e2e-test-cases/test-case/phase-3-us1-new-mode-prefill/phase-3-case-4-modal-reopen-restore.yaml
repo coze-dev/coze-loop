@@ -1,0 +1,25 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-001 Modal 关闭后重开默认值恢复
+
+验收场景:
+
+- US-001 Modal 关闭后重新打开恢复默认值
+  - case: 修改表单后取消再重开时恢复默认值
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击「创建空白 Prompt」打开 Modal 2. 将 Prompt Key 修改为 "my_modified_key" 3. 将 Prompt 名称修改为 "My Modified Name" 4. 点击取消关闭 Modal 5. 再次点击「创建空白 Prompt」
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值恢复）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"（默认值恢复）
+        - ❌ 不应残留上次修改的 "my_modified_key" 或 "My Modified Name"
+
+  - case: 点击遮罩层关闭 Modal 后重开恢复默认值
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击「创建空白 Prompt」打开 Modal 2. 修改表单中的 Prompt Key 3. 点击 Modal 外部遮罩层关闭 Modal 4. 再次点击「创建空白 Prompt」
+        - ✅ Prompt Key 显示 "prompt_key_0"（默认值恢复）
+        - ✅ Prompt 名称显示 "prompt_demo_name_0"
+        - ❌ 不应残留上次编辑值

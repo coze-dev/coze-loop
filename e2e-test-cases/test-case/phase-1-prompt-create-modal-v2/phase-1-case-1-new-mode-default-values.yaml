@@ -1,0 +1,31 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8147/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — 新建 Prompt 入口
+
+验收场景:
+
+- 新建模式默认值展示
+  - case: Prompt Key 预填默认值 prompt_key_0
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击页面上的「创建空白 Prompt」按钮 2. 等待创建表单 Modal 弹出
+        - ✅ Prompt Key 输入框中显示预填值 "prompt_key_0"
+        - ✅ 输入框处于可编辑状态（非禁用）
+        - ❌ Prompt Key 输入框不应为空
+
+  - case: Prompt 名称预填默认值 prompt_demo_name_0
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击页面上的「创建空白 Prompt」按钮 2. 等待创建表单 Modal 弹出
+        - ✅ Prompt 名称输入框中显示预填值 "prompt_demo_name_0"
+        - ✅ 输入框处于可编辑状态
+        - ❌ Prompt 名称输入框不应为空
+
+  - case: Prompt 描述不预填默认值
+    - pc: 用户已登录并进入 Prompt 列表页
+      - ts: 1. 点击页面上的「创建空白 Prompt」按钮 2. 等待创建表单 Modal 弹出
+        - ✅ Prompt 描述输入框为空（无预填值）
+        - ❌ Prompt 描述不应显示任何默认文本

@@ -4,7 +4,8 @@ import { createRsbuildConfig } from '@cozeloop/rsbuild-config';
 
 export type RsbuildConfig = ReturnType<typeof createRsbuildConfig>;
 
-const port = 8090;
+const port = 8147;
+const mockServerPort = 9130;
 
 export default createRsbuildConfig({
   server: { port },
