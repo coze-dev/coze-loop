@@ -24,8 +24,9 @@ type ExptItemEvalEvent struct {
 	ExptRunID   int64
 	ExptRunMode ExptRunMode
 
-	EvalSetItemID      int64
-	AsyncReportTrigger bool
+	EvalSetItemID               int64
+	AsyncReportTrigger          bool
+	AsyncEvaluatorReportTrigger bool
 
 	CreateAt      int64
 	RetryTimes    int
