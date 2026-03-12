@@ -684,15 +684,16 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 	if err != nil {
 		return false, err
 	}
-	toSubmitItems, incompleteItems, _, err := e.ScanEvalItems(ctx, event, expt)
+	toSubmitItems, incompleteItems, completeItems, err := e.ScanEvalItems(ctx, event, expt)
 	if err != nil {
 		return false, err
 	}
 	toSubmit = len(toSubmitItems)
 	incomplete = len(incompleteItems)
+	complete := len(completeItems)
 
-	// 用新的 toSubmit、incomplete 判断是否结束
-	if toSubmit == 0 && incomplete == 0 {
+	// 用新的 toSubmit、incomplete、complete 判断是否结束，需 Complete 数量也为零才不发送下一个心跳
+	if toSubmit == 0 && incomplete == 0 && complete == 0 {
 
 		if expt.Status == entity.ExptStatus_Draining {
 			logs.CtxInfo(ctx, "[ExptEval] expt daemon drained, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
@@ -716,9 +717,9 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		}
 		return false, nil
 	}
-	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v", toSubmit, incomplete)
-	// 若未结束且有新数据，则发送下一次 tick；否则不发送
-	return toSubmit > 0 || incomplete > 0, nil
+	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmit, incomplete, complete)
+	// 若未结束且有新数据或待 Complete，则发送下一次 tick；否则不发送
+	return toSubmit > 0 || incomplete > 0 || complete > 0, nil
 }
 
 func (e *ExptAppendExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
