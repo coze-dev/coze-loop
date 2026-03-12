@@ -1711,6 +1711,7 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.mutex.EXPECT().LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
+				f.mutex.EXPECT().UnlockForce(gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(1)
 				f.manager.EXPECT().GetDetail(gomock.Any(), args.event.ExptID, args.event.SpaceID, gomock.Any()).Return(mockExptWithEvalSet, nil).Times(1)
 				execConf := &entity.ExptExecConf{
@@ -1765,6 +1766,7 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 			},
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.mutex.EXPECT().LockBackoff(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
+				f.mutex.EXPECT().UnlockForce(gomock.Any(), gomock.Any()).Return(true, nil).Times(1)
 				f.mutex.EXPECT().Unlock(gomock.Any()).Return(true, nil).Times(1)
 				f.manager.EXPECT().GetDetail(gomock.Any(), args.event.ExptID, args.event.SpaceID, gomock.Any()).Return(mockExptWithEvalSet, nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ExptItemEvalConf: &entity.ExptItemEvalConf{ConcurNum: 1}}).AnyTimes()
@@ -2020,7 +2022,6 @@ func TestNewSchedulerModeFactory(t *testing.T) {
 		templateManager,
 		mockExptRunLogRepo,
 		mutex,
-		nil, // daemonLockCancelStore
 	)
 
 	tests := []struct {
@@ -2145,7 +2146,7 @@ func TestNewExptAppendMode(t *testing.T) {
 	templateManager := svcmocks.NewMockIExptTemplateManager(ctrl)
 	mutex := lockMocks.NewMockILocker(ctrl)
 
-	exec := NewExptAppendMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, templateManager, mutex, nil)
+	exec := NewExptAppendMode(manager, exptItemResultRepo, exptStatsRepo, exptTurnResultRepo, idgenerator, evaluationSetItemService, exptRepo, idem, configer, publisher, evaluatorRecordService, templateManager, mutex)
 	assert.NotNil(t, exec)
 	assert.Equal(t, manager, exec.manager)
 	assert.Equal(t, exptItemResultRepo, exec.exptItemResultRepo)
@@ -4350,7 +4351,6 @@ func TestSchedulerModeFactory_NewSchedulerMode_RetryAll(t *testing.T) {
 		templateManager,
 		mockExptRunLogRepo,
 		mutex,
-		nil, // daemonLockCancelStore
 	)
 
 	tests := []struct {

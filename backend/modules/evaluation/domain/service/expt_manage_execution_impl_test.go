@@ -2321,7 +2321,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*5).
+					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*10).
 					Return(true, nil)
 
 				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
@@ -2446,7 +2446,7 @@ func TestExptMangerImpl_Invoke_ExtField(t *testing.T) {
 
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*5).
+					LockBackoff(ctx, "expt_online_data_lock:1:2", time.Second*30, time.Minute*10).
 					Return(true, nil)
 
 				mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).

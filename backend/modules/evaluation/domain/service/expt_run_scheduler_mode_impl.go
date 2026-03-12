@@ -51,7 +51,6 @@ func NewSchedulerModeFactory(
 	templateManager IExptTemplateManager,
 	exptRunLogRepo repo.IExptRunLogRepo,
 	mutex lock.ILocker,
-	daemonLockCancelStore OnlineDaemonLockCancelStore,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -69,7 +68,6 @@ func NewSchedulerModeFactory(
 		templateManager:          templateManager,
 		exptRunLogRepo:           exptRunLogRepo,
 		mutex:                    mutex,
-		daemonLockCancelStore:    daemonLockCancelStore,
 	}
 }
 
@@ -88,9 +86,8 @@ type DefaultSchedulerModeFactory struct {
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
 	templateManager          IExptTemplateManager
-	exptRunLogRepo           repo.IExptRunLogRepo
-	mutex                    lock.ILocker
-	daemonLockCancelStore    OnlineDaemonLockCancelStore
+	exptRunLogRepo repo.IExptRunLogRepo
+	mutex          lock.ILocker
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -102,7 +99,7 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeFailRetry:
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
-		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.mutex, f.daemonLockCancelStore), nil
+		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.mutex), nil
 	case entity.EvaluationModeRetryAll:
 		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeRetryItems:
@@ -604,9 +601,8 @@ type ExptAppendExec struct {
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
-	templateManager          IExptTemplateManager
-	mutex                    lock.ILocker
-	daemonLockCancelStore    OnlineDaemonLockCancelStore
+	templateManager IExptTemplateManager
+	mutex          lock.ILocker
 }
 
 func NewExptAppendMode(
@@ -623,7 +619,6 @@ func NewExptAppendMode(
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
 	mutex lock.ILocker,
-	daemonLockCancelStore OnlineDaemonLockCancelStore,
 ) *ExptAppendExec {
 	return &ExptAppendExec{
 		manager:                  manager,
@@ -639,7 +634,6 @@ func NewExptAppendMode(
 		evaluatorRecordService:   evaluatorRecordService,
 		templateManager:          templateManager,
 		mutex:                    mutex,
-		daemonLockCancelStore:    daemonLockCancelStore,
 	}
 }
 
@@ -706,14 +700,15 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 				logs.CtxError(ctx, "[ExptEval] expt daemon record expt data failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 			}
 		}
-		// 在线实验 daemon 结束：在数据锁内释放心跳锁
-		if e.daemonLockCancelStore != nil {
-			lockKey := fmt.Sprintf("expt_online_daemon_lock:%d:%d", event.ExptID, event.ExptRunID)
-			if cancel, ok := e.daemonLockCancelStore.LoadAndDelete(lockKey); ok && cancel != nil {
-				logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
-				cancel()
-				logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
-			}
+		// 在线实验 daemon 结束：主动释放 Redis 心跳锁，适配分布式架构（ExptEnd 可能在任意实例执行）
+		lockKey := fmt.Sprintf("expt_online_daemon_lock:%d:%d", event.ExptID, event.ExptRunID)
+		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		if released, uerr := e.mutex.UnlockForce(ctx, lockKey); uerr != nil {
+			logs.CtxWarn(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock UnlockForce err, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
+		} else if released {
+			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		} else {
+			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock already released or not held, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 		}
 		return false, nil
 	}

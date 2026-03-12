@@ -62,7 +62,6 @@ func NewExptManager(
 	templateManager IExptTemplateManager,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
-	daemonLockCancelStore OnlineDaemonLockCancelStore,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -89,9 +88,8 @@ func NewExptManager(
 		exptAggrResultService:       exptAggrResultService,
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
-		notifyRPCAdapter:            notifyRPCAdapter,
-		userProvider:                userProvider,
-		daemonLockCancelStore:       daemonLockCancelStore,
+		notifyRPCAdapter: notifyRPCAdapter,
+		userProvider:     userProvider,
 	}
 }
 
@@ -120,9 +118,8 @@ type ExptMangerImpl struct {
 	benefitService              benefit.IBenefitService
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
-	notifyRPCAdapter            rpc.INotifyRPCAdapter
-	userProvider                rpc.IUserProvider
-	daemonLockCancelStore       OnlineDaemonLockCancelStore
+	notifyRPCAdapter rpc.INotifyRPCAdapter
+	userProvider     rpc.IUserProvider
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {

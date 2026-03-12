@@ -287,12 +287,12 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
-	// 在线实验：抢心跳锁成功才发送 MQ daemon，与 Invoke 一致。Store cancel 供 ExptEnd 结束时释放
+	// 在线实验：抢心跳锁成功才发送 MQ daemon，与 Invoke 一致。ExptEnd 会通过 UnlockForce 主动释放，适配分布式架构
 	if expt.ExptType == entity.ExptType_Online {
 		maxHold := e.computeDaemonLockMaxHold(expt)
 		lockKey := e.makeOnlineExptDaemonLockKey(exptID, runID)
 		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
-		locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
+		locked, _, _, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
 		if err != nil {
 			logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Run] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", exptID, runID, spaceID, err)
 			return err
@@ -302,12 +302,6 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 			return nil
 		}
 		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
-		if e.daemonLockCancelStore != nil {
-			e.daemonLockCancelStore.Store(lockKey, cancel)
-			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt daemon lock cancel stored, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
-		} else {
-			defer cancel()
-		}
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
@@ -836,26 +830,20 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		return err
 	}
 
-	// singleflight mutex: 抢锁成功才发送 MQ daemon，使用 LockWithRenew 与 consumer 一致。Store cancel 供 ExptEnd 结束时释放
+	// singleflight mutex: 抢锁成功才发送 MQ daemon，使用 LockWithRenew 与 consumer 一致。ExptEnd 会通过 UnlockForce 主动释放，适配分布式架构
 	maxHold := e.computeDaemonLockMaxHold(expt)
 	lockKey := e.makeOnlineExptDaemonLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
 	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
-	locked, _, cancel, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
-	if err != nil {
-		logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID, err)
-		return err
+	locked, _, _, lockErr := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
+	if lockErr != nil {
+		logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID, lockErr)
+		return lockErr
 	}
 	if !locked {
 		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon already running, skip publish, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
 		return nil
 	}
 	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
-	if e.daemonLockCancelStore != nil {
-		e.daemonLockCancelStore.Store(lockKey, cancel)
-		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon lock cancel stored, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
-	} else {
-		defer cancel()
-	}
 	logs.CtxInfo(ctx, "[Invoke] PublishExptScheduleEvent, exptID: %v ", invokeExptReq.ExptID)
 	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
