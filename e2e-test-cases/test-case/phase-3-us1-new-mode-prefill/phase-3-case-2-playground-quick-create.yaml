@@ -4,7 +4,7 @@ web:
     password: admin123
     strategy: login_then_register
   urls:
-    - url: http://localhost:8147/console/enterprise/1/space/1/pe/playground
+    - url: http://localhost:8720/console/enterprise/1/space/1/pe/playground
       description: Playground 页面 — US-001 快速创建入口（空字符串场景）
 
 验收场景:
