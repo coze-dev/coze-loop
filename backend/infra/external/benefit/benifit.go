@@ -35,8 +35,8 @@ type IBenefitService interface {
 }
 
 type GetTraceBenefitSourceParams struct {
-	Tags       map[string]string `json:"source"`        // 来源
-	SystemTags map[string]string `json:"connector_uid"` // Coze登录ID
+	Tags       map[string]string `json:"tags"`
+	SystemTags map[string]string `json:"system_tags"`
 }
 
 type GetTraceBenefitSourceResult struct {
