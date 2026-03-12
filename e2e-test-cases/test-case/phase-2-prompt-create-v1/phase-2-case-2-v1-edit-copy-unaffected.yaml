@@ -4,7 +4,7 @@ web:
     password: admin123
     strategy: login_then_register
   urls:
-    - url: http://localhost:8720/console/enterprise/1/space/1/evaluation/experiments/create
+    - url: http://localhost:8685/console/enterprise/1/space/1/evaluation/experiments/create
       description: 评测实验创建页 — v1 PromptCreate 编辑/复制模式验证
 
 验收场景:

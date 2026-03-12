@@ -4,7 +4,7 @@ web:
     password: admin123
     strategy: login_then_register
   urls:
-    - url: http://localhost:8720/console/enterprise/1/space/1/pe/prompts
+    - url: http://localhost:8685/console/enterprise/1/space/1/pe/prompts
       description: Prompt 列表页 — US-002 修改后的值校验失败场景
 
 验收场景:

@@ -4,7 +4,7 @@ web:
     password: admin123
     strategy: login_then_register
   urls:
-    - url: http://localhost:8720/console/enterprise/1/space/1/pe/prompts
+    - url: http://localhost:8685/console/enterprise/1/space/1/pe/prompts
       description: Prompt 列表页 — US-001 Modal 关闭后重开默认值恢复
 
 验收场景:
