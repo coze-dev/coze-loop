@@ -1359,7 +1359,7 @@ func TestOpenAPIApplication_IngestTraces_SkipWhichIsEnough3(t *testing.T) {
 			{SpanID: "s3", TagsString: map[string]string{"src": "ingest"}},
 		},
 	})
-	assert.NoError(t, err)
+	assert.Error(t, err)
 }
 
 func TestOpenAPIApplication_IngestTraces_WorkspaceIdMismatch(t *testing.T) {
@@ -2298,6 +2298,74 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		assert.NotNil(t, pbResp.PartialSuccess)
 		assert.Equal(t, int64(1), pbResp.PartialSuccess.RejectedSpans)
 		assert.Contains(t, pbResp.PartialSuccess.ErrorMessage, "TraceNoCapacityAvailable")
+	})
+
+	t.Run("otel ingest ignores spans when source resolve fails", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		traceServiceMock := servicemocks.NewMockITraceService(ctrl)
+		authMock := rpcmocks.NewMockIAuthProvider(ctrl)
+		authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
+		benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
+		tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+		workspaceMock := workspacemocks.NewMockIWorkSpaceProvider(ctrl)
+		rateLimiterMock := limitermocks.NewMockIRateLimiter(ctrl)
+		traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+		metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
+		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
+
+		authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+		benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).AnyTimes()
+		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Times(0)
+		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Times(0)
+
+		app := &OpenAPIApplication{
+			traceService: traceServiceMock,
+			auth:         authMock,
+			benefit:      benefitMock,
+			tenant:       tenantMock,
+			workspace:    workspaceMock,
+			rateLimiter:  rateLimiterMock,
+			traceConfig:  traceConfigMock,
+			metrics:      metricsMock,
+			collector:    collectorMock,
+		}
+
+		req := &openapi.OtelIngestTracesRequest{
+			WorkspaceID:     "1",
+			ContentType:     "application/json",
+			ContentEncoding: "",
+			Body: []byte(`{
+				"resourceSpans":[
+					{
+						"scopeSpans":[
+							{
+								"spans":[
+									{
+										"traceId":"t1",
+										"spanId":"s1",
+										"name":"n1",
+										"startTimeUnixNano":"1",
+										"endTimeUnixNano":"2",
+										"attributes":[{"key":"src","value":{"stringValue":"a"}}]
+									}
+								]
+							}
+						]
+					}
+				]
+			}`),
+		}
+
+		resp, err := app.OtelIngestTraces(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+
+		pbResp := &coltracepb.ExportTraceServiceResponse{}
+		assert.NoError(t, proto.Unmarshal(resp.Body, pbResp))
+		assert.NotNil(t, pbResp.PartialSuccess)
+		assert.Equal(t, int64(0), pbResp.PartialSuccess.RejectedSpans)
 	})
 
 	t.Run("invalid request", func(t *testing.T) {
