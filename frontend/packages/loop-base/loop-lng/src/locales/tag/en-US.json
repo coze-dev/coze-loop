@@ -16,7 +16,7 @@
   "tag_type": "Tag Type",
   "tag_description": "Tag Description",
   "tag_name": "Tag Name",
-  "tag_name_length_limit": "Tag name must be 1-50 characters long",
+  "tag_name_length_limit": "Tag name must be 1-100 characters long",
   "tag_name_valid_chars": "Tag name only supports Chinese, English, numbers and underscores",
   "tag_configuration": "Tag Configuration",
   "tag_options": "Tag Options",

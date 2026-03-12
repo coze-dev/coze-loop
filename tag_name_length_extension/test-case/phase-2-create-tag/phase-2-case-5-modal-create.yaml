@@ -1,0 +1,17 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/tag/tag
+      description: 标签列表页面 — 弹窗模式新建标签
+
+验收场景:
+
+- 弹窗模式新建标签
+  - case: 弹窗新建标签输入100个字符名称可成功创建
+    - pc: 用户已登录并进入标签列表页面
+      - ts: 1. 点击页面上的「新建标签」按钮打开弹窗 2. 在弹窗中的标签名称输入框输入100个合法字符 3. 选择标签类型 4. 点击确认按钮提交
+        - ✅ 标签创建成功，弹窗关闭，列表刷新显示新标签
+        - ❌ 输入被截断、校验失败或创建失败

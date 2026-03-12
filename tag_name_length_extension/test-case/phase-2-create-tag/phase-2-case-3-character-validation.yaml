@@ -1,0 +1,23 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/tag/tag/create
+      description: 新建标签页面 — 字符合法性校验
+
+验收场景:
+
+- 新建标签字符校验
+  - case: 输入特殊字符提示字符不合法
+    - pc: 用户已登录并进入新建标签页面
+      - ts: 1. 在标签名称输入框中输入"test@#$%tag" 2. 点击输入框外部触发blur校验 3. 观察错误提示
+        - ✅ 显示错误提示"标签名称仅支持输入中文、英文、数字和下划线"
+        - ❌ 校验通过或提示信息不正确
+
+  - case: 输入空格提示字符不合法
+    - pc: 用户已登录并进入新建标签页面
+      - ts: 1. 在标签名称输入框中输入"test tag"（包含空格） 2. 点击输入框外部触发blur校验 3. 观察错误提示
+        - ✅ 显示错误提示"标签名称仅支持输入中文、英文、数字和下划线"
+        - ❌ 校验通过或允许包含空格的名称

@@ -1,0 +1,17 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/tag/tag/create
+      description: 新建标签页面 — 唯一性校验
+
+验收场景:
+
+- 新建标签唯一性校验
+  - case: 输入与已有标签相同名称提示重复
+    - pc: 用户已登录并进入新建标签页面，空间内已存在名为"已有标签"的标签
+      - ts: 1. 在标签名称输入框中输入"已有标签" 2. 点击输入框外部触发blur校验 3. 观察错误提示
+        - ✅ 显示错误提示"同空间内标签名称不允许重复"
+        - ❌ 校验通过或无重复提示

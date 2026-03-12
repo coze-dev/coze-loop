@@ -1,0 +1,17 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/tag/tag/create
+      description: 新建标签页面 — 英文环境下长度校验错误提示
+
+验收场景:
+
+- 英文环境长度校验提示
+  - case: 空标签名称提示包含100字符限制（英文）
+    - pc: 用户已登录并进入新建标签页面，语言设置为英文
+      - ts: 1. 切换界面语言为英文 2. 点击标签名称输入框获取焦点 3. 不输入任何内容 4. 点击输入框外部触发blur校验
+        - ✅ 错误提示显示"Tag name must be 1-100 characters long"
+        - ❌ 错误提示仍显示旧文案"Tag name must be 1-50 characters long"

@@ -33,7 +33,7 @@ import {
   useTagNameValidateUniqBySpace,
   type ValidateFn,
 } from '@/utils/validate';
-import { TAG_TYPE_OPTIONS, MAX_TAG_LENGTH } from '@/const';
+import { TAG_TYPE_OPTIONS, MAX_TAG_LENGTH, MAX_TAG_NAME_LENGTH } from '@/const';
 
 const { TagContentType } = tag;
 
@@ -130,7 +130,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
               label={I18n.t('tag_name')}
               placeholder={I18n.t('enter_tag_name')}
               rules={[{ required: true, message: I18n.t('enter_tag_name') }]}
-              maxLength={50}
+              maxLength={MAX_TAG_NAME_LENGTH}
               validate={composeValidate([
                 tagNameValidate,
                 validateUniqBySpace as ValidateFn,
@@ -217,7 +217,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                                   field={`${field}.tag_value_name`}
                                   placeholder={I18n.t('please_enter')}
                                   fieldClassName="!py-0"
-                                  maxLength={50}
+                                  maxLength={MAX_TAG_NAME_LENGTH}
                                   onChange={() => {
                                     formApi
                                       .validate(['tag_values'])
@@ -307,7 +307,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                       placeholder={I18n.t('please_enter')}
                       fieldClassName="!py-0 flex-1"
                       noLabel
-                      maxLength={50}
+                      maxLength={MAX_TAG_NAME_LENGTH}
                       validate={composeValidate([
                         tagNameValidate,
                         tagValidateNameUniqByOptions(
@@ -331,7 +331,7 @@ export const TagsForm = forwardRef((props: TagsForm, ref) => {
                       placeholder={I18n.t('please_enter')}
                       fieldClassName="!py-0 flex-1"
                       noLabel
-                      maxLength={50}
+                      maxLength={MAX_TAG_NAME_LENGTH}
                       onChange={() => {
                         formApi.validate(['tag_values']).catch(console.log);
                       }}

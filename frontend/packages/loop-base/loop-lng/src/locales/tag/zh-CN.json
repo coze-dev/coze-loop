@@ -16,7 +16,7 @@
   "tag_type": "标签类型",
   "tag_description": "标签描述",
   "tag_name": "标签名称",
-  "tag_name_length_limit": "标签名称必须为 1～50 字符长度",
+  "tag_name_length_limit": "标签名称必须为 1～100 字符长度",
   "tag_name_valid_chars": "标签名称仅支持输入中文、英文、数字和下划线",
   "tag_configuration": "标签配置",
   "tag_options": "标签选项",

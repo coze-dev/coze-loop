@@ -12,7 +12,7 @@ export enum TagType {
 }
 
 export const MAX_TAG_LENGTH = 50;
-export const MAX_TAG_NAME_LENGTH = 50;
+export const MAX_TAG_NAME_LENGTH = 100;
 export const MAX_TAG_DESC_LENGTH = 200;
 
 export const TAG_TYPE_TO_NAME_MAP = {
