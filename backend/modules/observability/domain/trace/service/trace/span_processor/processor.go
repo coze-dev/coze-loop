@@ -6,6 +6,7 @@ package span_processor
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -20,6 +21,7 @@ type Settings struct {
 	SpanDoubleCheck       bool
 	QueryTraceID          string
 	QueryLogID            string
+	Scene                 entity.ProcessorScene
 }
 
 type Factory interface {
