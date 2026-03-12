@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "bash",
+      "args": [
+        "./scripts/chrome-devtools-mcp.sh"
+      ],
+      "env": {
+        "CHROME_DEBUG_PORT": "${CHROME_DEBUG_PORT:-}"
+      }
+    }
+  }
+}

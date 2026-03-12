@@ -1,0 +1,19 @@
+web:
+  auth:
+    email: admin@example.com
+    password: admin123
+    strategy: login_then_register
+  urls:
+    - url: http://localhost:8082/console/enterprise/1/space/1/pe/prompts
+      description: Prompt 列表页 — US-003 Snippet 模式下默认值不影响结果
+
+验收场景:
+
+- US-003 Snippet 模式下默认值不影响最终结果
+  - case: Snippet 模式创建时 Prompt Key 被 nanoid 覆盖
+    - pc: 用户已登录，以 Snippet 模式（isSnippet=true）打开创建表单
+      - ts: 1. 触发 Snippet 模式的创建流程 2. 观察 Prompt Key 输入区域（Snippet 模式下 Key 输入框应被隐藏） 3. 提交表单
+        - ✅ Snippet 模式下 Prompt Key 输入框不可见
+        - ✅ 提交时 Prompt Key 被覆盖为 "fornax.segment.{nanoid}" 格式
+        - ✅ initValues 中的默认值 "prompt_key_0" 不影响最终 API 参数
+        - ❌ Snippet 模式下不应使用默认值 "prompt_key_0" 作为最终 Key
