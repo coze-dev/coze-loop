@@ -184,6 +184,48 @@ func TestExptTurnResultFilterDAOImpl_buildQueryConditions(t *testing.T) {
 	}
 }
 
+func TestExptTurnResultFilterDAOImpl_buildItemSnapshotConditions(t *testing.T) {
+	d := &exptTurnResultFilterDAOImpl{}
+
+	t.Run("record_condition_as_field_filter", func(t *testing.T) {
+		// record 条件作为独立 FieldFilter：string_map['record_string_key_0'] = '7581751092564738049'
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				StringMapFilters: []*FieldFilter{
+					{Key: "string_key_0", Op: "LIKE", Values: []any{"开普勒"}},
+					{Key: "record_string_key_0", Op: "=", Values: []any{"7581751092564738049"}},
+				},
+			},
+			IsOnlineExpt: true,
+		}
+		var whereSQL string
+		var args []interface{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Contains(t, whereSQL, "dis.string_map['string_key_0'] LIKE ?")
+		assert.Contains(t, whereSQL, "dis.string_map['record_string_key_0'] = ?")
+		assert.Len(t, args, 2)
+		assert.Equal(t, "%开普勒%", args[0])
+		assert.Equal(t, "7581751092564738049", args[1])
+	})
+
+	t.Run("single_filter_no_record", func(t *testing.T) {
+		cond := &ExptTurnResultFilterQueryCond{
+			ItemSnapshotCond: &ItemSnapshotFilter{
+				StringMapFilters: []*FieldFilter{
+					{Key: "string_key_0", Op: "=", Values: []any{"v1"}},
+				},
+			},
+			IsOnlineExpt: false,
+		}
+		var whereSQL string
+		var args []interface{}
+		d.buildItemSnapshotConditions(cond, &whereSQL, &args)
+		assert.Contains(t, whereSQL, "dis.string_map['string_key_0'] = ?")
+		assert.NotContains(t, whereSQL, "record_string_key_0")
+		assert.Len(t, args, 1)
+	})
+}
+
 func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

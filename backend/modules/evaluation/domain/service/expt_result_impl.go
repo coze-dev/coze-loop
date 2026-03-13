@@ -2182,15 +2182,13 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	if (filter.ItemSnapshotCond == nil || len(filter.ItemSnapshotCond.StringMapFilters) == 0) && (filter.KeywordSearch == nil || filter.KeywordSearch.ItemSnapshotFilter == nil || len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) == 0) {
 		return nil
 	}
-	if baseExpt.ExptType == entity.ExptType_Online {
-		// todo 草稿版数据集不支持模糊搜索，本期暂不实现
-		return nil
+	req := &rpc.QueryItemSnapshotMappingRequest{
+		SpaceID:        baseExpt.SpaceID,
+		DatasetID:      baseExpt.EvalSetID,
+		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
+		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
 	}
-	// evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
-	// if err != nil {
-	//	return err
-	// }
-	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, baseExpt.SpaceID, baseExpt.EvalSetID, ptr.Of(baseExpt.EvalSetVersionID))
+	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -2214,28 +2212,40 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		switch itemSnapshotMapping.MappingKey {
 		case "string_map":
 			itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "float_map":
 			itemSnapshotFilter.FloatMapFilters = append(itemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "int_map":
 			itemSnapshotFilter.IntMapFilters = append(itemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "bool_map":
 			itemSnapshotFilter.BoolMapFilters = append(itemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		}
 	}
 	filter.ItemSnapshotCond = itemSnapshotFilter
@@ -2256,28 +2266,40 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		switch itemSnapshotMapping.MappingKey {
 		case "string_map":
 			keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "float_map":
 			keywordItemSnapshotFilter.FloatMapFilters = append(keywordItemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "int_map":
 			keywordItemSnapshotFilter.IntMapFilters = append(keywordItemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "bool_map":
 			keywordItemSnapshotFilter.BoolMapFilters = append(keywordItemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		}
 	}
 	filter.KeywordSearch.ItemSnapshotFilter = keywordItemSnapshotFilter

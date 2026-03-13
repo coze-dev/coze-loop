@@ -151,6 +151,7 @@ func (d *exptTurnResultFilterDAOImpl) buildQueryConditions(ctx context.Context, 
 
 	d.buildMainTableConditions(cond, &whereSQL, &args)
 	d.buildMapFieldConditions(cond, &whereSQL, &args)
+	d.buildItemSnapshotConditions(cond, &whereSQL, &args)
 	d.buildKeywordSearchConditions(ctx, cond, &keywordCond, &args)
 
 	return whereSQL, keywordCond, args
@@ -439,6 +440,120 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 				*args = append(*args, intValues)
 			}
 		}
+	}
+}
+
+// buildItemSnapshotConditions 构建 dis 表（dataset_item_draft/snapshot）的 map 字段条件
+// 在线实验的 record 条件通过独立 FieldFilter 传入，如 Key="record_string_key_0", Op="=", Values=["7581751092564738049"]
+func (d *exptTurnResultFilterDAOImpl) buildItemSnapshotConditions(cond *ExptTurnResultFilterQueryCond, whereSQL *string, args *[]interface{}) {
+	if cond.ItemSnapshotCond == nil || !d.hasItemSnapshotFilters(cond.ItemSnapshotCond) {
+		return
+	}
+	f := cond.ItemSnapshotCond
+	for _, ff := range f.StringMapFilters {
+		d.appendItemSnapshotMapCond(whereSQL, args, "string_map", ff)
+	}
+	for _, ff := range f.FloatMapFilters {
+		d.appendItemSnapshotMapCond(whereSQL, args, "float_map", ff)
+	}
+	for _, ff := range f.IntMapFilters {
+		d.appendItemSnapshotMapCond(whereSQL, args, "int_map", ff)
+	}
+	for _, ff := range f.BoolMapFilters {
+		d.appendItemSnapshotMapCond(whereSQL, args, "bool_map", ff)
+	}
+}
+
+func (d *exptTurnResultFilterDAOImpl) appendItemSnapshotMapCond(whereSQL *string, args *[]interface{}, mapKey string, f *FieldFilter) {
+	// 主条件：dis.{mapKey}['Key'] Op ?
+	switch mapKey {
+	case "string_map":
+		switch f.Op {
+		case "=":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] = ?", f.Key)
+			*args = append(*args, f.Values[0])
+		case "LIKE":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] LIKE ?", f.Key)
+			*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+		case "NOT LIKE":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] NOT LIKE ?", f.Key)
+			*args = append(*args, "%"+escapeSpecialChars(fmt.Sprintf("%v", f.Values[0]))+"%")
+		case "!=":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] != ?", f.Key)
+			*args = append(*args, f.Values[0])
+		case "in", "IN":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] IN ?", f.Key)
+			*args = append(*args, f.Values)
+		case "NOT IN":
+			*whereSQL += fmt.Sprintf(" AND dis.string_map['%s'] NOT IN ?", f.Key)
+			*args = append(*args, f.Values)
+		default:
+			return
+		}
+	case "float_map":
+		switch f.Op {
+		case "=":
+			v, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			if err != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND abs(dis.float_map['%s'] - ?) < %g", f.Key, floatEpsilon)
+			*args = append(*args, v)
+		case ">", ">=", "<", "<=", "!=":
+			v, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			if err != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND dis.float_map['%s'] %s ?", f.Key, f.Op)
+			*args = append(*args, v)
+		case "BETWEEN":
+			v1, err1 := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
+			v2, err2 := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[1]), 64)
+			if err1 != nil || err2 != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND dis.float_map['%s'] BETWEEN ? AND ?", f.Key)
+			*args = append(*args, v1, v2)
+		default:
+			return
+		}
+	case "int_map":
+		switch f.Op {
+		case "=":
+			v, err := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			if err != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND dis.int_map['%s'] = ?", f.Key)
+			*args = append(*args, v)
+		case ">", ">=", "<", "<=", "!=":
+			v, err := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			if err != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND dis.int_map['%s'] %s ?", f.Key, f.Op)
+			*args = append(*args, v)
+		case "BETWEEN":
+			v1, err1 := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
+			v2, err2 := strconv.ParseInt(fmt.Sprintf("%v", f.Values[1]), 10, 64)
+			if err1 != nil || err2 != nil {
+				return
+			}
+			*whereSQL += fmt.Sprintf(" AND dis.int_map['%s'] BETWEEN ? AND ?", f.Key)
+			*args = append(*args, v1, v2)
+		default:
+			return
+		}
+	case "bool_map":
+		switch f.Op {
+		case "=", "!=":
+			*whereSQL += fmt.Sprintf(" AND dis.bool_map['%s'] %s ?", f.Key, f.Op)
+			*args = append(*args, f.Values[0])
+		default:
+			return
+		}
+	default:
+		return
 	}
 }
 

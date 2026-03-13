@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 )
 
 //go:generate mockgen -destination=mocks/evaluation_set.go -package=mocks . IEvaluationSetService
@@ -19,7 +20,7 @@ type IEvaluationSetService interface {
 	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error)
 	ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
-	QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
+	QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 }
 
 //type CreateEvaluationSetParam struct {

@@ -978,7 +978,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -1478,7 +1478,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -2839,7 +2839,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 		}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 			{
 				FieldKey:      "field_key_string",
 				MappingKey:    "string_map",
