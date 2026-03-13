@@ -1153,7 +1153,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 	b.ExptResultBuilders = []*ExptResultBuilder{exptResultBuilder}
 
 	// 填充数据
-	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, exptDO.EvalSetVersionID)
+	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, exptDO.EvalSetID, exptDO.EvalSetVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -1161,7 +1161,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 	return b.ExptTurnResultFilters, nil
 }
 
-func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetVersionID int64) error {
+func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetID, evalSetVersionID int64) error {
 	exptResultBuilder := b.ExptResultBuilders[0]
 	b.ExptTurnResultFilters = make([]*entity.ExptTurnResultFilterEntity, 0)
 	itemID2ItemIdx := make(map[int64]*entity.ExptItemResult)
@@ -1182,6 +1182,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			AnnotationString:  make(map[string]string),
 			EvalTargetMetrics: make(map[string]int64),
 			CreatedDate:       ptr.From(createdDate),
+			EvalSetID:         evalSetID,
 			EvalSetVersionID:  evalSetVersionID,
 		}
 		exptTurnResultFilter.ExptID = b.BaselineExptID

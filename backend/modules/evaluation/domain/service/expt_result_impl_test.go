@@ -5621,7 +5621,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		if assert.NotNil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore) {
@@ -5675,7 +5675,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		// 应该使用已有的加权分数
@@ -5725,7 +5725,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		// 未启用加权分数，应该保持为 nil

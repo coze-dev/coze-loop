@@ -775,6 +775,7 @@ type ExptTurnResultFilterEntity struct {
 	EvalTargetMetrics       map[string]int64   `json:"eval_target_metrics"`
 	CreatedDate             time.Time          `json:"created_date"`
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
+	EvalSetID               int64              `json:"eval_set_id"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
 	CreatedAt               time.Time          `json:"created_at"`
 	UpdatedAt               time.Time          `json:"updated_at"`
