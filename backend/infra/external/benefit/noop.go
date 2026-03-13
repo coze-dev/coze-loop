@@ -14,6 +14,12 @@ func NewNoopBenefitService() IBenefitService {
 	return &NoopBenefitServiceImpl{}
 }
 
+func (n NoopBenefitServiceImpl) GetTraceBenefitSource(ctx context.Context, param *GetTraceBenefitSourceParams) (result *GetTraceBenefitSourceResult, err error) {
+	return &GetTraceBenefitSourceResult{
+		Source: 10,
+	}, nil
+}
+
 func (n NoopBenefitServiceImpl) CheckTraceBenefit(ctx context.Context, param *CheckTraceBenefitParams) (result *CheckTraceBenefitResult, err error) {
 	return &CheckTraceBenefitResult{
 		AccountAvailable: true,
