@@ -194,15 +194,15 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
 			o := &OpenAPIApplication{
-				traceService: fields.traceService,
-				auth:         fields.auth,
-				benefit:      fields.benefit,
-				tenant:       fields.tenant,
-				workspace:    fields.workspace,
-				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
-				traceConfig:  fields.traceConfig,
-				metrics:      fields.metrics,
-				collector:    fields.collector,
+				traceService:         fields.traceService,
+				auth:                 fields.auth,
+				benefit:              fields.benefit,
+				tenant:               fields.tenant,
+				workspace:            fields.workspace,
+				rateLimiter:          fields.rateLimiter.NewRateLimiter(),
+				traceConfig:          fields.traceConfig,
+				metrics:              fields.metrics,
+				collector:            fields.collector,
 				spanContextExtractor: newSpanContextExtractorMock(ctrl),
 			}
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
@@ -1265,14 +1265,14 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 			defer ctrl.Finish()
 			fields := tt.fieldsGetter(ctrl)
 			o := &OpenAPIApplication{
-				traceService: fields.traceService,
-				auth:         fields.auth,
-				benefit:      fields.benefit,
-				tenant:       fields.tenant,
-				workspace:    fields.workspace,
-				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
-				traceConfig:  fields.traceConfig,
-				metrics:      fields.metrics,
+				traceService:         fields.traceService,
+				auth:                 fields.auth,
+				benefit:              fields.benefit,
+				tenant:               fields.tenant,
+				workspace:            fields.workspace,
+				rateLimiter:          fields.rateLimiter.NewRateLimiter(),
+				traceConfig:          fields.traceConfig,
+				metrics:              fields.metrics,
 				spanContextExtractor: newSpanContextExtractorMock(ctrl),
 			}
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
@@ -1366,12 +1366,12 @@ func TestOpenAPIApplication_IngestTraces_SkipWhichIsEnough3(t *testing.T) {
 	).Times(1)
 
 	app := &OpenAPIApplication{
-		traceService: traceServiceMock,
-		auth:         authMock,
-		benefit:      benefitMock,
-		tenant:       tenantMock,
-		workspace:    workspaceMock,
-		traceConfig:  traceConfigMock,
+		traceService:         traceServiceMock,
+		auth:                 authMock,
+		benefit:              benefitMock,
+		tenant:               tenantMock,
+		workspace:            workspaceMock,
+		traceConfig:          traceConfigMock,
 		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
@@ -1473,12 +1473,12 @@ func TestOpenAPIApplication_IngestTraces_BenefitErrorFallsBackToDefault(t *testi
 	).Times(1)
 
 	app := &OpenAPIApplication{
-		traceService: traceServiceMock,
-		auth:         authMock,
-		benefit:      benefitMock,
-		tenant:       tenantMock,
-		workspace:    workspaceMock,
-		traceConfig:  traceConfigMock,
+		traceService:         traceServiceMock,
+		auth:                 authMock,
+		benefit:              benefitMock,
+		tenant:               tenantMock,
+		workspace:            workspaceMock,
+		traceConfig:          traceConfigMock,
 		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
@@ -1522,12 +1522,12 @@ func TestOpenAPIApplication_IngestTraces_MaxSpanLengthExceededByTenant(t *testin
 	traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Times(0)
 
 	app := &OpenAPIApplication{
-		traceService: traceServiceMock,
-		auth:         authMock,
-		benefit:      benefitMock,
-		tenant:       tenantMock,
-		workspace:    workspaceMock,
-		traceConfig:  traceConfigMock,
+		traceService:         traceServiceMock,
+		auth:                 authMock,
+		benefit:              benefitMock,
+		tenant:               tenantMock,
+		workspace:            workspaceMock,
+		traceConfig:          traceConfigMock,
 		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
@@ -1570,12 +1570,12 @@ func TestOpenAPIApplication_IngestTraces_TraceServiceReturnsError(t *testing.T) 
 	traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(assert.AnError).Times(1)
 
 	app := &OpenAPIApplication{
-		traceService: traceServiceMock,
-		auth:         authMock,
-		benefit:      benefitMock,
-		tenant:       tenantMock,
-		workspace:    workspaceMock,
-		traceConfig:  traceConfigMock,
+		traceService:         traceServiceMock,
+		auth:                 authMock,
+		benefit:              benefitMock,
+		tenant:               tenantMock,
+		workspace:            workspaceMock,
+		traceConfig:          traceConfigMock,
 		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
@@ -2186,15 +2186,15 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		).Times(2)
 
 		app := &OpenAPIApplication{
-			traceService: traceServiceMock,
-			auth:         authMock,
-			benefit:      benefitMock,
-			tenant:       tenantMock,
-			workspace:    workspaceMock,
-			rateLimiter:  rateLimiterMock,
-			traceConfig:  traceConfigMock,
-			metrics:      metricsMock,
-			collector:    collectorMock,
+			traceService:         traceServiceMock,
+			auth:                 authMock,
+			benefit:              benefitMock,
+			tenant:               tenantMock,
+			workspace:            workspaceMock,
+			rateLimiter:          rateLimiterMock,
+			traceConfig:          traceConfigMock,
+			metrics:              metricsMock,
+			collector:            collectorMock,
 			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
@@ -2289,15 +2289,15 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		).Times(1)
 
 		app := &OpenAPIApplication{
-			traceService: traceServiceMock,
-			auth:         authMock,
-			benefit:      benefitMock,
-			tenant:       tenantMock,
-			workspace:    workspaceMock,
-			rateLimiter:  rateLimiterMock,
-			traceConfig:  traceConfigMock,
-			metrics:      metricsMock,
-			collector:    collectorMock,
+			traceService:         traceServiceMock,
+			auth:                 authMock,
+			benefit:              benefitMock,
+			tenant:               tenantMock,
+			workspace:            workspaceMock,
+			rateLimiter:          rateLimiterMock,
+			traceConfig:          traceConfigMock,
+			metrics:              metricsMock,
+			collector:            collectorMock,
 			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
@@ -2367,15 +2367,15 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 		app := &OpenAPIApplication{
-			traceService: traceServiceMock,
-			auth:         authMock,
-			benefit:      benefitMock,
-			tenant:       tenantMock,
-			workspace:    workspaceMock,
-			rateLimiter:  rateLimiterMock,
-			traceConfig:  traceConfigMock,
-			metrics:      metricsMock,
-			collector:    collectorMock,
+			traceService:         traceServiceMock,
+			auth:                 authMock,
+			benefit:              benefitMock,
+			tenant:               tenantMock,
+			workspace:            workspaceMock,
+			rateLimiter:          rateLimiterMock,
+			traceConfig:          traceConfigMock,
+			metrics:              metricsMock,
+			collector:            collectorMock,
 			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
