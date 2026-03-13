@@ -5,9 +5,12 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
@@ -28,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -598,9 +602,11 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 	//	return nil, err
 	// }
 
+	logID := logs.GetLogID(ctx)
+
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("logid: %s, param json unmarshal fail", logID)))
 	}
 
 	switch request.GetEvalTargetType() {
@@ -626,14 +632,19 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 			},
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, fmt.Sprintf("logid: %s", logID))
+		}
+		if record != nil && record.Status != nil && *record.Status == entity.EvalTargetRunStatusFail {
+			if record.EvalTargetOutputData != nil && record.EvalTargetOutputData.EvalTargetRunError != nil {
+				record.EvalTargetOutputData.EvalTargetRunError.Message = fmt.Sprintf("logid: %s, %s", logID, record.EvalTargetOutputData.EvalTargetRunError.Message)
+			}
 		}
 		return &eval_target.DebugEvalTargetResponse{
 			EvalTargetRecord: target.EvalTargetRecordDO2DTO(record),
 			BaseResp:         base.NewBaseResp(),
 		}, err
 	default:
-		return nil, errorx.New("unsupported eval target type %v", request.GetEvalTargetType())
+		return nil, errorx.New("logid: %s, unsupported eval target type %v", logID, request.GetEvalTargetType())
 	}
 }
 
