@@ -61,3 +61,4 @@ backend/script/errorx/.env
 .specify/
 specs/
 .puml
+.trae

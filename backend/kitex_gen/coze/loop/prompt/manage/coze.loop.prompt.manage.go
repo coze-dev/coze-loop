@@ -22,13 +22,14 @@ type ListPromptOrderBy = string
 
 // --------------- Prompt管理 --------------- //
 type CreatePromptRequest struct {
-	WorkspaceID       *int64               `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
-	PromptName        *string              `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
-	PromptKey         *string              `thrift:"prompt_key,12,optional" frugal:"12,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
-	PromptDescription *string              `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
-	PromptType        *prompt.PromptType   `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty" query:"prompt_type"`
-	DraftDetail       *prompt.PromptDetail `thrift:"draft_detail,21,optional" frugal:"21,optional,prompt.PromptDetail" form:"draft_detail" json:"draft_detail,omitempty" query:"draft_detail"`
-	Base              *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID       *int64                `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	PromptName        *string               `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
+	PromptKey         *string               `thrift:"prompt_key,12,optional" frugal:"12,optional,string" form:"prompt_key" json:"prompt_key,omitempty" query:"prompt_key"`
+	PromptDescription *string               `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
+	PromptType        *prompt.PromptType    `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty" query:"prompt_type"`
+	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,15,optional" frugal:"15,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	DraftDetail       *prompt.PromptDetail  `thrift:"draft_detail,21,optional" frugal:"21,optional,prompt.PromptDetail" form:"draft_detail" json:"draft_detail,omitempty" query:"draft_detail"`
+	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreatePromptRequest() *CreatePromptRequest {
@@ -98,6 +99,18 @@ func (p *CreatePromptRequest) GetPromptType() (v prompt.PromptType) {
 	return *p.PromptType
 }
 
+var CreatePromptRequest_SecurityLevel_DEFAULT prompt.SecurityLevel
+
+func (p *CreatePromptRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSecurityLevel() {
+		return CreatePromptRequest_SecurityLevel_DEFAULT
+	}
+	return *p.SecurityLevel
+}
+
 var CreatePromptRequest_DraftDetail_DEFAULT *prompt.PromptDetail
 
 func (p *CreatePromptRequest) GetDraftDetail() (v *prompt.PromptDetail) {
@@ -136,6 +149,9 @@ func (p *CreatePromptRequest) SetPromptDescription(val *string) {
 func (p *CreatePromptRequest) SetPromptType(val *prompt.PromptType) {
 	p.PromptType = val
 }
+func (p *CreatePromptRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
+	p.SecurityLevel = val
+}
 func (p *CreatePromptRequest) SetDraftDetail(val *prompt.PromptDetail) {
 	p.DraftDetail = val
 }
@@ -149,6 +165,7 @@ var fieldIDToName_CreatePromptRequest = map[int16]string{
 	12:  "prompt_key",
 	13:  "prompt_description",
 	14:  "prompt_type",
+	15:  "security_level",
 	21:  "draft_detail",
 	255: "Base",
 }
@@ -171,6 +188,10 @@ func (p *CreatePromptRequest) IsSetPromptDescription() bool {
 
 func (p *CreatePromptRequest) IsSetPromptType() bool {
 	return p.PromptType != nil
+}
+
+func (p *CreatePromptRequest) IsSetSecurityLevel() bool {
+	return p.SecurityLevel != nil
 }
 
 func (p *CreatePromptRequest) IsSetDraftDetail() bool {
@@ -234,6 +255,14 @@ func (p *CreatePromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 14:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField14(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 15:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField15(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -339,6 +368,17 @@ func (p *CreatePromptRequest) ReadField14(iprot thrift.TProtocol) error {
 	p.PromptType = _field
 	return nil
 }
+func (p *CreatePromptRequest) ReadField15(iprot thrift.TProtocol) error {
+
+	var _field *prompt.SecurityLevel
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SecurityLevel = _field
+	return nil
+}
 func (p *CreatePromptRequest) ReadField21(iprot thrift.TProtocol) error {
 	_field := prompt.NewPromptDetail()
 	if err := _field.Read(iprot); err != nil {
@@ -380,6 +420,10 @@ func (p *CreatePromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField14(oprot); err != nil {
 			fieldId = 14
+			goto WriteFieldError
+		}
+		if err = p.writeField15(oprot); err != nil {
+			fieldId = 15
 			goto WriteFieldError
 		}
 		if err = p.writeField21(oprot); err != nil {
@@ -498,6 +542,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
 }
+func (p *CreatePromptRequest) writeField15(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSecurityLevel() {
+		if err = oprot.WriteFieldBegin("security_level", thrift.STRING, 15); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SecurityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
+}
 func (p *CreatePromptRequest) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDraftDetail() {
 		if err = oprot.WriteFieldBegin("draft_detail", thrift.STRUCT, 21); err != nil {
@@ -562,6 +624,9 @@ func (p *CreatePromptRequest) DeepEqual(ano *CreatePromptRequest) bool {
 		return false
 	}
 	if !p.Field14DeepEqual(ano.PromptType) {
+		return false
+	}
+	if !p.Field15DeepEqual(ano.SecurityLevel) {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.DraftDetail) {
@@ -629,6 +694,18 @@ func (p *CreatePromptRequest) Field14DeepEqual(src *prompt.PromptType) bool {
 		return false
 	}
 	if strings.Compare(*p.PromptType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreatePromptRequest) Field15DeepEqual(src *prompt.SecurityLevel) bool {
+
+	if p.SecurityLevel == src {
+		return true
+	} else if p.SecurityLevel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SecurityLevel, *src) != 0 {
 		return false
 	}
 	return true
@@ -5706,10 +5783,12 @@ func (p *ListPromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type UpdatePromptRequest struct {
-	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	PromptName        *string    `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
-	PromptDescription *string    `thrift:"prompt_description,12,optional" frugal:"12,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
-	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID          *int64                `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	PromptName        *string               `thrift:"prompt_name,11,optional" frugal:"11,optional,string" form:"prompt_name" json:"prompt_name,omitempty" query:"prompt_name"`
+	PromptDescription *string               `thrift:"prompt_description,12,optional" frugal:"12,optional,string" form:"prompt_description" json:"prompt_description,omitempty" query:"prompt_description"`
+	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,13,optional" frugal:"13,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	DowngradeReason   *string               `thrift:"downgrade_reason,14,optional" frugal:"14,optional,string" form:"downgrade_reason" json:"downgrade_reason,omitempty" query:"downgrade_reason"`
+	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdatePromptRequest() *UpdatePromptRequest {
@@ -5755,6 +5834,30 @@ func (p *UpdatePromptRequest) GetPromptDescription() (v string) {
 	return *p.PromptDescription
 }
 
+var UpdatePromptRequest_SecurityLevel_DEFAULT prompt.SecurityLevel
+
+func (p *UpdatePromptRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSecurityLevel() {
+		return UpdatePromptRequest_SecurityLevel_DEFAULT
+	}
+	return *p.SecurityLevel
+}
+
+var UpdatePromptRequest_DowngradeReason_DEFAULT string
+
+func (p *UpdatePromptRequest) GetDowngradeReason() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDowngradeReason() {
+		return UpdatePromptRequest_DowngradeReason_DEFAULT
+	}
+	return *p.DowngradeReason
+}
+
 var UpdatePromptRequest_Base_DEFAULT *base.Base
 
 func (p *UpdatePromptRequest) GetBase() (v *base.Base) {
@@ -5775,6 +5878,12 @@ func (p *UpdatePromptRequest) SetPromptName(val *string) {
 func (p *UpdatePromptRequest) SetPromptDescription(val *string) {
 	p.PromptDescription = val
 }
+func (p *UpdatePromptRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
+	p.SecurityLevel = val
+}
+func (p *UpdatePromptRequest) SetDowngradeReason(val *string) {
+	p.DowngradeReason = val
+}
 func (p *UpdatePromptRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -5783,6 +5892,8 @@ var fieldIDToName_UpdatePromptRequest = map[int16]string{
 	1:   "prompt_id",
 	11:  "prompt_name",
 	12:  "prompt_description",
+	13:  "security_level",
+	14:  "downgrade_reason",
 	255: "Base",
 }
 
@@ -5796,6 +5907,14 @@ func (p *UpdatePromptRequest) IsSetPromptName() bool {
 
 func (p *UpdatePromptRequest) IsSetPromptDescription() bool {
 	return p.PromptDescription != nil
+}
+
+func (p *UpdatePromptRequest) IsSetSecurityLevel() bool {
+	return p.SecurityLevel != nil
+}
+
+func (p *UpdatePromptRequest) IsSetDowngradeReason() bool {
+	return p.DowngradeReason != nil
 }
 
 func (p *UpdatePromptRequest) IsSetBase() bool {
@@ -5839,6 +5958,22 @@ func (p *UpdatePromptRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 13:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField13(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 14:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField14(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5914,6 +6049,28 @@ func (p *UpdatePromptRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.PromptDescription = _field
 	return nil
 }
+func (p *UpdatePromptRequest) ReadField13(iprot thrift.TProtocol) error {
+
+	var _field *prompt.SecurityLevel
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SecurityLevel = _field
+	return nil
+}
+func (p *UpdatePromptRequest) ReadField14(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.DowngradeReason = _field
+	return nil
+}
 func (p *UpdatePromptRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -5939,6 +6096,14 @@ func (p *UpdatePromptRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField13(oprot); err != nil {
+			fieldId = 13
+			goto WriteFieldError
+		}
+		if err = p.writeField14(oprot); err != nil {
+			fieldId = 14
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6017,6 +6182,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *UpdatePromptRequest) writeField13(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSecurityLevel() {
+		if err = oprot.WriteFieldBegin("security_level", thrift.STRING, 13); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SecurityLevel); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 13 end error: ", p), err)
+}
+func (p *UpdatePromptRequest) writeField14(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDowngradeReason() {
+		if err = oprot.WriteFieldBegin("downgrade_reason", thrift.STRING, 14); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.DowngradeReason); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 14 end error: ", p), err)
+}
 func (p *UpdatePromptRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -6059,6 +6260,12 @@ func (p *UpdatePromptRequest) DeepEqual(ano *UpdatePromptRequest) bool {
 	if !p.Field12DeepEqual(ano.PromptDescription) {
 		return false
 	}
+	if !p.Field13DeepEqual(ano.SecurityLevel) {
+		return false
+	}
+	if !p.Field14DeepEqual(ano.DowngradeReason) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -6097,6 +6304,30 @@ func (p *UpdatePromptRequest) Field12DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PromptDescription, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdatePromptRequest) Field13DeepEqual(src *prompt.SecurityLevel) bool {
+
+	if p.SecurityLevel == src {
+		return true
+	} else if p.SecurityLevel == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SecurityLevel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdatePromptRequest) Field14DeepEqual(src *string) bool {
+
+	if p.DowngradeReason == src {
+		return true
+	} else if p.DowngradeReason == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.DowngradeReason, *src) != 0 {
 		return false
 	}
 	return true
@@ -13138,6 +13369,625 @@ func (p *ListParentPromptResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+type BatchGetPromptBasicRequest struct {
+	WorkspaceID *int64     `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	PromptIds   []int64    `thrift:"prompt_ids,2,optional" frugal:"2,optional,list<i64>" form:"prompt_ids" json:"prompt_ids,omitempty" query:"prompt_ids"`
+	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewBatchGetPromptBasicRequest() *BatchGetPromptBasicRequest {
+	return &BatchGetPromptBasicRequest{}
+}
+
+func (p *BatchGetPromptBasicRequest) InitDefault() {
+}
+
+var BatchGetPromptBasicRequest_WorkspaceID_DEFAULT int64
+
+func (p *BatchGetPromptBasicRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return BatchGetPromptBasicRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var BatchGetPromptBasicRequest_PromptIds_DEFAULT []int64
+
+func (p *BatchGetPromptBasicRequest) GetPromptIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptIds() {
+		return BatchGetPromptBasicRequest_PromptIds_DEFAULT
+	}
+	return p.PromptIds
+}
+
+var BatchGetPromptBasicRequest_Base_DEFAULT *base.Base
+
+func (p *BatchGetPromptBasicRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return BatchGetPromptBasicRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *BatchGetPromptBasicRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *BatchGetPromptBasicRequest) SetPromptIds(val []int64) {
+	p.PromptIds = val
+}
+func (p *BatchGetPromptBasicRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_BatchGetPromptBasicRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "prompt_ids",
+	255: "Base",
+}
+
+func (p *BatchGetPromptBasicRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *BatchGetPromptBasicRequest) IsSetPromptIds() bool {
+	return p.PromptIds != nil
+}
+
+func (p *BatchGetPromptBasicRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *BatchGetPromptBasicRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetPromptBasicRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *BatchGetPromptBasicRequest) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.PromptIds = _field
+	return nil
+}
+func (p *BatchGetPromptBasicRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *BatchGetPromptBasicRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetPromptBasicRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetPromptBasicRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptIds() {
+		if err = oprot.WriteFieldBegin("prompt_ids", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.PromptIds)); err != nil {
+			return err
+		}
+		for _, v := range p.PromptIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchGetPromptBasicRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetPromptBasicRequest(%+v)", *p)
+
+}
+
+func (p *BatchGetPromptBasicRequest) DeepEqual(ano *BatchGetPromptBasicRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PromptIds) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetPromptBasicRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchGetPromptBasicRequest) Field2DeepEqual(src []int64) bool {
+
+	if len(p.PromptIds) != len(src) {
+		return false
+	}
+	for i, v := range p.PromptIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetPromptBasicRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchGetPromptBasicResponse struct {
+	Prompts  []*prompt.Prompt `thrift:"prompts,1,optional" frugal:"1,optional,list<prompt.Prompt>" form:"prompts" json:"prompts,omitempty" query:"prompts"`
+	BaseResp *base.BaseResp   `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewBatchGetPromptBasicResponse() *BatchGetPromptBasicResponse {
+	return &BatchGetPromptBasicResponse{}
+}
+
+func (p *BatchGetPromptBasicResponse) InitDefault() {
+}
+
+var BatchGetPromptBasicResponse_Prompts_DEFAULT []*prompt.Prompt
+
+func (p *BatchGetPromptBasicResponse) GetPrompts() (v []*prompt.Prompt) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPrompts() {
+		return BatchGetPromptBasicResponse_Prompts_DEFAULT
+	}
+	return p.Prompts
+}
+
+var BatchGetPromptBasicResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *BatchGetPromptBasicResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return BatchGetPromptBasicResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *BatchGetPromptBasicResponse) SetPrompts(val []*prompt.Prompt) {
+	p.Prompts = val
+}
+func (p *BatchGetPromptBasicResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_BatchGetPromptBasicResponse = map[int16]string{
+	1:   "prompts",
+	255: "BaseResp",
+}
+
+func (p *BatchGetPromptBasicResponse) IsSetPrompts() bool {
+	return p.Prompts != nil
+}
+
+func (p *BatchGetPromptBasicResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *BatchGetPromptBasicResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetPromptBasicResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*prompt.Prompt, 0, size)
+	values := make([]prompt.Prompt, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Prompts = _field
+	return nil
+}
+func (p *BatchGetPromptBasicResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *BatchGetPromptBasicResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetPromptBasicResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrompts() {
+		if err = oprot.WriteFieldBegin("prompts", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Prompts)); err != nil {
+			return err
+		}
+		for _, v := range p.Prompts {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetPromptBasicResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetPromptBasicResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetPromptBasicResponse(%+v)", *p)
+
+}
+
+func (p *BatchGetPromptBasicResponse) DeepEqual(ano *BatchGetPromptBasicResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Prompts) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetPromptBasicResponse) Field1DeepEqual(src []*prompt.Prompt) bool {
+
+	if len(p.Prompts) != len(src) {
+		return false
+	}
+	for i, v := range p.Prompts {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetPromptBasicResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type PromptManageService interface {
 	// --------------- Prompt管理 --------------- //
 	// 增
@@ -13154,6 +14004,8 @@ type PromptManageService interface {
 	ListPrompt(ctx context.Context, request *ListPromptRequest) (r *ListPromptResponse, err error)
 	// 查询片段的引用记录
 	ListParentPrompt(ctx context.Context, request *ListParentPromptRequest) (r *ListParentPromptResponse, err error)
+
+	BatchGetPromptBasic(ctx context.Context, request *BatchGetPromptBasicRequest) (r *BatchGetPromptBasicResponse, err error)
 	// 改
 	UpdatePrompt(ctx context.Context, request *UpdatePromptRequest) (r *UpdatePromptResponse, err error)
 
@@ -13260,6 +14112,15 @@ func (p *PromptManageServiceClient) ListParentPrompt(ctx context.Context, reques
 	_args.Request = request
 	var _result PromptManageServiceListParentPromptResult
 	if err = p.Client_().Call(ctx, "ListParentPrompt", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *PromptManageServiceClient) BatchGetPromptBasic(ctx context.Context, request *BatchGetPromptBasicRequest) (r *BatchGetPromptBasicResponse, err error) {
+	var _args PromptManageServiceBatchGetPromptBasicArgs
+	_args.Request = request
+	var _result PromptManageServiceBatchGetPromptBasicResult
+	if err = p.Client_().Call(ctx, "BatchGetPromptBasic", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -13373,6 +14234,7 @@ func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageS
 	self.AddToProcessorMap("BatchGetPrompt", &promptManageServiceProcessorBatchGetPrompt{handler: handler})
 	self.AddToProcessorMap("ListPrompt", &promptManageServiceProcessorListPrompt{handler: handler})
 	self.AddToProcessorMap("ListParentPrompt", &promptManageServiceProcessorListParentPrompt{handler: handler})
+	self.AddToProcessorMap("BatchGetPromptBasic", &promptManageServiceProcessorBatchGetPromptBasic{handler: handler})
 	self.AddToProcessorMap("UpdatePrompt", &promptManageServiceProcessorUpdatePrompt{handler: handler})
 	self.AddToProcessorMap("SaveDraft", &promptManageServiceProcessorSaveDraft{handler: handler})
 	self.AddToProcessorMap("CreateLabel", &promptManageServiceProcessorCreateLabel{handler: handler})
@@ -13721,6 +14583,54 @@ func (p *promptManageServiceProcessorListParentPrompt) Process(ctx context.Conte
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("ListParentPrompt", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type promptManageServiceProcessorBatchGetPromptBasic struct {
+	handler PromptManageService
+}
+
+func (p *promptManageServiceProcessorBatchGetPromptBasic) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := PromptManageServiceBatchGetPromptBasicArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("BatchGetPromptBasic", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := PromptManageServiceBatchGetPromptBasicResult{}
+	var retval *BatchGetPromptBasicResponse
+	if retval, err2 = p.handler.BatchGetPromptBasic(ctx, args.Request); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing BatchGetPromptBasic: "+err2.Error())
+		oprot.WriteMessageBegin("BatchGetPromptBasic", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("BatchGetPromptBasic", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -16571,6 +17481,350 @@ func (p *PromptManageServiceListParentPromptResult) DeepEqual(ano *PromptManageS
 }
 
 func (p *PromptManageServiceListParentPromptResult) Field0DeepEqual(src *ListParentPromptResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceBatchGetPromptBasicArgs struct {
+	Request *BatchGetPromptBasicRequest `thrift:"request,1" frugal:"1,default,BatchGetPromptBasicRequest"`
+}
+
+func NewPromptManageServiceBatchGetPromptBasicArgs() *PromptManageServiceBatchGetPromptBasicArgs {
+	return &PromptManageServiceBatchGetPromptBasicArgs{}
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) InitDefault() {
+}
+
+var PromptManageServiceBatchGetPromptBasicArgs_Request_DEFAULT *BatchGetPromptBasicRequest
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) GetRequest() (v *BatchGetPromptBasicRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return PromptManageServiceBatchGetPromptBasicArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *PromptManageServiceBatchGetPromptBasicArgs) SetRequest(val *BatchGetPromptBasicRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_PromptManageServiceBatchGetPromptBasicArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceBatchGetPromptBasicArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewBatchGetPromptBasicRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Request = _field
+	return nil
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetPromptBasic_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("request", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Request.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceBatchGetPromptBasicArgs(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) DeepEqual(ano *PromptManageServiceBatchGetPromptBasicArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Request) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicArgs) Field1DeepEqual(src *BatchGetPromptBasicRequest) bool {
+
+	if !p.Request.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type PromptManageServiceBatchGetPromptBasicResult struct {
+	Success *BatchGetPromptBasicResponse `thrift:"success,0,optional" frugal:"0,optional,BatchGetPromptBasicResponse"`
+}
+
+func NewPromptManageServiceBatchGetPromptBasicResult() *PromptManageServiceBatchGetPromptBasicResult {
+	return &PromptManageServiceBatchGetPromptBasicResult{}
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) InitDefault() {
+}
+
+var PromptManageServiceBatchGetPromptBasicResult_Success_DEFAULT *BatchGetPromptBasicResponse
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) GetSuccess() (v *BatchGetPromptBasicResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return PromptManageServiceBatchGetPromptBasicResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *PromptManageServiceBatchGetPromptBasicResult) SetSuccess(x interface{}) {
+	p.Success = x.(*BatchGetPromptBasicResponse)
+}
+
+var fieldIDToName_PromptManageServiceBatchGetPromptBasicResult = map[int16]string{
+	0: "success",
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_PromptManageServiceBatchGetPromptBasicResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewBatchGetPromptBasicResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetPromptBasic_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("PromptManageServiceBatchGetPromptBasicResult(%+v)", *p)
+
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) DeepEqual(ano *PromptManageServiceBatchGetPromptBasicResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *PromptManageServiceBatchGetPromptBasicResult) Field0DeepEqual(src *BatchGetPromptBasicResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
