@@ -72,6 +72,8 @@ func OpenAPIMessageDO2DTO(do *entity.Message) *openapi.Message {
 		Parts:            OpenAPIBatchContentPartDO2DTO(do.Parts),
 		ToolCallID:       do.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDO2DTO(do.ToolCalls),
+		SkipRender:       do.SkipRender,
+		Signature:        do.Signature,
 		Metadata:         do.Metadata,
 	}
 }
@@ -165,6 +167,8 @@ func OpenAPIModelConfigDO2DTO(do *entity.ModelConfig) *openapi.LLMConfig {
 		PresencePenalty:  do.PresencePenalty,
 		FrequencyPenalty: do.FrequencyPenalty,
 		JSONMode:         do.JSONMode,
+		Thinking:         OpenAPIThinkingConfigDO2DTO(do.Thinking),
+		Extra:            do.Extra,
 	}
 }
 
@@ -210,6 +214,7 @@ func OpenAPIContentPartDO2DTO(do *entity.ContentPart) *openapi.ContentPart {
 		VideoURL:   videoURL,
 		Base64Data: do.Base64Data,
 		Config:     config,
+		Signature:  do.Signature,
 	}
 }
 
@@ -257,6 +262,8 @@ func OpenAPIMessageDTO2DO(dto *openapi.Message) *entity.Message {
 		Parts:            OpenAPIBatchContentPartDTO2DO(dto.Parts),
 		ToolCallID:       dto.ToolCallID,
 		ToolCalls:        OpenAPIBatchToolCallDTO2DO(dto.ToolCalls),
+		SkipRender:       dto.SkipRender,
+		Signature:        dto.Signature,
 		Metadata:         dto.Metadata,
 	}
 }
@@ -307,6 +314,7 @@ func OpenAPIContentPartDTO2DO(dto *openapi.ContentPart) *entity.ContentPart {
 		VideoURL:    videoURL,
 		Base64Data:  dto.Base64Data,
 		MediaConfig: mediaConfig,
+		Signature:   dto.Signature,
 	}
 }
 
@@ -392,6 +400,7 @@ func OpenAPIToolCallDO2DTO(do *entity.ToolCall) *openapi.ToolCall {
 		ID:           ptr.Of(do.ID),
 		Type:         ptr.Of(OpenAPIToolTypeDO2DTO(do.Type)),
 		FunctionCall: OpenAPIFunctionCallDO2DTO(do.FunctionCall),
+		Signature:    do.Signature,
 	}
 }
 
@@ -443,6 +452,7 @@ func OpenAPIToolCallDTO2DO(dto *openapi.ToolCall) *entity.ToolCall {
 		ID:           dto.GetID(),
 		Type:         OpenAPIToolTypeDTO2DO(dto.GetType()),
 		FunctionCall: OpenAPIFunctionCallDTO2DO(dto.FunctionCall),
+		Signature:    dto.Signature,
 	}
 }
 
@@ -491,5 +501,198 @@ func OpenAPIPromptBasicDO2DTO(do *entity.Prompt) *openapi.PromptBasic {
 			}
 			return ptr.Of(do.PromptBasic.LatestCommittedAt.UnixMilli())
 		}(),
+	}
+}
+
+// OpenAPIBatchToolDTO2DO 将openapi Tool转换为entity Tool
+func OpenAPIBatchToolDTO2DO(dtos []*openapi.Tool) []*entity.Tool {
+	if dtos == nil {
+		return nil
+	}
+	var tools []*entity.Tool
+	for _, dto := range dtos {
+		if dto != nil {
+			tools = append(tools, OpenAPIToolDTO2DO(dto))
+		}
+	}
+	return tools
+}
+
+// OpenAPIToolDTO2DO 将openapi Tool转换为entity Tool
+func OpenAPIToolDTO2DO(dto *openapi.Tool) *entity.Tool {
+	if dto == nil {
+		return nil
+	}
+	return &entity.Tool{
+		Type:     OpenAPIToolTypeDTO2DO(dto.GetType()),
+		Function: OpenAPIFunctionDTO2DO(dto.Function),
+	}
+}
+
+// OpenAPIFunctionDTO2DO 将openapi Function转换为entity Function
+func OpenAPIFunctionDTO2DO(dto *openapi.Function) *entity.Function {
+	if dto == nil {
+		return nil
+	}
+	return &entity.Function{
+		Name:        dto.GetName(),
+		Description: dto.GetDescription(),
+		Parameters:  dto.GetParameters(),
+	}
+}
+
+// OpenAPIToolCallConfigDTO2DO 将openapi ToolCallConfig转换为entity ToolCallConfig
+func OpenAPIToolCallConfigDTO2DO(dto *openapi.ToolCallConfig) *entity.ToolCallConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ToolCallConfig{
+		ToolChoice:              OpenAPIToolChoiceTypeDTO2DO(dto.GetToolChoice()),
+		ToolChoiceSpecification: OpenAPIToolChoiceSpecificationDTO2DO(dto.ToolChoiceSpecification),
+	}
+}
+
+// OpenAPIToolChoiceTypeDTO2DO 将openapi ToolChoiceType转换为entity ToolChoiceType
+func OpenAPIToolChoiceTypeDTO2DO(dto openapi.ToolChoiceType) entity.ToolChoiceType {
+	return entity.ToolChoiceType(dto)
+}
+
+// OpenAPIToolChoiceSpecificationDTO2DO 将openapi ToolChoiceSpecification转换为entity ToolChoiceSpecification
+func OpenAPIToolChoiceSpecificationDTO2DO(dto *openapi.ToolChoiceSpecification) *entity.ToolChoiceSpecification {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ToolChoiceSpecification{
+		Type: OpenAPIToolTypeDTO2DO(dto.GetType()),
+		Name: dto.GetName(),
+	}
+}
+
+// OpenAPIModelConfigDTO2DO 将openapi ModelConfig转换为entity ModelConfig
+func OpenAPIModelConfigDTO2DO(dto *openapi.ModelConfig) *entity.ModelConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ModelConfig{
+		ModelID:           dto.GetModelID(),
+		MaxTokens:         dto.MaxTokens,
+		Temperature:       dto.Temperature,
+		TopK:              dto.TopK,
+		TopP:              dto.TopP,
+		PresencePenalty:   dto.PresencePenalty,
+		FrequencyPenalty:  dto.FrequencyPenalty,
+		JSONMode:          dto.JSONMode,
+		Extra:             dto.Extra,
+		Thinking:          OpenAPIThinkingConfigDTO2DO(dto.Thinking),
+		ParamConfigValues: OpenAPIBatchParamConfigValueDTO2DO(dto.ParamConfigValues),
+	}
+}
+
+// OpenAPIThinkingConfigDTO2DO 将openapi ThinkingConfig转换为entity ThinkingConfig
+func OpenAPIThinkingConfigDTO2DO(dto *openapi.ThinkingConfig) *entity.ThinkingConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ThinkingConfig{
+		BudgetTokens:    dto.BudgetTokens,
+		ThinkingOption:  OpenAPIThinkingOptionDTO2DO(dto.ThinkingOption),
+		ReasoningEffort: OpenAPIReasoningEffortDTO2DO(dto.ReasoningEffort),
+	}
+}
+
+// OpenAPIThinkingOptionDTO2DO 将openapi ThinkingOption转换为entity ThinkingOption
+func OpenAPIThinkingOptionDTO2DO(dto *openapi.ThinkingOption) *entity.ThinkingOption {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ThinkingOption(*dto)
+	return &result
+}
+
+// OpenAPIReasoningEffortDTO2DO 将openapi ReasoningEffort转换为entity ReasoningEffort
+func OpenAPIReasoningEffortDTO2DO(dto *openapi.ReasoningEffort) *entity.ReasoningEffort {
+	if dto == nil {
+		return nil
+	}
+	result := entity.ReasoningEffort(*dto)
+	return &result
+}
+
+// OpenAPIThinkingConfigDO2DTO 将entity ThinkingConfig转换为openapi ThinkingConfig
+func OpenAPIThinkingConfigDO2DTO(do *entity.ThinkingConfig) *openapi.ThinkingConfig {
+	if do == nil {
+		return nil
+	}
+	return &openapi.ThinkingConfig{
+		BudgetTokens:    do.BudgetTokens,
+		ThinkingOption:  OpenAPIThinkingOptionDO2DTO(do.ThinkingOption),
+		ReasoningEffort: OpenAPIReasoningEffortDO2DTO(do.ReasoningEffort),
+	}
+}
+
+// OpenAPIThinkingOptionDO2DTO 将entity ThinkingOption转换为openapi ThinkingOption
+func OpenAPIThinkingOptionDO2DTO(do *entity.ThinkingOption) *openapi.ThinkingOption {
+	if do == nil {
+		return nil
+	}
+	result := openapi.ThinkingOption(*do)
+	return &result
+}
+
+// OpenAPIReasoningEffortDO2DTO 将entity ReasoningEffort转换为openapi ReasoningEffort
+func OpenAPIReasoningEffortDO2DTO(do *entity.ReasoningEffort) *openapi.ReasoningEffort {
+	if do == nil {
+		return nil
+	}
+	result := openapi.ReasoningEffort(*do)
+	return &result
+}
+
+// OpenAPIBatchParamConfigValueDTO2DO 将openapi ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIBatchParamConfigValueDTO2DO(dtos []*openapi.ParamConfigValue) []*entity.ParamConfigValue {
+	if dtos == nil {
+		return nil
+	}
+	var params []*entity.ParamConfigValue
+	for _, dto := range dtos {
+		if dto != nil {
+			params = append(params, OpenAPIParamConfigValueDTO2DO(dto))
+		}
+	}
+	return params
+}
+
+// OpenAPIParamConfigValueDTO2DO 将openapi ParamConfigValue转换为entity ParamConfigValue
+func OpenAPIParamConfigValueDTO2DO(dto *openapi.ParamConfigValue) *entity.ParamConfigValue {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamConfigValue{
+		Name:  dto.GetName(),
+		Label: dto.GetLabel(),
+		Value: OpenAPIParamOptionDTO2DO(dto.Value),
+	}
+}
+
+// OpenAPIParamOptionDTO2DO 将openapi ParamOption转换为entity ParamOption
+func OpenAPIParamOptionDTO2DO(dto *openapi.ParamOption) *entity.ParamOption {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ParamOption{
+		Value: dto.GetValue(),
+		Label: dto.GetLabel(),
+	}
+}
+
+// OpenAPIResponseAPIConfigDTO2DO 将openapi ResponseAPIConfig转换为entity ResponseAPIConfig
+func OpenAPIResponseAPIConfigDTO2DO(dto *openapi.ResponseAPIConfig) *entity.ResponseAPIConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ResponseAPIConfig{
+		PreviousResponseID: dto.PreviousResponseID,
+		EnableCaching:      dto.EnableCaching,
+		SessionID:          dto.SessionID,
 	}
 }
