@@ -123,7 +123,7 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 		qd = qd.Where(q.ObservabilityTask.WorkspaceID.In(param.WorkspaceIDs...))
 	}
 	if param.NeedOnlyOld {
-		qd.Where(q.ObservabilityTask.WorkflowID.IsNull())
+		qd.Where(q.ObservabilityTask.WorkflowID.Eq(0))
 	}
 	// 应用过滤条件
 	qdf, err := v.applyTaskFilters(q, param.TaskFilters)

@@ -372,8 +372,9 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 }
 
 func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFilterFields {
+	// avoid npe
 	if spanFilterFields == nil {
-		return nil
+		return new(entity.SpanFilterFields)
 	}
 	return &entity.SpanFilterFields{
 		PlatformType: loop_span.PlatformType(*spanFilterFields.PlatformType),

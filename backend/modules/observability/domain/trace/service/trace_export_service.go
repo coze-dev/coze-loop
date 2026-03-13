@@ -5,9 +5,10 @@ package service
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 	"strconv"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 
