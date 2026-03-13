@@ -1153,8 +1153,12 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 
 	b.ExptResultBuilders = []*ExptResultBuilder{exptResultBuilder}
 
-	// 填充数据
-	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, exptDO.EvalSetID, exptDO.EvalSetVersionID)
+	// 填充数据；在线实验：补充 eval_set_id，eval_set_version_id 写入 0
+	evalSetID, evalSetVersionID := exptDO.EvalSetID, exptDO.EvalSetVersionID
+	if exptDO.ExptType == entity.ExptType_Online {
+		evalSetVersionID = 0
+	}
+	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, evalSetID, evalSetVersionID)
 	if err != nil {
 		return nil, err
 	}
