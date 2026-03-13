@@ -76,6 +76,8 @@ type ExptTurnResultFilterQueryCond struct {
 	// 联表
 	ItemSnapshotCond  *ItemSnapshotFilter
 	EvalSetSyncCkDate string
+	// IsOnlineExpt 是否在线实验，在线实验时 join 使用 dataset_item_draft + etrf.eval_set_id = dis.dataset_id，离线使用 dataset_item_snapshot + etrf.eval_set_version_id = dis.version_id
+	IsOnlineExpt bool
 
 	// 全文搜索
 	KeywordSearch *KeywordMapCond
@@ -131,7 +133,7 @@ func getClickHouseDatabaseName() string {
 
 func (d *exptTurnResultFilterDAOImpl) QueryItemIDStates(ctx context.Context, cond *ExptTurnResultFilterQueryCond) (map[string]int32, int64, error) {
 	whereSQL, keywordCond, args := d.buildQueryConditions(ctx, cond)
-	sql := d.buildBaseSQL(ctx, whereSQL, keywordCond, &args)
+	sql := d.buildBaseSQL(ctx, cond, whereSQL, keywordCond, &args)
 	total, err := d.getTotalCount(ctx, sql, args)
 	if err != nil {
 		return nil, total, err
@@ -465,9 +467,29 @@ func (d *exptTurnResultFilterDAOImpl) buildKeywordSearchConditions(ctx context.C
 	*keywordCond += ")"
 }
 
+// hasItemSnapshotFilters 判断 ItemSnapshotFilter 是否有有效筛选条件
+func (d *exptTurnResultFilterDAOImpl) hasItemSnapshotFilters(f *ItemSnapshotFilter) bool {
+	if f == nil {
+		return false
+	}
+	return len(f.BoolMapFilters) > 0 || len(f.FloatMapFilters) > 0 ||
+		len(f.IntMapFilters) > 0 || len(f.StringMapFilters) > 0
+}
+
 // buildBaseSQL 构建基础SQL语句
-func (d *exptTurnResultFilterDAOImpl) buildBaseSQL(ctx context.Context, whereSQL, keywordCond string, args *[]interface{}) string {
-	sql := "SELECT  etrf.item_id, etrf.status FROM " + getClickHouseDatabaseName() + ".expt_turn_result_filter etrf"
+// 当 ItemSnapshotCond 非空时，需 join 数据集 item 表：在线实验用 dataset_item_draft + etrf.eval_set_id = dis.dataset_id，离线用 dataset_item_snapshot + etrf.eval_set_version_id = dis.version_id
+func (d *exptTurnResultFilterDAOImpl) buildBaseSQL(ctx context.Context, cond *ExptTurnResultFilterQueryCond, whereSQL, keywordCond string, args *[]interface{}) string {
+	dbName := getClickHouseDatabaseName()
+	sql := "SELECT  etrf.item_id, etrf.status FROM " + dbName + ".expt_turn_result_filter etrf"
+	if cond != nil && cond.ItemSnapshotCond != nil && d.hasItemSnapshotFilters(cond.ItemSnapshotCond) {
+		itemTable := "dataset_item_snapshot"
+		joinCond := "etrf.eval_set_version_id = dis.version_id"
+		if cond.IsOnlineExpt {
+			itemTable = "dataset_item_draft"
+			joinCond = "etrf.eval_set_id = dis.dataset_id"
+		}
+		sql += " INNER JOIN " + dbName + "." + itemTable + " dis ON " + joinCond + " AND etrf.item_id = dis.item_id"
+	}
 	sql += " FINAL WHERE 1=1"
 	if keywordCond != "" {
 		// 将 evalSetSyncCkDate 插入到 args 切片的第一个位置

@@ -599,6 +599,8 @@ type ExptTurnResultFilterAccelerator struct {
 	KeywordSearch     *KeywordFilter `json:"keyword_search"`
 	Page              Page           `json:"page"`
 	EvalSetSyncCkDate string
+	// IsOnlineExpt 是否在线实验，用于 QueryItemIDStates 拼接 SQL 时选择 join 的表名和条件
+	IsOnlineExpt bool `json:"is_online_expt"`
 }
 
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {

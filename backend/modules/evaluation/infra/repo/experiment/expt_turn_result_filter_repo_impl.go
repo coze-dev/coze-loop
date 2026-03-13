@@ -112,6 +112,7 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 	}
 	// ItemSnapshotCond
 	cond.EvalSetSyncCkDate = filter.EvalSetSyncCkDate
+	cond.IsOnlineExpt = filter.IsOnlineExpt
 	if filter.ItemSnapshotCond != nil {
 		cond.ItemSnapshotCond = &ck.ItemSnapshotFilter{
 			BoolMapFilters:   fieldFiltersEntityToCK(filter.ItemSnapshotCond.BoolMapFilters),

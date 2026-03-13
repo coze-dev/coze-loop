@@ -195,6 +195,7 @@ func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 
 	tests := []struct {
 		name        string
+		cond        *ExptTurnResultFilterQueryCond
 		whereSQL    string
 		keywordCond string
 		args        *[]interface{}
@@ -202,10 +203,37 @@ func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 	}{
 		{
 			name:        "empty_conditions",
+			cond:        &ExptTurnResultFilterQueryCond{},
 			whereSQL:    "2",
 			keywordCond: "3",
 			args:        &[]interface{}{},
 			want:        "SELECT  etrf.item_id, etrf.status FROM `cozeloop-clickhouse`.expt_turn_result_filter etrf FINAL WHERE 1=123",
+		},
+		{
+			name: "offline_expt_with_item_snapshot_cond",
+			cond: &ExptTurnResultFilterQueryCond{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{{Key: "k1", Op: "=", Values: []any{"v1"}}},
+				},
+				IsOnlineExpt: false,
+			},
+			whereSQL:    "",
+			keywordCond: "",
+			args:        &[]interface{}{},
+			want:        "INNER JOIN `cozeloop-clickhouse`.dataset_item_snapshot dis ON etrf.eval_set_version_id = dis.version_id AND etrf.item_id = dis.item_id",
+		},
+		{
+			name: "online_expt_with_item_snapshot_cond",
+			cond: &ExptTurnResultFilterQueryCond{
+				ItemSnapshotCond: &ItemSnapshotFilter{
+					StringMapFilters: []*FieldFilter{{Key: "k1", Op: "=", Values: []any{"v1"}}},
+				},
+				IsOnlineExpt: true,
+			},
+			whereSQL:    "",
+			keywordCond: "",
+			args:        &[]interface{}{},
+			want:        "INNER JOIN `cozeloop-clickhouse`.dataset_item_draft dis ON etrf.eval_set_id = dis.dataset_id AND etrf.item_id = dis.item_id",
 		},
 	}
 
@@ -214,8 +242,12 @@ func TestExptTurnResultFilterDAOImpl_buildBaseSQL(t *testing.T) {
 			mockConfig.EXPECT().GetCKDBName(gomock.Any()).Return(&entity.CKDBConfig{
 				ExptTurnResultFilterDBName: "ck",
 			}).AnyTimes()
-			got := d.buildBaseSQL(ctx, tt.whereSQL, tt.keywordCond, tt.args)
-			assert.Equal(t, tt.want, got)
+			got := d.buildBaseSQL(ctx, tt.cond, tt.whereSQL, tt.keywordCond, tt.args)
+			if tt.name == "empty_conditions" {
+				assert.Equal(t, tt.want, got)
+			} else {
+				assert.Contains(t, got, tt.want)
+			}
 		})
 	}
 }

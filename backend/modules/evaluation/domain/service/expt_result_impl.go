@@ -434,6 +434,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		filterAccelerator.SpaceID = spaceID
 		filterAccelerator.CreatedDate = ptr.From(expt.StartAt)
 		filterAccelerator.Page = param.Page
+		filterAccelerator.IsOnlineExpt = expt.ExptType == entity.ExptType_Online
 		errOccur := false
 		var itemIDs []int64
 		if !filterAccelerator.HasFilters() {
