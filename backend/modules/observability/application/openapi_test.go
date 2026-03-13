@@ -28,6 +28,7 @@ import (
 	metricsmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	span_context_extractormocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/span_context_extractor/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	time_rangemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range/mocks"
@@ -45,6 +46,36 @@ import (
 
 	"go.uber.org/mock/gomock"
 )
+
+func newSpanContextExtractorMock(ctrl *gomock.Controller) *span_context_extractormocks.MockISpanContextExtractor {
+	m := span_context_extractormocks.NewMockISpanContextExtractor(ctrl)
+	m.EXPECT().GetCallType(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, sp *loop_span.Span) string {
+		if sp == nil || sp.TagsString == nil {
+			return "Custom"
+		}
+		if v := sp.TagsString["src"]; v != "" {
+			return v
+		}
+		return "Custom"
+	}).AnyTimes()
+	m.EXPECT().GetBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, callType string) int64 {
+		switch callType {
+		case "a":
+			return 1
+		case "b":
+			return 2
+		case "skip":
+			return 1
+		case "ingest":
+			return 2
+		case "Custom":
+			return 10
+		default:
+			return 0
+		}
+	}).AnyTimes()
+	return m
+}
 
 func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 	type fields struct {
@@ -172,6 +203,7 @@ func TestOpenAPIApplication_IngestTraces(t *testing.T) {
 				traceConfig:  fields.traceConfig,
 				metrics:      fields.metrics,
 				collector:    fields.collector,
+				spanContextExtractor: newSpanContextExtractorMock(ctrl),
 			}
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -967,6 +999,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	metricsMock := metricsmocks.NewMockITraceMetrics(ctrl)
 	collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 	timeRangeMock := time_rangemocks.NewMockITimeRangeProvider(ctrl)
+	spanContextExtractorMock := newSpanContextExtractorMock(ctrl)
 
 	rateLimiterFactoryMock.EXPECT().NewRateLimiter().Return(rateLimiterMock)
 
@@ -981,6 +1014,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 		metricsMock,
 		collectorMock,
 		timeRangeMock,
+		spanContextExtractorMock,
 	)
 
 	assert.NoError(t, err)
@@ -999,6 +1033,7 @@ func TestNewOpenAPIApplication(t *testing.T) {
 	assert.NotNil(t, openAPIApp.metrics)
 	assert.NotNil(t, openAPIApp.collector)
 	assert.NotNil(t, openAPIApp.timeRange)
+	assert.NotNil(t, openAPIApp.spanContextExtractor)
 }
 
 // 补充IngestTraces的边界测试场景
@@ -1238,6 +1273,7 @@ func TestOpenAPIApplication_IngestTraces_AdditionalScenarios(t *testing.T) {
 				rateLimiter:  fields.rateLimiter.NewRateLimiter(),
 				traceConfig:  fields.traceConfig,
 				metrics:      fields.metrics,
+				spanContextExtractor: newSpanContextExtractorMock(ctrl),
 			}
 			got, err := o.IngestTraces(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
@@ -1250,26 +1286,12 @@ func TestOpenAPIApplication_unpackSource(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-	benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).DoAndReturn(
-		func(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
-			assert.Equal(t, "sys", param.SystemTags["sys"])
-			switch param.Tags["src"] {
-			case "a":
-				return &benefit.GetTraceBenefitSourceResult{Source: 1}, nil
-			case "b":
-				return &benefit.GetTraceBenefitSourceResult{Source: 2}, nil
-			default:
-				return &benefit.GetTraceBenefitSourceResult{Source: 0}, nil
-			}
-		},
-	).AnyTimes()
-
-	app := &OpenAPIApplication{benefit: benefitMock}
-	sourceMap := app.unpackSource(context.Background(), []*span.InputSpan{
-		{TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
-		{TagsString: map[string]string{"src": "b"}, SystemTagsString: map[string]string{"sys": "sys"}},
-		{TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
+	spanContextExtractorMock := newSpanContextExtractorMock(ctrl)
+	app := &OpenAPIApplication{spanContextExtractor: spanContextExtractorMock}
+	sourceMap := app.unpackSource(context.Background(), []*loop_span.Span{
+		{CallType: "a", TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
+		{CallType: "b", TagsString: map[string]string{"src": "b"}, SystemTagsString: map[string]string{"sys": "sys"}},
+		{CallType: "a", TagsString: map[string]string{"src": "a"}, SystemTagsString: map[string]string{"sys": "sys"}},
 	})
 	assert.Len(t, sourceMap, 2)
 	assert.Len(t, sourceMap[1], 2)
@@ -1350,6 +1372,7 @@ func TestOpenAPIApplication_IngestTraces_SkipWhichIsEnough3(t *testing.T) {
 		tenant:       tenantMock,
 		workspace:    workspaceMock,
 		traceConfig:  traceConfigMock,
+		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
 	_, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
@@ -1456,6 +1479,7 @@ func TestOpenAPIApplication_IngestTraces_BenefitErrorFallsBackToDefault(t *testi
 		tenant:       tenantMock,
 		workspace:    workspaceMock,
 		traceConfig:  traceConfigMock,
+		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
 	_, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
@@ -1504,6 +1528,7 @@ func TestOpenAPIApplication_IngestTraces_MaxSpanLengthExceededByTenant(t *testin
 		tenant:       tenantMock,
 		workspace:    workspaceMock,
 		traceConfig:  traceConfigMock,
+		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
 	_, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
@@ -1551,6 +1576,7 @@ func TestOpenAPIApplication_IngestTraces_TraceServiceReturnsError(t *testing.T) 
 		tenant:       tenantMock,
 		workspace:    workspaceMock,
 		traceConfig:  traceConfigMock,
+		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 
 	_, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
@@ -1565,6 +1591,7 @@ func TestOpenAPIApplication_IngestTraces_SkipAllSourcesWhenResolveSourceFails(t 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	traceServiceMock := servicemocks.NewMockITraceService(ctrl)
 	authMock := rpcmocks.NewMockIAuthProvider(ctrl)
 	authMock.EXPECT().GetClaim(gomock.Any()).Return(nil).AnyTimes()
 	authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
@@ -1573,12 +1600,29 @@ func TestOpenAPIApplication_IngestTraces_SkipAllSourcesWhenResolveSourceFails(t 
 	workspaceMock.EXPECT().GetIngestWorkSpaceID(gomock.Any(), gomock.Any(), gomock.Any()).Return("1").AnyTimes()
 
 	benefitMock := benefitmocks.NewMockIBenefitService(ctrl)
-	benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).AnyTimes()
+	benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckTraceBenefitResult{
+		AccountAvailable: true,
+		IsEnough:         true,
+		StorageDuration:  3,
+		WhichIsEnough:    -1,
+	}, nil).AnyTimes()
+
+	tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+	tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("t").AnyTimes()
+
+	traceConfigMock := configmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTraceIngestTenantProducerCfg(gomock.Any()).Return(nil, nil).AnyTimes()
+
+	traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 	app := &OpenAPIApplication{
-		auth:      authMock,
-		benefit:   benefitMock,
-		workspace: workspaceMock,
+		traceService:         traceServiceMock,
+		auth:                 authMock,
+		benefit:              benefitMock,
+		tenant:               tenantMock,
+		workspace:            workspaceMock,
+		traceConfig:          traceConfigMock,
+		spanContextExtractor: newSpanContextExtractorMock(ctrl),
 	}
 	resp, err := app.IngestTraces(context.Background(), &openapi.IngestTracesRequest{
 		Spans: []*span.InputSpan{
@@ -2151,6 +2195,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			traceConfig:  traceConfigMock,
 			metrics:      metricsMock,
 			collector:    collectorMock,
+			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
 		// Create test request.
@@ -2253,6 +2298,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			traceConfig:  traceConfigMock,
 			metrics:      metricsMock,
 			collector:    collectorMock,
+			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
 		req := &openapi.OtelIngestTracesRequest{
@@ -2316,9 +2362,9 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 		collectorMock := collectormocks.NewMockICollectorProvider(ctrl)
 
 		authMock.EXPECT().CheckIngestPermission(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-		benefitMock.EXPECT().GetTraceBenefitSource(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).AnyTimes()
-		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Times(0)
-		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Times(0)
+		benefitMock.EXPECT().CheckTraceBenefit(gomock.Any(), gomock.Any()).Return(nil, assert.AnError).AnyTimes()
+		tenantMock.EXPECT().GetIngestTenant(gomock.Any(), gomock.Any()).Return("tenant1").AnyTimes()
+		traceServiceMock.EXPECT().IngestTraces(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 
 		app := &OpenAPIApplication{
 			traceService: traceServiceMock,
@@ -2330,6 +2376,7 @@ func TestOpenAPIApplication_OtelIngestTraces(t *testing.T) {
 			traceConfig:  traceConfigMock,
 			metrics:      metricsMock,
 			collector:    collectorMock,
+			spanContextExtractor: newSpanContextExtractorMock(ctrl),
 		}
 
 		req := &openapi.OtelIngestTracesRequest{
