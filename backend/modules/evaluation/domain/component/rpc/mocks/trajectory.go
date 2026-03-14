@@ -55,3 +55,18 @@ func (mr *MockITrajectoryAdapterMockRecorder) ListTrajectory(ctx, spaceID, trace
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTrajectory", reflect.TypeOf((*MockITrajectoryAdapter)(nil).ListTrajectory), ctx, spaceID, traceID, startTimeMS)
 }
+
+// SearchTraceSpans mocks base method.
+func (m *MockITrajectoryAdapter) SearchTraceSpans(ctx context.Context, spaceID int64, traceID string, startTimeMS, endTimeMS int64) ([]*entity.TraceSpanInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchTraceSpans", ctx, spaceID, traceID, startTimeMS, endTimeMS)
+	ret0, _ := ret[0].([]*entity.TraceSpanInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchTraceSpans indicates an expected call of SearchTraceSpans.
+func (mr *MockITrajectoryAdapterMockRecorder) SearchTraceSpans(ctx, spaceID, traceID, startTimeMS, endTimeMS any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchTraceSpans", reflect.TypeOf((*MockITrajectoryAdapter)(nil).SearchTraceSpans), ctx, spaceID, traceID, startTimeMS, endTimeMS)
+}

@@ -45,6 +45,10 @@ const (
 	FieldType_TargetInputTokens  FieldType = 51
 	FieldType_TargetOutputTokens FieldType = 52
 	FieldType_TargetTotalTokens  FieldType = 53
+
+	// FieldType_TargetTraceMetric 通用 trace 衍生指标类型
+	// FieldKey 格式为 _target_trace_{metric_name}，如 _target_trace_span_count、_target_trace_tool_count
+	FieldType_TargetTraceMetric FieldType = 54
 )
 
 const (
@@ -52,7 +56,16 @@ const (
 	AggrResultFieldKey_TargetInputTokens  string = "_target_input_tokens"
 	AggrResultFieldKey_TargetOutputTokens string = "_target_output_tokens"
 	AggrResultFieldKey_TargetTotalTokens  string = "_target_total_tokens"
+
+	AggrResultFieldKeyPrefix_TargetTrace string = "_target_trace_"
+
+	TraceMetricKey_SpanCount string = "span_count"
+	TraceMetricKey_ToolCount string = "tool_count"
 )
+
+func AggrResultFieldKey_TargetTrace(metricName string) string {
+	return AggrResultFieldKeyPrefix_TargetTrace + metricName
+}
 
 // aggregate result
 type UpdateExptAggrResultParam struct {
@@ -213,6 +226,7 @@ type EvalTargetMtrAggrResult struct {
 	InputTokensAggrResults  []*AggregatorResult
 	OutputTokensAggrResults []*AggregatorResult
 	TotalTokensAggrResults  []*AggregatorResult
+	TraceMetrics            map[string][]*AggregatorResult // key: metric name (e.g. "span_count", "tool_count")
 }
 
 // item result

@@ -23,6 +23,11 @@ func (t *Trajectory) IsValid() bool {
 	return true
 }
 
+// TraceSpanInfo contains lightweight span info for counting span/tool metrics.
+type TraceSpanInfo struct {
+	SpanType string // e.g. "tool", "agent", "model"
+}
+
 func (t *Trajectory) ToContent(ctx context.Context) *Content {
 	if t == nil {
 		return nil

@@ -64,3 +64,25 @@ func (a *adapterImpl) ListTrajectory(ctx context.Context, spaceID int64, traceID
 		return gcond.IfLazyR(e == nil, nil, func() *entity.Trajectory { return gptr.Of(entity.Trajectory(*e)) })
 	}), nil
 }
+
+func (a *adapterImpl) SearchTraceSpans(ctx context.Context, spaceID int64, traceID string, startTimeMS, endTimeMS int64) ([]*entity.TraceSpanInfo, error) {
+	req := &trace.SearchTraceTreeRequest{
+		WorkspaceID: spaceID,
+		TraceID:     traceID,
+		StartTime:   startTimeMS,
+		EndTime:     endTimeMS,
+	}
+	resp, err := a.GetTracer().SearchTraceTree(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	spans := resp.GetSpans()
+	result := make([]*entity.TraceSpanInfo, 0, len(spans))
+	for _, s := range spans {
+		result = append(result, &entity.TraceSpanInfo{
+			SpanType: s.SpanType,
+		})
+	}
+	return result, nil
+}

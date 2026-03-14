@@ -9,6 +9,8 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -40,6 +42,7 @@ type ExptAggrResultServiceImpl struct {
 	evaluatorRecordService EvaluatorRecordService
 	tagRPCAdapter          rpc.ITagRPCAdapter
 	evalTargetSvc          IEvalTargetService
+	trajectoryAdapter      rpc.ITrajectoryAdapter
 
 	publisher events.ExptEventPublisher
 	locker    lock.ILocker
@@ -56,6 +59,7 @@ func NewExptAggrResultService(
 	ets IEvalTargetService,
 	pub events.ExptEventPublisher,
 	locker lock.ILocker,
+	trajectoryAdapter rpc.ITrajectoryAdapter,
 ) ExptAggrResultService {
 	return &ExptAggrResultServiceImpl{
 		exptTurnResultRepo:     exptTurnResultRepo,
@@ -69,6 +73,7 @@ func NewExptAggrResultService(
 		evalTargetSvc:          ets,
 		publisher:              pub,
 		locker:                 locker,
+		trajectoryAdapter:      trajectoryAdapter,
 	}
 }
 
@@ -144,11 +149,29 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
 	const queryInterval = time.Millisecond * 30
 
+	// Check if experiment's target type supports trajectory for trace metrics
+	var supportsTrace bool
+	if e.trajectoryAdapter != nil {
+		experiment, err := e.experimentRepo.GetByID(ctx, exptID, spaceID)
+		if err != nil {
+			return nil, err
+		}
+		supportsTrace = experiment != nil && experiment.TargetType.SupptTrajectory()
+	}
+
 	mtrAggrGroup := &targetMtrAggrGroup{
 		latency:      NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 		inputTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 		outputTokens: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
 		totalTokens:  NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+	}
+
+	// Initialize trace metric aggregators for trajectory-supporting targets
+	if supportsTrace {
+		mtrAggrGroup.traceMetrics = map[string]*AggregatorGroup{
+			entity.TraceMetricKey_SpanCount: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+			entity.TraceMetricKey_ToolCount: NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		}
 	}
 
 	var targetResultIDs []int64
@@ -182,9 +205,75 @@ func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx contex
 		}
 
 		mtrAggrGroup.calcRecord(records)
+
+		// Fetch trace data concurrently for trace metrics
+		if supportsTrace && e.trajectoryAdapter != nil {
+			e.fetchAndCalcTraceMetrics(ctx, spaceID, records, mtrAggrGroup)
+		}
 	}
 
 	return mtrAggrGroup, nil
+}
+
+// fetchAndCalcTraceMetrics fetches trace span data for records with valid TraceID and computes trace metrics.
+func (e *ExptAggrResultServiceImpl) fetchAndCalcTraceMetrics(ctx context.Context, spaceID int64, records []*entity.EvalTargetRecord, mtrAggrGroup *targetMtrAggrGroup) {
+	const concurrency = 15
+
+	type traceResult struct {
+		spans []*entity.TraceSpanInfo
+		err   error
+	}
+
+	// Filter records with valid TraceID
+	var validRecords []*entity.EvalTargetRecord
+	for _, record := range records {
+		if record != nil && record.TraceID != "" {
+			validRecords = append(validRecords, record)
+		}
+	}
+	if len(validRecords) == 0 {
+		return
+	}
+
+	results := make([]traceResult, len(validRecords))
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+
+	for i, record := range validRecords {
+		wg.Add(1)
+		go func(idx int, rec *entity.EvalTargetRecord) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			// Use record's CreatedAt ± 24h as time range
+			var startTimeMS, endTimeMS int64
+			if rec.BaseInfo != nil && rec.BaseInfo.CreatedAt != nil {
+				createdAtMS := gptr.Indirect(rec.BaseInfo.CreatedAt)
+				const dayMS = 24 * 60 * 60 * 1000
+				startTimeMS = createdAtMS - dayMS
+				endTimeMS = createdAtMS + dayMS
+			} else {
+				// fallback: use a wide time range
+				now := time.Now()
+				startTimeMS = now.Add(-7 * 24 * time.Hour).UnixMilli()
+				endTimeMS = now.UnixMilli()
+			}
+
+			spans, err := e.trajectoryAdapter.SearchTraceSpans(ctx, spaceID, rec.TraceID, startTimeMS, endTimeMS)
+			results[idx] = traceResult{spans: spans, err: err}
+		}(i, record)
+	}
+
+	wg.Wait()
+
+	for _, result := range results {
+		if result.err != nil {
+			logs.CtxWarn(ctx, "fetchAndCalcTraceMetrics: SearchTraceSpans failed, err: %v", result.err)
+			continue
+		}
+		mtrAggrGroup.calcTraceMetrics(result.spans)
+	}
 }
 
 func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Context, spaceID, experimentID int64,
@@ -647,6 +736,18 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
 				}
 				targetResults.TotalTokensAggrResults = gslice.Clone(ar.AggregatorResults)
+
+			case int32(entity.FieldType_TargetTraceMetric):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				// Extract metric name from FieldKey (e.g. "_target_trace_span_count" -> "span_count")
+				metricName := strings.TrimPrefix(fieldResult.FieldKey, entity.AggrResultFieldKeyPrefix_TargetTrace)
+				if targetResults.TraceMetrics == nil {
+					targetResults.TraceMetrics = make(map[string][]*entity.AggregatorResult)
+				}
+				targetResults.TraceMetrics[metricName] = gslice.Clone(ar.AggregatorResults)
 
 			default:
 
@@ -1112,6 +1213,7 @@ type targetMtrAggrGroup struct {
 	inputTokens  *AggregatorGroup
 	outputTokens *AggregatorGroup
 	totalTokens  *AggregatorGroup
+	traceMetrics map[string]*AggregatorGroup // key: metric name (e.g. "span_count", "tool_count")
 }
 
 func (t *targetMtrAggrGroup) calcRecord(records []*entity.EvalTargetRecord) {
@@ -1126,6 +1228,28 @@ func (t *targetMtrAggrGroup) calcRecord(records []*entity.EvalTargetRecord) {
 			t.outputTokens.Append(float64(record.EvalTargetOutputData.EvalTargetUsage.OutputTokens))
 			t.totalTokens.Append(float64(record.EvalTargetOutputData.EvalTargetUsage.TotalTokens))
 		}
+	}
+}
+
+// calcTraceMetrics computes span_count and tool_count from trace span info
+func (t *targetMtrAggrGroup) calcTraceMetrics(spans []*entity.TraceSpanInfo) {
+	if t.traceMetrics == nil || len(spans) == 0 {
+		return
+	}
+
+	spanCount := float64(len(spans))
+	var toolCount float64
+	for _, span := range spans {
+		if span.SpanType == "tool" {
+			toolCount++
+		}
+	}
+
+	if ag, ok := t.traceMetrics[entity.TraceMetricKey_SpanCount]; ok {
+		ag.Append(spanCount)
+	}
+	if ag, ok := t.traceMetrics[entity.TraceMetricKey_ToolCount]; ok {
+		ag.Append(toolCount)
 	}
 }
 
@@ -1174,6 +1298,14 @@ func (t *targetMtrAggrGroup) buildAggrResult(spaceID, exptID int64) ([]*entity.E
 		{entity.FieldType_TargetTotalTokens, entity.AggrResultFieldKey_TargetTotalTokens, t.totalTokens},
 	} {
 		if err := builder(cfg.fieldType, cfg.fieldKey, cfg.aggr); err != nil {
+			return nil, err
+		}
+	}
+
+	// build trace metrics aggregation results
+	for metricName, aggr := range t.traceMetrics {
+		fieldKey := entity.AggrResultFieldKey_TargetTrace(metricName)
+		if err := builder(entity.FieldType_TargetTraceMetric, fieldKey, aggr); err != nil {
 			return nil, err
 		}
 	}
