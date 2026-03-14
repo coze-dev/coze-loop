@@ -49,6 +49,10 @@ const (
 	// FieldType_TargetTraceMetric 通用 trace 衍生指标类型
 	// FieldKey 格式为 _target_trace_{metric_name}，如 _target_trace_span_count、_target_trace_tool_count
 	FieldType_TargetTraceMetric FieldType = 54
+
+	// FieldType_EvalSetColumn 评测集数值列聚合统计
+	// FieldKey 为评测集列的 column_key
+	FieldType_EvalSetColumn FieldType = 55
 )
 
 const (
@@ -61,10 +65,19 @@ const (
 
 	TraceMetricKey_SpanCount string = "span_count"
 	TraceMetricKey_ToolCount string = "tool_count"
+
+	AggrResultFieldKeyPrefix_EvalSetColumn string = "_eval_set_col_"
+
+	// MaxEvalSetNumericColumns 评测集数值列统计上限
+	MaxEvalSetNumericColumns = 10
 )
 
 func AggrResultFieldKey_TargetTrace(metricName string) string {
 	return AggrResultFieldKeyPrefix_TargetTrace + metricName
+}
+
+func AggrResultFieldKey_EvalSetColumn(columnKey string) string {
+	return AggrResultFieldKeyPrefix_EvalSetColumn + columnKey
 }
 
 // aggregate result
@@ -202,6 +215,15 @@ type ExptAggregateResult struct {
 	UpdateTime        *time.Time
 	// WeightedResults 加权聚合结果列表，对每种聚合指标（Average、p99 等）给出加权后的结果
 	WeightedResults []*AggregatorResult
+	// EvalSetColumnResults 评测集数值列聚合结果
+	EvalSetColumnResults []*EvalSetColumnAggrResult
+}
+
+// EvalSetColumnAggrResult 评测集数值列聚合结果
+type EvalSetColumnAggrResult struct {
+	ColumnKey         string
+	ColumnName        string
+	AggregatorResults []*AggregatorResult
 }
 
 type EvaluatorAggregateResult struct {

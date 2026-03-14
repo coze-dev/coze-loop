@@ -43,6 +43,7 @@ type ExptAggrResultServiceImpl struct {
 	tagRPCAdapter          rpc.ITagRPCAdapter
 	evalTargetSvc          IEvalTargetService
 	trajectoryAdapter      rpc.ITrajectoryAdapter
+	evaluationSetService   IEvaluationSetService
 
 	publisher events.ExptEventPublisher
 	locker    lock.ILocker
@@ -60,6 +61,7 @@ func NewExptAggrResultService(
 	pub events.ExptEventPublisher,
 	locker lock.ILocker,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
+	evaluationSetService IEvaluationSetService,
 ) ExptAggrResultService {
 	return &ExptAggrResultServiceImpl{
 		exptTurnResultRepo:     exptTurnResultRepo,
@@ -74,6 +76,7 @@ func NewExptAggrResultService(
 		publisher:              pub,
 		locker:                 locker,
 		trajectoryAdapter:      trajectoryAdapter,
+		evaluationSetService:   evaluationSetService,
 	}
 }
 
@@ -143,7 +146,13 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 		return err
 	}
 
-	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existed)
+	evalSetColAggr, err := e.buildEvalSetColumnAggregatorGroups(ctx, spaceID, experimentID)
+	if err != nil {
+		logs.CtxWarn(ctx, "buildEvalSetColumnAggregatorGroups failed, expt_id: %v, err: %v", experimentID, err)
+		// non-fatal: continue without eval set column aggregation
+	}
+
+	return e.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, evalSetColAggr, existed)
 }
 
 func (e *ExptAggrResultServiceImpl) buildExptTargetMtrAggregatorGroup(ctx context.Context, spaceID, exptID int64) (*targetMtrAggrGroup, error) {
@@ -277,7 +286,7 @@ func (e *ExptAggrResultServiceImpl) fetchAndCalcTraceMetrics(ctx context.Context
 }
 
 func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Context, spaceID, experimentID int64,
-	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, existedAggrResults []*entity.ExptAggrResult,
+	evaluatorVersionID2AggregatorGroup map[int64]*AggregatorGroup, tmag *targetMtrAggrGroup, evalSetColAggr *evalSetColumnAggrGroups, existedAggrResults []*entity.ExptAggrResult,
 ) error {
 	aggrResKeyFn := func(fieldType int32, fieldKey string) string { return fmt.Sprintf("%d:%s", fieldType, fieldKey) }
 	existedAggrResultsMap := gslice.ToMap(existedAggrResults, func(val *entity.ExptAggrResult) (string, *entity.ExptAggrResult) {
@@ -328,6 +337,15 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 	}
 
 	aggrResults = append(aggrResults, targetAggrResults...)
+
+	// Append eval set column aggregation results
+	if evalSetColAggr != nil {
+		colAggrResults, err := evalSetColAggr.buildAggrResult(spaceID, experimentID)
+		if err != nil {
+			return err
+		}
+		aggrResults = append(aggrResults, colAggrResults...)
+	}
 
 	var tocreated []*entity.ExptAggrResult
 	var toupdated []*entity.ExptAggrResult
@@ -651,6 +669,7 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 			TargetVersionID: versionedTargetIDMap[exptID].VersionID,
 		}
 		var weightedResults []*entity.AggregatorResult
+		var evalSetColumnResults []*entity.EvalSetColumnAggrResult
 
 		var latestUpdateAt *time.Time
 		for _, fieldResult := range exptResult {
@@ -749,17 +768,31 @@ func (e *ExptAggrResultServiceImpl) BatchGetExptAggrResultByExperimentIDs(ctx co
 				}
 				targetResults.TraceMetrics[metricName] = gslice.Clone(ar.AggregatorResults)
 
+			case int32(entity.FieldType_EvalSetColumn):
+				ar := entity.AggregateResult{}
+				if err := json.Unmarshal(fieldResult.AggrResult, &ar); err != nil {
+					return nil, errorx.Wrapf(err, "AggregateResult json.Unmarshal failed, raw: %v", string(fieldResult.AggrResult))
+				}
+				// Extract column_key from FieldKey (e.g. "_eval_set_col_price" -> "price")
+				columnKey := strings.TrimPrefix(fieldResult.FieldKey, entity.AggrResultFieldKeyPrefix_EvalSetColumn)
+				evalSetColumnResults = append(evalSetColumnResults, &entity.EvalSetColumnAggrResult{
+					ColumnKey:         columnKey,
+					ColumnName:        columnKey, // name will be enriched by frontend or future lookup
+					AggregatorResults: gslice.Clone(ar.AggregatorResults),
+				})
+
 			default:
 
 			}
 		}
 
 		exptAgg := &entity.ExptAggregateResult{
-			ExperimentID:      exptID,
-			EvaluatorResults:  evaluatorResults,
-			AnnotationResults: annotationResults,
-			TargetResults:     targetResults,
-			UpdateTime:        latestUpdateAt,
+			ExperimentID:         exptID,
+			EvaluatorResults:     evaluatorResults,
+			AnnotationResults:    annotationResults,
+			TargetResults:        targetResults,
+			UpdateTime:           latestUpdateAt,
+			EvalSetColumnResults: evalSetColumnResults,
 		}
 		if len(weightedResults) > 0 {
 			exptAgg.WeightedResults = weightedResults
@@ -1206,6 +1239,162 @@ func (e *ExptAggrResultServiceImpl) updateBooleanExptAggrResult(ctx context.Cont
 
 	logs.CtxInfo(ctx, "update expt aggr result success, exptID: %d", param.ExperimentID)
 	return nil
+}
+
+// evalSetColumnAggrGroups 评测集数值列聚合器组
+type evalSetColumnAggrGroups struct {
+	columns []*evalSetColumnAggr
+}
+
+type evalSetColumnAggr struct {
+	columnKey  string
+	columnName string
+	aggr       *AggregatorGroup
+}
+
+func (g *evalSetColumnAggrGroups) buildAggrResult(spaceID, exptID int64) ([]*entity.ExptAggrResult, error) {
+	if g == nil {
+		return nil, nil
+	}
+	var res []*entity.ExptAggrResult
+	for _, col := range g.columns {
+		if col.aggr == nil {
+			continue
+		}
+		agRes := col.aggr.Result()
+		var averageScore float64
+		for _, aggregatorResult := range agRes.AggregatorResults {
+			if aggregatorResult.AggregatorType == entity.Average {
+				averageScore = aggregatorResult.GetScore()
+				break
+			}
+		}
+		aggrResultBytes, err := json.Marshal(agRes)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "EvalSetColumn AggregateResult json marshal fail, column_key: %s", col.columnKey)
+		}
+		res = append(res, &entity.ExptAggrResult{
+			SpaceID:      spaceID,
+			ExperimentID: exptID,
+			FieldType:    int32(entity.FieldType_EvalSetColumn),
+			FieldKey:     entity.AggrResultFieldKey_EvalSetColumn(col.columnKey),
+			Score:        utils.RoundScoreToTwoDecimals(averageScore),
+			AggrResult:   aggrResultBytes,
+		})
+	}
+	return res, nil
+}
+
+// buildEvalSetColumnAggregatorGroups reads eval set schema, filters numeric columns,
+// scans eval set items, and computes aggregation for each numeric column.
+func (e *ExptAggrResultServiceImpl) buildEvalSetColumnAggregatorGroups(ctx context.Context, spaceID, exptID int64) (*evalSetColumnAggrGroups, error) {
+	if e.evaluationSetService == nil {
+		return nil, nil
+	}
+
+	// Get experiment to find eval set ID
+	experiment, err := e.experimentRepo.GetByID(ctx, exptID, spaceID)
+	if err != nil {
+		return nil, err
+	}
+	if experiment == nil || experiment.EvalSetID == 0 {
+		return nil, nil
+	}
+
+	// Get evaluation set with schema
+	evalSet, err := e.evaluationSetService.GetEvaluationSet(ctx, &spaceID, experiment.EvalSetID, nil)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "GetEvaluationSet failed, eval_set_id: %d", experiment.EvalSetID)
+	}
+	if evalSet == nil || evalSet.EvaluationSetVersion == nil || evalSet.EvaluationSetVersion.EvaluationSetSchema == nil {
+		return nil, nil
+	}
+
+	schema := evalSet.EvaluationSetVersion.EvaluationSetSchema
+
+	// Filter numeric columns (Integer/Float), max 10
+	type numericCol struct {
+		key  string
+		name string
+	}
+	var numericCols []numericCol
+	for _, fs := range schema.FieldSchemas {
+		if fs == nil || fs.SchemaKey == nil {
+			continue
+		}
+		if *fs.SchemaKey == entity.SchemaKey_Integer || *fs.SchemaKey == entity.SchemaKey_Float {
+			numericCols = append(numericCols, numericCol{key: fs.Key, name: fs.Name})
+			if len(numericCols) >= entity.MaxEvalSetNumericColumns {
+				break
+			}
+		}
+	}
+
+	if len(numericCols) == 0 {
+		return nil, nil
+	}
+
+	// Create aggregator groups for each numeric column
+	result := &evalSetColumnAggrGroups{}
+	colKeyToAggr := make(map[string]*evalSetColumnAggr)
+	for _, col := range numericCols {
+		colAggr := &evalSetColumnAggr{
+			columnKey:  col.key,
+			columnName: col.name,
+			aggr:       NewAggregatorGroup(WithBucketScoreDistributionAggregator(20)),
+		}
+		result.columns = append(result.columns, colAggr)
+		colKeyToAggr[col.key] = colAggr
+	}
+
+	// Scan turn results to get eval set item data
+	maxLoop, cursor, limit := 10000, int64(0), int64(50)
+	for i := 0; i < maxLoop; i++ {
+		trs, ncursor, err := e.exptTurnResultRepo.ScanTurnResults(ctx, exptID, nil, cursor, limit, spaceID)
+		if err != nil {
+			return nil, err
+		}
+		cursor = ncursor
+		if len(trs) == 0 {
+			break
+		}
+
+		// Get target records to extract eval set data
+		var targetResultIDs []int64
+		for _, tr := range trs {
+			targetResultIDs = append(targetResultIDs, tr.TargetResultID)
+		}
+
+		records, err := e.evalTargetSvc.BatchGetRecordByIDs(ctx, spaceID, targetResultIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, record := range records {
+			if record == nil || record.EvalTargetInputData == nil {
+				continue
+			}
+			for key, content := range record.EvalTargetInputData.InputFields {
+				if content == nil || content.Text == nil {
+					continue
+				}
+				colAggr, ok := colKeyToAggr[key]
+				if !ok {
+					continue
+				}
+				val, err := strconv.ParseFloat(*content.Text, 64)
+				if err != nil {
+					continue // skip non-numeric values
+				}
+				if math.IsNaN(val) || math.IsInf(val, 0) {
+					continue
+				}
+				colAggr.aggr.Append(val)
+			}
+		}
+	}
+
+	return result, nil
 }
 
 type targetMtrAggrGroup struct {

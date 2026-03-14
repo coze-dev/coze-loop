@@ -1388,7 +1388,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 
 			tt.setup(mockExptAggrResultRepo)
 
-			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorVersionID2AggregatorGroup, tt.tmag, tt.existedAggrResults)
+			err := svc.CreateOrUpdateExptAggrResult(context.Background(), tt.spaceID, tt.exptID, tt.evaluatorVersionID2AggregatorGroup, tt.tmag, nil, tt.existedAggrResults)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -2819,7 +2819,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, nil, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
@@ -2864,7 +2864,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 				return nil
 			})
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, nil, existedAggrResults)
 		assert.NoError(t, err)
 	})
 
@@ -2910,7 +2910,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 			).
 			Return(nil, int64(0), errors.New("scan error"))
 
-		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, existedAggrResults)
+		err := svc.CreateOrUpdateExptAggrResult(ctx, spaceID, experimentID, evaluatorVersionID2AggregatorGroup, tmag, nil, existedAggrResults)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "scan error")
 	})
