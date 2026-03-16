@@ -105,7 +105,8 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 	if do == nil ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) ||
-		(do.EvaluatorType == evaluatordo.EvaluatorTypeCustomRPC && do.CustomRPCEvaluatorVersion == nil) {
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeCustomRPC && do.CustomRPCEvaluatorVersion == nil) ||
+		(do.EvaluatorType == evaluatordo.EvaluatorTypeAgent && do.AgentEvaluatorVersion == nil) {
 		return nil, nil
 	}
 
@@ -190,6 +191,25 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		// Custom RPC evaluator不需要chat history，设置为nil
 		po.ReceiveChatHistory = nil
 		po.ID = do.CustomRPCEvaluatorVersion.ID
+	case evaluatordo.EvaluatorTypeAgent:
+		metaInfoByte, err := json.Marshal(do.AgentEvaluatorVersion)
+		if err != nil {
+			return nil, err
+		}
+		inputSchemaByte, err := json.Marshal(do.AgentEvaluatorVersion.InputSchemas)
+		if err != nil {
+			return nil, err
+		}
+		outputSchemaByte, err := json.Marshal(do.AgentEvaluatorVersion.OutputSchemas)
+		if err != nil {
+			return nil, err
+		}
+
+		po.InputSchema = ptr.Of(inputSchemaByte)
+		po.OutputSchema = ptr.Of(outputSchemaByte)
+		po.Metainfo = ptr.Of(metaInfoByte)
+		po.ReceiveChatHistory = nil
+		po.ID = do.AgentEvaluatorVersion.ID
 	}
 	return po, nil
 }
@@ -259,6 +279,25 @@ func ConvertEvaluatorVersionPO2DO(po *model.EvaluatorVersion) (*evaluatordo.Eval
 			var outputSchemas []*evaluatordo.ArgsSchema
 			if err := json.Unmarshal(*po.OutputSchema, &outputSchemas); err == nil {
 				do.CustomRPCEvaluatorVersion.OutputSchemas = outputSchemas
+			}
+		}
+	case evaluatordo.EvaluatorTypeAgent:
+		do.AgentEvaluatorVersion = &evaluatordo.AgentEvaluatorVersion{}
+		if po.Metainfo != nil {
+			if err := json.Unmarshal(*po.Metainfo, do.AgentEvaluatorVersion); err != nil {
+				return nil, err
+			}
+		}
+		if po.InputSchema != nil {
+			var inputSchemas []*evaluatordo.ArgsSchema
+			if err := json.Unmarshal(*po.InputSchema, &inputSchemas); err == nil {
+				do.AgentEvaluatorVersion.InputSchemas = inputSchemas
+			}
+		}
+		if po.OutputSchema != nil {
+			var outputSchemas []*evaluatordo.ArgsSchema
+			if err := json.Unmarshal(*po.OutputSchema, &outputSchemas); err == nil {
+				do.AgentEvaluatorVersion.OutputSchemas = outputSchemas
 			}
 		}
 	}

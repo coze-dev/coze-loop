@@ -12,6 +12,8 @@ import (
 
 //go:generate mockgen -destination=mocks/benefit_service.go -package=mocks . IBenefitService
 type IBenefitService interface {
+	// GetTraceBenefitSource 获取Trace来源
+	GetTraceBenefitSource(ctx context.Context, param *GetTraceBenefitSourceParams) (result *GetTraceBenefitSourceResult, err error)
 	// CheckTraceBenefit 校验Trace上报权益
 	CheckTraceBenefit(ctx context.Context, param *CheckTraceBenefitParams) (result *CheckTraceBenefitResult, err error)
 	// DeductTraceBenefit Trace上报权益扣减
@@ -32,7 +34,17 @@ type IBenefitService interface {
 	DeductOptimizationBenefit(ctx context.Context, param *DeductOptimizationBenefitParams) (err error)
 }
 
+type GetTraceBenefitSourceParams struct {
+	Tags       map[string]string `json:"tags"`
+	SystemTags map[string]string `json:"system_tags"`
+}
+
+type GetTraceBenefitSourceResult struct {
+	Source int64 `json:"source"` // 来源
+}
+
 type CheckTraceBenefitParams struct {
+	Source       int64  `json:"source"`        // 来源
 	ConnectorUID string `json:"connector_uid"` // Coze登录ID
 	SpaceID      int64  `json:"space_id"`      // 空间ID
 }

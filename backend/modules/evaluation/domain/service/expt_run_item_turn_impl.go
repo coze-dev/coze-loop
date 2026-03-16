@@ -92,7 +92,11 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
 
-	return trr.SetEvaluatorResults(evaluatorResults)
+	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults() {
+		return trr
+	}
+
+	return trr
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
@@ -259,6 +263,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return make(map[int64]*entity.EvaluatorRecord), nil
 	}
 
+	if etec.Event.AsyncEvaluatorReportTrigger {
+		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
+		return etec.ExptTurnRunResult.EvaluatorResults, nil
+	}
+
 	expt := etec.Expt
 	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
@@ -266,7 +275,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
-		if !etec.Event.IgnoreExistedResult() && existResult != nil && existResult.Status == entity.EvaluatorRunStatusSuccess {
+		if !etec.Event.IgnoreExistedResult() && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}
@@ -355,28 +364,34 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		// 若共享同一 inputData 的 *Content 指针，先完成的 evaluator 会污染未执行 evaluator 的输入，导致 content_omitted。
 		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
 		ecForCapture := ec
-		pool.Add(func() error {
-			var err error
-			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
-			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
-				Name:               "",
-				EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
-				InputData:          inputDataForCapture,
-				ExperimentID:       etec.Event.ExptID,
-				ExperimentRunID:    etec.Event.ExptRunID,
-				ItemID:             item.ItemID,
-				TurnID:             turn.ID,
-				Ext:                etec.Ext,
-				EvaluatorRunConf:   ecForCapture.RunConf,
+		if evForCapture.IsAsync() {
+			pool.Add(func() error {
+				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)
 			})
-			if err != nil {
-				return err
-			}
+		} else {
+			pool.Add(func() error {
+				var err error
+				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+					SpaceID:            spaceID,
+					Name:               "",
+					EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
+					InputData:          inputDataForCapture,
+					ExperimentID:       etec.Event.ExptID,
+					ExperimentRunID:    etec.Event.ExptRunID,
+					ItemID:             item.ItemID,
+					TurnID:             turn.ID,
+					Ext:                etec.Ext,
+					EvaluatorRunConf:   ecForCapture.RunConf,
+				})
+				if err != nil {
+					return err
+				}
 
-			recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
-			return nil
-		})
+				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
+				return nil
+			})
+		}
 	}
 
 	err = pool.Exec(ctx)
@@ -388,6 +403,49 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	})
 
 	return records, err
+}
+
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
+	ctx context.Context,
+	ev *entity.Evaluator,
+	ec *entity.EvaluatorConf,
+	etec *entity.ExptTurnEvalCtx,
+	inputData *entity.EvaluatorInputData,
+	recordMap *sync.Map,
+) error {
+	var err error
+	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
+
+	ts := time.Now()
+
+	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            etec.Event.SpaceID,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		ExperimentID:       etec.Event.ExptID,
+		ExperimentRunID:    etec.Event.ExptRunID,
+		ItemID:             etec.EvalSetItem.ItemID,
+		TurnID:             etec.Turn.ID,
+		Ext:                etec.Ext,
+		EvaluatorRunConf:   ec.RunConf,
+	})
+	if err != nil {
+		return err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", evaluatorRecord.ID)
+	if err = e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		Event:              etec.Event,
+		RecordID:           evaluatorRecord.ID,
+		AsyncUnixMS:        ts.UnixMilli(),
+		Session:            etec.Event.Session,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+	}); err != nil {
+		return err
+	}
+
+	recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
@@ -424,6 +482,20 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 				for key, content := range fieldCnt {
 					res.InputFields[key] = content
 				}
+			}
+		}
+	case entity.EvaluatorTypeAgent:
+		// For Agent evaluators, we need to provide the full dataset context, not just the mapped fields.
+		// This ensures the agent has access to all available information for its reasoning process.
+		allEvalSetFields, err := e.getAllEvalSetFields(ctx, spaceID, evalSetTurn)
+		if err != nil {
+			return nil, err
+		}
+		res.EvaluateDatasetFields = allEvalSetFields
+		res.EvaluateTargetOutputFields = fromTarget
+		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+			for key, content := range fieldCnt {
+				res.InputFields[key] = content
 			}
 		}
 	default:
@@ -590,4 +662,35 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[strin
 	}
 
 	return builtExt
+}
+
+func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context, spaceID int64, evalSetTurn *entity.Turn) (map[string]*entity.Content, error) {
+	if evalSetTurn == nil {
+		return nil, nil
+	}
+
+	result := make(map[string]*entity.Content, len(evalSetTurn.FieldDataList))
+	for _, field := range evalSetTurn.FieldDataList {
+		content := field.Content
+		if content == nil {
+			continue
+		}
+		if content.IsContentOmitted() {
+			req := &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: evalSetTurn.EvalSetID,
+				ItemPK:          evalSetTurn.ItemID,
+				FieldName:       field.Name,
+				TurnID:          gptr.Of(evalSetTurn.ID),
+			}
+			logs.CtxInfo(ctx, "found omitted content turn in getAllEvalSetFields, turn_info: %v", json.Jsonify(req))
+			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+			content = fd.Content
+		}
+		result[field.Name] = content
+	}
+	return result, nil
 }
