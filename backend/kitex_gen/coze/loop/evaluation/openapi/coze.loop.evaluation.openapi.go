@@ -14991,10 +14991,9 @@ func (p *ImportEvaluationSetOpenAPIData) Field1DeepEqual(src *int64) bool {
 type ImportEvaluationSetOApiRequest struct {
 	WorkspaceID     int64                           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64                           `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"workspace_id" path:"evaluation_set_id,required" `
-	SourceType      *dataset_job.SourceType         `thrift:"source_type,3,optional" frugal:"3,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
-	Source          *dataset_job.DatasetIOEndpoint  `thrift:"source,4,required" frugal:"4,required,dataset_job.DatasetIOEndpoint" form:"source,required" json:"source,required" query:"source,required"`
-	FieldMappings   []*dataset_job.FieldMapping     `thrift:"fieldMappings,5,optional" frugal:"5,optional,list<dataset_job.FieldMapping>" form:"fieldMappings" json:"fieldMappings,omitempty" query:"fieldMappings"`
-	Option          *dataset_job.DatasetIOJobOption `thrift:"option,6,optional" frugal:"6,optional,dataset_job.DatasetIOJobOption" form:"option" json:"option,omitempty" query:"option"`
+	File            *dataset_job.DatasetIOFile      `thrift:"file,3,optional" frugal:"3,optional,dataset_job.DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
+	FieldMappings   []*dataset_job.FieldMapping     `thrift:"fieldMappings,4,optional" frugal:"4,optional,list<dataset_job.FieldMapping>" form:"fieldMappings" json:"fieldMappings,omitempty" query:"fieldMappings"`
+	Option          *dataset_job.DatasetIOJobOption `thrift:"option,5,optional" frugal:"5,optional,dataset_job.DatasetIOJobOption" form:"option" json:"option,omitempty" query:"option"`
 	Base            *base.Base                      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -15019,28 +15018,16 @@ func (p *ImportEvaluationSetOApiRequest) GetEvaluationSetID() (v int64) {
 	return
 }
 
-var ImportEvaluationSetOApiRequest_SourceType_DEFAULT dataset_job.SourceType
+var ImportEvaluationSetOApiRequest_File_DEFAULT *dataset_job.DatasetIOFile
 
-func (p *ImportEvaluationSetOApiRequest) GetSourceType() (v dataset_job.SourceType) {
+func (p *ImportEvaluationSetOApiRequest) GetFile() (v *dataset_job.DatasetIOFile) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetSourceType() {
-		return ImportEvaluationSetOApiRequest_SourceType_DEFAULT
+	if !p.IsSetFile() {
+		return ImportEvaluationSetOApiRequest_File_DEFAULT
 	}
-	return *p.SourceType
-}
-
-var ImportEvaluationSetOApiRequest_Source_DEFAULT *dataset_job.DatasetIOEndpoint
-
-func (p *ImportEvaluationSetOApiRequest) GetSource() (v *dataset_job.DatasetIOEndpoint) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSource() {
-		return ImportEvaluationSetOApiRequest_Source_DEFAULT
-	}
-	return p.Source
+	return p.File
 }
 
 var ImportEvaluationSetOApiRequest_FieldMappings_DEFAULT []*dataset_job.FieldMapping
@@ -15084,11 +15071,8 @@ func (p *ImportEvaluationSetOApiRequest) SetWorkspaceID(val int64) {
 func (p *ImportEvaluationSetOApiRequest) SetEvaluationSetID(val int64) {
 	p.EvaluationSetID = val
 }
-func (p *ImportEvaluationSetOApiRequest) SetSourceType(val *dataset_job.SourceType) {
-	p.SourceType = val
-}
-func (p *ImportEvaluationSetOApiRequest) SetSource(val *dataset_job.DatasetIOEndpoint) {
-	p.Source = val
+func (p *ImportEvaluationSetOApiRequest) SetFile(val *dataset_job.DatasetIOFile) {
+	p.File = val
 }
 func (p *ImportEvaluationSetOApiRequest) SetFieldMappings(val []*dataset_job.FieldMapping) {
 	p.FieldMappings = val
@@ -15103,19 +15087,14 @@ func (p *ImportEvaluationSetOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_ImportEvaluationSetOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
-	3:   "source_type",
-	4:   "source",
-	5:   "fieldMappings",
-	6:   "option",
+	3:   "file",
+	4:   "fieldMappings",
+	5:   "option",
 	255: "Base",
 }
 
-func (p *ImportEvaluationSetOApiRequest) IsSetSourceType() bool {
-	return p.SourceType != nil
-}
-
-func (p *ImportEvaluationSetOApiRequest) IsSetSource() bool {
-	return p.Source != nil
+func (p *ImportEvaluationSetOApiRequest) IsSetFile() bool {
+	return p.File != nil
 }
 
 func (p *ImportEvaluationSetOApiRequest) IsSetFieldMappings() bool {
@@ -15135,7 +15114,6 @@ func (p *ImportEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetEvaluationSetID bool = false
-	var issetSource bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -15170,7 +15148,7 @@ func (p *ImportEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15178,25 +15156,16 @@ func (p *ImportEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error
 				goto SkipFieldError
 			}
 		case 4:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetSource = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
 		case 5:
-			if fieldTypeId == thrift.LIST {
-				if err = p.ReadField5(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 6:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField6(iprot); err != nil {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15230,11 +15199,6 @@ func (p *ImportEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error
 
 	if !issetEvaluationSetID {
 		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSource {
-		fieldId = 4
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -15278,26 +15242,14 @@ func (p *ImportEvaluationSetOApiRequest) ReadField2(iprot thrift.TProtocol) erro
 	return nil
 }
 func (p *ImportEvaluationSetOApiRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *dataset_job.SourceType
-	if v, err := iprot.ReadI32(); err != nil {
-		return err
-	} else {
-		tmp := dataset_job.SourceType(v)
-		_field = &tmp
-	}
-	p.SourceType = _field
-	return nil
-}
-func (p *ImportEvaluationSetOApiRequest) ReadField4(iprot thrift.TProtocol) error {
-	_field := dataset_job.NewDatasetIOEndpoint()
+	_field := dataset_job.NewDatasetIOFile()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.Source = _field
+	p.File = _field
 	return nil
 }
-func (p *ImportEvaluationSetOApiRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *ImportEvaluationSetOApiRequest) ReadField4(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -15320,7 +15272,7 @@ func (p *ImportEvaluationSetOApiRequest) ReadField5(iprot thrift.TProtocol) erro
 	p.FieldMappings = _field
 	return nil
 }
-func (p *ImportEvaluationSetOApiRequest) ReadField6(iprot thrift.TProtocol) error {
+func (p *ImportEvaluationSetOApiRequest) ReadField5(iprot thrift.TProtocol) error {
 	_field := dataset_job.NewDatasetIOJobOption()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -15361,10 +15313,6 @@ func (p *ImportEvaluationSetOApiRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
-			goto WriteFieldError
-		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -15422,11 +15370,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *ImportEvaluationSetOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSourceType() {
-		if err = oprot.WriteFieldBegin("source_type", thrift.I32, 3); err != nil {
+	if p.IsSetFile() {
+		if err = oprot.WriteFieldBegin("file", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.SourceType)); err != nil {
+		if err := p.File.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15440,24 +15388,8 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ImportEvaluationSetOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("source", thrift.STRUCT, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := p.Source.Write(oprot); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
-}
-func (p *ImportEvaluationSetOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFieldMappings() {
-		if err = oprot.WriteFieldBegin("fieldMappings", thrift.LIST, 5); err != nil {
+		if err = oprot.WriteFieldBegin("fieldMappings", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldMappings)); err != nil {
@@ -15477,13 +15409,13 @@ func (p *ImportEvaluationSetOApiRequest) writeField5(oprot thrift.TProtocol) (er
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *ImportEvaluationSetOApiRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ImportEvaluationSetOApiRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetOption() {
-		if err = oprot.WriteFieldBegin("option", thrift.STRUCT, 6); err != nil {
+		if err = oprot.WriteFieldBegin("option", thrift.STRUCT, 5); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := p.Option.Write(oprot); err != nil {
@@ -15495,9 +15427,9 @@ func (p *ImportEvaluationSetOApiRequest) writeField6(oprot thrift.TProtocol) (er
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *ImportEvaluationSetOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -15538,16 +15470,13 @@ func (p *ImportEvaluationSetOApiRequest) DeepEqual(ano *ImportEvaluationSetOApiR
 	if !p.Field2DeepEqual(ano.EvaluationSetID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.SourceType) {
+	if !p.Field3DeepEqual(ano.File) {
 		return false
 	}
-	if !p.Field4DeepEqual(ano.Source) {
+	if !p.Field4DeepEqual(ano.FieldMappings) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.FieldMappings) {
-		return false
-	}
-	if !p.Field6DeepEqual(ano.Option) {
+	if !p.Field5DeepEqual(ano.Option) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -15570,26 +15499,14 @@ func (p *ImportEvaluationSetOApiRequest) Field2DeepEqual(src int64) bool {
 	}
 	return true
 }
-func (p *ImportEvaluationSetOApiRequest) Field3DeepEqual(src *dataset_job.SourceType) bool {
+func (p *ImportEvaluationSetOApiRequest) Field3DeepEqual(src *dataset_job.DatasetIOFile) bool {
 
-	if p.SourceType == src {
-		return true
-	} else if p.SourceType == nil || src == nil {
-		return false
-	}
-	if *p.SourceType != *src {
+	if !p.File.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ImportEvaluationSetOApiRequest) Field4DeepEqual(src *dataset_job.DatasetIOEndpoint) bool {
-
-	if !p.Source.DeepEqual(src) {
-		return false
-	}
-	return true
-}
-func (p *ImportEvaluationSetOApiRequest) Field5DeepEqual(src []*dataset_job.FieldMapping) bool {
+func (p *ImportEvaluationSetOApiRequest) Field4DeepEqual(src []*dataset_job.FieldMapping) bool {
 
 	if len(p.FieldMappings) != len(src) {
 		return false
@@ -15602,7 +15519,7 @@ func (p *ImportEvaluationSetOApiRequest) Field5DeepEqual(src []*dataset_job.Fiel
 	}
 	return true
 }
-func (p *ImportEvaluationSetOApiRequest) Field6DeepEqual(src *dataset_job.DatasetIOJobOption) bool {
+func (p *ImportEvaluationSetOApiRequest) Field5DeepEqual(src *dataset_job.DatasetIOJobOption) bool {
 
 	if !p.Option.DeepEqual(src) {
 		return false

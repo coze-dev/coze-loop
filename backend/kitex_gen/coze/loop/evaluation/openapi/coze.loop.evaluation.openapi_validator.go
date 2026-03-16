@@ -429,14 +429,9 @@ func (p *ImportEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *ImportEvaluationSetOApiRequest) IsValid() error {
-	if p.SourceType != nil {
-		if p.SourceType.String() == "<UNSET>" {
-			return fmt.Errorf("field SourceType defined_only rule failed")
-		}
-	}
-	if p.Source != nil {
-		if err := p.Source.IsValid(); err != nil {
-			return fmt.Errorf("field Source not valid, %w", err)
+	if p.File != nil {
+		if err := p.File.IsValid(); err != nil {
+			return fmt.Errorf("field File not valid, %w", err)
 		}
 	}
 	if len(p.FieldMappings) < int(1) {
