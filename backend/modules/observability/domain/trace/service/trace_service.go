@@ -1100,6 +1100,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		PageToken:       req.PageToken,
 		SelectColumns:   req.SelectColumns,
 	})
+	logs.CtxInfo(ctx, "span count after CK: %v", len(tRes.Spans))
 	r.metrics.EmitListSpans(req.WorkspaceID, string(req.SpanListType), st, err != nil)
 	if err != nil {
 		return nil, err
@@ -1122,6 +1123,8 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 			return nil, err
 		}
 	}
+	logs.CtxInfo(ctx, "span count after process: %v", len(tRes.Spans))
+
 	return &ListSpansResp{
 		Spans:         spans,
 		NextPageToken: tRes.PageToken,
