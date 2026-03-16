@@ -58,6 +58,7 @@ type ListSpansReq struct {
 	SpanListType          loop_span.SpanListType
 	Source                span_filter.SourceType
 	SelectColumns         []string
+	OmitColumns           []string
 	Scene                 entity.ProcessorScene
 }
 
@@ -1099,6 +1100,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		DescByStartTime: req.DescByStartTime,
 		PageToken:       req.PageToken,
 		SelectColumns:   req.SelectColumns,
+		OmitColumns:     req.OmitColumns,
 	})
 	logs.CtxInfo(ctx, "span count after CK: %v", len(tRes.Spans))
 	r.metrics.EmitListSpans(req.WorkspaceID, string(req.SpanListType), st, err != nil)
@@ -1456,7 +1458,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 }
 
 func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {
-	const maxListMetadataSpansList = 300
+	const maxListMetadataSpansList = 500
 	listSpansResp, err := r.ListSpans(ctx, &ListSpansReq{
 		WorkspaceID:  req.WorkspaceID,
 		StartTime:    req.StartTime,
@@ -1464,13 +1466,11 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		SpanListType: req.SpanListType,
 		PlatformType: req.PlatformType,
 		Limit:        maxListMetadataSpansList,
-		SelectColumns: []string{
-			"tags_string",
-			"tags_long",
-			"tags_float",
-			"tags_bool",
-			"tags_byte",
+		OmitColumns: []string{
+			"input",
+			"output",
 		},
+		DescByStartTime: true,
 	})
 	if err != nil {
 		return nil, err
