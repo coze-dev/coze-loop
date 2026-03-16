@@ -1928,15 +1928,16 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateMetaOApi(ctx context.Context,
 		return nil, err
 	}
 
+	metaOut := &experiment.ExptTemplateMeta{
+		ID:          gptr.Of(do.Meta.ID),
+		WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
+		Name:        gptr.Of(do.Meta.Name),
+		Description: gptr.Of(do.Meta.Desc),
+		ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
+	}
 	return &openapi.UpdateExptTemplateMetaOApiResponse{
 		Data: &openapi.UpdateExptTemplateMetaOpenAPIData{
-			Meta: &experiment.ExptTemplateMeta{
-				ID:          gptr.Of(do.Meta.ID),
-				WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
-				Name:        gptr.Of(do.Meta.Name),
-				Description: gptr.Of(do.Meta.Desc),
-				ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
-			},
+			Meta: metaOut,
 		},
 	}, nil
 }

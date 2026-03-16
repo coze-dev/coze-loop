@@ -240,6 +240,11 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 				return db.Where(fmt.Sprintf("%sexpt_type %s (?)", templatePrefix, scopeComparator), ffields.ExptType)
 			})
 		}
+		if len(ffields.CronActivate) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%scron_activate %s (?)", templatePrefix, scopeComparator), ffields.CronActivate)
+			})
+		}
 
 		return conds
 	}
