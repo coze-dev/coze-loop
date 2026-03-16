@@ -877,6 +877,267 @@ func (p *TokenUsage) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *EvalSetColumnAggregateResult_) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalSetColumnAggregateResult_[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *EvalSetColumnAggregateResult_) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ColumnKey = _field
+	return offset, nil
+}
+
+func (p *EvalSetColumnAggregateResult_) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ColumnName = _field
+	return offset, nil
+}
+
+func (p *EvalSetColumnAggregateResult_) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.AggregatorResults = _field
+	return offset, nil
+}
+
+func (p *EvalSetColumnAggregateResult_) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *EvalSetColumnAggregateResult_) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *EvalSetColumnAggregateResult_) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *EvalSetColumnAggregateResult_) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetColumnKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ColumnKey)
+	}
+	return offset
+}
+
+func (p *EvalSetColumnAggregateResult_) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetColumnName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ColumnName)
+	}
+	return offset
+}
+
+func (p *EvalSetColumnAggregateResult_) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAggregatorResults() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.AggregatorResults {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *EvalSetColumnAggregateResult_) field1Length() int {
+	l := 0
+	if p.IsSetColumnKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ColumnKey)
+	}
+	return l
+}
+
+func (p *EvalSetColumnAggregateResult_) field2Length() int {
+	l := 0
+	if p.IsSetColumnName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ColumnName)
+	}
+	return l
+}
+
+func (p *EvalSetColumnAggregateResult_) field3Length() int {
+	l := 0
+	if p.IsSetAggregatorResults() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.AggregatorResults {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *EvalSetColumnAggregateResult_) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvalSetColumnAggregateResult_)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ColumnKey != nil {
+		var tmp string
+		if *src.ColumnKey != "" {
+			tmp = kutils.StringDeepCopy(*src.ColumnKey)
+		}
+		p.ColumnKey = &tmp
+	}
+
+	if src.ColumnName != nil {
+		var tmp string
+		if *src.ColumnName != "" {
+			tmp = kutils.StringDeepCopy(*src.ColumnName)
+		}
+		p.ColumnName = &tmp
+	}
+
+	if src.AggregatorResults != nil {
+		p.AggregatorResults = make([]*AggregatorResult_, 0, len(src.AggregatorResults))
+		for _, elem := range src.AggregatorResults {
+			var _elem *AggregatorResult_
+			if elem != nil {
+				_elem = &AggregatorResult_{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.AggregatorResults = append(p.AggregatorResults, _elem)
+		}
+	}
+
+	return nil
+}
+
 func (p *EvaluatorAggregateResult_) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -1345,6 +1606,20 @@ func (p *EvalTargetAggregateResult_) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1491,6 +1766,49 @@ func (p *EvalTargetAggregateResult_) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTargetAggregateResult_) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string][]*AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]*AggregatorResult_, 0, size)
+		values := make([]AggregatorResult_, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
+			if l, err := _elem.FastRead(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.TraceMetrics = _field
+	return offset, nil
+}
+
 func (p *EvalTargetAggregateResult_) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1504,6 +1822,7 @@ func (p *EvalTargetAggregateResult_) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField20(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1518,6 +1837,7 @@ func (p *EvalTargetAggregateResult_) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field20Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1605,6 +1925,30 @@ func (p *EvalTargetAggregateResult_) fastWriteField8(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *EvalTargetAggregateResult_) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTraceMetrics() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 20)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.TraceMetrics {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += v.FastWriteNocopy(buf[offset:], w)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+	}
+	return offset
+}
+
 func (p *EvalTargetAggregateResult_) field1Length() int {
 	l := 0
 	if p.IsSetTargetID() {
@@ -1670,6 +2014,25 @@ func (p *EvalTargetAggregateResult_) field8Length() int {
 		for _, v := range p.TotalTokens {
 			_ = v
 			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *EvalTargetAggregateResult_) field20Length() int {
+	l := 0
+	if p.IsSetTraceMetrics() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.TraceMetrics {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += v.BLength()
+			}
 		}
 	}
 	return l
@@ -1748,6 +2111,34 @@ func (p *EvalTargetAggregateResult_) DeepCopy(s interface{}) error {
 			}
 
 			p.TotalTokens = append(p.TotalTokens, _elem)
+		}
+	}
+
+	if src.TraceMetrics != nil {
+		p.TraceMetrics = make(map[string][]*AggregatorResult_, len(src.TraceMetrics))
+		for key, val := range src.TraceMetrics {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val []*AggregatorResult_
+			if val != nil {
+				_val = make([]*AggregatorResult_, 0, len(val))
+				for _, elem := range val {
+					var _elem *AggregatorResult_
+					if elem != nil {
+						_elem = &AggregatorResult_{}
+						if err := _elem.DeepCopy(elem); err != nil {
+							return err
+						}
+					}
+
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.TraceMetrics[_key] = _val
 		}
 	}
 

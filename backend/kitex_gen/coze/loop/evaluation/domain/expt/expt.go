@@ -17563,6 +17563,8 @@ type ExptAggregateResult_ struct {
 	// timestamp in seconds
 	UpdateTime      *int64               `thrift:"update_time,6,optional" frugal:"6,optional,i64" form:"update_time" json:"update_time,omitempty" query:"update_time"`
 	WeightedResults []*AggregatorResult_ `thrift:"weighted_results,10,optional" frugal:"10,optional,list<AggregatorResult_>" json:"weighted_results" form:"weighted_results" query:"weighted_results"`
+	// 评测集数值列聚合结果
+	EvalSetColumnResults []*EvalSetColumnAggregateResult_ `thrift:"eval_set_column_results,20,optional" frugal:"20,optional,list<EvalSetColumnAggregateResult_>" json:"eval_set_column_results,omitempty" form:"eval_set_column_results" query:"eval_set_column_results"`
 }
 
 func NewExptAggregateResult_() *ExptAggregateResult_ {
@@ -17650,6 +17652,18 @@ func (p *ExptAggregateResult_) GetWeightedResults() (v []*AggregatorResult_) {
 	}
 	return p.WeightedResults
 }
+
+var ExptAggregateResult__EvalSetColumnResults_DEFAULT []*EvalSetColumnAggregateResult_
+
+func (p *ExptAggregateResult_) GetEvalSetColumnResults() (v []*EvalSetColumnAggregateResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetColumnResults() {
+		return ExptAggregateResult__EvalSetColumnResults_DEFAULT
+	}
+	return p.EvalSetColumnResults
+}
 func (p *ExptAggregateResult_) SetExperimentID(val int64) {
 	p.ExperimentID = val
 }
@@ -17671,6 +17685,9 @@ func (p *ExptAggregateResult_) SetUpdateTime(val *int64) {
 func (p *ExptAggregateResult_) SetWeightedResults(val []*AggregatorResult_) {
 	p.WeightedResults = val
 }
+func (p *ExptAggregateResult_) SetEvalSetColumnResults(val []*EvalSetColumnAggregateResult_) {
+	p.EvalSetColumnResults = val
+}
 
 var fieldIDToName_ExptAggregateResult_ = map[int16]string{
 	1:  "experiment_id",
@@ -17680,6 +17697,7 @@ var fieldIDToName_ExptAggregateResult_ = map[int16]string{
 	5:  "eval_target_aggr_result",
 	6:  "update_time",
 	10: "weighted_results",
+	20: "eval_set_column_results",
 }
 
 func (p *ExptAggregateResult_) IsSetEvaluatorResults() bool {
@@ -17704,6 +17722,10 @@ func (p *ExptAggregateResult_) IsSetUpdateTime() bool {
 
 func (p *ExptAggregateResult_) IsSetWeightedResults() bool {
 	return p.WeightedResults != nil
+}
+
+func (p *ExptAggregateResult_) IsSetEvalSetColumnResults() bool {
+	return p.EvalSetColumnResults != nil
 }
 
 func (p *ExptAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -17777,6 +17799,14 @@ func (p *ExptAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 10:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17940,6 +17970,29 @@ func (p *ExptAggregateResult_) ReadField10(iprot thrift.TProtocol) error {
 	p.WeightedResults = _field
 	return nil
 }
+func (p *ExptAggregateResult_) ReadField20(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*EvalSetColumnAggregateResult_, 0, size)
+	values := make([]EvalSetColumnAggregateResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvalSetColumnResults = _field
+	return nil
+}
 
 func (p *ExptAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -17973,6 +18026,10 @@ func (p *ExptAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField10(oprot); err != nil {
 			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -18147,6 +18204,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
+func (p *ExptAggregateResult_) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetColumnResults() {
+		if err = oprot.WriteFieldBegin("eval_set_column_results", thrift.LIST, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.EvalSetColumnResults)); err != nil {
+			return err
+		}
+		for _, v := range p.EvalSetColumnResults {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 
 func (p *ExptAggregateResult_) String() string {
 	if p == nil {
@@ -18181,6 +18264,9 @@ func (p *ExptAggregateResult_) DeepEqual(ano *ExptAggregateResult_) bool {
 		return false
 	}
 	if !p.Field10DeepEqual(ano.WeightedResults) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.EvalSetColumnResults) {
 		return false
 	}
 	return true
@@ -18263,6 +18349,19 @@ func (p *ExptAggregateResult_) Field10DeepEqual(src []*AggregatorResult_) bool {
 	}
 	return true
 }
+func (p *ExptAggregateResult_) Field20DeepEqual(src []*EvalSetColumnAggregateResult_) bool {
+
+	if len(p.EvalSetColumnResults) != len(src) {
+		return false
+	}
+	for i, v := range p.EvalSetColumnResults {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
 
 type EvalTargetAggregateResult_ struct {
 	TargetID        *int64               `thrift:"target_id,1,optional" frugal:"1,optional,i64" json:"target_id" form:"target_id" query:"target_id"`
@@ -18271,6 +18370,8 @@ type EvalTargetAggregateResult_ struct {
 	InputTokens     []*AggregatorResult_ `thrift:"input_tokens,6,optional" frugal:"6,optional,list<AggregatorResult_>" form:"input_tokens" json:"input_tokens,omitempty" query:"input_tokens"`
 	OutputTokens    []*AggregatorResult_ `thrift:"output_tokens,7,optional" frugal:"7,optional,list<AggregatorResult_>" form:"output_tokens" json:"output_tokens,omitempty" query:"output_tokens"`
 	TotalTokens     []*AggregatorResult_ `thrift:"total_tokens,8,optional" frugal:"8,optional,list<AggregatorResult_>" form:"total_tokens" json:"total_tokens,omitempty" query:"total_tokens"`
+	// trace 衍生指标（通用 map 结构，key 为指标名如 "span_count"、"tool_count"，支持动态扩展）
+	TraceMetrics map[string][]*AggregatorResult_ `thrift:"trace_metrics,20,optional" frugal:"20,optional,map<string:list<AggregatorResult_>>" json:"trace_metrics,omitempty" form:"trace_metrics" query:"trace_metrics"`
 }
 
 func NewEvalTargetAggregateResult_() *EvalTargetAggregateResult_ {
@@ -18351,6 +18452,18 @@ func (p *EvalTargetAggregateResult_) GetTotalTokens() (v []*AggregatorResult_) {
 	}
 	return p.TotalTokens
 }
+
+var EvalTargetAggregateResult__TraceMetrics_DEFAULT map[string][]*AggregatorResult_
+
+func (p *EvalTargetAggregateResult_) GetTraceMetrics() (v map[string][]*AggregatorResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTraceMetrics() {
+		return EvalTargetAggregateResult__TraceMetrics_DEFAULT
+	}
+	return p.TraceMetrics
+}
 func (p *EvalTargetAggregateResult_) SetTargetID(val *int64) {
 	p.TargetID = val
 }
@@ -18369,14 +18482,18 @@ func (p *EvalTargetAggregateResult_) SetOutputTokens(val []*AggregatorResult_) {
 func (p *EvalTargetAggregateResult_) SetTotalTokens(val []*AggregatorResult_) {
 	p.TotalTokens = val
 }
+func (p *EvalTargetAggregateResult_) SetTraceMetrics(val map[string][]*AggregatorResult_) {
+	p.TraceMetrics = val
+}
 
 var fieldIDToName_EvalTargetAggregateResult_ = map[int16]string{
-	1: "target_id",
-	2: "target_version_id",
-	5: "latency",
-	6: "input_tokens",
-	7: "output_tokens",
-	8: "total_tokens",
+	1:  "target_id",
+	2:  "target_version_id",
+	5:  "latency",
+	6:  "input_tokens",
+	7:  "output_tokens",
+	8:  "total_tokens",
+	20: "trace_metrics",
 }
 
 func (p *EvalTargetAggregateResult_) IsSetTargetID() bool {
@@ -18401,6 +18518,10 @@ func (p *EvalTargetAggregateResult_) IsSetOutputTokens() bool {
 
 func (p *EvalTargetAggregateResult_) IsSetTotalTokens() bool {
 	return p.TotalTokens != nil
+}
+
+func (p *EvalTargetAggregateResult_) IsSetTraceMetrics() bool {
+	return p.TraceMetrics != nil
 }
 
 func (p *EvalTargetAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
@@ -18464,6 +18585,14 @@ func (p *EvalTargetAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18612,6 +18741,47 @@ func (p *EvalTargetAggregateResult_) ReadField8(iprot thrift.TProtocol) error {
 	p.TotalTokens = _field
 	return nil
 }
+func (p *EvalTargetAggregateResult_) ReadField20(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string][]*AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return err
+		}
+		_val := make([]*AggregatorResult_, 0, size)
+		values := make([]AggregatorResult_, size)
+		for i := 0; i < size; i++ {
+			_elem := &values[i]
+			_elem.InitDefault()
+
+			if err := _elem.Read(iprot); err != nil {
+				return err
+			}
+
+			_val = append(_val, _elem)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.TraceMetrics = _field
+	return nil
+}
 
 func (p *EvalTargetAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -18641,6 +18811,10 @@ func (p *EvalTargetAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -18801,6 +18975,43 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *EvalTargetAggregateResult_) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTraceMetrics() {
+		if err = oprot.WriteFieldBegin("trace_metrics", thrift.MAP, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.TraceMetrics)); err != nil {
+			return err
+		}
+		for k, v := range p.TraceMetrics {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteListBegin(thrift.STRUCT, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := v.Write(oprot); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 
 func (p *EvalTargetAggregateResult_) String() string {
 	if p == nil {
@@ -18832,6 +19043,9 @@ func (p *EvalTargetAggregateResult_) DeepEqual(ano *EvalTargetAggregateResult_) 
 		return false
 	}
 	if !p.Field8DeepEqual(ano.TotalTokens) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.TraceMetrics) {
 		return false
 	}
 	return true
@@ -18906,6 +19120,382 @@ func (p *EvalTargetAggregateResult_) Field8DeepEqual(src []*AggregatorResult_) b
 		return false
 	}
 	for i, v := range p.TotalTokens {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *EvalTargetAggregateResult_) Field20DeepEqual(src map[string][]*AggregatorResult_) bool {
+
+	if len(p.TraceMetrics) != len(src) {
+		return false
+	}
+	for k, v := range p.TraceMetrics {
+		_src := src[k]
+		if len(v) != len(_src) {
+			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if !v.DeepEqual(_src1) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// 评测集数值列聚合结果
+type EvalSetColumnAggregateResult_ struct {
+	ColumnKey         *string              `thrift:"column_key,1,optional" frugal:"1,optional,string" json:"column_key" form:"column_key" query:"column_key"`
+	ColumnName        *string              `thrift:"column_name,2,optional" frugal:"2,optional,string" json:"column_name" form:"column_name" query:"column_name"`
+	AggregatorResults []*AggregatorResult_ `thrift:"aggregator_results,3,optional" frugal:"3,optional,list<AggregatorResult_>" json:"aggregator_results" form:"aggregator_results" query:"aggregator_results"`
+}
+
+func NewEvalSetColumnAggregateResult_() *EvalSetColumnAggregateResult_ {
+	return &EvalSetColumnAggregateResult_{}
+}
+
+func (p *EvalSetColumnAggregateResult_) InitDefault() {
+}
+
+var EvalSetColumnAggregateResult__ColumnKey_DEFAULT string
+
+func (p *EvalSetColumnAggregateResult_) GetColumnKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetColumnKey() {
+		return EvalSetColumnAggregateResult__ColumnKey_DEFAULT
+	}
+	return *p.ColumnKey
+}
+
+var EvalSetColumnAggregateResult__ColumnName_DEFAULT string
+
+func (p *EvalSetColumnAggregateResult_) GetColumnName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetColumnName() {
+		return EvalSetColumnAggregateResult__ColumnName_DEFAULT
+	}
+	return *p.ColumnName
+}
+
+var EvalSetColumnAggregateResult__AggregatorResults_DEFAULT []*AggregatorResult_
+
+func (p *EvalSetColumnAggregateResult_) GetAggregatorResults() (v []*AggregatorResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAggregatorResults() {
+		return EvalSetColumnAggregateResult__AggregatorResults_DEFAULT
+	}
+	return p.AggregatorResults
+}
+func (p *EvalSetColumnAggregateResult_) SetColumnKey(val *string) {
+	p.ColumnKey = val
+}
+func (p *EvalSetColumnAggregateResult_) SetColumnName(val *string) {
+	p.ColumnName = val
+}
+func (p *EvalSetColumnAggregateResult_) SetAggregatorResults(val []*AggregatorResult_) {
+	p.AggregatorResults = val
+}
+
+var fieldIDToName_EvalSetColumnAggregateResult_ = map[int16]string{
+	1: "column_key",
+	2: "column_name",
+	3: "aggregator_results",
+}
+
+func (p *EvalSetColumnAggregateResult_) IsSetColumnKey() bool {
+	return p.ColumnKey != nil
+}
+
+func (p *EvalSetColumnAggregateResult_) IsSetColumnName() bool {
+	return p.ColumnName != nil
+}
+
+func (p *EvalSetColumnAggregateResult_) IsSetAggregatorResults() bool {
+	return p.AggregatorResults != nil
+}
+
+func (p *EvalSetColumnAggregateResult_) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvalSetColumnAggregateResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvalSetColumnAggregateResult_) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ColumnKey = _field
+	return nil
+}
+func (p *EvalSetColumnAggregateResult_) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ColumnName = _field
+	return nil
+}
+func (p *EvalSetColumnAggregateResult_) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*AggregatorResult_, 0, size)
+	values := make([]AggregatorResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.AggregatorResults = _field
+	return nil
+}
+
+func (p *EvalSetColumnAggregateResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvalSetColumnAggregateResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvalSetColumnAggregateResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnKey() {
+		if err = oprot.WriteFieldBegin("column_key", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ColumnKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvalSetColumnAggregateResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumnName() {
+		if err = oprot.WriteFieldBegin("column_name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ColumnName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvalSetColumnAggregateResult_) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAggregatorResults() {
+		if err = oprot.WriteFieldBegin("aggregator_results", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.AggregatorResults)); err != nil {
+			return err
+		}
+		for _, v := range p.AggregatorResults {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *EvalSetColumnAggregateResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvalSetColumnAggregateResult_(%+v)", *p)
+
+}
+
+func (p *EvalSetColumnAggregateResult_) DeepEqual(ano *EvalSetColumnAggregateResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ColumnKey) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ColumnName) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.AggregatorResults) {
+		return false
+	}
+	return true
+}
+
+func (p *EvalSetColumnAggregateResult_) Field1DeepEqual(src *string) bool {
+
+	if p.ColumnKey == src {
+		return true
+	} else if p.ColumnKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ColumnKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvalSetColumnAggregateResult_) Field2DeepEqual(src *string) bool {
+
+	if p.ColumnName == src {
+		return true
+	} else if p.ColumnName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ColumnName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvalSetColumnAggregateResult_) Field3DeepEqual(src []*AggregatorResult_) bool {
+
+	if len(p.AggregatorResults) != len(src) {
+		return false
+	}
+	for i, v := range p.AggregatorResults {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

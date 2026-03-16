@@ -344,6 +344,9 @@ func (p *ExptAggregateResult_) IsValid() error {
 func (p *EvalTargetAggregateResult_) IsValid() error {
 	return nil
 }
+func (p *EvalSetColumnAggregateResult_) IsValid() error {
+	return nil
+}
 func (p *EvaluatorAggregateResult_) IsValid() error {
 	return nil
 }

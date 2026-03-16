@@ -1159,6 +1159,7 @@ func OpenTargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *openapi
 		InputTokens:     OpenAPIAggregatorResultsDO2DTOs(result.InputTokensAggrResults),
 		OutputTokens:    OpenAPIAggregatorResultsDO2DTOs(result.OutputTokensAggrResults),
 		TotalTokens:     OpenAPIAggregatorResultsDO2DTOs(result.TotalTokensAggrResults),
+		TraceMetrics:    openAPITraceMetricsDO2DTO(result.TraceMetrics),
 	}
 }
 
@@ -1173,7 +1174,30 @@ func TargetAggrResultDO2DTO(result *entity.EvalTargetMtrAggrResult) *domainExpt.
 		InputTokens:     AggregatorResultDOsToDTOs(result.InputTokensAggrResults),
 		OutputTokens:    AggregatorResultDOsToDTOs(result.OutputTokensAggrResults),
 		TotalTokens:     AggregatorResultDOsToDTOs(result.TotalTokensAggrResults),
+		TraceMetrics:    traceMetricsDO2DTO(result.TraceMetrics),
 	}
+}
+
+func traceMetricsDO2DTO(metrics map[string][]*entity.AggregatorResult) map[string][]*domainExpt.AggregatorResult_ {
+	if len(metrics) == 0 {
+		return nil
+	}
+	result := make(map[string][]*domainExpt.AggregatorResult_, len(metrics))
+	for key, values := range metrics {
+		result[key] = AggregatorResultDOsToDTOs(values)
+	}
+	return result
+}
+
+func openAPITraceMetricsDO2DTO(metrics map[string][]*entity.AggregatorResult) map[string][]*openapiExperiment.AggregatorResult_ {
+	if len(metrics) == 0 {
+		return nil
+	}
+	result := make(map[string][]*openapiExperiment.AggregatorResult_, len(metrics))
+	for key, values := range metrics {
+		result[key] = OpenAPIAggregatorResultsDO2DTOs(values)
+	}
+	return result
 }
 
 func OpenAPIEvaluatorParamsDTO2Domain(dtos []*openapi.SubmitExperimentEvaluatorParam) []*domainEvaluator.EvaluatorIDVersionItem {
