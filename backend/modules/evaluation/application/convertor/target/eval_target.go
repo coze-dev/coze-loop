@@ -120,7 +120,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		SourceTargetVersion: &targetVersionDO.SourceTargetVersion,
 	}
 	switch targetVersionDO.EvalTargetType {
-	case do.EvalTargetTypeCozeBot:
+	case do.EvalTargetTypeCozeBot, do.EvalTargetTypeCozeBotOnline:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
@@ -136,7 +136,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.CozeBot.BaseInfo),
 			}
 		}
-	case do.EvalTargetTypeLoopPrompt:
+	case do.EvalTargetTypeLoopPrompt, do.EvalTargetTypeCozeLoopPromptOnline:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
@@ -151,7 +151,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				Description:  &targetVersionDO.Prompt.Description,
 			}
 		}
-	case do.EvalTargetTypeCozeWorkflow:
+	case do.EvalTargetTypeCozeWorkflow, do.EvalTargetTypeCozeWorkflowOnline:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
@@ -166,7 +166,8 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				BaseInfo:    commonconvertor.ConvertBaseInfoDO2DTO(targetVersionDO.CozeWorkflow.BaseInfo),
 			}
 		}
-	case do.EvalTargetTypeVolcengineAgent, do.EvalTargetTypeVolcengineAgentAgentkit:
+	case do.EvalTargetTypeVolcengineAgent, do.EvalTargetTypeVolcengineAgentAgentkit,
+		do.EvalTargetTypeVolcengineAgentOnline, do.EvalTargetTypeVolcengineAgentAgentkitOnline:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),
@@ -189,7 +190,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 				RuntimeID:                targetVersionDO.VolcengineAgent.RuntimeID,
 			}
 		}
-	case do.EvalTargetTypeCustomRPCServer:
+	case do.EvalTargetTypeCustomRPCServer, do.EvalTargetTypeCustomRPCServerOnline:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
 			OutputSchemas: make([]*commondto.ArgsSchema, 0),

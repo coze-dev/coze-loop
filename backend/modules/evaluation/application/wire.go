@@ -33,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
@@ -155,6 +156,7 @@ func InitExperimentApplication(
 	benefitSvc benefit.IBenefitService,
 	ckDb ck.Provider,
 	tagClient tagservice.Client,
+	taskClient taskservice.Client,
 	objectStorage fileserver.ObjectStorage,
 	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
@@ -229,32 +231,33 @@ func InitEvalTargetApplication(ctx context.Context,
 }
 
 func InitEvalOpenAPIApplication(
-	ctx context.Context,
-	configFactory conf.IConfigLoaderFactory,
-	rmqFactory mq.IFactory,
-	cmdable redis.Cmdable,
-	idgen idgen.IIDGenerator,
-	db db.Provider,
-	client promptmanageservice.Client,
-	executeClient promptexecuteservice.Client,
-	authClient authservice.Client,
-	meter metrics.Meter,
-	dataClient datasetservice.Client,
-	userClient userservice.Client,
-	llmClient llmruntimeservice.Client,
-	tagClient tagservice.Client,
-	limiterFactory limiter.IRateLimiterFactory,
-	objectStorage fileserver.ObjectStorage,
-	batchObjectStorage fileserver.BatchObjectStorage,
-	auditClient audit.IAuditService,
-	benefitService benefit.IBenefitService,
-	ckProvider ck.Provider,
-	plainLimiterFactory limiter.IPlainRateLimiterFactory,
-	trajectoryAdapter rpc.ITrajectoryAdapter,
-	fileClient fileservice.Client,
+    ctx context.Context,
+    configFactory conf.IConfigLoaderFactory,
+    rmqFactory mq.IFactory,
+    cmdable redis.Cmdable,
+    idgen idgen.IIDGenerator,
+    db db.Provider,
+    client promptmanageservice.Client,
+    executeClient promptexecuteservice.Client,
+    authClient authservice.Client,
+    meter metrics.Meter,
+    dataClient datasetservice.Client,
+    userClient userservice.Client,
+    llmClient llmruntimeservice.Client,
+    tagClient tagservice.Client,
+    limiterFactory limiter.IRateLimiterFactory,
+    objectStorage fileserver.ObjectStorage,
+    batchObjectStorage fileserver.BatchObjectStorage,
+    auditClient audit.IAuditService,
+    benefitService benefit.IBenefitService,
+    ckProvider ck.Provider,
+    plainLimiterFactory limiter.IPlainRateLimiterFactory,
+    trajectoryAdapter rpc.ITrajectoryAdapter,
+    fileClient fileservice.Client,
+    taskClient taskservice.Client,
 ) (IEvalOpenAPIApplication, error) {
-	wire.Build(
-		evalOpenAPISet,
-	)
-	return nil, nil
+    wire.Build(
+        evalOpenAPISet,
+    )
+    return nil, nil
 }

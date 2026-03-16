@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	rpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -116,36 +117,6 @@ func (mr *MockIEvaluationSetServiceMockRecorder) GetEvaluationSet(ctx, spaceID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationSet", reflect.TypeOf((*MockIEvaluationSetService)(nil).GetEvaluationSet), ctx, spaceID, evaluationSetID, deletedAt)
 }
 
-// GetEvaluationSetIOJob mocks base method.
-func (m *MockIEvaluationSetService) GetEvaluationSetIOJob(ctx context.Context, spaceID, jobID int64) (*entity.DatasetIOJob, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetEvaluationSetIOJob", ctx, spaceID, jobID)
-	ret0, _ := ret[0].(*entity.DatasetIOJob)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetEvaluationSetIOJob indicates an expected call of GetEvaluationSetIOJob.
-func (mr *MockIEvaluationSetServiceMockRecorder) GetEvaluationSetIOJob(ctx, spaceID, jobID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluationSetIOJob", reflect.TypeOf((*MockIEvaluationSetService)(nil).GetEvaluationSetIOJob), ctx, spaceID, jobID)
-}
-
-// ImportEvaluationSet mocks base method.
-func (m *MockIEvaluationSetService) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (int64, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ImportEvaluationSet", ctx, param)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ImportEvaluationSet indicates an expected call of ImportEvaluationSet.
-func (mr *MockIEvaluationSetServiceMockRecorder) ImportEvaluationSet(ctx, param any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportEvaluationSet", reflect.TypeOf((*MockIEvaluationSetService)(nil).ImportEvaluationSet), ctx, param)
-}
-
 // ListEvaluationSets mocks base method.
 func (m *MockIEvaluationSetService) ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) ([]*entity.EvaluationSet, *int64, *string, error) {
 	m.ctrl.T.Helper()
@@ -179,9 +150,9 @@ func (mr *MockIEvaluationSetServiceMockRecorder) ParseImportSourceFile(ctx, para
 }
 
 // QueryItemSnapshotMappings mocks base method.
-func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", ctx, spaceID, datasetID, versionID)
+	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", ctx, req)
 	ret0, _ := ret[0].([]*entity.ItemSnapshotFieldMapping)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -189,9 +160,9 @@ func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Contex
 }
 
 // QueryItemSnapshotMappings indicates an expected call of QueryItemSnapshotMappings.
-func (mr *MockIEvaluationSetServiceMockRecorder) QueryItemSnapshotMappings(ctx, spaceID, datasetID, versionID any) *gomock.Call {
+func (mr *MockIEvaluationSetServiceMockRecorder) QueryItemSnapshotMappings(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIEvaluationSetService)(nil).QueryItemSnapshotMappings), ctx, spaceID, datasetID, versionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIEvaluationSetService)(nil).QueryItemSnapshotMappings), ctx, req)
 }
 
 // UpdateEvaluationSet mocks base method.

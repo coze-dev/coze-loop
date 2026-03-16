@@ -225,7 +225,8 @@ func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *ent
 				return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: evaluator %v is expected to receive the missing evalset %v column", evaluatorConf.EvaluatorVersionID, fc.FromField)))
 			}
 		}
-		if expt.Target != nil && expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
+		// Trace 和仅记录型不需要 target 输出，跳过 target 字段校验
+		if expt.Target != nil && expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace && !expt.Target.EvalTargetType.IsRecordOnlyType() {
 			for _, fc := range evaluatorConf.IngressConf.TargetAdapter.FieldConfs {
 				firstField, err := json.GetFirstJSONPathField(fc.FromField)
 				if err != nil {
@@ -285,6 +286,23 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	expt, err := e.GetDetail(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err
+	}
+
+	// 在线实验：抢心跳锁成功才发送 MQ daemon，与 Invoke 一致。ExptEnd 会通过 UnlockForce 主动释放，适配分布式架构
+	if expt.ExptType == entity.ExptType_Online {
+		maxHold := e.computeDaemonLockMaxHold(expt)
+		lockKey := e.makeOnlineExptDaemonLockKey(exptID, runID)
+		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
+		locked, _, _, err := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
+		if err != nil {
+			logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Run] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", exptID, runID, spaceID, err)
+			return err
+		}
+		if !locked {
+			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt daemon already running, skip publish, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
+			return nil
+		}
+		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Run] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", exptID, runID, spaceID)
 	}
 
 	if err := e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
@@ -566,7 +584,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 
 	// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
 	if got.ExptTemplateMeta != nil && got.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, got.ExptTemplateMeta.ID, spaceID, exptID, status, 0, nil); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in CompleteExpt, template_id: %v, expt_id: %v, err: %v",
 				got.ExptTemplateMeta.ID, exptID, err)
@@ -733,6 +751,24 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		return err
 	}
 
+	// 数据锁：阻塞直到抢锁成功，加锁后追加数据
+	dataLockKey := e.makeOnlineExptDataLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
+	locked, err := e.mutex.LockBackoff(ctx, dataLockKey, time.Second*30, time.Minute*10)
+	if err != nil {
+		logs.CtxError(ctx, "[ScheduleLock][Data][Invoke] online expt data lock err, expt_id: %v, run_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, err)
+		return err
+	}
+	if !locked {
+		logs.CtxError(ctx, "[ScheduleLock][Data][Invoke] online expt data lock timeout, expt_id: %v, run_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID)
+		return errorx.New("[Invoke] online expt data lock timeout")
+	}
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][Invoke] online expt data lock acquired, expt_id: %v, run_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID)
+	defer func() {
+		if _, uerr := e.mutex.Unlock(dataLockKey); uerr != nil {
+			logs.CtxWarn(ctx, "[ScheduleLock][Data][Invoke] online expt data unlock err, expt_id: %v, run_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, uerr)
+		}
+	}()
+
 	idIdx := 0
 	eirs := make([]*entity.ExptItemResult, 0, len(toSubmitItems))
 	etrs := make([]*entity.ExptTurnResult, 0, len(toSubmitItems))
@@ -790,6 +826,21 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		return err
 	}
 
+	// singleflight mutex: 抢锁成功才发送 MQ daemon，使用 LockWithRenew 与 consumer 一致。ExptEnd 会通过 UnlockForce 主动释放，适配分布式架构
+	maxHold := e.computeDaemonLockMaxHold(expt)
+	lockKey := e.makeOnlineExptDaemonLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
+	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
+	locked, _, _, lockErr := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
+	if lockErr != nil {
+		logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID, lockErr)
+		return lockErr
+	}
+	if !locked {
+		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon already running, skip publish, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
+		return nil
+	}
+	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
+	logs.CtxInfo(ctx, "[Invoke] PublishExptScheduleEvent, exptID: %v ", invokeExptReq.ExptID)
 	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
 		ExptID:      invokeExptReq.ExptID,
@@ -879,7 +930,8 @@ func (e *ExptMangerImpl) Finish(ctx context.Context, expt *entity.Experiment, ex
 	return nil
 }
 
-func (e *ExptMangerImpl) PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
+// RecordExptData 记录实验数据：在无数据且未完成时，计算并更新 run_log 与 expt_stats
+func (e *ExptMangerImpl) RecordExptData(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
 	runLog, err := e.GetRunLog(ctx, exptID, exptRunID, spaceID, session)
 	if err != nil {
 		return err
@@ -888,18 +940,13 @@ func (e *ExptMangerImpl) PendRun(ctx context.Context, exptID, exptRunID, spaceID
 	if err := e.calculateRunLogStats(ctx, exptID, exptRunID, runLog, spaceID, session); err != nil {
 		return err
 	}
-	runLog.Status = int64(entity.ExptStatus_Pending)
-
-	logs.CtxInfo(ctx, "[ExptEval] PendRun, expt_id: %v, expt_run_id: %v, status: %v", exptID, exptRunID, runLog.Status)
+	runLog.Status = int64(entity.ExptStatus_Processing)
+	logs.CtxInfo(ctx, "[ExptEval] RecordExptData run_log, expt_id: %v, expt_run_id: %v, status: %v", exptID, exptRunID, runLog.Status)
 
 	if err := e.runLogRepo.Save(ctx, runLog); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (e *ExptMangerImpl) PendExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	stats, err := e.exptResultService.CalculateStats(ctx, exptID, spaceID, session)
 	if err != nil {
 		return err

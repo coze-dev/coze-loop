@@ -1,0 +1,32 @@
+// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package rpc
+
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+)
+
+// IPipelineListAdapter 查询 ml_flow PipelineService ListPipeline 的适配器接口
+//go:generate mockgen -destination=./mocks/pipeline_list_adapter.go -package=mocks . IPipelineListAdapter
+type IPipelineListAdapter interface {
+	ListPipelineFlow(ctx context.Context, req *ListPipelineFlowRequest) (*ListPipelineFlowResponse, error)
+}
+
+// ListPipelineFlowRequest ListPipeline 查询请求参数
+type ListPipelineFlowRequest struct {
+	SpaceID    *int64
+	Name       *string
+	Page       *int32
+	PageSize   *int32
+	WithDetail bool   // 为 true 时返回 Flow 详情（含 nodes、edges）
+	IDList     []int64 // 按 ID 筛选，非空时只返回指定 ID 的 Pipeline
+}
+
+// ListPipelineFlowResponse ListPipeline 查询响应，返回完整 Pipeline 列表
+type ListPipelineFlowResponse struct {
+	Total int64
+	Items []*entity.Pipeline
+}
