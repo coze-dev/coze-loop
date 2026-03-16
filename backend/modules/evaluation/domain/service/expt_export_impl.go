@@ -267,11 +267,12 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	writer := csv.NewWriter(file)
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:           spaceID,
-		ExptIDs:           []int64{exptID},
-		BaseExptID:        ptr.Of(exptID),
-		ExportFullContent: true,
-		FullTrajectory:    true,
+		SpaceID:                 spaceID,
+		ExptIDs:                 []int64{exptID},
+		BaseExptID:              ptr.Of(exptID),
+		LoadEvaluatorFullContent:  gptr.Of(false), // 导出 CSV 仅需 score/reason，不加载 Evaluator input/output 大对象
+		LoadEvalTargetFullContent: gptr.Of(true),  // Target output 需完整内容（如 OutputFields 大字段）
+		FullTrajectory:          true,
 	}
 
 	var helper *exportCSVHelper
