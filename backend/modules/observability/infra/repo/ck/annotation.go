@@ -80,6 +80,7 @@ func (a *AnnotationCkDaoImpl) List(ctx context.Context, params *dao.ListAnnotati
 		return nil, nil
 	}
 	if len(params.SpanIDs) == 0 && params.WorkspaceID == "" {
+		logs.CtxWarn(ctx, "List annotations requires SpanID or WorkspaceID")
 		return nil, nil
 	}
 	db, err := a.buildSql(ctx, &annoSqlParam{

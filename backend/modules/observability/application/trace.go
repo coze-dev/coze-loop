@@ -961,7 +961,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 	}
 
 	if req.AnnotationType != nil {
-		svcReq.AnnotationType = string(*req.AnnotationType)
+		svcReq.AnnotationType = *req.AnnotationType
 	}
 	switch req.GetSpanListType() {
 	case common.SpanListTypeRootSpan:

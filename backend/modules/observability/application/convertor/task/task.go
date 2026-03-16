@@ -161,6 +161,7 @@ func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *tas
 	return &task.EvaluationExperimentConfig{
 		ItemConcurrencyCount: v.ItemConcurrencyCount,
 		ItemMaxRetryCount:    v.ItemMaxRetryCount,
+		SourceTargetID:       v.SourceTargetID,
 	}
 }
 

@@ -120,8 +120,9 @@ type AutoEvaluateConfig struct {
 }
 
 type EvaluationExperimentConfig struct {
-	ItemConcurrencyCount *int32 `json:"item_concurrency_count,omitempty"`
-	ItemMaxRetryCount    *int32 `json:"item_max_retry_count,omitempty"`
+	ItemConcurrencyCount *int32  `json:"item_concurrency_count,omitempty"`
+	ItemMaxRetryCount    *int32  `json:"item_max_retry_count,omitempty"`
+	SourceTargetID       *string `json:"source_target_id,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束
