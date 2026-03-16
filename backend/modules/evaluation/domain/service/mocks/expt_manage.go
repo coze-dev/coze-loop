@@ -236,9 +236,9 @@ func (mr *MockIExptManagerMockRecorder) Invoke(ctx, invokeExptReq any) *gomock.C
 }
 
 // IsCompletingRun mocks base method.
-func (m *MockIExptManager) IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+func (m *MockIExptManager) ExistCompletingRunLock(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsCompletingRun", ctx, exptID, exptRunID, spaceID)
+	ret := m.ctrl.Call(m, "ExistCompletingRunLock", ctx, exptID, exptRunID, spaceID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -247,7 +247,7 @@ func (m *MockIExptManager) IsCompletingRun(ctx context.Context, exptID, exptRunI
 // IsCompletingRun indicates an expected call of IsCompletingRun.
 func (mr *MockIExptManagerMockRecorder) IsCompletingRun(ctx, exptID, exptRunID, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCompletingRun", reflect.TypeOf((*MockIExptManager)(nil).IsCompletingRun), ctx, exptID, exptRunID, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistCompletingRunLock", reflect.TypeOf((*MockIExptManager)(nil).ExistCompletingRunLock), ctx, exptID, exptRunID, spaceID)
 }
 
 // LockCompletingRun mocks base method.

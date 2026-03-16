@@ -920,7 +920,7 @@ func (e *ExptMangerImpl) PendExpt(ctx context.Context, exptID, spaceID int64, se
 	return nil
 }
 
-func (e *ExptMangerImpl) IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+func (e *ExptMangerImpl) ExistCompletingRunLock(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
 	return e.mutex.Exists(ctx, e.makeExptCompletingLockKey(exptID, exptRunID))
 }
 
@@ -1010,7 +1010,7 @@ func (e *ExptMangerImpl) LogRetryItemsRun(ctx context.Context, exptID int64, mod
 			return 0, false, errorx.NewByCode(errno.ExperimentRunningExistedCode)
 		}
 
-		completing, err := e.IsCompletingRun(ctx, exptID, runID, spaceID)
+		completing, err := e.ExistCompletingRunLock(ctx, exptID, runID, spaceID)
 		if err != nil {
 			return 0, false, err
 		}
