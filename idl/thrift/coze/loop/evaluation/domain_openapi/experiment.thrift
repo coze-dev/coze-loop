@@ -74,6 +74,13 @@ struct TokenUsage {
     2: optional string output_tokens
 }
 
+// 评测集数值列聚合结果
+struct EvalSetColumnAggregateResult {
+    1: optional string column_key (go.tag = 'json:"column_key"')
+    2: optional string column_name (go.tag = 'json:"column_name"')
+    3: optional list<AggregatorResult> aggregator_results (go.tag = 'json:"aggregator_results"')
+}
+
 // 评估器聚合结果
 struct EvaluatorAggregateResult {
     1: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
@@ -92,6 +99,9 @@ struct EvalTargetAggregateResult {
     6: optional list<AggregatorResult> input_tokens
     7: optional list<AggregatorResult> output_tokens
     8: optional list<AggregatorResult> total_tokens
+
+    // trace 衍生指标（通用 map 结构，key 为指标名如 "span_count"、"tool_count"，支持动态扩展）
+    20: optional map<string, list<AggregatorResult>> trace_metrics (go.tag = 'json:"trace_metrics,omitempty"')
 }
 
 // 一种聚合器类型的聚合结果

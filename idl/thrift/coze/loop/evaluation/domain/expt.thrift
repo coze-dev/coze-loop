@@ -454,6 +454,9 @@ struct ExptAggregateResult {
     6: optional i64 update_time // timestamp in seconds
 
     10: optional list<AggregatorResult> weighted_results (go.tag = 'json:"weighted_results"')
+
+    // 评测集数值列聚合结果
+    20: optional list<EvalSetColumnAggregateResult> eval_set_column_results (go.tag = 'json:"eval_set_column_results,omitempty"')
 }
 
 struct EvalTargetAggregateResult {
@@ -464,6 +467,16 @@ struct EvalTargetAggregateResult {
     6: optional list<AggregatorResult> input_tokens
     7: optional list<AggregatorResult> output_tokens
     8: optional list<AggregatorResult> total_tokens
+
+    // trace 衍生指标（通用 map 结构，key 为指标名如 "span_count"、"tool_count"，支持动态扩展）
+    20: optional map<string, list<AggregatorResult>> trace_metrics (go.tag = 'json:"trace_metrics,omitempty"')
+}
+
+// 评测集数值列聚合结果
+struct EvalSetColumnAggregateResult {
+    1: optional string column_key (go.tag = 'json:"column_key"')
+    2: optional string column_name (go.tag = 'json:"column_name"')
+    3: optional list<AggregatorResult> aggregator_results (go.tag = 'json:"aggregator_results"')
 }
 
 // 评估器版本粒度聚合结果
