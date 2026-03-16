@@ -351,6 +351,10 @@ type MGetExperimentResultParam struct {
 	FullTrajectory bool
 	// ExportFullContent 表示导出场景下需要从 TOS 加载完整字段内容（RDS 中大对象会被剪裁）
 	ExportFullContent bool
+	// LoadEvaluatorFullContent 为 true 时从 TOS 加载 Evaluator input 大对象；nil 时沿用 ExportFullContent
+	LoadEvaluatorFullContent *bool
+	// LoadEvalTargetFullContent 为 true 时从 TOS 加载 EvalTarget output 大对象；nil 时沿用 ExportFullContent
+	LoadEvalTargetFullContent *bool
 }
 
 type MGetExperimentReportResult struct {

@@ -725,7 +725,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				itemResults1 := []*entity.ItemResult{{ItemID: 1}}
 				itemResults2 := []*entity.ItemResult{{ItemID: 2}}
 
-				// 第一次调用返回第一页数据
+				// 第一次调用返回第一页数据（pageSize=20，total=25 需 2 页）
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
 					Return(&entity.MGetExperimentReportResult{
@@ -733,7 +733,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ColumnEvalSetFields:   colEvalSetFields,
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults1,
-						Total:                 int64(150),
+						Total:                 int64(25),
 					}, nil).
 					Times(1)
 
@@ -745,7 +745,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ColumnEvalSetFields:   colEvalSetFields,
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults2,
-						Total:                 int64(150),
+						Total:                 int64(25),
 					}, nil).
 					Times(1)
 
