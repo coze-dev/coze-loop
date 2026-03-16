@@ -626,6 +626,42 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 		assert.ElementsMatch(t, []int64{10, 20}, got.Includes.EvalSetIDs)
 	})
 
+	t.Run("ConvertFilters方法，CronActivate字段", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_CronActivate,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1,0",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{1, 0}, got.Includes.CronActivate)
+	})
+
+	t.Run("ConvertFilters方法，CronActivate非法取值返回错误", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_CronActivate,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+
 	t.Run("ConvertFilters方法，TargetID字段", func(t *testing.T) {
 		filters := &domain_expt.Filters{}
 		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))

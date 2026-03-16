@@ -550,7 +550,7 @@ func TestExptMangerImpl_Delete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).Return(mockExpt, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Delete(ctx, exptID, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Success, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Success, int64(-1), nil).Return(nil)
 
 		err := mgr.Delete(ctx, exptID, spaceID, session)
 		if err != nil {
@@ -569,7 +569,7 @@ func TestExptMangerImpl_Delete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).Return(mockExpt, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Delete(ctx, exptID, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Failed, int64(-1)).
+			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Failed, int64(-1), nil).
 			Return(errors.New("update error"))
 
 		// UpdateExptInfo失败不应该影响主流程，应该返回nil
@@ -1209,9 +1209,9 @@ func TestExptMangerImpl_MDelete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, exptIDs, spaceID).Return(expts, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MDelete(ctx, exptIDs, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1), nil).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(200), spaceID, int64(2), entity.ExptStatus_Failed, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, int64(200), spaceID, int64(2), entity.ExptStatus_Failed, int64(-1), nil).Return(nil)
 
 		err := mgr.MDelete(ctx, exptIDs, spaceID, session)
 		if err != nil {
@@ -1257,7 +1257,7 @@ func TestExptMangerImpl_MDelete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, exptIDs, spaceID).Return(expts, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MDelete(ctx, exptIDs, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1)).
+			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1), nil).
 			Return(errors.New("update error"))
 
 		// UpdateExptInfo失败不应该影响主流程，应该返回nil

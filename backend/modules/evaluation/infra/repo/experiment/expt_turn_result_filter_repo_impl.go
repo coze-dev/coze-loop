@@ -110,8 +110,11 @@ func (e *ExptTurnResultFilterRepoImpl) QueryItemIDStates(ctx context.Context, fi
 			AnnotationStringFilters: fieldFiltersEntityToCK(filter.MapCond.AnnotationStringFilters),
 		}
 	}
-	// ItemSnapshotCond
-	cond.EvalSetSyncCkDate = filter.EvalSetSyncCkDate
+	// ItemSnapshotCond；join dataset_item_draft 时不需要 sync_ck_date
+	cond.IsOnlineExpt = filter.IsOnlineExpt
+	if !filter.IsOnlineExpt {
+		cond.EvalSetSyncCkDate = filter.EvalSetSyncCkDate
+	}
 	if filter.ItemSnapshotCond != nil {
 		cond.ItemSnapshotCond = &ck.ItemSnapshotFilter{
 			BoolMapFilters:   fieldFiltersEntityToCK(filter.ItemSnapshotCond.BoolMapFilters),

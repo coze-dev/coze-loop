@@ -1362,14 +1362,15 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		return nil
 	}
 
+	metaDTO := &openapiExperiment.ExptTemplateMeta{
+		ID:          gptr.Of(template.Meta.ID),
+		WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+		Name:        gptr.Of(template.Meta.Name),
+		Description: gptr.Of(template.Meta.Desc),
+		ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
+	}
 	dto := &openapiExperiment.ExptTemplate{
-		Meta: &openapiExperiment.ExptTemplateMeta{
-			ID:          gptr.Of(template.Meta.ID),
-			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
-			Name:        gptr.Of(template.Meta.Name),
-			Description: gptr.Of(template.Meta.Desc),
-			ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
-		},
+		Meta:     metaDTO,
 		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
 	}
 
@@ -1480,6 +1481,7 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	}
 
 	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
+
 	return dto
 }
 

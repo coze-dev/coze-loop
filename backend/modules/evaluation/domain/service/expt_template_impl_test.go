@@ -26,6 +26,8 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	platestwrite "github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -87,6 +89,9 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
 	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
 	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+	mockTaskRPCAdapter := mocks.NewMockITaskRPCAdapter(ctrl)
+	mockPipelineRPCAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
+	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
 
 	mgr := NewExptTemplateManager(
 		mockRepo,
@@ -96,6 +101,9 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 		mockEvalSetSvc,
 		mockEvalSetVerSvc,
 		mockLWT,
+		mockTaskRPCAdapter,
+		mockPipelineRPCAdapter,
+		mockExptRepo,
 	)
 
 	ctx := context.Background()
@@ -341,7 +349,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NewAndClamp(t *testing.T) {
 			}),
 	)
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 200, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 200, entity.ExptStatus_Processing, 1, nil)
 	assert.NoError(t, err)
 
 	// 场景二：已有 ExptInfo，adjustCount 负数，下限为 0
@@ -377,7 +385,42 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NewAndClamp(t *testing.T) {
 			}),
 	)
 
-	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 300, entity.ExptStatus_Failed, -5)
+	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 300, entity.ExptStatus_Failed, -5, nil)
+	assert.NoError(t, err)
+
+	// 场景三：传入 latestExptStartTime，验证字段被正确更新
+	latestStartTime := int64(1700000000000) // 毫秒时间戳
+	existing3 := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+		},
+		ExptInfo: &entity.ExptInfo{
+			CreatedExptCount:    1,
+			LatestExptID:        100,
+			LatestExptStatus:    entity.ExptStatus_Pending,
+			LatestExptStartTime: 0,
+		},
+	}
+
+	gomock.InOrder(
+		mockRepo.EXPECT().
+			GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
+			Return(existing3, nil),
+		mockRepo.EXPECT().
+			UpdateFields(ctx, templateID, gomock.AssignableToTypeOf(map[string]any{})).
+			DoAndReturn(func(_ context.Context, _ int64, fields map[string]any) error {
+				buf, ok := fields["expt_info"].([]byte)
+				assert.True(t, ok)
+				var info entity.ExptInfo
+				err := json.Unmarshal(buf, &info)
+				assert.NoError(t, err)
+				assert.Equal(t, latestStartTime, info.LatestExptStartTime)
+				return nil
+			}),
+	)
+
+	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 400, entity.ExptStatus_Pending, 1, &latestStartTime)
 	assert.NoError(t, err)
 }
 
@@ -399,7 +442,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NotFound(t *testing.T) {
 		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
 		Return((*entity.ExptTemplate)(nil), nil)
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	code, _, ok := errno.ParseStatusError(err)
 	assert.True(t, ok)
@@ -2711,7 +2754,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_GetByIDError(t *testing.T) {
 		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
 		Return((*entity.ExptTemplate)(nil), errors.New("get by id fail"))
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "get template fail")
 }
@@ -2751,7 +2794,741 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_UpdateFieldsError(t *testing.T) 
 		UpdateFields(ctx, templateID, gomock.AssignableToTypeOf(map[string]any{})).
 		Return(errors.New("update expt info fail"))
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 2, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 2, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "update ExptInfo fail")
+}
+
+func TestExptTemplateManagerImpl_matchesTemplateFilter(t *testing.T) {
+	mgr := &ExptTemplateManagerImpl{}
+
+	t.Run("filters为nil，返回true", func(t *testing.T) {
+		result := mgr.matchesTemplateFilter(&entity.ExptTemplate{}, nil)
+		assert.True(t, result)
+	})
+
+	t.Run("CreatedBy匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				CreatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("CreatedBy不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("user3")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				CreatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("UpdatedBy匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				UpdatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				UpdatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("UpdatedBy不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				UpdatedBy: &entity.UserInfo{UserID: gptr.Of("user3")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				UpdatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("EvalSetIDs匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 100,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				EvalSetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("EvalSetIDs不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 300,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				EvalSetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("TargetIDs匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetID: 100,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				TargetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("TargetIDs不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetID: 300,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				TargetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("TargetType匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				TargetType: []int64{int64(entity.EvalTargetTypeLoopPrompt), int64(entity.EvalTargetTypeCustomRPCServer)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("TargetType不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetType: entity.EvalTargetTypeCozeBot,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				TargetType: []int64{int64(entity.EvalTargetTypeLoopPrompt), int64(entity.EvalTargetTypeCustomRPCServer)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("ExptType匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ExptType: entity.ExptType_Online,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				ExptType: []int64{int64(entity.ExptType_Online), int64(entity.ExptType_Offline)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("ExptType不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ExptType: entity.ExptType_Offline,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				ExptType: []int64{int64(entity.ExptType_Online)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("FuzzyName匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				Name: "TestTemplate123",
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes:  &entity.ExptTemplateFilterFields{},
+			FuzzyName: "template",
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("FuzzyName不匹配", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				Name: "TestTemplate123",
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Includes:  &entity.ExptTemplateFilterFields{},
+			FuzzyName: "invalid",
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("Excludes-CreatedBy匹配被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				CreatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("Excludes-CreatedBy不匹配不被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of("user3")},
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				CreatedBy: []string{"user1", "user2"},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.True(t, result)
+	})
+
+	t.Run("Excludes-EvalSetIDs匹配被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 100,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				EvalSetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("Excludes-TargetIDs匹配被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetID: 100,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				TargetIDs: []int64{100, 200},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("Excludes-TargetType匹配被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			TripleConfig: &entity.ExptTemplateTuple{
+				TargetType: entity.EvalTargetTypeLoopPrompt,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				TargetType: []int64{int64(entity.EvalTargetTypeLoopPrompt)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+
+	t.Run("Excludes-ExptType匹配被排除", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ExptType: entity.ExptType_Online,
+			},
+		}
+		filters := &entity.ExptTemplateListFilter{
+			Excludes: &entity.ExptTemplateFilterFields{
+				ExptType: []int64{int64(entity.ExptType_Online)},
+			},
+		}
+		result := mgr.matchesTemplateFilter(template, filters)
+		assert.False(t, result)
+	})
+}
+
+func TestExptTemplateManagerImpl_applyTemplateFilters(t *testing.T) {
+	mgr := &ExptTemplateManagerImpl{}
+
+	templates := []*entity.ExptTemplate{
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID:   1,
+				Name: "template1",
+			},
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 100,
+			},
+		},
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID:   2,
+				Name: "template2",
+			},
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 200,
+			},
+		},
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID:   3,
+				Name: "template3",
+			},
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID: 300,
+			},
+		},
+	}
+
+	t.Run("filters为nil，返回所有", func(t *testing.T) {
+		result := mgr.applyTemplateFilters(templates, nil)
+		assert.Len(t, result, 3)
+	})
+
+	t.Run("应用EvalSetIDs筛选", func(t *testing.T) {
+		filters := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				EvalSetIDs: []int64{100, 300},
+			},
+		}
+		result := mgr.applyTemplateFilters(templates, filters)
+		assert.Len(t, result, 2)
+		ids := []int64{}
+		for _, t := range result {
+			ids = append(ids, t.GetID())
+		}
+		assert.ElementsMatch(t, []int64{1, 3}, ids)
+	})
+}
+
+func TestExptTemplateManagerImpl_applyTemplateOrderBy(t *testing.T) {
+	mgr := &ExptTemplateManagerImpl{}
+
+	templates := []*entity.ExptTemplate{
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID: 1,
+			},
+			BaseInfo: &entity.BaseInfo{
+				UpdatedAt: gptr.Of(int64(100)),
+				CreatedAt: gptr.Of(int64(10)),
+			},
+		},
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID: 2,
+			},
+			BaseInfo: &entity.BaseInfo{
+				UpdatedAt: gptr.Of(int64(200)),
+				CreatedAt: gptr.Of(int64(20)),
+			},
+		},
+		{
+			Meta: &entity.ExptTemplateMeta{
+				ID: 3,
+			},
+			BaseInfo: &entity.BaseInfo{
+				UpdatedAt: gptr.Of(int64(150)),
+				CreatedAt: gptr.Of(int64(5)),
+			},
+		},
+	}
+
+	t.Run("orderBys为空，不排序", func(t *testing.T) {
+		copyTemplates := make([]*entity.ExptTemplate, len(templates))
+		copy(copyTemplates, templates)
+		mgr.applyTemplateOrderBy(copyTemplates, nil)
+		assert.Equal(t, int64(1), copyTemplates[0].GetID())
+		assert.Equal(t, int64(2), copyTemplates[1].GetID())
+		assert.Equal(t, int64(3), copyTemplates[2].GetID())
+	})
+
+	t.Run("按UpdatedAt升序", func(t *testing.T) {
+		copyTemplates := make([]*entity.ExptTemplate, len(templates))
+		copy(copyTemplates, templates)
+		mgr.applyTemplateOrderBy(copyTemplates, []*entity.OrderBy{
+			{
+				Field: gptr.Of(entity.OrderByUpdatedAt),
+				IsAsc: gptr.Of(true),
+			},
+		})
+		assert.Equal(t, int64(1), copyTemplates[0].GetID())
+		assert.Equal(t, int64(3), copyTemplates[1].GetID())
+		assert.Equal(t, int64(2), copyTemplates[2].GetID())
+	})
+
+	t.Run("按UpdatedAt降序", func(t *testing.T) {
+		copyTemplates := make([]*entity.ExptTemplate, len(templates))
+		copy(copyTemplates, templates)
+		mgr.applyTemplateOrderBy(copyTemplates, []*entity.OrderBy{
+			{
+				Field: gptr.Of(entity.OrderByUpdatedAt),
+				IsAsc: gptr.Of(false),
+			},
+		})
+		assert.Equal(t, int64(2), copyTemplates[0].GetID())
+		assert.Equal(t, int64(3), copyTemplates[1].GetID())
+		assert.Equal(t, int64(1), copyTemplates[2].GetID())
+	})
+
+	t.Run("按CreatedAt升序", func(t *testing.T) {
+		copyTemplates := make([]*entity.ExptTemplate, len(templates))
+		copy(copyTemplates, templates)
+		mgr.applyTemplateOrderBy(copyTemplates, []*entity.OrderBy{
+			{
+				Field: gptr.Of(entity.OrderByCreatedAt),
+				IsAsc: gptr.Of(true),
+			},
+		})
+		assert.Equal(t, int64(3), copyTemplates[0].GetID())
+		assert.Equal(t, int64(1), copyTemplates[1].GetID())
+		assert.Equal(t, int64(2), copyTemplates[2].GetID())
+	})
+
+	t.Run("按CreatedAt降序", func(t *testing.T) {
+		copyTemplates := make([]*entity.ExptTemplate, len(templates))
+		copy(copyTemplates, templates)
+		mgr.applyTemplateOrderBy(copyTemplates, []*entity.OrderBy{
+			{
+				Field: gptr.Of(entity.OrderByCreatedAt),
+				IsAsc: gptr.Of(false),
+			},
+		})
+		assert.Equal(t, int64(2), copyTemplates[0].GetID())
+		assert.Equal(t, int64(1), copyTemplates[1].GetID())
+		assert.Equal(t, int64(3), copyTemplates[2].GetID())
+	})
+}
+
+func Test_taskToExptTemplate(t *testing.T) {
+	t.Run("task为nil返回nil", func(t *testing.T) {
+		result := taskToExptTemplate(nil, 100)
+		assert.Nil(t, result)
+	})
+
+	t.Run("task.ID为nil返回nil", func(t *testing.T) {
+		task := &taskdomain.Task{}
+		result := taskToExptTemplate(task, 100)
+		assert.Nil(t, result)
+	})
+
+	t.Run("正常转换", func(t *testing.T) {
+		taskID := int64(12345)
+		task := &taskdomain.Task{
+			ID:   &taskID,
+			Name: "test-task",
+		}
+		result := taskToExptTemplate(task, 100)
+		assert.NotNil(t, result)
+		assert.Equal(t, -taskID, result.GetID())
+		assert.Equal(t, int64(100), result.GetSpaceID())
+		assert.Equal(t, "test-task", result.GetName())
+		assert.Equal(t, entity.ExptType_Online, result.GetExptType())
+	})
+}
+
+func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
+	t.Run("taskConfig为nil返回nil", func(t *testing.T) {
+		triple, connector := autoEvaluateConfigsToExptTemplateConf(nil)
+		assert.Nil(t, triple)
+		assert.NotNil(t, connector)
+	})
+
+	t.Run("AutoEvaluateConfigs为空返回nil", func(t *testing.T) {
+		taskConfig := &taskdomain.TaskConfig{}
+		triple, connector := autoEvaluateConfigsToExptTemplateConf(taskConfig)
+		assert.Nil(t, triple)
+		assert.NotNil(t, connector)
+	})
+
+	t.Run("正常转换", func(t *testing.T) {
+		taskConfig := &taskdomain.TaskConfig{
+			AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+				{
+					EvaluatorID:        1,
+					EvaluatorVersionID: 1001,
+				},
+			},
+		}
+		triple, connector := autoEvaluateConfigsToExptTemplateConf(taskConfig)
+		assert.NotNil(t, triple)
+		assert.NotNil(t, connector)
+		assert.NotNil(t, connector.EvaluatorsConf)
+		assert.Len(t, connector.EvaluatorsConf.EvaluatorConf, 1)
+	})
+}
+
+func Test_extractEvaluatorVersionIDs(t *testing.T) {
+	t.Run("正常提取", func(t *testing.T) {
+		items := []*entity.EvaluatorIDVersionItem{
+			{EvaluatorVersionID: 1001},
+			{EvaluatorVersionID: 1002},
+			nil,
+			{EvaluatorVersionID: 0},
+		}
+		result := extractEvaluatorVersionIDs(items)
+		assert.Len(t, result, 2)
+		assert.ElementsMatch(t, []int64{1001, 1002}, result)
+	})
+}
+
+func Test_taskRuleToExptScheduler(t *testing.T) {
+	t.Run("rule为nil返回nil", func(t *testing.T) {
+		result := taskRuleToExptScheduler(nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("sampler和effectiveTime都为nil返回nil", func(t *testing.T) {
+		rule := &taskdomain.Rule{}
+		result := taskRuleToExptScheduler(rule)
+		assert.Nil(t, result)
+	})
+}
+
+func Test_convertTaskFrequency(t *testing.T) {
+	t.Run("sampler为nil返回nil", func(t *testing.T) {
+		result := convertTaskFrequency(nil, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("IsCycle为nil返回nil", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{}
+		result := convertTaskFrequency(sampler, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("IsCycle为false返回nil", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle: gptr.Of(false),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("TimeUnit为Day返回every_day", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of(taskdomain.TimeUnitDay),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.NotNil(t, result)
+		assert.Equal(t, "every_day", *result)
+	})
+}
+
+func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
+	t.Run("sf为nil返回nil", func(t *testing.T) {
+		result := spanFilterFieldsFromTaskRule(nil)
+		assert.Nil(t, result)
+	})
+}
+
+func Test_filterFieldsFromTaskRule(t *testing.T) {
+	t.Run("ff为nil返回nil", func(t *testing.T) {
+		result := filterFieldsFromTaskRule(nil)
+		assert.Nil(t, result)
+	})
+}
+
+func Test_filterFieldFromTaskRule(t *testing.T) {
+	t.Run("f为nil返回nil", func(t *testing.T) {
+		result := filterFieldFromTaskRule(nil)
+		assert.Nil(t, result)
+	})
+}
+
+func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
+	t.Run("p为nil返回nil", func(t *testing.T) {
+		result := extractSpanFilterFieldsFromPipeline(nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("Flow为nil返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("Flow.Nodes为空返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+}
+
+func Test_extractSchedulerFromPipeline(t *testing.T) {
+	t.Run("p为nil返回nil", func(t *testing.T) {
+		result := extractSchedulerFromPipeline(nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("Scheduler为nil返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{}
+		result := extractSchedulerFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("正常提取", func(t *testing.T) {
+		enabled := true
+		p := &entity.Pipeline{
+			Scheduler: &entity.Scheduler{
+				Enabled: &enabled,
+			},
+		}
+		result := extractSchedulerFromPipeline(p)
+		assert.NotNil(t, result)
+		assert.True(t, *result.Enabled)
+	})
+}
+
+func Test_parseSpanFilterFieldsFromTaskJSON(t *testing.T) {
+	t.Run("invalid JSON返回nil", func(t *testing.T) {
+		result := parseSpanFilterFieldsFromTaskJSON("invalid json")
+		assert.Nil(t, result)
+	})
+
+	t.Run("valid JSON但无rule返回nil", func(t *testing.T) {
+		result := parseSpanFilterFieldsFromTaskJSON(`{"other":"field"}`)
+		assert.Nil(t, result)
+	})
+}
+
+func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockPipelineAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
+	mgr := &ExptTemplateManagerImpl{
+		pipelineRPCAdapter: mockPipelineAdapter,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+
+	t.Run("pipelineRPCAdapter为nil，直接返回", func(t *testing.T) {
+		mgrNoAdapter := &ExptTemplateManagerImpl{}
+		err := mgrNoAdapter.enrichExptSourceFromPipeline(ctx, nil, spaceID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("templates为空，直接返回", func(t *testing.T) {
+		err := mgr.enrichExptSourceFromPipeline(ctx, []*entity.ExptTemplate{}, spaceID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("没有需要查询的pipeline，直接返回", func(t *testing.T) {
+		templates := []*entity.ExptTemplate{
+			{ExptSource: nil},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Evaluation}},
+		}
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+	})
+}
+
+func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockTaskAdapter := mocks.NewMockITaskRPCAdapter(ctrl)
+	mockPipelineAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
+	mockEvalSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
+	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:                mockRepo,
+		taskRPCAdapter:              mockTaskAdapter,
+		pipelineRPCAdapter:          mockPipelineAdapter,
+		evaluatorService:            mockEvalSvc,
+		evalTargetService:           mockTargetSvc,
+		evaluationSetService:        mockEvalSetSvc,
+		evaluationSetVersionService: mockEvalSetVerSvc,
+	}
+
+	ctx := context.Background()
+	page := int32(1)
+	pageSize := int32(10)
+	spaceID := int64(100)
+	session := &entity.Session{UserID: "u1"}
+
+	t.Run("ListTasks失败，返回错误", func(t *testing.T) {
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return(nil, nil, errors.New("list tasks fail"))
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
+		assert.Error(t, err)
+		assert.Nil(t, templates)
+		assert.Equal(t, int64(0), total)
+	})
+
+	t.Run("成功查询，无数据", func(t *testing.T) {
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{}, gptr.Of(int64(0)), nil)
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil)
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 0)
+		assert.Equal(t, int64(0), total)
+	})
 }

@@ -979,7 +979,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -1479,7 +1479,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -2840,7 +2840,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 		}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 			{
 				FieldKey:      "field_key_string",
 				MappingKey:    "string_map",
@@ -5622,7 +5622,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		if assert.NotNil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore) {
@@ -5676,7 +5676,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		// 应该使用已有的加权分数
@@ -5726,7 +5726,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		// 未启用加权分数，应该保持为 nil
