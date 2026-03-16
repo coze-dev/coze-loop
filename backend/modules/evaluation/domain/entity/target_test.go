@@ -20,6 +20,61 @@ func TestEvalTargetType_String(t *testing.T) {
 	assert.Equal(t, "<UNSET>", unknown.String())
 }
 
+func TestEvalTargetType_SupptTrajectory(t *testing.T) {
+	tests := []struct {
+		name     string
+		targetType EvalTargetType
+		expected bool
+	}{
+		{
+			name:     "VolcengineAgent supports trajectory",
+			targetType: EvalTargetTypeVolcengineAgent,
+			expected: true,
+		},
+		{
+			name:     "CustomRPCServer supports trajectory",
+			targetType: EvalTargetTypeCustomRPCServer,
+			expected: true,
+		},
+		{
+			name:     "LoopPrompt supports trajectory",
+			targetType: EvalTargetTypeLoopPrompt,
+			expected: true,
+		},
+		{
+			name:     "CozeBot does not support trajectory",
+			targetType: EvalTargetTypeCozeBot,
+			expected: false,
+		},
+		{
+			name:     "LoopTrace does not support trajectory",
+			targetType: EvalTargetTypeLoopTrace,
+			expected: false,
+		},
+		{
+			name:     "CozeWorkflow does not support trajectory",
+			targetType: EvalTargetTypeCozeWorkflow,
+			expected: false,
+		},
+		{
+			name:     "VolcengineAgentAgentkit does not support trajectory",
+			targetType: EvalTargetTypeVolcengineAgentAgentkit,
+			expected: false,
+		},
+		{
+			name:     "Unknown type does not support trajectory",
+			targetType: EvalTargetType(99),
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.targetType.SupptTrajectory())
+		})
+	}
+}
+
 func TestEvalTargetTypePtr_Value_Scan(t *testing.T) {
 	v := EvalTargetTypeCozeBot
 	ptr := EvalTargetTypePtr(v)
