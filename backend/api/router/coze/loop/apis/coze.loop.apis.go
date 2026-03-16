@@ -435,6 +435,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
 				{
 					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
+					_evaluation_set_id0.POST("/import", append(_importevaluationsetoapiMw(handler), apis.ImportEvaluationSetOApi)...)
 					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
 					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
 					{
@@ -480,6 +481,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+				{
+					_evaluation_set_io_job := _evaluation0.Group("/evaluation_set_io_job", _evaluation_set_io_jobMw(handler)...)
+					_evaluation_set_io_job.GET("/:job_id", append(_getevaluationsetjoboapiMw(handler), apis.GetEvaluationSetJobOApi)...)
+				}
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)
 					_evaluator_records0.POST("/batch_get", append(_batchgetevaluatorrecordsoapiMw(handler), apis.BatchGetEvaluatorRecordsOApi)...)
