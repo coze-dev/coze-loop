@@ -4,7 +4,6 @@
 package service
 
 import (
-	"bufio"
 	"context"
 	"encoding/csv"
 	"fmt"
@@ -267,12 +266,12 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 	writer := csv.NewWriter(file)
 
 	param := &entity.MGetExperimentResultParam{
-		SpaceID:                 spaceID,
-		ExptIDs:                 []int64{exptID},
-		BaseExptID:              ptr.Of(exptID),
+		SpaceID:                   spaceID,
+		ExptIDs:                   []int64{exptID},
+		BaseExptID:                ptr.Of(exptID),
 		LoadEvaluatorFullContent:  gptr.Of(false), // 导出 CSV 仅需 score/reason，不加载 Evaluator input/output 大对象
 		LoadEvalTargetFullContent: gptr.Of(true),  // Target output 需完整内容（如 OutputFields 大字段）
-		FullTrajectory:          true,
+		FullTrajectory:            true,
 	}
 
 	var helper *exportCSVHelper
@@ -348,7 +347,6 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 type exportCSVHelper struct {
 	spaceID   int64
 	exptID    int64
-	fileName  string
 	withLogID bool
 
 	colEvaluators     []*entity.ColumnEvaluator
@@ -363,21 +361,6 @@ type exportCSVHelper struct {
 	exptResultService  ExptResultService
 	fileClient         fileserver.ObjectStorage
 	evalSetItemSvc     EvaluationSetItemService
-}
-
-func (e *exportCSVHelper) exportCSV(ctx context.Context) error {
-	columns, err := e.buildColumns(ctx)
-	if err != nil {
-		return err
-	}
-	rows, err := e.buildRows(ctx)
-	if err != nil {
-		return err
-	}
-	fileData := make([][]string, 0, 1+len(rows))
-	fileData = append(fileData, columns)
-	fileData = append(fileData, rows...)
-	return e.createAndUploadCSV(ctx, e.fileName, fileData)
 }
 
 const (
@@ -750,66 +733,6 @@ func (e *ExptResultExportService) getFileName(ctx context.Context, exptName stri
 	// 文件名为：{对应实验名}_实验报告_{导出任务ID}_{下载时间}.csv
 	fileName := fmt.Sprintf("%s_实验报告_%d_%s.csv", exptName, exportID, t)
 	return fileName, nil
-}
-
-func (e *exportCSVHelper) createAndUploadCSV(ctx context.Context, fileName string, fileData [][]string) error {
-	err := e.createCSV(ctx, fileName, fileData)
-	if err != nil {
-		return err
-	}
-	// 上传文件
-
-	csvFile, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = csvFile.Close()
-	}()
-
-	fileReader := bufio.NewReader(csvFile)
-
-	err = e.uploadCSVFile(ctx, fileName, fileReader)
-	if err != nil {
-		return fmt.Errorf("uploadFile error: %v", err)
-	}
-
-	// 删除CSV文件
-	err = os.Remove(fileName)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (e *exportCSVHelper) createCSV(ctx context.Context, fileName string, fileData [][]string) error {
-	// 创建CSV文件
-	file, err := os.Create(fileName)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = file.Close()
-	}()
-
-	_, err = file.WriteString("\xEF\xBB\xBF") // 写入UTF-8 BOM，避免使用Excel打开乱码
-	if err != nil {
-		return err
-	}
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// 将数据写入CSV文件
-	for _, rowData := range fileData {
-		err := writer.Write(rowData)
-		if err != nil {
-			return err
-		}
-	}
-
-	logs.CtxInfo(ctx, "CSV file successfully created, file = %v", file.Name())
-	return nil
 }
 
 func (e *exportCSVHelper) uploadCSVFile(ctx context.Context, fileName string, reader io.Reader) (err error) {

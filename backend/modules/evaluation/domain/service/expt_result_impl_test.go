@@ -4314,11 +4314,11 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 						ID:       1,
 						ExptType: entity.ExptType_Offline,
 					},
-					SpaceID:                 100,
+					SpaceID:                   100,
 					LoadEvalTargetFullContent: true,
-					turnResultDO:            []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}, {ID: 11, TargetResultID: 2}},
-					evalTargetService:      mockEvalTargetService,
-					FullTrajectory:          false,
+					turnResultDO:              []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}, {ID: 11, TargetResultID: 2}},
+					evalTargetService:         mockEvalTargetService,
+					FullTrajectory:            false,
 				}
 				return builder, mockEvalTargetService
 			},
@@ -4356,11 +4356,11 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 						ID:       1,
 						ExptType: entity.ExptType_Offline,
 					},
-					SpaceID:                 100,
+					SpaceID:                   100,
 					LoadEvalTargetFullContent: true,
-					turnResultDO:            []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}},
-					evalTargetService:      mockEvalTargetService,
-					FullTrajectory:          false,
+					turnResultDO:              []*entity.ExptTurnResult{{ID: 10, TargetResultID: 1}},
+					evalTargetService:         mockEvalTargetService,
+					FullTrajectory:            false,
 				}
 				return builder, mockEvalTargetService
 			},
