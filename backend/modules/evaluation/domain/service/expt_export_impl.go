@@ -329,6 +329,9 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			}
 		}
 		writer.Flush()
+		if err := writer.Error(); err != nil {
+			return err
+		}
 
 		if pageNum*pageSize >= int(result.Total) {
 			break
