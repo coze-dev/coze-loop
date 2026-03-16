@@ -80,7 +80,7 @@ func (p EvalTargetType) String() string {
 
 func (p EvalTargetType) SupptTrajectory() bool {
 	switch p {
-	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer:
+	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer, EvalTargetTypeLoopPrompt:
 		return true
 	default:
 		return false
