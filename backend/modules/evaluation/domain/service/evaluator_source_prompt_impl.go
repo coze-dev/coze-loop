@@ -664,6 +664,14 @@ func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluato
 	return nil
 }
 
+func (p *EvaluatorSourcePromptServiceImpl) AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) (map[string]string, string, error) {
+	return nil, "", errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async run"))
+}
+
+func (p *EvaluatorSourcePromptServiceImpl) AsyncDebug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) (map[string]string, string, error) {
+	return nil, "", errorx.NewByCode(errno.InvalidEvaluatorTypeCode, errorx.WithExtraMsg("prompt evaluator does not support async debug"))
+}
+
 func (p *EvaluatorSourcePromptServiceImpl) Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error) {
 	// 实现调试评估的逻辑
 	output, _, _ = p.Run(ctx, evaluator, input, evaluatorRunConf, exptSpaceID, false)

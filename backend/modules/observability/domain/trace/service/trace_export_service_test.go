@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
@@ -84,7 +85,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
 
@@ -165,7 +166,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 				adaptor := NewDatasetServiceAdaptor()
 
 				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
@@ -499,7 +500,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -594,7 +595,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -691,7 +692,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -787,7 +788,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -831,7 +832,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -877,7 +878,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -948,7 +949,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1051,7 +1052,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Multimodal(t *testi
 	annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 	metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+	buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 	adaptor := NewDatasetServiceAdaptor()
 	adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1184,7 +1185,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 
@@ -1246,7 +1247,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1342,7 +1343,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1414,7 +1415,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_Evaluation, datasetProviderMock)
@@ -1514,7 +1515,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1613,7 +1614,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1713,7 +1714,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
@@ -1812,7 +1813,7 @@ func TestTraceExportServiceImpl_ExportTracesToDataset_Additional(t *testing.T) {
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 				traceServiceStub := &stubTraceService{}
 
 				adaptor := NewDatasetServiceAdaptor()
@@ -1965,7 +1966,7 @@ func TestTraceExportServiceImpl_PreviewExportTracesToDataset_Additional(t *testi
 				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, nil, nil, nil, nil, nil, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 
 				adaptor := NewDatasetServiceAdaptor()
 				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)

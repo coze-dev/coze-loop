@@ -783,7 +783,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3)); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3),
+			func(event *entity.ExptItemEvalEvent) {
+				event.AsyncReportTrigger = true
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -1906,4 +1909,50 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 			Total:               gptr.Of(int32(total)),
 		},
 	}, nil
+}
+
+func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
+	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive req: %v", json.Jsonify(req))
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", req.GetInvokeID())
+	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
+	if err != nil {
+		return nil, err
+	}
+
+	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
+		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID())
+
+	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
+	if outputData != nil {
+		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
+	}
+
+	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
+		SpaceID:    req.GetWorkspaceID(),
+		RecordID:   req.GetInvokeID(),
+		OutputData: outputData,
+		Status:     evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus()),
+	}); err != nil {
+		return nil, err
+	}
+
+	if actx.Event != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil, func(event *entity.ExptItemEvalEvent) {
+			event.AsyncEvaluatorReportTrigger = true
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
