@@ -1453,7 +1453,7 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 }
 
 func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {
-	const maxListMetadataSpansList = 3000
+	const maxListMetadataSpansList = 300
 	listSpansResp, err := r.ListSpans(ctx, &ListSpansReq{
 		WorkspaceID:  req.WorkspaceID,
 		StartTime:    req.StartTime,
@@ -1472,7 +1472,7 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	if err != nil {
 		return nil, err
 	}
-
+	logs.CtxInfo(ctx, "Span info: %v", listSpansResp.Spans)
 	result := make(map[string][]string)
 	valueSetMap := make(map[string]map[string]bool)
 
@@ -1488,7 +1488,7 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 			}
 		}
 	}
-
+	logs.CtxInfo(ctx, "Result info: %v", result)
 	keys := lo.Keys(result)
 	sort.Strings(keys)
 	items := make([]*trace.MetadataItemInfo, 0)
