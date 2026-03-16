@@ -22,6 +22,7 @@ type EvalTargetBuilderImpl struct {
 }
 
 func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.ObservabilityTask) *eval_target.CreateEvalTargetParam {
+	// todo fby
 	return &eval_target.CreateEvalTargetParam{
 		EvalTargetType: lo.ToPtr(eval_target_d.EvalTargetType_Trace),
 		SourceTargetID: lo.ToPtr(strconv.FormatInt(task.ID, 10)),

@@ -2340,8 +2340,9 @@ func (p *EffectiveTime) Field2DeepEqual(src *int64) bool {
 }
 
 type EvaluationExperimentConfig struct {
-	ItemConcurrencyCount *int32 `thrift:"item_concurrency_count,1,optional" frugal:"1,optional,i32" json:"item_concurrency_count" form:"item_concurrency_count" query:"item_concurrency_count"`
-	ItemMaxRetryCount    *int32 `thrift:"item_max_retry_count,2,optional" frugal:"2,optional,i32" json:"item_max_retry_count" form:"item_max_retry_count" query:"item_max_retry_count"`
+	ItemConcurrencyCount *int32  `thrift:"item_concurrency_count,1,optional" frugal:"1,optional,i32" json:"item_concurrency_count" form:"item_concurrency_count" query:"item_concurrency_count"`
+	ItemMaxRetryCount    *int32  `thrift:"item_max_retry_count,2,optional" frugal:"2,optional,i32" json:"item_max_retry_count" form:"item_max_retry_count" query:"item_max_retry_count"`
+	SourceTargetID       *string `thrift:"source_target_id,3,optional" frugal:"3,optional,string" json:"source_target_id" form:"source_target_id" query:"source_target_id"`
 }
 
 func NewEvaluationExperimentConfig() *EvaluationExperimentConfig {
@@ -2374,16 +2375,32 @@ func (p *EvaluationExperimentConfig) GetItemMaxRetryCount() (v int32) {
 	}
 	return *p.ItemMaxRetryCount
 }
+
+var EvaluationExperimentConfig_SourceTargetID_DEFAULT string
+
+func (p *EvaluationExperimentConfig) GetSourceTargetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceTargetID() {
+		return EvaluationExperimentConfig_SourceTargetID_DEFAULT
+	}
+	return *p.SourceTargetID
+}
 func (p *EvaluationExperimentConfig) SetItemConcurrencyCount(val *int32) {
 	p.ItemConcurrencyCount = val
 }
 func (p *EvaluationExperimentConfig) SetItemMaxRetryCount(val *int32) {
 	p.ItemMaxRetryCount = val
 }
+func (p *EvaluationExperimentConfig) SetSourceTargetID(val *string) {
+	p.SourceTargetID = val
+}
 
 var fieldIDToName_EvaluationExperimentConfig = map[int16]string{
 	1: "item_concurrency_count",
 	2: "item_max_retry_count",
+	3: "source_target_id",
 }
 
 func (p *EvaluationExperimentConfig) IsSetItemConcurrencyCount() bool {
@@ -2392,6 +2409,10 @@ func (p *EvaluationExperimentConfig) IsSetItemConcurrencyCount() bool {
 
 func (p *EvaluationExperimentConfig) IsSetItemMaxRetryCount() bool {
 	return p.ItemMaxRetryCount != nil
+}
+
+func (p *EvaluationExperimentConfig) IsSetSourceTargetID() bool {
+	return p.SourceTargetID != nil
 }
 
 func (p *EvaluationExperimentConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2423,6 +2444,14 @@ func (p *EvaluationExperimentConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2479,6 +2508,17 @@ func (p *EvaluationExperimentConfig) ReadField2(iprot thrift.TProtocol) error {
 	p.ItemMaxRetryCount = _field
 	return nil
 }
+func (p *EvaluationExperimentConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceTargetID = _field
+	return nil
+}
 
 func (p *EvaluationExperimentConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2492,6 +2532,10 @@ func (p *EvaluationExperimentConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -2548,6 +2592,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *EvaluationExperimentConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceTargetID() {
+		if err = oprot.WriteFieldBegin("source_target_id", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SourceTargetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *EvaluationExperimentConfig) String() string {
 	if p == nil {
@@ -2567,6 +2629,9 @@ func (p *EvaluationExperimentConfig) DeepEqual(ano *EvaluationExperimentConfig) 
 		return false
 	}
 	if !p.Field2DeepEqual(ano.ItemMaxRetryCount) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SourceTargetID) {
 		return false
 	}
 	return true
@@ -2592,6 +2657,18 @@ func (p *EvaluationExperimentConfig) Field2DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemMaxRetryCount != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluationExperimentConfig) Field3DeepEqual(src *string) bool {
+
+	if p.SourceTargetID == src {
+		return true
+	} else if p.SourceTargetID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SourceTargetID, *src) != 0 {
 		return false
 	}
 	return true

@@ -1683,6 +1683,20 @@ func (p *EvaluationExperimentConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1729,6 +1743,20 @@ func (p *EvaluationExperimentConfig) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationExperimentConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceTargetID = _field
+	return offset, nil
+}
+
 func (p *EvaluationExperimentConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1738,6 +1766,7 @@ func (p *EvaluationExperimentConfig) FastWriteNocopy(buf []byte, w thrift.Nocopy
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1748,6 +1777,7 @@ func (p *EvaluationExperimentConfig) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1771,6 +1801,15 @@ func (p *EvaluationExperimentConfig) fastWriteField2(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *EvaluationExperimentConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceTargetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceTargetID)
+	}
+	return offset
+}
+
 func (p *EvaluationExperimentConfig) field1Length() int {
 	l := 0
 	if p.IsSetItemConcurrencyCount() {
@@ -1789,6 +1828,15 @@ func (p *EvaluationExperimentConfig) field2Length() int {
 	return l
 }
 
+func (p *EvaluationExperimentConfig) field3Length() int {
+	l := 0
+	if p.IsSetSourceTargetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceTargetID)
+	}
+	return l
+}
+
 func (p *EvaluationExperimentConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*EvaluationExperimentConfig)
 	if !ok {
@@ -1803,6 +1851,14 @@ func (p *EvaluationExperimentConfig) DeepCopy(s interface{}) error {
 	if src.ItemMaxRetryCount != nil {
 		tmp := *src.ItemMaxRetryCount
 		p.ItemMaxRetryCount = &tmp
+	}
+
+	if src.SourceTargetID != nil {
+		var tmp string
+		if *src.SourceTargetID != "" {
+			tmp = kutils.StringDeepCopy(*src.SourceTargetID)
+		}
+		p.SourceTargetID = &tmp
 	}
 
 	return nil

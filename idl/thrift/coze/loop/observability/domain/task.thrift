@@ -76,6 +76,7 @@ struct EffectiveTime {
 struct EvaluationExperimentConfig {
     1: optional i32 item_concurrency_count (api.js_conv="true",  go.tag='json:"item_concurrency_count"')
     2: optional i32 item_max_retry_count (api.js_conv="true", go.tag='json:"item_max_retry_count"')
+    3: optional string source_target_id (go.tag='json:"source_target_id"')
 }
 // TaskConfig
 struct TaskConfig {
