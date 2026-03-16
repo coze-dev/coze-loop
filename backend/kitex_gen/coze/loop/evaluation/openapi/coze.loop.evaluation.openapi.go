@@ -44134,7 +44134,7 @@ type EvaluationOpenAPIService interface {
 	// 查询评测集某个filed值，用于获取超长文本的内容
 	GetEvaluationItemFieldOApi(ctx context.Context, req *GetEvaluationItemFieldOApiRequest) (r *GetEvaluationItemFieldOApiResponse, err error)
 	// 导入评测集
-	ImportEvaluationSetOApi(ctx context.Context, req *ImportEvaluationSetOApiRequest) (r *ImportEvaluationSetOApiRequest, err error)
+	ImportEvaluationSetOApi(ctx context.Context, req *ImportEvaluationSetOApiRequest) (r *ImportEvaluationSetOApiResponse, err error)
 	// 查询评测集导入任务
 	GetEvaluationSetJobOApi(ctx context.Context, req *GetEvaluationSetIOJobOApiRequest) (r *GetEvaluationSetIOJobOApiResponse, err error)
 	// 更新评测集字段信息
@@ -44329,7 +44329,7 @@ func (p *EvaluationOpenAPIServiceClient) GetEvaluationItemFieldOApi(ctx context.
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationOpenAPIServiceClient) ImportEvaluationSetOApi(ctx context.Context, req *ImportEvaluationSetOApiRequest) (r *ImportEvaluationSetOApiRequest, err error) {
+func (p *EvaluationOpenAPIServiceClient) ImportEvaluationSetOApi(ctx context.Context, req *ImportEvaluationSetOApiRequest) (r *ImportEvaluationSetOApiResponse, err error) {
 	var _args EvaluationOpenAPIServiceImportEvaluationSetOApiArgs
 	_args.Req = req
 	var _result EvaluationOpenAPIServiceImportEvaluationSetOApiResult
@@ -45257,7 +45257,7 @@ func (p *evaluationOpenAPIServiceProcessorImportEvaluationSetOApi) Process(ctx c
 	iprot.ReadMessageEnd()
 	var err2 error
 	result := EvaluationOpenAPIServiceImportEvaluationSetOApiResult{}
-	var retval *ImportEvaluationSetOApiRequest
+	var retval *ImportEvaluationSetOApiResponse
 	if retval, err2 = p.handler.ImportEvaluationSetOApi(ctx, args.Req); err2 != nil {
 		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ImportEvaluationSetOApi: "+err2.Error())
 		oprot.WriteMessageBegin("ImportEvaluationSetOApi", thrift.EXCEPTION, seqId)
@@ -50882,7 +50882,7 @@ func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiArgs) Field1DeepEqual(sr
 }
 
 type EvaluationOpenAPIServiceImportEvaluationSetOApiResult struct {
-	Success *ImportEvaluationSetOApiRequest `thrift:"success,0,optional" frugal:"0,optional,ImportEvaluationSetOApiRequest"`
+	Success *ImportEvaluationSetOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ImportEvaluationSetOApiResponse"`
 }
 
 func NewEvaluationOpenAPIServiceImportEvaluationSetOApiResult() *EvaluationOpenAPIServiceImportEvaluationSetOApiResult {
@@ -50892,9 +50892,9 @@ func NewEvaluationOpenAPIServiceImportEvaluationSetOApiResult() *EvaluationOpenA
 func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) InitDefault() {
 }
 
-var EvaluationOpenAPIServiceImportEvaluationSetOApiResult_Success_DEFAULT *ImportEvaluationSetOApiRequest
+var EvaluationOpenAPIServiceImportEvaluationSetOApiResult_Success_DEFAULT *ImportEvaluationSetOApiResponse
 
-func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) GetSuccess() (v *ImportEvaluationSetOApiRequest) {
+func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) GetSuccess() (v *ImportEvaluationSetOApiResponse) {
 	if p == nil {
 		return
 	}
@@ -50904,7 +50904,7 @@ func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) GetSuccess() (v 
 	return p.Success
 }
 func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ImportEvaluationSetOApiRequest)
+	p.Success = x.(*ImportEvaluationSetOApiResponse)
 }
 
 var fieldIDToName_EvaluationOpenAPIServiceImportEvaluationSetOApiResult = map[int16]string{
@@ -50971,7 +50971,7 @@ ReadStructEndError:
 }
 
 func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewImportEvaluationSetOApiRequest()
+	_field := NewImportEvaluationSetOApiResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -51046,7 +51046,7 @@ func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) DeepEqual(ano *E
 	return true
 }
 
-func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) Field0DeepEqual(src *ImportEvaluationSetOApiRequest) bool {
+func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) Field0DeepEqual(src *ImportEvaluationSetOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

@@ -34338,7 +34338,7 @@ SkipFieldError:
 
 func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
-	_field := NewImportEvaluationSetOApiRequest()
+	_field := NewImportEvaluationSetOApiResponse()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -34394,9 +34394,9 @@ func (p *EvaluationOpenAPIServiceImportEvaluationSetOApiResult) DeepCopy(s inter
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _success *ImportEvaluationSetOApiRequest
+	var _success *ImportEvaluationSetOApiResponse
 	if src.Success != nil {
-		_success = &ImportEvaluationSetOApiRequest{}
+		_success = &ImportEvaluationSetOApiResponse{}
 		if err := _success.DeepCopy(src.Success); err != nil {
 			return err
 		}

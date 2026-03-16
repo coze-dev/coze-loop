@@ -13,6 +13,8 @@ import (
 type IDatasetRPCAdapter interface {
 	CreateDataset(ctx context.Context, param *CreateDatasetParam) (id int64, err error)
 	CreateDatasetWithImport(ctx context.Context, param *CreateDatasetWithImportParam) (id, jobID int64, err error)
+	ImportDataset(ctx context.Context, param *ImportDatasetParam) (jobID int64, err error)
+	GetDatasetIOJob(ctx context.Context, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
@@ -71,6 +73,14 @@ type CreateDatasetWithImportParam struct {
 	Source        *entity.DatasetIOEndpoint
 	FieldMappings []*entity.FieldMapping
 	Session       *entity.Session
+}
+
+type ImportDatasetParam struct {
+	WorkspaceID   int64
+	DatasetID     int64
+	File          *entity.DatasetIOFile
+	FieldMappings []*entity.FieldMapping
+	Option        *entity.DatasetIOJobOption
 }
 
 type ListDatasetsParam struct {

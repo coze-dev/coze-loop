@@ -975,7 +975,7 @@ service EvaluationOpenAPIService {
     // 查询评测集某个filed值，用于获取超长文本的内容
     GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
     // 导入评测集
-    ImportEvaluationSetOApiRequest ImportEvaluationSetOApi(1: ImportEvaluationSetOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import")
+    ImportEvaluationSetOApiResponse ImportEvaluationSetOApi(1: ImportEvaluationSetOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import")
     // 查询评测集导入任务
     GetEvaluationSetIOJobOApiResponse GetEvaluationSetJobOApi(1: GetEvaluationSetIOJobOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_set_io_job/:job_id")
     // 更新评测集字段信息

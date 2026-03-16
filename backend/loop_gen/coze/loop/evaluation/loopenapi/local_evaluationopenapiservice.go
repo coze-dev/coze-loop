@@ -301,7 +301,7 @@ func (l *LocalEvaluationOpenAPIService) GetEvaluationItemFieldOApi(ctx context.C
 
 // ImportEvaluationSetOApi
 // 导入评测集
-func (l *LocalEvaluationOpenAPIService) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.ImportEvaluationSetOApiRequest, error) {
+func (l *LocalEvaluationOpenAPIService) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest, callOptions ...callopt.Option) (*openapi.ImportEvaluationSetOApiResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs)
 		result := out.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult)

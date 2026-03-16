@@ -1218,7 +1218,7 @@ func (p *kClient) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.G
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiRequest, err error) {
+func (p *kClient) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
 	var _args openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult
