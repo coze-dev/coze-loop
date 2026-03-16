@@ -251,8 +251,8 @@ func (e ExptResultExportService) HandleExportEvent(ctx context.Context, spaceID,
 
 func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptID int64, fileName string, withLogID bool) (err error) {
 	const (
-		pageSize = 100
-		maxPage  = 500
+		pageSize = 20
+		maxPage  = 2500
 	)
 
 	file, err := os.Create(fileName)
