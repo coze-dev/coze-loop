@@ -22,49 +22,49 @@ func TestEvalTargetType_String(t *testing.T) {
 
 func TestEvalTargetType_SupptTrajectory(t *testing.T) {
 	tests := []struct {
-		name     string
+		name       string
 		targetType EvalTargetType
-		expected bool
+		expected   bool
 	}{
 		{
-			name:     "VolcengineAgent supports trajectory",
+			name:       "VolcengineAgent supports trajectory",
 			targetType: EvalTargetTypeVolcengineAgent,
-			expected: true,
+			expected:   true,
 		},
 		{
-			name:     "CustomRPCServer supports trajectory",
+			name:       "CustomRPCServer supports trajectory",
 			targetType: EvalTargetTypeCustomRPCServer,
-			expected: true,
+			expected:   true,
 		},
 		{
-			name:     "LoopPrompt supports trajectory",
+			name:       "LoopPrompt supports trajectory",
 			targetType: EvalTargetTypeLoopPrompt,
-			expected: true,
+			expected:   true,
 		},
 		{
-			name:     "CozeBot does not support trajectory",
+			name:       "CozeBot does not support trajectory",
 			targetType: EvalTargetTypeCozeBot,
-			expected: false,
+			expected:   false,
 		},
 		{
-			name:     "LoopTrace does not support trajectory",
+			name:       "LoopTrace does not support trajectory",
 			targetType: EvalTargetTypeLoopTrace,
-			expected: false,
+			expected:   false,
 		},
 		{
-			name:     "CozeWorkflow does not support trajectory",
+			name:       "CozeWorkflow does not support trajectory",
 			targetType: EvalTargetTypeCozeWorkflow,
-			expected: false,
+			expected:   false,
 		},
 		{
-			name:     "VolcengineAgentAgentkit does not support trajectory",
+			name:       "VolcengineAgentAgentkit does not support trajectory",
 			targetType: EvalTargetTypeVolcengineAgentAgentkit,
-			expected: false,
+			expected:   false,
 		},
 		{
-			name:     "Unknown type does not support trajectory",
+			name:       "Unknown type does not support trajectory",
 			targetType: EvalTargetType(99),
-			expected: false,
+			expected:   false,
 		},
 	}
 
