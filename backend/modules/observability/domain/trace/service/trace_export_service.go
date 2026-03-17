@@ -201,7 +201,7 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	*PreviewExportTracesToDatasetResponse, error,
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
-	spans := loop_span.SpanList{}
+	var spans loop_span.SpanList
 	var err error
 	if len(req.SpanIds) > 0 {
 		spans, err = r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
@@ -606,35 +606,4 @@ func (d *DatasetServiceAdaptor) GetDatasetProvider(category entity.DatasetCatego
 		return rpc.NoopDatasetProvider
 	}
 	return datasetProvider
-}
-
-func convertFilterFieldsDTO2DO(dto *filter.FilterFields) *loop_span.FilterFields {
-	if dto == nil {
-		return nil
-	}
-	do := &loop_span.FilterFields{
-		QueryAndOr:   (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
-		FilterFields: make([]*loop_span.FilterField, len(dto.FilterFields)),
-	}
-	for i, f := range dto.FilterFields {
-		do.FilterFields[i] = convertFilterFieldDTO2DO(f)
-	}
-	return do
-}
-
-func convertFilterFieldDTO2DO(dto *filter.FilterField) *loop_span.FilterField {
-	if dto == nil {
-		return nil
-	}
-	do := &loop_span.FilterField{
-		FieldName:  gptr.Indirect(dto.FieldName),
-		FieldType:  loop_span.FieldType(gptr.Indirect(dto.FieldType)),
-		Values:     dto.Values,
-		QueryType:  (*loop_span.QueryTypeEnum)(dto.QueryType),
-		QueryAndOr: (*loop_span.QueryAndOrEnum)(dto.QueryAndOr),
-		SubFilter:  convertFilterFieldsDTO2DO(dto.SubFilter),
-		IsCustom:   gptr.Indirect(dto.IsCustom),
-		ExtraInfo:  dto.ExtraInfo,
-	}
-	return do
 }
