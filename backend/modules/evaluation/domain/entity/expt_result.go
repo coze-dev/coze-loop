@@ -603,6 +603,8 @@ type ExptTurnResultFilterAccelerator struct {
 	KeywordSearch     *KeywordFilter `json:"keyword_search"`
 	Page              Page           `json:"page"`
 	EvalSetSyncCkDate string
+	// IsOnlineExpt 是否在线实验，用于 QueryItemIDStates 拼接 SQL 时选择 join 的表名和条件
+	IsOnlineExpt bool `json:"is_online_expt"`
 }
 
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
@@ -779,6 +781,7 @@ type ExptTurnResultFilterEntity struct {
 	EvalTargetMetrics       map[string]int64   `json:"eval_target_metrics"`
 	CreatedDate             time.Time          `json:"created_date"`
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
+	EvalSetID               int64              `json:"eval_set_id"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
 	CreatedAt               time.Time          `json:"created_at"`
 	UpdatedAt               time.Time          `json:"updated_at"`

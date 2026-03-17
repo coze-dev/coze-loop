@@ -44,26 +44,26 @@ func (m *MockIConfiger) EXPECT() *MockIConfigerMockRecorder {
 
 // CheckAgentEvaluatorWritable mocks base method.
 func (m *MockIConfiger) CheckAgentEvaluatorWritable(ctx context.Context) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckAgentEvaluatorWritable", ctx)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+    m.ctrl.T.Helper()
+    ret := m.ctrl.Call(m, "CheckAgentEvaluatorWritable", ctx)
+    ret0, _ := ret[0].(bool)
+    ret1, _ := ret[1].(error)
+    return ret0, ret1
 }
 
 // CheckAgentEvaluatorWritable indicates an expected call of CheckAgentEvaluatorWritable.
 func (mr *MockIConfigerMockRecorder) CheckAgentEvaluatorWritable(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAgentEvaluatorWritable", reflect.TypeOf((*MockIConfiger)(nil).CheckAgentEvaluatorWritable), ctx)
+    mr.mock.ctrl.T.Helper()
+    return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAgentEvaluatorWritable", reflect.TypeOf((*MockIConfiger)(nil).CheckAgentEvaluatorWritable), ctx)
 }
 
 // CheckCustomRPCEvaluatorWritable mocks base method.
 func (m *MockIConfiger) CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckCustomRPCEvaluatorWritable", ctx, spaceID, builtinSpaceIDs)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+    m.ctrl.T.Helper()
+    ret := m.ctrl.Call(m, "CheckCustomRPCEvaluatorWritable", ctx, spaceID, builtinSpaceIDs)
+    ret0, _ := ret[0].(bool)
+    ret1, _ := ret[1].(error)
+    return ret0, ret1
 }
 
 // CheckCustomRPCEvaluatorWritable indicates an expected call of CheckCustomRPCEvaluatorWritable.

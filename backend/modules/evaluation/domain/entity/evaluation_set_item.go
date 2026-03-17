@@ -165,6 +165,7 @@ type ItemSnapshotFieldMapping struct {
 	MappingKey string `json:"mapping_key"`
 	// tag_array时，无值
 	MappingSubKey string `json:"mapping_subKey"`
+	RecordID      int64  `json:"record_id"`
 }
 
 type DatasetItemOutput struct {

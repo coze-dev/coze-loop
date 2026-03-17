@@ -122,11 +122,19 @@ func (p *ExptTemplate) IsValid() error {
 			return fmt.Errorf("field ExptInfo not valid, %w", err)
 		}
 	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExptSource) IsValid() error {
 	return nil
 }
 func (p *ExptInfo) IsValid() error {

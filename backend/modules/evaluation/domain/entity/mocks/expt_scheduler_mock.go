@@ -129,20 +129,6 @@ func (mr *MockExptSchedulerModeMockRecorder) ScanEvalItems(ctx, event, expt any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanEvalItems", reflect.TypeOf((*MockExptSchedulerMode)(nil).ScanEvalItems), ctx, event, expt)
 }
 
-// ScheduleEnd mocks base method.
-func (m *MockExptSchedulerMode) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ScheduleEnd", ctx, event, expt, toSubmit, incomplete)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ScheduleEnd indicates an expected call of ScheduleEnd.
-func (mr *MockExptSchedulerModeMockRecorder) ScheduleEnd(ctx, event, expt, toSubmit, incomplete any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScheduleEnd", reflect.TypeOf((*MockExptSchedulerMode)(nil).ScheduleEnd), ctx, event, expt, toSubmit, incomplete)
-}
-
 // ScheduleStart mocks base method.
 func (m *MockExptSchedulerMode) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	m.ctrl.T.Helper()
