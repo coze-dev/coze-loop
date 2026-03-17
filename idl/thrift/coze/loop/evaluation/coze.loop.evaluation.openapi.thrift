@@ -977,7 +977,7 @@ service EvaluationOpenAPIService {
     // 导入评测集
     ImportEvaluationSetOApiResponse ImportEvaluationSetOApi(1: ImportEvaluationSetOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import")
     // 查询评测集导入任务
-    GetEvaluationSetIOJobOApiResponse GetEvaluationSetJobOApi(1: GetEvaluationSetIOJobOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_set_io_job/:job_id")
+    GetEvaluationSetIOJobOApiResponse GetEvaluationSetJobOApi(1: GetEvaluationSetIOJobOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/io_job/:job_id")
     // 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.category="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 
