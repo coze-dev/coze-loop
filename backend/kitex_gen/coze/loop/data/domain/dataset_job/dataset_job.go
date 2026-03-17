@@ -3649,7 +3649,8 @@ func (p *DatasetIOJob) Field105DeepEqual(src *int64) bool {
 
 type DatasetIOJobOption struct {
 	// 覆盖数据集
-	OverwriteDataset *bool `thrift:"overwrite_dataset,1,optional" frugal:"1,optional,bool" form:"overwrite_dataset" json:"overwrite_dataset,omitempty" query:"overwrite_dataset"`
+	OverwriteDataset  *bool                       `thrift:"overwrite_dataset,1,optional" frugal:"1,optional,bool" form:"overwrite_dataset" json:"overwrite_dataset,omitempty" query:"overwrite_dataset"`
+	FieldWriteOptions []*dataset.FieldWriteOption `thrift:"field_write_options,2,optional" frugal:"2,optional,list<dataset.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
 }
 
 func NewDatasetIOJobOption() *DatasetIOJobOption {
@@ -3670,16 +3671,36 @@ func (p *DatasetIOJobOption) GetOverwriteDataset() (v bool) {
 	}
 	return *p.OverwriteDataset
 }
+
+var DatasetIOJobOption_FieldWriteOptions_DEFAULT []*dataset.FieldWriteOption
+
+func (p *DatasetIOJobOption) GetFieldWriteOptions() (v []*dataset.FieldWriteOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldWriteOptions() {
+		return DatasetIOJobOption_FieldWriteOptions_DEFAULT
+	}
+	return p.FieldWriteOptions
+}
 func (p *DatasetIOJobOption) SetOverwriteDataset(val *bool) {
 	p.OverwriteDataset = val
+}
+func (p *DatasetIOJobOption) SetFieldWriteOptions(val []*dataset.FieldWriteOption) {
+	p.FieldWriteOptions = val
 }
 
 var fieldIDToName_DatasetIOJobOption = map[int16]string{
 	1: "overwrite_dataset",
+	2: "field_write_options",
 }
 
 func (p *DatasetIOJobOption) IsSetOverwriteDataset() bool {
 	return p.OverwriteDataset != nil
+}
+
+func (p *DatasetIOJobOption) IsSetFieldWriteOptions() bool {
+	return p.FieldWriteOptions != nil
 }
 
 func (p *DatasetIOJobOption) Read(iprot thrift.TProtocol) (err error) {
@@ -3703,6 +3724,14 @@ func (p *DatasetIOJobOption) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3748,6 +3777,29 @@ func (p *DatasetIOJobOption) ReadField1(iprot thrift.TProtocol) error {
 	p.OverwriteDataset = _field
 	return nil
 }
+func (p *DatasetIOJobOption) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldWriteOption, 0, size)
+	values := make([]dataset.FieldWriteOption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldWriteOptions = _field
+	return nil
+}
 
 func (p *DatasetIOJobOption) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3757,6 +3809,10 @@ func (p *DatasetIOJobOption) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -3795,6 +3851,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *DatasetIOJobOption) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldWriteOptions() {
+		if err = oprot.WriteFieldBegin("field_write_options", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldWriteOptions)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldWriteOptions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *DatasetIOJobOption) String() string {
 	if p == nil {
@@ -3813,6 +3895,9 @@ func (p *DatasetIOJobOption) DeepEqual(ano *DatasetIOJobOption) bool {
 	if !p.Field1DeepEqual(ano.OverwriteDataset) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.FieldWriteOptions) {
+		return false
+	}
 	return true
 }
 
@@ -3825,6 +3910,19 @@ func (p *DatasetIOJobOption) Field1DeepEqual(src *bool) bool {
 	}
 	if *p.OverwriteDataset != *src {
 		return false
+	}
+	return true
+}
+func (p *DatasetIOJobOption) Field2DeepEqual(src []*dataset.FieldWriteOption) bool {
+
+	if len(p.FieldWriteOptions) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldWriteOptions {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

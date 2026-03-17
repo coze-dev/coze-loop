@@ -3,6 +3,8 @@
 package eval_set
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
@@ -34,6 +36,48 @@ const (
 
 	SchemaKeyTrajectory = "trajectory"
 )
+
+type MultiModalStoreStrategy int64
+
+const (
+	MultiModalStoreStrategy_Store       MultiModalStoreStrategy = 1
+	MultiModalStoreStrategy_Passthrough MultiModalStoreStrategy = 2
+)
+
+func (p MultiModalStoreStrategy) String() string {
+	switch p {
+	case MultiModalStoreStrategy_Store:
+		return "Store"
+	case MultiModalStoreStrategy_Passthrough:
+		return "Passthrough"
+	}
+	return "<UNSET>"
+}
+
+func MultiModalStoreStrategyFromString(s string) (MultiModalStoreStrategy, error) {
+	switch s {
+	case "Store":
+		return MultiModalStoreStrategy_Store, nil
+	case "Passthrough":
+		return MultiModalStoreStrategy_Passthrough, nil
+	}
+	return MultiModalStoreStrategy(0), fmt.Errorf("not a valid MultiModalStoreStrategy string")
+}
+
+func MultiModalStoreStrategyPtr(v MultiModalStoreStrategy) *MultiModalStoreStrategy { return &v }
+func (p *MultiModalStoreStrategy) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = MultiModalStoreStrategy(result.Int64)
+	return
+}
+
+func (p *MultiModalStoreStrategy) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
 
 // 评测集状态
 type EvaluationSetStatus = string
@@ -4856,6 +4900,750 @@ func (p *DatasetItemOutput) Field4DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.IsNewItem != *src {
+		return false
+	}
+	return true
+}
+
+type MultiModalStoreOption struct {
+	MultiModalStoreStrategy *MultiModalStoreStrategy `thrift:"multiModalStoreStrategy,1,optional" frugal:"1,optional,MultiModalStoreStrategy" form:"multiModalStoreStrategy" json:"multiModalStoreStrategy,omitempty" query:"multiModalStoreStrategy"`
+	// 未指定时默认填充为 true
+	SkipOnDownloadFailed *bool `thrift:"skipOnDownloadFailed,2,optional" frugal:"2,optional,bool" form:"skipOnDownloadFailed" json:"skipOnDownloadFailed,omitempty" query:"skipOnDownloadFailed"`
+	// 未指定时默认填充为 true
+	CheckContentTypeConsistency *bool `thrift:"checkContentTypeConsistency,3,optional" frugal:"3,optional,bool" form:"checkContentTypeConsistency" json:"checkContentTypeConsistency,omitempty" query:"checkContentTypeConsistency"`
+}
+
+func NewMultiModalStoreOption() *MultiModalStoreOption {
+	return &MultiModalStoreOption{}
+}
+
+func (p *MultiModalStoreOption) InitDefault() {
+}
+
+var MultiModalStoreOption_MultiModalStoreStrategy_DEFAULT MultiModalStoreStrategy
+
+func (p *MultiModalStoreOption) GetMultiModalStoreStrategy() (v MultiModalStoreStrategy) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMultiModalStoreStrategy() {
+		return MultiModalStoreOption_MultiModalStoreStrategy_DEFAULT
+	}
+	return *p.MultiModalStoreStrategy
+}
+
+var MultiModalStoreOption_SkipOnDownloadFailed_DEFAULT bool
+
+func (p *MultiModalStoreOption) GetSkipOnDownloadFailed() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkipOnDownloadFailed() {
+		return MultiModalStoreOption_SkipOnDownloadFailed_DEFAULT
+	}
+	return *p.SkipOnDownloadFailed
+}
+
+var MultiModalStoreOption_CheckContentTypeConsistency_DEFAULT bool
+
+func (p *MultiModalStoreOption) GetCheckContentTypeConsistency() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCheckContentTypeConsistency() {
+		return MultiModalStoreOption_CheckContentTypeConsistency_DEFAULT
+	}
+	return *p.CheckContentTypeConsistency
+}
+func (p *MultiModalStoreOption) SetMultiModalStoreStrategy(val *MultiModalStoreStrategy) {
+	p.MultiModalStoreStrategy = val
+}
+func (p *MultiModalStoreOption) SetSkipOnDownloadFailed(val *bool) {
+	p.SkipOnDownloadFailed = val
+}
+func (p *MultiModalStoreOption) SetCheckContentTypeConsistency(val *bool) {
+	p.CheckContentTypeConsistency = val
+}
+
+var fieldIDToName_MultiModalStoreOption = map[int16]string{
+	1: "multiModalStoreStrategy",
+	2: "skipOnDownloadFailed",
+	3: "checkContentTypeConsistency",
+}
+
+func (p *MultiModalStoreOption) IsSetMultiModalStoreStrategy() bool {
+	return p.MultiModalStoreStrategy != nil
+}
+
+func (p *MultiModalStoreOption) IsSetSkipOnDownloadFailed() bool {
+	return p.SkipOnDownloadFailed != nil
+}
+
+func (p *MultiModalStoreOption) IsSetCheckContentTypeConsistency() bool {
+	return p.CheckContentTypeConsistency != nil
+}
+
+func (p *MultiModalStoreOption) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MultiModalStoreOption[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *MultiModalStoreOption) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *MultiModalStoreStrategy
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := MultiModalStoreStrategy(v)
+		_field = &tmp
+	}
+	p.MultiModalStoreStrategy = _field
+	return nil
+}
+func (p *MultiModalStoreOption) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkipOnDownloadFailed = _field
+	return nil
+}
+func (p *MultiModalStoreOption) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CheckContentTypeConsistency = _field
+	return nil
+}
+
+func (p *MultiModalStoreOption) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("MultiModalStoreOption"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *MultiModalStoreOption) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMultiModalStoreStrategy() {
+		if err = oprot.WriteFieldBegin("multiModalStoreStrategy", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.MultiModalStoreStrategy)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *MultiModalStoreOption) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkipOnDownloadFailed() {
+		if err = oprot.WriteFieldBegin("skipOnDownloadFailed", thrift.BOOL, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.SkipOnDownloadFailed); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *MultiModalStoreOption) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCheckContentTypeConsistency() {
+		if err = oprot.WriteFieldBegin("checkContentTypeConsistency", thrift.BOOL, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CheckContentTypeConsistency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *MultiModalStoreOption) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("MultiModalStoreOption(%+v)", *p)
+
+}
+
+func (p *MultiModalStoreOption) DeepEqual(ano *MultiModalStoreOption) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.MultiModalStoreStrategy) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SkipOnDownloadFailed) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.CheckContentTypeConsistency) {
+		return false
+	}
+	return true
+}
+
+func (p *MultiModalStoreOption) Field1DeepEqual(src *MultiModalStoreStrategy) bool {
+
+	if p.MultiModalStoreStrategy == src {
+		return true
+	} else if p.MultiModalStoreStrategy == nil || src == nil {
+		return false
+	}
+	if *p.MultiModalStoreStrategy != *src {
+		return false
+	}
+	return true
+}
+func (p *MultiModalStoreOption) Field2DeepEqual(src *bool) bool {
+
+	if p.SkipOnDownloadFailed == src {
+		return true
+	} else if p.SkipOnDownloadFailed == nil || src == nil {
+		return false
+	}
+	if *p.SkipOnDownloadFailed != *src {
+		return false
+	}
+	return true
+}
+func (p *MultiModalStoreOption) Field3DeepEqual(src *bool) bool {
+
+	if p.CheckContentTypeConsistency == src {
+		return true
+	} else if p.CheckContentTypeConsistency == nil || src == nil {
+		return false
+	}
+	if *p.CheckContentTypeConsistency != *src {
+		return false
+	}
+	return true
+}
+
+type FieldWriteOption struct {
+	// 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key
+	FieldName *string `thrift:"fieldName,1,optional" frugal:"1,optional,string" form:"fieldName" json:"fieldName,omitempty" query:"fieldName"`
+	FieldKey  *string `thrift:"fieldKey,2,optional" frugal:"2,optional,string" form:"fieldKey" json:"fieldKey,omitempty" query:"fieldKey"`
+	// 手动标记的当前列，仅 image/video/audio 等多模态类型有效
+	ModalityType       *common.ContentType    `thrift:"modalityType,3,optional" frugal:"3,optional,string" form:"modalityType" json:"modalityType,omitempty" query:"modalityType"`
+	MultiModalStoreOpt *MultiModalStoreOption `thrift:"multiModalStoreOpt,4,optional" frugal:"4,optional,MultiModalStoreOption" form:"multiModalStoreOpt" json:"multiModalStoreOpt,omitempty" query:"multiModalStoreOpt"`
+}
+
+func NewFieldWriteOption() *FieldWriteOption {
+	return &FieldWriteOption{}
+}
+
+func (p *FieldWriteOption) InitDefault() {
+}
+
+var FieldWriteOption_FieldName_DEFAULT string
+
+func (p *FieldWriteOption) GetFieldName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldName() {
+		return FieldWriteOption_FieldName_DEFAULT
+	}
+	return *p.FieldName
+}
+
+var FieldWriteOption_FieldKey_DEFAULT string
+
+func (p *FieldWriteOption) GetFieldKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldKey() {
+		return FieldWriteOption_FieldKey_DEFAULT
+	}
+	return *p.FieldKey
+}
+
+var FieldWriteOption_ModalityType_DEFAULT common.ContentType
+
+func (p *FieldWriteOption) GetModalityType() (v common.ContentType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetModalityType() {
+		return FieldWriteOption_ModalityType_DEFAULT
+	}
+	return *p.ModalityType
+}
+
+var FieldWriteOption_MultiModalStoreOpt_DEFAULT *MultiModalStoreOption
+
+func (p *FieldWriteOption) GetMultiModalStoreOpt() (v *MultiModalStoreOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMultiModalStoreOpt() {
+		return FieldWriteOption_MultiModalStoreOpt_DEFAULT
+	}
+	return p.MultiModalStoreOpt
+}
+func (p *FieldWriteOption) SetFieldName(val *string) {
+	p.FieldName = val
+}
+func (p *FieldWriteOption) SetFieldKey(val *string) {
+	p.FieldKey = val
+}
+func (p *FieldWriteOption) SetModalityType(val *common.ContentType) {
+	p.ModalityType = val
+}
+func (p *FieldWriteOption) SetMultiModalStoreOpt(val *MultiModalStoreOption) {
+	p.MultiModalStoreOpt = val
+}
+
+var fieldIDToName_FieldWriteOption = map[int16]string{
+	1: "fieldName",
+	2: "fieldKey",
+	3: "modalityType",
+	4: "multiModalStoreOpt",
+}
+
+func (p *FieldWriteOption) IsSetFieldName() bool {
+	return p.FieldName != nil
+}
+
+func (p *FieldWriteOption) IsSetFieldKey() bool {
+	return p.FieldKey != nil
+}
+
+func (p *FieldWriteOption) IsSetModalityType() bool {
+	return p.ModalityType != nil
+}
+
+func (p *FieldWriteOption) IsSetMultiModalStoreOpt() bool {
+	return p.MultiModalStoreOpt != nil
+}
+
+func (p *FieldWriteOption) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FieldWriteOption[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *FieldWriteOption) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldName = _field
+	return nil
+}
+func (p *FieldWriteOption) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldKey = _field
+	return nil
+}
+func (p *FieldWriteOption) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *common.ContentType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ModalityType = _field
+	return nil
+}
+func (p *FieldWriteOption) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewMultiModalStoreOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.MultiModalStoreOpt = _field
+	return nil
+}
+
+func (p *FieldWriteOption) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("FieldWriteOption"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *FieldWriteOption) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldName() {
+		if err = oprot.WriteFieldBegin("fieldName", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *FieldWriteOption) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldKey() {
+		if err = oprot.WriteFieldBegin("fieldKey", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *FieldWriteOption) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetModalityType() {
+		if err = oprot.WriteFieldBegin("modalityType", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ModalityType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *FieldWriteOption) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMultiModalStoreOpt() {
+		if err = oprot.WriteFieldBegin("multiModalStoreOpt", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.MultiModalStoreOpt.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *FieldWriteOption) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("FieldWriteOption(%+v)", *p)
+
+}
+
+func (p *FieldWriteOption) DeepEqual(ano *FieldWriteOption) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FieldName) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.FieldKey) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ModalityType) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.MultiModalStoreOpt) {
+		return false
+	}
+	return true
+}
+
+func (p *FieldWriteOption) Field1DeepEqual(src *string) bool {
+
+	if p.FieldName == src {
+		return true
+	} else if p.FieldName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldWriteOption) Field2DeepEqual(src *string) bool {
+
+	if p.FieldKey == src {
+		return true
+	} else if p.FieldKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldWriteOption) Field3DeepEqual(src *common.ContentType) bool {
+
+	if p.ModalityType == src {
+		return true
+	} else if p.ModalityType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ModalityType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *FieldWriteOption) Field4DeepEqual(src *MultiModalStoreOption) bool {
+
+	if !p.MultiModalStoreOpt.DeepEqual(src) {
 		return false
 	}
 	return true
