@@ -181,6 +181,29 @@ func (l *LocalEvalTargetService) BatchGetSourceEvalTargets(ctx context.Context, 
 	return result.GetSuccess(), nil
 }
 
+// GetSourceEvalTargetVersion
+// 获取Source评测对象版本详情信息
+func (l *LocalEvalTargetService) GetSourceEvalTargetVersion(ctx context.Context, request *eval_target.GetSourceEvalTargetVersionRequest, callOptions ...callopt.Option) (*eval_target.GetSourceEvalTargetVersionResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_target.EvalTargetServiceGetSourceEvalTargetVersionArgs)
+		result := out.(*eval_target.EvalTargetServiceGetSourceEvalTargetVersionResult)
+		resp, err := l.impl.GetSourceEvalTargetVersion(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_target.EvalTargetServiceGetSourceEvalTargetVersionArgs{Request: request}
+	result := &eval_target.EvalTargetServiceGetSourceEvalTargetVersionResult{}
+	ctx = l.injectRPCInfo(ctx, "GetSourceEvalTargetVersion")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // SearchCustomEvalTarget
 // 搜索自定义评测对象
 func (l *LocalEvalTargetService) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest, callOptions ...callopt.Option) (*eval_target.SearchCustomEvalTargetResponse, error) {

@@ -189,6 +189,21 @@ struct BatchGetSourceEvalTargetsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct GetSourceEvalTargetVersionRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
+    2: optional string source_target_id
+    3: optional string source_target_version
+    4: optional eval_target.EvalTargetType target_type
+
+    255: optional base.Base Base
+}
+
+struct GetSourceEvalTargetVersionResponse {
+    1: optional eval_target.EvalTargetVersion eval_target_version
+
+    255: base.BaseResp BaseResp
+}
+
 struct ListSourceEvalTargetVersionsRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
     2: required string source_target_id
@@ -311,6 +326,10 @@ service EvalTargetService {
     )
     BatchGetSourceEvalTargetsResponse BatchGetSourceEvalTargets (1: BatchGetSourceEvalTargetsRequest request) (
         api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_source", api.op_type = 'query', api.tag = 'volc-agentkit'
+    )
+    // 获取Source评测对象版本详情信息
+    GetSourceEvalTargetVersionResponse GetSourceEvalTargetVersion (1: GetSourceEvalTargetVersionRequest request)(
+        api.category="eval_target", api.get = "/api/evaluation/v1/eval_targets/get_source_version", api.op_type = 'query', api.tag = 'volc-agentkit'
     )
     // 搜索自定义评测对象
     SearchCustomEvalTargetResponse SearchCustomEvalTarget(1: SearchCustomEvalTargetRequest req) (api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/search_custom")
