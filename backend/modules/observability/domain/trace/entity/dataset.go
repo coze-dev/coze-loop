@@ -5,8 +5,9 @@ package entity
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"strconv"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -126,7 +127,8 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory,
 	schema DatasetSchema,
 	session *common.Session,
 	evaluationBizCategory *EvaluationBizCategory,
-	isNewWorkflowTask bool) *Dataset {
+	isNewWorkflowTask bool,
+) *Dataset {
 	var userID *string
 	if session != nil {
 		userID = ptr.Of(strconv.FormatInt(*session.UserID, 10))

@@ -30,18 +30,23 @@ func (c *capturingProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigge
 	c.trigger = trigger
 	return nil
 }
+
 func (c *capturingProcessor) OnTaskRunCreated(ctx context.Context, param taskexe.OnTaskRunCreatedReq) error {
 	return nil
 }
+
 func (c *capturingProcessor) OnTaskRunFinished(ctx context.Context, param taskexe.OnTaskRunFinishedReq) error {
 	return nil
 }
+
 func (c *capturingProcessor) OnTaskFinished(ctx context.Context, param taskexe.OnTaskFinishedReq) error {
 	return nil
 }
+
 func (c *capturingProcessor) OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error {
 	return nil
 }
+
 func (c *capturingProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return nil
 }

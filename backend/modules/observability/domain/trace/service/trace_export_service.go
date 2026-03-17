@@ -380,6 +380,7 @@ func (r *TraceExportServiceImpl) getSpans(ctx context.Context, workspaceID int64
 	}
 	return sortedSpans, nil
 }
+
 func (r *TraceExportServiceImpl) clearDataset(ctx context.Context, datasetID int64, req *ExportTracesToDatasetRequest) error {
 	if req.ExportType == ExportType_Overwrite && !req.Config.IsNewDataset {
 		err := r.getDatasetProvider(req.Category).ClearDatasetItems(ctx, req.WorkspaceID, datasetID, req.Category)
