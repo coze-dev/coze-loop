@@ -58,4 +58,3 @@ func TestNormalizeExecuteRequest(t *testing.T) {
 		assert.Equal(t, openapi.ToolChoiceTypeAuto, normalized.CustomToolCallConfig.GetToolChoice())
 	})
 }
-

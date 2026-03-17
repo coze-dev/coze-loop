@@ -3421,7 +3421,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
-						assert.Equal(t, expectedResponseAPIConfig, param.ExecuteParam.ResponseAPIConfig)
+						assert.Equal(t, expectedResponseAPIConfig, param.ResponseAPIConfig)
 						// 模拟发送多个流式响应 - 使用同步方式避免竞争条件
 						// 发送第一个chunk
 						param.ResultStream <- &entity.Reply{

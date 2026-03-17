@@ -64,6 +64,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeNormal),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -180,6 +181,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeNormal,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -297,6 +299,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeNormal),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -312,6 +315,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeNormal,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -438,6 +442,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("snippet_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Snippet Prompt"),
 					Description:   ptr.Of("Snippet description"),
 					LatestVersion: ptr.Of("2.0.0"),
@@ -495,6 +500,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "snippet_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeSnippet,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Snippet Prompt",
 					Description:   "Snippet description",
 					LatestVersion: "2.0.0",
