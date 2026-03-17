@@ -88,9 +88,10 @@ func (a *DatasetRPCAdapter) ImportDataset(ctx context.Context, param *rpc.Import
 	return gptr.Indirect(resp.JobID), nil
 }
 
-func (a *DatasetRPCAdapter) GetDatasetIOJob(ctx context.Context, jobID int64) (job *entity.DatasetIOJob, err error) {
+func (a *DatasetRPCAdapter) GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error) {
 	req := &dataset.GetDatasetIOJobRequest{
-		JobID: jobID,
+		WorkspaceID: gptr.Of(spaceID),
+		JobID:       jobID,
 	}
 	resp, err := a.client.GetDatasetIOJob(ctx, req)
 	if err != nil {

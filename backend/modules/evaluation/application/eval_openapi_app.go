@@ -220,7 +220,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationSetJobOApi(ctx context.Context, re
 	}
 
 	// domain调用
-	job, err := e.evaluationSetService.GetEvaluationSetIOJob(ctx, req.GetJobID())
+	job, err := e.evaluationSetService.GetEvaluationSetIOJob(ctx, req.WorkspaceID, req.GetJobID())
 	if err != nil {
 		return nil, err
 	}

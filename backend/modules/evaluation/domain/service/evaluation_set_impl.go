@@ -123,8 +123,8 @@ func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, para
 	})
 }
 
-func (d *EvaluationSetServiceImpl) GetEvaluationSetIOJob(ctx context.Context, jobID int64) (job *entity.DatasetIOJob, err error) {
-	return d.datasetRPCAdapter.GetDatasetIOJob(ctx, jobID)
+func (d *EvaluationSetServiceImpl) GetEvaluationSetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error) {
+	return d.datasetRPCAdapter.GetDatasetIOJob(ctx, spaceID, jobID)
 }
 
 func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
