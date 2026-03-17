@@ -135,6 +135,19 @@ func (p *ExptTemplate) IsValid() error {
 	return nil
 }
 func (p *ExptSource) IsValid() error {
+	if p.SpanFilterFields != nil {
+		if err := p.SpanFilterFields.IsValid(); err != nil {
+			return fmt.Errorf("field SpanFilterFields not valid, %w", err)
+		}
+	}
+	if p.Scheduler != nil {
+		if err := p.Scheduler.IsValid(); err != nil {
+			return fmt.Errorf("field Scheduler not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Scheduler) IsValid() error {
 	return nil
 }
 func (p *ExptInfo) IsValid() error {

@@ -6,6 +6,7 @@ include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
+include "../../observability/domain/filter.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -123,7 +124,28 @@ struct ExptTemplate {
 struct ExptSource {
     1: optional SourceType source_type
     2: optional string source_id
-    3: optional map<string, string> ext
+
+    // 不同source里的源数据结构
+    100: optional filter.SpanFilterFields span_filter_fields
+    101: optional Scheduler scheduler
+}
+
+typedef string Frequency
+const Frequency FrequencyEveryday = "every_day"
+const Frequency FrequencyMonday = "monday"
+const Frequency FrequencyTuesday = "tuesday"
+const Frequency FrequencyWednesday = "wednesday"
+const Frequency FrequencyThursday = "thursday"
+const Frequency FrequencyFriday = "friday"
+const Frequency FrequencySaturday = "saturday"
+const Frequency FrequencySunday = "sunday"
+
+struct Scheduler {
+    1: optional bool enabled              // 定时触发器开关，默认关闭
+    2: optional Frequency frequency       // 触发频次
+    3: optional i64 trigger_at (agw.js_conv = "str")    // 触发时间（时间戳，秒。只使用时间，不使用日期）
+    4: optional i64 startTime (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
+    5: optional i64 endTime (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
 }
 
 struct ExptInfo {

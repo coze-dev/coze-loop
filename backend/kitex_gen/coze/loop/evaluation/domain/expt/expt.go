@@ -13,10 +13,27 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"strings"
 )
 
 const (
+	FrequencyEveryday = "every_day"
+
+	FrequencyMonday = "monday"
+
+	FrequencyTuesday = "tuesday"
+
+	FrequencyWednesday = "wednesday"
+
+	FrequencyThursday = "thursday"
+
+	FrequencyFriday = "friday"
+
+	FrequencySaturday = "saturday"
+
+	FrequencySunday = "sunday"
+
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
 	ColumnEvalTargetNameActualOutput = "actual_output"
@@ -952,6 +969,8 @@ func (p *DataType) Value() (driver.Value, error) {
 	}
 	return int64(*p), nil
 }
+
+type Frequency = string
 
 type ExptResultExportType = string
 
@@ -6093,9 +6112,11 @@ func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 }
 
 type ExptSource struct {
-	SourceType *SourceType       `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
-	SourceID   *string           `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
-	Ext        map[string]string `thrift:"ext,3,optional" frugal:"3,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	SourceType *SourceType `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	SourceID   *string     `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	// 不同source里的源数据结构
+	SpanFilterFields *filter.SpanFilterFields `thrift:"span_filter_fields,100,optional" frugal:"100,optional,filter.SpanFilterFields" form:"span_filter_fields" json:"span_filter_fields,omitempty" query:"span_filter_fields"`
+	Scheduler        *Scheduler               `thrift:"scheduler,101,optional" frugal:"101,optional,Scheduler" form:"scheduler" json:"scheduler,omitempty" query:"scheduler"`
 }
 
 func NewExptSource() *ExptSource {
@@ -6129,16 +6150,28 @@ func (p *ExptSource) GetSourceID() (v string) {
 	return *p.SourceID
 }
 
-var ExptSource_Ext_DEFAULT map[string]string
+var ExptSource_SpanFilterFields_DEFAULT *filter.SpanFilterFields
 
-func (p *ExptSource) GetExt() (v map[string]string) {
+func (p *ExptSource) GetSpanFilterFields() (v *filter.SpanFilterFields) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetExt() {
-		return ExptSource_Ext_DEFAULT
+	if !p.IsSetSpanFilterFields() {
+		return ExptSource_SpanFilterFields_DEFAULT
 	}
-	return p.Ext
+	return p.SpanFilterFields
+}
+
+var ExptSource_Scheduler_DEFAULT *Scheduler
+
+func (p *ExptSource) GetScheduler() (v *Scheduler) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScheduler() {
+		return ExptSource_Scheduler_DEFAULT
+	}
+	return p.Scheduler
 }
 func (p *ExptSource) SetSourceType(val *SourceType) {
 	p.SourceType = val
@@ -6146,14 +6179,18 @@ func (p *ExptSource) SetSourceType(val *SourceType) {
 func (p *ExptSource) SetSourceID(val *string) {
 	p.SourceID = val
 }
-func (p *ExptSource) SetExt(val map[string]string) {
-	p.Ext = val
+func (p *ExptSource) SetSpanFilterFields(val *filter.SpanFilterFields) {
+	p.SpanFilterFields = val
+}
+func (p *ExptSource) SetScheduler(val *Scheduler) {
+	p.Scheduler = val
 }
 
 var fieldIDToName_ExptSource = map[int16]string{
-	1: "source_type",
-	2: "source_id",
-	3: "ext",
+	1:   "source_type",
+	2:   "source_id",
+	100: "span_filter_fields",
+	101: "scheduler",
 }
 
 func (p *ExptSource) IsSetSourceType() bool {
@@ -6164,8 +6201,12 @@ func (p *ExptSource) IsSetSourceID() bool {
 	return p.SourceID != nil
 }
 
-func (p *ExptSource) IsSetExt() bool {
-	return p.Ext != nil
+func (p *ExptSource) IsSetSpanFilterFields() bool {
+	return p.SpanFilterFields != nil
+}
+
+func (p *ExptSource) IsSetScheduler() bool {
+	return p.Scheduler != nil
 }
 
 func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
@@ -6202,9 +6243,17 @@ func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 3:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField3(iprot); err != nil {
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6262,33 +6311,20 @@ func (p *ExptSource) ReadField2(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
-func (p *ExptSource) ReadField3(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
+func (p *ExptSource) ReadField100(iprot thrift.TProtocol) error {
+	_field := filter.NewSpanFilterFields()
+	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	_field := make(map[string]string, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
+	p.SpanFilterFields = _field
+	return nil
+}
+func (p *ExptSource) ReadField101(iprot thrift.TProtocol) error {
+	_field := NewScheduler()
+	if err := _field.Read(iprot); err != nil {
 		return err
 	}
-	p.Ext = _field
+	p.Scheduler = _field
 	return nil
 }
 
@@ -6306,8 +6342,12 @@ func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -6364,23 +6404,12 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ExptSource) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExt() {
-		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 3); err != nil {
+func (p *ExptSource) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpanFilterFields() {
+		if err = oprot.WriteFieldBegin("span_filter_fields", thrift.STRUCT, 100); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
-			return err
-		}
-		for k, v := range p.Ext {
-			if err := oprot.WriteString(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
+		if err := p.SpanFilterFields.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6389,9 +6418,27 @@ func (p *ExptSource) writeField3(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *ExptSource) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScheduler() {
+		if err = oprot.WriteFieldBegin("scheduler", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Scheduler.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
 
 func (p *ExptSource) String() string {
@@ -6414,7 +6461,10 @@ func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
 	if !p.Field2DeepEqual(ano.SourceID) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Ext) {
+	if !p.Field100DeepEqual(ano.SpanFilterFields) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.Scheduler) {
 		return false
 	}
 	return true
@@ -6444,16 +6494,511 @@ func (p *ExptSource) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ExptSource) Field3DeepEqual(src map[string]string) bool {
+func (p *ExptSource) Field100DeepEqual(src *filter.SpanFilterFields) bool {
 
-	if len(p.Ext) != len(src) {
+	if !p.SpanFilterFields.DeepEqual(src) {
 		return false
 	}
-	for k, v := range p.Ext {
-		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
-			return false
+	return true
+}
+func (p *ExptSource) Field101DeepEqual(src *Scheduler) bool {
+
+	if !p.Scheduler.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type Scheduler struct {
+	// 定时触发器开关，默认关闭
+	Enabled *bool `thrift:"enabled,1,optional" frugal:"1,optional,bool" form:"enabled" json:"enabled,omitempty" query:"enabled"`
+	// 触发频次
+	Frequency *Frequency `thrift:"frequency,2,optional" frugal:"2,optional,string" form:"frequency" json:"frequency,omitempty" query:"frequency"`
+	// 触发时间（时间戳，秒。只使用时间，不使用日期）
+	TriggerAt *int64 `thrift:"trigger_at,3,optional" frugal:"3,optional,i64" form:"trigger_at" json:"trigger_at,omitempty" query:"trigger_at"`
+	// 生效开始时间（时间戳，秒）
+	StartTime *int64 `thrift:"startTime,4,optional" frugal:"4,optional,i64" form:"startTime" json:"startTime,omitempty" query:"startTime"`
+	// 生效结束时间（时间戳，秒）
+	EndTime *int64 `thrift:"endTime,5,optional" frugal:"5,optional,i64" form:"endTime" json:"endTime,omitempty" query:"endTime"`
+}
+
+func NewScheduler() *Scheduler {
+	return &Scheduler{}
+}
+
+func (p *Scheduler) InitDefault() {
+}
+
+var Scheduler_Enabled_DEFAULT bool
+
+func (p *Scheduler) GetEnabled() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnabled() {
+		return Scheduler_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+
+var Scheduler_Frequency_DEFAULT Frequency
+
+func (p *Scheduler) GetFrequency() (v Frequency) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFrequency() {
+		return Scheduler_Frequency_DEFAULT
+	}
+	return *p.Frequency
+}
+
+var Scheduler_TriggerAt_DEFAULT int64
+
+func (p *Scheduler) GetTriggerAt() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerAt() {
+		return Scheduler_TriggerAt_DEFAULT
+	}
+	return *p.TriggerAt
+}
+
+var Scheduler_StartTime_DEFAULT int64
+
+func (p *Scheduler) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return Scheduler_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var Scheduler_EndTime_DEFAULT int64
+
+func (p *Scheduler) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return Scheduler_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+func (p *Scheduler) SetEnabled(val *bool) {
+	p.Enabled = val
+}
+func (p *Scheduler) SetFrequency(val *Frequency) {
+	p.Frequency = val
+}
+func (p *Scheduler) SetTriggerAt(val *int64) {
+	p.TriggerAt = val
+}
+func (p *Scheduler) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *Scheduler) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+
+var fieldIDToName_Scheduler = map[int16]string{
+	1: "enabled",
+	2: "frequency",
+	3: "trigger_at",
+	4: "startTime",
+	5: "endTime",
+}
+
+func (p *Scheduler) IsSetEnabled() bool {
+	return p.Enabled != nil
+}
+
+func (p *Scheduler) IsSetFrequency() bool {
+	return p.Frequency != nil
+}
+
+func (p *Scheduler) IsSetTriggerAt() bool {
+	return p.TriggerAt != nil
+}
+
+func (p *Scheduler) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *Scheduler) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
 		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_Scheduler[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *Scheduler) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Enabled = _field
+	return nil
+}
+func (p *Scheduler) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *Frequency
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Frequency = _field
+	return nil
+}
+func (p *Scheduler) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerAt = _field
+	return nil
+}
+func (p *Scheduler) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *Scheduler) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
+
+func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("Scheduler"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *Scheduler) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *Scheduler) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFrequency() {
+		if err = oprot.WriteFieldBegin("frequency", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Frequency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *Scheduler) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerAt() {
+		if err = oprot.WriteFieldBegin("trigger_at", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TriggerAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *Scheduler) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("startTime", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *Scheduler) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("endTime", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *Scheduler) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Scheduler(%+v)", *p)
+
+}
+
+func (p *Scheduler) DeepEqual(ano *Scheduler) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Enabled) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Frequency) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TriggerAt) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.EndTime) {
+		return false
+	}
+	return true
+}
+
+func (p *Scheduler) Field1DeepEqual(src *bool) bool {
+
+	if p.Enabled == src {
+		return true
+	} else if p.Enabled == nil || src == nil {
+		return false
+	}
+	if *p.Enabled != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field2DeepEqual(src *Frequency) bool {
+
+	if p.Frequency == src {
+		return true
+	} else if p.Frequency == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Frequency, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field3DeepEqual(src *int64) bool {
+
+	if p.TriggerAt == src {
+		return true
+	} else if p.TriggerAt == nil || src == nil {
+		return false
+	}
+	if *p.TriggerAt != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field4DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field5DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
+		return false
 	}
 	return true
 }
