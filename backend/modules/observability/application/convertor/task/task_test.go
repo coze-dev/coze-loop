@@ -190,8 +190,8 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 	cfg := TaskConfigDTO2DO(dto)
 	if assert.NotNil(t, cfg) && assert.Len(t, cfg.AutoEvaluateConfigs, 1) {
 		if assert.NotNil(t, cfg.EvaluationExperimentConfig) {
-			assert.Equal(t, int64(3), ptr.From(cfg.EvaluationExperimentConfig.ItemConcurrencyCount))
-			assert.Equal(t, int64(4), ptr.From(cfg.EvaluationExperimentConfig.ItemMaxRetryCount))
+			assert.Equal(t, int32(3), ptr.From(cfg.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int32(4), ptr.From(cfg.EvaluationExperimentConfig.ItemMaxRetryCount))
 		}
 		mappings := cfg.AutoEvaluateConfigs[0].FieldMappings
 		if assert.Len(t, mappings, 3) {
@@ -221,8 +221,8 @@ func TestTaskConfigDO2DTO_EvaluationExperimentConfig(t *testing.T) {
 	dto := TaskConfigDO2DTO(do)
 	if assert.NotNil(t, dto) {
 		if assert.NotNil(t, dto.EvaluationExperimentConfig) {
-			assert.Equal(t, int64(5), ptr.From(dto.EvaluationExperimentConfig.ItemConcurrencyCount))
-			assert.Equal(t, int64(6), ptr.From(dto.EvaluationExperimentConfig.ItemMaxRetryCount))
+			assert.Equal(t, int32(5), ptr.From(dto.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int32(6), ptr.From(dto.EvaluationExperimentConfig.ItemMaxRetryCount))
 		}
 	}
 }

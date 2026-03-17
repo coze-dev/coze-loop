@@ -954,6 +954,7 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 		platformType = loop_span.PlatformType(*req.PlatformType)
 	}
 
+	// 3 days forward by default
 	svcReq := &service.ListWorkspaceAnnotationsReq{
 		WorkspaceID:  req.WorkspaceID,
 		StartTime:    time.Now().Add(-3 * 24 * time.Hour).UnixMilli(),
