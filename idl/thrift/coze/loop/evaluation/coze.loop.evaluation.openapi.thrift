@@ -329,7 +329,7 @@ struct ImportEvaluationSetOpenAPIData {
 
 struct ImportEvaluationSetOApiRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
-    2: required i64 evaluation_set_id (api.js_conv="true", api.path="evaluation_set_id", go.tag='json:"workspace_id"'),
+    2: required i64 evaluation_set_id (api.js_conv="true", api.path="evaluation_set_id", go.tag='json:"evaluation_set_id"'),
 
     3: optional dataset_job.DatasetIOFile file
     4: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")

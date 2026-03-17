@@ -14990,7 +14990,7 @@ func (p *ImportEvaluationSetOpenAPIData) Field1DeepEqual(src *int64) bool {
 
 type ImportEvaluationSetOApiRequest struct {
 	WorkspaceID     int64                           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
-	EvaluationSetID int64                           `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"workspace_id" path:"evaluation_set_id,required" `
+	EvaluationSetID int64                           `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	File            *dataset_job.DatasetIOFile      `thrift:"file,3,optional" frugal:"3,optional,dataset_job.DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
 	FieldMappings   []*dataset_job.FieldMapping     `thrift:"fieldMappings,4,optional" frugal:"4,optional,list<dataset_job.FieldMapping>" form:"fieldMappings" json:"fieldMappings,omitempty" query:"fieldMappings"`
 	Option          *dataset_job.DatasetIOJobOption `thrift:"option,5,optional" frugal:"5,optional,dataset_job.DatasetIOJobOption" form:"option" json:"option,omitempty" query:"option"`
