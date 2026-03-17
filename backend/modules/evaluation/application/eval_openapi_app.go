@@ -783,7 +783,10 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3)); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3),
+			func(event *entity.ExptItemEvalEvent) {
+				event.AsyncReportTrigger = true
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -886,6 +889,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TargetRuntimeParam:     experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
 		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
+		ItemRetryNum:           req.ItemRetryNum,
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
@@ -1944,7 +1948,9 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil, func(event *entity.ExptItemEvalEvent) {
+			event.AsyncEvaluatorReportTrigger = true
+		}); err != nil {
 			return nil, err
 		}
 	}

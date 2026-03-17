@@ -1612,7 +1612,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Nil(t, param.Session)
 					return errors.New("report error")
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: true,
 		},
@@ -1630,7 +1630,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 18*time.Second, *duration)
@@ -1650,7 +1650,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Nil(t, param.Session)
 					return nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -1675,7 +1675,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 18*time.Second, *duration)
@@ -5270,7 +5270,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorVersionID: 9,
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil()).Return(errors.New("pub failed"))
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(errors.New("pub failed"))
 			},
 			wantErr: -1,
 		},
@@ -5300,7 +5300,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					assert.GreaterOrEqual(t, param.OutputData.TimeConsumingMS, int64(0))
 					return nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(nil)
 			},
 		},
 	}

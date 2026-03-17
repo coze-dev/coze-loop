@@ -13,11 +13,13 @@ type TenantInfo struct {
 	CozeAccountID    string         `json:"coze_account_id"`
 	WhichIsEnough    int            `json:"which_is_enough"`
 	VolcanoAccountID int64          `json:"volcano_account_id"`
+	Source           int64          `json:"source"`
 	Extra            map[string]any `json:"extra,omitempty"`
 }
 
 type TraceData struct {
-	Tenant     string             `json:"tenant"`
-	TenantInfo TenantInfo         `json:"tenant_info"`
-	SpanList   loop_span.SpanList `json:"span_list"`
+	Tenant          string             `json:"tenant"`
+	TenantInfo      TenantInfo         `json:"tenant_info"`
+	SpanList        loop_span.SpanList `json:"span_list"`
+	SpanListOffline loop_span.SpanList `json:"span_list_offline"`
 }

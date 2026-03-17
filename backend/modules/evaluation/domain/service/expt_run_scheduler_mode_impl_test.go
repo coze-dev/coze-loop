@@ -4078,6 +4078,7 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 				incomplete: 0,
 			},
 			prepareMock: func(f *exptRetryItemsExecFields, args args) {
+				f.manager.EXPECT().LockCompletingRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session).Return(nil).Times(1)
 				f.exptRunLogRepo.EXPECT().Get(gomock.Any(), args.event.ExptID, args.event.ExptRunID).Return(&entity.ExptRunLog{
 					ItemIds: []entity.ExptRunLogItems{{ItemIDs: []int64{1}}},
 				}, nil).Times(1)
@@ -4086,6 +4087,7 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().UnlockCompletingRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session).Return(nil).Times(1)
 			},
 			wantNextTick: false,
 			wantErr:      false,
