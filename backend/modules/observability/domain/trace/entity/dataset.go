@@ -83,7 +83,7 @@ type Dataset struct {
 	Seesion               *common.Session
 	UserID                *string
 	// 数据集属性
-	Visibility dataset.DatasetVisibility
+	Visibility *dataset.DatasetVisibility
 }
 
 type DatasetVersion struct {
@@ -146,7 +146,7 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory,
 		UserID:                userID,
 	}
 	if isNewWorkflowTask {
-		ds.Visibility = dataset.DatasetVisibility_System
+		ds.Visibility = gptr.Of(dataset.DatasetVisibility_System)
 	}
 	return ds
 }
