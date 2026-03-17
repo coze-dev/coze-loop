@@ -6517,9 +6517,9 @@ type Scheduler struct {
 	// 触发时间（时间戳，秒。只使用时间，不使用日期）
 	TriggerAt *int64 `thrift:"trigger_at,3,optional" frugal:"3,optional,i64" form:"trigger_at" json:"trigger_at,omitempty" query:"trigger_at"`
 	// 生效开始时间（时间戳，秒）
-	StartTime *int64 `thrift:"startTime,4,optional" frugal:"4,optional,i64" form:"startTime" json:"startTime,omitempty" query:"startTime"`
+	StartTime *int64 `thrift:"start_time,4,optional" frugal:"4,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
 	// 生效结束时间（时间戳，秒）
-	EndTime *int64 `thrift:"endTime,5,optional" frugal:"5,optional,i64" form:"endTime" json:"endTime,omitempty" query:"endTime"`
+	EndTime *int64 `thrift:"end_time,5,optional" frugal:"5,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
 }
 
 func NewScheduler() *Scheduler {
@@ -6608,8 +6608,8 @@ var fieldIDToName_Scheduler = map[int16]string{
 	1: "enabled",
 	2: "frequency",
 	3: "trigger_at",
-	4: "startTime",
-	5: "endTime",
+	4: "start_time",
+	5: "end_time",
 }
 
 func (p *Scheduler) IsSetEnabled() bool {
@@ -6875,7 +6875,7 @@ WriteFieldEndError:
 }
 func (p *Scheduler) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStartTime() {
-		if err = oprot.WriteFieldBegin("startTime", thrift.I64, 4); err != nil {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 4); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteI64(*p.StartTime); err != nil {
@@ -6893,7 +6893,7 @@ WriteFieldEndError:
 }
 func (p *Scheduler) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEndTime() {
-		if err = oprot.WriteFieldBegin("endTime", thrift.I64, 5); err != nil {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 5); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteI64(*p.EndTime); err != nil {
