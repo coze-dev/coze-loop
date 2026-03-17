@@ -144,8 +144,8 @@ struct Scheduler {
     1: optional bool enabled              // 定时触发器开关，默认关闭
     2: optional Frequency frequency       // 触发频次
     3: optional i64 trigger_at (agw.js_conv = "str")    // 触发时间（时间戳，秒。只使用时间，不使用日期）
-    4: optional i64 startTime (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
-    5: optional i64 endTime (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
+    4: optional i64 start_time (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
+    5: optional i64 end_time (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
 }
 
 struct ExptInfo {
