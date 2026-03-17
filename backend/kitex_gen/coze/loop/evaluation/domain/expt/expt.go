@@ -6093,8 +6093,9 @@ func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 }
 
 type ExptSource struct {
-	SourceType *SourceType `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
-	SourceID   *string     `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	SourceType *SourceType       `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	SourceID   *string           `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	Ext        map[string]string `thrift:"ext,3,optional" frugal:"3,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewExptSource() *ExptSource {
@@ -6127,16 +6128,32 @@ func (p *ExptSource) GetSourceID() (v string) {
 	}
 	return *p.SourceID
 }
+
+var ExptSource_Ext_DEFAULT map[string]string
+
+func (p *ExptSource) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return ExptSource_Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *ExptSource) SetSourceType(val *SourceType) {
 	p.SourceType = val
 }
 func (p *ExptSource) SetSourceID(val *string) {
 	p.SourceID = val
 }
+func (p *ExptSource) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_ExptSource = map[int16]string{
 	1: "source_type",
 	2: "source_id",
+	3: "ext",
 }
 
 func (p *ExptSource) IsSetSourceType() bool {
@@ -6145,6 +6162,10 @@ func (p *ExptSource) IsSetSourceType() bool {
 
 func (p *ExptSource) IsSetSourceID() bool {
 	return p.SourceID != nil
+}
+
+func (p *ExptSource) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
@@ -6176,6 +6197,14 @@ func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6233,6 +6262,35 @@ func (p *ExptSource) ReadField2(iprot thrift.TProtocol) error {
 	p.SourceID = _field
 	return nil
 }
+func (p *ExptSource) ReadField3(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6246,6 +6304,10 @@ func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -6302,6 +6364,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *ExptSource) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *ExptSource) String() string {
 	if p == nil {
@@ -6321,6 +6412,9 @@ func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -6347,6 +6441,19 @@ func (p *ExptSource) Field2DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.SourceID, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *ExptSource) Field3DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

@@ -8,6 +8,7 @@ package apis
 
 import (
 	"context"
+
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -132,17 +133,17 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	if err != nil {
 		return nil, err
 	}
-    taskserviceClient := provideTaskClient(taskClientFactory)
-    iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient)
-    if err != nil {
-        return nil, err
-    }
-    evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient)
-    if err != nil {
-        return nil, err
-    }
-    evaluationHandler := NewEvaluationHandler(iExperimentApplication, evaluatorService, evaluationSetService, evalTargetService, evalOpenAPIService)
-    return evaluationHandler, nil
+	taskserviceClient := provideTaskClient(taskClientFactory)
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient)
+	if err != nil {
+		return nil, err
+	}
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient)
+	if err != nil {
+		return nil, err
+	}
+	evaluationHandler := NewEvaluationHandler(iExperimentApplication, evaluatorService, evaluationSetService, evalTargetService, evalOpenAPIService)
+	return evaluationHandler, nil
 }
 
 func InitDataHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, redisCli redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, auditClient audit.IAuditService, auth authservice.Client, userClient userservice.Client) (*DataHandler, error) {

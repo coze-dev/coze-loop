@@ -123,6 +123,7 @@ struct ExptTemplate {
 struct ExptSource {
     1: optional SourceType source_type
     2: optional string source_id
+    3: optional map<string, string> ext
 }
 
 struct ExptInfo {
