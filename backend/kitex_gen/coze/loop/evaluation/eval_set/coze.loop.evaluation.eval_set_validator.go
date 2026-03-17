@@ -110,6 +110,11 @@ func (p *CreateEvaluationSetWithImportRequest) IsValid() error {
 			}
 		}
 	}
+	if p.Option != nil {
+		if err := p.Option.IsValid(); err != nil {
+			return fmt.Errorf("field Option not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -394,6 +399,14 @@ func (p *BatchCreateEvaluationSetItemsRequest) IsValid() error {
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
 	}
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem := p.FieldWriteOptions[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -410,6 +423,14 @@ func (p *BatchCreateEvaluationSetItemsResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluationSetItemRequest) IsValid() error {
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem := p.FieldWriteOptions[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

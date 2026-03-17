@@ -36,6 +36,7 @@ struct CreateEvaluationSetWithImportRequest {
     6: optional dataset_job.SourceType source_type (vt.defined_only = "true")
     7: required dataset_job.DatasetIOEndpoint source
     8: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+    9: optional dataset_job.DatasetIOJobOption option
 
     200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
@@ -233,7 +234,7 @@ struct BatchCreateEvaluationSetItemsRequest {
 
     10: optional bool skip_invalid_items // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据                                                    // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     11: optional bool allow_partial_add  // 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-    12: optional list<dataset.FieldWriteOption> field_write_options
+    12: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -252,6 +253,8 @@ struct UpdateEvaluationSetItemRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional list<eval_set.Turn> turns,  // 每轮对话
+
+    10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
