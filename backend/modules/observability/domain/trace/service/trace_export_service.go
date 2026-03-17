@@ -535,8 +535,9 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 			}
 		}
-
+		logs.CtxInfo(ctx, "Extract field value:%v", value)
 		content, errCode := entity.GetContentInfo(ctx, mapping.FieldSchema.ContentType, value)
+
 		if errCode == entity.DatasetErrorType_MismatchSchema {
 			item.AddError("invalid multi part", entity.DatasetErrorType_MismatchSchema, nil)
 			continue
