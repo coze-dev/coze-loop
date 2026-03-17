@@ -14992,7 +14992,7 @@ type ImportEvaluationSetOApiRequest struct {
 	WorkspaceID     int64                           `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" query:"workspace_id,required"`
 	EvaluationSetID int64                           `thrift:"evaluation_set_id,2,required" frugal:"2,required,i64" json:"evaluation_set_id" path:"evaluation_set_id,required" `
 	File            *dataset_job.DatasetIOFile      `thrift:"file,3,optional" frugal:"3,optional,dataset_job.DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
-	FieldMappings   []*dataset_job.FieldMapping     `thrift:"fieldMappings,4,optional" frugal:"4,optional,list<dataset_job.FieldMapping>" form:"fieldMappings" json:"fieldMappings,omitempty" query:"fieldMappings"`
+	FieldMappings   []*dataset_job.FieldMapping     `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset_job.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
 	Option          *dataset_job.DatasetIOJobOption `thrift:"option,5,optional" frugal:"5,optional,dataset_job.DatasetIOJobOption" form:"option" json:"option,omitempty" query:"option"`
 	Base            *base.Base                      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -15088,7 +15088,7 @@ var fieldIDToName_ImportEvaluationSetOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "evaluation_set_id",
 	3:   "file",
-	4:   "fieldMappings",
+	4:   "field_mappings",
 	5:   "option",
 	255: "Base",
 }
@@ -15389,7 +15389,7 @@ WriteFieldEndError:
 }
 func (p *ImportEvaluationSetOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFieldMappings() {
-		if err = oprot.WriteFieldBegin("fieldMappings", thrift.LIST, 4); err != nil {
+		if err = oprot.WriteFieldBegin("field_mappings", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldMappings)); err != nil {

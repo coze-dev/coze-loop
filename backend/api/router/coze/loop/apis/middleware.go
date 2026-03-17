@@ -2014,3 +2014,8 @@ func _getevaluationsetjoboapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _io_jobMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -332,7 +332,7 @@ struct ImportEvaluationSetOApiRequest {
     2: required i64 evaluation_set_id (api.js_conv="true", api.path="evaluation_set_id", go.tag='json:"evaluation_set_id"'),
 
     3: optional dataset_job.DatasetIOFile file
-    4: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+    4: optional list<dataset_job.FieldMapping> field_mappings (vt.min_size = "1", vt.elem.skip = "false")
     5: optional dataset_job.DatasetIOJobOption option
 
     255: optional base.Base Base
