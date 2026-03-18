@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
@@ -122,9 +123,9 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	}
 
 	// 构建响应
-	r.Data = openapi.NewListPromptBasicData()
+	r.Data = domainopenapi.NewListPromptBasicData()
 	r.Data.Total = ptr.Of(int32(result.Total))
-	r.Data.Prompts = make([]*openapi.PromptBasic, 0, len(result.PromptDOs))
+	r.Data.Prompts = make([]*domainopenapi.PromptBasic, 0, len(result.PromptDOs))
 	for _, promptDO := range result.PromptDOs {
 		promptBasic := convertor.OpenAPIPromptBasicDO2DTO(promptDO)
 		if promptBasic != nil {
@@ -295,7 +296,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 
 	// 构建响应
 	r := openapi.NewBatchGetPromptByPromptKeyResponse()
-	r.Data = openapi.NewPromptResultData()
+	r.Data = domainopenapi.NewPromptResultData()
 
 	for _, q := range req.Queries {
 		if q == nil {
@@ -322,7 +323,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 				errorx.WithExtra(map[string]string{"prompt_key": q.GetPromptKey(), "version": q.GetVersion()}))
 		}
 
-		r.Data.Items = append(r.Data.Items, &openapi.PromptResult_{
+		r.Data.Items = append(r.Data.Items, &domainopenapi.PromptResult_{
 			Query:  q,
 			Prompt: promptDTO,
 		})
@@ -422,7 +423,7 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 	}
 	// 构建返回结果
 	if reply != nil && reply.Item != nil {
-		r.Data = &openapi.ExecuteData{
+		r.Data = &domainopenapi.ExecuteData{
 			Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
 			FinishReason: &reply.Item.FinishReason,
 			Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
@@ -635,7 +636,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			}
 		}
 		chunk := &openapi.ExecuteStreamingResponse{
-			Data: &openapi.ExecuteStreamingData{
+			Data: &domainopenapi.ExecuteStreamingData{
 				Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
 				FinishReason: ptr.Of(reply.Item.FinishReason),
 				Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
@@ -699,7 +700,7 @@ func (p *PromptOpenAPIApplicationImpl) ptaasAllowByPromptKey(ctx context.Context
 }
 
 // getPromptByPromptKey 根据prompt_key获取prompt
-func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context, spaceID int64, promptIdentifier *openapi.PromptQuery) (prompt *entity.Prompt, err error) {
+func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context, spaceID int64, promptIdentifier *domainopenapi.PromptQuery) (prompt *entity.Prompt, err error) {
 	if promptIdentifier == nil {
 		return nil, errors.New("prompt identifier is nil")
 	}
@@ -839,7 +840,7 @@ func normalizeExecuteRequest(req *openapi.ExecuteRequest) *openapi.ExecuteReques
 
 	if normalizedReq.GetReleaseLabel() != "" {
 		if normalizedReq.PromptIdentifier == nil {
-			normalizedReq.PromptIdentifier = openapi.NewPromptQuery()
+			normalizedReq.PromptIdentifier = domainopenapi.NewPromptQuery()
 		}
 		if normalizedReq.PromptIdentifier.GetLabel() == "" {
 			normalizedReq.PromptIdentifier.Label = ptr.Of(normalizedReq.GetReleaseLabel())
@@ -851,8 +852,8 @@ func normalizeExecuteRequest(req *openapi.ExecuteRequest) *openapi.ExecuteReques
 			// custom_tool_config 兼容字段优先级低于 custom_tool_call_config
 			normalizedReq.CustomToolCallConfig = normalizedReq.CustomToolConfig
 		} else if len(normalizedReq.CustomTools) > 0 {
-			normalizedReq.CustomToolCallConfig = &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			normalizedReq.CustomToolCallConfig = &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 			}
 		}
 	}
@@ -867,16 +868,16 @@ func getRequestPromptKey(req *openapi.ExecuteRequest) string {
 	return req.GetPromptIdentifier().GetPromptKey()
 }
 
-func getRequestAccountMode(req *openapi.ExecuteRequest) openapi.AccountMode {
+func getRequestAccountMode(req *openapi.ExecuteRequest) domainopenapi.AccountMode {
 	if req == nil || req.AccountMode == nil {
-		return openapi.AccountModeSharedAccount
+		return domainopenapi.AccountModeSharedAccount
 	}
 	return req.GetAccountMode()
 }
 
-func getRequestUsageScenario(req *openapi.ExecuteRequest) openapi.UsageScenario {
+func getRequestUsageScenario(req *openapi.ExecuteRequest) domainopenapi.UsageScenario {
 	if req == nil || req.UsageScenario == nil {
-		return openapi.UsageScenarioPromptAsAService
+		return domainopenapi.UsageScenarioPromptAsAService
 	}
 	return req.GetUsageScenario()
 }
@@ -973,14 +974,14 @@ func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
 		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
 	}
-	validateParts := func(parts []*openapi.ContentPart) error {
+	validateParts := func(parts []*domainopenapi.ContentPart) error {
 		for _, part := range parts {
 			switch part.GetType() {
-			case openapi.ContentTypeImageURL:
+			case domainopenapi.ContentTypeImageURL:
 				if !govalidator.IsURL(part.GetImageURL()) {
 					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": fmt.Sprintf("%s不是有效的URL", part.GetImageURL())}))
 				}
-			case openapi.ContentTypeBase64Data:
+			case domainopenapi.ContentTypeBase64Data:
 				if _, err = dataurl.DecodeString(part.GetBase64Data()); err != nil {
 					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "存在无效的base64数据，数据格式应该符合data:[<mediatype>][;base64],<data>"}))
 				}
@@ -1065,7 +1066,7 @@ func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Pro
 }
 
 // validateAndApplyCustomModelConfig 验证并应用自定义模型配置（全量覆盖）
-func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *openapi.ModelConfig) error {
+func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *domainopenapi.ModelConfig) error {
 	if customModelConfig == nil {
 		return nil
 	}

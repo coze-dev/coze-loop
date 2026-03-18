@@ -150,18 +150,16 @@ struct ThinkingConfig {
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
 }
 
-enum ReasoningEffort {
-    Minimal = 1
-    Low = 2
-    Medium = 3
-    High = 4
-}
+typedef string ReasoningEffort (ts.enum="true")
+const ReasoningEffort ReasoningEffort_Minimal = "minimal"
+const ReasoningEffort ReasoningEffort_Low = "low"
+const ReasoningEffort ReasoningEffort_Medium = "medium"
+const ReasoningEffort ReasoningEffort_High = "high"
 
-enum ThinkingOption {
-    Disabled = 1
-    Enabled = 2
-    Auto = 3
-}
+typedef string ThinkingOption (ts.enum="true")
+const ThinkingOption ThinkingOption_Disabled = "disabled"
+const ThinkingOption ThinkingOption_Enabled = "enabled"
+const ThinkingOption ThinkingOption_Auto = "auto"
 
 struct ParamConfigValue {
     1: optional string name // 传给下游模型的key，与ParamSchema.name对齐

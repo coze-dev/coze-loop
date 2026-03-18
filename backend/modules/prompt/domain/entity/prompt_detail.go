@@ -212,22 +212,22 @@ type ThinkingConfig struct {
 }
 
 // ThinkingOption thinking开关选项
-type ThinkingOption int64
+type ThinkingOption string
 
 const (
-	ThinkingOptionDisabled ThinkingOption = 1
-	ThinkingOptionEnabled  ThinkingOption = 2
-	ThinkingOptionAuto     ThinkingOption = 3
+	ThinkingOptionDisabled ThinkingOption = "disabled"
+	ThinkingOptionEnabled  ThinkingOption = "enabled"
+	ThinkingOptionAuto     ThinkingOption = "auto"
 )
 
 // ReasoningEffort 思考长度
-type ReasoningEffort int64
+type ReasoningEffort string
 
 const (
-	ReasoningEffortMinimal ReasoningEffort = 1
-	ReasoningEffortLow     ReasoningEffort = 2
-	ReasoningEffortMedium  ReasoningEffort = 3
-	ReasoningEffortHigh    ReasoningEffort = 4
+	ReasoningEffortMinimal ReasoningEffort = "minimal"
+	ReasoningEffortLow     ReasoningEffort = "low"
+	ReasoningEffortMedium  ReasoningEffort = "medium"
+	ReasoningEffortHigh    ReasoningEffort = "high"
 )
 
 type ParamConfigValue struct {
