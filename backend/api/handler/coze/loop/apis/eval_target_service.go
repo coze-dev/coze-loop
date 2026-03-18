@@ -9,7 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
+	eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaltargetservice"
 )
 
@@ -103,4 +105,20 @@ func MockEvalTargetOutput(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/eval_target_records/output_fields [POST]
 func GetEvalTargetOutputFieldContent(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalTargetSvc.GetEvalTargetOutputFieldContent)
+}
+
+// GetSourceEvalTargetVersion .
+// @router /api/evaluation/v1/eval_targets/get_source_version [GET]
+func GetSourceEvalTargetVersion(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_target.GetSourceEvalTargetVersionRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_target.GetSourceEvalTargetVersionResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

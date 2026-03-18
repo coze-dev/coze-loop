@@ -182,7 +182,7 @@ func (l *LocalEvalTargetService) BatchGetSourceEvalTargets(ctx context.Context, 
 }
 
 // GetSourceEvalTargetVersion
-// 获取Source评测对象版本详情信息
+// 获取Source评测对象版本的详情信息
 func (l *LocalEvalTargetService) GetSourceEvalTargetVersion(ctx context.Context, request *eval_target.GetSourceEvalTargetVersionRequest, callOptions ...callopt.Option) (*eval_target.GetSourceEvalTargetVersionResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_target.EvalTargetServiceGetSourceEvalTargetVersionArgs)
