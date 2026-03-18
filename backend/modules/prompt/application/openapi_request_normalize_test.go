@@ -6,6 +6,7 @@ package application
 import (
 	"testing"
 
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,7 @@ func TestNormalizeExecuteRequest(t *testing.T) {
 	t.Run("release_label fills prompt_identifier.label", func(t *testing.T) {
 		t.Parallel()
 		req := &openapi.ExecuteRequest{
-			PromptIdentifier: &openapi.PromptQuery{
+			PromptIdentifier: &domainopenapi.PromptQuery{
 				PromptKey: ptr.Of("p1"),
 			},
 			ReleaseLabel: ptr.Of("prod"),
@@ -35,26 +36,26 @@ func TestNormalizeExecuteRequest(t *testing.T) {
 	t.Run("custom_tool_config fallback to custom_tool_call_config", func(t *testing.T) {
 		t.Parallel()
 		req := &openapi.ExecuteRequest{
-			CustomToolConfig: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			CustomToolConfig: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 			},
 		}
 		normalized := normalizeExecuteRequest(req)
 		assert.NotNil(t, normalized.CustomToolCallConfig)
-		assert.Equal(t, openapi.ToolChoiceTypeAuto, normalized.CustomToolCallConfig.GetToolChoice())
+		assert.Equal(t, domainopenapi.ToolChoiceTypeAuto, normalized.CustomToolCallConfig.GetToolChoice())
 	})
 
 	t.Run("custom_tools without config defaults to auto", func(t *testing.T) {
 		t.Parallel()
 		req := &openapi.ExecuteRequest{
-			CustomTools: []*openapi.Tool{
+			CustomTools: []*domainopenapi.Tool{
 				{
-					Type: ptr.Of(openapi.ToolTypeFunction),
+					Type: ptr.Of(domainopenapi.ToolTypeFunction),
 				},
 			},
 		}
 		normalized := normalizeExecuteRequest(req)
 		assert.NotNil(t, normalized.CustomToolCallConfig)
-		assert.Equal(t, openapi.ToolChoiceTypeAuto, normalized.CustomToolCallConfig.GetToolChoice())
+		assert.Equal(t, domainopenapi.ToolChoiceTypeAuto, normalized.CustomToolCallConfig.GetToolChoice())
 	})
 }

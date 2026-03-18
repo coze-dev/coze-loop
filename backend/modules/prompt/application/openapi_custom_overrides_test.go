@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -48,8 +49,8 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 
 		original := &entity.Prompt{ID: 1}
 		req := &openapi.ExecuteRequest{
-			CustomTools: []*openapi.Tool{
-				{Type: ptr.Of(openapi.ToolTypeFunction)},
+			CustomTools: []*domainopenapi.Tool{
+				{Type: ptr.Of(domainopenapi.ToolTypeFunction)},
 			},
 		}
 		got, err := app.applyCustomOverrides(original, req)
@@ -78,10 +79,10 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 			},
 		}
 		req := &openapi.ExecuteRequest{
-			CustomTools: []*openapi.Tool{
+			CustomTools: []*domainopenapi.Tool{
 				{
-					Type: ptr.Of(openapi.ToolTypeFunction),
-					Function: &openapi.Function{
+					Type: ptr.Of(domainopenapi.ToolTypeFunction),
+					Function: &domainopenapi.Function{
 						Name:        ptr.Of("new"),
 						Description: ptr.Of("desc"),
 						Parameters:  ptr.Of(`{}`),
@@ -117,10 +118,10 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 			},
 		}
 		req := &openapi.ExecuteRequest{
-			CustomToolCallConfig: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			CustomToolCallConfig: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 			},
-			CustomModelConfig: &openapi.ModelConfig{
+			CustomModelConfig: &domainopenapi.ModelConfig{
 				ModelID:     ptr.Of(int64(123)),
 				Temperature: ptr.Of(0.7),
 			},
@@ -152,8 +153,8 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 			},
 		}
 		req := &openapi.ExecuteRequest{
-			CustomToolConfig: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(openapi.ToolChoiceTypeAuto),
+			CustomToolConfig: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 			},
 		}
 
@@ -175,8 +176,8 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 			},
 		}
 		req := &openapi.ExecuteRequest{
-			CustomTools: []*openapi.Tool{
-				{Type: ptr.Of(openapi.ToolTypeFunction)},
+			CustomTools: []*domainopenapi.Tool{
+				{Type: ptr.Of(domainopenapi.ToolTypeFunction)},
 			},
 		}
 
@@ -200,7 +201,7 @@ func TestPromptOpenAPIApplicationImpl_applyCustomOverrides(t *testing.T) {
 			},
 		}
 		req := &openapi.ExecuteRequest{
-			CustomModelConfig: &openapi.ModelConfig{
+			CustomModelConfig: &domainopenapi.ModelConfig{
 				ModelID: ptr.Of(int64(0)), // IsSetModelID=true but value=0
 			},
 		}

@@ -35,11 +35,21 @@ func TestToolResultsCollector_CollectToolResults(t *testing.T) {
 				{Name: "tool_a", MockResponse: "{\"ok\":true}"},
 				{Name: "tool_b", MockResponse: "b"},
 			},
+			Reply: &entity.Reply{
+				Item: &entity.ReplyItem{
+					Message: &entity.Message{
+						ToolCalls: []*entity.ToolCall{
+							{ID: "c1", FunctionCall: &entity.FunctionCall{Name: "tool_a"}},
+							{ID: "c2", FunctionCall: &entity.FunctionCall{Name: "tool_b"}},
+						},
+					},
+				},
+			},
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]string{
-			"tool_a": "{\"ok\":true}",
-			"tool_b": "b",
+			"c1tool_a": "{\"ok\":true}",
+			"c2tool_b": "b",
 		}, got)
 	})
 
@@ -50,10 +60,19 @@ func TestToolResultsCollector_CollectToolResults(t *testing.T) {
 				{Name: "", MockResponse: "ignored"},
 				{Name: "tool_a", MockResponse: "a"},
 			},
+			Reply: &entity.Reply{
+				Item: &entity.ReplyItem{
+					Message: &entity.Message{
+						ToolCalls: []*entity.ToolCall{
+							{ID: "c1", FunctionCall: &entity.FunctionCall{Name: "tool_a"}},
+						},
+					},
+				},
+			},
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, map[string]string{
-			"tool_a": "a",
+			"c1tool_a": "a",
 		}, got)
 	})
 }

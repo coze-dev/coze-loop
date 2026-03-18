@@ -1330,7 +1330,7 @@ func TestPromptServiceImpl_reorganizeContexts_ToolResultMap(t *testing.T) {
 
 	got, err := p.reorganizeContexts(
 		[]*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("user")}},
-		map[string]string{"tool_a": "tool output"},
+		map[string]string{"call_1tool_a": "tool output"},
 		reply,
 	)
 	assert.NoError(t, err)
@@ -1373,7 +1373,7 @@ func TestPromptServiceImpl_reportToolSpan_UsesToolResultMap(t *testing.T) {
 		},
 	}
 
-	p.reportToolSpan(context.Background(), prompt, map[string]string{"tool_a": "tool output"}, replyItem)
+	p.reportToolSpan(context.Background(), prompt, map[string]string{"call_1tool_a": "tool output"}, replyItem)
 
 	if assert.Len(t, recorder.spans, 1) {
 		assert.Equal(t, "tool output", recorder.spans[0].output)

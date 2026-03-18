@@ -854,8 +854,8 @@ func TestThinkingConfigConversion(t *testing.T) {
 			name: "thinking config with values",
 			dto: &prompt.ThinkingConfig{
 				BudgetTokens:    ptr.Of(int64(256)),
-				ThinkingOption:  ptr.Of(prompt.ThinkingOption_Enabled),
-				ReasoningEffort: ptr.Of(prompt.ReasoningEffort_High),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffortHigh),
 			},
 			do: &entity.ThinkingConfig{
 				BudgetTokens:    ptr.Of(int64(256)),
@@ -864,8 +864,8 @@ func TestThinkingConfigConversion(t *testing.T) {
 			},
 			expectDTO: &prompt.ThinkingConfig{
 				BudgetTokens:    ptr.Of(int64(256)),
-				ThinkingOption:  ptr.Of(prompt.ThinkingOption_Enabled),
-				ReasoningEffort: ptr.Of(prompt.ReasoningEffort_High),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffortHigh),
 			},
 			expectDO: &entity.ThinkingConfig{
 				BudgetTokens:    ptr.Of(int64(256)),
