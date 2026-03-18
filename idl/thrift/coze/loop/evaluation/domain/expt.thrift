@@ -152,6 +152,7 @@ struct ExptInfo {
     1: optional i64 created_expt_count
     2: optional i64 latest_expt_id (api.js_conv='true', go.tag='json:"latest_expt_id"')
     3: optional ExptStatus latest_expt_status
+    4: optional i64 latest_expt_start_time (agw.js_conv = "str") // 最新实验开始时间（时间戳，毫秒）
 }
 
 struct TokenUsage {

@@ -7004,9 +7004,10 @@ func (p *Scheduler) Field5DeepEqual(src *int64) bool {
 }
 
 type ExptInfo struct {
-	CreatedExptCount *int64      `thrift:"created_expt_count,1,optional" frugal:"1,optional,i64" form:"created_expt_count" json:"created_expt_count,omitempty" query:"created_expt_count"`
-	LatestExptID     *int64      `thrift:"latest_expt_id,2,optional" frugal:"2,optional,i64" json:"latest_expt_id" form:"latest_expt_id" query:"latest_expt_id"`
-	LatestExptStatus *ExptStatus `thrift:"latest_expt_status,3,optional" frugal:"3,optional,ExptStatus" form:"latest_expt_status" json:"latest_expt_status,omitempty" query:"latest_expt_status"`
+	CreatedExptCount    *int64      `thrift:"created_expt_count,1,optional" frugal:"1,optional,i64" form:"created_expt_count" json:"created_expt_count,omitempty" query:"created_expt_count"`
+	LatestExptID        *int64      `thrift:"latest_expt_id,2,optional" frugal:"2,optional,i64" json:"latest_expt_id" form:"latest_expt_id" query:"latest_expt_id"`
+	LatestExptStatus    *ExptStatus `thrift:"latest_expt_status,3,optional" frugal:"3,optional,ExptStatus" form:"latest_expt_status" json:"latest_expt_status,omitempty" query:"latest_expt_status"`
+	LatestExptStartTime *int64      `thrift:"latest_expt_start_time,4,optional" frugal:"4,optional,i64" form:"latest_expt_start_time" json:"latest_expt_start_time,omitempty" query:"latest_expt_start_time"`
 }
 
 func NewExptInfo() *ExptInfo {
@@ -7051,6 +7052,18 @@ func (p *ExptInfo) GetLatestExptStatus() (v ExptStatus) {
 	}
 	return *p.LatestExptStatus
 }
+
+var ExptInfo_LatestExptStartTime_DEFAULT int64
+
+func (p *ExptInfo) GetLatestExptStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLatestExptStartTime() {
+		return ExptInfo_LatestExptStartTime_DEFAULT
+	}
+	return *p.LatestExptStartTime
+}
 func (p *ExptInfo) SetCreatedExptCount(val *int64) {
 	p.CreatedExptCount = val
 }
@@ -7060,11 +7073,15 @@ func (p *ExptInfo) SetLatestExptID(val *int64) {
 func (p *ExptInfo) SetLatestExptStatus(val *ExptStatus) {
 	p.LatestExptStatus = val
 }
+func (p *ExptInfo) SetLatestExptStartTime(val *int64) {
+	p.LatestExptStartTime = val
+}
 
 var fieldIDToName_ExptInfo = map[int16]string{
 	1: "created_expt_count",
 	2: "latest_expt_id",
 	3: "latest_expt_status",
+	4: "latest_expt_start_time",
 }
 
 func (p *ExptInfo) IsSetCreatedExptCount() bool {
@@ -7077,6 +7094,10 @@ func (p *ExptInfo) IsSetLatestExptID() bool {
 
 func (p *ExptInfo) IsSetLatestExptStatus() bool {
 	return p.LatestExptStatus != nil
+}
+
+func (p *ExptInfo) IsSetLatestExptStartTime() bool {
+	return p.LatestExptStartTime != nil
 }
 
 func (p *ExptInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -7116,6 +7137,14 @@ func (p *ExptInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7184,6 +7213,17 @@ func (p *ExptInfo) ReadField3(iprot thrift.TProtocol) error {
 	p.LatestExptStatus = _field
 	return nil
 }
+func (p *ExptInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LatestExptStartTime = _field
+	return nil
+}
 
 func (p *ExptInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -7201,6 +7241,10 @@ func (p *ExptInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -7275,6 +7319,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ExptInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatestExptStartTime() {
+		if err = oprot.WriteFieldBegin("latest_expt_start_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LatestExptStartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *ExptInfo) String() string {
 	if p == nil {
@@ -7297,6 +7359,9 @@ func (p *ExptInfo) DeepEqual(ano *ExptInfo) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.LatestExptStatus) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LatestExptStartTime) {
 		return false
 	}
 	return true
@@ -7334,6 +7399,18 @@ func (p *ExptInfo) Field3DeepEqual(src *ExptStatus) bool {
 		return false
 	}
 	if *p.LatestExptStatus != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptInfo) Field4DeepEqual(src *int64) bool {
+
+	if p.LatestExptStartTime == src {
+		return true
+	} else if p.LatestExptStartTime == nil || src == nil {
+		return false
+	}
+	if *p.LatestExptStartTime != *src {
 		return false
 	}
 	return true
