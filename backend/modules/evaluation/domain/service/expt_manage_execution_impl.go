@@ -225,7 +225,8 @@ func (e *ExptMangerImpl) checkEvaluatorsConnector(ctx context.Context, expt *ent
 				return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("invalid connector: evaluator %v is expected to receive the missing evalset %v column", evaluatorConf.EvaluatorVersionID, fc.FromField)))
 			}
 		}
-		if expt.Target != nil && expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace {
+		// Trace 和仅记录型不需要 target 输出，跳过 target 字段校验
+		if expt.Target != nil && expt.Target.EvalTargetType != entity.EvalTargetTypeLoopTrace && !expt.Target.EvalTargetType.IsRecordOnlyType() {
 			for _, fc := range evaluatorConf.IngressConf.TargetAdapter.FieldConfs {
 				firstField, err := json.GetFirstJSONPathField(fc.FromField)
 				if err != nil {

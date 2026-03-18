@@ -17,7 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
-	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observabi
+	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"

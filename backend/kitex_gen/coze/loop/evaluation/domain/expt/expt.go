@@ -7004,10 +7004,11 @@ func (p *Scheduler) Field5DeepEqual(src *int64) bool {
 }
 
 type ExptInfo struct {
-	CreatedExptCount    *int64      `thrift:"created_expt_count,1,optional" frugal:"1,optional,i64" form:"created_expt_count" json:"created_expt_count,omitempty" query:"created_expt_count"`
-	LatestExptID        *int64      `thrift:"latest_expt_id,2,optional" frugal:"2,optional,i64" json:"latest_expt_id" form:"latest_expt_id" query:"latest_expt_id"`
-	LatestExptStatus    *ExptStatus `thrift:"latest_expt_status,3,optional" frugal:"3,optional,ExptStatus" form:"latest_expt_status" json:"latest_expt_status,omitempty" query:"latest_expt_status"`
-	LatestExptStartTime *int64      `thrift:"latest_expt_start_time,4,optional" frugal:"4,optional,i64" form:"latest_expt_start_time" json:"latest_expt_start_time,omitempty" query:"latest_expt_start_time"`
+	CreatedExptCount *int64      `thrift:"created_expt_count,1,optional" frugal:"1,optional,i64" form:"created_expt_count" json:"created_expt_count,omitempty" query:"created_expt_count"`
+	LatestExptID     *int64      `thrift:"latest_expt_id,2,optional" frugal:"2,optional,i64" json:"latest_expt_id" form:"latest_expt_id" query:"latest_expt_id"`
+	LatestExptStatus *ExptStatus `thrift:"latest_expt_status,3,optional" frugal:"3,optional,ExptStatus" form:"latest_expt_status" json:"latest_expt_status,omitempty" query:"latest_expt_status"`
+	// 最新实验开始时间（时间戳，毫秒）
+	LatestExptStartTime *int64 `thrift:"latest_expt_start_time,4,optional" frugal:"4,optional,i64" form:"latest_expt_start_time" json:"latest_expt_start_time,omitempty" query:"latest_expt_start_time"`
 }
 
 func NewExptInfo() *ExptInfo {

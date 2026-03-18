@@ -64,16 +64,32 @@ func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID in
 	defer func() {
 		e.metric.EmitCreate(spaceID, err)
 	}()
-	if e.typedOperators[targetType] == nil {
+	// 仅记录型复用对应基础类型的 operator 构建，再覆盖为记录型
+	buildType := targetType
+	if baseType, ok := targetType.RecordOnlyTypeToBaseType(); ok {
+		if e.typedOperators[baseType] == nil {
+			return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+		}
+		buildType = baseType
+	}
+	if e.typedOperators[buildType] == nil {
 		return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	do, err := e.typedOperators[targetType].BuildBySource(ctx, spaceID, sourceTargetID, sourceTargetVersion, opts...)
+	do, err := e.typedOperators[buildType].BuildBySource(ctx, spaceID, sourceTargetID, sourceTargetVersion, opts...)
 	if err != nil {
 		return 0, 0, err
 	}
 
 	if do == nil {
 		return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode)
+	}
+
+	// 仅记录型：覆盖为请求的 targetType，保证存储的是 *Online 类型
+	if buildType != targetType {
+		do.EvalTargetType = targetType
+		if do.EvalTargetVersion != nil {
+			do.EvalTargetVersion.EvalTargetType = targetType
+		}
 	}
 
 	return e.evalTargetRepo.CreateEvalTarget(ctx, do)

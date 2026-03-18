@@ -217,7 +217,8 @@ func (t *TargetConf) Valid(ctx context.Context, targetType EvalTargetType) error
 	if t == nil || t.TargetVersionID == 0 {
 		return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
 	}
-	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer { // prompt target might receive no input
+	// prompt/custom_rpc 可能无输入；仅记录型不需要执行，仅需记录对象类型和基本信息
+	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer || targetType.IsRecordOnlyType() {
 		return nil
 	}
 	if t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil && len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
