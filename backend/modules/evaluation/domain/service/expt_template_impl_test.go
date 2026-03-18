@@ -348,7 +348,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NewAndClamp(t *testing.T) {
 			}),
 	)
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 200, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 200, entity.ExptStatus_Processing, 1, nil)
 	assert.NoError(t, err)
 
 	// 场景二：已有 ExptInfo，adjustCount 负数，下限为 0
@@ -384,7 +384,42 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NewAndClamp(t *testing.T) {
 			}),
 	)
 
-	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 300, entity.ExptStatus_Failed, -5)
+	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 300, entity.ExptStatus_Failed, -5, nil)
+	assert.NoError(t, err)
+
+	// 场景三：传入 latestExptStartTime，验证字段被正确更新
+	latestStartTime := int64(1700000000000) // 毫秒时间戳
+	existing3 := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+		},
+		ExptInfo: &entity.ExptInfo{
+			CreatedExptCount:    1,
+			LatestExptID:        100,
+			LatestExptStatus:    entity.ExptStatus_Pending,
+			LatestExptStartTime: 0,
+		},
+	}
+
+	gomock.InOrder(
+		mockRepo.EXPECT().
+			GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
+			Return(existing3, nil),
+		mockRepo.EXPECT().
+			UpdateFields(ctx, templateID, gomock.AssignableToTypeOf(map[string]any{})).
+			DoAndReturn(func(_ context.Context, _ int64, fields map[string]any) error {
+				buf, ok := fields["expt_info"].([]byte)
+				assert.True(t, ok)
+				var info entity.ExptInfo
+				err := json.Unmarshal(buf, &info)
+				assert.NoError(t, err)
+				assert.Equal(t, latestStartTime, info.LatestExptStartTime)
+				return nil
+			}),
+	)
+
+	err = mgr.UpdateExptInfo(ctx, templateID, spaceID, 400, entity.ExptStatus_Pending, 1, &latestStartTime)
 	assert.NoError(t, err)
 }
 
@@ -406,7 +441,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_NotFound(t *testing.T) {
 		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
 		Return((*entity.ExptTemplate)(nil), nil)
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	code, _, ok := errno.ParseStatusError(err)
 	assert.True(t, ok)
@@ -2718,7 +2753,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_GetByIDError(t *testing.T) {
 		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
 		Return((*entity.ExptTemplate)(nil), errors.New("get by id fail"))
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 1, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "get template fail")
 }
@@ -2758,7 +2793,7 @@ func TestExptTemplateManagerImpl_UpdateExptInfo_UpdateFieldsError(t *testing.T) 
 		UpdateFields(ctx, templateID, gomock.AssignableToTypeOf(map[string]any{})).
 		Return(errors.New("update expt info fail"))
 
-	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 2, entity.ExptStatus_Processing, 1)
+	err := mgr.UpdateExptInfo(ctx, templateID, spaceID, 2, entity.ExptStatus_Processing, 1, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "update ExptInfo fail")
 }

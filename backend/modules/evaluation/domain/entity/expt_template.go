@@ -87,6 +87,8 @@ type ExptInfo struct {
 	LatestExptID int64 `json:"latest_expt_id"`
 	// LatestExptStatus 最后一次创建实验的执行状态
 	LatestExptStatus ExptStatus `json:"latest_expt_status"`
+	// LatestExptStartTime 最新实验开始时间（时间戳，毫秒）
+	LatestExptStartTime int64 `json:"latest_expt_start_time"`
 }
 
 // ExptTemplateMeta 实验模板基础信息

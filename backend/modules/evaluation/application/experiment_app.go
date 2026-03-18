@@ -515,7 +515,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if req.IsSetExptTemplateID() && req.GetExptTemplateID() > 0 {
 		exptID := gptr.Indirect(cresp.GetExperiment().ID)
 		exptStatus := entity.ExptStatus_Pending // Submit 时实验状态为 Pending
-		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1); err != nil {
+		latestExptStartTime := gptr.Of(time.Now().UnixMilli())
+		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1, latestExptStartTime); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed after SubmitExperiment, template_id: %v, expt_id: %v, err: %v",
 				req.GetExptTemplateID(), exptID, err)

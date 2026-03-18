@@ -428,10 +428,16 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充 ExptInfo
 	if template.ExptInfo != nil {
+		// 历史数据无 LatestExptStartTime 时返回 nil，不填充默认值，避免干扰
+		var latestExptStartTime *int64
+		if template.ExptInfo.LatestExptStartTime > 0 {
+			latestExptStartTime = gptr.Of(template.ExptInfo.LatestExptStartTime)
+		}
 		exptInfo := &domain_expt.ExptInfo{
-			CreatedExptCount: gptr.Of(template.ExptInfo.CreatedExptCount),
-			LatestExptID:     gptr.Of(template.ExptInfo.LatestExptID),
-			LatestExptStatus: gptr.Of(domain_expt.ExptStatus(template.ExptInfo.LatestExptStatus)),
+			CreatedExptCount:    gptr.Of(template.ExptInfo.CreatedExptCount),
+			LatestExptID:       gptr.Of(template.ExptInfo.LatestExptID),
+			LatestExptStatus:   gptr.Of(domain_expt.ExptStatus(template.ExptInfo.LatestExptStatus)),
+			LatestExptStartTime: latestExptStartTime,
 		}
 		dto.SetExptInfo(exptInfo)
 	}

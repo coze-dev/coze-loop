@@ -302,7 +302,7 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		if expt == nil || expt.ExptTemplateMeta == nil || expt.ExptTemplateMeta.ID <= 0 || e.templateManager == nil {
 			continue
 		}
-		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, expt.ID, expt.Status, -1); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, expt.ID, expt.Status, -1, nil); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in MDelete, template_id: %v, expt_id: %v, err: %v",
 				expt.ExptTemplateMeta.ID, expt.ID, err)
@@ -884,7 +884,7 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 
 	// 如果实验关联了模板，更新模板的 ExptInfo（删除实验，数量 -1）
 	if expt != nil && expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1, nil); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in Delete, template_id: %v, expt_id: %v, err: %v",
 				expt.ExptTemplateMeta.ID, exptID, err)

@@ -830,7 +830,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
-			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
+			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1), gomock.Any()).
 			Return(nil)
 
 		app := &experimentApplication{
@@ -866,7 +866,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
-			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
+			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1), gomock.Any()).
 			Return(errors.New("update error"))
 
 		app := &experimentApplication{
@@ -902,7 +902,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		// 不应该调用 UpdateExptInfo
-		mockTemplateManager.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		mockTemplateManager.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 		app := &experimentApplication{
 			manager:            mockManager,
