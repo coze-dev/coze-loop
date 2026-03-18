@@ -122,17 +122,11 @@ struct PromptTemplate {
     100: optional map<string, string> metadata // 模板级元信息
 }
 
-typedef string TemplateType
+typedef string TemplateType (ts.enum="true")
 const TemplateType TemplateType_Normal = "normal"
 const TemplateType TemplateType_Jinja2 = "jinja2"
 const TemplateType TemplateType_GoTemplate = "go_template"
 const TemplateType TemplateType_CustomTemplate_M = "custom_template_m"
-
-
-typedef string ToolChoiceType
-const ToolChoiceType ToolChoiceType_Auto = "auto"
-const ToolChoiceType ToolChoiceType_None = "none"
-const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct ToolCallConfig {
     1: optional ToolChoiceType tool_choice
@@ -143,6 +137,11 @@ struct ToolChoiceSpecification {
     1: optional ToolType type
     2: optional string name
 }
+
+typedef string ToolChoiceType (ts.enum="true")
+const ToolChoiceType ToolChoiceType_Auto = "auto"
+const ToolChoiceType ToolChoiceType_None = "none"
+const ToolChoiceType ToolChoiceType_Specific = "specific"
 
 struct Message {
     1: optional Role role // 角色
@@ -308,19 +307,17 @@ struct PromptPublishInfo {
     3: optional i64 publish_at (api.js_conv='true', go.tag='json:"publish_at"') // 发布时间
 }
 
-enum PublishStatus {
-    Undefined = 0
-    UnPublish // 未发布
-    Published // 已发布
-}
+typedef string PublishStatus (ts.enum="true")
+const PublishStatus PublishStatus_Undefined = "undefined"
+const PublishStatus PublishStatus_UnPublish = "unpublish"
+const PublishStatus PublishStatus_Published = "published"
 
-enum SecurityLevel {
-    Undefined = 0
-    L1 = 1
-    L2 = 2
-    L3 = 3
-    L4 = 4
-}
+typedef string SecurityLevel (ts.enum="true")
+const SecurityLevel SecurityLevel_Undefined = "undefined"
+const SecurityLevel SecurityLevel_L1 = "L1"
+const SecurityLevel SecurityLevel_L2 = "L2"
+const SecurityLevel SecurityLevel_L3 = "L3"
+const SecurityLevel SecurityLevel_L4 = "L4"
 
 struct ThinkingConfig {
      1: optional i64 budget_tokens (agw.key="budget_tokens", api.js_conv='true', go.tag='json:"budget_tokens"') // thinking内容的最大输出token
@@ -328,18 +325,16 @@ struct ThinkingConfig {
      3: optional ReasoningEffort reasoning_effort (agw.key="reasoning_effort") // 思考长度
 }
 
-enum ReasoningEffort {
-    Minimal = 1
-    Low = 2
-    Medium = 3
-    High = 4
-}
+typedef string ReasoningEffort (ts.enum="true")
+const ReasoningEffort ReasoningEffort_Minimal = "minimal"
+const ReasoningEffort ReasoningEffort_Low = "low"
+const ReasoningEffort ReasoningEffort_Medium = "medium"
+const ReasoningEffort ReasoningEffort_High = "high"
 
-enum ThinkingOption {
-    Disabled = 1
-    Enabled = 2
-    Auto = 3
-}
+typedef string ThinkingOption (ts.enum="true")
+const ThinkingOption ThinkingOption_Disabled = "disabled"
+const ThinkingOption ThinkingOption_Enabled = "enabled"
+const ThinkingOption ThinkingOption_Auto = "auto"
 
 struct ModelConfig {
     1: optional i64 model_id (api.js_conv="true", go.tag='json:"model_id"')
@@ -362,19 +357,17 @@ struct ResponseAPIConfig {
     3: optional string session_id // 一轮会话的唯一标识
 }
 
-enum AccountMode {
-    SharedAccount = 1 // 使用共享模型账号
-    CustomAccount = 2 // 使用自定义模型账号
-}
+typedef string AccountMode (ts.enum="true")
+const AccountMode AccountMode_SharedAccount = "shared_account" // 使用共享模型账号
+const AccountMode AccountMode_CustomAccount = "custom_account" // 使用自定义模型账号
 
-enum UsageScenario {
-    Default = 1
-    Evaluation = 2
-    PromptAsAService = 3
-    AIAnnotate = 4
-    AIScore = 5
-    AITag = 6
-}
+typedef string UsageScenario (ts.enum="true")
+const UsageScenario UsageScenario_Default = "default"
+const UsageScenario UsageScenario_Evaluation = "evaluation"
+const UsageScenario UsageScenario_PromptAsAService = "prompt_as_a_service"
+const UsageScenario UsageScenario_AIAnnotate = "ai_annotate"
+const UsageScenario UsageScenario_AIScore = "ai_score"
+const UsageScenario UsageScenario_AITag = "ai_tag"
 
 struct ParamConfigValue {
     1: optional string name // 传给下游模型的key，与ParamSchema.name对齐

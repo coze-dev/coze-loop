@@ -509,8 +509,8 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 				Extra:       ptr.Of(`{"trace":"on"}`),
 				Thinking: &openapi.ThinkingConfig{
 					BudgetTokens:    ptr.Of(int64(128)),
-					ThinkingOption:  ptr.Of(openapi.ThinkingOption_Enabled),
-					ReasoningEffort: ptr.Of(openapi.ReasoningEffort_Low),
+					ThinkingOption:  ptr.Of(openapi.ThinkingOptionEnabled),
+					ReasoningEffort: ptr.Of(openapi.ReasoningEffortLow),
 				},
 			},
 		},
@@ -2316,7 +2316,7 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 			want: &openapi.ToolCallConfig{
 				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
 				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
-					Type: ptr.Of(prompt.ToolTypeFunction),
+					Type: ptr.Of(openapi.ToolTypeFunction),
 					Name: ptr.Of("get_weather"),
 				},
 			},
@@ -2331,7 +2331,7 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 				},
 			},
 			want: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
+				ToolChoice: ptr.Of(openapi.ToolChoiceTypeSpecific),
 				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
 					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
 					Name: ptr.Of("search"),
@@ -2405,9 +2405,9 @@ func TestOpenAPIToolCallConfigDTO2DO(t *testing.T) {
 		{
 			name: "specific tool choice with specification",
 			dto: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(openapi.ToolChoiceTypeSpecific),
+				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
 				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
-					Type: ptr.Of(openapi.ToolTypeFunction),
+					Type: ptr.Of(prompt.ToolTypeFunction),
 					Name: ptr.Of("tool_a"),
 				},
 			},
@@ -2435,8 +2435,8 @@ func TestOpenAPIModelConfigDTO2DO(t *testing.T) {
 		Temperature: ptr.Of(0.8),
 		Thinking: &openapi.ThinkingConfig{
 			BudgetTokens:    ptr.Of(int64(256)),
-			ThinkingOption:  ptr.Of(openapi.ThinkingOption_Enabled),
-			ReasoningEffort: ptr.Of(openapi.ReasoningEffort_High),
+			ThinkingOption:  ptr.Of(openapi.ThinkingOptionEnabled),
+			ReasoningEffort: ptr.Of(openapi.ReasoningEffortHigh),
 		},
 		ParamConfigValues: []*openapi.ParamConfigValue{
 			{

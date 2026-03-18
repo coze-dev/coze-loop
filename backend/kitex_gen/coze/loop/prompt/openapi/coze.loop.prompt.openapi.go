@@ -4,8 +4,6 @@ package openapi
 
 import (
 	"context"
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/cloudwego/kitex/pkg/streaming"
@@ -79,318 +77,53 @@ const (
 	ToolTypeFunction = "function"
 
 	ToolTypeGoogleSearch = "google_search"
+
+	PublishStatusUndefined = "undefined"
+
+	PublishStatusUnPublish = "unpublish"
+
+	PublishStatusPublished = "published"
+
+	SecurityLevelUndefined = "undefined"
+
+	SecurityLevelL1 = "L1"
+
+	SecurityLevelL2 = "L2"
+
+	SecurityLevelL3 = "L3"
+
+	SecurityLevelL4 = "L4"
+
+	ReasoningEffortMinimal = "minimal"
+
+	ReasoningEffortLow = "low"
+
+	ReasoningEffortMedium = "medium"
+
+	ReasoningEffortHigh = "high"
+
+	ThinkingOptionDisabled = "disabled"
+
+	ThinkingOptionEnabled = "enabled"
+
+	ThinkingOptionAuto = "auto"
+
+	AccountModeSharedAccount = "shared_account"
+
+	AccountModeCustomAccount = "custom_account"
+
+	UsageScenarioDefault = "default"
+
+	UsageScenarioEvaluation = "evaluation"
+
+	UsageScenarioPromptAsAService = "prompt_as_a_service"
+
+	UsageScenarioAIAnnotate = "ai_annotate"
+
+	UsageScenarioAIScore = "ai_score"
+
+	UsageScenarioAITag = "ai_tag"
 )
-
-type PublishStatus int64
-
-const (
-	PublishStatus_Undefined PublishStatus = 0
-	// 未发布
-	PublishStatus_UnPublish PublishStatus = 1
-	// 已发布
-	PublishStatus_Published PublishStatus = 2
-)
-
-func (p PublishStatus) String() string {
-	switch p {
-	case PublishStatus_Undefined:
-		return "Undefined"
-	case PublishStatus_UnPublish:
-		return "UnPublish"
-	case PublishStatus_Published:
-		return "Published"
-	}
-	return "<UNSET>"
-}
-
-func PublishStatusFromString(s string) (PublishStatus, error) {
-	switch s {
-	case "Undefined":
-		return PublishStatus_Undefined, nil
-	case "UnPublish":
-		return PublishStatus_UnPublish, nil
-	case "Published":
-		return PublishStatus_Published, nil
-	}
-	return PublishStatus(0), fmt.Errorf("not a valid PublishStatus string")
-}
-
-func PublishStatusPtr(v PublishStatus) *PublishStatus { return &v }
-func (p *PublishStatus) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = PublishStatus(result.Int64)
-	return
-}
-
-func (p *PublishStatus) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type SecurityLevel int64
-
-const (
-	SecurityLevel_Undefined SecurityLevel = 0
-	SecurityLevel_L1        SecurityLevel = 1
-	SecurityLevel_L2        SecurityLevel = 2
-	SecurityLevel_L3        SecurityLevel = 3
-	SecurityLevel_L4        SecurityLevel = 4
-)
-
-func (p SecurityLevel) String() string {
-	switch p {
-	case SecurityLevel_Undefined:
-		return "Undefined"
-	case SecurityLevel_L1:
-		return "L1"
-	case SecurityLevel_L2:
-		return "L2"
-	case SecurityLevel_L3:
-		return "L3"
-	case SecurityLevel_L4:
-		return "L4"
-	}
-	return "<UNSET>"
-}
-
-func SecurityLevelFromString(s string) (SecurityLevel, error) {
-	switch s {
-	case "Undefined":
-		return SecurityLevel_Undefined, nil
-	case "L1":
-		return SecurityLevel_L1, nil
-	case "L2":
-		return SecurityLevel_L2, nil
-	case "L3":
-		return SecurityLevel_L3, nil
-	case "L4":
-		return SecurityLevel_L4, nil
-	}
-	return SecurityLevel(0), fmt.Errorf("not a valid SecurityLevel string")
-}
-
-func SecurityLevelPtr(v SecurityLevel) *SecurityLevel { return &v }
-func (p *SecurityLevel) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = SecurityLevel(result.Int64)
-	return
-}
-
-func (p *SecurityLevel) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type ReasoningEffort int64
-
-const (
-	ReasoningEffort_Minimal ReasoningEffort = 1
-	ReasoningEffort_Low     ReasoningEffort = 2
-	ReasoningEffort_Medium  ReasoningEffort = 3
-	ReasoningEffort_High    ReasoningEffort = 4
-)
-
-func (p ReasoningEffort) String() string {
-	switch p {
-	case ReasoningEffort_Minimal:
-		return "Minimal"
-	case ReasoningEffort_Low:
-		return "Low"
-	case ReasoningEffort_Medium:
-		return "Medium"
-	case ReasoningEffort_High:
-		return "High"
-	}
-	return "<UNSET>"
-}
-
-func ReasoningEffortFromString(s string) (ReasoningEffort, error) {
-	switch s {
-	case "Minimal":
-		return ReasoningEffort_Minimal, nil
-	case "Low":
-		return ReasoningEffort_Low, nil
-	case "Medium":
-		return ReasoningEffort_Medium, nil
-	case "High":
-		return ReasoningEffort_High, nil
-	}
-	return ReasoningEffort(0), fmt.Errorf("not a valid ReasoningEffort string")
-}
-
-func ReasoningEffortPtr(v ReasoningEffort) *ReasoningEffort { return &v }
-func (p *ReasoningEffort) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = ReasoningEffort(result.Int64)
-	return
-}
-
-func (p *ReasoningEffort) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type ThinkingOption int64
-
-const (
-	ThinkingOption_Disabled ThinkingOption = 1
-	ThinkingOption_Enabled  ThinkingOption = 2
-	ThinkingOption_Auto     ThinkingOption = 3
-)
-
-func (p ThinkingOption) String() string {
-	switch p {
-	case ThinkingOption_Disabled:
-		return "Disabled"
-	case ThinkingOption_Enabled:
-		return "Enabled"
-	case ThinkingOption_Auto:
-		return "Auto"
-	}
-	return "<UNSET>"
-}
-
-func ThinkingOptionFromString(s string) (ThinkingOption, error) {
-	switch s {
-	case "Disabled":
-		return ThinkingOption_Disabled, nil
-	case "Enabled":
-		return ThinkingOption_Enabled, nil
-	case "Auto":
-		return ThinkingOption_Auto, nil
-	}
-	return ThinkingOption(0), fmt.Errorf("not a valid ThinkingOption string")
-}
-
-func ThinkingOptionPtr(v ThinkingOption) *ThinkingOption { return &v }
-func (p *ThinkingOption) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = ThinkingOption(result.Int64)
-	return
-}
-
-func (p *ThinkingOption) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type AccountMode int64
-
-const (
-	// 使用共享模型账号
-	AccountMode_SharedAccount AccountMode = 1
-	// 使用自定义模型账号
-	AccountMode_CustomAccount AccountMode = 2
-)
-
-func (p AccountMode) String() string {
-	switch p {
-	case AccountMode_SharedAccount:
-		return "SharedAccount"
-	case AccountMode_CustomAccount:
-		return "CustomAccount"
-	}
-	return "<UNSET>"
-}
-
-func AccountModeFromString(s string) (AccountMode, error) {
-	switch s {
-	case "SharedAccount":
-		return AccountMode_SharedAccount, nil
-	case "CustomAccount":
-		return AccountMode_CustomAccount, nil
-	}
-	return AccountMode(0), fmt.Errorf("not a valid AccountMode string")
-}
-
-func AccountModePtr(v AccountMode) *AccountMode { return &v }
-func (p *AccountMode) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = AccountMode(result.Int64)
-	return
-}
-
-func (p *AccountMode) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type UsageScenario int64
-
-const (
-	UsageScenario_Default          UsageScenario = 1
-	UsageScenario_Evaluation       UsageScenario = 2
-	UsageScenario_PromptAsAService UsageScenario = 3
-	UsageScenario_AIAnnotate       UsageScenario = 4
-	UsageScenario_AIScore          UsageScenario = 5
-	UsageScenario_AITag            UsageScenario = 6
-)
-
-func (p UsageScenario) String() string {
-	switch p {
-	case UsageScenario_Default:
-		return "Default"
-	case UsageScenario_Evaluation:
-		return "Evaluation"
-	case UsageScenario_PromptAsAService:
-		return "PromptAsAService"
-	case UsageScenario_AIAnnotate:
-		return "AIAnnotate"
-	case UsageScenario_AIScore:
-		return "AIScore"
-	case UsageScenario_AITag:
-		return "AITag"
-	}
-	return "<UNSET>"
-}
-
-func UsageScenarioFromString(s string) (UsageScenario, error) {
-	switch s {
-	case "Default":
-		return UsageScenario_Default, nil
-	case "Evaluation":
-		return UsageScenario_Evaluation, nil
-	case "PromptAsAService":
-		return UsageScenario_PromptAsAService, nil
-	case "AIAnnotate":
-		return UsageScenario_AIAnnotate, nil
-	case "AIScore":
-		return UsageScenario_AIScore, nil
-	case "AITag":
-		return UsageScenario_AITag, nil
-	}
-	return UsageScenario(0), fmt.Errorf("not a valid UsageScenario string")
-}
-
-func UsageScenarioPtr(v UsageScenario) *UsageScenario { return &v }
-func (p *UsageScenario) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = UsageScenario(result.Int64)
-	return
-}
-
-func (p *UsageScenario) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
 
 type PromptType = string
 
@@ -405,6 +138,18 @@ type VariableType = string
 type Role = string
 
 type ToolType = string
+
+type PublishStatus = string
+
+type SecurityLevel = string
+
+type ReasoningEffort = string
+
+type ThinkingOption = string
+
+type AccountMode = string
+
+type UsageScenario = string
 
 type BatchGetPromptByPromptKeyRequest struct {
 	WorkspaceID *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
@@ -1370,9 +1115,9 @@ type ExecuteRequest struct {
 	// response api 配置
 	ResponseAPIConfig *ResponseAPIConfig `thrift:"response_api_config,23,optional" frugal:"23,optional,ResponseAPIConfig" form:"response_api_config" json:"response_api_config,omitempty"`
 	// 账号模式（兼容字段）
-	AccountMode *AccountMode `thrift:"account_mode,24,optional" frugal:"24,optional,AccountMode" form:"account_mode" json:"account_mode,omitempty"`
+	AccountMode *AccountMode `thrift:"account_mode,24,optional" frugal:"24,optional,string" form:"account_mode" json:"account_mode,omitempty"`
 	// 使用场景（兼容字段）
-	UsageScenario *UsageScenario `thrift:"usage_scenario,26,optional" frugal:"26,optional,UsageScenario" form:"usage_scenario" json:"usage_scenario,omitempty"`
+	UsageScenario *UsageScenario `thrift:"usage_scenario,26,optional" frugal:"26,optional,string" form:"usage_scenario" json:"usage_scenario,omitempty"`
 	// 发布标签（兼容字段）
 	ReleaseLabel *string `thrift:"release_label,28,optional" frugal:"28,optional,string" form:"release_label" json:"release_label,omitempty"`
 	// 自定义工具配置（兼容字段）
@@ -1733,7 +1478,7 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 24:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -1741,7 +1486,7 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 26:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField26(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -1916,11 +1661,10 @@ func (p *ExecuteRequest) ReadField23(iprot thrift.TProtocol) error {
 func (p *ExecuteRequest) ReadField24(iprot thrift.TProtocol) error {
 
 	var _field *AccountMode
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := AccountMode(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.AccountMode = _field
 	return nil
@@ -1928,11 +1672,10 @@ func (p *ExecuteRequest) ReadField24(iprot thrift.TProtocol) error {
 func (p *ExecuteRequest) ReadField26(iprot thrift.TProtocol) error {
 
 	var _field *UsageScenario
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := UsageScenario(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.UsageScenario = _field
 	return nil
@@ -2211,10 +1954,10 @@ WriteFieldEndError:
 }
 func (p *ExecuteRequest) writeField24(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAccountMode() {
-		if err = oprot.WriteFieldBegin("account_mode", thrift.I32, 24); err != nil {
+		if err = oprot.WriteFieldBegin("account_mode", thrift.STRING, 24); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.AccountMode)); err != nil {
+		if err := oprot.WriteString(*p.AccountMode); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2229,10 +1972,10 @@ WriteFieldEndError:
 }
 func (p *ExecuteRequest) writeField26(oprot thrift.TProtocol) (err error) {
 	if p.IsSetUsageScenario() {
-		if err = oprot.WriteFieldBegin("usage_scenario", thrift.I32, 26); err != nil {
+		if err = oprot.WriteFieldBegin("usage_scenario", thrift.STRING, 26); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.UsageScenario)); err != nil {
+		if err := oprot.WriteString(*p.UsageScenario); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2442,7 +2185,7 @@ func (p *ExecuteRequest) Field24DeepEqual(src *AccountMode) bool {
 	} else if p.AccountMode == nil || src == nil {
 		return false
 	}
-	if *p.AccountMode != *src {
+	if strings.Compare(*p.AccountMode, *src) != 0 {
 		return false
 	}
 	return true
@@ -2454,7 +2197,7 @@ func (p *ExecuteRequest) Field26DeepEqual(src *UsageScenario) bool {
 	} else if p.UsageScenario == nil || src == nil {
 		return false
 	}
-	if *p.UsageScenario != *src {
+	if strings.Compare(*p.UsageScenario, *src) != 0 {
 		return false
 	}
 	return true
@@ -4760,11 +4503,11 @@ type Prompt struct {
 	CreatedAt  *int64      `thrift:"created_at,14,optional" frugal:"14,optional,i64" json:"created_at" form:"created_at" query:"created_at"`
 	UpdatedAt  *int64      `thrift:"updated_at,15,optional" frugal:"15,optional,i64" json:"updated_at" form:"updated_at" query:"updated_at"`
 	// 发布状态
-	Status *PublishStatus `thrift:"status,16,optional" frugal:"16,optional,PublishStatus" form:"status" json:"status,omitempty" query:"status"`
+	Status *PublishStatus `thrift:"status,16,optional" frugal:"16,optional,string" form:"status" json:"status,omitempty" query:"status"`
 	// 发布信息
 	PublishInfo *PromptPublishInfo `thrift:"PublishInfo,17,optional" frugal:"17,optional,PromptPublishInfo" form:"PublishInfo" json:"PublishInfo,omitempty" query:"PublishInfo"`
 	// 密级标签
-	SecurityLevel *SecurityLevel `thrift:"security_level,18,optional" frugal:"18,optional,SecurityLevel" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	SecurityLevel *SecurityLevel `thrift:"security_level,18,optional" frugal:"18,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
 }
 
 func NewPrompt() *Prompt {
@@ -5248,7 +4991,7 @@ func (p *Prompt) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 16:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField16(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -5264,7 +5007,7 @@ func (p *Prompt) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 18:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField18(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -5460,11 +5203,10 @@ func (p *Prompt) ReadField15(iprot thrift.TProtocol) error {
 func (p *Prompt) ReadField16(iprot thrift.TProtocol) error {
 
 	var _field *PublishStatus
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := PublishStatus(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.Status = _field
 	return nil
@@ -5480,11 +5222,10 @@ func (p *Prompt) ReadField17(iprot thrift.TProtocol) error {
 func (p *Prompt) ReadField18(iprot thrift.TProtocol) error {
 
 	var _field *SecurityLevel
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := SecurityLevel(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.SecurityLevel = _field
 	return nil
@@ -5844,10 +5585,10 @@ WriteFieldEndError:
 }
 func (p *Prompt) writeField16(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStatus() {
-		if err = oprot.WriteFieldBegin("status", thrift.I32, 16); err != nil {
+		if err = oprot.WriteFieldBegin("status", thrift.STRING, 16); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.Status)); err != nil {
+		if err := oprot.WriteString(*p.Status); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5880,10 +5621,10 @@ WriteFieldEndError:
 }
 func (p *Prompt) writeField18(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSecurityLevel() {
-		if err = oprot.WriteFieldBegin("security_level", thrift.I32, 18); err != nil {
+		if err = oprot.WriteFieldBegin("security_level", thrift.STRING, 18); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.SecurityLevel)); err != nil {
+		if err := oprot.WriteString(*p.SecurityLevel); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -6126,7 +5867,7 @@ func (p *Prompt) Field16DeepEqual(src *PublishStatus) bool {
 	} else if p.Status == nil || src == nil {
 		return false
 	}
-	if *p.Status != *src {
+	if strings.Compare(*p.Status, *src) != 0 {
 		return false
 	}
 	return true
@@ -6145,7 +5886,7 @@ func (p *Prompt) Field18DeepEqual(src *SecurityLevel) bool {
 	} else if p.SecurityLevel == nil || src == nil {
 		return false
 	}
-	if *p.SecurityLevel != *src {
+	if strings.Compare(*p.SecurityLevel, *src) != 0 {
 		return false
 	}
 	return true
@@ -15165,9 +14906,9 @@ func (p *PromptPublishInfo) Field3DeepEqual(src *int64) bool {
 type ThinkingConfig struct {
 	// thinking内容的最大输出token
 	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" json:"budget_tokens" form:"budget_tokens" query:"budget_tokens"`
-	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,ThinkingOption" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
+	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,string" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
 	// 思考长度
-	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,ReasoningEffort" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
+	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,string" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
 }
 
 func NewThinkingConfig() *ThinkingConfig {
@@ -15267,7 +15008,7 @@ func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15275,7 +15016,7 @@ func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -15325,11 +15066,10 @@ func (p *ThinkingConfig) ReadField1(iprot thrift.TProtocol) error {
 func (p *ThinkingConfig) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *ThinkingOption
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := ThinkingOption(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ThinkingOption = _field
 	return nil
@@ -15337,11 +15077,10 @@ func (p *ThinkingConfig) ReadField2(iprot thrift.TProtocol) error {
 func (p *ThinkingConfig) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *ReasoningEffort
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := ReasoningEffort(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ReasoningEffort = _field
 	return nil
@@ -15403,10 +15142,10 @@ WriteFieldEndError:
 }
 func (p *ThinkingConfig) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThinkingOption() {
-		if err = oprot.WriteFieldBegin("thinking_option", thrift.I32, 2); err != nil {
+		if err = oprot.WriteFieldBegin("thinking_option", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.ThinkingOption)); err != nil {
+		if err := oprot.WriteString(*p.ThinkingOption); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15421,10 +15160,10 @@ WriteFieldEndError:
 }
 func (p *ThinkingConfig) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetReasoningEffort() {
-		if err = oprot.WriteFieldBegin("reasoning_effort", thrift.I32, 3); err != nil {
+		if err = oprot.WriteFieldBegin("reasoning_effort", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.ReasoningEffort)); err != nil {
+		if err := oprot.WriteString(*p.ReasoningEffort); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -15483,7 +15222,7 @@ func (p *ThinkingConfig) Field2DeepEqual(src *ThinkingOption) bool {
 	} else if p.ThinkingOption == nil || src == nil {
 		return false
 	}
-	if *p.ThinkingOption != *src {
+	if strings.Compare(*p.ThinkingOption, *src) != 0 {
 		return false
 	}
 	return true
@@ -15495,7 +15234,7 @@ func (p *ThinkingConfig) Field3DeepEqual(src *ReasoningEffort) bool {
 	} else if p.ReasoningEffort == nil || src == nil {
 		return false
 	}
-	if *p.ReasoningEffort != *src {
+	if strings.Compare(*p.ReasoningEffort, *src) != 0 {
 		return false
 	}
 	return true

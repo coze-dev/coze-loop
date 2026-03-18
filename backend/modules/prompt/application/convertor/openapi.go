@@ -605,7 +605,17 @@ func OpenAPIThinkingOptionDTO2DO(dto *openapi.ThinkingOption) *entity.ThinkingOp
 	if dto == nil {
 		return nil
 	}
-	result := entity.ThinkingOption(*dto)
+	var result entity.ThinkingOption
+	switch *dto {
+	case openapi.ThinkingOptionDisabled:
+		result = entity.ThinkingOptionDisabled
+	case openapi.ThinkingOptionEnabled:
+		result = entity.ThinkingOptionEnabled
+	case openapi.ThinkingOptionAuto:
+		result = entity.ThinkingOptionAuto
+	default:
+		return nil
+	}
 	return &result
 }
 
@@ -614,7 +624,19 @@ func OpenAPIReasoningEffortDTO2DO(dto *openapi.ReasoningEffort) *entity.Reasonin
 	if dto == nil {
 		return nil
 	}
-	result := entity.ReasoningEffort(*dto)
+	var result entity.ReasoningEffort
+	switch *dto {
+	case openapi.ReasoningEffortMinimal:
+		result = entity.ReasoningEffortMinimal
+	case openapi.ReasoningEffortLow:
+		result = entity.ReasoningEffortLow
+	case openapi.ReasoningEffortMedium:
+		result = entity.ReasoningEffortMedium
+	case openapi.ReasoningEffortHigh:
+		result = entity.ReasoningEffortHigh
+	default:
+		return nil
+	}
 	return &result
 }
 
@@ -635,7 +657,17 @@ func OpenAPIThinkingOptionDO2DTO(do *entity.ThinkingOption) *openapi.ThinkingOpt
 	if do == nil {
 		return nil
 	}
-	result := openapi.ThinkingOption(*do)
+	var result openapi.ThinkingOption
+	switch *do {
+	case entity.ThinkingOptionDisabled:
+		result = openapi.ThinkingOptionDisabled
+	case entity.ThinkingOptionEnabled:
+		result = openapi.ThinkingOptionEnabled
+	case entity.ThinkingOptionAuto:
+		result = openapi.ThinkingOptionAuto
+	default:
+		return nil
+	}
 	return &result
 }
 
@@ -644,7 +676,19 @@ func OpenAPIReasoningEffortDO2DTO(do *entity.ReasoningEffort) *openapi.Reasoning
 	if do == nil {
 		return nil
 	}
-	result := openapi.ReasoningEffort(*do)
+	var result openapi.ReasoningEffort
+	switch *do {
+	case entity.ReasoningEffortMinimal:
+		result = openapi.ReasoningEffortMinimal
+	case entity.ReasoningEffortLow:
+		result = openapi.ReasoningEffortLow
+	case entity.ReasoningEffortMedium:
+		result = openapi.ReasoningEffortMedium
+	case entity.ReasoningEffortHigh:
+		result = openapi.ReasoningEffortHigh
+	default:
+		return nil
+	}
 	return &result
 }
 

@@ -3948,8 +3948,8 @@ func (p *McpConfig) Field2DeepEqual(src []*McpServerCombine) bool {
 }
 
 type McpServerCombine struct {
-	McpServerID    *int64   `thrift:"mcp_server_id,1,optional" frugal:"1,optional,i64" form:"mcp_server_id" json:"mcp_server_id,omitempty" query:"mcp_server_id"`
-	AccessPointID  *int64   `thrift:"access_point_id,2,optional" frugal:"2,optional,i64" form:"access_point_id" json:"access_point_id,omitempty" query:"access_point_id"`
+	McpServerID    *int64   `thrift:"mcp_server_id,1,optional" frugal:"1,optional,i64" json:"mcp_server_id" form:"mcp_server_id" query:"mcp_server_id"`
+	AccessPointID  *int64   `thrift:"access_point_id,2,optional" frugal:"2,optional,i64" json:"access_point_id" form:"access_point_id" query:"access_point_id"`
 	DisabledTools  []string `thrift:"disabled_tools,3,optional" frugal:"3,optional,list<string>" form:"disabled_tools" json:"disabled_tools,omitempty" query:"disabled_tools"`
 	EnabledTools   []string `thrift:"enabled_tools,4,optional" frugal:"4,optional,list<string>" form:"enabled_tools" json:"enabled_tools,omitempty" query:"enabled_tools"`
 	IsEnabledTools *bool    `thrift:"is_enabled_tools,5,optional" frugal:"5,optional,bool" form:"is_enabled_tools" json:"is_enabled_tools,omitempty" query:"is_enabled_tools"`
@@ -7196,7 +7196,7 @@ func (p *ModelConfig) Field100DeepEqual(src []*ParamConfigValue) bool {
 
 type ThinkingConfig struct {
 	// thinking内容的最大输出token
-	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" form:"budget_tokens" json:"budget_tokens,omitempty" query:"budget_tokens"`
+	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" json:"budget_tokens" form:"budget_tokens" query:"budget_tokens"`
 	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,ThinkingOption" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
 	// 思考长度
 	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,ReasoningEffort" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`

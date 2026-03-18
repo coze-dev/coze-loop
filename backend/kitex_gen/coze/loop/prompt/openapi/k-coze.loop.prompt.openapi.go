@@ -848,7 +848,7 @@ func (p *ExecuteRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 24:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField24(buf[offset:])
 				offset += l
 				if err != nil {
@@ -862,7 +862,7 @@ func (p *ExecuteRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 26:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField26(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1076,13 +1076,11 @@ func (p *ExecuteRequest) FastReadField24(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *AccountMode
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := AccountMode(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.AccountMode = _field
 	return offset, nil
@@ -1092,13 +1090,11 @@ func (p *ExecuteRequest) FastReadField26(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *UsageScenario
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := UsageScenario(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.UsageScenario = _field
 	return offset, nil
@@ -1284,8 +1280,8 @@ func (p *ExecuteRequest) fastWriteField23(buf []byte, w thrift.NocopyWriter) int
 func (p *ExecuteRequest) fastWriteField24(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetAccountMode() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 24)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.AccountMode))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 24)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.AccountMode)
 	}
 	return offset
 }
@@ -1293,8 +1289,8 @@ func (p *ExecuteRequest) fastWriteField24(buf []byte, w thrift.NocopyWriter) int
 func (p *ExecuteRequest) fastWriteField26(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetUsageScenario() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 26)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.UsageScenario))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 26)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.UsageScenario)
 	}
 	return offset
 }
@@ -1414,7 +1410,7 @@ func (p *ExecuteRequest) field24Length() int {
 	l := 0
 	if p.IsSetAccountMode() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.AccountMode)
 	}
 	return l
 }
@@ -1423,7 +1419,7 @@ func (p *ExecuteRequest) field26Length() int {
 	l := 0
 	if p.IsSetUsageScenario() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.UsageScenario)
 	}
 	return l
 }
@@ -3397,7 +3393,7 @@ func (p *Prompt) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 16:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField16(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3425,7 +3421,7 @@ func (p *Prompt) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 18:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField18(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3661,13 +3657,11 @@ func (p *Prompt) FastReadField16(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *PublishStatus
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := PublishStatus(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.Status = _field
 	return offset, nil
@@ -3689,13 +3683,11 @@ func (p *Prompt) FastReadField18(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *SecurityLevel
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := SecurityLevel(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.SecurityLevel = _field
 	return offset, nil
@@ -3891,8 +3883,8 @@ func (p *Prompt) fastWriteField15(buf []byte, w thrift.NocopyWriter) int {
 func (p *Prompt) fastWriteField16(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetStatus() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 16)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Status))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 16)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Status)
 	}
 	return offset
 }
@@ -3909,8 +3901,8 @@ func (p *Prompt) fastWriteField17(buf []byte, w thrift.NocopyWriter) int {
 func (p *Prompt) fastWriteField18(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSecurityLevel() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 18)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.SecurityLevel))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 18)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SecurityLevel)
 	}
 	return offset
 }
@@ -4049,7 +4041,7 @@ func (p *Prompt) field16Length() int {
 	l := 0
 	if p.IsSetStatus() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.Status)
 	}
 	return l
 }
@@ -4067,7 +4059,7 @@ func (p *Prompt) field18Length() int {
 	l := 0
 	if p.IsSetSecurityLevel() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.SecurityLevel)
 	}
 	return l
 }
@@ -10642,7 +10634,7 @@ func (p *ThinkingConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -10656,7 +10648,7 @@ func (p *ThinkingConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 3:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
@@ -10705,13 +10697,11 @@ func (p *ThinkingConfig) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *ThinkingOption
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := ThinkingOption(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ThinkingOption = _field
 	return offset, nil
@@ -10721,13 +10711,11 @@ func (p *ThinkingConfig) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *ReasoningEffort
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := ReasoningEffort(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ReasoningEffort = _field
 	return offset, nil
@@ -10771,8 +10759,8 @@ func (p *ThinkingConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int 
 func (p *ThinkingConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetThinkingOption() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.ThinkingOption))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ThinkingOption)
 	}
 	return offset
 }
@@ -10780,8 +10768,8 @@ func (p *ThinkingConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int 
 func (p *ThinkingConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetReasoningEffort() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 3)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.ReasoningEffort))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ReasoningEffort)
 	}
 	return offset
 }
@@ -10799,7 +10787,7 @@ func (p *ThinkingConfig) field2Length() int {
 	l := 0
 	if p.IsSetThinkingOption() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.ThinkingOption)
 	}
 	return l
 }
@@ -10808,7 +10796,7 @@ func (p *ThinkingConfig) field3Length() int {
 	l := 0
 	if p.IsSetReasoningEffort() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.ReasoningEffort)
 	}
 	return l
 }

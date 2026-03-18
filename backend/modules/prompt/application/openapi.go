@@ -388,8 +388,8 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 			Stream:        false,
 			HasMessage:    len(req.Messages) > 0,
 			HasContexts:   len(req.Messages) > 1,
-			AccountMode:   getRequestAccountMode(req).String(),
-			UsageScenario: getRequestUsageScenario(req).String(),
+			AccountMode:   getRequestAccountMode(req),
+			UsageScenario: getRequestUsageScenario(req),
 			InputTokens:   intputTokens,
 			OutputTokens:  outputTokens,
 			StartedAt:     startTime,
@@ -515,8 +515,8 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 			Stream:        true,
 			HasMessage:    len(req.Messages) > 0,
 			HasContexts:   len(req.Messages) > 1,
-			AccountMode:   getRequestAccountMode(req).String(),
-			UsageScenario: getRequestUsageScenario(req).String(),
+			AccountMode:   getRequestAccountMode(req),
+			UsageScenario: getRequestUsageScenario(req),
 			InputTokens:   intputTokens,
 			OutputTokens:  outputTokens,
 			StartedAt:     startTime,
@@ -869,14 +869,14 @@ func getRequestPromptKey(req *openapi.ExecuteRequest) string {
 
 func getRequestAccountMode(req *openapi.ExecuteRequest) openapi.AccountMode {
 	if req == nil || req.AccountMode == nil {
-		return openapi.AccountMode_SharedAccount
+		return openapi.AccountModeSharedAccount
 	}
 	return req.GetAccountMode()
 }
 
 func getRequestUsageScenario(req *openapi.ExecuteRequest) openapi.UsageScenario {
 	if req == nil || req.UsageScenario == nil {
-		return openapi.UsageScenario_PromptAsAService
+		return openapi.UsageScenarioPromptAsAService
 	}
 	return req.GetUsageScenario()
 }
@@ -918,8 +918,8 @@ func (p *PromptOpenAPIApplicationImpl) emitExecuteMetrics(
 	if req.GetPromptIdentifier() != nil && req.GetPromptIdentifier().GetPromptKey() != "" {
 		promptmetrics.WithPaasPromptKey(ctx, req.GetPromptIdentifier().GetPromptKey())
 	}
-	promptmetrics.WithPaaSAccountMode(ctx, getRequestAccountMode(req).String())
-	promptmetrics.WithPaasUsageScenario(ctx, getRequestUsageScenario(req).String())
+	promptmetrics.WithPaaSAccountMode(ctx, getRequestAccountMode(req))
+	promptmetrics.WithPaasUsageScenario(ctx, getRequestUsageScenario(req))
 
 	// OpenAPI 使用 messages 承载上下文与当前提问，兼容 legacy tags 语义
 	hasMessage := len(req.Messages) > 0
