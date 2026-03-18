@@ -104,7 +104,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if existRecord := e.existedTargetRecord(etec); !etec.Event.IgnoreExistedResult() && existRecord != nil {
+	if existRecord := e.existedTargetRecord(etec); !etec.Event.IgnoreExistedTargetResult() && existRecord != nil {
 		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
 		return existRecord, nil
 	}
@@ -113,6 +113,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		if etec.ExptTurnRunResult == nil || etec.ExptTurnRunResult.TargetResult == nil {
 			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
 		}
+		etec.Event.WithCtxTargetCalled(ctx)
 		return etec.ExptTurnRunResult.TargetResult, nil
 	}
 
@@ -120,7 +121,13 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return nil, err
 	}
 
-	return e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+	record, err := e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	etec.Event.WithCtxTargetCalled(ctx)
+	return record, nil
 }
 
 // skipTargetNode Whether target is called is determined by the target info bound in expt;
@@ -275,7 +282,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
-		if !etec.Event.IgnoreExistedResult() && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}

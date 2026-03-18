@@ -3,6 +3,12 @@
 
 package entity
 
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
+)
+
 type ExptScheduleEvent struct {
 	SpaceID     int64
 	ExptID      int64
@@ -17,6 +23,8 @@ type ExptScheduleEvent struct {
 	ItemRetryTimes     int
 	ExecEvalSetItemIDs []int64
 }
+
+type ctxTargetCalledCacheKey struct{}
 
 type ExptItemEvalEvent struct {
 	SpaceID     int64
@@ -35,7 +43,27 @@ type ExptItemEvalEvent struct {
 	Session       *Session
 }
 
-func (e *ExptItemEvalEvent) IgnoreExistedResult() bool {
+func (e *ExptItemEvalEvent) IgnoreExistedTargetResult() bool {
+	return e.ignoreExistedResult()
+}
+
+func (e *ExptItemEvalEvent) WithCtxTargetCalled(ctx context.Context) {
+	ctxcache.Store(ctx, ctxTargetCalledCacheKey{}, struct{}{})
+}
+
+func (e *ExptItemEvalEvent) CtxTargetCalled(ctx context.Context) bool {
+	_, ok := ctxcache.Get[struct{}](ctx, ctxTargetCalledCacheKey{})
+	return ok
+}
+
+func (e *ExptItemEvalEvent) IgnoreExistedEvaluatorResult(ctx context.Context) bool {
+	if e.CtxTargetCalled(ctx) {
+		return false
+	}
+	return e.ignoreExistedResult()
+}
+
+func (e *ExptItemEvalEvent) ignoreExistedResult() bool {
 	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
 }
 
