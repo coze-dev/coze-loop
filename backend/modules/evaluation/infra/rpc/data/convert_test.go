@@ -1202,8 +1202,8 @@ func TestConvert2DatasetIOFile(t *testing.T) {
 	file := &dataset_job.DatasetIOFile{
 		Provider:         dataset.StorageProvider(1),
 		Path:             "path",
-		Format:           (*dataset_job.FileFormat)(gptr.Of(dataset_job.FileFormat(1))),
-		CompressFormat:   (*dataset_job.FileFormat)(gptr.Of(dataset_job.FileFormat(2))),
+		Format:           gptr.Of(dataset_job.FileFormat(1)),
+		CompressFormat:   gptr.Of(dataset_job.FileFormat(2)),
 		Files:            []string{"f1"},
 		OriginalFileName: gptr.Of("name"),
 		DownloadURL:      gptr.Of("url"),
@@ -1317,8 +1317,8 @@ func TestConvert2ThriftDatasetIOFile(t *testing.T) {
 	file := &entity.DatasetIOFile{
 		Provider:         entity.StorageProvider(1),
 		Path:             "path",
-		Format:           (*entity.FileFormat)(gptr.Of(entity.FileFormat(1))),
-		CompressFormat:   (*entity.FileFormat)(gptr.Of(entity.FileFormat(2))),
+		Format:           gptr.Of(entity.FileFormat(1)),
+		CompressFormat:   gptr.Of(entity.FileFormat(2)),
 		Files:            []string{"f1"},
 		OriginalFileName: gptr.Of("name"),
 		DownloadURL:      gptr.Of("url"),
