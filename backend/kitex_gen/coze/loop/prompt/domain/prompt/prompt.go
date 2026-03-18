@@ -3,8 +3,6 @@
 package prompt
 
 import (
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"strings"
@@ -40,6 +38,20 @@ const (
 	ToolChoiceTypeAuto = "auto"
 
 	ToolChoiceTypeSpecific = "specific"
+
+	ReasoningEffortMinimal = "minimal"
+
+	ReasoningEffortLow = "low"
+
+	ReasoningEffortMedium = "medium"
+
+	ReasoningEffortHigh = "high"
+
+	ThinkingOptionDisabled = "disabled"
+
+	ThinkingOptionEnabled = "enabled"
+
+	ThinkingOptionAuto = "auto"
 
 	RoleSystem = "system"
 
@@ -88,105 +100,6 @@ const (
 	ScenarioEvalTarget = "eval_target"
 )
 
-type ReasoningEffort int64
-
-const (
-	ReasoningEffort_Minimal ReasoningEffort = 1
-	ReasoningEffort_Low     ReasoningEffort = 2
-	ReasoningEffort_Medium  ReasoningEffort = 3
-	ReasoningEffort_High    ReasoningEffort = 4
-)
-
-func (p ReasoningEffort) String() string {
-	switch p {
-	case ReasoningEffort_Minimal:
-		return "Minimal"
-	case ReasoningEffort_Low:
-		return "Low"
-	case ReasoningEffort_Medium:
-		return "Medium"
-	case ReasoningEffort_High:
-		return "High"
-	}
-	return "<UNSET>"
-}
-
-func ReasoningEffortFromString(s string) (ReasoningEffort, error) {
-	switch s {
-	case "Minimal":
-		return ReasoningEffort_Minimal, nil
-	case "Low":
-		return ReasoningEffort_Low, nil
-	case "Medium":
-		return ReasoningEffort_Medium, nil
-	case "High":
-		return ReasoningEffort_High, nil
-	}
-	return ReasoningEffort(0), fmt.Errorf("not a valid ReasoningEffort string")
-}
-
-func ReasoningEffortPtr(v ReasoningEffort) *ReasoningEffort { return &v }
-func (p *ReasoningEffort) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = ReasoningEffort(result.Int64)
-	return
-}
-
-func (p *ReasoningEffort) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
-type ThinkingOption int64
-
-const (
-	ThinkingOption_Disabled ThinkingOption = 1
-	ThinkingOption_Enabled  ThinkingOption = 2
-	ThinkingOption_Auto     ThinkingOption = 3
-)
-
-func (p ThinkingOption) String() string {
-	switch p {
-	case ThinkingOption_Disabled:
-		return "Disabled"
-	case ThinkingOption_Enabled:
-		return "Enabled"
-	case ThinkingOption_Auto:
-		return "Auto"
-	}
-	return "<UNSET>"
-}
-
-func ThinkingOptionFromString(s string) (ThinkingOption, error) {
-	switch s {
-	case "Disabled":
-		return ThinkingOption_Disabled, nil
-	case "Enabled":
-		return ThinkingOption_Enabled, nil
-	case "Auto":
-		return ThinkingOption_Auto, nil
-	}
-	return ThinkingOption(0), fmt.Errorf("not a valid ThinkingOption string")
-}
-
-func ThinkingOptionPtr(v ThinkingOption) *ThinkingOption { return &v }
-func (p *ThinkingOption) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = ThinkingOption(result.Int64)
-	return
-}
-
-func (p *ThinkingOption) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
-
 type PromptType = string
 
 type SecurityLevel = string
@@ -196,6 +109,10 @@ type TemplateType = string
 type ToolType = string
 
 type ToolChoiceType = string
+
+type ReasoningEffort = string
+
+type ThinkingOption = string
 
 type Role = string
 
@@ -7197,9 +7114,9 @@ func (p *ModelConfig) Field100DeepEqual(src []*ParamConfigValue) bool {
 type ThinkingConfig struct {
 	// thinking内容的最大输出token
 	BudgetTokens   *int64          `thrift:"budget_tokens,1,optional" frugal:"1,optional,i64" json:"budget_tokens" form:"budget_tokens" query:"budget_tokens"`
-	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,ThinkingOption" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
+	ThinkingOption *ThinkingOption `thrift:"thinking_option,2,optional" frugal:"2,optional,string" form:"thinking_option" json:"thinking_option,omitempty" query:"thinking_option"`
 	// 思考长度
-	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,ReasoningEffort" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
+	ReasoningEffort *ReasoningEffort `thrift:"reasoning_effort,3,optional" frugal:"3,optional,string" form:"reasoning_effort" json:"reasoning_effort,omitempty" query:"reasoning_effort"`
 }
 
 func NewThinkingConfig() *ThinkingConfig {
@@ -7299,7 +7216,7 @@ func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -7307,7 +7224,7 @@ func (p *ThinkingConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 3:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -7357,11 +7274,10 @@ func (p *ThinkingConfig) ReadField1(iprot thrift.TProtocol) error {
 func (p *ThinkingConfig) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *ThinkingOption
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := ThinkingOption(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ThinkingOption = _field
 	return nil
@@ -7369,11 +7285,10 @@ func (p *ThinkingConfig) ReadField2(iprot thrift.TProtocol) error {
 func (p *ThinkingConfig) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *ReasoningEffort
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := ReasoningEffort(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.ReasoningEffort = _field
 	return nil
@@ -7435,10 +7350,10 @@ WriteFieldEndError:
 }
 func (p *ThinkingConfig) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThinkingOption() {
-		if err = oprot.WriteFieldBegin("thinking_option", thrift.I32, 2); err != nil {
+		if err = oprot.WriteFieldBegin("thinking_option", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.ThinkingOption)); err != nil {
+		if err := oprot.WriteString(*p.ThinkingOption); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -7453,10 +7368,10 @@ WriteFieldEndError:
 }
 func (p *ThinkingConfig) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetReasoningEffort() {
-		if err = oprot.WriteFieldBegin("reasoning_effort", thrift.I32, 3); err != nil {
+		if err = oprot.WriteFieldBegin("reasoning_effort", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.ReasoningEffort)); err != nil {
+		if err := oprot.WriteString(*p.ReasoningEffort); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -7515,7 +7430,7 @@ func (p *ThinkingConfig) Field2DeepEqual(src *ThinkingOption) bool {
 	} else if p.ThinkingOption == nil || src == nil {
 		return false
 	}
-	if *p.ThinkingOption != *src {
+	if strings.Compare(*p.ThinkingOption, *src) != 0 {
 		return false
 	}
 	return true
@@ -7527,7 +7442,7 @@ func (p *ThinkingConfig) Field3DeepEqual(src *ReasoningEffort) bool {
 	} else if p.ReasoningEffort == nil || src == nil {
 		return false
 	}
-	if *p.ReasoningEffort != *src {
+	if strings.Compare(*p.ReasoningEffort, *src) != 0 {
 		return false
 	}
 	return true
