@@ -17,6 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -38,6 +39,7 @@ func NewExptTemplateManager(
 	evaluationSetVersionService EvaluationSetVersionService,
 	lwt platestwrite.ILatestWriteTracker,
 	taskRPCAdapter rpc.ITaskRPCAdapter,
+	pipelineRPCAdapter rpc.IPipelineListAdapter,
 	exptRepo repo.IExperimentRepo,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
@@ -49,6 +51,7 @@ func NewExptTemplateManager(
 		evaluationSetVersionService: evaluationSetVersionService,
 		lwt:                         lwt,
 		taskRPCAdapter:              taskRPCAdapter,
+		pipelineRPCAdapter:         pipelineRPCAdapter,
 		exptRepo:                    exptRepo,
 	}
 }
@@ -62,6 +65,7 @@ type ExptTemplateManagerImpl struct {
 	evaluationSetVersionService EvaluationSetVersionService
 	lwt                         platestwrite.ILatestWriteTracker
 	taskRPCAdapter              rpc.ITaskRPCAdapter
+	pipelineRPCAdapter          rpc.IPipelineListAdapter
 	exptRepo                    repo.IExperimentRepo
 }
 
@@ -586,14 +590,15 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 	return templates, count, nil
 }
 
-// ListOnline 查询在线实验模板（通过 Task 查询）
+// ListOnline 查询在线实验模板（Task 与 ExptTemplate 同级）
+// 1. 通过 taskRPCAdapter.ListTasks 查询所有 task，转换为 ExptTemplate（直接用 task.Rule.SpanFilters，Scheduler 从 task 取）
+// 2. 查询当前空间下所有在线 ExptTemplate（expt_type=Online）
+// 3. 合并后内存筛选、排序、分页
 func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 	// Step 1: 通过 ITaskRPCAdapter 查询当前空间下所有的 task
-	// 由于 ListTasks 接口支持分页，但我们需要获取所有 task，所以先查询所有 task
-	limit := int32(200) // ListTasks 接口的最大 limit
+	limit := int32(200)
 	offset := int32(0)
 	var allTasks []*taskdomain.Task
-
 	for {
 		tasks, total, err := e.taskRPCAdapter.ListTasks(ctx, &rpc.ListTasksParam{
 			WorkspaceID: spaceID,
@@ -613,86 +618,105 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 		offset += limit
 	}
 
-	if len(allTasks) == 0 {
-		return []*entity.ExptTemplate{}, 0, nil
-	}
-
-	// Step 2: 从 task 中提取 task_id，查询关联的在线实验
-	taskIDs := make([]string, 0, len(allTasks))
+	// Step 2: 将 task 转换为 ExptTemplate（使用 task.Rule.SpanFilters，Scheduler 从 task 取，Task 无 Scheduler 则为 nil）
+	taskTemplates := make([]*entity.ExptTemplate, 0, len(allTasks))
 	for _, task := range allTasks {
-		if task.ID != nil {
-			taskIDs = append(taskIDs, strconv.FormatInt(*task.ID, 10))
+		if task == nil || task.ID == nil {
+			continue
+		}
+		tpl := taskToExptTemplate(task, spaceID)
+		if tpl != nil {
+			taskTemplates = append(taskTemplates, tpl)
 		}
 	}
 
-	// 查询在线实验：source_type = AutoTask (2), source_id in taskIDs, expt_type = Online
-	// 根据 IDL 定义：SourceType_AutoTask = 2
-	exptFilter := &entity.ExptListFilter{
-		Includes: &entity.ExptFilterFields{
-			ExptType:   []int64{int64(entity.ExptType_Online)},
-			SourceType: []int64{2}, // AutoTask = 2
-			SourceID:   taskIDs,
+	// Step 2.5: 填充 task 转换的模板的 Evaluators（通过 BatchGetEvaluatorVersion）
+	if len(taskTemplates) > 0 {
+		taskTupleIDs := make([]*entity.ExptTupleID, 0, len(taskTemplates))
+		for _, t := range taskTemplates {
+			taskTupleIDs = append(taskTupleIDs, e.packTemplateTupleID(t))
+		}
+		taskExptTuples, err := e.mgetExptTupleByID(ctx, taskTupleIDs, spaceID, session)
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "mget expt tuple for task templates fail")
+		}
+		for idx := range taskExptTuples {
+			taskTemplates[idx].Evaluators = taskExptTuples[idx].Evaluators
+		}
+	}
+
+	// Step 3: 查询当前空间下所有在线 ExptTemplate（expt_type=Online）
+	onlineFilter := &entity.ExptTemplateListFilter{
+		Includes: &entity.ExptTemplateFilterFields{
+			ExptType: []int64{int64(entity.ExptType_Online)},
 		},
 	}
-
-	// 查询所有相关的在线实验（不分页，因为需要获取所有）
-	onlineExpts, _, err := e.exptRepo.List(ctx, 0, 0, exptFilter, nil, spaceID)
-	if err != nil {
-		return nil, 0, errorx.Wrapf(err, "list online experiments fail, workspace_id: %d", spaceID)
-	}
-
-	if len(onlineExpts) == 0 {
-		return []*entity.ExptTemplate{}, 0, nil
-	}
-
-	// Step 3: 从在线实验中提取实验模板ID
-	templateIDSet := make(map[int64]bool)
-	for _, expt := range onlineExpts {
-		if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
-			templateIDSet[expt.ExptTemplateMeta.ID] = true
+	if filter != nil {
+		onlineFilter.FuzzyName = filter.FuzzyName
+		onlineFilter.Excludes = filter.Excludes
+		if filter.Includes != nil {
+			onlineFilter.Includes = &entity.ExptTemplateFilterFields{
+				ExptType:     []int64{int64(entity.ExptType_Online)},
+				CreatedBy:    filter.Includes.CreatedBy,
+				UpdatedBy:    filter.Includes.UpdatedBy,
+				EvalSetIDs:   filter.Includes.EvalSetIDs,
+				TargetIDs:    filter.Includes.TargetIDs,
+				EvaluatorIDs: filter.Includes.EvaluatorIDs,
+				TargetType:   filter.Includes.TargetType,
+			}
 		}
 	}
-
-	if len(templateIDSet) == 0 {
-		return []*entity.ExptTemplate{}, 0, nil
+	// 分页拉取所有在线模板（templateRepo.List 在 page/size 为 0 时只返回 defaultLimit 条）
+	listPageSize := int32(200)
+	listPageNum := int32(1)
+	var dbTemplates []*entity.ExptTemplate
+	for {
+		pageTemplates, total, err := e.templateRepo.List(ctx, listPageNum, listPageSize, onlineFilter, nil, spaceID)
+		if err != nil {
+			return nil, 0, errorx.Wrapf(err, "list online templates fail, workspace_id: %d", spaceID)
+		}
+		dbTemplates = append(dbTemplates, pageTemplates...)
+		if total == 0 || int64(len(dbTemplates)) >= total {
+			break
+		}
+		listPageNum++
 	}
 
-	templateIDs := make([]int64, 0, len(templateIDSet))
-	for id := range templateIDSet {
-		templateIDs = append(templateIDs, id)
-	}
-
-	// Step 4: 批量查询实验模板
-	templates, err := e.MGet(ctx, templateIDs, spaceID, session)
-	if err != nil {
-		return nil, 0, errorx.Wrapf(err, "mget experiment templates fail, template_ids: %v", templateIDs)
-	}
-
-	// Step 4.5: 填充关联数据（EvalSet、Target、Evaluators）
-	if len(templates) > 0 {
-		tupleIDs := make([]*entity.ExptTupleID, 0, len(templates))
-		for _, template := range templates {
-			tupleIDs = append(tupleIDs, e.packTemplateTupleID(template))
+	// Step 4: 填充 DB 模板的关联数据（EvalSet、Target、Evaluators）
+	if len(dbTemplates) > 0 {
+		tupleIDs := make([]*entity.ExptTupleID, 0, len(dbTemplates))
+		for _, t := range dbTemplates {
+			tupleIDs = append(tupleIDs, e.packTemplateTupleID(t))
 		}
 		exptTuples, err := e.mgetExptTupleByID(ctx, tupleIDs, spaceID, session)
 		if err != nil {
-			return nil, 0, errorx.Wrapf(err, "mget expt tuple by id fail, template_ids: %v", templateIDs)
+			return nil, 0, errorx.Wrapf(err, "mget expt tuple by id fail")
 		}
-		// 填充关联数据
 		for idx := range exptTuples {
-			templates[idx].EvalSet = exptTuples[idx].EvalSet
-			templates[idx].Target = exptTuples[idx].Target
-			templates[idx].Evaluators = exptTuples[idx].Evaluators
+			dbTemplates[idx].EvalSet = exptTuples[idx].EvalSet
+			dbTemplates[idx].Target = exptTuples[idx].Target
+			dbTemplates[idx].Evaluators = exptTuples[idx].Evaluators
 		}
 	}
 
-	// Step 5: 应用筛选条件
-	filteredTemplates := e.applyTemplateFilters(templates, filter)
+	// Step 5: 对 DB 模板（非 task 来源）从 Pipeline 填充 ExptSource.SpanFilterFields 和 Scheduler
+	// 来自 task 的模板已在 taskToExptTemplate 中填充，此处只处理 DB 中的在线模板
+	if err := e.enrichExptSourceFromPipeline(ctx, dbTemplates, spaceID); err != nil {
+		return nil, 0, errorx.Wrapf(err, "enrich expt source from pipeline fail, workspace_id: %d", spaceID)
+	}
 
-	// Step 6: 应用排序
+	// Step 6: 合并 task 转换的模板 + DB 模板
+	allTemplates := make([]*entity.ExptTemplate, 0, len(taskTemplates)+len(dbTemplates))
+	allTemplates = append(allTemplates, taskTemplates...)
+	allTemplates = append(allTemplates, dbTemplates...)
+
+	// Step 7: 内存筛选
+	filteredTemplates := e.applyTemplateFilters(allTemplates, filter)
+
+	// Step 8: 内存排序
 	e.applyTemplateOrderBy(filteredTemplates, orderBys)
 
-	// Step 7: 应用分页
+	// Step 9: 内存分页
 	total := int64(len(filteredTemplates))
 	start := int((page - 1) * pageSize)
 	end := start + int(pageSize)
@@ -704,6 +728,384 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 	}
 
 	return filteredTemplates[start:end], total, nil
+}
+
+// taskToExptTemplate 将 task 转换为 ExptTemplate，直接使用 task.Rule.SpanFilters 和 task 中的 Scheduler
+// 将 task.TaskConfig.AutoEvaluateConfigs 转为 ExptTemplate 的评估器配置
+func taskToExptTemplate(task *taskdomain.Task, spaceID int64) *entity.ExptTemplate {
+	if task == nil || task.ID == nil {
+		return nil
+	}
+	taskID := strconv.FormatInt(*task.ID, 10)
+	meta := &entity.ExptTemplateMeta{
+		ID:          -*task.ID, // 使用负数区分 task 来源，避免与 DB 模板 ID 冲突
+		WorkspaceID: spaceID,
+		Name:        task.Name,
+		Desc:        "",
+		ExptType:    entity.ExptType_Online,
+	}
+	exptSource := &entity.ExptSource{
+		SourceType: entity.SourceType_AutoTask,
+		SourceID:   taskID,
+	}
+	if task.Rule != nil && task.Rule.SpanFilters != nil {
+		exptSource.SpanFilterFields = spanFilterFieldsFromTaskRule(task.Rule.SpanFilters)
+	}
+	exptSource.Scheduler = nil
+
+	baseInfo := &entity.BaseInfo{}
+	if task.BaseInfo != nil {
+		baseInfo.CreatedAt = task.BaseInfo.CreatedAt
+		baseInfo.UpdatedAt = task.BaseInfo.UpdatedAt
+		if task.BaseInfo.CreatedBy != nil && task.BaseInfo.CreatedBy.IsSetUserID() {
+			uid := task.BaseInfo.CreatedBy.GetUserID()
+			baseInfo.CreatedBy = &entity.UserInfo{UserID: &uid}
+		}
+		if task.BaseInfo.UpdatedBy != nil && task.BaseInfo.UpdatedBy.IsSetUserID() {
+			uid := task.BaseInfo.UpdatedBy.GetUserID()
+			baseInfo.UpdatedBy = &entity.UserInfo{UserID: &uid}
+		}
+	}
+
+	// 从 task.TaskConfig.AutoEvaluateConfigs 转为 ExptTemplate 的 TripleConfig 和 TemplateConf.ConnectorConf.EvaluatorsConf
+	tripleConfig, connectorConf := autoEvaluateConfigsToExptTemplateConf(task.TaskConfig)
+
+	return &entity.ExptTemplate{
+		Meta:         meta,
+		TripleConfig: tripleConfig,
+		ExptSource:   exptSource,
+		BaseInfo:     baseInfo,
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ExptSource:    exptSource,
+			ConnectorConf: connectorConf,
+		},
+	}
+}
+
+// autoEvaluateConfigsToExptTemplateConf 将 task.TaskConfig.AutoEvaluateConfigs 转为 TripleConfig 和 ConnectorConf
+func autoEvaluateConfigsToExptTemplateConf(taskConfig *taskdomain.TaskConfig) (*entity.ExptTemplateTuple, entity.Connector) {
+	connector := entity.Connector{}
+	if taskConfig == nil || len(taskConfig.AutoEvaluateConfigs) == 0 {
+		return nil, connector
+	}
+
+	evaluatorConfs := make([]*entity.EvaluatorConf, 0, len(taskConfig.AutoEvaluateConfigs))
+	evaluatorIDVersionItems := make([]*entity.EvaluatorIDVersionItem, 0, len(taskConfig.AutoEvaluateConfigs))
+
+	for _, cfg := range taskConfig.AutoEvaluateConfigs {
+		if cfg == nil || cfg.EvaluatorVersionID <= 0 {
+			continue
+		}
+		ec := &entity.EvaluatorConf{
+			EvaluatorVersionID: cfg.EvaluatorVersionID,
+			EvaluatorID:        cfg.EvaluatorID,
+			Version:            "", // Task 无 Version 字段，留空由后续回填
+			IngressConf:        evaluateFieldMappingsToIngressConf(cfg.FieldMappings),
+		}
+		evaluatorConfs = append(evaluatorConfs, ec)
+		evaluatorIDVersionItems = append(evaluatorIDVersionItems, &entity.EvaluatorIDVersionItem{
+			EvaluatorID:        cfg.EvaluatorID,
+			EvaluatorVersionID: cfg.EvaluatorVersionID,
+			Version:            "",
+			ScoreWeight:        1.0,
+		})
+	}
+
+	if len(evaluatorConfs) == 0 {
+		return nil, connector
+	}
+
+	connector.EvaluatorsConf = &entity.EvaluatorsConf{
+		EvaluatorConf: evaluatorConfs,
+	}
+
+	tripleConfig := &entity.ExptTemplateTuple{
+		EvaluatorIDVersionItems: evaluatorIDVersionItems,
+		EvaluatorVersionIds:     extractEvaluatorVersionIDs(evaluatorIDVersionItems),
+	}
+	return tripleConfig, connector
+}
+
+// evaluateFieldMappingsToIngressConf 将 task.EvaluateFieldMapping 转为 EvaluatorIngressConf
+// Task 的字段映射来自 trace，使用 EvalSetAdapter 承载（trace 数据会流入 eval set）
+func evaluateFieldMappingsToIngressConf(mappings []*taskdomain.EvaluateFieldMapping) *entity.EvaluatorIngressConf {
+	if len(mappings) == 0 {
+		return &entity.EvaluatorIngressConf{
+			EvalSetAdapter: &entity.FieldAdapter{FieldConfs: []*entity.FieldConf{}},
+		}
+	}
+	fieldConfs := make([]*entity.FieldConf, 0, len(mappings))
+	for _, m := range mappings {
+		if m == nil {
+			continue
+		}
+		fieldName := ""
+		if m.FieldSchema != nil && m.FieldSchema.Key != nil {
+			fieldName = *m.FieldSchema.Key
+		} else if m.FieldSchema != nil && m.FieldSchema.Name != nil {
+			fieldName = *m.FieldSchema.Name
+		}
+		if fieldName == "" {
+			continue
+		}
+		// FromField: trace 来源使用 trace_field_key，eval_set 来源使用 eval_set_name
+		fromField := m.TraceFieldKey
+		if m.EvalSetName != nil && *m.EvalSetName != "" {
+			fromField = *m.EvalSetName
+		}
+		fieldConfs = append(fieldConfs, &entity.FieldConf{
+			FieldName: fieldName,
+			FromField: fromField,
+			Value:     "",
+		})
+	}
+	return &entity.EvaluatorIngressConf{
+		EvalSetAdapter: &entity.FieldAdapter{FieldConfs: fieldConfs},
+	}
+}
+
+func extractEvaluatorVersionIDs(items []*entity.EvaluatorIDVersionItem) []int64 {
+	ids := make([]int64, 0, len(items))
+	for _, item := range items {
+		if item != nil && item.EvaluatorVersionID > 0 {
+			ids = append(ids, item.EvaluatorVersionID)
+		}
+	}
+	return ids
+}
+
+// spanFilterFieldsFromTaskRule 将 task.Rule.SpanFilters (filter.SpanFilterFields) 转为 entity.SpanFilterFieldsDO
+func spanFilterFieldsFromTaskRule(sf *taskfilter.SpanFilterFields) *entity.SpanFilterFieldsDO {
+	if sf == nil {
+		return nil
+	}
+	do := &entity.SpanFilterFieldsDO{}
+	if sf.PlatformType != nil {
+		s := string(*sf.PlatformType)
+		do.PlatformType = &s
+	}
+	if sf.SpanListType != nil {
+		s := string(*sf.SpanListType)
+		do.SpanListType = &s
+	}
+	if sf.Filters != nil {
+		do.Filters = filterFieldsFromTaskRule(sf.Filters)
+	}
+	return do
+}
+
+// filterFieldsFromTaskRule 将 filter.FilterFields 转为 entity.FilterFieldsDO
+func filterFieldsFromTaskRule(ff *taskfilter.FilterFields) *entity.FilterFieldsDO {
+	if ff == nil {
+		return nil
+	}
+	do := &entity.FilterFieldsDO{}
+	if ff.QueryAndOr != nil {
+		s := string(*ff.QueryAndOr)
+		do.QueryAndOr = &s
+	}
+	if len(ff.FilterFields) > 0 {
+		do.FilterFields = make([]*entity.FilterFieldDO, 0, len(ff.FilterFields))
+		for _, f := range ff.FilterFields {
+			if fd := filterFieldFromTaskRule(f); fd != nil {
+				do.FilterFields = append(do.FilterFields, fd)
+			}
+		}
+	}
+	return do
+}
+
+// filterFieldFromTaskRule 将 filter.FilterField 转为 entity.FilterFieldDO
+func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
+	if f == nil {
+		return nil
+	}
+	fd := &entity.FilterFieldDO{
+		FieldName: f.FieldName,
+		Values:     f.Values,
+	}
+	if f.FieldType != nil {
+		s := string(*f.FieldType)
+		fd.FieldType = &s
+	}
+	if f.QueryType != nil {
+		s := string(*f.QueryType)
+		fd.QueryType = &s
+	}
+	if f.QueryAndOr != nil {
+		s := string(*f.QueryAndOr)
+		fd.QueryAndOr = &s
+	}
+	if f.SubFilter != nil {
+		fd.SubFilter = filterFieldsFromTaskRule(f.SubFilter)
+	}
+	return fd
+}
+
+// enrichExptSourceFromPipeline 对在线实验模板，根据 source_id 和 space_id 调用 ListPipeline，
+// 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters 到 ExptSource.SpanFilterFields，
+// 提取 Pipeline.Scheduler 到 ExptSource.Scheduler
+func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) error {
+	if e.pipelineRPCAdapter == nil {
+		return nil
+	}
+	// 收集需要查询的 pipeline ID（source_id 解析为 int64）
+	pipelineIDs := make([]int64, 0)
+	templateByPipelineID := make(map[int64][]*entity.ExptTemplate)
+	for _, t := range templates {
+		if t.ExptSource == nil || t.ExptSource.SourceType != entity.SourceType_AutoTask || t.ExptSource.SourceID == "" {
+			continue
+		}
+		pid, err := strconv.ParseInt(t.ExptSource.SourceID, 10, 64)
+		if err != nil || pid <= 0 {
+			continue
+		}
+		pipelineIDs = append(pipelineIDs, pid)
+		templateByPipelineID[pid] = append(templateByPipelineID[pid], t)
+	}
+	if len(pipelineIDs) == 0 {
+		return nil
+	}
+	// 去重
+	pipelineIDs = gslice.Uniq(pipelineIDs)
+
+	resp, err := e.pipelineRPCAdapter.ListPipelineFlow(ctx, &rpc.ListPipelineFlowRequest{
+		SpaceID:    gptr.Of(spaceID),
+		IDList:     pipelineIDs,
+		WithDetail: true,
+	})
+	if err != nil {
+		return err
+	}
+	if resp == nil || len(resp.Items) == 0 {
+		return nil
+	}
+
+	for _, p := range resp.Items {
+		if p == nil || p.ID == nil {
+			continue
+		}
+		pid := *p.ID
+		targets := templateByPipelineID[pid]
+		if len(targets) == 0 {
+			continue
+		}
+		spanFilterFields := extractSpanFilterFieldsFromPipeline(p)
+		scheduler := extractSchedulerFromPipeline(p)
+		for _, tpl := range targets {
+			if tpl.ExptSource != nil {
+				tpl.ExptSource.SpanFilterFields = spanFilterFields
+				tpl.ExptSource.Scheduler = scheduler
+			}
+		}
+	}
+	return nil
+}
+
+// extractSpanFilterFieldsFromPipeline 从 Pipeline Flow 中 node_template_type=data_reflow 的节点提取 span_filters
+func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterFieldsDO {
+	if p == nil || p.Flow == nil || len(p.Flow.Nodes) == 0 {
+		return nil
+	}
+	for _, node := range p.Flow.Nodes {
+		if node == nil || string(node.NodeTemplateType) != "data_reflow" {
+			continue
+		}
+		if node.Refs == nil {
+			continue
+		}
+		taskRef, ok := node.Refs["task"]
+		if !ok || taskRef == nil || taskRef.Content == "" {
+			continue
+		}
+		return parseSpanFilterFieldsFromTaskJSON(taskRef.Content)
+	}
+	return nil
+}
+
+// taskRuleJSON 解析 task JSON 中的 rule.span_filters 结构
+type taskRuleSpanFiltersJSON struct {
+	Rule *struct {
+		SpanFilters *spanFiltersJSON `json:"span_filters"`
+	} `json:"rule"`
+}
+
+type spanFiltersJSON struct {
+	SpanListType *string        `json:"span_list_type"`
+	PlatformType *string        `json:"platform_type"`
+	Filters      *filtersJSON  `json:"filters"`
+}
+
+type filtersJSON struct {
+	QueryAndOr   *string           `json:"query_and_or"`
+	FilterFields []*filterFieldJSON `json:"filter_fields"`
+}
+
+type filterFieldJSON struct {
+	FieldName  *string         `json:"field_name"`
+	FieldType  *string         `json:"field_type"`
+	Values     []string        `json:"values"`
+	QueryType  *string         `json:"query_type"`
+	QueryAndOr *string         `json:"query_and_or"`
+	SubFilter  *filtersJSON   `json:"sub_filter"`
+}
+
+func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
+	var parsed taskRuleSpanFiltersJSON
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		return nil
+	}
+	if parsed.Rule == nil || parsed.Rule.SpanFilters == nil {
+		return nil
+	}
+	sf := parsed.Rule.SpanFilters
+	result := &entity.SpanFilterFieldsDO{
+		PlatformType: sf.PlatformType,
+		SpanListType: sf.SpanListType,
+	}
+	if sf.Filters != nil {
+		result.Filters = &entity.FilterFieldsDO{
+			QueryAndOr: sf.Filters.QueryAndOr,
+		}
+		if len(sf.Filters.FilterFields) > 0 {
+			result.Filters.FilterFields = make([]*entity.FilterFieldDO, 0, len(sf.Filters.FilterFields))
+			for _, ff := range sf.Filters.FilterFields {
+				if ff == nil {
+					continue
+				}
+				fd := &entity.FilterFieldDO{
+					FieldName:  ff.FieldName,
+					FieldType:  ff.FieldType,
+					Values:     ff.Values,
+					QueryType:  ff.QueryType,
+					QueryAndOr: ff.QueryAndOr,
+				}
+				if ff.SubFilter != nil {
+					fd.SubFilter = &entity.FilterFieldsDO{
+						QueryAndOr:   ff.SubFilter.QueryAndOr,
+						FilterFields: nil, // 递归简化，暂不展开
+					}
+				}
+				result.Filters.FilterFields = append(result.Filters.FilterFields, fd)
+			}
+		}
+	}
+	return result
+}
+
+// extractSchedulerFromPipeline 从 Pipeline 提取 Scheduler
+func extractSchedulerFromPipeline(p *entity.Pipeline) *entity.ExptSchedulerDO {
+	if p == nil || p.Scheduler == nil {
+		return nil
+	}
+	s := p.Scheduler
+	return &entity.ExptSchedulerDO{
+		Enabled:   s.Enabled,
+		Frequency: s.Frequency,
+		TriggerAt: s.TriggerAt,
+		StartTime: s.StartTime,
+		EndTime:   s.EndTime,
+	}
 }
 
 // applyTemplateFilters 应用筛选条件

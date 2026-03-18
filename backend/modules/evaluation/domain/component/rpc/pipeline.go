@@ -3,7 +3,11 @@
 
 package rpc
 
-import "context"
+import (
+	"context"
+
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+)
 
 // IPipelineListAdapter 查询 ml_flow PipelineService ListPipeline 的适配器接口
 //go:generate mockgen -destination=./mocks/pipeline_list_adapter.go -package=mocks . IPipelineListAdapter
@@ -17,49 +21,12 @@ type ListPipelineFlowRequest struct {
 	Name       *string
 	Page       *int32
 	PageSize   *int32
-	WithDetail bool // 为 true 时返回 Flow 详情（含 nodes、edges）
+	WithDetail bool   // 为 true 时返回 Flow 详情（含 nodes、edges）
+	IDList     []int64 // 按 ID 筛选，非空时只返回指定 ID 的 Pipeline
 }
 
-// PipelineFlowItem 单个 Pipeline 的 Flow 信息
-type PipelineFlowItem struct {
-	PipelineID int64
-	Name       string
-	Flow       *FlowSchema
-}
-
-// ListPipelineFlowResponse ListPipeline 查询响应
+// ListPipelineFlowResponse ListPipeline 查询响应，返回完整 Pipeline 列表
 type ListPipelineFlowResponse struct {
 	Total int64
-	Items []*PipelineFlowItem
-}
-
-// RefType 引用类型
-type RefType string
-type NodeTemplateCategory string
-type NodeTemplateType string
-
-// FlowSchema Pipeline 画布结构，承载 nodes 和 edges
-type FlowSchema struct {
-	Nodes []*Node `json:"nodes,omitempty"`
-	Edges []*Edge `json:"edges,omitempty"`
-}
-
-// Node 画布节点
-type Node struct {
-	ID                   string               `json:"id,omitempty"`
-	NodeTemplateCategory NodeTemplateCategory `json:"node_template_category,omitempty"`
-	NodeTemplateType     NodeTemplateType     `json:"node_template_type,omitempty"`
-	Refs                 map[string]*NodeRef  `json:"refs,omitempty"`
-}
-
-// NodeRef 节点引用
-type NodeRef struct {
-	Type    RefType `json:"type,omitempty"`
-	Content string  `json:"content,omitempty"`
-}
-
-// Edge 画布边，连接两个节点
-type Edge struct {
-	Source string `json:"source,omitempty"`
-	Target string `json:"target,omitempty"`
+	Items []*entity.Pipeline
 }

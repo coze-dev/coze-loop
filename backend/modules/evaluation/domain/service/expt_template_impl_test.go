@@ -89,6 +89,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
 	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
 	mockTaskRPCAdapter := mocks.NewMockITaskRPCAdapter(ctrl)
+	mockPipelineRPCAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
 	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
 
 	mgr := NewExptTemplateManager(
@@ -100,6 +101,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 		mockEvalSetVerSvc,
 		mockLWT,
 		mockTaskRPCAdapter,
+		mockPipelineRPCAdapter,
 		mockExptRepo,
 	)
 

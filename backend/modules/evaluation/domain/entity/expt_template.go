@@ -41,8 +41,42 @@ type ExptTemplate struct {
 
 // ExptSource 实验来源信息
 type ExptSource struct {
-	SourceType SourceType
-	SourceID   string
+	SourceType       SourceType
+	SourceID         string
+	SpanFilterFields *SpanFilterFieldsDO // 从 Pipeline data_reflow 节点 task.rule.span_filters 提取
+	Scheduler        *ExptSchedulerDO    // 从 Pipeline.Scheduler 提取
+}
+
+// SpanFilterFieldsDO Span 过滤条件，与 filter.SpanFilterFields 结构对应
+type SpanFilterFieldsDO struct {
+	Filters      *FilterFieldsDO
+	PlatformType *string
+	SpanListType *string
+}
+
+// FilterFieldsDO 过滤条件
+type FilterFieldsDO struct {
+	QueryAndOr   *string
+	FilterFields []*FilterFieldDO
+}
+
+// FilterFieldDO 过滤字段
+type FilterFieldDO struct {
+	FieldName  *string
+	FieldType  *string
+	Values     []string
+	QueryType  *string
+	QueryAndOr *string
+	SubFilter  *FilterFieldsDO
+}
+
+// ExptSchedulerDO 定时触发器配置，与 expt.Scheduler 结构对应
+type ExptSchedulerDO struct {
+	Enabled   *bool
+	Frequency *string
+	TriggerAt *int64
+	StartTime *int64
+	EndTime   *int64
 }
 
 // ExptInfo 实验模板关联的实验运行状态信息

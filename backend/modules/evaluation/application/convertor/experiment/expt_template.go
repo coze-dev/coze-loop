@@ -9,9 +9,11 @@ import (
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	common_eval "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatorpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	common_obs "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -110,7 +112,7 @@ func buildTemplateFieldMappingsForCreate(
 	}
 
 	fieldMappingConfig := req.FieldMappingConfig
-	// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+	// 将 common_eval.RuntimeParam 转换为 entity.RuntimeParam
 	var entityRuntimeParam *entity.RuntimeParam
 	if fieldMappingConfig.TargetRuntimeParam != nil {
 		entityRuntimeParam = &entity.RuntimeParam{
@@ -407,18 +409,18 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充 BaseInfo
 	if template.BaseInfo != nil {
-		dto.BaseInfo = &common.BaseInfo{
+		dto.BaseInfo = &common_eval.BaseInfo{
 			CreatedAt: template.BaseInfo.CreatedAt,
 			UpdatedAt: template.BaseInfo.UpdatedAt,
 			DeletedAt: template.BaseInfo.DeletedAt,
 		}
 		if template.BaseInfo.CreatedBy != nil {
-			dto.BaseInfo.CreatedBy = &common.UserInfo{
+			dto.BaseInfo.CreatedBy = &common_eval.UserInfo{
 				UserID: template.BaseInfo.CreatedBy.UserID,
 			}
 		}
 		if template.BaseInfo.UpdatedBy != nil {
-			dto.BaseInfo.UpdatedBy = &common.UserInfo{
+			dto.BaseInfo.UpdatedBy = &common_eval.UserInfo{
 				UserID: template.BaseInfo.UpdatedBy.UserID,
 			}
 		}
@@ -440,9 +442,100 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 			SourceType: gptr.Of(domain_expt.SourceType(template.ExptSource.SourceType)),
 			SourceID:   gptr.Of(template.ExptSource.SourceID),
 		}
+		if template.ExptSource.SpanFilterFields != nil {
+			exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(template.ExptSource.SpanFilterFields)
+		}
+		if template.ExptSource.Scheduler != nil {
+			exptSource.Scheduler = exptSchedulerDO2DTO(template.ExptSource.Scheduler)
+		}
 		dto.SetExptSource(exptSource)
 	}
 
+	return dto
+}
+
+// spanFilterFieldsDO2DTO 将 entity.SpanFilterFieldsDO 转为 filter.SpanFilterFields
+func spanFilterFieldsDO2DTO(do *entity.SpanFilterFieldsDO) *filter.SpanFilterFields {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewSpanFilterFields()
+	if do.Filters != nil {
+		dto.Filters = filterFieldsDO2DTO(do.Filters)
+	}
+	if do.PlatformType != nil {
+		pt := common_obs.PlatformType(*do.PlatformType)
+		dto.PlatformType = &pt
+	}
+	if do.SpanListType != nil {
+		slt := common_obs.SpanListType(*do.SpanListType)
+		dto.SpanListType = &slt
+	}
+	return dto
+}
+
+// filterFieldsDO2DTO 将 entity.FilterFieldsDO 转为 filter.FilterFields
+func filterFieldsDO2DTO(do *entity.FilterFieldsDO) *filter.FilterFields {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewFilterFields()
+	if do.QueryAndOr != nil {
+		qao := filter.QueryRelation(*do.QueryAndOr)
+		dto.QueryAndOr = &qao
+	}
+	if len(do.FilterFields) > 0 {
+		ff := make([]*filter.FilterField, 0, len(do.FilterFields))
+		for _, f := range do.FilterFields {
+			if converted := filterFieldDO2DTO(f); converted != nil {
+				ff = append(ff, converted)
+			}
+		}
+		dto.FilterFields = ff
+	}
+	return dto
+}
+
+// filterFieldDO2DTO 将 entity.FilterFieldDO 转为 filter.FilterField
+func filterFieldDO2DTO(do *entity.FilterFieldDO) *filter.FilterField {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewFilterField()
+	dto.FieldName = do.FieldName
+	if do.FieldType != nil {
+		ft := filter.FieldType(*do.FieldType)
+		dto.FieldType = &ft
+	}
+	dto.Values = do.Values
+	if do.QueryType != nil {
+		qt := filter.QueryType(*do.QueryType)
+		dto.QueryType = &qt
+	}
+	if do.QueryAndOr != nil {
+		qao := filter.QueryRelation(*do.QueryAndOr)
+		dto.QueryAndOr = &qao
+	}
+	if do.SubFilter != nil {
+		dto.SubFilter = filterFieldsDO2DTO(do.SubFilter)
+	}
+	return dto
+}
+
+// exptSchedulerDO2DTO 将 entity.ExptSchedulerDO 转为 domain_expt.Scheduler
+func exptSchedulerDO2DTO(do *entity.ExptSchedulerDO) *domain_expt.Scheduler {
+	if do == nil {
+		return nil
+	}
+	dto := domain_expt.NewScheduler()
+	dto.Enabled = do.Enabled
+	if do.Frequency != nil {
+		f := domain_expt.Frequency(*do.Frequency)
+		dto.Frequency = &f
+	}
+	dto.TriggerAt = do.TriggerAt
+	dto.StartTime = do.StartTime
+	dto.EndTime = do.EndTime
 	return dto
 }
 
@@ -533,7 +626,7 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 			runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 			runCfg.Env = rc.Env
 			if rc.EvaluatorRuntimeParam != nil {
-				runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+				runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 					JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 				}
 			}
@@ -706,7 +799,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 				runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 				runCfg.Env = rc.Env
 				if rc.EvaluatorRuntimeParam != nil {
-					runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+					runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 						JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 					}
 				}
@@ -763,7 +856,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 	}
 
 	if template.FieldMappingConfig.TargetRuntimeParam != nil {
-		fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
+		fieldMapping.TargetRuntimeParam = &common_eval.RuntimeParam{
 			JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
 		}
 	}
@@ -883,10 +976,10 @@ func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]
 }
 
 // convertTemplateConfToDTO 转换模板配置为DTO
-func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common.RuntimeParam) {
+func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common_eval.RuntimeParam) {
 	var targetMapping *domain_expt.TargetFieldMapping
 	var evaluatorMappings []*domain_expt.EvaluatorFieldMapping
-	var runtimeParam *common.RuntimeParam
+	var runtimeParam *common_eval.RuntimeParam
 
 	if conf.ConnectorConf.TargetConf != nil && conf.ConnectorConf.TargetConf.IngressConf != nil {
 		ingressConf := conf.ConnectorConf.TargetConf.IngressConf
@@ -905,7 +998,7 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 		if ingressConf.CustomConf != nil {
 			for _, fc := range ingressConf.CustomConf.FieldConfs {
 				if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
-					runtimeParam = &common.RuntimeParam{
+					runtimeParam = &common_eval.RuntimeParam{
 						JSONValue: gptr.Of(fc.Value),
 					}
 					break
@@ -945,7 +1038,7 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 					runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 					runCfg.Env = rc.Env
 					if rc.EvaluatorRuntimeParam != nil {
-						runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+						runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 							JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 						}
 					}
@@ -1069,7 +1162,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	var itemConcurNum *int32
 	if req.GetFieldMappingConfig() != nil {
 		fieldMappingConfig := req.GetFieldMappingConfig()
-		// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+		// 将 common_eval.RuntimeParam 转换为 entity.RuntimeParam
 		var entityRuntimeParam *entity.RuntimeParam
 		if fieldMappingConfig.TargetRuntimeParam != nil {
 			entityRuntimeParam = &entity.RuntimeParam{
