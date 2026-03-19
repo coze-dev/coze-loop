@@ -444,6 +444,155 @@ func TestPromptManageApplicationImpl_BatchGetPrompt(t *testing.T) {
 	}
 }
 
+func TestPromptManageApplicationImpl_BatchGetPromptBasic(t *testing.T) {
+	type fields struct {
+		manageRepo       repo.IManageRepo
+		authRPCProvider  rpc.IAuthProvider
+		userRPCProvider  rpc.IUserProvider
+		auditRPCProvider rpc.IAuditProvider
+		configProvider   conf.IConfigProvider
+	}
+	type args struct {
+		ctx     context.Context
+		request *manage.BatchGetPromptBasicRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+		assertResp   func(t *testing.T, resp *manage.BatchGetPromptBasicResponse)
+	}{
+		{
+			name:         "user not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx: context.Background(),
+				request: &manage.BatchGetPromptBasicRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptIds:   []int64{1, 2},
+				},
+			},
+			wantErr: errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found")),
+		},
+		{
+			name: "permission denied",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				auth := mocks.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1, 2}, consts.ActionLoopPromptRead).Return(errorx.New("permission denied"))
+				return fields{authRPCProvider: auth}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
+				request: &manage.BatchGetPromptBasicRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptIds:   []int64{1, 2},
+				},
+			},
+			wantErr: errorx.New("permission denied"),
+		},
+		{
+			name: "repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				auth := mocks.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
+
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().BatchGetPromptBasic(gomock.Any(), []int64{1}).Return(nil, errorx.New("repo error"))
+
+				return fields{
+					manageRepo:      repoMock,
+					authRPCProvider: auth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
+				request: &manage.BatchGetPromptBasicRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptIds:   []int64{1},
+				},
+			},
+			wantErr: errorx.New("repo error"),
+		},
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				auth := mocks.NewMockIAuthProvider(ctrl)
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(100), []int64{1, 2}, consts.ActionLoopPromptRead).Return(nil)
+
+				repoMock := repomocks.NewMockIManageRepo(ctrl)
+				repoMock.EXPECT().BatchGetPromptBasic(gomock.Any(), []int64{1, 2}).Return(map[int64]*entity.Prompt{
+					1: {
+						ID:        1,
+						SpaceID:   100,
+						PromptKey: "prompt_a",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName: "Prompt A",
+							PromptType:  entity.PromptTypeNormal,
+						},
+					},
+					2: {
+						ID:        2,
+						SpaceID:   100,
+						PromptKey: "prompt_b",
+						PromptBasic: &entity.PromptBasic{
+							DisplayName: "Prompt B",
+							PromptType:  entity.PromptTypeSnippet,
+						},
+					},
+				}, nil)
+
+				return fields{
+					manageRepo:      repoMock,
+					authRPCProvider: auth,
+				}
+			},
+			args: args{
+				ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user"}),
+				request: &manage.BatchGetPromptBasicRequest{
+					WorkspaceID: ptr.Of(int64(100)),
+					PromptIds:   []int64{1, 2},
+				},
+			},
+			assertResp: func(t *testing.T, resp *manage.BatchGetPromptBasicResponse) {
+				assert.Len(t, resp.Prompts, 2)
+				got := make(map[int64]*prompt.Prompt)
+				for _, promptDTO := range resp.Prompts {
+					got[promptDTO.GetID()] = promptDTO
+				}
+				assert.Equal(t, "prompt_a", got[1].GetPromptKey())
+				assert.Equal(t, prompt.PromptTypeNormal, got[1].PromptBasic.GetPromptType())
+				assert.Equal(t, "prompt_b", got[2].GetPromptKey())
+				assert.Equal(t, prompt.PromptTypeSnippet, got[2].PromptBasic.GetPromptType())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ff := caseData.fieldsGetter(ctrl)
+			app := &PromptManageApplicationImpl{
+				manageRepo:       ff.manageRepo,
+				authRPCProvider:  ff.authRPCProvider,
+				userRPCProvider:  ff.userRPCProvider,
+				auditRPCProvider: ff.auditRPCProvider,
+				configProvider:   ff.configProvider,
+			}
+
+			resp, err := app.BatchGetPromptBasic(caseData.args.ctx, caseData.args.request)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+			if err == nil && caseData.assertResp != nil {
+				caseData.assertResp(t, resp)
+			}
+		})
+	}
+}
+
 func TestNewPromptManageApplication(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)
