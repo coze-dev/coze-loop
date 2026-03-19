@@ -72,20 +72,6 @@ func (p *IngestTracesRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 254:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField254(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -143,18 +129,6 @@ func (p *IngestTracesRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *IngestTracesRequest) FastReadField254(buf []byte) (int, error) {
-	offset := 0
-	_field := extra.NewExtra()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Extra = _field
-	return offset, nil
-}
-
 func (p *IngestTracesRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -175,7 +149,6 @@ func (p *IngestTracesRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -186,7 +159,6 @@ func (p *IngestTracesRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field254Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -209,15 +181,6 @@ func (p *IngestTracesRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *IngestTracesRequest) fastWriteField254(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetExtra() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 254)
-		offset += p.Extra.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
 func (p *IngestTracesRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
@@ -236,15 +199,6 @@ func (p *IngestTracesRequest) field1Length() int {
 			_ = v
 			l += v.BLength()
 		}
-	}
-	return l
-}
-
-func (p *IngestTracesRequest) field254Length() int {
-	l := 0
-	if p.IsSetExtra() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Extra.BLength()
 	}
 	return l
 }
@@ -278,15 +232,6 @@ func (p *IngestTracesRequest) DeepCopy(s interface{}) error {
 			p.Spans = append(p.Spans, _elem)
 		}
 	}
-
-	var _extra *extra.Extra
-	if src.Extra != nil {
-		_extra = &extra.Extra{}
-		if err := _extra.DeepCopy(src.Extra); err != nil {
-			return err
-		}
-	}
-	p.Extra = _extra
 
 	var _base *base.Base
 	if src.Base != nil {
@@ -605,20 +550,6 @@ func (p *OtelIngestTracesRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 254:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField254(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -729,18 +660,6 @@ func (p *OtelIngestTracesRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *OtelIngestTracesRequest) FastReadField254(buf []byte) (int, error) {
-	offset := 0
-	_field := extra.NewExtra()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Extra = _field
-	return offset, nil
-}
-
 func (p *OtelIngestTracesRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -764,7 +683,6 @@ func (p *OtelIngestTracesRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -778,7 +696,6 @@ func (p *OtelIngestTracesRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
-		l += p.field254Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -810,15 +727,6 @@ func (p *OtelIngestTracesRequest) fastWriteField4(buf []byte, w thrift.NocopyWri
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.WorkspaceID)
-	return offset
-}
-
-func (p *OtelIngestTracesRequest) fastWriteField254(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetExtra() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 254)
-		offset += p.Extra.FastWriteNocopy(buf[offset:], w)
-	}
 	return offset
 }
 
@@ -859,15 +767,6 @@ func (p *OtelIngestTracesRequest) field4Length() int {
 	return l
 }
 
-func (p *OtelIngestTracesRequest) field254Length() int {
-	l := 0
-	if p.IsSetExtra() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Extra.BLength()
-	}
-	return l
-}
-
 func (p *OtelIngestTracesRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -900,15 +799,6 @@ func (p *OtelIngestTracesRequest) DeepCopy(s interface{}) error {
 	if src.WorkspaceID != "" {
 		p.WorkspaceID = kutils.StringDeepCopy(src.WorkspaceID)
 	}
-
-	var _extra *extra.Extra
-	if src.Extra != nil {
-		_extra = &extra.Extra{}
-		if err := _extra.DeepCopy(src.Extra); err != nil {
-			return err
-		}
-	}
-	p.Extra = _extra
 
 	var _base *base.Base
 	if src.Base != nil {

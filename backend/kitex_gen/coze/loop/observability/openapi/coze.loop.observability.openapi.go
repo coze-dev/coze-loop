@@ -20,7 +20,6 @@ import (
 
 type IngestTracesRequest struct {
 	Spans []*span.InputSpan `thrift:"spans,1,optional" frugal:"1,optional,list<span.InputSpan>" form:"spans" json:"spans,omitempty"`
-	Extra *extra.Extra      `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -43,18 +42,6 @@ func (p *IngestTracesRequest) GetSpans() (v []*span.InputSpan) {
 	return p.Spans
 }
 
-var IngestTracesRequest_Extra_DEFAULT *extra.Extra
-
-func (p *IngestTracesRequest) GetExtra() (v *extra.Extra) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExtra() {
-		return IngestTracesRequest_Extra_DEFAULT
-	}
-	return p.Extra
-}
-
 var IngestTracesRequest_Base_DEFAULT *base.Base
 
 func (p *IngestTracesRequest) GetBase() (v *base.Base) {
@@ -69,25 +56,17 @@ func (p *IngestTracesRequest) GetBase() (v *base.Base) {
 func (p *IngestTracesRequest) SetSpans(val []*span.InputSpan) {
 	p.Spans = val
 }
-func (p *IngestTracesRequest) SetExtra(val *extra.Extra) {
-	p.Extra = val
-}
 func (p *IngestTracesRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
 var fieldIDToName_IngestTracesRequest = map[int16]string{
 	1:   "spans",
-	254: "extra",
 	255: "Base",
 }
 
 func (p *IngestTracesRequest) IsSetSpans() bool {
 	return p.Spans != nil
-}
-
-func (p *IngestTracesRequest) IsSetExtra() bool {
-	return p.Extra != nil
 }
 
 func (p *IngestTracesRequest) IsSetBase() bool {
@@ -115,14 +94,6 @@ func (p *IngestTracesRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 254:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -188,14 +159,6 @@ func (p *IngestTracesRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.Spans = _field
 	return nil
 }
-func (p *IngestTracesRequest) ReadField254(iprot thrift.TProtocol) error {
-	_field := extra.NewExtra()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Extra = _field
-	return nil
-}
 func (p *IngestTracesRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -213,10 +176,6 @@ func (p *IngestTracesRequest) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField254(oprot); err != nil {
-			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -267,24 +226,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *IngestTracesRequest) writeField254(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExtra() {
-		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Extra.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
-}
 func (p *IngestTracesRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -321,9 +262,6 @@ func (p *IngestTracesRequest) DeepEqual(ano *IngestTracesRequest) bool {
 	if !p.Field1DeepEqual(ano.Spans) {
 		return false
 	}
-	if !p.Field254DeepEqual(ano.Extra) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -340,13 +278,6 @@ func (p *IngestTracesRequest) Field1DeepEqual(src []*span.InputSpan) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
-	}
-	return true
-}
-func (p *IngestTracesRequest) Field254DeepEqual(src *extra.Extra) bool {
-
-	if !p.Extra.DeepEqual(src) {
-		return false
 	}
 	return true
 }
@@ -684,12 +615,11 @@ func (p *IngestTracesResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type OtelIngestTracesRequest struct {
-	Body            []byte       `thrift:"body,1,required" frugal:"1,required,binary" form:"body,required" json:"body,required"`
-	ContentType     string       `thrift:"content_type,2,required" frugal:"2,required,string" header:"Content-Type,required" json:"content_type,required"`
-	ContentEncoding string       `thrift:"content_encoding,3,required" frugal:"3,required,string" header:"Content-Encoding,required" json:"content_encoding,required"`
-	WorkspaceID     string       `thrift:"workspace_id,4,required" frugal:"4,required,string" header:"cozeloop-workspace-id,required" json:"workspace_id,required"`
-	Extra           *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base            *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Body            []byte     `thrift:"body,1,required" frugal:"1,required,binary" form:"body,required" json:"body,required"`
+	ContentType     string     `thrift:"content_type,2,required" frugal:"2,required,string" header:"Content-Type,required" json:"content_type,required"`
+	ContentEncoding string     `thrift:"content_encoding,3,required" frugal:"3,required,string" header:"Content-Encoding,required" json:"content_encoding,required"`
+	WorkspaceID     string     `thrift:"workspace_id,4,required" frugal:"4,required,string" header:"cozeloop-workspace-id,required" json:"workspace_id,required"`
+	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewOtelIngestTracesRequest() *OtelIngestTracesRequest {
@@ -727,18 +657,6 @@ func (p *OtelIngestTracesRequest) GetWorkspaceID() (v string) {
 	return
 }
 
-var OtelIngestTracesRequest_Extra_DEFAULT *extra.Extra
-
-func (p *OtelIngestTracesRequest) GetExtra() (v *extra.Extra) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExtra() {
-		return OtelIngestTracesRequest_Extra_DEFAULT
-	}
-	return p.Extra
-}
-
 var OtelIngestTracesRequest_Base_DEFAULT *base.Base
 
 func (p *OtelIngestTracesRequest) GetBase() (v *base.Base) {
@@ -762,9 +680,6 @@ func (p *OtelIngestTracesRequest) SetContentEncoding(val string) {
 func (p *OtelIngestTracesRequest) SetWorkspaceID(val string) {
 	p.WorkspaceID = val
 }
-func (p *OtelIngestTracesRequest) SetExtra(val *extra.Extra) {
-	p.Extra = val
-}
 func (p *OtelIngestTracesRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -774,12 +689,7 @@ var fieldIDToName_OtelIngestTracesRequest = map[int16]string{
 	2:   "content_type",
 	3:   "content_encoding",
 	4:   "workspace_id",
-	254: "extra",
 	255: "Base",
-}
-
-func (p *OtelIngestTracesRequest) IsSetExtra() bool {
-	return p.Extra != nil
 }
 
 func (p *OtelIngestTracesRequest) IsSetBase() bool {
@@ -841,14 +751,6 @@ func (p *OtelIngestTracesRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetWorkspaceID = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 254:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField254(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -954,14 +856,6 @@ func (p *OtelIngestTracesRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *OtelIngestTracesRequest) ReadField254(iprot thrift.TProtocol) error {
-	_field := extra.NewExtra()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.Extra = _field
-	return nil
-}
 func (p *OtelIngestTracesRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -991,10 +885,6 @@ func (p *OtelIngestTracesRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField254(oprot); err != nil {
-			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1083,24 +973,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *OtelIngestTracesRequest) writeField254(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExtra() {
-		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.Extra.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
-}
 func (p *OtelIngestTracesRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1146,9 +1018,6 @@ func (p *OtelIngestTracesRequest) DeepEqual(ano *OtelIngestTracesRequest) bool {
 	if !p.Field4DeepEqual(ano.WorkspaceID) {
 		return false
 	}
-	if !p.Field254DeepEqual(ano.Extra) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -1179,13 +1048,6 @@ func (p *OtelIngestTracesRequest) Field3DeepEqual(src string) bool {
 func (p *OtelIngestTracesRequest) Field4DeepEqual(src string) bool {
 
 	if strings.Compare(p.WorkspaceID, src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *OtelIngestTracesRequest) Field254DeepEqual(src *extra.Extra) bool {
-
-	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true

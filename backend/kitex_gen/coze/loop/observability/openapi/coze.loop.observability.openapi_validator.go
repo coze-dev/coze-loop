@@ -22,11 +22,6 @@ var (
 )
 
 func (p *IngestTracesRequest) IsValid() error {
-	if p.Extra != nil {
-		if err := p.Extra.IsValid(); err != nil {
-			return fmt.Errorf("field Extra not valid, %w", err)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -43,11 +38,6 @@ func (p *IngestTracesResponse) IsValid() error {
 	return nil
 }
 func (p *OtelIngestTracesRequest) IsValid() error {
-	if p.Extra != nil {
-		if err := p.Extra.IsValid(); err != nil {
-			return fmt.Errorf("field Extra not valid, %w", err)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

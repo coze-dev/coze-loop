@@ -12,7 +12,6 @@ include "../extra.thrift"
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
 
-    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -29,7 +28,6 @@ struct OtelIngestTracesRequest {
     3: required string content_encoding (api.header="Content-Encoding", agw.source="header"),
     4: required string workspace_id (api.header="cozeloop-workspace-id", agw.source="header"),
 
-    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 

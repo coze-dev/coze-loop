@@ -10,7 +10,7 @@ import (
 
 type Extra struct {
 	Src       *string `thrift:"src,1,optional" frugal:"1,optional,string" header:"src" json:"src,omitempty"`
-	UserAgent *string `thrift:"user_agent,2,optional" frugal:"2,optional,string" header:"user_agent" json:"user_agent,omitempty"`
+	UserAgent *string `thrift:"user_agent,2,optional" frugal:"2,optional,string" header:"user-agent" json:"user_agent,omitempty"`
 }
 
 func NewExtra() *Extra {
