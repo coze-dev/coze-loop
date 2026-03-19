@@ -4,3 +4,5 @@
 package consts
 
 const PromptPersonalDraftVersion = "$Draft"
+
+const OpenAPIUserID = "openAPI"
