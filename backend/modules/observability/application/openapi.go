@@ -792,6 +792,7 @@ func (o *OpenAPIApplication) buildSearchTraceTreeOApiReq(ctx context.Context, re
 }
 
 func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.ListSpansOApiRequest) (*openapi.ListSpansOApiResponse, error) {
+	logs.CtxInfo(ctx, "user-agent: %v, src: %v", req.GetExtra().GetUserAgent(), req.GetExtra().GetSrc())
 	var err error
 	st := time.Now()
 	spansSize := 0
