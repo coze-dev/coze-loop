@@ -8,6 +8,12 @@ service PromptOpenAPIService {
     ExecuteResponse Execute(1: ExecuteRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/execute")
     ExecuteStreamingResponse ExecuteStreaming(1: ExecuteRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/execute_streaming", streaming.mode='server')
     ListPromptBasicResponse ListPromptBasic(1: ListPromptBasicRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/list')
+    CreatePromptOApiResponse CreatePromptOApi(1: CreatePromptOApiRequest req) (api.tag="openapi", api.post="/v1/loop/prompts")
+    DeletePromptOApiResponse DeletePromptOApi(1: DeletePromptOApiRequest req) (api.tag="openapi", api.delete="/v1/loop/prompts/:prompt_id")
+    GetPromptOApiResponse GetPromptOApi(1: GetPromptOApiRequest req) (api.tag="openapi", api.get="/v1/loop/prompts/:prompt_id")
+    SaveDraftOApiResponse SaveDraftOApi(1: SaveDraftOApiRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/:prompt_id/drafts/save")
+    ListCommitOApiResponse ListCommitOApi(1: ListCommitOApiRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/:prompt_id/commits/list")
+    CommitDraftOApiResponse CommitDraftOApi(1: CommitDraftOApiRequest req) (api.tag="openapi", api.post="/v1/loop/prompts/:prompt_id/drafts/commit")
 }
 
 struct BatchGetPromptByPromptKeyRequest {
@@ -76,6 +82,118 @@ struct ListPromptBasicResponse {
     1: optional i32 code
     2: optional string msg
     3: optional prompt.ListPromptBasicData data
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct CreatePromptOApiRequest {
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+
+    11: optional string prompt_name (api.body="prompt_name", vt.not_nil="true", vt.min_size="1")
+    12: optional string prompt_key (api.body="prompt_key", vt.not_nil="true", vt.min_size="1")
+    13: optional string prompt_description (api.body="prompt_description")
+    14: optional prompt.PromptType prompt_type (api.body="prompt_type")
+    15: optional prompt.SecurityLevel security_level (api.body="security_level")
+
+    21: optional prompt.PromptDetail draft_detail (api.body="draft_detail")
+
+    255: optional base.Base Base
+}
+
+struct CreatePromptOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional i64 prompt_id (api.js_conv="true", go.tag='json:"prompt_id"')
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct DeletePromptOApiRequest {
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional i64 workspace_id (api.query="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+
+    255: optional base.Base Base
+}
+
+struct DeletePromptOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetPromptOApiRequest {
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional i64 workspace_id (api.query="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+
+    11: optional bool with_commit (api.query="with_commit")
+    12: optional string commit_version (api.query="commit_version")
+    21: optional bool with_draft (api.query="with_draft")
+
+    255: optional base.Base Base
+}
+
+struct GetPromptOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional prompt.PromptManage prompt
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct SaveDraftOApiRequest {
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+
+    11: optional prompt.PromptDraft prompt_draft (api.body="prompt_draft", vt.not_nil="true")
+
+    255: optional base.Base Base
+}
+
+struct SaveDraftOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional prompt.DraftInfo draft_info (api.body="draft_info")
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ListCommitOApiRequest {
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional bool with_commit_detail (api.query="with_commit_detail")
+
+    127: optional i32 page_size (api.body="page_size", vt.not_nil="true", vt.gt="0")
+    128: optional string page_token (api.body="page_token")
+
+    255: optional base.Base Base
+}
+
+struct ListCommitOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional list<prompt.CommitInfo> prompt_commit_infos (api.body="prompt_commit_infos")
+    4: optional map<string, prompt.PromptDetail> prompt_commit_detail_mapping (api.body="prompt_commit_detail_mapping")
+
+    127: optional bool has_more (api.body="has_more")
+    128: optional string next_page_token (api.body="next_page_token")
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct CommitDraftOApiRequest {
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    2: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+
+    11: optional string commit_version (api.body="commit_version", vt.not_nil="true", vt.min_size="1")
+    12: optional string commit_description (api.body="commit_description")
+
+    255: optional base.Base Base
+}
+
+struct CommitDraftOApiResponse {
+    1: optional i32 code
+    2: optional string msg
 
     255: optional base.BaseResp BaseResp
 }
