@@ -75,16 +75,18 @@ type PromptLabelQuery struct {
 }
 
 type PromptServiceImpl struct {
-	formatter        IPromptFormatter
-	idgen            idgen.IIDGenerator
-	debugLogRepo     repo.IDebugLogRepo
-	debugContextRepo repo.IDebugContextRepo
-	manageRepo       repo.IManageRepo
-	labelRepo        repo.ILabelRepo
-	configProvider   conf.IConfigProvider
-	llm              rpc.ILLMProvider
-	file             rpc.IFileProvider
-	snippetParser    SnippetParser
+	formatter            IPromptFormatter
+	toolConfigProvider   IToolConfigProvider
+	toolResultsCollector IToolResultsCollector
+	idgen                idgen.IIDGenerator
+	debugLogRepo         repo.IDebugLogRepo
+	debugContextRepo     repo.IDebugContextRepo
+	manageRepo           repo.IManageRepo
+	labelRepo            repo.ILabelRepo
+	configProvider       conf.IConfigProvider
+	llm                  rpc.ILLMProvider
+	file                 rpc.IFileProvider
+	snippetParser        SnippetParser
 }
 
 type GetPromptParam struct {
@@ -100,6 +102,8 @@ type GetPromptParam struct {
 
 func NewPromptService(
 	formatter IPromptFormatter,
+	toolConfigProvider IToolConfigProvider,
+	toolResultsProcessor IToolResultsCollector,
 	idgen idgen.IIDGenerator,
 	debugLogRepo repo.IDebugLogRepo,
 	debugContextRepo repo.IDebugContextRepo,
@@ -111,15 +115,17 @@ func NewPromptService(
 	snippetParser SnippetParser,
 ) IPromptService {
 	return &PromptServiceImpl{
-		formatter:        formatter,
-		idgen:            idgen,
-		debugLogRepo:     debugLogRepo,
-		debugContextRepo: debugContextRepo,
-		manageRepo:       promptManageRepo,
-		labelRepo:        labelRepo,
-		configProvider:   configProvider,
-		llm:              llm,
-		file:             file,
-		snippetParser:    snippetParser,
+		formatter:            formatter,
+		toolConfigProvider:   toolConfigProvider,
+		toolResultsCollector: toolResultsProcessor,
+		idgen:                idgen,
+		debugLogRepo:         debugLogRepo,
+		debugContextRepo:     debugContextRepo,
+		manageRepo:           promptManageRepo,
+		labelRepo:            labelRepo,
+		configProvider:       configProvider,
+		llm:                  llm,
+		file:                 file,
+		snippetParser:        snippetParser,
 	}
 }
