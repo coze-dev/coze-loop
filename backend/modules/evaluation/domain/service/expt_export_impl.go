@@ -615,6 +615,7 @@ func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields
 				EvaluationSetID: tes.EvalSetID,
 				ItemPK:          tes.ItemID,
 				FieldName:       gptr.Indirect(colEvalSetField.Name),
+				FieldKey:        ptr.From(colEvalSetField.Key),
 				TurnID:          gptr.Of(tes.Turn.ID),
 			}); err != nil {
 				return nil, err

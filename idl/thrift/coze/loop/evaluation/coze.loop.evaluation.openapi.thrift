@@ -276,6 +276,7 @@ struct GetEvaluationItemFieldOApiRequest {
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
     4: optional i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional string field_name // 列名
+    7: optional string field_key (api.js_conv='true', go.tag='json:"field_key"') // 列的唯一键，用于精确查找
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
