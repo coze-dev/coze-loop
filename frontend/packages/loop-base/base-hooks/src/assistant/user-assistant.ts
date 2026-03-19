@@ -19,6 +19,20 @@ function off(eventName: string, callback: (e: Event) => void) {
   emitter.removeEventListener(eventName, callback);
 }
 
+type AssistantMessageContext = {
+  extra_json?: string;
+};
+
+type AssistantOpenParams = {
+  from: string;
+  messageContext?: AssistantMessageContext;
+};
+
+type AssistantSendMessageParams = {
+  query: string;
+  messageContext?: AssistantMessageContext;
+};
+
 class Assistant {
   /** 是否启用助手 */
   isEnable = false;
@@ -30,11 +44,11 @@ class Assistant {
     this.isEnable = true;
   };
   /** 打开助手 */
-  open = (params?: { from: string }) => {
+  open = (params?: AssistantOpenParams) => {
     emit(OPEN_ASSISTANT_EVENT, params);
   };
   /** 监听助手打开事件, 返回取消监听函数 */
-  onOpen = (callback: (params?: { from: string }) => void) => {
+  onOpen = (callback: (params?: AssistantOpenParams) => void) => {
     const cb = (e?: Event) => {
       callback((e as CustomEvent).detail);
     };
@@ -54,11 +68,11 @@ class Assistant {
       off(CLOSE_ASSISTANT_EVENT, callback);
     };
   };
-  sendMessage = (params: { query: string }) => {
+  sendMessage = (params: AssistantSendMessageParams) => {
     emit(SEND_MESSAGE_EVENT, params);
   };
   /** 监听助手发送消息事件， 返回取消监听函数 */
-  onSendMessage = (callback: (params: { query: string }) => void) => {
+  onSendMessage = (callback: (params: AssistantSendMessageParams) => void) => {
     const cb = (e?: Event) => {
       callback((e as CustomEvent).detail);
     };

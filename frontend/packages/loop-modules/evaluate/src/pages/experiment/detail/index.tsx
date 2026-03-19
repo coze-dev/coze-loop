@@ -33,6 +33,18 @@ import ExperimentTable from './components/experiment-detail-table';
 import ExperimentDescription from './components/experiment-description';
 import ExperimentChart from './components/experiment-chart';
 
+const buildExperimentAssistantMessageContext = (experimentID?: string) => {
+  if (!experimentID) {
+    return undefined;
+  }
+
+  return {
+    extra_json: JSON.stringify({
+      experiment_id: experimentID,
+    }),
+  };
+};
+
 export default function ({
   defaultModuleRoute,
   defaultContrastRoute,
