@@ -16323,6 +16323,8 @@ type GetEvaluationSetItemFieldRequest struct {
 	ItemPk int64 `thrift:"item_pk,3,required" frugal:"3,required,i64" json:"item_pk" path:"item_pk,required" `
 	// 列名
 	FieldName string `thrift:"field_name,5,required" frugal:"5,required,string" form:"field_name,required" json:"field_name,required" query:"field_name,required"`
+	// 列的唯一键，用于精确查找
+	FieldKey *string `thrift:"field_key,7,optional" frugal:"7,optional,string" json:"field_key" form:"field_key" query:"field_key"`
 	// 当 item 为多轮时，必须提供
 	TurnID *int64     `thrift:"turn_id,6,optional" frugal:"6,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
 	Base   *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -16363,6 +16365,18 @@ func (p *GetEvaluationSetItemFieldRequest) GetFieldName() (v string) {
 	return
 }
 
+var GetEvaluationSetItemFieldRequest_FieldKey_DEFAULT string
+
+func (p *GetEvaluationSetItemFieldRequest) GetFieldKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldKey() {
+		return GetEvaluationSetItemFieldRequest_FieldKey_DEFAULT
+	}
+	return *p.FieldKey
+}
+
 var GetEvaluationSetItemFieldRequest_TurnID_DEFAULT int64
 
 func (p *GetEvaluationSetItemFieldRequest) GetTurnID() (v int64) {
@@ -16398,6 +16412,9 @@ func (p *GetEvaluationSetItemFieldRequest) SetItemPk(val int64) {
 func (p *GetEvaluationSetItemFieldRequest) SetFieldName(val string) {
 	p.FieldName = val
 }
+func (p *GetEvaluationSetItemFieldRequest) SetFieldKey(val *string) {
+	p.FieldKey = val
+}
 func (p *GetEvaluationSetItemFieldRequest) SetTurnID(val *int64) {
 	p.TurnID = val
 }
@@ -16410,8 +16427,13 @@ var fieldIDToName_GetEvaluationSetItemFieldRequest = map[int16]string{
 	2:   "evaluation_set_id",
 	3:   "item_pk",
 	5:   "field_name",
+	7:   "field_key",
 	6:   "turn_id",
 	255: "Base",
+}
+
+func (p *GetEvaluationSetItemFieldRequest) IsSetFieldKey() bool {
+	return p.FieldKey != nil
 }
 
 func (p *GetEvaluationSetItemFieldRequest) IsSetTurnID() bool {
@@ -16477,6 +16499,14 @@ func (p *GetEvaluationSetItemFieldRequest) Read(iprot thrift.TProtocol) (err err
 					goto ReadFieldError
 				}
 				issetFieldName = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -16590,6 +16620,17 @@ func (p *GetEvaluationSetItemFieldRequest) ReadField5(iprot thrift.TProtocol) er
 	p.FieldName = _field
 	return nil
 }
+func (p *GetEvaluationSetItemFieldRequest) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.FieldKey = _field
+	return nil
+}
 func (p *GetEvaluationSetItemFieldRequest) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -16630,6 +16671,10 @@ func (p *GetEvaluationSetItemFieldRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField6(oprot); err != nil {
@@ -16722,6 +16767,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *GetEvaluationSetItemFieldRequest) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldKey() {
+		if err = oprot.WriteFieldBegin("field_key", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.FieldKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *GetEvaluationSetItemFieldRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTurnID() {
 		if err = oprot.WriteFieldBegin("turn_id", thrift.I64, 6); err != nil {
@@ -16785,6 +16848,9 @@ func (p *GetEvaluationSetItemFieldRequest) DeepEqual(ano *GetEvaluationSetItemFi
 	if !p.Field5DeepEqual(ano.FieldName) {
 		return false
 	}
+	if !p.Field7DeepEqual(ano.FieldKey) {
+		return false
+	}
 	if !p.Field6DeepEqual(ano.TurnID) {
 		return false
 	}
@@ -16818,6 +16884,18 @@ func (p *GetEvaluationSetItemFieldRequest) Field3DeepEqual(src int64) bool {
 func (p *GetEvaluationSetItemFieldRequest) Field5DeepEqual(src string) bool {
 
 	if strings.Compare(p.FieldName, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetEvaluationSetItemFieldRequest) Field7DeepEqual(src *string) bool {
+
+	if p.FieldKey == src {
+		return true
+	} else if p.FieldKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.FieldKey, *src) != 0 {
 		return false
 	}
 	return true

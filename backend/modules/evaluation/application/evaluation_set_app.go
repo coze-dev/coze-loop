@@ -827,6 +827,7 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Con
 		EvaluationSetID: req.EvaluationSetID,
 		ItemPK:          req.GetItemPk(),
 		FieldName:       req.GetFieldName(),
+		FieldKey:        req.GetFieldKey(),
 		TurnID:          req.TurnID,
 	})
 	if err != nil {
