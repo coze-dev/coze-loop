@@ -222,7 +222,7 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_Agent(t *testing.
 					"turn_field2": mockContent2,
 				},
 				EvaluateTargetOutputFields: targetFields,
-				Ext: make(map[string]string),
+				Ext:                        make(map[string]string),
 			},
 			wantErr: false,
 		},
