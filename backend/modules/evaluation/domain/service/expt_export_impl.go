@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -610,6 +611,7 @@ func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields
 		}
 
 		if fieldData.Content.IsContentOmitted() {
+			logs.CtxInfo(ctx, "ContentOmitted fieldData: %v", json.Jsonify(fieldData))
 			if fieldData, err = e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
 				SpaceID:         e.spaceID,
 				EvaluationSetID: tes.EvalSetID,
