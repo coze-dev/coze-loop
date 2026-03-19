@@ -7,14 +7,12 @@ include "./domain/trace.thrift"
 include "./domain/common.thrift"
 include "./domain/filter.thrift"
 include "coze.loop.observability.trace.thrift"
-
-struct Extra {
-    1: optional string src (api.header="src")
-}
+include "../extra.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -31,6 +29,7 @@ struct OtelIngestTracesRequest {
     3: required string content_encoding (api.header="Content-Encoding", agw.source="header"),
     4: required string workspace_id (api.header="cozeloop-workspace-id", agw.source="header"),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -50,6 +49,7 @@ struct CreateAnnotationRequest {
     6: optional annotation.ValueType annotation_value_type (api.body="annotation_value_type")
     7: optional string reasoning (api.body="reasoning")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -63,6 +63,7 @@ struct DeleteAnnotationRequest {
     4: required string trace_id (api.query="trace_id", vt.min_size="1")
     3: required string annotation_key (api.query='annotation_key', vt.min_size="1")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -81,7 +82,7 @@ struct SearchTraceOApiRequest {
     9: optional list<string> span_ids (api.body="span_ids")
     100: optional bool need_original_tags (api.body='need_original_tags')
 
-    254: optional Extra extra (agw.source="not_body_struct")
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -107,7 +108,7 @@ struct SearchTraceTreeOApiRequest {
     8: optional common.PlatformType platform_type (api.body="platform_type")
     10: optional filter.FilterFields filters (api.body="filters")
 
-    254: optional Extra extra (agw.source="not_body_struct")
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -137,7 +138,7 @@ struct ListSpansOApiRequest {
 
     100: optional bool need_original_tags (api.body='need_original_tags')
 
-    254: optional Extra extra (agw.source="not_body_struct")
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -164,7 +165,7 @@ struct ListPreSpanOApiRequest {
     5: optional string previous_response_id (api.body="previous_response_id")
     6: optional common.PlatformType platform_type (api.body="platform_type")
 
-    254: optional Extra extra (agw.source="not_body_struct")
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -181,6 +182,7 @@ struct ListTracesOApiRequest {
     4: required list<string> trace_ids (api.body="trace_ids")
     8: optional common.PlatformType platform_type (api.body="platform_type")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 

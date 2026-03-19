@@ -40,6 +40,11 @@ func (p *CreateEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field EvaluationSetSchema not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -64,6 +69,11 @@ func (p *CreateEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *GetEvaluationSetOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -106,6 +116,11 @@ func (p *UpdateEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -130,6 +145,11 @@ func (p *UpdateEvaluationSetOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *DeleteEvaluationSetOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -160,6 +180,11 @@ func (p *ListEvaluationSetsOApiRequest) IsValid() error {
 		}
 		if *p.PageSize > int32(200) {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -199,6 +224,11 @@ func (p *CreateEvaluationSetVersionOApiRequest) IsValid() error {
 			return fmt.Errorf("field Description max_len rule failed, current value: %d", len(*p.Description))
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -231,6 +261,11 @@ func (p *ListEvaluationSetVersionsOApiRequest) IsValid() error {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -260,6 +295,11 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsValid() error {
 	}
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -291,6 +331,11 @@ func (p *BatchUpdateEvaluationSetItemsOApiRequest) IsValid() error {
 	if len(p.Items) > int(100) {
 		return fmt.Errorf("field Items MaxLen rule failed, current value: %v", p.Items)
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -315,6 +360,11 @@ func (p *BatchUpdateEvaluationSetItemsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchDeleteEvaluationSetItemsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -339,6 +389,11 @@ func (p *ListEvaluationSetVersionItemsOApiRequest) IsValid() error {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -360,6 +415,11 @@ func (p *ListEvaluationSetVersionItemsOApiResponse) IsValid() error {
 	return nil
 }
 func (p *GetEvaluationItemFieldOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -384,6 +444,11 @@ func (p *ListEvaluationSetVersionItemsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluationSetSchemaOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -408,6 +473,11 @@ func (p *ReportEvalTargetInvokeResultRequest) IsValid() error {
 	if p.Usage != nil {
 		if err := p.Usage.IsValid(); err != nil {
 			return fmt.Errorf("field Usage not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -520,6 +590,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -568,6 +643,11 @@ func (p *SubmitExperimentOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *GetExperimentsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -602,6 +682,11 @@ func (p *GetExperimentsOpenAPIDataData) IsValid() error {
 	return nil
 }
 func (p *ListExperimentResultOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -626,6 +711,11 @@ func (p *ListExperimentResultOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *GetExperimentAggrResultOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -673,6 +763,11 @@ func (p *ListEvaluatorsOApiRequest) IsValid() error {
 			return fmt.Errorf("field PageNumber gt rule failed, current value: %v", *p.PageNumber)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -697,6 +792,11 @@ func (p *ListEvaluatorsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluatorsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -726,6 +826,11 @@ func (p *CreateEvaluatorOApiRequest) IsValid() error {
 			return fmt.Errorf("field Evaluator not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -750,6 +855,11 @@ func (p *CreateEvaluatorOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *UpdateEvaluatorOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -777,6 +887,11 @@ func (p *UpdateEvaluatorDraftOApiRequest) IsValid() error {
 	if p.EvaluatorContent != nil {
 		if err := p.EvaluatorContent.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluatorContent not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -808,6 +923,11 @@ func (p *UpdateEvaluatorDraftOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *DeleteEvaluatorOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -837,6 +957,11 @@ func (p *ListEvaluatorVersionsOApiRequest) IsValid() error {
 			return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -861,6 +986,11 @@ func (p *ListEvaluatorVersionsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluatorVersionsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -885,6 +1015,11 @@ func (p *BatchGetEvaluatorVersionsOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *SubmitEvaluatorVersionOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -924,6 +1059,11 @@ func (p *RunEvaluatorOApiRequest) IsValid() error {
 			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -958,6 +1098,11 @@ func (p *CorrectEvaluatorRecordOApiRequest) IsValid() error {
 			return fmt.Errorf("field Correction not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -987,6 +1132,11 @@ func (p *CorrectEvaluatorRecordOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchGetEvaluatorRecordsOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1039,6 +1189,11 @@ func (p *CreateExptTemplateOApiRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1068,6 +1223,11 @@ func (p *CreateExptTemplateOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *BatchGetExptTemplatesOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1095,6 +1255,11 @@ func (p *UpdateExptTemplateMetaOApiRequest) IsValid() error {
 	if p.Meta != nil {
 		if err := p.Meta.IsValid(); err != nil {
 			return fmt.Errorf("field Meta not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -1146,6 +1311,11 @@ func (p *UpdateExptTemplateOApiRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1175,6 +1345,11 @@ func (p *UpdateExptTemplateOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *DeleteExptTemplateOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1204,6 +1379,11 @@ func (p *ListExptTemplatesOApiRequest) IsValid() error {
 			return fmt.Errorf("field FilterOption not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1228,6 +1408,11 @@ func (p *ListExptTemplatesOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1260,6 +1445,11 @@ func (p *ReportEvaluatorInvokeResultRequest) IsValid() error {
 	if p.Output != nil {
 		if err := p.Output.IsValid(); err != nil {
 			return fmt.Errorf("field Output not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

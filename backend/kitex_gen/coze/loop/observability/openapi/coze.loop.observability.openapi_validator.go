@@ -21,10 +21,12 @@ var (
 	_ = time.Nanosecond
 )
 
-func (p *Extra) IsValid() error {
-	return nil
-}
 func (p *IngestTracesRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -41,6 +43,11 @@ func (p *IngestTracesResponse) IsValid() error {
 	return nil
 }
 func (p *OtelIngestTracesRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -66,6 +73,11 @@ func (p *CreateAnnotationRequest) IsValid() error {
 	if len(p.AnnotationKey) < int(1) {
 		return fmt.Errorf("field AnnotationKey min_len rule failed, current value: %d", len(p.AnnotationKey))
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -90,6 +102,11 @@ func (p *DeleteAnnotationRequest) IsValid() error {
 	}
 	if len(p.AnnotationKey) < int(1) {
 		return fmt.Errorf("field AnnotationKey min_len rule failed, current value: %d", len(p.AnnotationKey))
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -246,6 +263,11 @@ func (p *ListPreSpanOApiResponse) IsValid() error {
 func (p *ListTracesOApiRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
