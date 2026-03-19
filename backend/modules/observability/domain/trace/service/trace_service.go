@@ -1010,6 +1010,31 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, err
 	}
+	logTraceFilter := &loop_span.FilterFields{
+		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+	}
+	if req.TraceID != "" {
+		logTraceFilter.FilterFields = append(logTraceFilter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldTraceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.TraceID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
+	}
+	if req.LogID != "" {
+		logTraceFilter.FilterFields = append(logTraceFilter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldLogID,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.LogID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
+	}
+	queryFilter := r.combineFilters(logTraceFilter, req.Filters)
+	queryFilterJSON, err := json.MarshalString(queryFilter)
+	if err != nil {
+		logs.CtxWarn(ctx, "marshal trace query filter failed, err=%v", err)
+		queryFilterJSON = ""
+	}
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:     req.WorkspaceID,
 		PlatformType:    req.PlatformType,
@@ -1019,6 +1044,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		QueryTenants:    tenants,
 		QueryLogID:      req.LogID,
 		QueryTraceID:    req.TraceID,
+		QueryFilterJSON: queryFilterJSON,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -1051,6 +1077,11 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		return &ListSpansResp{Spans: loop_span.SpanList{}}, nil
 	}
 	filters := r.combineFilters(builtinFilter, req.Filters)
+	filterJSON, err := json.MarshalString(filters)
+	if err != nil {
+		logs.CtxWarn(ctx, "marshal list spans filter failed, err=%v", err)
+		filterJSON = ""
+	}
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -1072,12 +1103,13 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}
 	spans := tRes.Spans
 	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
-		WorkspaceId:    req.WorkspaceID,
-		PlatformType:   req.PlatformType,
-		QueryStartTime: req.StartTime,
-		QueryEndTime:   req.EndTime,
-		QueryTenants:   tenants,
-		Scene:          req.Scene,
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		QueryTenants:    tenants,
+		QueryFilterJSON: filterJSON,
+		Scene:           req.Scene,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
