@@ -758,6 +758,8 @@ func convertEntityEvaluatorTypeToOpenAPI(typ entity.EvaluatorType) *openapiEvalu
 		openapiType = openapiEvaluator.EvaluatorTypePrompt
 	case entity.EvaluatorTypeCode:
 		openapiType = openapiEvaluator.EvaluatorTypeCode
+	case entity.EvaluatorTypeCustomRPC:
+		openapiType = openapiEvaluator.EvaluatorTypeCustomRPC
 	default:
 		return nil
 	}

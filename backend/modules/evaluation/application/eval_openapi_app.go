@@ -857,21 +857,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		if len(version) == 0 {
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
 		}
-		var versionID int64
-		switch version[0].EvaluatorType {
-		case entity.EvaluatorTypePrompt:
-			if version[0].PromptEvaluatorVersion != nil {
-				versionID = version[0].PromptEvaluatorVersion.ID
-			}
-		case entity.EvaluatorTypeCode:
-			if version[0].CodeEvaluatorVersion != nil {
-				versionID = version[0].CodeEvaluatorVersion.ID
-			}
-		case entity.EvaluatorTypeCustomRPC:
-			if version[0].CustomRPCEvaluatorVersion != nil {
-				versionID = version[0].CustomRPCEvaluatorVersion.ID
-			}
-		}
+		versionID := version[0].GetEvaluatorVersionID()
 		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
 		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
