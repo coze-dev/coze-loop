@@ -382,6 +382,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_labels.POST("/list", append(_listlabelMw(handler), apis.ListLabel)...)
 				_v15.POST("/prompts", append(_promptsMw(handler), apis.CreatePrompt)...)
 				_prompts := _v15.Group("/prompts", _promptsMw(handler)...)
+				_prompts.POST("/batch_get_prompt_basic", append(_batchgetpromptbasicMw(handler), apis.BatchGetPromptBasic)...)
 				_prompts.POST("/list", append(_listpromptMw(handler), apis.ListPrompt)...)
 				_prompts.POST("/list_parent", append(_listparentpromptMw(handler), apis.ListParentPrompt)...)
 				_prompts.DELETE("/:prompt_id", append(_prompt_idMw(handler), apis.DeletePrompt)...)

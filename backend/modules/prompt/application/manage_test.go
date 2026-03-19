@@ -753,6 +753,7 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 						CreatedAt:     ptr.Of(baseTime.UnixMilli()),
 						UpdatedAt:     ptr.Of(baseTime.UnixMilli()),
 						PromptType:    ptr.Of(prompt.PromptTypeNormal),
+						SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					},
 					PromptCommit: &prompt.PromptCommit{
 						Detail: &prompt.PromptDetail{
@@ -870,6 +871,7 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 						CreatedAt:     ptr.Of(draftTime.UnixMilli()),
 						UpdatedAt:     ptr.Of(draftTime.UnixMilli()),
 						PromptType:    ptr.Of(prompt.PromptTypeNormal),
+						SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					},
 					PromptDraft: &prompt.PromptDraft{
 						Detail: &prompt.PromptDetail{
@@ -1027,6 +1029,7 @@ func TestPromptManageApplicationImpl_GetPrompt(t *testing.T) {
 						CreatedAt:     ptr.Of(snippetTime.UnixMilli()),
 						UpdatedAt:     ptr.Of(snippetTime.UnixMilli()),
 						PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+						SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					},
 				}
 				resp.TotalParentReferences = ptr.Of(int32(5))
@@ -1198,6 +1201,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 							UpdatedAt:         ptr.Of(now.UnixMilli()),
 							LatestCommittedAt: ptr.Of(now.UnixMilli()),
 							PromptType:        ptr.Of(prompt.PromptTypeNormal),
+							SecurityLevel:     ptr.Of(string(entity.SecurityLevelL3)),
 						},
 					},
 				},
@@ -1316,6 +1320,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 							UpdatedAt:         ptr.Of(now.UnixMilli()),
 							LatestCommittedAt: ptr.Of(now.UnixMilli()),
 							PromptType:        ptr.Of(prompt.PromptTypeNormal),
+							SecurityLevel:     ptr.Of(string(entity.SecurityLevelL3)),
 						},
 					},
 					{
@@ -1331,6 +1336,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 							CreatedAt:     ptr.Of(now.UnixMilli()),
 							UpdatedAt:     ptr.Of(now.UnixMilli()),
 							PromptType:    ptr.Of(prompt.PromptTypeNormal),
+							SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 						},
 					},
 				},
@@ -1455,6 +1461,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 							UpdatedAt:         ptr.Of(now.UnixMilli()),
 							LatestCommittedAt: ptr.Of(now.UnixMilli()),
 							PromptType:        ptr.Of(prompt.PromptTypeNormal),
+							SecurityLevel:     ptr.Of(string(entity.SecurityLevelL3)),
 						},
 						PromptDraft: &prompt.PromptDraft{
 							Detail: &prompt.PromptDetail{
@@ -1611,6 +1618,7 @@ func TestPromptManageApplicationImpl_ListPrompt(t *testing.T) {
 							UpdatedAt:         ptr.Of(now.UnixMilli()),
 							LatestCommittedAt: ptr.Of(now.UnixMilli()),
 							PromptType:        ptr.Of(prompt.PromptTypeSnippet),
+							SecurityLevel:     ptr.Of(string(entity.SecurityLevelL3)),
 						},
 					},
 				},
@@ -2179,8 +2187,7 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 			name: "permission denied",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := mocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(1), consts.ActionLoopPromptRead).
-					Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(errorx.NewByCode(prompterr.CommonNoPermissionCode))
 
 				return fields{
 					authRPCProvider: mockAuth,
@@ -2199,12 +2206,8 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 		{
 			name: "invalid prompt ID",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockAuth := mocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(1), consts.ActionLoopPromptRead).
-					Return(nil)
-
 				return fields{
-					authRPCProvider:  mockAuth,
+					authRPCProvider:  nil,
 					manageRepo:       nil,
 					promptService:    nil,
 					userRPCProvider:  nil,
@@ -2227,8 +2230,7 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 			name: "successful list parent prompts",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := mocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(1), consts.ActionLoopPromptRead).
-					Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
 
 				mockRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockRepo.EXPECT().ListParentPrompt(gomock.Any(), repo.ListParentPromptParam{
@@ -2281,6 +2283,7 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 								Description:   ptr.Of("parent description"),
 								LatestVersion: ptr.Of("2.0.0"),
 								PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+								SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 								CreatedBy:     ptr.Of(""),
 								UpdatedBy:     ptr.Of(""),
 								CreatedAt:     ptr.Of(time.Time{}.UnixMilli()),
@@ -2297,8 +2300,7 @@ func TestPromptManageApplicationImpl_ListParentPrompt(t *testing.T) {
 			name: "repository error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockAuth := mocks.NewMockIAuthProvider(ctrl)
-				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(1), consts.ActionLoopPromptRead).
-					Return(nil)
+				mockAuth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(1), []int64{1}, consts.ActionLoopPromptRead).Return(nil)
 
 				mockRepo := repomocks.NewMockIManageRepo(ctrl)
 				mockRepo.EXPECT().ListParentPrompt(gomock.Any(), repo.ListParentPromptParam{
@@ -2392,9 +2394,11 @@ func TestPromptManageApplicationImpl_UpdatePrompt(t *testing.T) {
 					UpdatedBy:         "user",
 					PromptName:        "name",
 					PromptDescription: "desc",
+					SecurityLevel:     entity.SecurityLevelL3,
 				}).Return(nil)
 				auth := mocks.NewMockIAuthProvider(ctrl)
-				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(20), []int64{int64(2)}, consts.ActionLoopPromptEdit).Return(nil)
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(20), []int64{int64(2)}, consts.ActionLoopPromptEditSecLevel).Return(nil).AnyTimes()
+				auth.EXPECT().MCheckPromptPermission(gomock.Any(), int64(20), []int64{int64(2)}, consts.ActionLoopPromptEdit).Return(nil).AnyTimes()
 				audit := mocks.NewMockIAuditProvider(ctrl)
 				audit.EXPECT().AuditPrompt(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, promptDO *entity.Prompt) error {
 					assert.Equal(t, int64(2), promptDO.ID)

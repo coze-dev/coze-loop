@@ -234,8 +234,10 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 	// execute
 	resultStream := make(chan *entity.Reply)
 	errChan := make(chan error)
+	replyChan := make(chan *entity.Reply, 1)
 	goroutine.GoSafe(ctx, func() {
 		var executeErr error
+		var localReply *entity.Reply
 		defer func() {
 			e := recover()
 			if e != nil {
@@ -243,6 +245,8 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 			}
 			// 确保errChan和resultStream被关闭
 			close(resultStream)
+			replyChan <- localReply
+			close(replyChan)
 			if executeErr != nil {
 				errChan <- executeErr
 			}
@@ -253,7 +257,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 			logErr := p.saveDebugLog(context.WithoutCancel(ctx), saveDebugLogParam{
 				prompt:          prompt,
 				startTime:       startTime,
-				result:          aggregatedReply,
+				result:          localReply,
 				err:             executeErr,
 				singleStepDebug: req.GetSingleStepDebug(),
 			})
@@ -269,7 +273,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 		if executeErr != nil {
 			return
 		}
-		aggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
+		localReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
 				Prompt:        prompt,
 				Messages:      messages,
@@ -318,6 +322,7 @@ func (p *PromptDebugApplicationImpl) doDebugStreaming(ctx context.Context, req *
 			return nil, err
 		}
 	}
+	aggregatedReply = <-replyChan
 	select { //nolint:staticcheck
 	case err, ok = <-errChan:
 		if !ok {
