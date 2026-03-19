@@ -1158,7 +1158,7 @@ func TestConvert2DatasetIOJob(t *testing.T) {
 		Option: &dataset_job.DatasetIOJobOption{
 			OverwriteDataset: gptr.Of(true),
 		},
-		Status: (*dataset_job.JobStatus)(gptr.Of(dataset_job.JobStatus(1))),
+		Status: gptr.Of(dataset_job.JobStatus(1)),
 		Progress: &dataset_job.DatasetIOJobProgress{
 			Total: gptr.Of(int64(10)),
 		},
