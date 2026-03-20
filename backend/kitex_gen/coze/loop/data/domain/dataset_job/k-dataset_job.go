@@ -2547,9 +2547,9 @@ func (p *DatasetIOJobOption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 2:
+		case 8:
 			if fieldTypeId == thrift.LIST {
-				l, err = p.FastReadField2(buf[offset:])
+				l, err = p.FastReadField8(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -2593,7 +2593,7 @@ func (p *DatasetIOJobOption) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *DatasetIOJobOption) FastReadField2(buf []byte) (int, error) {
+func (p *DatasetIOJobOption) FastReadField8(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -2626,7 +2626,7 @@ func (p *DatasetIOJobOption) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) 
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2636,7 +2636,7 @@ func (p *DatasetIOJobOption) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field2Length()
+		l += p.field8Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2651,10 +2651,10 @@ func (p *DatasetIOJobOption) fastWriteField1(buf []byte, w thrift.NocopyWriter) 
 	return offset
 }
 
-func (p *DatasetIOJobOption) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *DatasetIOJobOption) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFieldWriteOptions() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 8)
 		listBeginOffset := offset
 		offset += thrift.Binary.ListBeginLength()
 		var length int
@@ -2676,7 +2676,7 @@ func (p *DatasetIOJobOption) field1Length() int {
 	return l
 }
 
-func (p *DatasetIOJobOption) field2Length() int {
+func (p *DatasetIOJobOption) field8Length() int {
 	l := 0
 	if p.IsSetFieldWriteOptions() {
 		l += thrift.Binary.FieldBeginLength()

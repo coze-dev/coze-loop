@@ -1890,6 +1890,20 @@ func (p *ParseImportSourceFileResponse) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -2034,6 +2048,48 @@ func (p *ParseImportSourceFileResponse) FastReadField5(buf []byte) (int, error) 
 	return offset, nil
 }
 
+func (p *ParseImportSourceFileResponse) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string][]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			return offset, err
+		}
+		_val := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+			var _elem string
+			if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+				return offset, err
+			} else {
+				offset += l
+				_elem = v
+			}
+
+			_val = append(_val, _elem)
+		}
+
+		_field[_key] = _val
+	}
+	p.PrecheckDataByField = _field
+	return offset, nil
+}
+
 func (p *ParseImportSourceFileResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
@@ -2058,6 +2114,7 @@ func (p *ParseImportSourceFileResponse) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -2072,6 +2129,7 @@ func (p *ParseImportSourceFileResponse) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -2151,6 +2209,30 @@ func (p *ParseImportSourceFileResponse) fastWriteField5(buf []byte, w thrift.Noc
 	return offset
 }
 
+func (p *ParseImportSourceFileResponse) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPrecheckDataByField() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 6)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.PrecheckDataByField {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			listBeginOffset := offset
+			offset += thrift.Binary.ListBeginLength()
+			var length int
+			for _, v := range v {
+				length++
+				offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+			}
+			thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.LIST, length)
+	}
+	return offset
+}
+
 func (p *ParseImportSourceFileResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
@@ -2216,6 +2298,25 @@ func (p *ParseImportSourceFileResponse) field5Length() int {
 		for _, v := range p.UntypedURLFields {
 			_ = v
 			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
+func (p *ParseImportSourceFileResponse) field6Length() int {
+	l := 0
+	if p.IsSetPrecheckDataByField() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.PrecheckDataByField {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.ListBeginLength()
+			for _, v := range v {
+				_ = v
+				l += thrift.Binary.StringLengthNocopy(v)
+			}
 		}
 	}
 	return l
@@ -2290,6 +2391,30 @@ func (p *ParseImportSourceFileResponse) DeepCopy(s interface{}) error {
 				_elem = kutils.StringDeepCopy(elem)
 			}
 			p.UntypedURLFields = append(p.UntypedURLFields, _elem)
+		}
+	}
+
+	if src.PrecheckDataByField != nil {
+		p.PrecheckDataByField = make(map[string][]string, len(src.PrecheckDataByField))
+		for key, val := range src.PrecheckDataByField {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val []string
+			if val != nil {
+				_val = make([]string, 0, len(val))
+				for _, elem := range val {
+					var _elem string
+					if elem != "" {
+						_elem = kutils.StringDeepCopy(elem)
+					}
+					_val = append(_val, _elem)
+				}
+			}
+
+			p.PrecheckDataByField[_key] = _val
 		}
 	}
 

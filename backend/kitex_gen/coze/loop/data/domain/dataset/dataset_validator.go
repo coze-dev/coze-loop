@@ -154,14 +154,14 @@ func (p *ItemErrorGroup) IsValid() error {
 func (p *CreateDatasetItemOutput) IsValid() error {
 	return nil
 }
-func (p *MultiModalStoreOption) IsValid() error {
-	return nil
-}
 func (p *FieldWriteOption) IsValid() error {
-	if p.MultiModalStoreOption != nil {
-		if err := p.MultiModalStoreOption.IsValid(); err != nil {
-			return fmt.Errorf("field MultiModalStoreOption not valid, %w", err)
+	if p.MultiModalStoreOpt != nil {
+		if err := p.MultiModalStoreOpt.IsValid(); err != nil {
+			return fmt.Errorf("field MultiModalStoreOpt not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *MultiModalStoreOption) IsValid() error {
 	return nil
 }
