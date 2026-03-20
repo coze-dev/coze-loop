@@ -715,6 +715,29 @@ func (l *LocalEvaluationOpenAPIService) RunEvaluatorOApi(ctx context.Context, re
 	return result.GetSuccess(), nil
 }
 
+// RunBuiltinEvaluatorOApi
+// 执行预置评估器（按标识）
+func (l *LocalEvaluationOpenAPIService) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest, callOptions ...callopt.Option) (*openapi.RunBuiltinEvaluatorOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult)
+		resp, err := l.impl.RunBuiltinEvaluatorOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "RunBuiltinEvaluatorOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // CorrectEvaluatorRecordOApi
 // 修正评估记录
 func (l *LocalEvaluationOpenAPIService) CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest, callOptions ...callopt.Option) (*openapi.CorrectEvaluatorRecordOApiResponse, error) {
