@@ -3485,6 +3485,32 @@ func TestEvalOpenAPIApplication_RunBuiltinEvaluatorOApi(t *testing.T) {
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
+			name: "workspace_id is required",
+			req: &openapi.RunBuiltinEvaluatorOApiRequest{
+				BuiltinEvaluatorID: gptr.Of(builtinEvaluatorID),
+			},
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid identifier - id is 0",
+			req: &openapi.RunBuiltinEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				BuiltinEvaluatorID: gptr.Of(int64(0)),
+			},
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid identifier - name is empty",
+			req: &openapi.RunBuiltinEvaluatorOApiRequest{
+				WorkspaceID:          gptr.Of(workspaceID),
+				BuiltinEvaluatorName: gptr.Of(""),
+			},
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockEvaluatorService) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
 			name: "mismatch identifier",
 			req: &openapi.RunBuiltinEvaluatorOApiRequest{
 				WorkspaceID:          gptr.Of(workspaceID),
@@ -3548,6 +3574,23 @@ func TestEvalOpenAPIApplication_RunBuiltinEvaluatorOApi(t *testing.T) {
 			req: &openapi.RunBuiltinEvaluatorOApiRequest{
 				WorkspaceID:        gptr.Of(workspaceID),
 				BuiltinEvaluatorID: gptr.Of(builtinEvaluatorID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+				record := &entity.EvaluatorRecord{ID: 4004}
+				evaluatorSvc.EXPECT().ResolveBuiltinEvaluatorVisibleVersionID(gomock.Any(), builtinEvaluatorID, "").Return(evaluatorVersionID, nil)
+				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
+			},
+		},
+		{
+			name: "success with runtime param",
+			req: &openapi.RunBuiltinEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				BuiltinEvaluatorID: gptr.Of(builtinEvaluatorID),
+				EvaluatorRunConf: &openapiEvaluator.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &common.RuntimeParam{
+						JSONValue: gptr.Of(`{"key":"value"}`),
+					},
+				},
 			},
 			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
 				record := &entity.EvaluatorRecord{ID: 4004}

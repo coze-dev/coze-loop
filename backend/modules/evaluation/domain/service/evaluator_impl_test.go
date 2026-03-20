@@ -116,6 +116,233 @@ func Test_GetBuiltinEvaluator(t *testing.T) {
 	})
 }
 
+func Test_EvaluatorServiceImpl_BatchGetBuiltinEvaluator(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		evaluatorIDs []int64
+		setup        func(repo *repomocks.MockIEvaluatorRepo)
+		wantLen      int
+		wantErr      bool
+	}{
+		{
+			name:         "empty input",
+			evaluatorIDs: []int64{},
+			setup:        func(*repomocks.MockIEvaluatorRepo) {},
+			wantLen:      0,
+		},
+		{
+			name:         "batch get meta error",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(nil, errors.New("meta error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:         "no valid builtin visible version pairs",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: false},
+					{ID: 2, Builtin: true, BuiltinVisibleVersion: ""},
+					nil,
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(metas, nil)
+			},
+			wantLen: 0,
+		},
+		{
+			name:         "batch get versions error",
+			evaluatorIDs: []int64{1},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: true, BuiltinVisibleVersion: "1.0.0"},
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1}, false).Return(metas, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}}).Return(nil, errors.New("version error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:         "success",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: true, BuiltinVisibleVersion: "1.0.0", Name: "eval1"},
+					{ID: 2, Builtin: true, BuiltinVisibleVersion: "2.0.0", Name: "eval2"},
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(metas, nil)
+
+				versions := []*entity.Evaluator{
+					{ID: 101, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.0.0"}},
+					{ID: 102, EvaluatorType: entity.EvaluatorTypeCode, CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{EvaluatorID: 2, Version: "2.0.0"}},
+				}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}, {int64(2), "2.0.0"}}).Return(versions, nil)
+			},
+			wantLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			got, err := s.BatchGetBuiltinEvaluator(context.Background(), tc.evaluatorIDs)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Len(t, got, tc.wantLen)
+			}
+		})
+	}
+}
+
+func Test_EvaluatorServiceImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		evaluatorID int64
+		tags        map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
+		setup       func(repo *repomocks.MockIEvaluatorRepo)
+		wantErr     bool
+	}{
+		{
+			name:        "success",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"llm"},
+				},
+			},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().UpdateEvaluatorTags(gomock.Any(), int64(1), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error",
+			evaluatorID: 1,
+			tags:        nil,
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().UpdateEvaluatorTags(gomock.Any(), int64(1), gomock.Any()).Return(errors.New("update error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			err := s.UpdateBuiltinEvaluatorTags(context.Background(), tc.evaluatorID, tc.tags)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_EvaluatorServiceImpl_CheckNameExist(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		spaceID     int64
+		evaluatorID int64
+		evalName    string
+		setup       func(repo *repomocks.MockIEvaluatorRepo)
+		wantExist   bool
+		wantErr     bool
+	}{
+		{
+			name:        "exist",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(true, nil)
+			},
+			wantExist: true,
+			wantErr:   false,
+		},
+		{
+			name:        "not exist",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(false, nil)
+			},
+			wantExist: false,
+			wantErr:   false,
+		},
+		{
+			name:        "error",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(false, errors.New("check error"))
+			},
+			wantExist: false,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			got, err := s.CheckNameExist(context.Background(), tc.spaceID, tc.evaluatorID, tc.evalName)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.wantExist, got)
+			}
+		})
+	}
+}
+
 func Test_EvaluatorServiceImpl_ResolveBuiltinEvaluatorVisibleVersionID(t *testing.T) {
 	t.Parallel()
 
@@ -164,6 +391,24 @@ func Test_EvaluatorServiceImpl_ResolveBuiltinEvaluatorVisibleVersionID(t *testin
 			wantID: 333,
 		},
 		{
+			name:        "resolve by id failed to get meta",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return(nil, errors.New("get meta failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:        "resolve by id empty meta",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{}, nil)
+			},
+			wantID: 0,
+		},
+		{
 			name:          "resolve by id and name mismatch",
 			evaluatorID:   11,
 			evaluatorName: "other",
@@ -196,6 +441,59 @@ func Test_EvaluatorServiceImpl_ResolveBuiltinEvaluatorVisibleVersionID(t *testin
 				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
 			},
 			wantID: 444,
+		},
+		{
+			name:          "resolve by name failed to get meta",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, errors.New("get meta failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:          "resolve by name not found in any space",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100", "200"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, nil)
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(200), "builtin", false).Return(nil, nil)
+			},
+			wantID: 0,
+		},
+		{
+			name:          "resolve by name batch get versions failed",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return(nil, errors.New("get version failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:          "resolve by name version not found",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{}, nil)
+			},
+			wantID: 0,
+		},
+		{
+			name:          "resolve by name code evaluator success",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypeCode, CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{ID: 555, EvaluatorID: 22, Version: "2.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 555,
 		},
 		{
 			name:          "resolve by name not builtin",
