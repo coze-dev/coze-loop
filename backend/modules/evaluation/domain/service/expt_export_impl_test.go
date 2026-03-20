@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -725,7 +724,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				itemResults1 := []*entity.ItemResult{{ItemID: 1}}
 				itemResults2 := []*entity.ItemResult{{ItemID: 2}}
 
-				// 第一次调用返回第一页数据（pageSize=20，total=25 需 2 页）
+				// 第一次调用返回第一页数据
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
 					Return(&entity.MGetExperimentReportResult{
@@ -733,7 +732,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ColumnEvalSetFields:   colEvalSetFields,
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults1,
-						Total:                 int64(25),
+						Total:                 int64(150),
 					}, nil).
 					Times(1)
 
@@ -745,7 +744,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ColumnEvalSetFields:   colEvalSetFields,
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults2,
-						Total:                 int64(25),
+						Total:                 int64(150),
 					}, nil).
 					Times(1)
 
@@ -792,8 +791,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
-			out := filepath.Join(t.TempDir(), "file_name")
-			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, out, true)
+			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, "file_name", true)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DoExportCSV() error = %v, wantErr %v", err, tt.wantErr)
 			}

@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	evaluation "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
@@ -1613,7 +1612,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Nil(t, param.Session)
 					return errors.New("report error")
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: true,
 		},
@@ -1631,7 +1630,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 18*time.Second, *duration)
@@ -1651,7 +1650,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 					assert.Nil(t, param.Session)
 					return nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			},
 			wantErr: false,
 		},
@@ -1676,7 +1675,7 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 				})
 				conf := &entity.TargetTrajectoryConf{}
 				configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).Return(conf)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration, _ func(*entity.ExptItemEvalEvent)) error {
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), event, gomock.Any()).DoAndReturn(func(_ context.Context, evt *entity.ExptItemEvalEvent, duration *time.Duration) error {
 					assert.Equal(t, event, evt)
 					if assert.NotNil(t, duration) {
 						assert.Equal(t, 18*time.Second, *duration)
@@ -5189,409 +5188,6 @@ func TestEvalOpenAPIApplication_UpdateExptTemplateMetaOApi(t *testing.T) {
 				assert.True(t, metric.called)
 				assert.Equal(t, tc.req.GetWorkspaceID(), metric.spaceID)
 				assert.Equal(t, tc.req.GetTemplateID(), metric.evaluationSetID)
-			}
-		})
-	}
-}
-
-func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
-	t.Parallel()
-
-	workspaceID := int64(1001)
-	invokeID := int64(2002)
-	event := &entity.ExptItemEvalEvent{ExptID: 3003, ExptRunID: 4004}
-
-	tests := []struct {
-		name    string
-		req     *openapi.ReportEvaluatorInvokeResultRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher)
-		wantErr int32
-	}{
-		{
-			name: "auth failed",
-			req: &openapi.ReportEvaluatorInvokeResultRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				InvokeID:    gptr.Of(invokeID),
-				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, _ *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantErr: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "async repo failed",
-			req: &openapi.ReportEvaluatorInvokeResultRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				InvokeID:    gptr.Of(invokeID),
-				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(nil, errors.New("get failed"))
-			},
-			wantErr: -1,
-		},
-		{
-			name: "report service failed",
-			req: &openapi.ReportEvaluatorInvokeResultRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				InvokeID:    gptr.Of(invokeID),
-				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
-				Output: &spi.InvokeEvaluatorOutputData{
-					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9))},
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-					Event:              event,
-					AsyncUnixMS:        time.Now().UnixMilli() - 10,
-					EvaluatorVersionID: 9,
-				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(errors.New("report failed"))
-			},
-			wantErr: -1,
-		},
-		{
-			name: "publish event failed",
-			req: &openapi.ReportEvaluatorInvokeResultRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				InvokeID:    gptr.Of(invokeID),
-				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_FAILED),
-				Output: &spi.InvokeEvaluatorOutputData{
-					EvaluatorRunError: &spi.InvokeEvaluatorRunError{Code: gptr.Of(int32(123)), Message: gptr.Of("m")},
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-					Event:              event,
-					AsyncUnixMS:        time.Now().UnixMilli() - 10,
-					EvaluatorVersionID: 9,
-				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(errors.New("pub failed"))
-			},
-			wantErr: -1,
-		},
-		{
-			name: "success",
-			req: &openapi.ReportEvaluatorInvokeResultRequest{
-				WorkspaceID: gptr.Of(workspaceID),
-				InvokeID:    gptr.Of(invokeID),
-				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
-				Output: &spi.InvokeEvaluatorOutputData{
-					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.9)), Reasoning: gptr.Of("r")},
-					EvaluatorUsage:   &spi.InvokeEvaluatorUsage{InputTokens: gptr.Of(int64(1)), OutputTokens: gptr.Of(int64(2))},
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, publisher *eventmocks.MockExptEventPublisher) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
-					Event:              event,
-					AsyncUnixMS:        time.Now().UnixMilli() - 50,
-					EvaluatorVersionID: 9,
-				}, nil)
-				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *entity.ReportEvaluatorRecordParam) error {
-					assert.Equal(t, workspaceID, param.SpaceID)
-					assert.Equal(t, invokeID, param.RecordID)
-					assert.Equal(t, entity.EvaluatorRunStatusSuccess, param.Status)
-					assert.NotNil(t, param.OutputData)
-					assert.GreaterOrEqual(t, param.OutputData.TimeConsumingMS, int64(0))
-					return nil
-				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(nil)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			auth := rpcmocks.NewMockIAuthProvider(ctrl)
-			asyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
-			evaluatorSvc := servicemocks.NewMockEvaluatorService(ctrl)
-			publisher := eventmocks.NewMockExptEventPublisher(ctrl)
-			metric := &fakeOpenAPIMetric{}
-
-			app := &EvalOpenAPIApplication{
-				auth:             auth,
-				asyncRepo:        asyncRepo,
-				evaluatorService: evaluatorSvc,
-				publisher:        publisher,
-				metric:           metric,
-			}
-
-			tc.setup(auth, asyncRepo, evaluatorSvc, publisher)
-
-			resp, err := app.ReportEvaluatorInvokeResult_(context.Background(), tc.req)
-			if tc.wantErr != 0 {
-				assert.Error(t, err)
-				if tc.wantErr > 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tc.wantErr, statusErr.Code())
-				}
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
-				assert.NotNil(t, resp.BaseResp)
-			}
-		})
-	}
-}
-
-func TestEvalOpenAPIApplication_ImportEvaluationSetOApi(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		req     *openapi.ImportEvaluationSetOApiRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService)
-		wantErr int32
-		wantID  int64
-	}{
-		{
-			name:    "invalid req",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {},
-			wantErr: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "evaluation set not found",
-			req: &openapi.ImportEvaluationSetOApiRequest{
-				WorkspaceID:     1,
-				EvaluationSetID: 2,
-				File: &dataset_job.DatasetIOFile{
-					Path: "test.csv",
-				},
-			},
-			setup: func(_ *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(nil, nil)
-			},
-			wantErr: errno.ResourceNotFoundCode,
-		},
-		{
-			name: "auth error",
-			req: &openapi.ImportEvaluationSetOApiRequest{
-				WorkspaceID:     1,
-				EvaluationSetID: 2,
-				File: &dataset_job.DatasetIOFile{
-					Path: "test.csv",
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
-					ID:      2,
-					SpaceID: 1,
-					BaseInfo: &entity.BaseInfo{
-						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
-					},
-				}, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantErr: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "import error",
-			req: &openapi.ImportEvaluationSetOApiRequest{
-				WorkspaceID:     1,
-				EvaluationSetID: 2,
-				File: &dataset_job.DatasetIOFile{
-					Path: "test.csv",
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
-					ID:      2,
-					SpaceID: 1,
-					BaseInfo: &entity.BaseInfo{
-						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
-					},
-				}, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				evalSetSvc.EXPECT().ImportEvaluationSet(gomock.Any(), gomock.Any()).Return(int64(0), errors.New("import error"))
-			},
-			wantErr: -1,
-		},
-		{
-			name: "success",
-			req: &openapi.ImportEvaluationSetOApiRequest{
-				WorkspaceID:     1,
-				EvaluationSetID: 2,
-				File: &dataset_job.DatasetIOFile{
-					Path: "test.csv",
-				},
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
-					ID:      2,
-					SpaceID: 1,
-					BaseInfo: &entity.BaseInfo{
-						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
-					},
-				}, nil)
-				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				evalSetSvc.EXPECT().ImportEvaluationSet(gomock.Any(), gomock.Any()).Return(int64(100), nil)
-			},
-			wantID: 100,
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			auth := rpcmocks.NewMockIAuthProvider(ctrl)
-			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
-			metric := &fakeOpenAPIMetric{}
-
-			app := &EvalOpenAPIApplication{
-				auth:                 auth,
-				evaluationSetService: evalSetSvc,
-				metric:               metric,
-			}
-
-			tc.setup(auth, evalSetSvc)
-
-			resp, err := app.ImportEvaluationSetOApi(context.Background(), tc.req)
-
-			if tc.wantErr != 0 {
-				assert.Error(t, err)
-				if tc.wantErr > 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tc.wantErr, statusErr.Code())
-				}
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
-					assert.Equal(t, tc.wantID, gptr.Indirect(resp.Data.JobID))
-				}
-			}
-		})
-	}
-}
-
-func TestEvalOpenAPIApplication_GetEvaluationSetJobOApi(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		req     *openapi.GetEvaluationSetIOJobOApiRequest
-		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService)
-		wantErr int32
-		wantID  int64
-	}{
-		{
-			name:    "invalid req",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {},
-			wantErr: errno.CommonInvalidParamCode,
-		},
-		{
-			name: "auth error",
-			req: &openapi.GetEvaluationSetIOJobOApiRequest{
-				WorkspaceID: 1,
-				JobID:       100,
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
-			},
-			wantErr: errno.CommonNoPermissionCode,
-		},
-		{
-			name: "job not found",
-			req: &openapi.GetEvaluationSetIOJobOApiRequest{
-				WorkspaceID: 1,
-				JobID:       100,
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(nil, nil)
-			},
-			wantErr: errno.ResourceNotFoundCode,
-		},
-		{
-			name: "job space mismatch",
-			req: &openapi.GetEvaluationSetIOJobOApiRequest{
-				WorkspaceID: 1,
-				JobID:       100,
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(&entity.DatasetIOJob{
-					ID:      100,
-					SpaceID: 2,
-				}, nil)
-			},
-			wantErr: errno.ResourceNotFoundCode,
-		},
-		{
-			name: "success",
-			req: &openapi.GetEvaluationSetIOJobOApiRequest{
-				WorkspaceID: 1,
-				JobID:       100,
-			},
-			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
-				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(&entity.DatasetIOJob{
-					ID:      100,
-					SpaceID: 1,
-					JobType: entity.JobType(1),
-				}, nil)
-			},
-			wantID: 100,
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			auth := rpcmocks.NewMockIAuthProvider(ctrl)
-			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
-			metric := &fakeOpenAPIMetric{}
-
-			app := &EvalOpenAPIApplication{
-				auth:                 auth,
-				evaluationSetService: evalSetSvc,
-				metric:               metric,
-			}
-
-			tc.setup(auth, evalSetSvc)
-
-			resp, err := app.GetEvaluationSetJobOApi(context.Background(), tc.req)
-
-			if tc.wantErr != 0 {
-				assert.Error(t, err)
-				if tc.wantErr > 0 {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, tc.wantErr, statusErr.Code())
-				}
-				assert.Nil(t, resp)
-			} else {
-				assert.NoError(t, err)
-				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) && assert.NotNil(t, resp.Data.Job) {
-					assert.Equal(t, tc.wantID, resp.Data.Job.ID)
-				}
 			}
 		})
 	}

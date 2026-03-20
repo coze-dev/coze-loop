@@ -189,68 +189,6 @@ func TestDatasetServiceImpl_commitToInProgress(t *testing.T) {
 	}
 }
 
-func TestDatasetServiceImpl_commitProgress_MultiBatch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepo := mock_repo.NewMockIDatasetAPI(ctrl)
-	service := &DatasetServiceImpl{
-		repo: mockRepo,
-	}
-
-	t.Run("PatchVersion called for every batch with hasMore=true", func(t *testing.T) {
-		processCtx := &snapshotContext{
-			spaceID:   1,
-			versionID: 1,
-			version: &entity.DatasetVersion{
-				ID:               1,
-				SpaceID:          1,
-				SnapshotStatus:   entity.SnapshotStatusUnstarted,
-				SnapshotProgress: &entity.SnapshotProgress{},
-				UpdateVersion:    0,
-			},
-		}
-
-		// Batch 1: hasMore=true, status transitions from Unstarted to InProgress
-		mockRepo.EXPECT().PatchVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		err := service.commitProgress(context.Background(), processCtx, true)
-		if err != nil {
-			t.Fatalf("batch 1: commitProgress() error = %v", err)
-		}
-		if processCtx.version.SnapshotStatus != entity.SnapshotStatusInProgress {
-			t.Errorf("batch 1: expected status %v, got %v", entity.SnapshotStatusInProgress, processCtx.version.SnapshotStatus)
-		}
-		if processCtx.version.UpdateVersion != 1 {
-			t.Errorf("batch 1: expected UpdateVersion 1, got %v", processCtx.version.UpdateVersion)
-		}
-
-		// Batch 2: hasMore=true, status already InProgress — must still call PatchVersion
-		processCtx.version.SnapshotProgress.Cursor = "cursor_batch2"
-		mockRepo.EXPECT().PatchVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		err = service.commitProgress(context.Background(), processCtx, true)
-		if err != nil {
-			t.Fatalf("batch 2: commitProgress() error = %v", err)
-		}
-		if processCtx.version.SnapshotStatus != entity.SnapshotStatusInProgress {
-			t.Errorf("batch 2: expected status %v, got %v", entity.SnapshotStatusInProgress, processCtx.version.SnapshotStatus)
-		}
-		if processCtx.version.UpdateVersion != 2 {
-			t.Errorf("batch 2: expected UpdateVersion 2, got %v", processCtx.version.UpdateVersion)
-		}
-
-		// Batch 3: hasMore=true, third batch — must still call PatchVersion
-		processCtx.version.SnapshotProgress.Cursor = "cursor_batch3"
-		mockRepo.EXPECT().PatchVersion(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-		err = service.commitProgress(context.Background(), processCtx, true)
-		if err != nil {
-			t.Fatalf("batch 3: commitProgress() error = %v", err)
-		}
-		if processCtx.version.UpdateVersion != 3 {
-			t.Errorf("batch 3: expected UpdateVersion 3, got %v", processCtx.version.UpdateVersion)
-		}
-	})
-}
-
 func TestDatasetServiceImpl_commitToFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

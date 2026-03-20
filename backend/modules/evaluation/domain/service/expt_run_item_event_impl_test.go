@@ -275,7 +275,7 @@ func TestExptItemEventEvalServiceImpl_HandleEventErr(t *testing.T) {
 						RetryIntervalSecond: 60,
 						IsInDebt:            false,
 					})
-				mockPublisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockPublisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockMetric.EXPECT().EmitItemExecResult(gomock.Any(), gomock.Any(), true, true, gomock.Any(), gomock.Any(), gomock.Any())
 			},
 			event:   &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, RetryTimes: 1},

@@ -10,9 +10,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
-	"github.com/cloudwego/hertz/pkg/protocol/consts"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
-	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
 
 var localEvalOpenAPIClient evalopenapiservice.Client
@@ -237,32 +235,4 @@ func ListExptTemplatesOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/experiment_templates/submit_expt [POST]
 func SubmitExptFromTemplateOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.SubmitExptFromTemplateOApi)
-}
-
-// ReportEvaluatorInvokeResult .
-// @router /v1/loop/evaluation/evaluators/result [POST]
-func ReportEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.ReportEvaluatorInvokeResultRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(openapi0.ReportEvaluatorInvokeResultResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}
-
-// ImportEvaluationSetOApi .
-// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import [POST]
-func ImportEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalOpenAPIClient.ImportEvaluationSetOApi)
-}
-
-// GetEvaluationSetJobOApi .
-// @router /v1/loop/evaluation/evaluation_set_io_job/:job_id [GET]
-func GetEvaluationSetJobOApi(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationSetJobOApi)
 }

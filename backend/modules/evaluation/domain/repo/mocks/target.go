@@ -89,18 +89,18 @@ func (mr *MockIEvalTargetRepoMockRecorder) CreateEvalTarget(ctx, do any) *gomock
 }
 
 // CreateEvalTargetRecord mocks base method.
-func (m *MockIEvalTargetRepo) CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) (int64, error) {
+func (m *MockIEvalTargetRepo) CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) (int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateEvalTargetRecord", ctx, record, truncateLargeContent)
+	ret := m.ctrl.Call(m, "CreateEvalTargetRecord", ctx, record)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateEvalTargetRecord indicates an expected call of CreateEvalTargetRecord.
-func (mr *MockIEvalTargetRepoMockRecorder) CreateEvalTargetRecord(ctx, record, truncateLargeContent any) *gomock.Call {
+func (mr *MockIEvalTargetRepoMockRecorder) CreateEvalTargetRecord(ctx, record any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).CreateEvalTargetRecord), ctx, record, truncateLargeContent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).CreateEvalTargetRecord), ctx, record)
 }
 
 // GetEvalTarget mocks base method.
@@ -222,29 +222,29 @@ func (mr *MockIEvalTargetRepoMockRecorder) LoadEvalTargetRecordOutputFields(ctx,
 }
 
 // SaveEvalTargetRecord mocks base method.
-func (m *MockIEvalTargetRepo) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
+func (m *MockIEvalTargetRepo) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SaveEvalTargetRecord", ctx, record, truncateLargeContent)
+	ret := m.ctrl.Call(m, "SaveEvalTargetRecord", ctx, record)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SaveEvalTargetRecord indicates an expected call of SaveEvalTargetRecord.
-func (mr *MockIEvalTargetRepoMockRecorder) SaveEvalTargetRecord(ctx, record, truncateLargeContent any) *gomock.Call {
+func (mr *MockIEvalTargetRepoMockRecorder) SaveEvalTargetRecord(ctx, record any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).SaveEvalTargetRecord), ctx, record, truncateLargeContent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).SaveEvalTargetRecord), ctx, record)
 }
 
 // UpdateEvalTargetRecord mocks base method.
-func (m *MockIEvalTargetRepo) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
+func (m *MockIEvalTargetRepo) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateEvalTargetRecord", ctx, record, truncateLargeContent)
+	ret := m.ctrl.Call(m, "UpdateEvalTargetRecord", ctx, record)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateEvalTargetRecord indicates an expected call of UpdateEvalTargetRecord.
-func (mr *MockIEvalTargetRepoMockRecorder) UpdateEvalTargetRecord(ctx, record, truncateLargeContent any) *gomock.Call {
+func (mr *MockIEvalTargetRepoMockRecorder) UpdateEvalTargetRecord(ctx, record any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).UpdateEvalTargetRecord), ctx, record, truncateLargeContent)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvalTargetRecord", reflect.TypeOf((*MockIEvalTargetRepo)(nil).UpdateEvalTargetRecord), ctx, record)
 }

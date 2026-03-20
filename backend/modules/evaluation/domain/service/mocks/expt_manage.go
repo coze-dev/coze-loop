@@ -236,9 +236,9 @@ func (mr *MockIExptManagerMockRecorder) Invoke(ctx, invokeExptReq any) *gomock.C
 }
 
 // IsCompletingRun mocks base method.
-func (m *MockIExptManager) ExistCompletingRunLock(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
+func (m *MockIExptManager) IsCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExistCompletingRunLock", ctx, exptID, exptRunID, spaceID)
+	ret := m.ctrl.Call(m, "IsCompletingRun", ctx, exptID, exptRunID, spaceID)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
@@ -247,35 +247,7 @@ func (m *MockIExptManager) ExistCompletingRunLock(ctx context.Context, exptID, e
 // IsCompletingRun indicates an expected call of IsCompletingRun.
 func (mr *MockIExptManagerMockRecorder) IsCompletingRun(ctx, exptID, exptRunID, spaceID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExistCompletingRunLock", reflect.TypeOf((*MockIExptManager)(nil).ExistCompletingRunLock), ctx, exptID, exptRunID, spaceID)
-}
-
-// LockCompletingRun mocks base method.
-func (m *MockIExptManager) LockCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "LockCompletingRun", ctx, exptID, exptRunID, spaceID, session)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// LockCompletingRun indicates an expected call of LockCompletingRun.
-func (mr *MockIExptManagerMockRecorder) LockCompletingRun(ctx, exptID, exptRunID, spaceID, session any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockCompletingRun", reflect.TypeOf((*MockIExptManager)(nil).LockCompletingRun), ctx, exptID, exptRunID, spaceID, session)
-}
-
-// UnlockCompletingRun mocks base method.
-func (m *MockIExptManager) UnlockCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UnlockCompletingRun", ctx, exptID, exptRunID, spaceID, session)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UnlockCompletingRun indicates an expected call of UnlockCompletingRun.
-func (mr *MockIExptManagerMockRecorder) UnlockCompletingRun(ctx, exptID, exptRunID, spaceID, session any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnlockCompletingRun", reflect.TypeOf((*MockIExptManager)(nil).UnlockCompletingRun), ctx, exptID, exptRunID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsCompletingRun", reflect.TypeOf((*MockIExptManager)(nil).IsCompletingRun), ctx, exptID, exptRunID, spaceID)
 }
 
 // List mocks base method.

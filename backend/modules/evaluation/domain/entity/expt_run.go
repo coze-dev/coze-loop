@@ -498,17 +498,6 @@ func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
 	return false
 }
 
-func (e *ExptTurnRunResult) AbortWithEvaluatorResults() bool {
-	// evaluator async exec, check if any evaluator is in async invoking status
-	for _, record := range e.EvaluatorResults {
-		if record != nil && record.Status == EvaluatorRunStatusAsyncInvoking {
-			e.AsyncAbort = true
-			return true
-		}
-	}
-	return false
-}
-
 //go:generate  mockgen -destination  ./mocks/expt_scheduler_mock.go  --package mocks . ExptSchedulerMode
 type ExptSchedulerMode interface {
 	Mode() ExptRunMode
@@ -527,10 +516,9 @@ type CKDBConfig struct {
 }
 
 type EvalAsyncCtx struct {
-	Event              *ExptItemEvalEvent
-	RecordID           int64
-	AsyncUnixMS        int64 // async call time with unix ms ts
-	Session            *Session
-	Callee             string
-	EvaluatorVersionID int64 // evaluator version id, used for evaluator async scenario
+	Event       *ExptItemEvalEvent
+	RecordID    int64
+	AsyncUnixMS int64 // async call time with unix ms ts
+	Session     *Session
+	Callee      string
 }

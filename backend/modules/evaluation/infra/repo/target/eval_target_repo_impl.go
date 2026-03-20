@@ -283,9 +283,9 @@ func (e *EvalTargetRepoImpl) BatchGetEvalTargetVersion(ctx context.Context, spac
 	return dos, nil
 }
 
-func (e *EvalTargetRepoImpl) CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) (int64, error) {
+func (e *EvalTargetRepoImpl) CreateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) (int64, error) {
 	if e.recordDataStorage != nil {
-		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record, truncateLargeContent); err != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
 			return 0, err
 		}
 	}
@@ -350,9 +350,9 @@ func (e *EvalTargetRepoImpl) LoadEvalTargetRecordFullData(ctx context.Context, r
 	return e.recordDataStorage.LoadEvalTargetRecordData(ctx, record)
 }
 
-func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
+func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
 	if e.recordDataStorage != nil {
-		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record, truncateLargeContent); err != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
 			return err
 		}
 	}
@@ -363,9 +363,9 @@ func (e *EvalTargetRepoImpl) SaveEvalTargetRecord(ctx context.Context, record *e
 	return e.evalTargetRecordDao.Save(ctx, po)
 }
 
-func (e *EvalTargetRepoImpl) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord, truncateLargeContent *bool) error {
+func (e *EvalTargetRepoImpl) UpdateEvalTargetRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
 	if e.recordDataStorage != nil {
-		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record, truncateLargeContent); err != nil {
+		if err := e.recordDataStorage.SaveEvalTargetRecordData(ctx, record); err != nil {
 			return err
 		}
 	}

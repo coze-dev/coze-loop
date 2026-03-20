@@ -23,7 +23,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	evaluatormocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
-	pkgjson "github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 func TestNewEvaluatorRecordRepo(t *testing.T) {
@@ -560,113 +559,6 @@ func TestEvaluatorRecordRepoImpl_GetEvaluatorRecord(t *testing.T) {
 		assert.Contains(t, err.Error(), "load evaluator input omitted content")
 		assert.Nil(t, result)
 	})
-}
-
-func TestEvaluatorRecordRepoImpl_UpdateEvaluatorRecordResult(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockEvaluatorRecordDAO := evaluatormocks.NewMockEvaluatorRecordDAO(ctrl)
-
-	tests := []struct {
-		name              string
-		recordID          int64
-		status            entity.EvaluatorRunStatus
-		outputData        *entity.EvaluatorOutputData
-		wantScore         float64
-		wantOutputDataStr string
-		daoErr            error
-	}{
-		{
-			name:              "outputData为nil",
-			recordID:          1,
-			status:            entity.EvaluatorRunStatusSuccess,
-			outputData:        nil,
-			wantScore:         0,
-			wantOutputDataStr: "",
-		},
-		{
-			name:     "EvaluatorResult为nil",
-			recordID: 2,
-			status:   entity.EvaluatorRunStatusFail,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: nil,
-			},
-			wantScore:         0,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{EvaluatorResult: nil}),
-		},
-		{
-			name:     "Score为nil但Correction有score",
-			recordID: 3,
-			status:   entity.EvaluatorRunStatusFail,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: nil,
-					Correction: &entity.Correction{
-						Score: gptr.Of(float64(2.5)),
-					},
-				},
-			},
-			wantScore: 0,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: nil,
-					Correction: &entity.Correction{
-						Score: gptr.Of(float64(2.5)),
-					},
-				},
-			}),
-		},
-		{
-			name:     "Score有值",
-			recordID: 4,
-			status:   entity.EvaluatorRunStatusSuccess,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(1.25)),
-				},
-			},
-			wantScore: 1.25,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(1.25)),
-				},
-			}),
-		},
-		{
-			name:     "DAO返回错误",
-			recordID: 5,
-			status:   entity.EvaluatorRunStatusSuccess,
-			outputData: &entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(3)),
-				},
-			},
-			wantScore: 3,
-			wantOutputDataStr: pkgjson.Jsonify(&entity.EvaluatorOutputData{
-				EvaluatorResult: &entity.EvaluatorResult{
-					Score: gptr.Of(float64(3)),
-				},
-			}),
-			daoErr: assert.AnError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := &EvaluatorRecordRepoImpl{
-				evaluatorRecordDao: mockEvaluatorRecordDAO,
-			}
-
-			mockEvaluatorRecordDAO.EXPECT().
-				UpdateEvaluatorRecordResult(gomock.Any(), tt.recordID, int8(tt.status), tt.wantScore, tt.wantOutputDataStr).
-				Return(tt.daoErr).
-				Times(1)
-
-			err := repo.UpdateEvaluatorRecordResult(context.Background(), tt.recordID, tt.status, tt.outputData)
-			assert.Equal(t, tt.daoErr, err)
-		})
-	}
 }
 
 type nopReader struct{ buf *bytes.Reader }

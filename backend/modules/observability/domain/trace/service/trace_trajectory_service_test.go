@@ -119,9 +119,7 @@ func TestTraceServiceImpl_GetTrajectories_and_ListTrajectory(t *testing.T) {
 	defer ctrl.Finish()
 	repoMock := repomocks.NewMockITraceRepo(ctrl)
 	filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
-	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{
-		entity.SceneGetTrace: {span_processor.NewCheckProcessorFactory()},
-	})
+	builder := NewTraceFilterProcessorBuilder(filterFactoryMock, []span_processor.Factory{span_processor.NewCheckProcessorFactory()}, nil, nil, nil, nil, nil)
 	tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"tenant"}, nil).AnyTimes()
 	// 配置查询：返回空，走默认规则

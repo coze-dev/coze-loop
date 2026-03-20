@@ -355,59 +355,6 @@ func TestExptTurnRunResult_AbortWithTargetResult(t *testing.T) {
 	}
 }
 
-func TestExptTurnRunResult_AbortWithEvaluatorResults(t *testing.T) {
-	tests := []struct {
-		name          string
-		evaluatorRes  map[int64]*EvaluatorRecord
-		expectedAbort bool
-		expectedAsync bool
-	}{
-		{
-			name:          "EvaluatorResults 为 nil 不中止",
-			evaluatorRes:  nil,
-			expectedAbort: false,
-			expectedAsync: false,
-		},
-		{
-			name: "全部成功不中止",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusSuccess},
-			},
-			expectedAbort: false,
-			expectedAsync: false,
-		},
-		{
-			name: "存在 AsyncInvoking 中止并标记 AsyncAbort",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: {ID: 100, EvaluatorVersionID: 1, Status: EvaluatorRunStatusSuccess},
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
-			},
-			expectedAbort: true,
-			expectedAsync: true,
-		},
-		{
-			name: "包含 nil record 不影响判断",
-			evaluatorRes: map[int64]*EvaluatorRecord{
-				1: nil,
-				2: {ID: 200, EvaluatorVersionID: 2, Status: EvaluatorRunStatusAsyncInvoking},
-			},
-			expectedAbort: true,
-			expectedAsync: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			trr := &ExptTurnRunResult{EvaluatorResults: tt.evaluatorRes}
-
-			got := trr.AbortWithEvaluatorResults()
-			assert.Equal(t, tt.expectedAbort, got)
-			assert.Equal(t, tt.expectedAsync, trr.AsyncAbort)
-		})
-	}
-}
-
 func TestExptTurnRunResult_SetEvalErr(t *testing.T) {
 	tests := []struct {
 		name     string

@@ -138,8 +138,6 @@ type ExecuteTargetCtx struct {
 	ExperimentRunID *int64
 	// 评测集数据项ID
 	ItemID int64
-	// TruncateLargeContent 是否对大对象剪裁，仅 DebugTarget 使用，nil 时默认剪裁
-	TruncateLargeContent *bool
 	// 评测集数据项轮次ID
 	TurnID int64
 }

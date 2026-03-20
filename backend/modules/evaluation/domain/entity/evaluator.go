@@ -22,7 +22,6 @@ type Evaluator struct {
 	PromptEvaluatorVersion    *PromptEvaluatorVersion
 	CodeEvaluatorVersion      *CodeEvaluatorVersion
 	CustomRPCEvaluatorVersion *CustomRPCEvaluatorVersion
-	AgentEvaluatorVersion     *AgentEvaluatorVersion
 }
 
 type EvaluatorInfo struct {
@@ -45,18 +44,12 @@ const (
 	EvaluatorTypePrompt    EvaluatorType = 1
 	EvaluatorTypeCode      EvaluatorType = 2
 	EvaluatorTypeCustomRPC EvaluatorType = 3
-	EvaluatorTypeAgent     EvaluatorType = 4
 )
 
 var EvaluatorTypeSet = map[EvaluatorType]struct{}{
 	EvaluatorTypePrompt:    {},
 	EvaluatorTypeCode:      {},
 	EvaluatorTypeCustomRPC: {},
-	EvaluatorTypeAgent:     {},
-}
-
-func (e *Evaluator) IsAsync() bool {
-	return e.EvaluatorType == EvaluatorTypeAgent
 }
 
 // UpdateEvaluatorMetaRequest 用于更新评估器元信息的参数
@@ -87,10 +80,6 @@ func (e *Evaluator) GetEvaluatorVersionID() int64 {
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetID()
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetID()
-		}
 	default:
 		return 0
 	}
@@ -111,10 +100,6 @@ func (e *Evaluator) GetVersion() string {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetVersion()
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetVersion()
 		}
 	default:
 		return ""
@@ -137,10 +122,6 @@ func (e *Evaluator) GetEvaluatorID() int64 {
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetEvaluatorID()
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetEvaluatorID()
-		}
 	default:
 		return 0
 	}
@@ -161,10 +142,6 @@ func (e *Evaluator) GetSpaceID() int64 {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetSpaceID()
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetSpaceID()
 		}
 	default:
 		return 0
@@ -192,10 +169,6 @@ func (e *Evaluator) GetEvaluatorVersionDescription() string {
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetDescription()
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetDescription()
-		}
 	default:
 		return ""
 	}
@@ -216,10 +189,6 @@ func (e *Evaluator) GetBaseInfo() *BaseInfo {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.GetBaseInfo()
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.GetBaseInfo()
 		}
 	default:
 		return nil
@@ -268,10 +237,6 @@ func (e *Evaluator) ValidateInput(input *EvaluatorInputData) error {
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.ValidateInput(input)
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.ValidateInput(input)
-		}
 	default:
 		return nil
 	}
@@ -292,10 +257,6 @@ func (e *Evaluator) ValidateBaseInfo() error {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.ValidateBaseInfo()
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.ValidateBaseInfo()
 		}
 	default:
 		return nil
@@ -318,10 +279,6 @@ func (e *Evaluator) SetEvaluatorVersionID(id int64) {
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetID(id)
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetID(id)
-		}
 	default:
 		return
 	}
@@ -341,10 +298,6 @@ func (e *Evaluator) SetVersion(version string) {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetVersion(version)
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetVersion(version)
 		}
 	default:
 		return
@@ -371,10 +324,6 @@ func (e *Evaluator) SetEvaluatorVersionDescription(description string) {
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetDescription(description)
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetDescription(description)
-		}
 	default:
 		return
 	}
@@ -394,10 +343,6 @@ func (e *Evaluator) SetBaseInfo(baseInfo *BaseInfo) {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetBaseInfo(baseInfo)
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetBaseInfo(baseInfo)
 		}
 	default:
 		return
@@ -455,10 +400,6 @@ func (e *Evaluator) SetEvaluatorID(evaluatorID int64) {
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetEvaluatorID(evaluatorID)
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetEvaluatorID(evaluatorID)
-		}
 	default:
 		return
 	}
@@ -479,10 +420,6 @@ func (e *Evaluator) SetSpaceID(spaceID int64) {
 		if e.CustomRPCEvaluatorVersion != nil {
 			e.CustomRPCEvaluatorVersion.SetSpaceID(spaceID)
 		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			e.AgentEvaluatorVersion.SetSpaceID(spaceID)
-		}
 	default:
 		return
 	}
@@ -496,8 +433,6 @@ func (e *Evaluator) SetEvaluatorVersion(version *Evaluator) {
 		e.CodeEvaluatorVersion = version.CodeEvaluatorVersion
 	case EvaluatorTypeCustomRPC:
 		e.CustomRPCEvaluatorVersion = version.CustomRPCEvaluatorVersion
-	case EvaluatorTypeAgent:
-		e.AgentEvaluatorVersion = version.AgentEvaluatorVersion
 	default:
 		return
 	}
@@ -524,10 +459,6 @@ func (e *Evaluator) GetInputSchemas() []*ArgsSchema {
 	case EvaluatorTypeCustomRPC:
 		if e.CustomRPCEvaluatorVersion != nil {
 			return e.CustomRPCEvaluatorVersion.InputSchemas
-		}
-	case EvaluatorTypeAgent:
-		if e.AgentEvaluatorVersion != nil {
-			return e.AgentEvaluatorVersion.InputSchemas
 		}
 	}
 	return nil

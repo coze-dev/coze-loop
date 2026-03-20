@@ -147,99 +147,6 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	}, nil
 }
 
-func (e *EvalOpenAPIApplication) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	// 参数校验
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-	// 鉴权
-	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil)
-	if err != nil {
-		return nil, err
-	}
-	if set == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
-	}
-	var ownerID *string
-	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
-		ownerID = set.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(set.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.AddItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: set.SpaceID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// domain调用
-	jobID, err := e.evaluationSetService.ImportEvaluationSet(ctx, &entity.ImportEvaluationSetParam{
-		WorkspaceID:     req.GetWorkspaceID(),
-		EvaluationSetID: req.GetEvaluationSetID(),
-		File:            evaluation_set.DatasetIOFileDTO2DO(req.File),
-		FieldMappings:   evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
-		Option:          evaluation_set.OpenAPIDatasetIOJobOptionDTO2DO(req.Option),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &openapi.ImportEvaluationSetOApiResponse{
-		Data: &openapi.ImportEvaluationSetOpenAPIData{
-			JobID: gptr.Of(jobID),
-		},
-	}, nil
-}
-
-func (e *EvalOpenAPIApplication) GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error) {
-	startTime := time.Now().UnixNano() / int64(time.Millisecond)
-	defer func() {
-		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
-	}()
-
-	// 参数校验
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
-
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
-		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// domain调用
-	job, err := e.evaluationSetService.GetEvaluationSetIOJob(ctx, req.WorkspaceID, req.GetJobID())
-	if err != nil {
-		return nil, err
-	}
-	if job == nil {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found"))
-	}
-
-	// Verify workspace ID matches
-	if job.SpaceID != req.GetWorkspaceID() {
-		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found in workspace"))
-	}
-
-	return &openapi.GetEvaluationSetIOJobOApiResponse{
-		Data: &openapi.GetEvaluationSetIOJobOpenAPIData{
-			Job: evaluation_set.OpenAPIDatasetIOJobDO2DTO(job),
-		},
-	}, nil
-}
-
 func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest) (r *openapi.GetEvaluationSetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -876,10 +783,7 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3),
-			func(event *entity.ExptItemEvalEvent) {
-				event.AsyncReportTrigger = true
-			}); err != nil {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(req.GetWorkspaceID())+time.Second*3)); err != nil {
 			return nil, err
 		}
 	}
@@ -982,7 +886,6 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		TargetRuntimeParam:     experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
 		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
-		ItemRetryNum:           req.ItemRetryNum,
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
@@ -2003,50 +1906,4 @@ func (e *EvalOpenAPIApplication) ListExptTemplatesOApi(ctx context.Context, req 
 			Total:               gptr.Of(int32(total)),
 		},
 	}, nil
-}
-
-func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
-	logs.CtxInfo(ctx, "ReportEvaluatorInvokeResult receive req: %v", json.Jsonify(req))
-
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
-		SpaceID:       req.GetWorkspaceID(),
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	asyncCtxKey := fmt.Sprintf("evaluator:%d", req.GetInvokeID())
-	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
-	if err != nil {
-		return nil, err
-	}
-
-	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
-		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID())
-
-	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
-	if outputData != nil {
-		outputData.TimeConsumingMS = time.Now().UnixMilli() - actx.AsyncUnixMS
-	}
-
-	if err := e.evaluatorService.ReportEvaluatorInvokeResult(ctx, &entity.ReportEvaluatorRecordParam{
-		SpaceID:    req.GetWorkspaceID(),
-		RecordID:   req.GetInvokeID(),
-		OutputData: outputData,
-		Status:     evaluator_convertor.ToEvaluatorRunStatusDO(req.GetStatus()),
-	}); err != nil {
-		return nil, err
-	}
-
-	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil, func(event *entity.ExptItemEvalEvent) {
-			event.AsyncEvaluatorReportTrigger = true
-		}); err != nil {
-			return nil, err
-		}
-	}
-
-	return &openapi.ReportEvaluatorInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }

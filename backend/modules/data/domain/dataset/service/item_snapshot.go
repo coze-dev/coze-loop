@@ -123,8 +123,10 @@ func (s *DatasetServiceImpl) commitProgress(ctx context.Context, processCtx *sna
 		}
 		return nil
 	}
-	if err := s.commitToInProgress(ctx, processCtx); err != nil {
-		return err
+	if processCtx.version.SnapshotStatus == entity.SnapshotStatusUnstarted {
+		if err := s.commitToInProgress(ctx, processCtx); err != nil {
+			return err
+		}
 	}
 	return nil
 }

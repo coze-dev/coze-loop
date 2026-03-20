@@ -7,7 +7,6 @@ include "coze.loop.evaluation.spi.thrift"
 include "domain_openapi/experiment.thrift"
 include "domain_openapi/eval_target.thrift"
 include "domain_openapi/evaluator.thrift"
-include "../data/domain/dataset_job.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -320,44 +319,6 @@ struct ReportEvalTargetInvokeResultRequest {
 }
 
 struct ReportEvalTargetInvokeResultResponse {
-    255: base.BaseResp BaseResp
-}
-
-struct ImportEvaluationSetOpenAPIData {
-    1: optional i64 job_id (api.js_conv="true", go.tag='json:"job_id"')
-}
-
-struct ImportEvaluationSetOApiRequest {
-    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"'),
-    2: required i64 evaluation_set_id (api.js_conv="true", api.path="evaluation_set_id", go.tag='json:"evaluation_set_id"'),
-
-    3: optional dataset_job.DatasetIOFile file
-    4: optional list<dataset_job.FieldMapping> field_mappings (vt.min_size = "1", vt.elem.skip = "false")
-    5: optional dataset_job.DatasetIOJobOption option
-
-    255: optional base.Base Base
-}
-
-struct ImportEvaluationSetOApiResponse {
-    1: optional ImportEvaluationSetOpenAPIData data
-
-    255: base.BaseResp BaseResp
-}
-
-struct GetEvaluationSetIOJobOpenAPIData {
-    1: optional dataset_job.DatasetIOJob job
-}
-
-struct GetEvaluationSetIOJobOApiRequest {
-    1: required i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"'),
-    2: required i64 job_id (api.path = "job_id", api.js_conv="true", go.tag='json:"workspace_id"'),
-
-    255: optional base.Base Base
-}
-
-struct GetEvaluationSetIOJobOApiResponse {
-    1: optional GetEvaluationSetIOJobOpenAPIData data
-
     255: base.BaseResp BaseResp
 }
 
@@ -929,20 +890,6 @@ struct SubmitExptFromTemplateOApiResponse {
 struct SubmitExptFromTemplateOpenAPIData {
     1: optional experiment.Experiment experiment (api.body="experiment")
 }
-struct ReportEvaluatorInvokeResultRequest {
-    1: optional i64 workspace_id (api.js_conv="true", go.tag = 'json:"workspace_id"')
-    2: optional i64 invoke_id (api.js_conv="true", go.tag = 'json:"invoke_id"')
-    3: optional coze.loop.evaluation.spi.InvokeEvaluatorRunStatus status
-
-    // set output if status=SUCCESS
-    10: optional coze.loop.evaluation.spi.InvokeEvaluatorOutputData output
-
-    255: optional base.Base Base
-}
-
-struct ReportEvaluatorInvokeResultResponse {
-    255: base.BaseResp BaseResp
-}
 
 // ===============================
 // 服务定义
@@ -974,10 +921,6 @@ service EvaluationOpenAPIService {
     ListEvaluationSetVersionItemsOApiResponse ListEvaluationSetVersionItemsOApi(1: ListEvaluationSetVersionItemsOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items")
     // 查询评测集某个filed值，用于获取超长文本的内容
     GetEvaluationItemFieldOApiResponse GetEvaluationItemFieldOApi(1: GetEvaluationItemFieldOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/items/:item_id/field")
-    // 导入评测集
-    ImportEvaluationSetOApiResponse ImportEvaluationSetOApi(1: ImportEvaluationSetOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import")
-    // 查询评测集导入任务
-    GetEvaluationSetIOJobOApiResponse GetEvaluationSetJobOApi(1: GetEvaluationSetIOJobOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/evaluation_sets/io_job/:job_id")
     // 更新评测集字段信息
     UpdateEvaluationSetSchemaOApiResponse UpdateEvaluationSetSchemaOApi(1: UpdateEvaluationSetSchemaOApiRequest req) (api.category="openapi", api.put = "/v1/loop/evaluation/evaluation_sets/:evaluation_set_id/schema"),
 
@@ -1036,8 +979,4 @@ service EvaluationOpenAPIService {
     // 根据实验模板提交新实验
     SubmitExptFromTemplateOApiResponse SubmitExptFromTemplateOApi(1: SubmitExptFromTemplateOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiment_templates/submit_expt")
 
-
-    // 评估器接口
-    // 评估器调用结果上报接口
-    ReportEvaluatorInvokeResultResponse ReportEvaluatorInvokeResult(1: ReportEvaluatorInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/result")
 }

@@ -29,26 +29,11 @@ type EvaluatorInputData struct {
 }
 
 type EvaluatorOutputData struct {
-	EvaluatorResult   *EvaluatorResult             `json:"evaluator_result,omitempty"`
-	EvaluatorUsage    *EvaluatorUsage              `json:"evaluator_usage,omitempty"`
-	EvaluatorRunError *EvaluatorRunError           `json:"evaluator_run_error,omitempty"`
-	TimeConsumingMS   int64                        `json:"time_consuming_ms,omitempty"`
-	Stdout            string                       `json:"stdout,omitempty"`
-	ExtraOutput       *EvaluatorExtraOutputContent `json:"extra_output,omitempty"`
-	Ext               map[string]string            `json:"ext,omitempty"`
-}
-
-type EvaluatorExtraOutputType string
-
-const (
-	EvaluatorExtraOutputTypeHTML     EvaluatorExtraOutputType = "html"
-	EvaluatorExtraOutputTypeMarkdown EvaluatorExtraOutputType = "markdown"
-)
-
-type EvaluatorExtraOutputContent struct {
-	OutputType *EvaluatorExtraOutputType `json:"output_type,omitempty"`
-	URI        *string                   `json:"uri,omitempty"`
-	URL        *string                   `json:"url,omitempty"`
+	EvaluatorResult   *EvaluatorResult   `json:"evaluator_result,omitempty"`
+	EvaluatorUsage    *EvaluatorUsage    `json:"evaluator_usage,omitempty"`
+	EvaluatorRunError *EvaluatorRunError `json:"evaluator_run_error,omitempty"`
+	TimeConsumingMS   int64              `json:"time_consuming_ms,omitempty"`
+	Stdout            string             `json:"stdout,omitempty"`
 }
 
 type Correction struct {
@@ -76,10 +61,9 @@ type EvaluatorRunError struct {
 type EvaluatorRunStatus int64
 
 const (
-	EvaluatorRunStatusUnknown       EvaluatorRunStatus = 0
-	EvaluatorRunStatusSuccess       EvaluatorRunStatus = 1
-	EvaluatorRunStatusFail          EvaluatorRunStatus = 2
-	EvaluatorRunStatusAsyncInvoking EvaluatorRunStatus = 3
+	EvaluatorRunStatusUnknown EvaluatorRunStatus = 0
+	EvaluatorRunStatusSuccess EvaluatorRunStatus = 1
+	EvaluatorRunStatusFail    EvaluatorRunStatus = 2
 )
 
 func (e *EvaluatorRecord) GetBaseInfo() *BaseInfo {

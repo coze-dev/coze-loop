@@ -4,7 +4,6 @@
 package trace
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -24,7 +23,6 @@ func SpanDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
-	workflowMap map[string]string,
 	needOriginalTags bool,
 ) *span.OutputSpan {
 	outSpan := &span.OutputSpan{
@@ -127,14 +125,6 @@ func SpanDO2DTO(
 			outSpan.Annotations = annotationDTOList
 		}
 	}
-	if s.Encryption.NeedWorkflow {
-		key := fmt.Sprintf("%s-%s", s.TraceID, s.SpanID)
-		if workflowURL, ok := workflowMap[key]; ok {
-			outSpan.Encryption = &span.EncryptionInfo{
-				Workflow: &workflowURL,
-			}
-		}
-	}
 	return outSpan
 }
 
@@ -180,12 +170,11 @@ func SpanListDO2DTO(
 	userMap map[string]*common.UserInfo,
 	evalMap map[int64]*rpc.Evaluator,
 	tagMap map[int64]*rpc.TagInfo,
-	workflowMap map[string]string,
 	needOriginalTags bool,
 ) []*span.OutputSpan {
 	ret := make([]*span.OutputSpan, len(spans))
 	for i, s := range spans {
-		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, workflowMap, needOriginalTags)
+		ret[i] = SpanDO2DTO(s, userMap, evalMap, tagMap, needOriginalTags)
 	}
 	return ret
 }

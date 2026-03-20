@@ -98,20 +98,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"ImportEvaluationSetOApi": kitex.NewMethodInfo(
-		importEvaluationSetOApiHandler,
-		newEvaluationOpenAPIServiceImportEvaluationSetOApiArgs,
-		newEvaluationOpenAPIServiceImportEvaluationSetOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"GetEvaluationSetJobOApi": kitex.NewMethodInfo(
-		getEvaluationSetJobOApiHandler,
-		newEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs,
-		newEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 	"UpdateEvaluationSetSchemaOApi": kitex.NewMethodInfo(
 		updateEvaluationSetSchemaOApiHandler,
 		newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs,
@@ -284,13 +270,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		submitExptFromTemplateOApiHandler,
 		newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiArgs,
 		newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
-	"ReportEvaluatorInvokeResult": kitex.NewMethodInfo(
-		reportEvaluatorInvokeResult_Handler,
-		newEvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs,
-		newEvaluationOpenAPIServiceReportEvaluatorInvokeResultResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -553,44 +532,6 @@ func newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult()
-}
-
-func importEvaluationSetOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).ImportEvaluationSetOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceImportEvaluationSetOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceImportEvaluationSetOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceImportEvaluationSetOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceImportEvaluationSetOApiResult()
-}
-
-func getEvaluationSetJobOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluationSetJobOApi(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs()
-}
-
-func newEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult()
 }
 
 func updateEvaluationSetSchemaOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1068,25 +1009,6 @@ func newEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult()
 }
 
-func reportEvaluatorInvokeResult_Handler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs)
-	realResult := result.(*openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult)
-	success, err := handler.(openapi.EvaluationOpenAPIService).ReportEvaluatorInvokeResult_(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newEvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs()
-}
-
-func newEvaluationOpenAPIServiceReportEvaluatorInvokeResultResult() interface{} {
-	return openapi.NewEvaluationOpenAPIServiceReportEvaluatorInvokeResultResult()
-}
-
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1214,26 +1136,6 @@ func (p *kClient) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.G
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult
 	if err = p.c.Call(ctx, "GetEvaluationItemFieldOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult
-	if err = p.c.Call(ctx, "ImportEvaluationSetOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiResult
-	if err = p.c.Call(ctx, "GetEvaluationSetJobOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -1484,16 +1386,6 @@ func (p *kClient) SubmitExptFromTemplateOApi(ctx context.Context, req *openapi.S
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceSubmitExptFromTemplateOApiResult
 	if err = p.c.Call(ctx, "SubmitExptFromTemplateOApi", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) ReportEvaluatorInvokeResult_(ctx context.Context, req *openapi.ReportEvaluatorInvokeResultRequest) (r *openapi.ReportEvaluatorInvokeResultResponse, err error) {
-	var _args openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultArgs
-	_args.Req = req
-	var _result openapi.EvaluationOpenAPIServiceReportEvaluatorInvokeResultResult
-	if err = p.c.Call(ctx, "ReportEvaluatorInvokeResult", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

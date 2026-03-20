@@ -247,6 +247,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 			spaceID: 789,
 			opts:    []entity.CompleteExptOptionFn{},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				runLog := &entity.ExptRunLog{
 					ID:        456,
 					ExptID:    123,
@@ -276,6 +281,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: false,
 		},
@@ -295,6 +305,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					Exist(ctx, "CompleteRun:test_cid").
 					Return(false, nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
 
 				runLog := &entity.ExptRunLog{
 					ID:        456,
@@ -321,6 +336,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 
 				mgr.idem.(*idemMocks.MockIdempotentService).
 					EXPECT().
@@ -356,6 +376,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 				entity.WithCompleteInterval(time.Millisecond * 100),
 			},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				runLog := &entity.ExptRunLog{
 					ID:        456,
 					ExptID:    123,
@@ -382,6 +407,11 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 					EXPECT().
 					Save(ctx, gomock.Any()).
 					Return(nil)
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: false,
 		},
@@ -393,10 +423,20 @@ func TestExptMangerImpl_CompleteRun(t *testing.T) {
 			spaceID: 789,
 			opts:    []entity.CompleteExptOptionFn{},
 			setup: func() {
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
+					Return(true, nil)
+
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().
 					Get(ctx, int64(123), int64(456)).
 					Return(nil, errors.New("run log not found"))
+
+				mgr.mutex.(*lockMocks.MockILocker).
+					EXPECT().
+					Unlock(gomock.Any()).
+					Return(true, nil)
 			},
 			wantErr: true,
 		},
@@ -851,42 +891,6 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 					Return(true, "1006", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
-			},
-			wantErr: true,
-		},
-		{
-			name: "retried_completing_lock_exists",
-			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
-				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
-					EXPECT().GenID(ctx).Return(int64(1007), nil)
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1007", 300*time.Second, time.Second).
-					Return(false, "1001", nil)
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(true, nil)
-			},
-			wantErr: true,
-		},
-		{
-			name: "retried_completing_lock_check_error",
-			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
-				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
-					EXPECT().GenID(ctx).Return(int64(1008), nil)
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1008", 300*time.Second, time.Second).
-					Return(false, "1001", nil)
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, errors.New("lock check error"))
 			},
 			wantErr: true,
 		},
@@ -2727,201 +2731,6 @@ func TestExptMangerImpl_checkTargetConnector_WithRuntimeParam(t *testing.T) {
 			err := mgr.checkTargetConnector(ctx, tt.expt, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("checkTargetConnector() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestExptMangerImpl_ExistCompletingRunLock(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mgr := newTestExptManager(ctrl)
-	ctx := context.Background()
-
-	tests := []struct {
-		name       string
-		exptID     int64
-		exptRunID  int64
-		spaceID    int64
-		setup      func()
-		wantExists bool
-		wantErr    bool
-	}{
-		{
-			name:      "lock exists",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Exists(ctx, "expt_completing_mutex_lock:123:456").
-					Return(true, nil)
-			},
-			wantExists: true,
-			wantErr:    false,
-		},
-		{
-			name:      "lock does not exist",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Exists(ctx, "expt_completing_mutex_lock:123:456").
-					Return(false, nil)
-			},
-			wantExists: false,
-			wantErr:    false,
-		},
-		{
-			name:      "mutex check error",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Exists(ctx, "expt_completing_mutex_lock:123:456").
-					Return(false, errors.New("mutex error"))
-			},
-			wantExists: false,
-			wantErr:    true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			exists, err := mgr.ExistCompletingRunLock(ctx, tt.exptID, tt.exptRunID, tt.spaceID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ExistCompletingRunLock() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if exists != tt.wantExists {
-				t.Errorf("ExistCompletingRunLock() exists = %v, want %v", exists, tt.wantExists)
-			}
-		})
-	}
-}
-
-func TestExptMangerImpl_LockCompletingRun(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mgr := newTestExptManager(ctrl)
-	ctx := context.Background()
-	session := &entity.Session{UserID: "test_user"}
-
-	tests := []struct {
-		name      string
-		exptID    int64
-		exptRunID int64
-		spaceID   int64
-		setup     func()
-		wantErr   bool
-	}{
-		{
-			name:      "lock acquired successfully",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
-					Return(true, nil)
-			},
-			wantErr: false,
-		},
-		{
-			name:      "lock acquisition failed",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
-					Return(false, nil)
-			},
-			wantErr: true,
-		},
-		{
-			name:      "mutex lock error",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Lock(ctx, "expt_completing_mutex_lock:123:456", time.Minute*3).
-					Return(false, errors.New("lock error"))
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := mgr.LockCompletingRun(ctx, tt.exptID, tt.exptRunID, tt.spaceID, session)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("LockCompletingRun() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-func TestExptMangerImpl_UnlockCompletingRun(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mgr := newTestExptManager(ctrl)
-	ctx := context.Background()
-	session := &entity.Session{UserID: "test_user"}
-
-	tests := []struct {
-		name      string
-		exptID    int64
-		exptRunID int64
-		spaceID   int64
-		setup     func()
-		wantErr   bool
-	}{
-		{
-			name:      "unlock successful",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Unlock("expt_completing_mutex_lock:123:456").
-					Return(true, nil)
-			},
-			wantErr: false,
-		},
-		{
-			name:      "unlock error",
-			exptID:    123,
-			exptRunID: 456,
-			spaceID:   789,
-			setup: func() {
-				mgr.mutex.(*lockMocks.MockILocker).
-					EXPECT().
-					Unlock("expt_completing_mutex_lock:123:456").
-					Return(false, errors.New("unlock error"))
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.setup()
-			err := mgr.UnlockCompletingRun(ctx, tt.exptID, tt.exptRunID, tt.spaceID, session)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UnlockCompletingRun() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

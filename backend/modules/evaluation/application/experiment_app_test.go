@@ -2532,13 +2532,12 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // userInfoService
 				nil, // evalTargetService
 				nil, // evaluationSetItemService
-				nil, // annotateService
-				nil, // tagRPCAdapter
-				nil, // exptResultExportService
-				nil, // exptInsightAnalysisService
+				nil,
+				nil,
+				nil,
+				nil,
 				nil, // evaluatorService
 				nil, // templateManager
-				nil, // fileProvider
 			)
 
 			// 执行测试
@@ -2780,13 +2779,12 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // userInfoService
 				nil, // evalTargetService
 				nil, // evaluationSetItemService
-				nil, // annotateService
-				nil, // tagRPCAdapter
-				nil, // exptResultExportService
-				nil, // exptInsightAnalysisService
+				nil,
+				nil,
+				nil,
+				nil,
 				nil, // evaluatorService
 				nil, // templateManager
-				nil, // fileProvider
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -2888,7 +2886,6 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		nil,                 // exptInsightAnalysisService
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
-		nil,                 // fileProvider
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -2989,7 +2986,6 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				nil,                 // exptInsightAnalysisService
 				nil,                 // evaluatorService
 				mockTemplateManager, // templateManager
-				nil,                 // fileProvider
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3032,7 +3028,6 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3101,7 +3096,6 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
@@ -3138,7 +3132,6 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3204,7 +3197,6 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3253,7 +3245,6 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		nil,                 // exptInsightAnalysisService
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
-		nil,                 // fileProvider
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3324,7 +3315,6 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		nil,                 // exptInsightAnalysisService
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
-		nil,                 // fileProvider
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3366,7 +3356,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
-			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager,
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3393,7 +3383,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
-			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager,
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3422,7 +3412,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
-			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager,
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3454,7 +3444,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
-			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager,
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -5829,677 +5819,4 @@ func TestExperimentApplication_UpsertExptTurnResultFilter(t *testing.T) {
 		_, err := app.UpsertExptTurnResultFilter(context.Background(), req)
 		assert.NoError(t, err)
 	})
-}
-
-func TestBuildExptTurnResultFilter(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		req     *exptpb.BatchGetExperimentResultRequest
-		wantErr bool
-		assert  func(t *testing.T, param *entity.MGetExperimentResultParam)
-	}{
-		{
-			name: "use accelerator",
-			req: &exptpb.BatchGetExperimentResultRequest{
-				UseAccelerator: gptr.Of(true),
-				Filters: map[int64]*expt.ExperimentFilter{
-					1: {},
-				},
-			},
-			assert: func(t *testing.T, param *entity.MGetExperimentResultParam) {
-				assert.True(t, param.UseAccelerator)
-				assert.Nil(t, param.Filters)
-				if assert.NotNil(t, param.FilterAccelerators) {
-					assert.NotNil(t, param.FilterAccelerators[int64(1)])
-				}
-			},
-		},
-		{
-			name: "no accelerator",
-			req: &exptpb.BatchGetExperimentResultRequest{
-				UseAccelerator: gptr.Of(false),
-				Filters: map[int64]*expt.ExperimentFilter{
-					2: {},
-				},
-			},
-			assert: func(t *testing.T, param *entity.MGetExperimentResultParam) {
-				assert.False(t, param.UseAccelerator)
-				assert.Nil(t, param.FilterAccelerators)
-				if assert.NotNil(t, param.Filters) {
-					assert.NotNil(t, param.Filters[int64(2)])
-				}
-			},
-		},
-		{
-			name: "accelerator convert error",
-			req: &exptpb.BatchGetExperimentResultRequest{
-				UseAccelerator: gptr.Of(true),
-				Filters: map[int64]*expt.ExperimentFilter{
-					3: {Filters: &expt.Filters{FilterConditions: []*expt.FilterCondition{{}}, LogicOp: gptr.Of(expt.FilterLogicOp_Or)}},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "normal convert error",
-			req: &exptpb.BatchGetExperimentResultRequest{
-				UseAccelerator: gptr.Of(false),
-				Filters: map[int64]*expt.ExperimentFilter{
-					4: {Filters: &expt.Filters{FilterConditions: []*expt.FilterCondition{{}}, LogicOp: gptr.Of(expt.FilterLogicOp_Or)}},
-				},
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			param := &entity.MGetExperimentResultParam{}
-			err := buildExptTurnResultFilter(tc.req, param)
-			if tc.wantErr {
-				assert.Error(t, err)
-				return
-			}
-			assert.NoError(t, err)
-			if tc.assert != nil {
-				tc.assert(t, param)
-			}
-		})
-	}
-}
-
-func TestExperimentApplication_InsightAnalysisExperiment(t *testing.T) {
-	ctx := context.Background()
-	workspaceID := int64(100)
-	exptID := int64(200)
-	userID := int64(300)
-
-	tests := []struct {
-		name      string
-		setup     func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService)
-		wantErr   bool
-		wantCode  *int32
-		checkResp func(t *testing.T, resp *exptpb.InsightAnalysisExperimentResponse)
-	}{
-		{
-			name: "workspace_mismatch",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID + 1}, nil)
-			},
-			wantErr:  true,
-			wantCode: gptr.Of(int32(errno.ResourceNotFoundCode)),
-		},
-		{
-			name: "auth_fail",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-				a.EXPECT().
-					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
-					Return(errors.New("no permission"))
-			},
-			wantErr: true,
-		},
-		{
-			name: "success",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				recordID := int64(999)
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-
-				a.EXPECT().
-					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationWithoutSPIParam) error {
-						assert.Equal(t, workspaceID, p.SpaceID)
-						assert.Equal(t, workspaceID, p.ResourceSpaceID)
-						assert.Equal(t, gptr.Of("u1"), p.OwnerID)
-						assert.Len(t, p.ActionObjects, 1)
-						assert.Equal(t, consts.Edit, gptr.Indirect(p.ActionObjects[0].Action))
-						assert.Equal(t, rpc.AuthEntityType_EvaluationExperiment, gptr.Indirect(p.ActionObjects[0].EntityType))
-						return nil
-					})
-
-				s.EXPECT().
-					CreateAnalysisRecord(gomock.Any(), gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, r *entity.ExptInsightAnalysisRecord, sess *entity.Session) (int64, error) {
-						assert.Equal(t, workspaceID, r.SpaceID)
-						assert.Equal(t, exptID, r.ExptID)
-						assert.Equal(t, entity.InsightAnalysisStatus_Running, r.Status)
-						assert.Equal(t, "300", r.CreatedBy)
-						assert.Equal(t, "300", sess.UserID)
-						return recordID, nil
-					})
-			},
-			checkResp: func(t *testing.T, resp *exptpb.InsightAnalysisExperimentResponse) {
-				assert.Equal(t, int64(999), resp.InsightAnalysisRecordID)
-				assert.NotNil(t, resp.BaseResp)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockManager := servicemocks.NewMockIExptManager(ctrl)
-			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-			mockInsightSvc := servicemocks.NewMockIExptInsightAnalysisService(ctrl)
-
-			if tc.setup != nil {
-				tc.setup(t, mockManager, mockAuth, mockInsightSvc)
-			}
-
-			app := &experimentApplication{
-				manager:                     mockManager,
-				auth:                        mockAuth,
-				IExptInsightAnalysisService: mockInsightSvc,
-			}
-
-			resp, err := app.InsightAnalysisExperiment(ctx, &exptpb.InsightAnalysisExperimentRequest{
-				WorkspaceID: workspaceID,
-				ExptID:      exptID,
-				Session:     &common.Session{UserID: gptr.Of(userID)},
-			})
-
-			if tc.wantErr {
-				assert.Error(t, err)
-				if tc.wantCode != nil {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, gptr.Indirect(tc.wantCode), statusErr.Code())
-				}
-				return
-			}
-
-			assert.NoError(t, err)
-			if assert.NotNil(t, resp) && tc.checkResp != nil {
-				tc.checkResp(t, resp)
-			}
-		})
-	}
-}
-
-func TestExperimentApplication_InsightAnalysisRecordAPIs(t *testing.T) {
-	ctx := context.Background()
-	workspaceID := int64(100)
-	exptID := int64(200)
-	recordID := int64(300)
-
-	tests := []struct {
-		name  string
-		setup func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService)
-		run   func(app *experimentApplication) (any, error)
-		check func(t *testing.T, resp any)
-	}{
-		{
-			name: "ListExptInsightAnalysisRecord_success",
-			setup: func(t *testing.T, _ *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				a.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				s.EXPECT().
-					ListAnalysisRecord(gomock.Any(), workspaceID, exptID, gomock.Any(), gomock.Any()).
-					Return([]*entity.ExptInsightAnalysisRecord{
-						{ID: recordID, SpaceID: workspaceID, ExptID: exptID, CreatedBy: "u1", Status: entity.InsightAnalysisStatus_Success},
-					}, int64(1), nil)
-			},
-			run: func(app *experimentApplication) (any, error) {
-				return app.ListExptInsightAnalysisRecord(ctx, &exptpb.ListExptInsightAnalysisRecordRequest{
-					WorkspaceID: workspaceID,
-					ExptID:      exptID,
-					PageNumber:  gptr.Of(int32(1)),
-					PageSize:    gptr.Of(int32(10)),
-					Session:     &common.Session{UserID: gptr.Of(int64(1))},
-				})
-			},
-			check: func(t *testing.T, resp any) {
-				r := resp.(*exptpb.ListExptInsightAnalysisRecordResponse)
-				assert.NotNil(t, r.BaseResp)
-				assert.Equal(t, int64(1), gptr.Indirect(r.Total))
-				assert.Len(t, r.ExptInsightAnalysisRecords, 1)
-			},
-		},
-		{
-			name: "GetExptInsightAnalysisRecord_success",
-			setup: func(t *testing.T, _ *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				a.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
-				s.EXPECT().
-					GetAnalysisRecordByID(gomock.Any(), workspaceID, exptID, recordID, gomock.Any()).
-					Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: workspaceID, ExptID: exptID, CreatedBy: "u1"}, nil)
-			},
-			run: func(app *experimentApplication) (any, error) {
-				return app.GetExptInsightAnalysisRecord(ctx, &exptpb.GetExptInsightAnalysisRecordRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				})
-			},
-			check: func(t *testing.T, resp any) {
-				r := resp.(*exptpb.GetExptInsightAnalysisRecordResponse)
-				assert.NotNil(t, r.BaseResp)
-				assert.Equal(t, recordID, r.ExptInsightAnalysisRecord.RecordID)
-			},
-		},
-		{
-			name: "DeleteExptInsightAnalysisRecord_success",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-				a.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				s.EXPECT().DeleteAnalysisRecord(gomock.Any(), workspaceID, exptID, recordID).Return(nil)
-			},
-			run: func(app *experimentApplication) (any, error) {
-				return app.DeleteExptInsightAnalysisRecord(ctx, &exptpb.DeleteExptInsightAnalysisRecordRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				})
-			},
-			check: func(t *testing.T, resp any) {
-				r := resp.(*exptpb.DeleteExptInsightAnalysisRecordResponse)
-				assert.NotNil(t, r.BaseResp)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockManager := servicemocks.NewMockIExptManager(ctrl)
-			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-			mockInsightSvc := servicemocks.NewMockIExptInsightAnalysisService(ctrl)
-
-			if tc.setup != nil {
-				tc.setup(t, mockManager, mockAuth, mockInsightSvc)
-			}
-
-			app := &experimentApplication{
-				manager:                     mockManager,
-				auth:                        mockAuth,
-				IExptInsightAnalysisService: mockInsightSvc,
-			}
-			resp, err := tc.run(app)
-			assert.NoError(t, err)
-			if tc.check != nil {
-				tc.check(t, resp)
-			}
-		})
-	}
-}
-
-func TestExperimentApplication_FeedbackExptInsightAnalysisReport(t *testing.T) {
-	ctx := context.Background()
-	workspaceID := int64(100)
-	exptID := int64(200)
-	recordID := int64(300)
-
-	tests := []struct {
-		name      string
-		setup     func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService)
-		req       func() *exptpb.FeedbackExptInsightAnalysisReportRequest
-		wantErr   bool
-		wantCode  *int32
-		checkResp func(t *testing.T, resp *exptpb.FeedbackExptInsightAnalysisReportResponse)
-	}{
-		{
-			name: "workspace_mismatch",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID + 1}, nil)
-			},
-			req: func() *exptpb.FeedbackExptInsightAnalysisReportRequest {
-				return &exptpb.FeedbackExptInsightAnalysisReportRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					FeedbackActionType:      expt.FeedbackActionTypeUpvote,
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				}
-			},
-			wantErr:  true,
-			wantCode: gptr.Of(int32(errno.ResourceNotFoundCode)),
-		},
-		{
-			name: "record_not_found",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, _ *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-				s.EXPECT().
-					GetAnalysisRecordByID(gomock.Any(), workspaceID, exptID, recordID, gomock.Any()).
-					Return(nil, nil)
-			},
-			req: func() *exptpb.FeedbackExptInsightAnalysisReportRequest {
-				return &exptpb.FeedbackExptInsightAnalysisReportRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					FeedbackActionType:      expt.FeedbackActionTypeUpvote,
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				}
-			},
-			wantErr:  true,
-			wantCode: gptr.Of(int32(errno.ResourceNotFoundCode)),
-		},
-		{
-			name: "invalid_action_type",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-				s.EXPECT().
-					GetAnalysisRecordByID(gomock.Any(), workspaceID, exptID, recordID, gomock.Any()).
-					Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: workspaceID, ExptID: exptID}, nil)
-				a.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-			},
-			req: func() *exptpb.FeedbackExptInsightAnalysisReportRequest {
-				return &exptpb.FeedbackExptInsightAnalysisReportRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					FeedbackActionType:      expt.FeedbackActionType("invalid"),
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				}
-			},
-			wantErr: true,
-		},
-		{
-			name: "success",
-			setup: func(t *testing.T, m *servicemocks.MockIExptManager, a *rpcmocks.MockIAuthProvider, s *servicemocks.MockIExptInsightAnalysisService) {
-				m.EXPECT().
-					Get(gomock.Any(), exptID, workspaceID, gomock.Any()).
-					Return(&entity.Experiment{ID: exptID, SpaceID: workspaceID, CreatedBy: "u1"}, nil)
-				s.EXPECT().
-					GetAnalysisRecordByID(gomock.Any(), workspaceID, exptID, recordID, gomock.Any()).
-					Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: workspaceID, ExptID: exptID}, nil)
-				a.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
-				s.EXPECT().
-					FeedbackExptInsightAnalysis(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, p *entity.ExptInsightAnalysisFeedbackParam) error {
-						assert.Equal(t, workspaceID, p.SpaceID)
-						assert.Equal(t, exptID, p.ExptID)
-						assert.Equal(t, recordID, p.AnalysisRecordID)
-						assert.Equal(t, entity.FeedbackActionType_Upvote, p.FeedbackActionType)
-						assert.Equal(t, gptr.Of("c"), p.Comment)
-						assert.Equal(t, gptr.Of(int64(123)), p.CommentID)
-						assert.NotNil(t, p.Session)
-						return nil
-					})
-			},
-			req: func() *exptpb.FeedbackExptInsightAnalysisReportRequest {
-				return &exptpb.FeedbackExptInsightAnalysisReportRequest{
-					WorkspaceID:             workspaceID,
-					ExptID:                  exptID,
-					InsightAnalysisRecordID: recordID,
-					FeedbackActionType:      expt.FeedbackActionTypeUpvote,
-					Comment:                 gptr.Of("c"),
-					CommentID:               gptr.Of(int64(123)),
-					Session:                 &common.Session{UserID: gptr.Of(int64(1))},
-				}
-			},
-			checkResp: func(t *testing.T, resp *exptpb.FeedbackExptInsightAnalysisReportResponse) {
-				assert.NotNil(t, resp.BaseResp)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockManager := servicemocks.NewMockIExptManager(ctrl)
-			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-			mockInsightSvc := servicemocks.NewMockIExptInsightAnalysisService(ctrl)
-
-			if tc.setup != nil {
-				tc.setup(t, mockManager, mockAuth, mockInsightSvc)
-			}
-
-			app := &experimentApplication{
-				manager:                     mockManager,
-				auth:                        mockAuth,
-				IExptInsightAnalysisService: mockInsightSvc,
-			}
-
-			resp, err := app.FeedbackExptInsightAnalysisReport(ctx, tc.req())
-			if tc.wantErr {
-				assert.Error(t, err)
-				if tc.wantCode != nil {
-					statusErr, ok := errorx.FromStatusError(err)
-					assert.True(t, ok)
-					assert.Equal(t, gptr.Indirect(tc.wantCode), statusErr.Code())
-				}
-				return
-			}
-
-			assert.NoError(t, err)
-			if tc.checkResp != nil {
-				tc.checkResp(t, resp)
-			}
-		})
-	}
-}
-
-func TestExperimentApplication_transformExtraOutputURIsToURLs(t *testing.T) {
-	ctx := context.Background()
-
-	buildNoURI := func() []*expt.ItemResult_ {
-		return []*expt.ItemResult_{{
-			ItemID: 1,
-			TurnResults: []*expt.TurnResult_{{
-				TurnID: 1,
-				ExperimentResults: []*expt.ExperimentResult_{{
-					ExperimentID: 1,
-					Payload:      &expt.ExperimentTurnPayload{TurnID: 1},
-				}},
-			}},
-		}}
-	}
-	buildWithURI := func() []*expt.ItemResult_ {
-		return []*expt.ItemResult_{{
-			ItemID: 1,
-			TurnResults: []*expt.TurnResult_{{
-				TurnID: 1,
-				ExperimentResults: []*expt.ExperimentResult_{{
-					ExperimentID: 1,
-					Payload: &expt.ExperimentTurnPayload{
-						TurnID: 1,
-						EvaluatorOutput: &expt.TurnEvaluatorOutput{
-							EvaluatorRecords: map[int64]*evaluator.EvaluatorRecord{
-								1: {
-									EvaluatorOutputData: &evaluator.EvaluatorOutputData{
-										ExtraOutput: &evaluator.EvaluatorExtraOutputContent{
-											URI: gptr.Of("uri1"),
-										},
-									},
-								},
-							},
-						},
-					},
-				}},
-			}},
-		}}
-	}
-
-	tests := []struct {
-		name     string
-		setup    func(fp *rpcmocks.MockIFileProvider)
-		build    func() []*expt.ItemResult_
-		wantErr  bool
-		wantURL  *string
-		wantURIs []string
-	}{
-		{
-			name:  "no_uri_no_call",
-			build: buildNoURI,
-		},
-		{
-			name: "uri_filled",
-			setup: func(fp *rpcmocks.MockIFileProvider) {
-				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(map[string]string{"uri1": "url1"}, nil)
-			},
-			build:   buildWithURI,
-			wantURL: gptr.Of("url1"),
-		},
-		{
-			name: "provider_error",
-			setup: func(fp *rpcmocks.MockIFileProvider) {
-				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(nil, errors.New("mget failed"))
-			},
-			build:   buildWithURI,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
-			if tc.setup != nil {
-				tc.setup(mockFileProvider)
-			}
-			app := &experimentApplication{fileProvider: mockFileProvider}
-
-			itemResults := tc.build()
-			err := app.transformExtraOutputURIsToURLs(ctx, itemResults)
-
-			if tc.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			if tc.wantURL != nil {
-				gotURL := itemResults[0].
-					GetTurnResults()[0].
-					GetExperimentResults()[0].
-					GetPayload().
-					GetEvaluatorOutput().
-					GetEvaluatorRecords()[1].
-					GetEvaluatorOutputData().
-					GetExtraOutput().
-					URL
-				assert.Equal(t, gptr.Indirect(tc.wantURL), gptr.Indirect(gotURL))
-			}
-		})
-	}
-}
-
-func TestExperimentApplication_BatchGetExperimentResult_ExtraOutputURIErrorSwallowed(t *testing.T) {
-	ctx := context.Background()
-	workspaceID := int64(100)
-	exptID := int64(200)
-
-	tests := []struct {
-		name  string
-		setup func(t *testing.T, a *rpcmocks.MockIAuthProvider, r *servicemocks.MockExptResultService, fp *rpcmocks.MockIFileProvider)
-		check func(t *testing.T, resp *exptpb.BatchGetExperimentResultResponse)
-	}{
-		{
-			name: "swallow_transform_error",
-			setup: func(t *testing.T, a *rpcmocks.MockIAuthProvider, r *servicemocks.MockExptResultService, fp *rpcmocks.MockIFileProvider) {
-				a.EXPECT().
-					Authorization(gomock.Any(), gomock.Any()).
-					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationParam) error {
-						assert.Equal(t, strconv.FormatInt(workspaceID, 10), p.ObjectID)
-						assert.Equal(t, workspaceID, p.SpaceID)
-						return nil
-					})
-
-				r.EXPECT().
-					MGetExperimentResult(gomock.Any(), gomock.Any()).
-					Return(&entity.MGetExperimentReportResult{
-						Total: 1,
-						ItemResults: []*entity.ItemResult{{
-							ItemID: 1,
-							TurnResults: []*entity.TurnResult{{
-								TurnID: 1,
-								ExperimentResults: []*entity.ExperimentResult{{
-									ExperimentID: exptID,
-									Payload: &entity.ExperimentTurnPayload{
-										TurnID: 1,
-										EvaluatorOutput: &entity.TurnEvaluatorOutput{
-											EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
-												1: {
-													EvaluatorOutputData: &entity.EvaluatorOutputData{
-														ExtraOutput: &entity.EvaluatorExtraOutputContent{
-															URI: gptr.Of("uri1"),
-														},
-													},
-												},
-											},
-										},
-									},
-								}},
-							}},
-						}},
-					}, nil)
-
-				fp.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(nil, errors.New("mget failed"))
-			},
-			check: func(t *testing.T, resp *exptpb.BatchGetExperimentResultResponse) {
-				assert.NotNil(t, resp)
-				assert.Len(t, resp.ItemResults, 1)
-				gotExtra := resp.ItemResults[0].
-					GetTurnResults()[0].
-					GetExperimentResults()[0].
-					GetPayload().
-					GetEvaluatorOutput().
-					GetEvaluatorRecords()[1].
-					GetEvaluatorOutputData().
-					GetExtraOutput()
-				assert.Equal(t, "uri1", gptr.Indirect(gotExtra.URI))
-				assert.Nil(t, gotExtra.URL)
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tc := tt
-		t.Run(tc.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
-			mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
-			mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
-
-			tc.setup(t, mockAuth, mockResultSvc, mockFileProvider)
-
-			app := &experimentApplication{
-				auth:         mockAuth,
-				resultSvc:    mockResultSvc,
-				fileProvider: mockFileProvider,
-			}
-
-			resp, err := app.BatchGetExperimentResult_(ctx, &exptpb.BatchGetExperimentResultRequest{
-				WorkspaceID:   workspaceID,
-				ExperimentIds: []int64{exptID},
-			})
-			assert.NoError(t, err)
-			if tc.check != nil {
-				tc.check(t, resp)
-			}
-		})
-	}
 }

@@ -425,80 +425,6 @@ func (p *ReportEvalTargetInvokeResultResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *ImportEvaluationSetOpenAPIData) IsValid() error {
-	return nil
-}
-func (p *ImportEvaluationSetOApiRequest) IsValid() error {
-	if p.File != nil {
-		if err := p.File.IsValid(); err != nil {
-			return fmt.Errorf("field File not valid, %w", err)
-		}
-	}
-	if len(p.FieldMappings) < int(1) {
-		return fmt.Errorf("field FieldMappings MinLen rule failed, current value: %v", p.FieldMappings)
-	}
-	for i := 0; i < len(p.FieldMappings); i++ {
-		_elem := p.FieldMappings[i]
-		if _elem != nil {
-			if err := _elem.IsValid(); err != nil {
-				return fmt.Errorf("field _elem not valid, %w", err)
-			}
-		}
-	}
-	if p.Option != nil {
-		if err := p.Option.IsValid(); err != nil {
-			return fmt.Errorf("field Option not valid, %w", err)
-		}
-	}
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ImportEvaluationSetOApiResponse) IsValid() error {
-	if p.Data != nil {
-		if err := p.Data.IsValid(); err != nil {
-			return fmt.Errorf("field Data not valid, %w", err)
-		}
-	}
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *GetEvaluationSetIOJobOpenAPIData) IsValid() error {
-	if p.Job != nil {
-		if err := p.Job.IsValid(); err != nil {
-			return fmt.Errorf("field Job not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *GetEvaluationSetIOJobOApiRequest) IsValid() error {
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *GetEvaluationSetIOJobOApiResponse) IsValid() error {
-	if p.Data != nil {
-		if err := p.Data.IsValid(); err != nil {
-			return fmt.Errorf("field Data not valid, %w", err)
-		}
-	}
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
-		}
-	}
-	return nil
-}
 func (p *SubmitExperimentOApiRequest) IsValid() error {
 	if p.EvalSetParam != nil {
 		if err := p.EvalSetParam.IsValid(); err != nil {
@@ -1252,27 +1178,6 @@ func (p *SubmitExptFromTemplateOpenAPIData) IsValid() error {
 	if p.Experiment != nil {
 		if err := p.Experiment.IsValid(); err != nil {
 			return fmt.Errorf("field Experiment not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ReportEvaluatorInvokeResultRequest) IsValid() error {
-	if p.Output != nil {
-		if err := p.Output.IsValid(); err != nil {
-			return fmt.Errorf("field Output not valid, %w", err)
-		}
-	}
-	if p.Base != nil {
-		if err := p.Base.IsValid(); err != nil {
-			return fmt.Errorf("field Base not valid, %w", err)
-		}
-	}
-	return nil
-}
-func (p *ReportEvaluatorInvokeResultResponse) IsValid() error {
-	if p.BaseResp != nil {
-		if err := p.BaseResp.IsValid(); err != nil {
-			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
 	return nil

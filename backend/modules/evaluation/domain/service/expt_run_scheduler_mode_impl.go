@@ -1369,13 +1369,6 @@ func (e *ExptRetryItemsExec) ExptEnd(ctx context.Context, event *entity.ExptSche
 		return true, nil
 	}
 
-	if err := e.manager.LockCompletingRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
-		return false, err
-	}
-	defer func() {
-		_ = e.manager.UnlockCompletingRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session)
-	}()
-
 	logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 
 	got, err := e.exptRunLogRepo.Get(ctx, event.ExptID, event.ExptRunID)

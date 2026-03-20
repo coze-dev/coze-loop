@@ -473,20 +473,6 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 		} else {
 			do.BaseInfo.DeletedAt = gptr.Of(int64(1)) // 说明源数据已删除
 		}
-		existTrajectory := false
-		for _, schema := range do.EvalTargetVersion.OutputSchema {
-			if gptr.Indirect(schema.Key) == consts.EvalTargetOutputFieldKeyTrajectory {
-				existTrajectory = true
-				break
-			}
-		}
-		if !existTrajectory {
-			do.EvalTargetVersion.OutputSchema = append(do.EvalTargetVersion.OutputSchema, &entity.ArgsSchema{
-				Key:                 gptr.Of(consts.EvalTargetOutputFieldKeyTrajectory),
-				SupportContentTypes: []entity.ContentType{entity.ContentTypeText},
-				JsonSchema:          gptr.Of(consts.ObjectJsonSchema),
-			})
-		}
 	}
 	return nil
 }

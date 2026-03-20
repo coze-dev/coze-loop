@@ -258,7 +258,7 @@ func Test_SaveAndLoad_EvalTargetRecordData(t *testing.T) {
 		},
 	}
 
-	err := s.SaveEvalTargetRecordData(context.Background(), rec, nil)
+	err := s.SaveEvalTargetRecordData(context.Background(), rec)
 	assert.NoError(t, err)
 	// fields should be marked omitted
 	assert.True(t, gptr.Indirect(rec.EvalTargetInputData.InputFields["a"].ContentOmitted))
@@ -279,37 +279,6 @@ func Test_SaveAndLoad_EvalTargetRecordData(t *testing.T) {
 	err = s.LoadEvalTargetOutputFields(context.Background(), rec, []string{"b"})
 	assert.NoError(t, err)
 	assert.Equal(t, "0123456789abcdef", rec.EvalTargetOutputData.OutputFields["b"].GetText())
-}
-
-func Test_SaveEvalTargetRecordData_skipTruncateWhenTruncateLargeContentFalse(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockS3 := fsMocks.NewMockBatchObjectStorage(ctrl)
-	// 当 truncateLargeContent=false 时不应调用 Upload
-	// mockS3.EXPECT().Upload(...) 不设置，若被调用会失败
-
-	cfg := &component.EvaluationRecordStorage{Providers: []*component.EvaluationRecordProviderConfig{{Provider: "RDS", MaxSize: 10}}}
-	s := NewRecordDataStorage(mockS3, &fakeConfiger{cfg: cfg})
-
-	truncateLargeContent := gptr.Of(false)
-	rec := &entity.EvalTargetRecord{
-		EvalTargetInputData: &entity.EvalTargetInputData{
-			InputFields: map[string]*entity.Content{
-				"a": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("0123456789abcdef")},
-			},
-		},
-		EvalTargetOutputData: &entity.EvalTargetOutputData{
-			OutputFields: map[string]*entity.Content{
-				"b": {ContentType: gptr.Of(entity.ContentTypeText), Text: gptr.Of("0123456789abcdef")},
-			},
-		},
-	}
-
-	err := s.SaveEvalTargetRecordData(context.Background(), rec, truncateLargeContent)
-	assert.NoError(t, err)
-	// 未剪裁，ContentOmitted 应保持未设置
-	assert.False(t, rec.EvalTargetInputData.InputFields["a"].ContentOmitted != nil && *rec.EvalTargetInputData.InputFields["a"].ContentOmitted)
-	assert.False(t, rec.EvalTargetOutputData.OutputFields["b"].ContentOmitted != nil && *rec.EvalTargetOutputData.OutputFields["b"].ContentOmitted)
 }
 
 func Test_LoadEvalTargetRecordData(t *testing.T) {
@@ -625,7 +594,7 @@ func Test_SaveEvalTargetRecordData_processInput_error(t *testing.T) {
 			},
 		},
 	}
-	err := s.SaveEvalTargetRecordData(context.Background(), rec, nil)
+	err := s.SaveEvalTargetRecordData(context.Background(), rec)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "process eval target input data")
 }
@@ -652,7 +621,7 @@ func Test_SaveEvalTargetRecordData_processOutput_error(t *testing.T) {
 			},
 		},
 	}
-	err := s.SaveEvalTargetRecordData(context.Background(), rec, nil)
+	err := s.SaveEvalTargetRecordData(context.Background(), rec)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "process eval target output data")
 }

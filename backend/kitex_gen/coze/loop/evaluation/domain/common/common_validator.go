@@ -118,9 +118,3 @@ func (p *RuntimeParam) IsValid() error {
 func (p *RateLimit) IsValid() error {
 	return nil
 }
-func (p *AgentConfig) IsValid() error {
-	return nil
-}
-func (p *SkillConfig) IsValid() error {
-	return nil
-}

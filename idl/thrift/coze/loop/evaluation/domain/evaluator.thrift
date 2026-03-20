@@ -7,7 +7,6 @@ enum EvaluatorType {
     Prompt = 1
     Code = 2
     CustomRPC = 3
-    Agent = 4
 }
 
 typedef string LanguageType(ts.enum="true")
@@ -34,7 +33,6 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
     Unknown = 0
     Success = 1
     Fail = 2
-    AsyncInvoking = 3
 }
 
 typedef string EvaluatorTagType(ts.enum="true")
@@ -87,25 +85,6 @@ struct PromptEvaluator {
     6: optional list<Tool> tools (go.tag ='mapstructure:"tools"')
 }
 
-// AgentEvaluator: an agent implementation, based on a model, equipped with some skills, running some prompt
-struct AgentEvaluator {
-    1: optional common.AgentConfig agent_config // agent config
-    2: optional common.ModelConfig model_config // model config for agent
-    3: optional list<common.SkillConfig> skill_configs  // skill configs for agent
-    4: optional AgentEvaluatorPromptConfig prompt_config // agent prompt config for agent
-}
-
-struct AgentEvaluatorPromptConfig {
-    1: optional list<common.Message> message_list
-    2: optional AgentEvaluatorPromptConfigOutputRules output_rules
-}
-
-struct AgentEvaluatorPromptConfigOutputRules {
-    1: optional common.Message score_prompt // 分值
-    2: optional common.Message reasoning_prompt // 原因
-    3: optional common.Message extra_output_prompt  // 附加输出
-}
-
 struct CodeEvaluator {
     1: optional LanguageType language_type
     2: optional string code_content
@@ -143,7 +122,6 @@ struct EvaluatorContent {
     101: optional PromptEvaluator prompt_evaluator (go.tag ='mapstructure:"prompt_evaluator"')
     102: optional CodeEvaluator code_evaluator
     103: optional CustomRPCEvaluator custom_rpc_evaluator
-    104: optional AgentEvaluator agent_evaluator
 }
 
 // 明确有顺序的 evaluator 与版本映射元素
@@ -262,7 +240,6 @@ struct EvaluatorOutputData {
     3: optional EvaluatorRunError evaluator_run_error
     4: optional i64 time_consuming_ms (api.js_conv = 'true', go.tag = 'json:"time_consuming_ms"')
     11: optional string stdout
-    12: optional EvaluatorExtraOutputContent extra_output
 }
 
 struct EvaluatorResult {
@@ -279,16 +256,6 @@ struct EvaluatorUsage {
 struct EvaluatorRunError {
     1: optional i32 code
     2: optional string message
-}
-
-typedef string EvaluatorExtraOutputType(ts.enum="true")
-const EvaluatorExtraOutputType EvaluatorExtraOutputType_HTML = "html"
-const EvaluatorExtraOutputType EvaluatorExtraOutputType_Markdown = "markdown"
-
-struct EvaluatorExtraOutputContent {
-    1: optional EvaluatorExtraOutputType output_type
-    2: optional string uri
-    3: optional string url
 }
 
 struct EvaluatorInputData {
@@ -312,11 +279,4 @@ const EvaluatorHTTPMethod HTTPMethod_Post = "post"
 struct EvaluatorRunConfig {
     1: optional string env
     2: optional common.RuntimeParam evaluator_runtime_param
-}
-
-struct EvaluatorProgressMessage {
-    1: optional string role    // 如 system, assistant
-    2: optional string type    // 如 tool_use, tool_result
-    3: optional string message    // 如 Check current user identity and working directory
-    4: optional i64 created_at_ms
 }
