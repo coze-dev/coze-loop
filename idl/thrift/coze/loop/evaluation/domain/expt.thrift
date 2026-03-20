@@ -30,7 +30,12 @@ enum ExptType {
 enum SourceType {
     Evaluation = 1
     AutoTask = 2
+    IntelligentGen =3    // 智能生成
 }
+
+typedef string Visibility(ts.enum="true")
+const Visibility Visibility_Hidden = "hidden"
+
 
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
@@ -42,6 +47,7 @@ struct Experiment {
     7: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
     8: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
     9: optional i32 item_concur_num
+    10: optional Visibility visibility  // 实验可见性，默认为空，可见
 
     21: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
     22: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
@@ -70,6 +76,9 @@ struct Experiment {
     // 评估器得分加权配置
     61: optional ExptScoreWeight score_weight_config
     62: optional bool enable_weighted_score
+
+    // 智能评测相关
+    63: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
 }
 
 // 实验模板基础信息
@@ -79,6 +88,7 @@ struct ExptTemplateMeta {
     3: optional string name
     4: optional string desc
     5: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
+    6: optional Visibility visibility  // 实验模板可见性，默认为空，可见
 }
 
 // 实验三元组配置
