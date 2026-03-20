@@ -2454,6 +2454,8 @@ type ParseImportSourceFileResponse struct {
 	FilesWithAmbiguousColumn []string `thrift:"files_with_ambiguous_column,4,optional" frugal:"4,optional,list<string>" form:"files_with_ambiguous_column" json:"files_with_ambiguous_column,omitempty" query:"files_with_ambiguous_column"`
 	// 无类型标记的 URL 列名列表（内容为文件中的列名）
 	UntypedUrlFields []string `thrift:"untypedUrlFields,5,optional" frugal:"5,optional,list<string>" form:"untypedUrlFields" json:"untypedUrlFields,omitempty" query:"untypedUrlFields"`
+	// 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
+	PrecheckDataByField map[string][]string `thrift:"precheck_data_by_field,6,optional" frugal:"6,optional,map<string:list<string>>" form:"precheck_data_by_field" json:"precheck_data_by_field,omitempty" query:"precheck_data_by_field"`
 	/*base*/
 	BaseResp *base.BaseResp `thrift:"baseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"baseResp" json:"baseResp,omitempty" query:"baseResp"`
 }
@@ -2525,6 +2527,18 @@ func (p *ParseImportSourceFileResponse) GetUntypedUrlFields() (v []string) {
 	return p.UntypedUrlFields
 }
 
+var ParseImportSourceFileResponse_PrecheckDataByField_DEFAULT map[string][]string
+
+func (p *ParseImportSourceFileResponse) GetPrecheckDataByField() (v map[string][]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPrecheckDataByField() {
+		return ParseImportSourceFileResponse_PrecheckDataByField_DEFAULT
+	}
+	return p.PrecheckDataByField
+}
+
 var ParseImportSourceFileResponse_BaseResp_DEFAULT *base.BaseResp
 
 func (p *ParseImportSourceFileResponse) GetBaseResp() (v *base.BaseResp) {
@@ -2551,6 +2565,9 @@ func (p *ParseImportSourceFileResponse) SetFilesWithAmbiguousColumn(val []string
 func (p *ParseImportSourceFileResponse) SetUntypedUrlFields(val []string) {
 	p.UntypedUrlFields = val
 }
+func (p *ParseImportSourceFileResponse) SetPrecheckDataByField(val map[string][]string) {
+	p.PrecheckDataByField = val
+}
 func (p *ParseImportSourceFileResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
@@ -2561,6 +2578,7 @@ var fieldIDToName_ParseImportSourceFileResponse = map[int16]string{
 	3:   "conflicts",
 	4:   "files_with_ambiguous_column",
 	5:   "untypedUrlFields",
+	6:   "precheck_data_by_field",
 	255: "baseResp",
 }
 
@@ -2582,6 +2600,10 @@ func (p *ParseImportSourceFileResponse) IsSetFilesWithAmbiguousColumn() bool {
 
 func (p *ParseImportSourceFileResponse) IsSetUntypedUrlFields() bool {
 	return p.UntypedUrlFields != nil
+}
+
+func (p *ParseImportSourceFileResponse) IsSetPrecheckDataByField() bool {
+	return p.PrecheckDataByField != nil
 }
 
 func (p *ParseImportSourceFileResponse) IsSetBaseResp() bool {
@@ -2641,6 +2663,14 @@ func (p *ParseImportSourceFileResponse) Read(iprot thrift.TProtocol) (err error)
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2786,6 +2816,47 @@ func (p *ParseImportSourceFileResponse) ReadField5(iprot thrift.TProtocol) error
 	p.UntypedUrlFields = _field
 	return nil
 }
+func (p *ParseImportSourceFileResponse) ReadField6(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string][]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+		_, size, err := iprot.ReadListBegin()
+		if err != nil {
+			return err
+		}
+		_val := make([]string, 0, size)
+		for i := 0; i < size; i++ {
+
+			var _elem string
+			if v, err := iprot.ReadString(); err != nil {
+				return err
+			} else {
+				_elem = v
+			}
+
+			_val = append(_val, _elem)
+		}
+		if err := iprot.ReadListEnd(); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.PrecheckDataByField = _field
+	return nil
+}
 func (p *ParseImportSourceFileResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
@@ -2819,6 +2890,10 @@ func (p *ParseImportSourceFileResponse) Write(oprot thrift.TProtocol) (err error
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -2965,6 +3040,43 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ParseImportSourceFileResponse) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPrecheckDataByField() {
+		if err = oprot.WriteFieldBegin("precheck_data_by_field", thrift.MAP, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.LIST, len(p.PrecheckDataByField)); err != nil {
+			return err
+		}
+		for k, v := range p.PrecheckDataByField {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteListBegin(thrift.STRING, len(v)); err != nil {
+				return err
+			}
+			for _, v := range v {
+				if err := oprot.WriteString(v); err != nil {
+					return err
+				}
+			}
+			if err := oprot.WriteListEnd(); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *ParseImportSourceFileResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("baseResp", thrift.STRUCT, 255); err != nil {
@@ -3011,6 +3123,9 @@ func (p *ParseImportSourceFileResponse) DeepEqual(ano *ParseImportSourceFileResp
 		return false
 	}
 	if !p.Field5DeepEqual(ano.UntypedUrlFields) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.PrecheckDataByField) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -3079,6 +3194,25 @@ func (p *ParseImportSourceFileResponse) Field5DeepEqual(src []string) bool {
 		_src := src[i]
 		if strings.Compare(v, _src) != 0 {
 			return false
+		}
+	}
+	return true
+}
+func (p *ParseImportSourceFileResponse) Field6DeepEqual(src map[string][]string) bool {
+
+	if len(p.PrecheckDataByField) != len(src) {
+		return false
+	}
+	for k, v := range p.PrecheckDataByField {
+		_src := src[k]
+		if len(v) != len(_src) {
+			return false
+		}
+		for i, v := range v {
+			_src1 := _src[i]
+			if strings.Compare(v, _src1) != 0 {
+				return false
+			}
 		}
 	}
 	return true
