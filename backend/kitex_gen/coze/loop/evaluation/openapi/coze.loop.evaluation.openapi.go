@@ -15961,6 +15961,7 @@ type ImportEvaluationSetOApiRequest struct {
 	File            *dataset_job.DatasetIOFile      `thrift:"file,3,optional" frugal:"3,optional,dataset_job.DatasetIOFile" form:"file" json:"file,omitempty" query:"file"`
 	FieldMappings   []*dataset_job.FieldMapping     `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset_job.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
 	Option          *dataset_job.DatasetIOJobOption `thrift:"option,5,optional" frugal:"5,optional,dataset_job.DatasetIOJobOption" form:"option" json:"option,omitempty" query:"option"`
+	Extra           *extra.Extra                    `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base            *base.Base                      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -16021,6 +16022,18 @@ func (p *ImportEvaluationSetOApiRequest) GetOption() (v *dataset_job.DatasetIOJo
 	return p.Option
 }
 
+var ImportEvaluationSetOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ImportEvaluationSetOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ImportEvaluationSetOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var ImportEvaluationSetOApiRequest_Base_DEFAULT *base.Base
 
 func (p *ImportEvaluationSetOApiRequest) GetBase() (v *base.Base) {
@@ -16047,6 +16060,9 @@ func (p *ImportEvaluationSetOApiRequest) SetFieldMappings(val []*dataset_job.Fie
 func (p *ImportEvaluationSetOApiRequest) SetOption(val *dataset_job.DatasetIOJobOption) {
 	p.Option = val
 }
+func (p *ImportEvaluationSetOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *ImportEvaluationSetOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -16057,6 +16073,7 @@ var fieldIDToName_ImportEvaluationSetOApiRequest = map[int16]string{
 	3:   "file",
 	4:   "field_mappings",
 	5:   "option",
+	254: "extra",
 	255: "Base",
 }
 
@@ -16070,6 +16087,10 @@ func (p *ImportEvaluationSetOApiRequest) IsSetFieldMappings() bool {
 
 func (p *ImportEvaluationSetOApiRequest) IsSetOption() bool {
 	return p.Option != nil
+}
+
+func (p *ImportEvaluationSetOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *ImportEvaluationSetOApiRequest) IsSetBase() bool {
@@ -16133,6 +16154,14 @@ func (p *ImportEvaluationSetOApiRequest) Read(iprot thrift.TProtocol) (err error
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16247,6 +16276,14 @@ func (p *ImportEvaluationSetOApiRequest) ReadField5(iprot thrift.TProtocol) erro
 	p.Option = _field
 	return nil
 }
+func (p *ImportEvaluationSetOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *ImportEvaluationSetOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -16280,6 +16317,10 @@ func (p *ImportEvaluationSetOApiRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -16398,6 +16439,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ImportEvaluationSetOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *ImportEvaluationSetOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -16446,6 +16505,9 @@ func (p *ImportEvaluationSetOApiRequest) DeepEqual(ano *ImportEvaluationSetOApiR
 	if !p.Field5DeepEqual(ano.Option) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -16489,6 +16551,13 @@ func (p *ImportEvaluationSetOApiRequest) Field4DeepEqual(src []*dataset_job.Fiel
 func (p *ImportEvaluationSetOApiRequest) Field5DeepEqual(src *dataset_job.DatasetIOJobOption) bool {
 
 	if !p.Option.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ImportEvaluationSetOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -16915,9 +16984,10 @@ func (p *GetEvaluationSetIOJobOpenAPIData) Field1DeepEqual(src *dataset_job.Data
 }
 
 type GetEvaluationSetIOJobOApiRequest struct {
-	WorkspaceID int64      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
-	JobID       int64      `thrift:"job_id,2,required" frugal:"2,required,i64" json:"workspace_id" path:"job_id,required" `
-	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID int64        `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" query:"workspace_id,required" `
+	JobID       int64        `thrift:"job_id,2,required" frugal:"2,required,i64" json:"workspace_id" path:"job_id,required" `
+	Extra       *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetEvaluationSetIOJobOApiRequest() *GetEvaluationSetIOJobOApiRequest {
@@ -16941,6 +17011,18 @@ func (p *GetEvaluationSetIOJobOApiRequest) GetJobID() (v int64) {
 	return
 }
 
+var GetEvaluationSetIOJobOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *GetEvaluationSetIOJobOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return GetEvaluationSetIOJobOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var GetEvaluationSetIOJobOApiRequest_Base_DEFAULT *base.Base
 
 func (p *GetEvaluationSetIOJobOApiRequest) GetBase() (v *base.Base) {
@@ -16958,6 +17040,9 @@ func (p *GetEvaluationSetIOJobOApiRequest) SetWorkspaceID(val int64) {
 func (p *GetEvaluationSetIOJobOApiRequest) SetJobID(val int64) {
 	p.JobID = val
 }
+func (p *GetEvaluationSetIOJobOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *GetEvaluationSetIOJobOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -16965,7 +17050,12 @@ func (p *GetEvaluationSetIOJobOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_GetEvaluationSetIOJobOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "job_id",
+	254: "extra",
 	255: "Base",
+}
+
+func (p *GetEvaluationSetIOJobOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *GetEvaluationSetIOJobOApiRequest) IsSetBase() bool {
@@ -17007,6 +17097,14 @@ func (p *GetEvaluationSetIOJobOApiRequest) Read(iprot thrift.TProtocol) (err err
 					goto ReadFieldError
 				}
 				issetJobID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -17080,6 +17178,14 @@ func (p *GetEvaluationSetIOJobOApiRequest) ReadField2(iprot thrift.TProtocol) er
 	p.JobID = _field
 	return nil
 }
+func (p *GetEvaluationSetIOJobOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *GetEvaluationSetIOJobOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -17101,6 +17207,10 @@ func (p *GetEvaluationSetIOJobOApiRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -17157,6 +17267,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *GetEvaluationSetIOJobOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *GetEvaluationSetIOJobOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -17196,6 +17324,9 @@ func (p *GetEvaluationSetIOJobOApiRequest) DeepEqual(ano *GetEvaluationSetIOJobO
 	if !p.Field2DeepEqual(ano.JobID) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -17212,6 +17343,13 @@ func (p *GetEvaluationSetIOJobOApiRequest) Field1DeepEqual(src int64) bool {
 func (p *GetEvaluationSetIOJobOApiRequest) Field2DeepEqual(src int64) bool {
 
 	if p.JobID != src {
+		return false
+	}
+	return true
+}
+func (p *GetEvaluationSetIOJobOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true

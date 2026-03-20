@@ -350,6 +350,7 @@ struct ImportEvaluationSetOApiRequest {
     4: optional list<dataset_job.FieldMapping> field_mappings (vt.min_size = "1", vt.elem.skip = "false")
     5: optional dataset_job.DatasetIOJobOption option
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -367,6 +368,7 @@ struct GetEvaluationSetIOJobOApiRequest {
     1: required i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 job_id (api.path = "job_id", api.js_conv="true", go.tag='json:"workspace_id"'),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
