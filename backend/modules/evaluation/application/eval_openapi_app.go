@@ -147,6 +147,99 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.AddItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// domain调用
+	jobID, err := e.evaluationSetService.ImportEvaluationSet(ctx, &entity.ImportEvaluationSetParam{
+		WorkspaceID:     req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		File:            evaluation_set.DatasetIOFileDTO2DO(req.File),
+		FieldMappings:   evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
+		Option:          evaluation_set.OpenAPIDatasetIOJobOptionDTO2DO(req.Option),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.ImportEvaluationSetOApiResponse{
+		Data: &openapi.ImportEvaluationSetOpenAPIData{
+			JobID: gptr.Of(jobID),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// domain调用
+	job, err := e.evaluationSetService.GetEvaluationSetIOJob(ctx, req.WorkspaceID, req.GetJobID())
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found"))
+	}
+
+	// Verify workspace ID matches
+	if job.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found in workspace"))
+	}
+
+	return &openapi.GetEvaluationSetIOJobOApiResponse{
+		Data: &openapi.GetEvaluationSetIOJobOpenAPIData{
+			Job: evaluation_set.OpenAPIDatasetIOJobDO2DTO(job),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest) (r *openapi.GetEvaluationSetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
