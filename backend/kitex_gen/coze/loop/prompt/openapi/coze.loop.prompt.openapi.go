@@ -8,6 +8,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/cloudwego/kitex/pkg/streaming"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/extra"
 	"strings"
 )
 
@@ -90,6 +91,7 @@ type ToolType = string
 type BatchGetPromptByPromptKeyRequest struct {
 	WorkspaceID *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	Queries     []*PromptQuery `thrift:"queries,2,optional" frugal:"2,optional,list<PromptQuery>" form:"queries" json:"queries,omitempty"`
+	Extra       *extra.Extra   `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base        *base.Base     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -124,6 +126,18 @@ func (p *BatchGetPromptByPromptKeyRequest) GetQueries() (v []*PromptQuery) {
 	return p.Queries
 }
 
+var BatchGetPromptByPromptKeyRequest_Extra_DEFAULT *extra.Extra
+
+func (p *BatchGetPromptByPromptKeyRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return BatchGetPromptByPromptKeyRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var BatchGetPromptByPromptKeyRequest_Base_DEFAULT *base.Base
 
 func (p *BatchGetPromptByPromptKeyRequest) GetBase() (v *base.Base) {
@@ -141,6 +155,9 @@ func (p *BatchGetPromptByPromptKeyRequest) SetWorkspaceID(val *int64) {
 func (p *BatchGetPromptByPromptKeyRequest) SetQueries(val []*PromptQuery) {
 	p.Queries = val
 }
+func (p *BatchGetPromptByPromptKeyRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *BatchGetPromptByPromptKeyRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -148,6 +165,7 @@ func (p *BatchGetPromptByPromptKeyRequest) SetBase(val *base.Base) {
 var fieldIDToName_BatchGetPromptByPromptKeyRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "queries",
+	254: "extra",
 	255: "Base",
 }
 
@@ -157,6 +175,10 @@ func (p *BatchGetPromptByPromptKeyRequest) IsSetWorkspaceID() bool {
 
 func (p *BatchGetPromptByPromptKeyRequest) IsSetQueries() bool {
 	return p.Queries != nil
+}
+
+func (p *BatchGetPromptByPromptKeyRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *BatchGetPromptByPromptKeyRequest) IsSetBase() bool {
@@ -192,6 +214,14 @@ func (p *BatchGetPromptByPromptKeyRequest) Read(iprot thrift.TProtocol) (err err
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -268,6 +298,14 @@ func (p *BatchGetPromptByPromptKeyRequest) ReadField2(iprot thrift.TProtocol) er
 	p.Queries = _field
 	return nil
 }
+func (p *BatchGetPromptByPromptKeyRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *BatchGetPromptByPromptKeyRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -289,6 +327,10 @@ func (p *BatchGetPromptByPromptKeyRequest) Write(oprot thrift.TProtocol) (err er
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -357,6 +399,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *BatchGetPromptByPromptKeyRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *BatchGetPromptByPromptKeyRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -396,6 +456,9 @@ func (p *BatchGetPromptByPromptKeyRequest) DeepEqual(ano *BatchGetPromptByPrompt
 	if !p.Field2DeepEqual(ano.Queries) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -424,6 +487,13 @@ func (p *BatchGetPromptByPromptKeyRequest) Field2DeepEqual(src []*PromptQuery) b
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *BatchGetPromptByPromptKeyRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
 	}
 	return true
 }
@@ -1041,8 +1111,9 @@ type ExecuteRequest struct {
 	// 变量值
 	VariableVals []*VariableVal `thrift:"variable_vals,10,optional" frugal:"10,optional,list<VariableVal>" form:"variable_vals" json:"variable_vals,omitempty"`
 	// 消息
-	Messages []*Message `thrift:"messages,11,optional" frugal:"11,optional,list<Message>" form:"messages" json:"messages,omitempty"`
-	Base     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Messages []*Message   `thrift:"messages,11,optional" frugal:"11,optional,list<Message>" form:"messages" json:"messages,omitempty"`
+	Extra    *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base     *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExecuteRequest() *ExecuteRequest {
@@ -1100,6 +1171,18 @@ func (p *ExecuteRequest) GetMessages() (v []*Message) {
 	return p.Messages
 }
 
+var ExecuteRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ExecuteRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ExecuteRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var ExecuteRequest_Base_DEFAULT *base.Base
 
 func (p *ExecuteRequest) GetBase() (v *base.Base) {
@@ -1123,6 +1206,9 @@ func (p *ExecuteRequest) SetVariableVals(val []*VariableVal) {
 func (p *ExecuteRequest) SetMessages(val []*Message) {
 	p.Messages = val
 }
+func (p *ExecuteRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *ExecuteRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -1132,6 +1218,7 @@ var fieldIDToName_ExecuteRequest = map[int16]string{
 	2:   "prompt_identifier",
 	10:  "variable_vals",
 	11:  "messages",
+	254: "extra",
 	255: "Base",
 }
 
@@ -1149,6 +1236,10 @@ func (p *ExecuteRequest) IsSetVariableVals() bool {
 
 func (p *ExecuteRequest) IsSetMessages() bool {
 	return p.Messages != nil
+}
+
+func (p *ExecuteRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *ExecuteRequest) IsSetBase() bool {
@@ -1200,6 +1291,14 @@ func (p *ExecuteRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1307,6 +1406,14 @@ func (p *ExecuteRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.Messages = _field
 	return nil
 }
+func (p *ExecuteRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *ExecuteRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -1336,6 +1443,10 @@ func (p *ExecuteRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -1448,6 +1559,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *ExecuteRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *ExecuteRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -1491,6 +1620,9 @@ func (p *ExecuteRequest) DeepEqual(ano *ExecuteRequest) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.Messages) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -1541,6 +1673,13 @@ func (p *ExecuteRequest) Field11DeepEqual(src []*Message) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *ExecuteRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
 	}
 	return true
 }
@@ -9856,8 +9995,9 @@ type ListPromptBasicRequest struct {
 	// name/key前缀匹配
 	KeyWord *string `thrift:"key_word,4,optional" frugal:"4,optional,string" form:"key_word" json:"key_word,omitempty"`
 	// 创建人
-	Creator *string    `thrift:"creator,5,optional" frugal:"5,optional,string" form:"creator" json:"creator,omitempty"`
-	Base    *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Creator *string      `thrift:"creator,5,optional" frugal:"5,optional,string" form:"creator" json:"creator,omitempty"`
+	Extra   *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base    *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListPromptBasicRequest() *ListPromptBasicRequest {
@@ -9927,6 +10067,18 @@ func (p *ListPromptBasicRequest) GetCreator() (v string) {
 	return *p.Creator
 }
 
+var ListPromptBasicRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ListPromptBasicRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ListPromptBasicRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var ListPromptBasicRequest_Base_DEFAULT *base.Base
 
 func (p *ListPromptBasicRequest) GetBase() (v *base.Base) {
@@ -9953,6 +10105,9 @@ func (p *ListPromptBasicRequest) SetKeyWord(val *string) {
 func (p *ListPromptBasicRequest) SetCreator(val *string) {
 	p.Creator = val
 }
+func (p *ListPromptBasicRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *ListPromptBasicRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -9963,6 +10118,7 @@ var fieldIDToName_ListPromptBasicRequest = map[int16]string{
 	3:   "page_size",
 	4:   "key_word",
 	5:   "creator",
+	254: "extra",
 	255: "Base",
 }
 
@@ -9984,6 +10140,10 @@ func (p *ListPromptBasicRequest) IsSetKeyWord() bool {
 
 func (p *ListPromptBasicRequest) IsSetCreator() bool {
 	return p.Creator != nil
+}
+
+func (p *ListPromptBasicRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *ListPromptBasicRequest) IsSetBase() bool {
@@ -10043,6 +10203,14 @@ func (p *ListPromptBasicRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10140,6 +10308,14 @@ func (p *ListPromptBasicRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.Creator = _field
 	return nil
 }
+func (p *ListPromptBasicRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *ListPromptBasicRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -10173,6 +10349,10 @@ func (p *ListPromptBasicRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -10287,6 +10467,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ListPromptBasicRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *ListPromptBasicRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -10333,6 +10531,9 @@ func (p *ListPromptBasicRequest) DeepEqual(ano *ListPromptBasicRequest) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.Creator) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -10397,6 +10598,13 @@ func (p *ListPromptBasicRequest) Field5DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Creator, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListPromptBasicRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true

@@ -2,11 +2,13 @@ namespace go coze.loop.foundation.openapi
 
 include "../../../base.thrift"
 
+include "../extra.thrift"
 
 struct UploadLoopFileRequest {
     1: required string              content_type (api.header="Content-Type") // file type
     2: required binary              body         (api.raw_body='')           // binary data
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 

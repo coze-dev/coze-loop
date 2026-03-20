@@ -22,6 +22,11 @@ var (
 )
 
 func (p *BatchGetPromptByPromptKeyRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -49,6 +54,11 @@ func (p *ExecuteRequest) IsValid() error {
 	if p.PromptIdentifier != nil {
 		if err := p.PromptIdentifier.IsValid(); err != nil {
 			return fmt.Errorf("field PromptIdentifier not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -226,6 +236,11 @@ func (p *ListPromptBasicRequest) IsValid() error {
 		}
 		if *p.PageSize > int32(200) {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
