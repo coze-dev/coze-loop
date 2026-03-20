@@ -280,6 +280,8 @@ type CreateExptParam struct {
 	MaxAliveTime          int64                    `json:"max_alive_time"`
 	SourceType            SourceType               `json:"source_type"`
 	SourceID              string                   `json:"source_id"`
+	Visibility            *Visibility              `json:"visibility,omitempty"`
+	ThreadID              *int64                   `json:"thread_id,omitempty"`
 	ExptTemplateID        int64                    `json:"expt_template_id"`
 	ExptConf              *EvaluationConfiguration `json:"expt_conf"`
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`

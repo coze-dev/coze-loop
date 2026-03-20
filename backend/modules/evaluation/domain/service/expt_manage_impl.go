@@ -677,6 +677,12 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
 	}
+	if req.Visibility != nil {
+		do.Visibility = *req.Visibility
+	}
+	if req.ThreadID != nil {
+		do.ThreadID = *req.ThreadID
+	}
 
 	// 如果提供了模板 ID，设置 ExptTemplateMeta
 	if req.ExptTemplateID > 0 {

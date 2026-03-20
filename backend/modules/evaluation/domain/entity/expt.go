@@ -20,6 +20,11 @@ type (
 	ExptStatus int64
 	ExptType   int64
 	SourceType = int64
+	Visibility = int64
+)
+
+const (
+	Visibility_Hidden Visibility = 1
 )
 
 const (
@@ -48,8 +53,9 @@ const (
 )
 
 const (
-	SourceType_Evaluation SourceType = 1
-	SourceType_Trace      SourceType = 2
+	SourceType_Evaluation     SourceType = 1
+	SourceType_Trace          SourceType = 2
+	SourceType_IntelligentGen SourceType = 3
 )
 
 type ExptRunLog struct {
@@ -140,6 +146,9 @@ type Experiment struct {
 	AggregateResult *ExptAggregateResult
 
 	ExptTemplateMeta *ExptTemplateMeta // 关联的实验模板基础信息（仅在查询时按需填充，包含模板 ID）
+
+	Visibility Visibility // 实验模板可见性，默认为空，可见
+	ThreadID   int64      // 关联的智能评测会话ID
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

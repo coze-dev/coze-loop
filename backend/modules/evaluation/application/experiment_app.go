@@ -450,6 +450,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvaluatorVersionIds:    req.EvaluatorVersionIds,
 		Name:                   req.Name,
 		Desc:                   req.Desc,
+		Visibility:             req.Visibility,
 		TargetFieldMapping:     req.TargetFieldMapping,
 		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
 		ItemConcurNum:          req.ItemConcurNum,
@@ -461,6 +462,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		SourceID:               req.SourceID,
 		TargetRuntimeParam:     req.TargetRuntimeParam,
 		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		ThreadID:               req.ThreadID,
 		Session:                req.Session,
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析

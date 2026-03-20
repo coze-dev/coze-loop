@@ -27,14 +27,16 @@ const (
 type UpsertExptTurnResultFilterType = string
 
 type CreateExperimentRequest struct {
-	WorkspaceID           int64                              `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvalSetVersionID      *int64                             `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
-	TargetVersionID       *int64                             `thrift:"target_version_id,3,optional" frugal:"3,optional,i64" json:"target_version_id" form:"target_version_id" `
-	EvaluatorVersionIds   []int64                            `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
-	Name                  *string                            `thrift:"name,5,optional" frugal:"5,optional,string" form:"name" json:"name,omitempty"`
-	Desc                  *string                            `thrift:"desc,6,optional" frugal:"6,optional,string" form:"desc" json:"desc,omitempty"`
-	EvalSetID             *int64                             `thrift:"eval_set_id,7,optional" frugal:"7,optional,i64" json:"eval_set_id" form:"eval_set_id" `
-	TargetID              *int64                             `thrift:"target_id,8,optional" frugal:"8,optional,i64" json:"target_id" form:"target_id" `
+	WorkspaceID         int64   `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	EvalSetVersionID    *int64  `thrift:"eval_set_version_id,2,optional" frugal:"2,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" `
+	TargetVersionID     *int64  `thrift:"target_version_id,3,optional" frugal:"3,optional,i64" json:"target_version_id" form:"target_version_id" `
+	EvaluatorVersionIds []int64 `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" `
+	Name                *string `thrift:"name,5,optional" frugal:"5,optional,string" form:"name" json:"name,omitempty"`
+	Desc                *string `thrift:"desc,6,optional" frugal:"6,optional,string" form:"desc" json:"desc,omitempty"`
+	EvalSetID           *int64  `thrift:"eval_set_id,7,optional" frugal:"7,optional,i64" json:"eval_set_id" form:"eval_set_id" `
+	TargetID            *int64  `thrift:"target_id,8,optional" frugal:"8,optional,i64" json:"target_id" form:"target_id" `
+	// 实验模板可见性，默认为空，可见
+	Visibility            *expt.Visibility                   `thrift:"visibility,9,optional" frugal:"9,optional,string" form:"visibility" json:"visibility,omitempty"`
 	TargetFieldMapping    *expt.TargetFieldMapping           `thrift:"target_field_mapping,20,optional" frugal:"20,optional,expt.TargetFieldMapping" form:"target_field_mapping" json:"target_field_mapping,omitempty"`
 	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping      `thrift:"evaluator_field_mapping,21,optional" frugal:"21,optional,list<expt.EvaluatorFieldMapping>" form:"evaluator_field_mapping" json:"evaluator_field_mapping,omitempty"`
 	ItemConcurNum         *int32                             `thrift:"item_concur_num,22,optional" frugal:"22,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
@@ -52,8 +54,10 @@ type CreateExperimentRequest struct {
 	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,42,optional" frugal:"42,optional,map<i64:double>" json:"evaluator_score_weights" form:"evaluator_score_weights" `
 	ExptTemplateID        *int64            `thrift:"expt_template_id,43,optional" frugal:"43,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum          *int32            `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	Session               *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base                  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 关联的智能评测会话ID
+	ThreadID *int64          `thrift:"thread_id,60,optional" frugal:"60,optional,i64" json:"thread_id" form:"thread_id" query:"thread_id"`
+	Session  *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base     *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentRequest() *CreateExperimentRequest {
@@ -152,6 +156,18 @@ func (p *CreateExperimentRequest) GetTargetID() (v int64) {
 		return CreateExperimentRequest_TargetID_DEFAULT
 	}
 	return *p.TargetID
+}
+
+var CreateExperimentRequest_Visibility_DEFAULT expt.Visibility
+
+func (p *CreateExperimentRequest) GetVisibility() (v expt.Visibility) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVisibility() {
+		return CreateExperimentRequest_Visibility_DEFAULT
+	}
+	return *p.Visibility
 }
 
 var CreateExperimentRequest_TargetFieldMapping_DEFAULT *expt.TargetFieldMapping
@@ -334,6 +350,18 @@ func (p *CreateExperimentRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var CreateExperimentRequest_ThreadID_DEFAULT int64
+
+func (p *CreateExperimentRequest) GetThreadID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetThreadID() {
+		return CreateExperimentRequest_ThreadID_DEFAULT
+	}
+	return *p.ThreadID
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -381,6 +409,9 @@ func (p *CreateExperimentRequest) SetEvalSetID(val *int64) {
 func (p *CreateExperimentRequest) SetTargetID(val *int64) {
 	p.TargetID = val
 }
+func (p *CreateExperimentRequest) SetVisibility(val *expt.Visibility) {
+	p.Visibility = val
+}
 func (p *CreateExperimentRequest) SetTargetFieldMapping(val *expt.TargetFieldMapping) {
 	p.TargetFieldMapping = val
 }
@@ -426,6 +457,9 @@ func (p *CreateExperimentRequest) SetExptTemplateID(val *int64) {
 func (p *CreateExperimentRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *CreateExperimentRequest) SetThreadID(val *int64) {
+	p.ThreadID = val
+}
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -442,6 +476,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	6:   "desc",
 	7:   "eval_set_id",
 	8:   "target_id",
+	9:   "visibility",
 	20:  "target_field_mapping",
 	21:  "evaluator_field_mapping",
 	22:  "item_concur_num",
@@ -457,6 +492,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	42:  "evaluator_score_weights",
 	43:  "expt_template_id",
 	45:  "item_retry_num",
+	60:  "thread_id",
 	200: "session",
 	255: "Base",
 }
@@ -487,6 +523,10 @@ func (p *CreateExperimentRequest) IsSetEvalSetID() bool {
 
 func (p *CreateExperimentRequest) IsSetTargetID() bool {
 	return p.TargetID != nil
+}
+
+func (p *CreateExperimentRequest) IsSetVisibility() bool {
+	return p.Visibility != nil
 }
 
 func (p *CreateExperimentRequest) IsSetTargetFieldMapping() bool {
@@ -547,6 +587,10 @@ func (p *CreateExperimentRequest) IsSetExptTemplateID() bool {
 
 func (p *CreateExperimentRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *CreateExperimentRequest) IsSetThreadID() bool {
+	return p.ThreadID != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -636,6 +680,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -756,6 +808,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 45:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField45(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 60:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField60(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -910,6 +970,17 @@ func (p *CreateExperimentRequest) ReadField8(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.TargetID = _field
+	return nil
+}
+func (p *CreateExperimentRequest) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *expt.Visibility
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Visibility = _field
 	return nil
 }
 func (p *CreateExperimentRequest) ReadField20(iprot thrift.TProtocol) error {
@@ -1112,6 +1183,17 @@ func (p *CreateExperimentRequest) ReadField45(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ThreadID = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -1165,6 +1247,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 		if err = p.writeField20(oprot); err != nil {
@@ -1225,6 +1311,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField45(oprot); err != nil {
 			fieldId = 45
+			goto WriteFieldError
+		}
+		if err = p.writeField60(oprot); err != nil {
+			fieldId = 60
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -1402,6 +1492,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *CreateExperimentRequest) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibility() {
+		if err = oprot.WriteFieldBegin("visibility", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Visibility); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
 func (p *CreateExperimentRequest) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTargetFieldMapping() {
@@ -1700,6 +1808,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField60(oprot thrift.TProtocol) (err error) {
+	if p.IsSetThreadID() {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.I64, 60); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ThreadID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -1775,6 +1901,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 	if !p.Field8DeepEqual(ano.TargetID) {
 		return false
 	}
+	if !p.Field9DeepEqual(ano.Visibility) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.TargetFieldMapping) {
 		return false
 	}
@@ -1818,6 +1947,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field45DeepEqual(ano.ItemRetryNum) {
+		return false
+	}
+	if !p.Field60DeepEqual(ano.ThreadID) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -1917,6 +2049,18 @@ func (p *CreateExperimentRequest) Field8DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.TargetID != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field9DeepEqual(src *expt.Visibility) bool {
+
+	if p.Visibility == src {
+		return true
+	} else if p.Visibility == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Visibility, *src) != 0 {
 		return false
 	}
 	return true
@@ -2085,6 +2229,18 @@ func (p *CreateExperimentRequest) Field45DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field60DeepEqual(src *int64) bool {
+
+	if p.ThreadID == src {
+		return true
+	} else if p.ThreadID == nil || src == nil {
+		return false
+	}
+	if *p.ThreadID != *src {
 		return false
 	}
 	return true

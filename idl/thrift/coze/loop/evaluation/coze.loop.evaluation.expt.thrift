@@ -17,6 +17,7 @@ struct CreateExperimentRequest {
     6: optional string desc (api.body='desc')
     7: optional i64 eval_set_id (api.body='eval_set_id', api.js_conv='true', go.tag='json:"eval_set_id"')
     8: optional i64 target_id (api.body='target_id', api.js_conv='true', go.tag='json:"target_id"')
+    9: optional expt.Visibility visibility (api.body='visibility')  // 实验模板可见性，默认为空，可见
 
     20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
@@ -37,6 +38,8 @@ struct CreateExperimentRequest {
     42: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
     43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+
+    60: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
 
     200: optional common.Session session
 

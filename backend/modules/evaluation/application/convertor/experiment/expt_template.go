@@ -52,6 +52,13 @@ func fillCreateTemplateMeta(param *entity.CreateExptTemplateParam, req *expt.Cre
 	param.Name = meta.GetName()
 	param.Description = meta.GetDesc()
 	param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
+	if meta.IsSetVisibility() {
+		if meta.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
 }
 
 // 拆分的子函数：从 triple_config 中提取三元组配置
@@ -438,6 +445,13 @@ func ConvertUpdateExptTemplateMetaReq(req *expt.UpdateExperimentTemplateMetaRequ
 		if meta.IsSetExptType() {
 			param.ExptType = entity.ExptType(meta.GetExptType())
 		}
+		if meta.IsSetVisibility() {
+			if meta.GetVisibility() == domain_expt.VisibilityHidden {
+				param.Visibility = gptr.Of(entity.Visibility_Hidden)
+			} else {
+				param.Visibility = gptr.Of(entity.Visibility(0))
+			}
+		}
 	}
 
 	return param, nil
@@ -454,6 +468,9 @@ func fillTemplateMetaDTO(template *entity.ExptTemplate, dto *domain_expt.ExptTem
 		Name:        gptr.Of(template.Meta.Name),
 		Desc:        gptr.Of(template.Meta.Desc),
 		ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
+	}
+	if template.Meta.Visibility == entity.Visibility_Hidden {
+		dto.Meta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 	}
 }
 

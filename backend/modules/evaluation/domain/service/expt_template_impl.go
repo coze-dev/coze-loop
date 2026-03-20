@@ -109,6 +109,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			Name:        param.Name,
 			Desc:        param.Description,
 			ExptType:    param.ExptType,
+			Visibility:  gptr.Indirect(param.Visibility),
 		},
 		TripleConfig: &entity.ExptTemplateTuple{
 			EvalSetID:               param.EvalSetID,
@@ -127,6 +128,9 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
+	}
+	if param.Visibility != nil {
+		template.Meta.Visibility = *param.Visibility
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
@@ -447,6 +451,9 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 	}
 	if param.ExptType > 0 {
 		ufields["expt_type"] = int32(param.ExptType)
+	}
+	if param.Visibility != nil {
+		ufields["visibility"] = int32(*param.Visibility)
 	}
 
 	// 更新 updated_at 和 updated_by

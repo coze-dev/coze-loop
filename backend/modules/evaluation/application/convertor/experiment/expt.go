@@ -355,6 +355,12 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		TargetRuntimeParam:     trtp,
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
+	if experiment.Visibility == entity.Visibility_Hidden {
+		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
+	}
+	if experiment.ThreadID > 0 {
+		res.ThreadID = gptr.Of(experiment.ThreadID)
+	}
 
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
 
@@ -396,6 +402,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
 			Desc:        gptr.Of(experiment.ExptTemplateMeta.Desc),
 			ExptType:    gptr.Of(domain_expt.ExptType(experiment.ExptTemplateMeta.ExptType)),
+		}
+		if experiment.ExptTemplateMeta.Visibility == entity.Visibility_Hidden {
+			res.ExptTemplateMeta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 		}
 	}
 
@@ -490,6 +499,16 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		SourceType:            entity.SourceType(cer.GetSourceType()),
 		SourceID:              cer.GetSourceID(),
 		ExptConf:              nil,
+	}
+	if cer.IsSetVisibility() {
+		if cer.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
+	if cer.IsSetThreadID() {
+		param.ThreadID = cer.ThreadID
 	}
 	evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
 	if err != nil {

@@ -53,6 +53,7 @@ type ExptTemplateMeta struct {
 	Name        string
 	Desc        string
 	ExptType    ExptType
+	Visibility  Visibility // 实验模板可见性，默认为空，可见
 }
 
 // EvaluatorIDVersionItem 评估器ID和版本映射项
@@ -347,6 +348,7 @@ type CreateExptTemplateParam struct {
 	EvaluatorIDVersionItems []*EvaluatorIDVersionItem // 评估器ID版本项列表（包含完整信息）
 	TemplateConf            *ExptTemplateConfiguration
 	ExptType                ExptType
+	Visibility              *Visibility
 	CreateEvalTargetParam   *CreateEvalTargetParam
 }
 
@@ -371,4 +373,5 @@ type UpdateExptTemplateMetaParam struct {
 	Name        string
 	Description string
 	ExptType    ExptType
+	Visibility  *Visibility
 }
