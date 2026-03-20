@@ -1527,7 +1527,8 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	}
 
 	// 校验评估器版本是否存在且有权限
-	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluatorVersionID(), false, false)
+	// 预置评估器（Builtin）允许跨 workspace 执行：查询时不传 spaceID
+	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1535,19 +1536,25 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
 	}
 
-	var ownerID *string
-	if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
-		ownerID = evaluator.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(evaluator.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: evaluator.SpaceID,
-	})
-	if err != nil {
-		return nil, err
+	if !evaluator.Builtin {
+		if evaluator.SpaceID != req.GetWorkspaceID() {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+		}
+
+		var ownerID *string
+		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
+			ownerID = evaluator.BaseInfo.CreatedBy.UserID
+		}
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: evaluator.SpaceID,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)

@@ -3311,6 +3311,22 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 			wantErr: errno.ResourceNotFoundCode,
 		},
 		{
+			name: "evaluator version not found in workspace",
+			req: &openapi.RunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+				evaluator := &entity.Evaluator{
+					ID:      evaluatorVersionID,
+					SpaceID: workspaceID + 1,
+					Builtin: false,
+				}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
 			name: "auth failed",
 			req: &openapi.RunEvaluatorOApiRequest{
 				WorkspaceID:        gptr.Of(workspaceID),
@@ -3369,6 +3385,23 @@ func TestEvalOpenAPIApplication_RunEvaluatorOApi(t *testing.T) {
 				record := &entity.EvaluatorRecord{ID: 4004}
 				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
+			},
+		},
+		{
+			name: "builtin success",
+			req: &openapi.RunEvaluatorOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				EvaluatorVersionID: gptr.Of(evaluatorVersionID),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
+				evaluator := &entity.Evaluator{
+					ID:      evaluatorVersionID,
+					SpaceID: workspaceID + 999,
+					Builtin: true,
+				}
+				record := &entity.EvaluatorRecord{ID: 4004}
+				evaluatorSvc.EXPECT().GetEvaluatorVersion(gomock.Any(), gomock.Any(), evaluatorVersionID, false, false).Return(evaluator, nil)
 				evaluatorSvc.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(record, nil)
 			},
 		},
