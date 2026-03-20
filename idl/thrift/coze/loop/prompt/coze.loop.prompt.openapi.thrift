@@ -2,6 +2,7 @@ namespace go coze.loop.prompt.openapi
 
 include "../../../base.thrift"
 include "./domain/prompt.thrift"
+include "../extra.thrift"
 
 service PromptOpenAPIService {
     BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/mget')
@@ -14,6 +15,7 @@ struct BatchGetPromptByPromptKeyRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional list<PromptQuery> queries (api.body="queries")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -36,6 +38,7 @@ struct ExecuteRequest {
     10: optional list<VariableVal> variable_vals (api.body="variable_vals") // 变量值
     11: optional list<Message> messages (api.body="messages") // 消息
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -235,6 +238,7 @@ struct ListPromptBasicRequest {
     4: optional string key_word (api.body="key_word") // name/key前缀匹配
     5: optional string creator (api.body="creator") // 创建人
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
