@@ -1320,7 +1320,7 @@ func TestOpenAPIColumnEvaluatorsDO2DTOs(t *testing.T) {
 
 		assert.Equal(t, int64(14), got[3].GetEvaluatorVersionID())
 		assert.Equal(t, int64(104), got[3].GetEvaluatorID())
-		assert.Nil(t, got[3].EvaluatorType)
+		assert.Equal(t, openapiEvaluator.EvaluatorTypeAgent, gptr.Indirect(got[3].EvaluatorType))
 	}
 
 	assert.Nil(t, OpenAPIColumnEvaluatorsDO2DTOs([]*entity.ColumnEvaluator{nil}))
