@@ -1999,3 +1999,23 @@ func _reportevaluatorinvokeprogressMw(handler *apis.APIHandler) []app.HandlerFun
 	// your code...
 	return nil
 }
+
+func _importevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _evaluation_set_io_jobMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getevaluationsetjoboapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _io_jobMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

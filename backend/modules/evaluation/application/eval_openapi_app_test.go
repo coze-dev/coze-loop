@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	evaluation "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation"
 	domainexpt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
@@ -5364,6 +5365,255 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
 				assert.NotNil(t, resp.BaseResp)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ImportEvaluationSetOApi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.ImportEvaluationSetOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService)
+		wantErr int32
+		wantID  int64
+	}{
+		{
+			name:    "invalid req",
+			req:     nil,
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "evaluation set not found",
+			req: &openapi.ImportEvaluationSetOApiRequest{
+				WorkspaceID:     1,
+				EvaluationSetID: 2,
+				File: &dataset_job.DatasetIOFile{
+					Path: "test.csv",
+				},
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth error",
+			req: &openapi.ImportEvaluationSetOApiRequest{
+				WorkspaceID:     1,
+				EvaluationSetID: 2,
+				File: &dataset_job.DatasetIOFile{
+					Path: "test.csv",
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
+					ID:      2,
+					SpaceID: 1,
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+					},
+				}, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "import error",
+			req: &openapi.ImportEvaluationSetOApiRequest{
+				WorkspaceID:     1,
+				EvaluationSetID: 2,
+				File: &dataset_job.DatasetIOFile{
+					Path: "test.csv",
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
+					ID:      2,
+					SpaceID: 1,
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+					},
+				}, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evalSetSvc.EXPECT().ImportEvaluationSet(gomock.Any(), gomock.Any()).Return(int64(0), errors.New("import error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req: &openapi.ImportEvaluationSetOApiRequest{
+				WorkspaceID:     1,
+				EvaluationSetID: 2,
+				File: &dataset_job.DatasetIOFile{
+					Path: "test.csv",
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				evalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(int64(1)), int64(2), nil).Return(&entity.EvaluationSet{
+					ID:      2,
+					SpaceID: 1,
+					BaseInfo: &entity.BaseInfo{
+						CreatedBy: &entity.UserInfo{UserID: gptr.Of("user1")},
+					},
+				}, nil)
+				auth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+				evalSetSvc.EXPECT().ImportEvaluationSet(gomock.Any(), gomock.Any()).Return(int64(100), nil)
+			},
+			wantID: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:                 auth,
+				evaluationSetService: evalSetSvc,
+				metric:               metric,
+			}
+
+			tc.setup(auth, evalSetSvc)
+
+			resp, err := app.ImportEvaluationSetOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
+					assert.Equal(t, tc.wantID, gptr.Indirect(resp.Data.JobID))
+				}
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_GetEvaluationSetJobOApi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.GetEvaluationSetIOJobOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService)
+		wantErr int32
+		wantID  int64
+	}{
+		{
+			name:    "invalid req",
+			req:     nil,
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth error",
+			req: &openapi.GetEvaluationSetIOJobOApiRequest{
+				WorkspaceID: 1,
+				JobID:       100,
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIEvaluationSetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "job not found",
+			req: &openapi.GetEvaluationSetIOJobOApiRequest{
+				WorkspaceID: 1,
+				JobID:       100,
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "job space mismatch",
+			req: &openapi.GetEvaluationSetIOJobOApiRequest{
+				WorkspaceID: 1,
+				JobID:       100,
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(&entity.DatasetIOJob{
+					ID:      100,
+					SpaceID: 2,
+				}, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "success",
+			req: &openapi.GetEvaluationSetIOJobOApiRequest{
+				WorkspaceID: 1,
+				JobID:       100,
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, evalSetSvc *servicemocks.MockIEvaluationSetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				evalSetSvc.EXPECT().GetEvaluationSetIOJob(gomock.Any(), int64(1), int64(100)).Return(&entity.DatasetIOJob{
+					ID:      100,
+					SpaceID: 1,
+					JobType: entity.JobType(1),
+				}, nil)
+			},
+			wantID: 100,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			evalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:                 auth,
+				evaluationSetService: evalSetSvc,
+				metric:               metric,
+			}
+
+			tc.setup(auth, evalSetSvc)
+
+			resp, err := app.GetEvaluationSetJobOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) && assert.NotNil(t, resp.Data.Job) {
+					assert.Equal(t, tc.wantID, resp.Data.Job.ID)
+				}
 			}
 		})
 	}
