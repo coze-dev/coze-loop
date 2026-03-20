@@ -758,7 +758,7 @@ struct RunEvaluatorOpenAPIData {
 // 3.10.1 执行预置评估器（按标识）
 struct RunBuiltinEvaluatorOApiRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
-    // 预置评估器标识：builtin_evaluator_id 和 builtin_evaluator_name 必须且只能传一个
+    // 预置评估器标识：builtin_evaluator_id 和 builtin_evaluator_name 至少传一个；若两者都传则需匹配
     2: optional i64 builtin_evaluator_id (api.body="builtin_evaluator_id", api.js_conv="true", go.tag='json:"builtin_evaluator_id"')
     3: optional string builtin_evaluator_name (api.body="builtin_evaluator_name", go.tag='json:"builtin_evaluator_name"')
     4: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
