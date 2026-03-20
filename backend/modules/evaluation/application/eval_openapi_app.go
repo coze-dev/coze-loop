@@ -1588,6 +1588,73 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	var evaluatorVersionID int64
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluatorVersionID, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	hasID := req.IsSetBuiltinEvaluatorID()
+	hasName := req.IsSetBuiltinEvaluatorName()
+	if !hasID && !hasName {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id or builtin_evaluator_name is required"))
+	}
+
+	builtinEvaluatorID := req.GetBuiltinEvaluatorID()
+	builtinEvaluatorName := req.GetBuiltinEvaluatorName()
+	if hasID && builtinEvaluatorID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id is invalid"))
+	}
+	if hasName && builtinEvaluatorName == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_name is invalid"))
+	}
+
+	evaluatorVersionID, err = e.evaluatorService.ResolveBuiltinEvaluatorVisibleVersionID(ctx, builtinEvaluatorID, builtinEvaluatorName)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorVersionID == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("builtin evaluator not found"))
+	}
+
+	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
+	runConf := evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(req.EvaluatorRunConf)
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	record, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+		SpaceID:            req.GetWorkspaceID(),
+		EvaluatorVersionID: evaluatorVersionID,
+		InputData:          inputData,
+		EvaluatorRunConf:   runConf,
+		Ext:                req.Ext,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.RunBuiltinEvaluatorOApiResponse{
+		Data: &openapi.RunEvaluatorOpenAPIData{
+			Record: evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest) (r *openapi.CorrectEvaluatorRecordOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {

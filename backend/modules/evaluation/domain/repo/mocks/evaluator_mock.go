@@ -176,6 +176,21 @@ func (mr *MockIEvaluatorRepoMockRecorder) CreateEvaluator(ctx, evaluator any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateEvaluator", reflect.TypeOf((*MockIEvaluatorRepo)(nil).CreateEvaluator), ctx, evaluator)
 }
 
+// GetEvaluatorMetaBySpaceIDAndName mocks base method.
+func (m *MockIEvaluatorRepo) GetEvaluatorMetaBySpaceIDAndName(ctx context.Context, spaceID int64, name string, includeDeleted bool) (*entity.Evaluator, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvaluatorMetaBySpaceIDAndName", ctx, spaceID, name, includeDeleted)
+	ret0, _ := ret[0].(*entity.Evaluator)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvaluatorMetaBySpaceIDAndName indicates an expected call of GetEvaluatorMetaBySpaceIDAndName.
+func (mr *MockIEvaluatorRepoMockRecorder) GetEvaluatorMetaBySpaceIDAndName(ctx, spaceID, name, includeDeleted any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorMetaBySpaceIDAndName", reflect.TypeOf((*MockIEvaluatorRepo)(nil).GetEvaluatorMetaBySpaceIDAndName), ctx, spaceID, name, includeDeleted)
+}
+
 // ListBuiltinEvaluator mocks base method.
 func (m *MockIEvaluatorRepo) ListBuiltinEvaluator(ctx context.Context, req *repo.ListBuiltinEvaluatorRequest) (*repo.ListBuiltinEvaluatorResponse, error) {
 	m.ctrl.T.Helper()

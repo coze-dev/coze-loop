@@ -486,6 +486,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
 				{
+					_builtin_evaluators := _evaluation0.Group("/builtin_evaluators", _builtin_evaluatorsMw(handler)...)
+					_builtin_evaluators.POST("/run", append(_runbuiltinevaluatoroapiMw(handler), apis.RunBuiltinEvaluatorOApi)...)
+				}
+				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)
 					_evaluator_records0.POST("/batch_get", append(_batchgetevaluatorrecordsoapiMw(handler), apis.BatchGetEvaluatorRecordsOApi)...)
 					_evaluator_records0.PATCH("/:evaluator_record_id", append(_correctevaluatorrecordoapiMw(handler), apis.CorrectEvaluatorRecordOApi)...)
