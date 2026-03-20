@@ -471,6 +471,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_id2 := _evaluators1.Group("/:evaluator_id", _evaluator_id2Mw(handler)...)
 				_evaluator_id2.PATCH("/update_draft", append(_updateevaluatordraftoapiMw(handler), apis.UpdateEvaluatorDraftOApi)...)
 				_evaluators1.POST("/result", append(_reportevaluatorinvokeresultMw(handler), apis.ReportEvaluatorInvokeResult)...)
+				{
+					_builtin := _evaluators1.Group("/builtin", _builtinMw(handler)...)
+					_builtin.POST("/run", append(_runbuiltinevaluatoroapiMw(handler), apis.RunBuiltinEvaluatorOApi)...)
+				}
 				_evaluation0.POST("/experiment_templates", append(_experiment_templates0Mw(handler), apis.CreateExptTemplateOApi)...)
 				_experiment_templates0 := _evaluation0.Group("/experiment_templates", _experiment_templates0Mw(handler)...)
 				_experiment_templates0.POST("/batch_get", append(_batchgetexpttemplatesoapiMw(handler), apis.BatchGetExptTemplatesOApi)...)
@@ -485,10 +489,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
 				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
-				{
-					_builtin_evaluators := _evaluation0.Group("/builtin_evaluators", _builtin_evaluatorsMw(handler)...)
-					_builtin_evaluators.POST("/run", append(_runbuiltinevaluatoroapiMw(handler), apis.RunBuiltinEvaluatorOApi)...)
-				}
 				{
 					_evaluator_records0 := _evaluation0.Group("/evaluator_records", _evaluator_records0Mw(handler)...)
 					_evaluator_records0.POST("/batch_get", append(_batchgetevaluatorrecordsoapiMw(handler), apis.BatchGetEvaluatorRecordsOApi)...)

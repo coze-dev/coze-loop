@@ -116,6 +116,132 @@ func Test_GetBuiltinEvaluator(t *testing.T) {
 	})
 }
 
+func Test_EvaluatorServiceImpl_ResolveBuiltinEvaluatorVisibleVersionID(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		evaluatorID   int64
+		evaluatorName string
+		setup         func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo)
+		wantID        int64
+		wantErrCode   int32
+		wantErr       bool
+	}{
+		{
+			name:        "neither id nor name",
+			evaluatorID: 0,
+			setup:       func(context.Context, *confmocks.MockIConfiger, *repomocks.MockIEvaluatorRepo) {},
+			wantErrCode: errno.CommonInvalidParamCode,
+			wantErr:     true,
+		},
+		{
+			name:          "empty builtin space config",
+			evaluatorID:   1,
+			evaluatorName: "",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, _ *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{})
+			},
+		},
+		{
+			name:        "invalid builtin space id",
+			evaluatorID: 1,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, _ *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"abc"})
+			},
+			wantErr: true,
+		},
+		{
+			name:        "resolve by id success",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 333, EvaluatorID: 11, Version: "1.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(11), "1.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 333,
+		},
+		{
+			name:          "resolve by id and name mismatch",
+			evaluatorID:   11,
+			evaluatorName: "other",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+			},
+			wantErrCode: errno.CommonInvalidParamCode,
+			wantErr:     true,
+		},
+		{
+			name:        "resolve by id not in allowed space",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 200, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+			},
+		},
+		{
+			name:          "resolve by name success",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100", "200"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, nil)
+				meta := &entity.Evaluator{ID: 22, SpaceID: 200, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(200), "builtin", false).Return(meta, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 444, EvaluatorID: 22, Version: "2.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 444,
+		},
+		{
+			name:          "resolve by name not builtin",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: false, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			mockCfg := confmocks.NewMockIConfiger(ctrl)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: mockRepo,
+				configer:      mockCfg,
+			}
+
+			tc.setup(ctx, mockCfg, mockRepo)
+			got, err := s.ResolveBuiltinEvaluatorVisibleVersionID(ctx, tc.evaluatorID, tc.evaluatorName)
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.wantID, got)
+		})
+	}
+}
+
 // Test_BatchGetBuiltinEvaluator 覆盖批量可见版本查询与元信息回填
 func Test_BatchGetBuiltinEvaluator(t *testing.T) {
 	ctrl := gomock.NewController(t)

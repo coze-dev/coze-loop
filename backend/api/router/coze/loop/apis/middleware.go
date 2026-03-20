@@ -2029,3 +2029,8 @@ func _runbuiltinevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _builtinMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

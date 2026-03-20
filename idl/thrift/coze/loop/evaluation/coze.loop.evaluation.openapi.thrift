@@ -1080,7 +1080,7 @@ service EvaluationOpenAPIService {
     // 执行评估器
     RunEvaluatorOApiResponse RunEvaluatorOApi(1: RunEvaluatorOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators_versions/:evaluator_version_id/run")
     // 执行预置评估器（按标识）
-    RunBuiltinEvaluatorOApiResponse RunBuiltinEvaluatorOApi(1: RunBuiltinEvaluatorOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/builtin_evaluators/run")
+    RunBuiltinEvaluatorOApiResponse RunBuiltinEvaluatorOApi(1: RunBuiltinEvaluatorOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/builtin/run")
     // 修正评估记录
     CorrectEvaluatorRecordOApiResponse CorrectEvaluatorRecordOApi(1: CorrectEvaluatorRecordOApiRequest req) (api.category="openapi", api.patch = "/v1/loop/evaluation/evaluator_records/:evaluator_record_id")
     // 批量查询评估记录

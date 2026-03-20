@@ -268,7 +268,7 @@ func GetEvaluationSetJobOApi(ctx context.Context, c *app.RequestContext) {
 }
 
 // RunBuiltinEvaluatorOApi .
-// @router /v1/loop/evaluation/builtin_evaluators/run [POST]
+// @router /v1/loop/evaluation/evaluators/builtin/run [POST]
 func RunBuiltinEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.RunBuiltinEvaluatorOApi)
 }
