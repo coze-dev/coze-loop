@@ -33,6 +33,9 @@ func ConvertEvaluatorDTO2DO(evaluatorDTO *evaluatordto.Evaluator) (*evaluatordo.
 		BaseInfo:               commonconvertor.ConvertBaseInfoDTO2DO(evaluatorDTO.GetBaseInfo()),
 		Tags:                   ConvertEvaluatorLangTagsDTO2DO(evaluatorDTO.GetTags()),
 	}
+	if evaluatorDTO.IsSetSourceType() {
+		evaluatorDO.SourceType = convertSourceTypeDTO2DO(evaluatorDTO.GetSourceType())
+	}
 	if evaluatorDTO.GetEvaluatorInfo() != nil {
 		evaluatorDO.EvaluatorInfo = &evaluatordo.EvaluatorInfo{
 			Benchmark:     evaluatorDTO.GetEvaluatorInfo().Benchmark,
@@ -85,6 +88,10 @@ func ConvertEvaluatorDO2DTO(do *evaluatordo.Evaluator) *evaluatordto.Evaluator {
 		Builtin:               gptr.Of(do.Builtin),
 		BaseInfo:              commonconvertor.ConvertBaseInfoDO2DTO(do.BaseInfo),
 		Tags:                  ConvertEvaluatorLangTagsDO2DTO(do.Tags),
+	}
+	if do.SourceType != 0 {
+		val := convertSourceTypeDO2DTO(do.SourceType)
+		dto.SourceType = &val
 	}
 	if do.EvaluatorInfo != nil {
 		dto.EvaluatorInfo = &evaluatordto.EvaluatorInfo{
@@ -147,6 +154,24 @@ func convertBoxTypeDO2DTO(doType evaluatordo.EvaluatorBoxType) string {
 		return "Black"
 	default:
 		return "White"
+	}
+}
+
+func convertSourceTypeDTO2DO(dtoType evaluatordto.EvaluatorSourceType) evaluatordo.EvaluatorSourceType {
+	switch dtoType {
+	case evaluatordto.EvaluatorSourceTypeIntelligentGen:
+		return evaluatordo.EvaluatorSourceType_IntelligentGen
+	default:
+		return 0
+	}
+}
+
+func convertSourceTypeDO2DTO(doType evaluatordo.EvaluatorSourceType) evaluatordto.EvaluatorSourceType {
+	switch doType {
+	case evaluatordo.EvaluatorSourceType_IntelligentGen:
+		return evaluatordto.EvaluatorSourceTypeIntelligentGen
+	default:
+		return ""
 	}
 }
 

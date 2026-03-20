@@ -37,6 +37,7 @@ func ConvertEvaluatorDO2PO(do *evaluatordo.Evaluator) *model.Evaluator {
 		BuiltinVisibleVersion: do.BuiltinVisibleVersion,
 		Builtin:               builtinVal,
 		BoxType:               int32(do.BoxType),
+		SourceType:            int32(do.SourceType),
 	}
 	if do.EvaluatorInfo != nil {
 		b, err := json.Marshal(do.EvaluatorInfo)
@@ -77,6 +78,7 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 		BuiltinVisibleVersion: po.BuiltinVisibleVersion,
 		Builtin:               po.Builtin == 1,
 		BoxType:               evaluatordo.EvaluatorBoxType(po.BoxType),
+		SourceType:            evaluatordo.EvaluatorSourceType(po.SourceType),
 	}
 	if po.EvaluatorInfo != nil {
 		var info evaluatordo.EvaluatorInfo

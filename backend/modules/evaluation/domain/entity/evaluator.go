@@ -18,6 +18,7 @@ type Evaluator struct {
 	BuiltinVisibleVersion string
 	BoxType               EvaluatorBoxType                                      `json:"box_type"`
 	Tags                  map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `json:"tags"`
+	SourceType            EvaluatorSourceType
 
 	PromptEvaluatorVersion    *PromptEvaluatorVersion
 	CodeEvaluatorVersion      *CodeEvaluatorVersion
@@ -31,6 +32,14 @@ type EvaluatorInfo struct {
 	VendorURL     *string `json:"vendor_url"`
 	UserManualURL *string `json:"user_manual_url"`
 }
+
+type (
+	EvaluatorSourceType = int64
+)
+
+const (
+	EvaluatorSourceType_IntelligentGen SourceType = 1
+)
 
 type EvaluatorBoxType int64
 

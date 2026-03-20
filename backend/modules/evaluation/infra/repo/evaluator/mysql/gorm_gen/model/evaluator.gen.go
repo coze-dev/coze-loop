@@ -30,6 +30,7 @@ type Evaluator struct {
 	Builtin               int32          `gorm:"column:builtin;type:int(11) unsigned;not null;default:2;comment:是否预置，1:是；2:否" json:"builtin"`                                                                                                                                                                                               // 是否预置，1:是；2:否
 	BoxType               int32          `gorm:"column:box_type;type:int(11) unsigned;not null;default:1;comment:黑白盒类型，1:白盒；2:黑盒" json:"box_type"`                                                                                                                                                                                          // 黑白盒类型，1:白盒；2:黑盒
 	BuiltinVisibleVersion string         `gorm:"column:builtin_visible_version;type:varchar(128) character set utf8mb4;not null;comment:预置评估器最新可见版本号" json:"builtin_visible_version"`                                                                                                                                                       // 预置评估器最新可见版本号
+	SourceType            int32          `gorm:"column:source_type;type:int(11) unsigned;not null;comment:来源类型, 默认0, 1-智能生成" json:"source_type"`                                                                                                                                                                                            // 来源类型, 默认0, 1-智能生成
 }
 
 // TableName Evaluator's table name
