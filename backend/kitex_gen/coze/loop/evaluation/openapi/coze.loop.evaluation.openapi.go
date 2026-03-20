@@ -8109,9 +8109,10 @@ type BatchCreateEvaluationSetItemsOApiRequest struct {
 	// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
 	IsSkipInvalidItems *bool `thrift:"is_skip_invalid_items,4,optional" frugal:"4,optional,bool" form:"is_skip_invalid_items" json:"is_skip_invalid_items,omitempty"`
 	// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-	IsAllowPartialAdd *bool        `thrift:"is_allow_partial_add,5,optional" frugal:"5,optional,bool" form:"is_allow_partial_add" json:"is_allow_partial_add,omitempty"`
-	Extra             *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base              *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	IsAllowPartialAdd *bool                        `thrift:"is_allow_partial_add,5,optional" frugal:"5,optional,bool" form:"is_allow_partial_add" json:"is_allow_partial_add,omitempty"`
+	FieldWriteOptions []*eval_set.FieldWriteOption `thrift:"field_write_options,6,optional" frugal:"6,optional,list<eval_set.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
+	Extra             *extra.Extra                 `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base              *base.Base                   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchCreateEvaluationSetItemsOApiRequest() *BatchCreateEvaluationSetItemsOApiRequest {
@@ -8181,6 +8182,18 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) GetIsAllowPartialAdd() (v boo
 	return *p.IsAllowPartialAdd
 }
 
+var BatchCreateEvaluationSetItemsOApiRequest_FieldWriteOptions_DEFAULT []*eval_set.FieldWriteOption
+
+func (p *BatchCreateEvaluationSetItemsOApiRequest) GetFieldWriteOptions() (v []*eval_set.FieldWriteOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldWriteOptions() {
+		return BatchCreateEvaluationSetItemsOApiRequest_FieldWriteOptions_DEFAULT
+	}
+	return p.FieldWriteOptions
+}
+
 var BatchCreateEvaluationSetItemsOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) GetExtra() (v *extra.Extra) {
@@ -8219,6 +8232,9 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) SetIsSkipInvalidItems(val *bo
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetIsAllowPartialAdd(val *bool) {
 	p.IsAllowPartialAdd = val
 }
+func (p *BatchCreateEvaluationSetItemsOApiRequest) SetFieldWriteOptions(val []*eval_set.FieldWriteOption) {
+	p.FieldWriteOptions = val
+}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -8232,6 +8248,7 @@ var fieldIDToName_BatchCreateEvaluationSetItemsOApiRequest = map[int16]string{
 	3:   "items",
 	4:   "is_skip_invalid_items",
 	5:   "is_allow_partial_add",
+	6:   "field_write_options",
 	254: "extra",
 	255: "Base",
 }
@@ -8254,6 +8271,10 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetIsSkipInvalidItems() boo
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetIsAllowPartialAdd() bool {
 	return p.IsAllowPartialAdd != nil
+}
+
+func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetFieldWriteOptions() bool {
+	return p.FieldWriteOptions != nil
 }
 
 func (p *BatchCreateEvaluationSetItemsOApiRequest) IsSetExtra() bool {
@@ -8317,6 +8338,14 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Read(iprot thrift.TProtocol) 
 		case 5:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8434,6 +8463,29 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField5(iprot thrift.TProt
 	p.IsAllowPartialAdd = _field
 	return nil
 }
+func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*eval_set.FieldWriteOption, 0, size)
+	values := make([]eval_set.FieldWriteOption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldWriteOptions = _field
+	return nil
+}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -8475,6 +8527,10 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Write(oprot thrift.TProtocol)
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -8601,6 +8657,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldWriteOptions() {
+		if err = oprot.WriteFieldBegin("field_write_options", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldWriteOptions)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldWriteOptions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 func (p *BatchCreateEvaluationSetItemsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -8665,6 +8747,9 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepEqual(ano *BatchCreateEva
 		return false
 	}
 	if !p.Field5DeepEqual(ano.IsAllowPartialAdd) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.FieldWriteOptions) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -8734,6 +8819,19 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) Field5DeepEqual(src *bool) bo
 	}
 	if *p.IsAllowPartialAdd != *src {
 		return false
+	}
+	return true
+}
+func (p *BatchCreateEvaluationSetItemsOApiRequest) Field6DeepEqual(src []*eval_set.FieldWriteOption) bool {
+
+	if len(p.FieldWriteOptions) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldWriteOptions {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }

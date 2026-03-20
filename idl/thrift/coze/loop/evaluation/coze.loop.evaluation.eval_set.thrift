@@ -36,6 +36,7 @@ struct CreateEvaluationSetWithImportRequest {
     6: optional dataset_job.SourceType source_type (vt.defined_only = "true")
     7: required dataset_job.DatasetIOEndpoint source
     8: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+    9: optional dataset_job.DatasetIOJobOption option
 
     200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
@@ -58,8 +59,10 @@ struct ParseImportSourceFileRequest {
 struct ParseImportSourceFileResponse {
     1: optional i64 bytes (api.js_conv="true", go.tag='json:"bytes"')       // 文件大小，单位为 byte
     10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
-    3: optional list<ConflictField> conflicts         // 冲突详情。key: 列名，val：冲突详情
+    3: optional list<ConflictField> conflicts            // 冲突详情。key: 列名，val：冲突详情
     4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
+    5: optional list<string> untypedUrlFields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
+    6: optional map<string, list<string>> precheck_data_by_field // 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 
     /*base*/
     255: optional base.BaseResp baseResp
@@ -230,8 +233,9 @@ struct BatchCreateEvaluationSetItemsRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100'),
 
-    10: optional bool skip_invalid_items, // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据                                                    // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
+    10: optional bool skip_invalid_items // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据                                                    // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     11: optional bool allow_partial_add  // 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
+    12: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -250,6 +254,8 @@ struct UpdateEvaluationSetItemRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional list<eval_set.Turn> turns,  // 每轮对话
+
+    10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -356,6 +362,7 @@ struct GetEvaluationSetItemFieldRequest {
     3: required i64 item_pk (api.path='item_pk',api.js_conv='true', go.tag='json:"item_pk"'), // item 的主键ID，即 item.ID 这一字段
     5: required string field_name // 列名
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+    7: optional string field_key // 与 field name 同时指定时，仅 field key 生效
 
     255: optional base.Base Base
 }
