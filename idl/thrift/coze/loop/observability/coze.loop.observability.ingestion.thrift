@@ -1,7 +1,7 @@
-namespace go coze.loop.observability.metric
+namespace go coze.loop.observability.ingestion
 
 include "../../../base.thrift"
 
-service MetricService {
+service IngestionService {
 
 }
