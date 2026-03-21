@@ -38,6 +38,7 @@ type ListTaskParam struct {
 	ReqLimit     int32
 	ReqOffset    int32
 	OrderBy      *common.OrderBy
+	NeedOnlyOld  bool
 }
 
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskDao
@@ -121,6 +122,9 @@ func (v *TaskDaoImpl) ListTasks(ctx context.Context, param ListTaskParam) ([]*mo
 	if len(param.WorkspaceIDs) != 0 {
 		qd = qd.Where(q.ObservabilityTask.WorkspaceID.In(param.WorkspaceIDs...))
 	}
+	if param.NeedOnlyOld {
+		qd.Where(q.ObservabilityTask.WorkflowID.Eq(0))
+	}
 	// 应用过滤条件
 	qdf, err := v.applyTaskFilters(q, param.TaskFilters)
 	if err != nil {
@@ -201,6 +205,8 @@ func (v *TaskDaoImpl) buildSingleFilterExpr(q *genquery.Query, f *entity.TaskFil
 		return v.buildUpdateAtFilter(q, f)
 	case "task_source":
 		return v.buildTaskSourceFilter(q, f)
+	case entity.TaskFieldNameUpdatedBy:
+		return v.buildUpdatedByFilter(q, f)
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithMsgParam("invalid filter field name: %s", string(*f.FieldName)))
 	}
@@ -278,6 +284,22 @@ func (v *TaskDaoImpl) buildCreatedByFilter(q *genquery.Query, f *entity.TaskFilt
 		return q.ObservabilityTask.CreatedBy.In(f.Values...), nil
 	case entity.QueryTypeNotIn:
 		return q.ObservabilityTask.CreatedBy.NotIn(f.Values...), nil
+	default:
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
+	}
+}
+
+// 构建更新者过滤条件
+func (v *TaskDaoImpl) buildUpdatedByFilter(q *genquery.Query, f *entity.TaskFilterField) (field.Expr, error) {
+	if len(f.Values) == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("no values provided for created_by query"))
+	}
+
+	switch *f.QueryType {
+	case entity.QueryTypeIn:
+		return q.ObservabilityTask.UpdatedBy.In(f.Values...), nil
+	case entity.QueryTypeNotIn:
+		return q.ObservabilityTask.UpdatedBy.NotIn(f.Values...), nil
 	default:
 		return nil, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("invalid query type for created_by"))
 	}

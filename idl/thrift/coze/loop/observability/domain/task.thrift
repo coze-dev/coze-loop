@@ -3,6 +3,7 @@ namespace go coze.loop.observability.domain.task
 include "common.thrift"
 include "filter.thrift"
 include "export_dataset.thrift"
+include "../../data/domain/dataset.thrift"
 
 typedef string TimeUnit (ts.enum="true")
 const TimeUnit TimeUnit_Day = "day"
@@ -46,7 +47,7 @@ struct Task {
     9: optional RunDetail task_detail                                                       // 任务状态详情
     10: optional RunDetail backfill_task_detail                                             // 任务历史数据执行详情
     11: optional TaskSource task_source                                                     // 创建来源
-
+    12: optional i64 workflow_id (api.js_conv="true", go.tag='json:"worflow_id"')           // 对应工作流 ID
     100: optional common.BaseInfo base_info                                                 // 基础信息
 }
 
@@ -72,11 +73,16 @@ struct EffectiveTime {
     2: optional i64 end_at (api.js_conv="true", go.tag='json:"end_at"')          // ms timestamp
 }
 
-
+struct EvaluationExperimentConfig {
+    1: optional i32 item_concurrency_count (api.js_conv="true",  go.tag='json:"item_concurrency_count"')
+    2: optional i32 item_max_retry_count (api.js_conv="true", go.tag='json:"item_max_retry_count"')
+    3: optional string source_target_id (go.tag='json:"source_target_id"')
+}
 // TaskConfig
 struct TaskConfig {
-    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息
+    1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息 evaluator 维度
     2: optional list<DataReflowConfig> data_reflow_config                    // 配置的数据回流的数据集信息
+    3: optional EvaluationExperimentConfig evaluation_experiment_config      // 评测实验配置 task 维度
 }
 
 struct DataReflowConfig {
@@ -84,6 +90,7 @@ struct DataReflowConfig {
     2: optional string dataset_name                                                  // 数据集名称
     3: optional export_dataset.DatasetSchema dataset_schema (vt.not_nil="true")      // 数据集列数据schema
     4: optional list<export_dataset.FieldMapping> field_mappings (vt.min_size="1", vt.max_size="100")
+    5: optional dataset.DatasetCategory dataset_category                             // 数据集类型
 }
 
 struct AutoEvaluateConfig {

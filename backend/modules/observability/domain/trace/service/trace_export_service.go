@@ -8,6 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
+
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
@@ -46,6 +50,7 @@ type ExportTracesToDatasetRequest struct {
 	// 导入方式，不填默认为追加
 	ExportType    ExportType
 	FieldMappings []entity.FieldMapping
+	SpanFilters   *filter.SpanFilterFields
 }
 
 type ExportTracesToDatasetResponse struct {
@@ -196,12 +201,34 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	*PreviewExportTracesToDatasetResponse, error,
 ) {
 	resp := &PreviewExportTracesToDatasetResponse{}
-	spans, err := r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	var spans loop_span.SpanList
+	var err error
+	if len(req.SpanIds) > 0 {
+		spans, err = r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
+	} else {
+		spanListType := loop_span.SpanListTypeRootSpan
+		if req.SpanFilters.IsSetSpanListType() {
+			spanListType = loop_span.SpanListType(req.SpanFilters.GetSpanListType())
+		}
+		listResp, err := r.traceService.ListSpans(ctx, &ListSpansReq{
+			WorkspaceID:     req.WorkspaceID,
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
+			Filters:         convertor.FilterFieldsDTO2DO(req.SpanFilters.Filters),
+			Limit:           10,
+			DescByStartTime: true,
+			PlatformType:    req.PlatformType,
+			SpanListType:    spanListType,
+		})
+		if err != nil {
+			return resp, err
+		}
+		spans = listResp.Spans
+	}
 	if err != nil {
 		return resp, err
 	}
 	logs.CtxInfo(ctx, "Get spans success, total count:%v", len(spans))
-
 	dataset, err := r.buildPreviewDataset(ctx, req.WorkspaceID, req.Category, req.Config)
 	if err != nil {
 		return resp, err
@@ -253,7 +280,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 			*config.DatasetName,
 			category,
 			config.DatasetSchema,
-			nil, nil,
+			nil, nil, false,
 		))
 		if err != nil {
 			return nil, err
@@ -277,7 +304,7 @@ func (r *TraceExportServiceImpl) createOrUpdateDataset(ctx context.Context, work
 				"",
 				category,
 				config.DatasetSchema,
-				nil, nil,
+				nil, nil, false,
 			)); err != nil {
 				return nil, err
 			}
@@ -508,8 +535,9 @@ func (r *TraceExportServiceImpl) buildItem(ctx context.Context, span *loop_span.
 				logs.CtxInfo(ctx, "Extract field failed, err:%v", err)
 			}
 		}
-
+		logs.CtxInfo(ctx, "Extract field value:%v", value)
 		content, errCode := entity.GetContentInfo(ctx, mapping.FieldSchema.ContentType, value)
+
 		if errCode == entity.DatasetErrorType_MismatchSchema {
 			item.AddError("invalid multi part", entity.DatasetErrorType_MismatchSchema, nil)
 			continue
@@ -543,7 +571,7 @@ func (r *TraceExportServiceImpl) buildPreviewDataset(ctx context.Context, worksp
 		"",
 		category,
 		schema,
-		nil, nil,
+		nil, nil, false,
 	)
 	if config.DatasetID != nil {
 		dataset.ID = *config.DatasetID

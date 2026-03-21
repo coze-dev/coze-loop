@@ -33,6 +33,7 @@ type SubmitExperimentReq struct {
 	TargetFieldMapping    *expt.TargetFieldMapping
 	EvaluatorFieldMapping []*expt.EvaluatorFieldMapping
 	ItemConcurNum         *int32
+	ItemRetryNum          *int32
 	EvaluatorsConcurNum   *int32
 	CreateEvalTargetParam *eval_target.CreateEvalTargetParam
 	ExptType              *expt.ExptType

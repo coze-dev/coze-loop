@@ -78,7 +78,15 @@ func (p *Sampler) IsValid() error {
 func (p *EffectiveTime) IsValid() error {
 	return nil
 }
+func (p *EvaluationExperimentConfig) IsValid() error {
+	return nil
+}
 func (p *TaskConfig) IsValid() error {
+	if p.EvaluationExperimentConfig != nil {
+		if err := p.EvaluationExperimentConfig.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluationExperimentConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *DataReflowConfig) IsValid() error {

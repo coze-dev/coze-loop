@@ -340,6 +340,25 @@ func (p *ListAnnotationsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ListWorkspaceAnnotationsRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListWorkspaceAnnotationsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ExportTracesToDatasetRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
@@ -408,6 +427,11 @@ func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
 	}
 	if len(p.FieldMappings) > int(100) {
 		return fmt.Errorf("field FieldMappings MaxLen rule failed, current value: %v", p.FieldMappings)
+	}
+	if p.SpanFilters != nil {
+		if err := p.SpanFilters.IsValid(); err != nil {
+			return fmt.Errorf("field SpanFilters not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -585,6 +609,25 @@ func (p *ListTrajectoryRequest) IsValid() error {
 	return nil
 }
 func (p *ListTrajectoryResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListMetadataRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MetadataItemInfo) IsValid() error {
+	return nil
+}
+func (p *ListMetadataResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

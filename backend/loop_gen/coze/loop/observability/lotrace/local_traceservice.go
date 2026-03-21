@@ -337,6 +337,27 @@ func (l *LocalTraceService) ListAnnotations(ctx context.Context, req *trace.List
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) ListWorkspaceAnnotations(ctx context.Context, req *trace.ListWorkspaceAnnotationsRequest, callOptions ...callopt.Option) (*trace.ListWorkspaceAnnotationsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceListWorkspaceAnnotationsArgs)
+		result := out.(*trace.TraceServiceListWorkspaceAnnotationsResult)
+		resp, err := l.impl.ListWorkspaceAnnotations(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceListWorkspaceAnnotationsArgs{Req: req}
+	result := &trace.TraceServiceListWorkspaceAnnotationsResult{}
+	ctx = l.injectRPCInfo(ctx, "ListWorkspaceAnnotations")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) ExportTracesToDataset(ctx context.Context, Req *trace.ExportTracesToDatasetRequest, callOptions ...callopt.Option) (*trace.ExportTracesToDatasetResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceExportTracesToDatasetArgs)
@@ -499,6 +520,27 @@ func (l *LocalTraceService) ListTrajectory(ctx context.Context, req *trace.ListT
 	arg := &trace.TraceServiceListTrajectoryArgs{Req: req}
 	result := &trace.TraceServiceListTrajectoryResult{}
 	ctx = l.injectRPCInfo(ctx, "ListTrajectory")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (*trace.ListMetadataResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceListMetadataArgs)
+		result := out.(*trace.TraceServiceListMetadataResult)
+		resp, err := l.impl.ListMetadata(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceListMetadataArgs{Req: req}
+	result := &trace.TraceServiceListMetadataResult{}
+	ctx = l.injectRPCInfo(ctx, "ListMetadata")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

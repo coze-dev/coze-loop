@@ -7,6 +7,8 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+
 	"github.com/bytedance/gg/gptr"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -80,6 +82,8 @@ type Dataset struct {
 	EvaluationBizCategory *EvaluationBizCategory
 	Seesion               *common.Session
 	UserID                *string
+	// 数据集属性
+	Visibility dataset.DatasetVisibility
 }
 
 type DatasetVersion struct {
@@ -119,12 +123,17 @@ type FieldSchema struct {
 	DisplayFormat FieldDisplayFormat
 }
 
-func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema DatasetSchema, session *common.Session, evaluationBizCategory *EvaluationBizCategory) *Dataset {
+func NewDataset(id, spaceID int64, name string, category DatasetCategory,
+	schema DatasetSchema,
+	session *common.Session,
+	evaluationBizCategory *EvaluationBizCategory,
+	isNewWorkflowTask bool,
+) *Dataset {
 	var userID *string
 	if session != nil {
 		userID = ptr.Of(strconv.FormatInt(*session.UserID, 10))
 	}
-	dataset := &Dataset{
+	ds := &Dataset{
 		ID:          id,
 		WorkspaceID: spaceID,
 		Name:        name,
@@ -136,7 +145,13 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory, schema
 		Seesion:               session,
 		UserID:                userID,
 	}
-	return dataset
+	if isNewWorkflowTask {
+		ds.Visibility = dataset.DatasetVisibility_System
+	} else {
+		ds.Visibility = dataset.DatasetVisibility_Space
+	}
+
+	return ds
 }
 
 func (d *Dataset) GetFieldSchemaKeyByName(fieldSchemaName string) string {
@@ -410,6 +425,7 @@ func GetContentInfo(ctx context.Context, contentType ContentType, value string) 
 			logs.CtxInfo(ctx, "Unmarshal multi part failed, err:%v", err)
 			return nil, DatasetErrorType_MismatchSchema
 		}
+		logs.CtxInfo(ctx, "Unmarshal multi part success, parts:%v", parts)
 		var multiPart []*Content
 		for _, part := range parts {
 			// 本期仅支持回流图片的多模态数据，非ImageURL信息的，打包放进text
@@ -467,6 +483,7 @@ func GetContentInfo(ctx context.Context, contentType ContentType, value string) 
 			Text:        value,
 		}
 	}
+	logs.CtxInfo(ctx, "Get content info success, content:%v", content)
 	return content, 0
 }
 
