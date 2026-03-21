@@ -288,6 +288,25 @@ func TestFactoryImpl_CreateLLM(t *testing.T) {
 			wantErr:    nil,
 		},
 		{
+			name: "eino_minimax",
+			args: args{
+				ctx: context.Background(),
+				model: &entity.Model{
+					Frame:    entity.FrameDefault,
+					Protocol: entity.ProtocolMiniMax,
+					ProtocolConfig: &entity.ProtocolConfig{
+						APIKey:                "your-api-key",
+						Model:                 "MiniMax-M2.7",
+						TimeoutMs:             nil,
+						ProtocolConfigMiniMax: &entity.ProtocolConfigMiniMax{},
+					},
+					ParamConfig: paramCfg,
+				},
+			},
+			wantNotNil: true,
+			wantErr:    nil,
+		},
+		{
 			name: "failed",
 			args: args{
 				ctx: context.Background(),
