@@ -2527,6 +2527,8 @@ type SubmitExperimentRequest struct {
 	EnableWeightedScore *bool  `thrift:"enable_weighted_score,41,optional" frugal:"41,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
 	ExptTemplateID      *int64 `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum        *int32 `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 试运行行数
+	TrialRunItemCount *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	// 智能评测相关
 	ThreadID *int64            `thrift:"thread_id,60,optional" frugal:"60,optional,i64" json:"thread_id" form:"thread_id" query:"thread_id"`
 	Ext      map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -2812,6 +2814,18 @@ func (p *SubmitExperimentRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var SubmitExperimentRequest_TrialRunItemCount_DEFAULT int64
+
+func (p *SubmitExperimentRequest) GetTrialRunItemCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrialRunItemCount() {
+		return SubmitExperimentRequest_TrialRunItemCount_DEFAULT
+	}
+	return *p.TrialRunItemCount
+}
+
 var SubmitExperimentRequest_ThreadID_DEFAULT int64
 
 func (p *SubmitExperimentRequest) GetThreadID() (v int64) {
@@ -2928,6 +2942,9 @@ func (p *SubmitExperimentRequest) SetExptTemplateID(val *int64) {
 func (p *SubmitExperimentRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *SubmitExperimentRequest) SetTrialRunItemCount(val *int64) {
+	p.TrialRunItemCount = val
+}
 func (p *SubmitExperimentRequest) SetThreadID(val *int64) {
 	p.ThreadID = val
 }
@@ -2965,6 +2982,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	41:  "enable_weighted_score",
 	42:  "expt_template_id",
 	45:  "item_retry_num",
+	46:  "trial_run_item_count",
 	60:  "thread_id",
 	100: "ext",
 	200: "session",
@@ -3057,6 +3075,10 @@ func (p *SubmitExperimentRequest) IsSetExptTemplateID() bool {
 
 func (p *SubmitExperimentRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetTrialRunItemCount() bool {
+	return p.TrialRunItemCount != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetThreadID() bool {
@@ -3274,6 +3296,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 45:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField45(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 46:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField46(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3628,6 +3658,17 @@ func (p *SubmitExperimentRequest) ReadField45(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField46(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TrialRunItemCount = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 
 	var _field *int64
@@ -3781,6 +3822,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField45(oprot); err != nil {
 			fieldId = 45
+			goto WriteFieldError
+		}
+		if err = p.writeField46(oprot); err != nil {
+			fieldId = 46
 			goto WriteFieldError
 		}
 		if err = p.writeField60(oprot); err != nil {
@@ -4253,6 +4298,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 45 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField46(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrialRunItemCount() {
+		if err = oprot.WriteFieldBegin("trial_run_item_count", thrift.I64, 46); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TrialRunItemCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 46 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 46 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField60(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
 		if err = oprot.WriteFieldBegin("thread_id", thrift.I64, 60); err != nil {
@@ -4418,6 +4481,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field45DeepEqual(ano.ItemRetryNum) {
+		return false
+	}
+	if !p.Field46DeepEqual(ano.TrialRunItemCount) {
 		return false
 	}
 	if !p.Field60DeepEqual(ano.ThreadID) {
@@ -4690,6 +4756,18 @@ func (p *SubmitExperimentRequest) Field45DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field46DeepEqual(src *int64) bool {
+
+	if p.TrialRunItemCount == src {
+		return true
+	} else if p.TrialRunItemCount == nil || src == nil {
+		return false
+	}
+	if *p.TrialRunItemCount != *src {
 		return false
 	}
 	return true

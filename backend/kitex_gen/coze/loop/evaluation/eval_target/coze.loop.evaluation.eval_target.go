@@ -342,6 +342,8 @@ type CreateEvalTargetParam struct {
 	Region *eval_target.Region `thrift:"region,7,optional" frugal:"7,optional,string" form:"region" json:"region,omitempty" query:"region"`
 	// 有环境限制需要填充这个字段
 	Env *string `thrift:"env,8,optional" frugal:"8,optional,string" form:"env" json:"env,omitempty" query:"env"`
+	// type=8时需填写，评测对象操作说明
+	OperationInstruction *string `thrift:"operation_instruction,9,optional" frugal:"9,optional,string" form:"operation_instruction" json:"operation_instruction,omitempty" query:"operation_instruction"`
 }
 
 func NewCreateEvalTargetParam() *CreateEvalTargetParam {
@@ -446,6 +448,18 @@ func (p *CreateEvalTargetParam) GetEnv() (v string) {
 	}
 	return *p.Env
 }
+
+var CreateEvalTargetParam_OperationInstruction_DEFAULT string
+
+func (p *CreateEvalTargetParam) GetOperationInstruction() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOperationInstruction() {
+		return CreateEvalTargetParam_OperationInstruction_DEFAULT
+	}
+	return *p.OperationInstruction
+}
 func (p *CreateEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -470,6 +484,9 @@ func (p *CreateEvalTargetParam) SetRegion(val *eval_target.Region) {
 func (p *CreateEvalTargetParam) SetEnv(val *string) {
 	p.Env = val
 }
+func (p *CreateEvalTargetParam) SetOperationInstruction(val *string) {
+	p.OperationInstruction = val
+}
 
 var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	1: "source_target_id",
@@ -480,6 +497,7 @@ var fieldIDToName_CreateEvalTargetParam = map[int16]string{
 	6: "custom_eval_target",
 	7: "region",
 	8: "env",
+	9: "operation_instruction",
 }
 
 func (p *CreateEvalTargetParam) IsSetSourceTargetID() bool {
@@ -512,6 +530,10 @@ func (p *CreateEvalTargetParam) IsSetRegion() bool {
 
 func (p *CreateEvalTargetParam) IsSetEnv() bool {
 	return p.Env != nil
+}
+
+func (p *CreateEvalTargetParam) IsSetOperationInstruction() bool {
+	return p.OperationInstruction != nil
 }
 
 func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -591,6 +613,14 @@ func (p *CreateEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -712,6 +742,17 @@ func (p *CreateEvalTargetParam) ReadField8(iprot thrift.TProtocol) error {
 	p.Env = _field
 	return nil
 }
+func (p *CreateEvalTargetParam) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OperationInstruction = _field
+	return nil
+}
 
 func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -749,6 +790,10 @@ func (p *CreateEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
 			goto WriteFieldError
 		}
 	}
@@ -913,6 +958,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *CreateEvalTargetParam) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOperationInstruction() {
+		if err = oprot.WriteFieldBegin("operation_instruction", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.OperationInstruction); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
 
 func (p *CreateEvalTargetParam) String() string {
 	if p == nil {
@@ -950,6 +1013,9 @@ func (p *CreateEvalTargetParam) DeepEqual(ano *CreateEvalTargetParam) bool {
 		return false
 	}
 	if !p.Field8DeepEqual(ano.Env) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.OperationInstruction) {
 		return false
 	}
 	return true
@@ -1042,6 +1108,18 @@ func (p *CreateEvalTargetParam) Field8DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Env, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateEvalTargetParam) Field9DeepEqual(src *string) bool {
+
+	if p.OperationInstruction == src {
+		return true
+	} else if p.OperationInstruction == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.OperationInstruction, *src) != 0 {
 		return false
 	}
 	return true
