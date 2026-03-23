@@ -96,6 +96,25 @@ const (
 	TTL365d TTL = "365d"
 )
 
+func GetDurationByTTL(ttl TTL) time.Duration {
+	switch ttl {
+	case TTL3d:
+		return time.Hour * 24 * 3
+	case TTL7d:
+		return time.Hour * 24 * 7
+	case TTL30d:
+		return time.Hour * 24 * 30
+	case TTL90d:
+		return time.Hour * 24 * 90
+	case TTL180d:
+		return time.Hour * 24 * 180
+	case TTL365d:
+		return time.Hour * 24 * 365
+	default:
+		return time.Hour * 24 * 3
+	}
+}
+
 var TimeTagSlice = []string{
 	SpanFieldStartTimeFirstResp,
 	SpanFieldLatencyFirstResp,
