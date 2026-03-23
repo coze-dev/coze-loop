@@ -54,6 +54,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
 	_experiment.Visibility = field.NewInt32(tableName, "visibility")
 	_experiment.ThreadID = field.NewInt64(tableName, "thread_id")
+	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
 
 	_experiment.fillFieldMap()
 
@@ -92,6 +93,7 @@ type experiment struct {
 	MaxAliveTime     field.Int64  // 最大存活时间
 	Visibility       field.Int32  // 可见性，默认0-可见，1-隐藏
 	ThreadID         field.Int64  // 智能生成会话ID
+	MaxAliveTime     field.Int64  // 试运行行数
 
 	fieldMap map[string]field.Expr
 }
@@ -135,6 +137,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
 	e.Visibility = field.NewInt32(table, "visibility")
 	e.ThreadID = field.NewInt64(table, "thread_id")
+	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
 
 	e.fillFieldMap()
 
@@ -161,7 +164,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 27)
+	e.fieldMap = make(map[string]field.Expr, 28)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -189,6 +192,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["max_alive_time"] = e.MaxAliveTime
 	e.fieldMap["visibility"] = e.Visibility
 	e.fieldMap["thread_id"] = e.ThreadID
+	e.fieldMap["max_alive_time"] = e.MaxAliveTime
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {

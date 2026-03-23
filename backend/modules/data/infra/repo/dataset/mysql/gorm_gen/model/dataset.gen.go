@@ -5,13 +5,10 @@
 package model
 
 import (
-	"encoding/json"
 	"time"
 
-	"github.com/coze-dev/coze-loop/backend/modules/data/infra/repo/dataset/mysql/gorm_gen/model"
 	"gorm.io/datatypes"
-	"gorm.io/gorm"
-	"gorm.io/gorm/schema"
+	"gorm.io/plugin/soft_delete"
 )
 
 const TableNameDataset = "dataset"

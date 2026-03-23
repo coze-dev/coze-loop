@@ -672,6 +672,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		MaxAliveTime:        req.MaxAliveTime,
 		SourceType:          req.SourceType,
 		SourceID:            req.SourceID,
+		TrialRunItemCount:   req.TrialRunItemCount,
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,

@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `max_alive_time`      bigint unsigned                                                         DEFAULT NULL COMMENT '最大存活时间',
     `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
     `thread_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '智能生成会话ID',
+    `max_alive_time`      bigint unsigned                                                         DEFAULT NULL COMMENT '试运行行数',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_deleted_created_by` (`space_id`, `created_by`, `deleted_at`),

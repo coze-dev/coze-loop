@@ -32,6 +32,8 @@ const (
 
 	EvaluationModeRetryAll   ExptRunMode = 4
 	EvaluationModeRetryItems ExptRunMode = 5
+	// EvaluationModeTrialRun 试运行模式
+	EvaluationModeTrialRun ExptRunMode = 6
 )
 
 type ItemRunState int64

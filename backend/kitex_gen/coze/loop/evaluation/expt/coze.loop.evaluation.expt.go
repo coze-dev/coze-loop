@@ -8414,14 +8414,16 @@ func (p *BatchDeleteExperimentsResponse) Field255DeepEqual(src *base.BaseResp) b
 }
 
 type RunExperimentRequest struct {
-	WorkspaceID  *int64            `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	ExptID       *int64            `thrift:"expt_id,2,optional" frugal:"2,optional,i64" json:"expt_id" form:"expt_id" `
-	ItemIds      []int64           `thrift:"item_ids,3,optional" frugal:"3,optional,list<i64>" json:"item_ids" form:"item_ids" `
-	ExptType     *expt.ExptType    `thrift:"expt_type,10,optional" frugal:"10,optional,ExptType" form:"expt_type" json:"expt_type,omitempty"`
-	ItemRetryNum *int32            `thrift:"item_retry_num,11,optional" frugal:"11,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
-	Ext          map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Session      *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base         *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID  *int64         `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	ExptID       *int64         `thrift:"expt_id,2,optional" frugal:"2,optional,i64" json:"expt_id" form:"expt_id" `
+	ItemIds      []int64        `thrift:"item_ids,3,optional" frugal:"3,optional,list<i64>" json:"item_ids" form:"item_ids" `
+	ExptType     *expt.ExptType `thrift:"expt_type,10,optional" frugal:"10,optional,ExptType" form:"expt_type" json:"expt_type,omitempty"`
+	ItemRetryNum *int32         `thrift:"item_retry_num,11,optional" frugal:"11,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	// 试运行行数
+	TrialRunItemCount *int64            `thrift:"trial_run_item_count,12,optional" frugal:"12,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
+	Ext               map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Session           *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base              *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewRunExperimentRequest() *RunExperimentRequest {
@@ -8491,6 +8493,18 @@ func (p *RunExperimentRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+var RunExperimentRequest_TrialRunItemCount_DEFAULT int64
+
+func (p *RunExperimentRequest) GetTrialRunItemCount() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrialRunItemCount() {
+		return RunExperimentRequest_TrialRunItemCount_DEFAULT
+	}
+	return *p.TrialRunItemCount
+}
+
 var RunExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *RunExperimentRequest) GetExt() (v map[string]string) {
@@ -8541,6 +8555,9 @@ func (p *RunExperimentRequest) SetExptType(val *expt.ExptType) {
 func (p *RunExperimentRequest) SetItemRetryNum(val *int32) {
 	p.ItemRetryNum = val
 }
+func (p *RunExperimentRequest) SetTrialRunItemCount(val *int64) {
+	p.TrialRunItemCount = val
+}
 func (p *RunExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -8557,6 +8574,7 @@ var fieldIDToName_RunExperimentRequest = map[int16]string{
 	3:   "item_ids",
 	10:  "expt_type",
 	11:  "item_retry_num",
+	12:  "trial_run_item_count",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -8580,6 +8598,10 @@ func (p *RunExperimentRequest) IsSetExptType() bool {
 
 func (p *RunExperimentRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *RunExperimentRequest) IsSetTrialRunItemCount() bool {
+	return p.TrialRunItemCount != nil
 }
 
 func (p *RunExperimentRequest) IsSetExt() bool {
@@ -8647,6 +8669,14 @@ func (p *RunExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8773,6 +8803,17 @@ func (p *RunExperimentRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.ItemRetryNum = _field
 	return nil
 }
+func (p *RunExperimentRequest) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TrialRunItemCount = _field
+	return nil
+}
 func (p *RunExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -8843,6 +8884,10 @@ func (p *RunExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -8973,6 +9018,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *RunExperimentRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrialRunItemCount() {
+		if err = oprot.WriteFieldBegin("trial_run_item_count", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TrialRunItemCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *RunExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -9068,6 +9131,9 @@ func (p *RunExperimentRequest) DeepEqual(ano *RunExperimentRequest) bool {
 	if !p.Field11DeepEqual(ano.ItemRetryNum) {
 		return false
 	}
+	if !p.Field12DeepEqual(ano.TrialRunItemCount) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
@@ -9137,6 +9203,18 @@ func (p *RunExperimentRequest) Field11DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemRetryNum != *src {
+		return false
+	}
+	return true
+}
+func (p *RunExperimentRequest) Field12DeepEqual(src *int64) bool {
+
+	if p.TrialRunItemCount == src {
+		return true
+	} else if p.TrialRunItemCount == nil || src == nil {
+		return false
+	}
+	if *p.TrialRunItemCount != *src {
 		return false
 	}
 	return true

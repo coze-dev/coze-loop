@@ -475,8 +475,11 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	return res
 }
 
-func ExptType2EvalMode(exptType domain_expt.ExptType) entity.ExptRunMode {
+func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) entity.ExptRunMode {
 	exptMode := entity.EvaluationModeSubmit
+	if trialRunItemCount != nil && *trialRunItemCount > 0 {
+		return entity.EvaluationModeTrialRun
+	}
 	if exptType == domain_expt.ExptType_Online {
 		exptMode = entity.EvaluationModeAppend
 	}
@@ -498,6 +501,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		MaxAliveTime:          cer.GetMaxAliveTime(),
 		SourceType:            entity.SourceType(cer.GetSourceType()),
 		SourceID:              cer.GetSourceID(),
+		TrialRunItemCount:     cer.GetTrialRunItemCount(),
 		ExptConf:              nil,
 	}
 	if cer.IsSetVisibility() {

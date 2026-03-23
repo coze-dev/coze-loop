@@ -141,6 +141,7 @@ type Experiment struct {
 	MaxAliveTime int64
 	SourceType   SourceType
 	SourceID     string
+	TrialRunItemCount int64
 
 	Stats           *ExptStats
 	AggregateResult *ExptAggregateResult
