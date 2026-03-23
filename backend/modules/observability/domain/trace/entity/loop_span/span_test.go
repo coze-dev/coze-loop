@@ -1160,3 +1160,126 @@ func TestEncryptionInfo(t *testing.T) {
 		assert.False(t, span.Encryption.NeedWorkflow)
 	})
 }
+
+func TestCopySpans(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	original := []*Span{
+		{
+			StartTime:      1,
+			SpanID:         "0000000000000001",
+			TraceID:        "00000000000000000000000000000001",
+			ParentID:       "0000000000000000",
+			DurationMicros: 2,
+			CallType:       "call_type",
+			PSM:            "psm",
+			LogID:          "logid",
+			WorkspaceID:    "space",
+			SpanName:       "name",
+			SpanType:       "type",
+			Method:         "method",
+			StatusCode:     1,
+			Input:          "input",
+			Output:         "output",
+			ObjectStorage:  "os",
+			SystemTagsString: map[string]string{
+				"s1": "v1",
+			},
+			SystemTagsLong: map[string]int64{
+				"s2": 2,
+			},
+			SystemTagsDouble: map[string]float64{
+				"s3": 3,
+			},
+			TagsString: map[string]string{
+				"k": "v",
+			},
+			TagsLong: map[string]int64{
+				"k2": 2,
+			},
+			TagsDouble: map[string]float64{
+				"k3": 3,
+			},
+			TagsBool: map[string]bool{
+				"k4": true,
+			},
+			TagsByte: map[string]string{
+				"k5": "b",
+			},
+			AttrTos: &AttrTos{
+				InputDataURL:  "in",
+				OutputDataURL: "out",
+				MultimodalData: map[string]string{
+					"m": "mv",
+				},
+			},
+			Annotations: AnnotationList{
+				{
+					ID:              "anno1",
+					SpanID:          "0000000000000001",
+					TraceID:         "00000000000000000000000000000001",
+					StartTime:       now,
+					WorkspaceID:     "space",
+					AnnotationType:  AnnotationTypeManualFeedback,
+					AnnotationIndex: []string{"i1"},
+					Key:             "key",
+					Value:           NewStringValue("val"),
+					Reasoning:       "r1",
+					Corrections: []AnnotationCorrection{
+						{
+							Reasoning: "cr1",
+							Value:     NewStringValue("cval"),
+							Type:      AnnotationCorrectionTypeManual,
+							UpdateAt:  now,
+							UpdatedBy: "u1",
+						},
+					},
+					Metadata:  &ManualDatasetMetadata{},
+					Status:    AnnotationStatusNormal,
+					CreatedAt: now,
+					CreatedBy: "c1",
+					UpdatedAt: now,
+					UpdatedBy: "u1",
+					IsDeleted: false,
+				},
+				nil,
+			},
+			Encryption: EncryptionInfo{NeedWorkflow: true},
+		},
+	}
+
+	copied := CopySpans(original)
+	assert.Len(t, copied, 1)
+	assert.NotSame(t, original[0], copied[0])
+
+	copied[0].TagsString["k"] = "changed"
+	assert.Equal(t, "v", original[0].TagsString["k"])
+
+	delete(copied[0].SystemTagsLong, "s2")
+	assert.Equal(t, int64(2), original[0].SystemTagsLong["s2"])
+
+	copied[0].AttrTos.MultimodalData["m"] = "changed"
+	assert.Equal(t, "mv", original[0].AttrTos.MultimodalData["m"])
+
+	assert.Len(t, copied[0].Annotations, 2)
+	assert.NotNil(t, copied[0].Annotations[0])
+	assert.NotSame(t, original[0].Annotations[0], copied[0].Annotations[0])
+	assert.Nil(t, copied[0].Annotations[1])
+
+	copied[0].Annotations[0].AnnotationIndex[0] = "changed"
+	assert.Equal(t, "i1", original[0].Annotations[0].AnnotationIndex[0])
+
+	copied[0].Annotations[0].Corrections[0].Reasoning = "changed"
+	assert.Equal(t, "cr1", original[0].Annotations[0].Corrections[0].Reasoning)
+
+	spanWithNilMaps := &Span{
+		SpanID:  "0000000000000002",
+		TraceID: "00000000000000000000000000000002",
+	}
+	copiedNil := CopySpan(spanWithNilMaps)
+	assert.NotNil(t, copiedNil)
+	assert.Nil(t, copiedNil.TagsString)
+	assert.Nil(t, copiedNil.SystemTagsString)
+	assert.Nil(t, copiedNil.Annotations)
+	assert.Nil(t, copiedNil.AttrTos)
+}
