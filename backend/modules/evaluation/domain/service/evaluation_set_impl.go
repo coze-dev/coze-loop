@@ -110,6 +110,23 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 	})
 }
 
+func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error) {
+	if param == nil {
+		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.ImportDataset(ctx, &rpc.ImportDatasetParam{
+		WorkspaceID:   param.WorkspaceID,
+		DatasetID:     param.EvaluationSetID,
+		File:          param.File,
+		FieldMappings: param.FieldMappings,
+		Option:        param.Option,
+	})
+}
+
+func (d *EvaluationSetServiceImpl) GetEvaluationSetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error) {
+	return d.datasetRPCAdapter.GetDatasetIOJob(ctx, spaceID, jobID)
+}
+
 func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
 	return d.datasetRPCAdapter.QueryItemSnapshotMappings(ctx, req)
 }
