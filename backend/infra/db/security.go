@@ -11,9 +11,6 @@ func QuoteSQLData(data string) string {
 	return "'" + escapeSQL(data) + "'"
 }
 
-// EscapeSQLData escapes string contents for embedding into SQL string literals,
-// but does NOT wrap the result with quotes.
-// Use it only when the caller already provides the surrounding quotes, e.g. `...['%s']`.
 func EscapeSQLData(data string) string {
 	return escapeSQL(data)
 }
