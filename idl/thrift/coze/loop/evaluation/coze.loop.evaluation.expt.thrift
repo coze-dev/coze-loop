@@ -38,6 +38,7 @@ struct CreateExperimentRequest {
     42: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
     43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+    46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
 
     60: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
 
