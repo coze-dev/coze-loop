@@ -144,6 +144,9 @@ type Span struct {
 	Output         string `json:"output"`
 	ObjectStorage  string `json:"object_storage"`
 
+	InputObject  map[string]interface{} `json:"input_object"`
+	OutputObject map[string]interface{} `json:"output_object"`
+
 	SystemTagsString map[string]string  `json:"system_tags_string"`
 	SystemTagsLong   map[string]int64   `json:"system_tags_long"`
 	SystemTagsDouble map[string]float64 `json:"system_tags_double"`
