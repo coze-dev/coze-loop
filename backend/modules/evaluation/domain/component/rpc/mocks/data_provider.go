@@ -238,6 +238,21 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) GetDataset(ctx, spaceID, evaluatio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDataset", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).GetDataset), ctx, spaceID, evaluationSetID, deletedAt)
 }
 
+// GetDatasetIOJob mocks base method.
+func (m *MockIDatasetRPCAdapter) GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (*entity.DatasetIOJob, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDatasetIOJob", ctx, spaceID, jobID)
+	ret0, _ := ret[0].(*entity.DatasetIOJob)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDatasetIOJob indicates an expected call of GetDatasetIOJob.
+func (mr *MockIDatasetRPCAdapterMockRecorder) GetDatasetIOJob(ctx, spaceID, jobID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetIOJob", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).GetDatasetIOJob), ctx, spaceID, jobID)
+}
+
 // GetDatasetItemField mocks base method.
 func (m *MockIDatasetRPCAdapter) GetDatasetItemField(ctx context.Context, param *rpc.GetDatasetItemFieldParam) (*entity.FieldData, error) {
 	m.ctrl.T.Helper()
@@ -267,6 +282,21 @@ func (m *MockIDatasetRPCAdapter) GetDatasetVersion(ctx context.Context, spaceID,
 func (mr *MockIDatasetRPCAdapterMockRecorder) GetDatasetVersion(ctx, spaceID, versionID, deletedAt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDatasetVersion", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).GetDatasetVersion), ctx, spaceID, versionID, deletedAt)
+}
+
+// ImportDataset mocks base method.
+func (m *MockIDatasetRPCAdapter) ImportDataset(ctx context.Context, param *rpc.ImportDatasetParam) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImportDataset", ctx, param)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ImportDataset indicates an expected call of ImportDataset.
+func (mr *MockIDatasetRPCAdapterMockRecorder) ImportDataset(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportDataset", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ImportDataset), ctx, param)
 }
 
 // ListDatasetItems mocks base method.
