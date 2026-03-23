@@ -1027,6 +1027,9 @@ func (t *TraceApplication) PreviewExportTracesToDataset(ctx context.Context, req
 	if err := req.IsValid(); err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode)
 	}
+	if len(req.SpanIds) == 0 && req.SpanFilters == nil {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("span_ids and span_filters cannot be both nil"))
+	}
 	v := utils.DateValidator{
 		Start:        req.GetStartTime(),
 		End:          req.GetEndTime(),

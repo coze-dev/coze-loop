@@ -206,15 +206,19 @@ func (r *TraceExportServiceImpl) PreviewExportTracesToDataset(ctx context.Contex
 	if len(req.SpanIds) > 0 {
 		spans, err = r.getSpans(ctx, req.WorkspaceID, req.SpanIds, req.StartTime, req.EndTime, req.PlatformType)
 	} else {
+		spanFilters := req.SpanFilters
+		if spanFilters == nil {
+			spanFilters = &filter.SpanFilterFields{}
+		}
 		spanListType := loop_span.SpanListTypeRootSpan
 		if req.SpanFilters.IsSetSpanListType() {
-			spanListType = loop_span.SpanListType(req.SpanFilters.GetSpanListType())
+			spanListType = loop_span.SpanListType(spanFilters.GetSpanListType())
 		}
 		listResp, err := r.traceService.ListSpans(ctx, &ListSpansReq{
 			WorkspaceID:     req.WorkspaceID,
 			StartTime:       req.StartTime,
 			EndTime:         req.EndTime,
-			Filters:         convertor.FilterFieldsDTO2DO(req.SpanFilters.Filters),
+			Filters:         convertor.FilterFieldsDTO2DO(spanFilters.Filters),
 			Limit:           10,
 			DescByStartTime: true,
 			PlatformType:    req.PlatformType,
