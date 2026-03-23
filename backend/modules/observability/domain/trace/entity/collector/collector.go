@@ -135,8 +135,8 @@ func (col *Collector) WaitForReady() {
 }
 
 // 通常在异步线程中进行, 主线程需要等待初始化完成
-func (col *Collector) Run(ctx context.Context) error {
-	if err := col.setupConfigurationComponents(ctx); err != nil {
+func (col *Collector) Run(ctx context.Context, hook func() error) error {
+	if err := col.setupConfigurationComponentsWithHook(ctx, hook); err != nil {
 		return err
 	}
 	signal.Notify(col.signalsChannel, os.Interrupt, syscall.SIGTERM)
@@ -151,8 +151,8 @@ func (col *Collector) Run(ctx context.Context) error {
 }
 
 // 同步阻塞执行
-func (col *Collector) RunInOne(ctx context.Context) error {
-	if err := col.setupConfigurationComponents(ctx); err != nil {
+func (col *Collector) RunInOne(ctx context.Context, hook func() error) error {
+	if err := col.setupConfigurationComponentsWithHook(ctx, hook); err != nil {
 		return err
 	}
 	signal.Notify(col.signalsChannel, os.Interrupt, syscall.SIGTERM)
@@ -165,7 +165,7 @@ func (col *Collector) RunInOne(ctx context.Context) error {
 	return col.shutdown(ctx)
 }
 
-func (col *Collector) setupConfigurationComponents(ctx context.Context) error {
+func (col *Collector) setupConfigurationComponentsWithHook(ctx context.Context, hook func() error) error {
 	factories, err := col.set.Factories()
 	if err != nil {
 		return err
@@ -194,6 +194,10 @@ func (col *Collector) setupConfigurationComponents(ctx context.Context) error {
 			}
 			return fmt.Errorf("failed to start tenant %q, %v", tenantName, err)
 		}
+	}
+
+	if err = hook(); err != nil {
+		fmt.Printf("hook failed, %v\n", err)
 	}
 	return nil
 }
