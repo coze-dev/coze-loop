@@ -324,7 +324,7 @@ struct ExportTracesToDatasetResponse {
 
 struct PreviewExportTracesToDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    2: required list<SpanID> span_ids (api.body="span_ids", vt.max_size="500")
     3: required dataset.DatasetCategory category (api.body="category")
     4: required DatasetConfig config (api.body="config")
     5: required i64 start_time (api.js_conv="true", go.tag='json:"start_time"', api.body="start_time")

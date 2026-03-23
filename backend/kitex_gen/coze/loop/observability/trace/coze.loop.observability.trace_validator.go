@@ -411,9 +411,6 @@ func (p *PreviewExportTracesToDatasetRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
-	if len(p.SpanIds) < int(1) {
-		return fmt.Errorf("field SpanIds MinLen rule failed, current value: %v", p.SpanIds)
-	}
 	if len(p.SpanIds) > int(500) {
 		return fmt.Errorf("field SpanIds MaxLen rule failed, current value: %v", p.SpanIds)
 	}
