@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -1128,4 +1129,241 @@ func TestConvertObjectStorageToVideo(t *testing.T) {
 			assert.Equal(t, tt.expected, got)
 		})
 	}
+}
+
+func TestConvert2DatasetIOJob(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIOJob(context.Background(), nil))
+
+	job := &dataset_job.DatasetIOJob{
+		ID:        1,
+		AppID:     gptr.Of(int32(2)),
+		SpaceID:   3,
+		DatasetID: 4,
+		JobType:   dataset_job.JobType(1),
+		Source: &dataset_job.DatasetIOEndpoint{
+			File: &dataset_job.DatasetIOFile{
+				Path: "path1",
+			},
+		},
+		Target: &dataset_job.DatasetIOEndpoint{
+			Dataset: &dataset_job.DatasetIODataset{
+				DatasetID: 2,
+			},
+		},
+		FieldMappings: []*dataset_job.FieldMapping{
+			{Source: "s", Target: "t"},
+		},
+		Option: &dataset_job.DatasetIOJobOption{
+			OverwriteDataset: gptr.Of(true),
+		},
+		Status: gptr.Of(dataset_job.JobStatus(1)),
+		Progress: &dataset_job.DatasetIOJobProgress{
+			Total: gptr.Of(int64(10)),
+		},
+		Errors: []*dataset.ItemErrorGroup{
+			{Summary: gptr.Of("err")},
+		},
+		CreatedBy: gptr.Of("user1"),
+		CreatedAt: gptr.Of(int64(100)),
+		UpdatedBy: gptr.Of("user2"),
+		UpdatedAt: gptr.Of(int64(200)),
+		StartedAt: gptr.Of(int64(150)),
+		EndedAt:   gptr.Of(int64(180)),
+	}
+
+	entityJob := convert2DatasetIOJob(context.Background(), job)
+	assert.NotNil(t, entityJob)
+	assert.Equal(t, int64(1), entityJob.ID)
+	assert.Equal(t, gptr.Of(int32(2)), entityJob.AppID)
+	assert.Equal(t, int64(3), entityJob.SpaceID)
+	assert.Equal(t, int64(4), entityJob.DatasetID)
+	assert.NotNil(t, entityJob.Source)
+	assert.NotNil(t, entityJob.Target)
+	assert.Len(t, entityJob.FieldMappings, 1)
+	assert.NotNil(t, entityJob.Option)
+	assert.NotNil(t, entityJob.Status)
+	assert.NotNil(t, entityJob.Progress)
+	assert.Len(t, entityJob.Errors, 1)
+	assert.Equal(t, gptr.Of("user1"), entityJob.CreatedBy)
+	assert.Equal(t, gptr.Of(int64(100)), entityJob.CreatedAt)
+	assert.Equal(t, gptr.Of("user2"), entityJob.UpdatedBy)
+	assert.Equal(t, gptr.Of(int64(200)), entityJob.UpdatedAt)
+	assert.Equal(t, gptr.Of(int64(150)), entityJob.StartedAt)
+	assert.Equal(t, gptr.Of(int64(180)), entityJob.EndedAt)
+}
+
+func TestConvert2DatasetIOFile(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIOFile(context.Background(), nil))
+
+	file := &dataset_job.DatasetIOFile{
+		Provider:         dataset.StorageProvider(1),
+		Path:             "path",
+		Format:           gptr.Of(dataset_job.FileFormat(1)),
+		CompressFormat:   gptr.Of(dataset_job.FileFormat(2)),
+		Files:            []string{"f1"},
+		OriginalFileName: gptr.Of("name"),
+		DownloadURL:      gptr.Of("url"),
+		ProviderID:       gptr.Of("pid"),
+		ProviderAuth: &dataset_job.ProviderAuth{
+			ProviderAccountID: gptr.Of(int64(1)),
+		},
+	}
+
+	entityFile := convert2DatasetIOFile(context.Background(), file)
+	assert.NotNil(t, entityFile)
+	assert.Equal(t, "path", entityFile.Path)
+	assert.Len(t, entityFile.Files, 1)
+	assert.Equal(t, gptr.Of("name"), entityFile.OriginalFileName)
+	assert.Equal(t, gptr.Of("url"), entityFile.DownloadURL)
+	assert.Equal(t, gptr.Of("pid"), entityFile.ProviderID)
+	assert.NotNil(t, entityFile.ProviderAuth)
+}
+
+func TestConvert2DatasetIODataset(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIODataset(context.Background(), nil))
+
+	ds := &dataset_job.DatasetIODataset{
+		SpaceID:   gptr.Of(int64(1)),
+		DatasetID: 2,
+		VersionID: gptr.Of(int64(3)),
+	}
+
+	entityDs := convert2DatasetIODataset(context.Background(), ds)
+	assert.NotNil(t, entityDs)
+	assert.Equal(t, gptr.Of(int64(1)), entityDs.SpaceID)
+	assert.Equal(t, int64(2), entityDs.DatasetID)
+	assert.Equal(t, gptr.Of(int64(3)), entityDs.VersionID)
+}
+
+func TestConvert2FieldMappings(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2FieldMappings(context.Background(), nil))
+	assert.Nil(t, convert2FieldMappings(context.Background(), []*dataset_job.FieldMapping{}))
+
+	mappings := []*dataset_job.FieldMapping{
+		{Source: "s", Target: "t"},
+	}
+
+	entityMappings := convert2FieldMappings(context.Background(), mappings)
+	assert.Len(t, entityMappings, 1)
+	assert.Equal(t, "s", entityMappings[0].Source)
+	assert.Equal(t, "t", entityMappings[0].Target)
+}
+
+func TestConvert2DatasetIOJobOption(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIOJobOption(context.Background(), nil))
+
+	opt := &dataset_job.DatasetIOJobOption{
+		OverwriteDataset: gptr.Of(true),
+	}
+
+	entityOpt := convert2DatasetIOJobOption(context.Background(), opt)
+	assert.NotNil(t, entityOpt)
+	assert.Equal(t, gptr.Of(true), entityOpt.OverwriteDataset)
+}
+
+func TestConvert2DatasetIOJobProgress(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIOJobProgress(context.Background(), nil))
+
+	progress := &dataset_job.DatasetIOJobProgress{
+		Total:     gptr.Of(int64(10)),
+		Processed: gptr.Of(int64(5)),
+		Added:     gptr.Of(int64(4)),
+		Name:      gptr.Of("n"),
+		SubProgresses: []*dataset_job.DatasetIOJobProgress{
+			{Total: gptr.Of(int64(2))},
+		},
+	}
+
+	entityProgress := convert2DatasetIOJobProgress(context.Background(), progress)
+	assert.NotNil(t, entityProgress)
+	assert.Equal(t, gptr.Of(int64(10)), entityProgress.Total)
+	assert.Equal(t, gptr.Of(int64(5)), entityProgress.Processed)
+	assert.Equal(t, gptr.Of(int64(4)), entityProgress.Added)
+	assert.Equal(t, gptr.Of("n"), entityProgress.Name)
+	assert.Len(t, entityProgress.SubProgresses, 1)
+}
+
+func TestConvert2DatasetIOJobSubProgresses(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2DatasetIOJobSubProgresses(context.Background(), nil))
+	assert.Nil(t, convert2DatasetIOJobSubProgresses(context.Background(), []*dataset_job.DatasetIOJobProgress{}))
+
+	progresses := []*dataset_job.DatasetIOJobProgress{
+		{Total: gptr.Of(int64(1))},
+	}
+
+	entityProgresses := convert2DatasetIOJobSubProgresses(context.Background(), progresses)
+	assert.Len(t, entityProgresses, 1)
+}
+
+func TestConvert2ThriftDatasetIOFile(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2ThriftDatasetIOFile(context.Background(), nil))
+
+	file := &entity.DatasetIOFile{
+		Provider:         entity.StorageProvider(1),
+		Path:             "path",
+		Format:           gptr.Of(entity.FileFormat(1)),
+		CompressFormat:   gptr.Of(entity.FileFormat(2)),
+		Files:            []string{"f1"},
+		OriginalFileName: gptr.Of("name"),
+		DownloadURL:      gptr.Of("url"),
+		ProviderID:       gptr.Of("pid"),
+		ProviderAuth: &entity.ProviderAuth{
+			ProviderAccountID: gptr.Of(int64(1)),
+		},
+	}
+
+	thriftFile := convert2ThriftDatasetIOFile(context.Background(), file)
+	assert.NotNil(t, thriftFile)
+	assert.Equal(t, "path", thriftFile.Path)
+	assert.Len(t, thriftFile.Files, 1)
+	assert.Equal(t, gptr.Of("name"), thriftFile.OriginalFileName)
+	assert.Equal(t, gptr.Of("url"), thriftFile.DownloadURL)
+	assert.Equal(t, gptr.Of("pid"), thriftFile.ProviderID)
+	assert.NotNil(t, thriftFile.ProviderAuth)
+}
+
+func TestConvert2ThriftFieldMappings(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2ThriftFieldMappings(context.Background(), nil))
+	assert.Nil(t, convert2ThriftFieldMappings(context.Background(), []*entity.FieldMapping{}))
+
+	mappings := []*entity.FieldMapping{
+		{Source: "s", Target: "t"},
+	}
+
+	thriftMappings := convert2ThriftFieldMappings(context.Background(), mappings)
+	assert.Len(t, thriftMappings, 1)
+	assert.Equal(t, "s", thriftMappings[0].Source)
+	assert.Equal(t, "t", thriftMappings[0].Target)
+}
+
+func TestConvert2ThriftDatasetIOJobOption(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convert2ThriftDatasetIOJobOption(context.Background(), nil))
+
+	opt := &entity.DatasetIOJobOption{
+		OverwriteDataset: gptr.Of(true),
+	}
+
+	thriftOpt := convert2ThriftDatasetIOJobOption(context.Background(), opt)
+	assert.NotNil(t, thriftOpt)
+	assert.Equal(t, gptr.Of(true), thriftOpt.OverwriteDataset)
 }
