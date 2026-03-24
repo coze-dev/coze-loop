@@ -17,7 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/space"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
-	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
+	manage1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
 )
 
 type EvaluationSetService interface {
@@ -237,6 +238,32 @@ func NewPromptManageServiceClient(c thrift.TClient) *PromptManageServiceClient {
 	}
 }
 
+type ToolManageService interface {
+	manage0.ToolManageService
+}
+
+type ToolManageServiceClient struct {
+	*manage0.ToolManageServiceClient
+}
+
+func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClientFactory(t, f),
+	}
+}
+
+func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClient(c),
+	}
+}
+
 type PromptDebugService interface {
 	debug.PromptDebugService
 }
@@ -316,28 +343,28 @@ func NewPromptOpenAPIServiceClient(c thrift.TClient) *PromptOpenAPIServiceClient
 }
 
 type LLMManageService interface {
-	manage0.LLMManageService
+	manage1.LLMManageService
 }
 
 type LLMManageServiceClient struct {
-	*manage0.LLMManageServiceClient
+	*manage1.LLMManageServiceClient
 }
 
 func NewLLMManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage0.NewLLMManageServiceClientFactory(t, f),
+		LLMManageServiceClient: manage1.NewLLMManageServiceClientFactory(t, f),
 	}
 }
 
 func NewLLMManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage0.NewLLMManageServiceClientProtocol(t, iprot, oprot),
+		LLMManageServiceClient: manage1.NewLLMManageServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewLLMManageServiceClient(c thrift.TClient) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage0.NewLLMManageServiceClient(c),
+		LLMManageServiceClient: manage1.NewLLMManageServiceClient(c),
 	}
 }
 
@@ -699,6 +726,15 @@ func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageS
 	return self
 }
 
+type ToolManageServiceProcessor struct {
+	*manage0.ToolManageServiceProcessor
+}
+
+func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
+	self := &ToolManageServiceProcessor{manage0.NewToolManageServiceProcessor(handler)}
+	return self
+}
+
 type PromptDebugServiceProcessor struct {
 	*debug.PromptDebugServiceProcessor
 }
@@ -727,11 +763,11 @@ func NewPromptOpenAPIServiceProcessor(handler PromptOpenAPIService) *PromptOpenA
 }
 
 type LLMManageServiceProcessor struct {
-	*manage0.LLMManageServiceProcessor
+	*manage1.LLMManageServiceProcessor
 }
 
 func NewLLMManageServiceProcessor(handler LLMManageService) *LLMManageServiceProcessor {
-	self := &LLMManageServiceProcessor{manage0.NewLLMManageServiceProcessor(handler)}
+	self := &LLMManageServiceProcessor{manage1.NewLLMManageServiceProcessor(handler)}
 	return self
 }
 

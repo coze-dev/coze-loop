@@ -42,6 +42,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	toolmanage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lodataset"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/data/lotag"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/evaluation/loeval_set"
@@ -62,6 +63,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lodebug"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lomanage"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/loopenapi"
+	lotoolmanage "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/tool/lomanage"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	evalapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/foundation/pkg/errno"
@@ -160,6 +162,7 @@ func NewDataHandler(dataApp dataapp.IDatasetApplication, tagApp tag.TagService) 
 
 type PromptHandler struct {
 	manage.PromptManageService
+	toolmanage.ToolManageService
 	debug.PromptDebugService
 	execute.PromptExecuteService
 	openapi.PromptOpenAPIService
@@ -167,17 +170,20 @@ type PromptHandler struct {
 
 func NewPromptHandler(
 	manageApp manage.PromptManageService,
+	toolManageApp toolmanage.ToolManageService,
 	debugApp debug.PromptDebugService,
 	executeApp execute.PromptExecuteService,
 	openAPIApp openapi.PromptOpenAPIService,
 ) *PromptHandler {
 	h := &PromptHandler{
 		PromptManageService:  manageApp,
+		ToolManageService:    toolManageApp,
 		PromptDebugService:   debugApp,
 		PromptExecuteService: executeApp,
 		PromptOpenAPIService: openAPIApp,
 	}
 	bindLocalCallClient(manage.PromptManageService(h), &promptManageSvc, lomanage.NewLocalPromptManageService)
+	bindLocalCallClient(toolmanage.ToolManageService(h), &toolManageSvc, lotoolmanage.NewLocalToolManageService)
 	bindLocalCallClient(debug.PromptDebugService(h), &promptDebugSvc, lodebug.NewLocalPromptDebugService)
 	bindLocalCallClient(openapi.PromptOpenAPIService(h), &promptOpenAPISvc, loopenapi.NewLocalPromptOpenAPIService)
 	return h

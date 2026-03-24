@@ -8,6 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
 )
 
 type PromptManageService interface {
@@ -33,6 +34,32 @@ func NewPromptManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TPro
 func NewPromptManageServiceClient(c thrift.TClient) *PromptManageServiceClient {
 	return &PromptManageServiceClient{
 		PromptManageServiceClient: manage.NewPromptManageServiceClient(c),
+	}
+}
+
+type ToolManageService interface {
+	manage0.ToolManageService
+}
+
+type ToolManageServiceClient struct {
+	*manage0.ToolManageServiceClient
+}
+
+func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClientFactory(t, f),
+	}
+}
+
+func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: manage0.NewToolManageServiceClient(c),
 	}
 }
 
@@ -120,6 +147,15 @@ type PromptManageServiceProcessor struct {
 
 func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageServiceProcessor {
 	self := &PromptManageServiceProcessor{manage.NewPromptManageServiceProcessor(handler)}
+	return self
+}
+
+type ToolManageServiceProcessor struct {
+	*manage0.ToolManageServiceProcessor
+}
+
+func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
+	self := &ToolManageServiceProcessor{manage0.NewToolManageServiceProcessor(handler)}
 	return self
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
 )
 
 var (
@@ -21,6 +22,7 @@ var (
 	_ = execute.KitexUnusedProtection
 	_ = manage.KitexUnusedProtection
 	_ = openapi.KitexUnusedProtection
+	_ = manage0.KitexUnusedProtection
 )
 
 // unused protection
