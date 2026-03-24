@@ -53,6 +53,8 @@ const (
 	EvalTargetType_CustomRPCServer EvalTargetType = 6
 	// 火山智能体Agentkit
 	EvalTargetType_VolcengineAgentAgentkit EvalTargetType = 7
+	// Web智能体
+	EvalTargetType_WebAgent EvalTargetType = 8
 )
 
 func (p EvalTargetType) String() string {
@@ -71,6 +73,8 @@ func (p EvalTargetType) String() string {
 		return "CustomRPCServer"
 	case EvalTargetType_VolcengineAgentAgentkit:
 		return "VolcengineAgentAgentkit"
+	case EvalTargetType_WebAgent:
+		return "WebAgent"
 	}
 	return "<UNSET>"
 }
@@ -91,6 +95,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_CustomRPCServer, nil
 	case "VolcengineAgentAgentkit":
 		return EvalTargetType_VolcengineAgentAgentkit, nil
+	case "WebAgent":
+		return EvalTargetType_WebAgent, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }
@@ -1441,6 +1447,8 @@ type EvalTargetContent struct {
 	VolcengineAgent *VolcengineAgent `thrift:"volcengine_agent,104,optional" frugal:"104,optional,VolcengineAgent" form:"volcengine_agent" json:"volcengine_agent,omitempty" query:"volcengine_agent"`
 	// EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息
 	CustomRPCServer *CustomRPCServer `thrift:"custom_rpc_server,105,optional" frugal:"105,optional,CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
+	// EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
+	WebAgent *WebAgent `thrift:"web_agent,106,optional" frugal:"106,optional,WebAgent" form:"web_agent" json:"web_agent,omitempty" query:"web_agent"`
 }
 
 func NewEvalTargetContent() *EvalTargetContent {
@@ -1545,6 +1553,18 @@ func (p *EvalTargetContent) GetCustomRPCServer() (v *CustomRPCServer) {
 	}
 	return p.CustomRPCServer
 }
+
+var EvalTargetContent_WebAgent_DEFAULT *WebAgent
+
+func (p *EvalTargetContent) GetWebAgent() (v *WebAgent) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWebAgent() {
+		return EvalTargetContent_WebAgent_DEFAULT
+	}
+	return p.WebAgent
+}
 func (p *EvalTargetContent) SetInputSchemas(val []*common.ArgsSchema) {
 	p.InputSchemas = val
 }
@@ -1569,6 +1589,9 @@ func (p *EvalTargetContent) SetVolcengineAgent(val *VolcengineAgent) {
 func (p *EvalTargetContent) SetCustomRPCServer(val *CustomRPCServer) {
 	p.CustomRPCServer = val
 }
+func (p *EvalTargetContent) SetWebAgent(val *WebAgent) {
+	p.WebAgent = val
+}
 
 var fieldIDToName_EvalTargetContent = map[int16]string{
 	1:   "input_schemas",
@@ -1579,6 +1602,7 @@ var fieldIDToName_EvalTargetContent = map[int16]string{
 	103: "coze_workflow",
 	104: "volcengine_agent",
 	105: "custom_rpc_server",
+	106: "web_agent",
 }
 
 func (p *EvalTargetContent) IsSetInputSchemas() bool {
@@ -1611,6 +1635,10 @@ func (p *EvalTargetContent) IsSetVolcengineAgent() bool {
 
 func (p *EvalTargetContent) IsSetCustomRPCServer() bool {
 	return p.CustomRPCServer != nil
+}
+
+func (p *EvalTargetContent) IsSetWebAgent() bool {
+	return p.WebAgent != nil
 }
 
 func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
@@ -1690,6 +1718,14 @@ func (p *EvalTargetContent) Read(iprot thrift.TProtocol) (err error) {
 		case 105:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField105(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 106:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField106(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1821,6 +1857,14 @@ func (p *EvalTargetContent) ReadField105(iprot thrift.TProtocol) error {
 	p.CustomRPCServer = _field
 	return nil
 }
+func (p *EvalTargetContent) ReadField106(iprot thrift.TProtocol) error {
+	_field := NewWebAgent()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.WebAgent = _field
+	return nil
+}
 
 func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1858,6 +1902,10 @@ func (p *EvalTargetContent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField105(oprot); err != nil {
 			fieldId = 105
+			goto WriteFieldError
+		}
+		if err = p.writeField106(oprot); err != nil {
+			fieldId = 106
 			goto WriteFieldError
 		}
 	}
@@ -2038,6 +2086,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 105 end error: ", p), err)
 }
+func (p *EvalTargetContent) writeField106(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWebAgent() {
+		if err = oprot.WriteFieldBegin("web_agent", thrift.STRUCT, 106); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.WebAgent.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 106 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 106 end error: ", p), err)
+}
 
 func (p *EvalTargetContent) String() string {
 	if p == nil {
@@ -2075,6 +2141,9 @@ func (p *EvalTargetContent) DeepEqual(ano *EvalTargetContent) bool {
 		return false
 	}
 	if !p.Field105DeepEqual(ano.CustomRPCServer) {
+		return false
+	}
+	if !p.Field106DeepEqual(ano.WebAgent) {
 		return false
 	}
 	return true
@@ -2149,6 +2218,937 @@ func (p *EvalTargetContent) Field104DeepEqual(src *VolcengineAgent) bool {
 func (p *EvalTargetContent) Field105DeepEqual(src *CustomRPCServer) bool {
 
 	if !p.CustomRPCServer.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *EvalTargetContent) Field106DeepEqual(src *WebAgent) bool {
+
+	if !p.WebAgent.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type WebAgent struct {
+	// 应用ID
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// agent config
+	AgentConfig *common.AgentConfig `thrift:"agent_config,4,optional" frugal:"4,optional,common.AgentConfig" form:"agent_config" json:"agent_config,omitempty" query:"agent_config"`
+	// agent prompt config for agent
+	PromptConfig *WebAgentTargetPromptConfig `thrift:"prompt_config,5,optional" frugal:"5,optional,WebAgentTargetPromptConfig" form:"prompt_config" json:"prompt_config,omitempty" query:"prompt_config"`
+}
+
+func NewWebAgent() *WebAgent {
+	return &WebAgent{}
+}
+
+func (p *WebAgent) InitDefault() {
+}
+
+var WebAgent_ID_DEFAULT int64
+
+func (p *WebAgent) GetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return WebAgent_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var WebAgent_Name_DEFAULT string
+
+func (p *WebAgent) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return WebAgent_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var WebAgent_Description_DEFAULT string
+
+func (p *WebAgent) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return WebAgent_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var WebAgent_AgentConfig_DEFAULT *common.AgentConfig
+
+func (p *WebAgent) GetAgentConfig() (v *common.AgentConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentConfig() {
+		return WebAgent_AgentConfig_DEFAULT
+	}
+	return p.AgentConfig
+}
+
+var WebAgent_PromptConfig_DEFAULT *WebAgentTargetPromptConfig
+
+func (p *WebAgent) GetPromptConfig() (v *WebAgentTargetPromptConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptConfig() {
+		return WebAgent_PromptConfig_DEFAULT
+	}
+	return p.PromptConfig
+}
+func (p *WebAgent) SetID(val *int64) {
+	p.ID = val
+}
+func (p *WebAgent) SetName(val *string) {
+	p.Name = val
+}
+func (p *WebAgent) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *WebAgent) SetAgentConfig(val *common.AgentConfig) {
+	p.AgentConfig = val
+}
+func (p *WebAgent) SetPromptConfig(val *WebAgentTargetPromptConfig) {
+	p.PromptConfig = val
+}
+
+var fieldIDToName_WebAgent = map[int16]string{
+	1: "id",
+	2: "name",
+	3: "description",
+	4: "agent_config",
+	5: "prompt_config",
+}
+
+func (p *WebAgent) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *WebAgent) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *WebAgent) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *WebAgent) IsSetAgentConfig() bool {
+	return p.AgentConfig != nil
+}
+
+func (p *WebAgent) IsSetPromptConfig() bool {
+	return p.PromptConfig != nil
+}
+
+func (p *WebAgent) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgent[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *WebAgent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *WebAgent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *WebAgent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *WebAgent) ReadField4(iprot thrift.TProtocol) error {
+	_field := common.NewAgentConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.AgentConfig = _field
+	return nil
+}
+func (p *WebAgent) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewWebAgentTargetPromptConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.PromptConfig = _field
+	return nil
+}
+
+func (p *WebAgent) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("WebAgent"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *WebAgent) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *WebAgent) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *WebAgent) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *WebAgent) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentConfig() {
+		if err = oprot.WriteFieldBegin("agent_config", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.AgentConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *WebAgent) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptConfig() {
+		if err = oprot.WriteFieldBegin("prompt_config", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.PromptConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *WebAgent) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WebAgent(%+v)", *p)
+
+}
+
+func (p *WebAgent) DeepEqual(ano *WebAgent) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AgentConfig) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.PromptConfig) {
+		return false
+	}
+	return true
+}
+
+func (p *WebAgent) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *WebAgent) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebAgent) Field3DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *WebAgent) Field4DeepEqual(src *common.AgentConfig) bool {
+
+	if !p.AgentConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *WebAgent) Field5DeepEqual(src *WebAgentTargetPromptConfig) bool {
+
+	if !p.PromptConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type WebAgentTargetPromptConfig struct {
+	// 通过messge list的方式描述target的操作说明
+	MessageList []*common.Message `thrift:"message_list,1,optional" frugal:"1,optional,list<common.Message>" form:"message_list" json:"message_list,omitempty" query:"message_list"`
+	// 输出规则
+	OutputRule *WebAgentTargetPromptConfigOutputRule `thrift:"output_rule,2,optional" frugal:"2,optional,WebAgentTargetPromptConfigOutputRule" form:"output_rule" json:"output_rule,omitempty" query:"output_rule"`
+}
+
+func NewWebAgentTargetPromptConfig() *WebAgentTargetPromptConfig {
+	return &WebAgentTargetPromptConfig{}
+}
+
+func (p *WebAgentTargetPromptConfig) InitDefault() {
+}
+
+var WebAgentTargetPromptConfig_MessageList_DEFAULT []*common.Message
+
+func (p *WebAgentTargetPromptConfig) GetMessageList() (v []*common.Message) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessageList() {
+		return WebAgentTargetPromptConfig_MessageList_DEFAULT
+	}
+	return p.MessageList
+}
+
+var WebAgentTargetPromptConfig_OutputRule_DEFAULT *WebAgentTargetPromptConfigOutputRule
+
+func (p *WebAgentTargetPromptConfig) GetOutputRule() (v *WebAgentTargetPromptConfigOutputRule) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOutputRule() {
+		return WebAgentTargetPromptConfig_OutputRule_DEFAULT
+	}
+	return p.OutputRule
+}
+func (p *WebAgentTargetPromptConfig) SetMessageList(val []*common.Message) {
+	p.MessageList = val
+}
+func (p *WebAgentTargetPromptConfig) SetOutputRule(val *WebAgentTargetPromptConfigOutputRule) {
+	p.OutputRule = val
+}
+
+var fieldIDToName_WebAgentTargetPromptConfig = map[int16]string{
+	1: "message_list",
+	2: "output_rule",
+}
+
+func (p *WebAgentTargetPromptConfig) IsSetMessageList() bool {
+	return p.MessageList != nil
+}
+
+func (p *WebAgentTargetPromptConfig) IsSetOutputRule() bool {
+	return p.OutputRule != nil
+}
+
+func (p *WebAgentTargetPromptConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgentTargetPromptConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfig) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*common.Message, 0, size)
+	values := make([]common.Message, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.MessageList = _field
+	return nil
+}
+func (p *WebAgentTargetPromptConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewWebAgentTargetPromptConfigOutputRule()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.OutputRule = _field
+	return nil
+}
+
+func (p *WebAgentTargetPromptConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("WebAgentTargetPromptConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessageList() {
+		if err = oprot.WriteFieldBegin("message_list", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MessageList)); err != nil {
+			return err
+		}
+		for _, v := range p.MessageList {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *WebAgentTargetPromptConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOutputRule() {
+		if err = oprot.WriteFieldBegin("output_rule", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.OutputRule.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WebAgentTargetPromptConfig(%+v)", *p)
+
+}
+
+func (p *WebAgentTargetPromptConfig) DeepEqual(ano *WebAgentTargetPromptConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.MessageList) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.OutputRule) {
+		return false
+	}
+	return true
+}
+
+func (p *WebAgentTargetPromptConfig) Field1DeepEqual(src []*common.Message) bool {
+
+	if len(p.MessageList) != len(src) {
+		return false
+	}
+	for i, v := range p.MessageList {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *WebAgentTargetPromptConfig) Field2DeepEqual(src *WebAgentTargetPromptConfigOutputRule) bool {
+
+	if !p.OutputRule.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type WebAgentTargetPromptConfigOutputRule struct {
+	Message *common.Message `thrift:"message,1,optional" frugal:"1,optional,common.Message" form:"message" json:"message,omitempty" query:"message"`
+}
+
+func NewWebAgentTargetPromptConfigOutputRule() *WebAgentTargetPromptConfigOutputRule {
+	return &WebAgentTargetPromptConfigOutputRule{}
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) InitDefault() {
+}
+
+var WebAgentTargetPromptConfigOutputRule_Message_DEFAULT *common.Message
+
+func (p *WebAgentTargetPromptConfigOutputRule) GetMessage() (v *common.Message) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMessage() {
+		return WebAgentTargetPromptConfigOutputRule_Message_DEFAULT
+	}
+	return p.Message
+}
+func (p *WebAgentTargetPromptConfigOutputRule) SetMessage(val *common.Message) {
+	p.Message = val
+}
+
+var fieldIDToName_WebAgentTargetPromptConfigOutputRule = map[int16]string{
+	1: "message",
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) IsSetMessage() bool {
+	return p.Message != nil
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgentTargetPromptConfigOutputRule[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) ReadField1(iprot thrift.TProtocol) error {
+	_field := common.NewMessage()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Message = _field
+	return nil
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("WebAgentTargetPromptConfigOutputRule"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMessage() {
+		if err = oprot.WriteFieldBegin("message", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Message.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("WebAgentTargetPromptConfigOutputRule(%+v)", *p)
+
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) DeepEqual(ano *WebAgentTargetPromptConfigOutputRule) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Message) {
+		return false
+	}
+	return true
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) Field1DeepEqual(src *common.Message) bool {
+
+	if !p.Message.DeepEqual(src) {
 		return false
 	}
 	return true

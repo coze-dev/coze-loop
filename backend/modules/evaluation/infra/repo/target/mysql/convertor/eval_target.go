@@ -68,6 +68,11 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
+	case entity.EvalTargetTypeWebAgent:
+		meta, err = json.Marshal(do.WebAgent)
+		if err != nil {
+			return nil, err
+		}
 	default:
 	}
 	if do.InputSchema != nil {
@@ -210,6 +215,11 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			meta := &entity.CustomRPCServer{}
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.CustomRPCServer = meta
+			}
+		case entity.EvalTargetTypeWebAgent:
+			meta := &entity.WebAgent{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.WebAgent = meta
 			}
 		default:
 			// todo

@@ -16,6 +16,7 @@ func TestEvalTargetType_String(t *testing.T) {
 	assert.Equal(t, "LoopTrace", EvalTargetTypeLoopTrace.String())
 	assert.Equal(t, "CozeWorkflow", EvalTargetTypeCozeWorkflow.String())
 	assert.Equal(t, "VolcengineAgent", EvalTargetTypeVolcengineAgent.String())
+	assert.Equal(t, "WebAgent", EvalTargetTypeWebAgent.String())
 	var unknown EvalTargetType = 99
 	assert.Equal(t, "<UNSET>", unknown.String())
 }
@@ -59,6 +60,11 @@ func TestEvalTargetType_SupptTrajectory(t *testing.T) {
 		{
 			name:       "VolcengineAgentAgentkit does not support trajectory",
 			targetType: EvalTargetTypeVolcengineAgentAgentkit,
+			expected:   false,
+		},
+		{
+			name:       "WebAgent does not support trajectory",
+			targetType: EvalTargetTypeWebAgent,
 			expected:   false,
 		},
 		{

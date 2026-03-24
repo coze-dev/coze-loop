@@ -30,6 +30,7 @@ type EvalTargetVersion struct {
 	CozeWorkflow    *CozeWorkflow
 	VolcengineAgent *VolcengineAgent
 	CustomRPCServer *CustomRPCServer
+	WebAgent        *WebAgent
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -56,6 +57,8 @@ const (
 
 	// 火山智能体Agentkit
 	EvalTargetTypeVolcengineAgentAgentkit EvalTargetType = 7
+	// Web智能体
+	EvalTargetTypeWebAgent EvalTargetType = 8
 )
 
 func (p EvalTargetType) String() string {
@@ -74,6 +77,8 @@ func (p EvalTargetType) String() string {
 		return "CustomRPCServer"
 	case EvalTargetTypeVolcengineAgentAgentkit:
 		return "VolcengineAgentKit"
+	case EvalTargetTypeWebAgent:
+		return "WebAgent"
 	}
 	return "<UNSET>"
 }

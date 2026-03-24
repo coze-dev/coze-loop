@@ -70,6 +70,9 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 				Description:  targetVersionDTO.GetEvalTargetContent().GetPrompt().GetDescription(),
 			}
 		}
+		if targetVersionDTO.GetEvalTargetContent().GetWebAgent() != nil {
+			targetVersionDO.WebAgent = WebAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetWebAgent())
+		}
 		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
@@ -197,6 +200,14 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		if targetVersionDO.CustomRPCServer != nil {
 			targetVersionDTO.EvalTargetContent.CustomRPCServer = CustomRPCServerDO2DTO(targetVersionDO.CustomRPCServer)
 		}
+	case do.EvalTargetTypeWebAgent:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.WebAgent != nil {
+			targetVersionDTO.EvalTargetContent.WebAgent = WebAgentDO2DTO(targetVersionDO.WebAgent)
+		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),
@@ -260,6 +271,96 @@ func CustomRPCServerDTO2DO(dto *dto.CustomRPCServer) (doRes *do.CustomRPCServer)
 		Timeout:             dto.Timeout,
 		AsyncTimeout:        dto.AsyncTimeout,
 		Ext:                 dto.Ext,
+	}
+}
+
+func WebAgentDTO2DO(dto *dto.WebAgent) *do.WebAgent {
+	if dto == nil {
+		return nil
+	}
+	return &do.WebAgent{
+		ID:           gptr.Indirect(dto.ID),
+		Name:         gptr.Indirect(dto.Name),
+		Description:  gptr.Indirect(dto.Description),
+		AgentConfig:  AgentConfigDTO2DO(dto.AgentConfig),
+		PromptConfig: WebAgentTargetPromptConfigDTO2DO(dto.PromptConfig),
+	}
+}
+
+func WebAgentDO2DTO(doObj *do.WebAgent) *dto.WebAgent {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.WebAgent{
+		ID:           gptr.Of(doObj.ID),
+		Name:         gptr.Of(doObj.Name),
+		Description:  gptr.Of(doObj.Description),
+		AgentConfig:  AgentConfigDO2DTO(doObj.AgentConfig),
+		PromptConfig: WebAgentTargetPromptConfigDO2DTO(doObj.PromptConfig),
+	}
+}
+
+func WebAgentTargetPromptConfigDTO2DO(dtoObj *dto.WebAgentTargetPromptConfig) *do.WebAgentTargetPromptConfig {
+	if dtoObj == nil {
+		return nil
+	}
+	messageList := make([]*do.Message, 0, len(dtoObj.GetMessageList()))
+	for _, msg := range dtoObj.GetMessageList() {
+		messageList = append(messageList, commonconvertor.ConvertMessageDTO2DO(msg))
+	}
+	return &do.WebAgentTargetPromptConfig{
+		MessageList: messageList,
+		OutputRule:  WebAgentTargetPromptConfigOutputRuleDTO2DO(dtoObj.OutputRule),
+	}
+}
+
+func WebAgentTargetPromptConfigDO2DTO(doObj *do.WebAgentTargetPromptConfig) *dto.WebAgentTargetPromptConfig {
+	if doObj == nil {
+		return nil
+	}
+	messageList := make([]*commondto.Message, 0, len(doObj.MessageList))
+	for _, msg := range doObj.MessageList {
+		messageList = append(messageList, commonconvertor.ConvertMessageDO2DTO(msg))
+	}
+	return &dto.WebAgentTargetPromptConfig{
+		MessageList: messageList,
+		OutputRule:  WebAgentTargetPromptConfigOutputRuleDO2DTO(doObj.OutputRule),
+	}
+}
+
+func WebAgentTargetPromptConfigOutputRuleDTO2DO(dtoObj *dto.WebAgentTargetPromptConfigOutputRule) *do.WebAgentTargetPromptConfigOutputRule {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.WebAgentTargetPromptConfigOutputRule{
+		Message: commonconvertor.ConvertMessageDTO2DO(dtoObj.Message),
+	}
+}
+
+func WebAgentTargetPromptConfigOutputRuleDO2DTO(doObj *do.WebAgentTargetPromptConfigOutputRule) *dto.WebAgentTargetPromptConfigOutputRule {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.WebAgentTargetPromptConfigOutputRule{
+		Message: commonconvertor.ConvertMessageDO2DTO(doObj.Message),
+	}
+}
+
+func AgentConfigDTO2DO(dtoObj *commondto.AgentConfig) *do.AgentConfig {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.AgentConfig{
+		AgentType: do.AgentType(gptr.Indirect(dtoObj.AgentType)),
+	}
+}
+
+func AgentConfigDO2DTO(doObj *do.AgentConfig) *commondto.AgentConfig {
+	if doObj == nil {
+		return nil
+	}
+	return &commondto.AgentConfig{
+		AgentType: gptr.Of(string(doObj.AgentType)),
 	}
 }
 

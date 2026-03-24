@@ -44,6 +44,27 @@ struct EvalTargetContent {
     104: optional VolcengineAgent volcengine_agent
     // EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息
     105: optional CustomRPCServer custom_rpc_server
+    // EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
+    106: optional WebAgent web_agent
+}
+
+struct WebAgent {
+    1: optional i64 id    // 应用ID
+
+    2: optional string name    // DTO使用，不存数据库
+    3: optional string description // DTO使用，不存数据库
+
+    4: optional common.AgentConfig agent_config // agent config
+    5: optional WebAgentTargetPromptConfig prompt_config // agent prompt config for agent
+}
+
+struct WebAgentTargetPromptConfig {
+    1: optional list<common.Message> message_list // 通过messge list的方式描述target的操作说明
+    2: optional WebAgentTargetPromptConfigOutputRule output_rule // 输出规则
+}
+
+struct WebAgentTargetPromptConfigOutputRule {
+    1: optional common.Message message
 }
 
 enum EvalTargetType {
@@ -55,6 +76,7 @@ enum EvalTargetType {
     CustomRPCServer = 6 // 自定义RPC服务 for内场
 
     VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
+    WebAgent = 8 // Web智能体
 }
 
 // Agent协议类型

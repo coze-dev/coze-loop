@@ -936,6 +936,20 @@ func (p *EvalTargetContent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 106:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField106(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1078,6 +1092,18 @@ func (p *EvalTargetContent) FastReadField105(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTargetContent) FastReadField106(buf []byte) (int, error) {
+	offset := 0
+	_field := NewWebAgent()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.WebAgent = _field
+	return offset, nil
+}
+
 func (p *EvalTargetContent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1093,6 +1119,7 @@ func (p *EvalTargetContent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 		offset += p.fastWriteField103(buf[offset:], w)
 		offset += p.fastWriteField104(buf[offset:], w)
 		offset += p.fastWriteField105(buf[offset:], w)
+		offset += p.fastWriteField106(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1109,6 +1136,7 @@ func (p *EvalTargetContent) BLength() int {
 		l += p.field103Length()
 		l += p.field104Length()
 		l += p.field105Length()
+		l += p.field106Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1200,6 +1228,15 @@ func (p *EvalTargetContent) fastWriteField105(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
+func (p *EvalTargetContent) fastWriteField106(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWebAgent() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 106)
+		offset += p.WebAgent.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *EvalTargetContent) field1Length() int {
 	l := 0
 	if p.IsSetInputSchemas() {
@@ -1276,6 +1313,15 @@ func (p *EvalTargetContent) field105Length() int {
 	if p.IsSetCustomRPCServer() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.CustomRPCServer.BLength()
+	}
+	return l
+}
+
+func (p *EvalTargetContent) field106Length() int {
+	l := 0
+	if p.IsSetWebAgent() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.WebAgent.BLength()
 	}
 	return l
 }
@@ -1368,6 +1414,677 @@ func (p *EvalTargetContent) DeepCopy(s interface{}) error {
 		}
 	}
 	p.CustomRPCServer = _customRPCServer
+
+	var _webAgent *WebAgent
+	if src.WebAgent != nil {
+		_webAgent = &WebAgent{}
+		if err := _webAgent.DeepCopy(src.WebAgent); err != nil {
+			return err
+		}
+	}
+	p.WebAgent = _webAgent
+
+	return nil
+}
+
+func (p *WebAgent) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgent[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *WebAgent) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ID = _field
+	return offset, nil
+}
+
+func (p *WebAgent) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Name = _field
+	return offset, nil
+}
+
+func (p *WebAgent) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Description = _field
+	return offset, nil
+}
+
+func (p *WebAgent) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewAgentConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.AgentConfig = _field
+	return offset, nil
+}
+
+func (p *WebAgent) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+	_field := NewWebAgentTargetPromptConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.PromptConfig = _field
+	return offset, nil
+}
+
+func (p *WebAgent) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *WebAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *WebAgent) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *WebAgent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
+	}
+	return offset
+}
+
+func (p *WebAgent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	}
+	return offset
+}
+
+func (p *WebAgent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDescription() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
+	}
+	return offset
+}
+
+func (p *WebAgent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAgentConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
+		offset += p.AgentConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *WebAgent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPromptConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 5)
+		offset += p.PromptConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *WebAgent) field1Length() int {
+	l := 0
+	if p.IsSetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *WebAgent) field2Length() int {
+	l := 0
+	if p.IsSetName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
+	}
+	return l
+}
+
+func (p *WebAgent) field3Length() int {
+	l := 0
+	if p.IsSetDescription() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Description)
+	}
+	return l
+}
+
+func (p *WebAgent) field4Length() int {
+	l := 0
+	if p.IsSetAgentConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.AgentConfig.BLength()
+	}
+	return l
+}
+
+func (p *WebAgent) field5Length() int {
+	l := 0
+	if p.IsSetPromptConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.PromptConfig.BLength()
+	}
+	return l
+}
+
+func (p *WebAgent) DeepCopy(s interface{}) error {
+	src, ok := s.(*WebAgent)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.ID != nil {
+		tmp := *src.ID
+		p.ID = &tmp
+	}
+
+	if src.Name != nil {
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
+		}
+		p.Name = &tmp
+	}
+
+	if src.Description != nil {
+		var tmp string
+		if *src.Description != "" {
+			tmp = kutils.StringDeepCopy(*src.Description)
+		}
+		p.Description = &tmp
+	}
+
+	var _agentConfig *common.AgentConfig
+	if src.AgentConfig != nil {
+		_agentConfig = &common.AgentConfig{}
+		if err := _agentConfig.DeepCopy(src.AgentConfig); err != nil {
+			return err
+		}
+	}
+	p.AgentConfig = _agentConfig
+
+	var _promptConfig *WebAgentTargetPromptConfig
+	if src.PromptConfig != nil {
+		_promptConfig = &WebAgentTargetPromptConfig{}
+		if err := _promptConfig.DeepCopy(src.PromptConfig); err != nil {
+			return err
+		}
+	}
+	p.PromptConfig = _promptConfig
+
+	return nil
+}
+
+func (p *WebAgentTargetPromptConfig) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgentTargetPromptConfig[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *WebAgentTargetPromptConfig) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*common.Message, 0, size)
+	values := make([]common.Message, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.MessageList = _field
+	return offset, nil
+}
+
+func (p *WebAgentTargetPromptConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+	_field := NewWebAgentTargetPromptConfigOutputRule()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.OutputRule = _field
+	return offset, nil
+}
+
+func (p *WebAgentTargetPromptConfig) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *WebAgentTargetPromptConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *WebAgentTargetPromptConfig) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *WebAgentTargetPromptConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMessageList() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.MessageList {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *WebAgentTargetPromptConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOutputRule() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.OutputRule.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *WebAgentTargetPromptConfig) field1Length() int {
+	l := 0
+	if p.IsSetMessageList() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.MessageList {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *WebAgentTargetPromptConfig) field2Length() int {
+	l := 0
+	if p.IsSetOutputRule() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.OutputRule.BLength()
+	}
+	return l
+}
+
+func (p *WebAgentTargetPromptConfig) DeepCopy(s interface{}) error {
+	src, ok := s.(*WebAgentTargetPromptConfig)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.MessageList != nil {
+		p.MessageList = make([]*common.Message, 0, len(src.MessageList))
+		for _, elem := range src.MessageList {
+			var _elem *common.Message
+			if elem != nil {
+				_elem = &common.Message{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.MessageList = append(p.MessageList, _elem)
+		}
+	}
+
+	var _outputRule *WebAgentTargetPromptConfigOutputRule
+	if src.OutputRule != nil {
+		_outputRule = &WebAgentTargetPromptConfigOutputRule{}
+		if err := _outputRule.DeepCopy(src.OutputRule); err != nil {
+			return err
+		}
+	}
+	p.OutputRule = _outputRule
+
+	return nil
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebAgentTargetPromptConfigOutputRule[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewMessage()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Message = _field
+	return offset, nil
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMessage() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+		offset += p.Message.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) field1Length() int {
+	l := 0
+	if p.IsSetMessage() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Message.BLength()
+	}
+	return l
+}
+
+func (p *WebAgentTargetPromptConfigOutputRule) DeepCopy(s interface{}) error {
+	src, ok := s.(*WebAgentTargetPromptConfigOutputRule)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _message *common.Message
+	if src.Message != nil {
+		_message = &common.Message{}
+		if err := _message.DeepCopy(src.Message); err != nil {
+			return err
+		}
+	}
+	p.Message = _message
 
 	return nil
 }
