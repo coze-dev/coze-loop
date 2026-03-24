@@ -2141,6 +2141,159 @@ func TestOpenAPICreateExptTemplateReq2Domain_WithRunConfigAndScoreWeight(t *test
 	}
 }
 
+func TestOpenAPITemplateToSubmitExperimentRequest_WithTemplateConfBackfill(t *testing.T) {
+	t.Parallel()
+
+	env := "prod"
+	weight := 0.8
+	template := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{ID: 1, WorkspaceID: 10, Name: "template", ExptType: entity.ExptType_Offline},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:        100,
+			EvalSetVersionID: 101,
+			TargetID:         200,
+			TargetVersionID:  201,
+			TargetType:       entity.EvalTargetTypeCozeBot,
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{{
+				EvaluatorID:        11,
+				EvaluatorVersionID: 500,
+			}},
+		},
+		FieldMappingConfig: &entity.ExptFieldMapping{
+			EvaluatorFieldMapping: []*entity.EvaluatorFieldMapping{{
+				EvaluatorVersionID: 500,
+				FromEvalSet:        []*entity.ExptTemplateFieldMapping{{FieldName: "question", FromFieldName: "q"}},
+				FromTarget:         []*entity.ExptTemplateFieldMapping{{FieldName: "answer", FromFieldName: "a"}},
+			}},
+		},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ConnectorConf: entity.Connector{
+				EvaluatorsConf: &entity.EvaluatorsConf{EvaluatorConf: []*entity.EvaluatorConf{{
+					EvaluatorVersionID: 500,
+					Version:            "v2",
+					RunConf:            &entity.EvaluatorRunConfig{Env: &env, EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: gptr.Of("{}")}},
+					ScoreWeight:        &weight,
+				}}},
+			},
+		},
+	}
+
+	got := OpenAPITemplateToSubmitExperimentRequest(template, "submit-name", 10)
+	if assert.NotNil(t, got) && assert.Len(t, got.GetEvaluatorIDVersionList(), 1) {
+		item := got.GetEvaluatorIDVersionList()[0]
+		assert.Equal(t, "v2", item.GetVersion())
+		assert.Equal(t, 0.8, item.GetScoreWeight())
+		if assert.NotNil(t, item.GetRunConfig()) {
+			assert.Equal(t, "prod", item.GetRunConfig().GetEnv())
+		}
+	}
+	if assert.Len(t, got.GetEvaluatorFieldMapping(), 1) {
+		item := got.GetEvaluatorFieldMapping()[0].GetEvaluatorIDVersionItem()
+		if assert.NotNil(t, item) {
+			assert.Equal(t, "v2", item.GetVersion())
+			assert.Equal(t, 0.8, item.GetScoreWeight())
+			assert.NotNil(t, item.GetRunConfig())
+		}
+	}
+}
+
+func TestBuildOpenAPITemplateConfMapsAndEntityRunConfToDomainEvaluator(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil template", func(t *testing.T) {
+		runConf, scoreWeight, version := buildOpenAPITemplateConfMaps(nil)
+		assert.Nil(t, runConf)
+		assert.Nil(t, scoreWeight)
+		assert.Nil(t, version)
+		assert.Nil(t, entityRunConfToDomainEvaluator(nil))
+	})
+
+	t.Run("skip invalid and collect valid config", func(t *testing.T) {
+		env := "test"
+		weight := 0.3
+		template := &entity.ExptTemplate{
+			TemplateConf: &entity.ExptTemplateConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{EvaluatorConf: []*entity.EvaluatorConf{
+						nil,
+						{EvaluatorVersionID: 0, Version: "ignored"},
+						{
+							EvaluatorVersionID: 300,
+							Version:            "v300",
+							RunConf:            &entity.EvaluatorRunConfig{Env: &env, EvaluatorRuntimeParam: &entity.RuntimeParam{JSONValue: gptr.Of("{\"k\":1}")}},
+							ScoreWeight:        &weight,
+						},
+					}},
+				},
+			},
+		}
+
+		runConf, scoreWeight, version := buildOpenAPITemplateConfMaps(template)
+		if assert.NotNil(t, runConf) && assert.Contains(t, runConf, int64(300)) {
+			assert.Equal(t, "test", gptr.Indirect(runConf[300].Env))
+		}
+		if assert.NotNil(t, scoreWeight) {
+			assert.Equal(t, 0.3, scoreWeight[300])
+		}
+		if assert.NotNil(t, version) {
+			assert.Equal(t, "v300", version[300])
+		}
+
+		dto := entityRunConfToDomainEvaluator(runConf[300])
+		if assert.NotNil(t, dto) {
+			assert.Equal(t, "test", dto.GetEnv())
+			if assert.NotNil(t, dto.GetEvaluatorRuntimeParam()) {
+				assert.Equal(t, "{\"k\":1}", dto.GetEvaluatorRuntimeParam().GetJSONValue())
+			}
+		}
+	})
+}
+
+func TestOpenAPIUpdateExptTemplateReq2Domain_WithRunConfigAndScoreWeight(t *testing.T) {
+	t.Parallel()
+
+	req := &openapi.UpdateExptTemplateOApiRequest{
+		TemplateID:  gptr.Of(int64(1)),
+		WorkspaceID: gptr.Of(int64(10)),
+		Meta:        &openapiExperiment.ExptTemplateMeta{Name: gptr.Of("updated"), ExptType: gptr.Of(openapiExperiment.ExperimentTypeOnline)},
+		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetVersionID: gptr.Of(int64(100)),
+			TargetVersionID:  gptr.Of(int64(200)),
+			EvaluatorIDVersionItems: []*openapiEvaluator.EvaluatorIDVersionItem{{
+				EvaluatorID:        gptr.Of(int64(10)),
+				Version:            gptr.Of("v1"),
+				EvaluatorVersionID: gptr.Of(int64(500)),
+				RunConfig:          &openapiEvaluator.EvaluatorRunConfig{Env: gptr.Of("staging")},
+				ScoreWeight:        gptr.Of(0.7),
+			}},
+		},
+		FieldMappingConfig: &openapiExperiment.ExptFieldMapping{
+			EvaluatorFieldMapping: []*openapiExperiment.EvaluatorFieldMapping{{
+				EvaluatorID: nil,
+				Version:     nil,
+				FromEvalSet: []*openapiExperiment.FieldMapping{{FieldName: gptr.Of("ef1"), FromFieldName: gptr.Of("es1")}},
+				FromTarget:  []*openapiExperiment.FieldMapping{{FieldName: gptr.Of("tf1"), FromFieldName: gptr.Of("ts1")}},
+			}},
+		},
+	}
+
+	got, err := OpenAPIUpdateExptTemplateReq2Domain(req)
+	assert.NoError(t, err)
+	if assert.NotNil(t, got) && assert.NotNil(t, got.TemplateConf) &&
+		assert.NotNil(t, got.TemplateConf.ConnectorConf.EvaluatorsConf) &&
+		assert.Len(t, got.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1) {
+		ec := got.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf[0]
+		assert.Equal(t, int64(10), ec.EvaluatorID)
+		assert.Equal(t, "v1", ec.Version)
+		assert.Equal(t, int64(500), ec.EvaluatorVersionID)
+		assert.NotNil(t, ec.RunConf)
+		assert.NotNil(t, ec.ScoreWeight)
+		assert.Equal(t, 0.7, *ec.ScoreWeight)
+		assert.Len(t, ec.IngressConf.EvalSetAdapter.FieldConfs, 1)
+		assert.Len(t, ec.IngressConf.TargetAdapter.FieldConfs, 1)
+	}
+}
+
 // TestOpenAPIExptTemplateFilterDTO2DO_InvalidAndUnknown 覆盖 1811-1818、1864-1888：parseInt64List 失败、未知 operator、未知 fieldType
 func TestOpenAPIExptTemplateFilterDTO2DO_InvalidAndUnknown(t *testing.T) {
 	t.Parallel()
