@@ -2453,7 +2453,7 @@ type ParseImportSourceFileResponse struct {
 	// 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
 	FilesWithAmbiguousColumn []string `thrift:"files_with_ambiguous_column,4,optional" frugal:"4,optional,list<string>" form:"files_with_ambiguous_column" json:"files_with_ambiguous_column,omitempty" query:"files_with_ambiguous_column"`
 	// 无类型标记的 URL 列名列表（内容为文件中的列名）
-	UntypedUrlFields []string `thrift:"untypedUrlFields,5,optional" frugal:"5,optional,list<string>" form:"untypedUrlFields" json:"untypedUrlFields,omitempty" query:"untypedUrlFields"`
+	UntypedURLFields []string `thrift:"untypedURLFields,5,optional" frugal:"5,optional,list<string>" form:"untypedURLFields" json:"untypedURLFields,omitempty" query:"untypedURLFields"`
 	// 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 	PrecheckDataByField map[string][]string `thrift:"precheck_data_by_field,6,optional" frugal:"6,optional,map<string:list<string>>" form:"precheck_data_by_field" json:"precheck_data_by_field,omitempty" query:"precheck_data_by_field"`
 	/*base*/
@@ -2515,16 +2515,16 @@ func (p *ParseImportSourceFileResponse) GetFilesWithAmbiguousColumn() (v []strin
 	return p.FilesWithAmbiguousColumn
 }
 
-var ParseImportSourceFileResponse_UntypedUrlFields_DEFAULT []string
+var ParseImportSourceFileResponse_UntypedURLFields_DEFAULT []string
 
-func (p *ParseImportSourceFileResponse) GetUntypedUrlFields() (v []string) {
+func (p *ParseImportSourceFileResponse) GetUntypedURLFields() (v []string) {
 	if p == nil {
 		return
 	}
-	if !p.IsSetUntypedUrlFields() {
-		return ParseImportSourceFileResponse_UntypedUrlFields_DEFAULT
+	if !p.IsSetUntypedURLFields() {
+		return ParseImportSourceFileResponse_UntypedURLFields_DEFAULT
 	}
-	return p.UntypedUrlFields
+	return p.UntypedURLFields
 }
 
 var ParseImportSourceFileResponse_PrecheckDataByField_DEFAULT map[string][]string
@@ -2562,8 +2562,8 @@ func (p *ParseImportSourceFileResponse) SetConflicts(val []*ConflictField) {
 func (p *ParseImportSourceFileResponse) SetFilesWithAmbiguousColumn(val []string) {
 	p.FilesWithAmbiguousColumn = val
 }
-func (p *ParseImportSourceFileResponse) SetUntypedUrlFields(val []string) {
-	p.UntypedUrlFields = val
+func (p *ParseImportSourceFileResponse) SetUntypedURLFields(val []string) {
+	p.UntypedURLFields = val
 }
 func (p *ParseImportSourceFileResponse) SetPrecheckDataByField(val map[string][]string) {
 	p.PrecheckDataByField = val
@@ -2577,7 +2577,7 @@ var fieldIDToName_ParseImportSourceFileResponse = map[int16]string{
 	10:  "field_schemas",
 	3:   "conflicts",
 	4:   "files_with_ambiguous_column",
-	5:   "untypedUrlFields",
+	5:   "untypedURLFields",
 	6:   "precheck_data_by_field",
 	255: "baseResp",
 }
@@ -2598,8 +2598,8 @@ func (p *ParseImportSourceFileResponse) IsSetFilesWithAmbiguousColumn() bool {
 	return p.FilesWithAmbiguousColumn != nil
 }
 
-func (p *ParseImportSourceFileResponse) IsSetUntypedUrlFields() bool {
-	return p.UntypedUrlFields != nil
+func (p *ParseImportSourceFileResponse) IsSetUntypedURLFields() bool {
+	return p.UntypedURLFields != nil
 }
 
 func (p *ParseImportSourceFileResponse) IsSetPrecheckDataByField() bool {
@@ -2813,7 +2813,7 @@ func (p *ParseImportSourceFileResponse) ReadField5(iprot thrift.TProtocol) error
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.UntypedUrlFields = _field
+	p.UntypedURLFields = _field
 	return nil
 }
 func (p *ParseImportSourceFileResponse) ReadField6(iprot thrift.TProtocol) error {
@@ -3015,14 +3015,14 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *ParseImportSourceFileResponse) writeField5(oprot thrift.TProtocol) (err error) {
-	if p.IsSetUntypedUrlFields() {
-		if err = oprot.WriteFieldBegin("untypedUrlFields", thrift.LIST, 5); err != nil {
+	if p.IsSetUntypedURLFields() {
+		if err = oprot.WriteFieldBegin("untypedURLFields", thrift.LIST, 5); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.UntypedUrlFields)); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.UntypedURLFields)); err != nil {
 			return err
 		}
-		for _, v := range p.UntypedUrlFields {
+		for _, v := range p.UntypedURLFields {
 			if err := oprot.WriteString(v); err != nil {
 				return err
 			}
@@ -3122,7 +3122,7 @@ func (p *ParseImportSourceFileResponse) DeepEqual(ano *ParseImportSourceFileResp
 	if !p.Field4DeepEqual(ano.FilesWithAmbiguousColumn) {
 		return false
 	}
-	if !p.Field5DeepEqual(ano.UntypedUrlFields) {
+	if !p.Field5DeepEqual(ano.UntypedURLFields) {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.PrecheckDataByField) {
@@ -3187,10 +3187,10 @@ func (p *ParseImportSourceFileResponse) Field4DeepEqual(src []string) bool {
 }
 func (p *ParseImportSourceFileResponse) Field5DeepEqual(src []string) bool {
 
-	if len(p.UntypedUrlFields) != len(src) {
+	if len(p.UntypedURLFields) != len(src) {
 		return false
 	}
-	for i, v := range p.UntypedUrlFields {
+	for i, v := range p.UntypedURLFields {
 		_src := src[i]
 		if strings.Compare(v, _src) != 0 {
 			return false
