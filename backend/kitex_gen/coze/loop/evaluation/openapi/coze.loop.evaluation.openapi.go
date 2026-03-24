@@ -35858,7 +35858,7 @@ func (p *RunEvaluatorOpenAPIData) Field1DeepEqual(src *evaluator.EvaluatorRecord
 // 3.10.1 执行预置评估器（按标识）
 type RunBuiltinEvaluatorOApiRequest struct {
 	WorkspaceID *int64 `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	// 预置评估器标识：builtin_evaluator_id 和 builtin_evaluator_name 必须且只能传一个
+	// 预置评估器标识：builtin_evaluator_id 和 builtin_evaluator_name 至少传一个；若两者都传则需匹配
 	BuiltinEvaluatorID   *int64                        `thrift:"builtin_evaluator_id,2,optional" frugal:"2,optional,i64" json:"builtin_evaluator_id" form:"builtin_evaluator_id" `
 	BuiltinEvaluatorName *string                       `thrift:"builtin_evaluator_name,3,optional" frugal:"3,optional,string" json:"builtin_evaluator_name" form:"builtin_evaluator_name" `
 	InputData            *evaluator.EvaluatorInputData `thrift:"input_data,4,optional" frugal:"4,optional,evaluator.EvaluatorInputData" form:"input_data" json:"input_data,omitempty"`
