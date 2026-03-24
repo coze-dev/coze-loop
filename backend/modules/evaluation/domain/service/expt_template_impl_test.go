@@ -27,6 +27,7 @@ import (
 	platestwrite "github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
@@ -3271,7 +3272,7 @@ func Test_taskToExptTemplate(t *testing.T) {
 		assert.Nil(t, result)
 	})
 
-	t.Run("正常转换", func(t *testing.T) {
+	t.Run("正常转换-基本场景", func(t *testing.T) {
 		taskID := int64(12345)
 		task := &taskdomain.Task{
 			ID:   &taskID,
@@ -3283,6 +3284,74 @@ func Test_taskToExptTemplate(t *testing.T) {
 		assert.Equal(t, int64(100), result.GetSpaceID())
 		assert.Equal(t, "test-task", result.GetName())
 		assert.Equal(t, entity.ExptType_Online, result.GetExptType())
+		assert.Equal(t, entity.SourceType_AutoTask, result.ExptSource.SourceType)
+		assert.Equal(t, "12345", result.ExptSource.SourceID)
+	})
+
+	t.Run("正常转换-带BaseInfo", func(t *testing.T) {
+		taskID := int64(12345)
+		createdAt := int64(1234567890000)
+		updatedAt := int64(1234567891000)
+		userID := "test-user"
+		task := &taskdomain.Task{
+			ID:   &taskID,
+			Name: "test-task",
+			BaseInfo: &taskdomain.BaseInfo{
+				CreatedAt: &createdAt,
+				UpdatedAt: &updatedAt,
+				CreatedBy: &taskdomain.UserInfo{
+					UserID: &userID,
+				},
+				UpdatedBy: &taskdomain.UserInfo{
+					UserID: &userID,
+				},
+			},
+		}
+		result := taskToExptTemplate(task, 100)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.BaseInfo)
+		assert.Equal(t, createdAt, *result.BaseInfo.CreatedAt)
+		assert.Equal(t, updatedAt, *result.BaseInfo.UpdatedAt)
+		assert.Equal(t, userID, *result.BaseInfo.CreatedBy.UserID)
+		assert.Equal(t, userID, *result.BaseInfo.UpdatedBy.UserID)
+	})
+
+	t.Run("正常转换-带Rule", func(t *testing.T) {
+		taskID := int64(12345)
+		task := &taskdomain.Task{
+			ID:   &taskID,
+			Name: "test-task",
+			Rule: &taskdomain.Rule{
+				Sampler: &taskdomain.Sampler{
+					IsCycle: gptr.Of(true),
+				},
+			},
+		}
+		result := taskToExptTemplate(task, 100)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.ExptSource.Scheduler)
+	})
+
+	t.Run("正常转换-带TaskConfig", func(t *testing.T) {
+		taskID := int64(12345)
+		task := &taskdomain.Task{
+			ID:   &taskID,
+			Name: "test-task",
+			TaskConfig: &taskdomain.TaskConfig{
+				AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+					{
+						EvaluatorID:        1,
+						EvaluatorVersionID: 1001,
+					},
+				},
+			},
+		}
+		result := taskToExptTemplate(task, 100)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.TripleConfig)
+		assert.NotNil(t, result.TemplateConf)
+		assert.NotNil(t, result.TemplateConf.ConnectorConf.EvaluatorsConf)
+		assert.Len(t, result.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1)
 	})
 }
 
@@ -3300,9 +3369,10 @@ func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
 		assert.NotNil(t, connector)
 	})
 
-	t.Run("正常转换", func(t *testing.T) {
+	t.Run("AutoEvaluateConfigs包含nil元素", func(t *testing.T) {
 		taskConfig := &taskdomain.TaskConfig{
 			AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+				nil,
 				{
 					EvaluatorID:        1,
 					EvaluatorVersionID: 1001,
@@ -3314,6 +3384,63 @@ func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
 		assert.NotNil(t, connector)
 		assert.NotNil(t, connector.EvaluatorsConf)
 		assert.Len(t, connector.EvaluatorsConf.EvaluatorConf, 1)
+	})
+
+	t.Run("AutoEvaluateConfigs包含无效元素", func(t *testing.T) {
+		taskConfig := &taskdomain.TaskConfig{
+			AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+				{
+					EvaluatorID:        1,
+					EvaluatorVersionID: 0, // 无效的版本ID
+				},
+				{
+					EvaluatorID:        0, // 无效的评估器ID
+					EvaluatorVersionID: 1001,
+				},
+			},
+		}
+		triple, connector := autoEvaluateConfigsToExptTemplateConf(taskConfig)
+		assert.Nil(t, triple)
+		assert.NotNil(t, connector)
+		assert.Nil(t, connector.EvaluatorsConf)
+	})
+
+	t.Run("正常转换-多个评估器", func(t *testing.T) {
+		taskConfig := &taskdomain.TaskConfig{
+			AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+				{
+					EvaluatorID:        1,
+					EvaluatorVersionID: 1001,
+					FieldMappings: []*taskdomain.EvaluateFieldMapping{
+						{
+							FieldSchema: &taskdomain.FieldSchema{
+								Key: gptr.Of("field1"),
+							},
+							TraceFieldKey: "trace_field1",
+						},
+					},
+				},
+				{
+					EvaluatorID:        2,
+					EvaluatorVersionID: 1002,
+					FieldMappings: []*taskdomain.EvaluateFieldMapping{
+						{
+							FieldSchema: &taskdomain.FieldSchema{
+								Name: gptr.Of("field2"),
+							},
+							EvalSetName: gptr.Of("eval_set_field"),
+						},
+					},
+				},
+			},
+		}
+		triple, connector := autoEvaluateConfigsToExptTemplateConf(taskConfig)
+		assert.NotNil(t, triple)
+		assert.NotNil(t, connector)
+		assert.NotNil(t, connector.EvaluatorsConf)
+		assert.Len(t, connector.EvaluatorsConf.EvaluatorConf, 2)
+		assert.Len(t, triple.EvaluatorIDVersionItems, 2)
+		assert.Len(t, triple.EvaluatorVersionIds, 2)
 	})
 }
 
@@ -3331,6 +3458,112 @@ func Test_extractEvaluatorVersionIDs(t *testing.T) {
 	})
 }
 
+func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
+	t.Run("空mappings返回空配置", func(t *testing.T) {
+		result := evaluateFieldMappingsToIngressConf(nil)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Empty(t, result.EvalSetAdapter.FieldConfs)
+	})
+
+	t.Run("mappings为空返回空配置", func(t *testing.T) {
+		result := evaluateFieldMappingsToIngressConf([]*taskdomain.EvaluateFieldMapping{})
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Empty(t, result.EvalSetAdapter.FieldConfs)
+	})
+
+	t.Run("mappings包含nil元素", func(t *testing.T) {
+		mappings := []*taskdomain.EvaluateFieldMapping{
+			nil,
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Key: gptr.Of("test_field"),
+				},
+				TraceFieldKey: "trace_field",
+			},
+		}
+		result := evaluateFieldMappingsToIngressConf(mappings)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Len(t, result.EvalSetAdapter.FieldConfs, 1)
+	})
+
+	t.Run("mappings包含无效元素", func(t *testing.T) {
+		mappings := []*taskdomain.EvaluateFieldMapping{
+			{
+				FieldSchema: &taskdomain.FieldSchema{}, // 无Key和Name
+				TraceFieldKey: "trace_field",
+			},
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Key: gptr.Of(""), // 空Key
+				},
+				TraceFieldKey: "trace_field",
+			},
+		}
+		result := evaluateFieldMappingsToIngressConf(mappings)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Empty(t, result.EvalSetAdapter.FieldConfs)
+	})
+
+	t.Run("正常转换-TraceFieldKey", func(t *testing.T) {
+		mappings := []*taskdomain.EvaluateFieldMapping{
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Key: gptr.Of("field1"),
+				},
+				TraceFieldKey: "trace_field1",
+			},
+		}
+		result := evaluateFieldMappingsToIngressConf(mappings)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Len(t, result.EvalSetAdapter.FieldConfs, 1)
+		assert.Equal(t, "field1", result.EvalSetAdapter.FieldConfs[0].FieldName)
+		assert.Equal(t, "trace_field1", result.EvalSetAdapter.FieldConfs[0].FromField)
+	})
+
+	t.Run("正常转换-EvalSetName", func(t *testing.T) {
+		mappings := []*taskdomain.EvaluateFieldMapping{
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Name: gptr.Of("field2"),
+				},
+				EvalSetName: gptr.Of("eval_set_field"),
+			},
+		}
+		result := evaluateFieldMappingsToIngressConf(mappings)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Len(t, result.EvalSetAdapter.FieldConfs, 1)
+		assert.Equal(t, "field2", result.EvalSetAdapter.FieldConfs[0].FieldName)
+		assert.Equal(t, "eval_set_field", result.EvalSetAdapter.FieldConfs[0].FromField)
+	})
+
+	t.Run("正常转换-多个字段", func(t *testing.T) {
+		mappings := []*taskdomain.EvaluateFieldMapping{
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Key: gptr.Of("field1"),
+				},
+				TraceFieldKey: "trace_field1",
+			},
+			{
+				FieldSchema: &taskdomain.FieldSchema{
+					Name: gptr.Of("field2"),
+				},
+				EvalSetName: gptr.Of("eval_set_field"),
+			},
+		}
+		result := evaluateFieldMappingsToIngressConf(mappings)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSetAdapter)
+		assert.Len(t, result.EvalSetAdapter.FieldConfs, 2)
+	})
+}
+
 func Test_taskRuleToExptScheduler(t *testing.T) {
 	t.Run("rule为nil返回nil", func(t *testing.T) {
 		result := taskRuleToExptScheduler(nil)
@@ -3341,6 +3574,60 @@ func Test_taskRuleToExptScheduler(t *testing.T) {
 		rule := &taskdomain.Rule{}
 		result := taskRuleToExptScheduler(rule)
 		assert.Nil(t, result)
+	})
+
+	t.Run("只有sampler", func(t *testing.T) {
+		rule := &taskdomain.Rule{
+			Sampler: &taskdomain.Sampler{
+				IsCycle: gptr.Of(true),
+			},
+		}
+		result := taskRuleToExptScheduler(rule)
+		assert.NotNil(t, result)
+		assert.True(t, *result.Enabled)
+	})
+
+	t.Run("只有effectiveTime", func(t *testing.T) {
+		startAt := int64(1234567890000)
+		endAt := int64(1234567891000)
+		rule := &taskdomain.Rule{
+			EffectiveTime: &taskdomain.EffectiveTime{
+				StartAt: &startAt,
+				EndAt:   &endAt,
+			},
+		}
+		result := taskRuleToExptScheduler(rule)
+		assert.NotNil(t, result)
+		assert.Equal(t, startAt, *result.StartTime)
+		assert.Equal(t, endAt, *result.EndTime)
+	})
+
+	t.Run("sampler和effectiveTime都有", func(t *testing.T) {
+		startAt := int64(1234567890000)
+		rule := &taskdomain.Rule{
+			Sampler: &taskdomain.Sampler{
+				IsCycle:       gptr.Of(true),
+				CycleTimeUnit: gptr.Of(taskdomain.TimeUnitDay),
+			},
+			EffectiveTime: &taskdomain.EffectiveTime{
+				StartAt: &startAt,
+			},
+		}
+		result := taskRuleToExptScheduler(rule)
+		assert.NotNil(t, result)
+		assert.True(t, *result.Enabled)
+		assert.Equal(t, startAt, *result.StartTime)
+	})
+
+	t.Run("sampler.IsCycle为false", func(t *testing.T) {
+		rule := &taskdomain.Rule{
+			Sampler: &taskdomain.Sampler{
+				IsCycle: gptr.Of(false),
+			},
+		}
+		result := taskRuleToExptScheduler(rule)
+		assert.NotNil(t, result)
+		assert.False(t, *result.Enabled)
 	})
 }
 
@@ -3373,12 +3660,140 @@ func Test_convertTaskFrequency(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Equal(t, "every_day", *result)
 	})
+
+	t.Run("TimeUnit为Null返回every_day", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of(taskdomain.TimeUnitNull),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.NotNil(t, result)
+		assert.Equal(t, "every_day", *result)
+	})
+
+	t.Run("TimeUnit为空返回every_day", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle: gptr.Of(true),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.NotNil(t, result)
+		assert.Equal(t, "every_day", *result)
+	})
+
+	t.Run("TimeUnit为Week", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of(taskdomain.TimeUnitWeek),
+		}
+		// 测试周一
+		startAt := int64(1704067200000) // 2024-01-01 00:00:00 UTC (周一)
+		effectiveTime := &taskdomain.EffectiveTime{
+			StartAt: &startAt,
+		}
+		result := convertTaskFrequency(sampler, effectiveTime)
+		assert.NotNil(t, result)
+		assert.Equal(t, "monday", *result)
+
+		// 测试周日
+		startAt = int64(1704672000000) // 2024-01-07 00:00:00 UTC (周日)
+		effectiveTime = &taskdomain.EffectiveTime{
+			StartAt: &startAt,
+		}
+		result = convertTaskFrequency(sampler, effectiveTime)
+		assert.NotNil(t, result)
+		assert.Equal(t, "sunday", *result)
+	})
+
+	t.Run("TimeUnit为Week但effectiveTime为nil返回nil", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of(taskdomain.TimeUnitWeek),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.Nil(t, result)
+	})
+
+	t.Run("TimeUnit为Week但StartAt为0返回nil", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of(taskdomain.TimeUnitWeek),
+		}
+		startAt := int64(0)
+		effectiveTime := &taskdomain.EffectiveTime{
+			StartAt: &startAt,
+		}
+		result := convertTaskFrequency(sampler, effectiveTime)
+		assert.Nil(t, result)
+	})
+
+	t.Run("TimeUnit为其他值返回nil", func(t *testing.T) {
+		sampler := &taskdomain.Sampler{
+			IsCycle:       gptr.Of(true),
+			CycleTimeUnit: gptr.Of("invalid"),
+		}
+		result := convertTaskFrequency(sampler, nil)
+		assert.Nil(t, result)
+	})
 }
 
 func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
 	t.Run("sf为nil返回nil", func(t *testing.T) {
 		result := spanFilterFieldsFromTaskRule(nil)
 		assert.Nil(t, result)
+	})
+
+	t.Run("正常转换-只有基本字段", func(t *testing.T) {
+		platformType := taskfilter.PlatformTypeTCE
+		spanListType := taskfilter.SpanListTypeNormal
+		sf := &taskfilter.SpanFilterFields{
+			PlatformType: &platformType,
+			SpanListType: &spanListType,
+		}
+		result := spanFilterFieldsFromTaskRule(sf)
+		assert.NotNil(t, result)
+		assert.Equal(t, string(platformType), *result.PlatformType)
+		assert.Equal(t, string(spanListType), *result.SpanListType)
+	})
+
+	t.Run("正常转换-包含过滤器", func(t *testing.T) {
+		platformType := taskfilter.PlatformTypeTCE
+		spanListType := taskfilter.SpanListTypeNormal
+		queryAndOr := taskfilter.QueryAndOrAnd
+		fieldType := taskfilter.FieldTypeString
+		queryType := taskfilter.QueryTypeEq
+		subQueryAndOr := taskfilter.QueryAndOrOr
+		sf := &taskfilter.SpanFilterFields{
+			PlatformType: &platformType,
+			SpanListType: &spanListType,
+			Filters: &taskfilter.FilterFields{
+				QueryAndOr: &queryAndOr,
+				FilterFields: []*taskfilter.FilterField{
+					{
+						FieldName:  "field1",
+						FieldType:  &fieldType,
+						Values:     []string{"value1", "value2"},
+						QueryType:  &queryType,
+						QueryAndOr: &queryAndOr,
+						SubFilter: &taskfilter.FilterFields{
+							QueryAndOr: &subQueryAndOr,
+							FilterFields: []*taskfilter.FilterField{
+								{
+									FieldName: "sub_field",
+									Values:    []string{"sub_value"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		result := spanFilterFieldsFromTaskRule(sf)
+		assert.NotNil(t, result)
+		assert.Equal(t, string(platformType), *result.PlatformType)
+		assert.Equal(t, string(spanListType), *result.SpanListType)
+		assert.NotNil(t, result.Filters)
+		assert.Equal(t, string(queryAndOr), *result.Filters.QueryAndOr)
+		assert.Len(t, result.Filters.FilterFields, 1)
 	})
 }
 
@@ -3387,12 +3802,88 @@ func Test_filterFieldsFromTaskRule(t *testing.T) {
 		result := filterFieldsFromTaskRule(nil)
 		assert.Nil(t, result)
 	})
+
+	t.Run("正常转换-只有QueryAndOr", func(t *testing.T) {
+		queryAndOr := taskfilter.QueryAndOrAnd
+		ff := &taskfilter.FilterFields{
+			QueryAndOr: &queryAndOr,
+		}
+		result := filterFieldsFromTaskRule(ff)
+		assert.NotNil(t, result)
+		assert.Equal(t, string(queryAndOr), *result.QueryAndOr)
+	})
+
+	t.Run("正常转换-包含FilterFields", func(t *testing.T) {
+		queryAndOr := taskfilter.QueryAndOrAnd
+		fieldType := taskfilter.FieldTypeString
+		queryType := taskfilter.QueryTypeEq
+		ff := &taskfilter.FilterFields{
+			QueryAndOr: &queryAndOr,
+			FilterFields: []*taskfilter.FilterField{
+				{
+					FieldName: "field1",
+					FieldType: &fieldType,
+					Values:    []string{"value1"},
+					QueryType: &queryType,
+				},
+				nil, // 测试nil元素
+				{
+					FieldName: "field2",
+					Values:    []string{"value2"},
+				},
+			},
+		}
+		result := filterFieldsFromTaskRule(ff)
+		assert.NotNil(t, result)
+		assert.Equal(t, string(queryAndOr), *result.QueryAndOr)
+		assert.Len(t, result.FilterFields, 2)
+	})
 }
 
 func Test_filterFieldFromTaskRule(t *testing.T) {
 	t.Run("f为nil返回nil", func(t *testing.T) {
 		result := filterFieldFromTaskRule(nil)
 		assert.Nil(t, result)
+	})
+
+	t.Run("正常转换-基本字段", func(t *testing.T) {
+		fieldType := taskfilter.FieldTypeString
+		queryType := taskfilter.QueryTypeEq
+		queryAndOr := taskfilter.QueryAndOrAnd
+		f := &taskfilter.FilterField{
+			FieldName:  "field1",
+			FieldType:  &fieldType,
+			Values:     []string{"value1", "value2"},
+			QueryType:  &queryType,
+			QueryAndOr: &queryAndOr,
+		}
+		result := filterFieldFromTaskRule(f)
+		assert.NotNil(t, result)
+		assert.Equal(t, "field1", result.FieldName)
+		assert.Equal(t, string(fieldType), *result.FieldType)
+		assert.Equal(t, []string{"value1", "value2"}, result.Values)
+		assert.Equal(t, string(queryType), *result.QueryType)
+		assert.Equal(t, string(queryAndOr), *result.QueryAndOr)
+	})
+
+	t.Run("正常转换-包含SubFilter", func(t *testing.T) {
+		fieldType := taskfilter.FieldTypeString
+		queryType := taskfilter.QueryTypeEq
+		subQueryAndOr := taskfilter.QueryAndOrOr
+		f := &taskfilter.FilterField{
+			FieldName: "field1",
+			FieldType: &fieldType,
+			Values:    []string{"value1"},
+			QueryType: &queryType,
+			SubFilter: &taskfilter.FilterFields{
+				QueryAndOr: &subQueryAndOr,
+			},
+		}
+		result := filterFieldFromTaskRule(f)
+		assert.NotNil(t, result)
+		assert.Equal(t, "field1", result.FieldName)
+		assert.NotNil(t, result.SubFilter)
+		assert.Equal(t, string(subQueryAndOr), *result.SubFilter.QueryAndOr)
 	})
 }
 
@@ -3414,6 +3905,104 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 		}
 		result := extractSpanFilterFieldsFromPipeline(p)
 		assert.Nil(t, result)
+	})
+
+	t.Run("Nodes中无data_reflow节点返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "other_type",
+					},
+				},
+			},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("data_reflow节点无Refs返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+					},
+				},
+			},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("data_reflow节点无task Ref返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"other": {Content: "{}"},
+						},
+					},
+				},
+			},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("data_reflow节点task Ref为空返回nil", func(t *testing.T) {
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {Content: ""},
+						},
+					},
+				},
+			},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.Nil(t, result)
+	})
+
+	t.Run("正常提取", func(t *testing.T) {
+		taskJSON := `{
+			"rule": {
+				"span_filters": {
+					"platform_type": "TCE",
+					"span_list_type": "normal",
+					"filters": {
+						"query_and_or": "and",
+						"filter_fields": [
+							{
+								"field_name": "field1",
+								"values": ["value1"]
+							}
+						]
+					}
+				}
+			}
+		}`
+		p := &entity.Pipeline{
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {Content: taskJSON},
+						},
+					},
+				},
+			},
+		}
+		result := extractSpanFilterFieldsFromPipeline(p)
+		assert.NotNil(t, result)
+		assert.Equal(t, "TCE", *result.PlatformType)
+		assert.Equal(t, "normal", *result.SpanListType)
 	})
 }
 
@@ -3443,6 +4032,11 @@ func Test_extractSchedulerFromPipeline(t *testing.T) {
 }
 
 func Test_parseSpanFilterFieldsFromTaskJSON(t *testing.T) {
+	t.Run("空content返回nil", func(t *testing.T) {
+		result := parseSpanFilterFieldsFromTaskJSON("")
+		assert.Nil(t, result)
+	})
+
 	t.Run("invalid JSON返回nil", func(t *testing.T) {
 		result := parseSpanFilterFieldsFromTaskJSON("invalid json")
 		assert.Nil(t, result)
@@ -3451,6 +4045,60 @@ func Test_parseSpanFilterFieldsFromTaskJSON(t *testing.T) {
 	t.Run("valid JSON但无rule返回nil", func(t *testing.T) {
 		result := parseSpanFilterFieldsFromTaskJSON(`{"other":"field"}`)
 		assert.Nil(t, result)
+	})
+
+	t.Run("无span_filters返回nil", func(t *testing.T) {
+		result := parseSpanFilterFieldsFromTaskJSON(`{"rule": {}}`)
+		assert.Nil(t, result)
+	})
+
+	t.Run("正常解析", func(t *testing.T) {
+		jsonContent := `{
+			"rule": {
+				"span_filters": {
+					"platform_type": "TCE",
+					"span_list_type": "normal",
+					"filters": {
+						"query_and_or": "and",
+						"filter_fields": [
+							{
+								"field_name": "field1",
+								"field_type": "string",
+								"values": ["value1", "value2"],
+								"query_type": "eq",
+								"query_and_or": "and",
+								"sub_filter": {
+									"query_and_or": "or"
+								}
+							}
+						]
+					}
+				}
+			}
+		}`
+		result := parseSpanFilterFieldsFromTaskJSON(jsonContent)
+		assert.NotNil(t, result)
+		assert.Equal(t, "TCE", *result.PlatformType)
+		assert.Equal(t, "normal", *result.SpanListType)
+		assert.NotNil(t, result.Filters)
+		assert.Equal(t, "and", *result.Filters.QueryAndOr)
+		assert.Len(t, result.Filters.FilterFields, 1)
+	})
+
+	t.Run("只包含基本字段", func(t *testing.T) {
+		jsonContent := `{
+			"rule": {
+				"span_filters": {
+					"platform_type": "TCE",
+					"span_list_type": "normal"
+				}
+			}
+		}`
+		result := parseSpanFilterFieldsFromTaskJSON(jsonContent)
+		assert.NotNil(t, result)
+		assert.Equal(t, "TCE", *result.PlatformType)
+		assert.Equal(t, "normal", *result.SpanListType)
+		assert.Nil(t, result.Filters)
 	})
 }
 
@@ -3481,9 +4129,265 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		templates := []*entity.ExptTemplate{
 			{ExptSource: nil},
 			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Evaluation}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: ""}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "invalid"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "0"}},
 		}
 		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
 		assert.NoError(t, err)
+	})
+
+	t.Run("ListPipelineFlow失败，返回错误", func(t *testing.T) {
+		templates := []*entity.ExptTemplate{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+		}
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, errors.New("rpc error"))
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.Error(t, err)
+	})
+
+	t.Run("ListPipelineFlow返回nil或空，直接返回", func(t *testing.T) {
+		templates := []*entity.ExptTemplate{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+		}
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{}}, nil)
+		err = mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("pipeline ID为nil，跳过处理", func(t *testing.T) {
+		templates := []*entity.ExptTemplate{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+		}
+		pipeline := &entity.Pipeline{
+			ID: nil,
+		}
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+		assert.Nil(t, templates[0].ExptSource.SpanFilterFields)
+		assert.Nil(t, templates[0].ExptSource.Scheduler)
+	})
+
+	t.Run("成功处理，填充span filter和scheduler", func(t *testing.T) {
+		template1 := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		template2 := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template1, template2}
+
+		taskContent := `{
+			"rule": {
+				"span_filters": {
+					"span_list_type": "all",
+					"platform_type": "web",
+					"filters": {
+						"query_and_or": "and",
+						"filter_fields": [
+							{
+								"field_name": "user_id",
+								"field_type": "string",
+								"values": ["123"],
+								"query_type": "eq",
+								"query_and_or": "and"
+							}
+						]
+					}
+				}
+			}
+		}`
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {
+								Content: taskContent,
+							},
+						},
+					},
+				},
+			},
+			Scheduler: &entity.Scheduler{
+				Enabled:   gptr.Of(true),
+				Frequency: gptr.Of("daily"),
+				TriggerAt: gptr.Of("00:00"),
+				StartTime: gptr.Of(int64(1700000000000)),
+				EndTime:   gptr.Of(int64(1700000000000)),
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.NotNil(t, template1.ExptSource.SpanFilterFields)
+		assert.NotNil(t, template1.ExptSource.Scheduler)
+		assert.NotNil(t, template2.ExptSource.SpanFilterFields)
+		assert.NotNil(t, template2.ExptSource.Scheduler)
+		assert.Equal(t, "all", *template1.ExptSource.SpanFilterFields.SpanListType)
+		assert.Equal(t, "web", *template1.ExptSource.SpanFilterFields.PlatformType)
+		assert.True(t, *template1.ExptSource.Scheduler.Enabled)
+		assert.Equal(t, "daily", *template1.ExptSource.Scheduler.Frequency)
+	})
+
+	t.Run("pipeline没有data_reflow节点，不填充数据", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template}
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "other_type",
+					},
+				},
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.Nil(t, template.ExptSource.SpanFilterFields)
+		assert.Nil(t, template.ExptSource.Scheduler)
+	})
+
+	t.Run("pipeline没有scheduler，只填充span filter", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template}
+
+		taskContent := `{
+			"rule": {
+				"span_filters": {
+					"span_list_type": "all"
+				}
+			}
+		}`
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {
+								Content: taskContent,
+							},
+						},
+					},
+				},
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.NotNil(t, template.ExptSource.SpanFilterFields)
+		assert.Equal(t, "all", *template.ExptSource.SpanFilterFields.SpanListType)
+		assert.Nil(t, template.ExptSource.Scheduler)
+	})
+
+	t.Run("pipeline有data_reflow节点但无task ref，不填充数据", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template}
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{},
+					},
+				},
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.Nil(t, template.ExptSource.SpanFilterFields)
+		assert.Nil(t, template.ExptSource.Scheduler)
+	})
+
+	t.Run("pipeline有data_reflow节点但task内容为空，不填充数据", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template}
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {
+								Content: "",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.Nil(t, template.ExptSource.SpanFilterFields)
+		assert.Nil(t, template.ExptSource.Scheduler)
+	})
+
+	t.Run("pipeline有data_reflow节点但task内容为无效JSON，不填充数据", func(t *testing.T) {
+		template := &entity.ExptTemplate{
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+		}
+		templates := []*entity.ExptTemplate{template}
+
+		pipeline := &entity.Pipeline{
+			ID: gptr.Of(int64(1)),
+			Flow: &entity.FlowSchema{
+				Nodes: []*entity.FlowNode{
+					{
+						NodeTemplateType: "data_reflow",
+						Refs: map[string]*entity.FlowNodeRef{
+							"task": {
+								Content: "invalid json",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{pipeline}}, nil)
+		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
+		assert.NoError(t, err)
+
+		assert.Nil(t, template.ExptSource.SpanFilterFields)
+		assert.Nil(t, template.ExptSource.Scheduler)
 	})
 }
 
@@ -3530,5 +4434,214 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, templates, 0)
 		assert.Equal(t, int64(0), total)
+	})
+
+	t.Run("templateRepo.List失败，返回错误", func(t *testing.T) {
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{}, gptr.Of(int64(0)), nil)
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, 0, errors.New("list templates fail"))
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
+		assert.Error(t, err)
+		assert.Nil(t, templates)
+		assert.Equal(t, int64(0), total)
+	})
+
+	t.Run("enrichExptSourceFromPipeline失败，返回错误", func(t *testing.T) {
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{}, gptr.Of(int64(0)), nil)
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{
+			{
+				Meta: &entity.ExptTemplateMeta{
+					ID:          1,
+					WorkspaceID: spaceID,
+					ExptType:    entity.ExptType_Online,
+				},
+				ExptSource: &entity.ExptSource{
+					SourceType: entity.SourceType_AutoTask,
+					SourceID:   "1",
+				},
+			},
+		}, int64(1), nil)
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, errors.New("list pipeline flow fail"))
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
+		assert.Error(t, err)
+		assert.Nil(t, templates)
+		assert.Equal(t, int64(0), total)
+	})
+
+	t.Run("成功查询，包含task转换的模板和DB模板", func(t *testing.T) {
+		// Mock ListTasks 返回一个 task
+		task := &taskdomain.Task{
+			ID:   gptr.Of(int64(1)),
+			Name: "test task",
+			BaseInfo: &taskdomain.BaseInfo{
+				CreatedAt: gptr.Of(int64(1700000000000)),
+				UpdatedAt: gptr.Of(int64(1700000000000)),
+				CreatedBy: &taskdomain.UserInfo{
+					UserID: gptr.Of("u1"),
+				},
+				UpdatedBy: &taskdomain.UserInfo{
+					UserID: gptr.Of("u1"),
+				},
+			},
+			TaskConfig: &taskdomain.TaskConfig{
+				AutoEvaluateConfigs: []*taskdomain.AutoEvaluateConfig{
+					{
+						EvaluatorID:        1,
+						EvaluatorVersionID: 101,
+						FieldMappings: []*taskdomain.EvaluateFieldMapping{
+							{
+								TraceFieldKey: "test_field",
+								FieldSchema: &taskdomain.FieldSchema{
+									Key: gptr.Of("test_key"),
+									Name: gptr.Of("test_name"),
+								},
+							},
+						},
+					},
+				},
+			},
+			Rule: &taskdomain.Rule{
+				Sampler: &taskdomain.Sampler{
+					IsCycle: gptr.Of(true),
+					CycleTimeUnit: gptr.Of(taskdomain.TimeUnitDay),
+				},
+				EffectiveTime: &taskdomain.EffectiveTime{
+					StartAt: gptr.Of(int64(1700000000000)),
+					EndAt:   gptr.Of(int64(1700000000000)),
+				},
+			},
+		}
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task}, gptr.Of(int64(1)), nil)
+
+		// Mock templateRepo.List 返回一个 DB 模板
+		dbTemplate := &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ID:          2,
+				WorkspaceID: spaceID,
+				Name:        "test db template",
+				ExptType:    entity.ExptType_Online,
+			},
+			ExptSource: &entity.ExptSource{
+				SourceType: entity.SourceType_Evaluation,
+				SourceID:   "2",
+			},
+		}
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{dbTemplate}, int64(1), nil)
+
+		// Mock ListPipelineFlow 返回空结果
+		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{}}, nil)
+
+		// Mock mgetExptTupleByID 返回空结果
+		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+		mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 2)
+		assert.Equal(t, int64(2), total)
+	})
+
+	t.Run("内存分页测试，超出范围", func(t *testing.T) {
+		// Mock ListTasks 返回一个 task
+		task := &taskdomain.Task{
+			ID:   gptr.Of(int64(1)),
+			Name: "test task",
+		}
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task}, gptr.Of(int64(1)), nil)
+
+		// Mock templateRepo.List 返回空结果
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil)
+
+		// Mock mgetExptTupleByID 返回空结果
+		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+		mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+		// 页码超出范围
+		templates, total, err := mgr.ListOnline(ctx, int32(2), pageSize, spaceID, nil, nil, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 0)
+		assert.Equal(t, int64(1), total)
+	})
+
+	t.Run("带筛选条件的查询", func(t *testing.T) {
+		// Mock ListTasks 返回一个 task
+		task := &taskdomain.Task{
+			ID:   gptr.Of(int64(1)),
+			Name: "test task",
+			BaseInfo: &taskdomain.BaseInfo{
+				CreatedBy: &taskdomain.UserInfo{
+					UserID: gptr.Of("u1"),
+				},
+			},
+		}
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task}, gptr.Of(int64(1)), nil)
+
+		// Mock templateRepo.List 返回空结果
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil)
+
+		// Mock mgetExptTupleByID 返回空结果
+		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+		mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+		// 带创建者筛选
+		filter := &entity.ExptTemplateListFilter{
+			Includes: &entity.ExptTemplateFilterFields{
+				CreatedBy: []string{"u1"},
+			},
+		}
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, filter, nil, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 1)
+		assert.Equal(t, int64(1), total)
+
+		// 带不匹配的创建者筛选
+		filter.Includes.CreatedBy = []string{"u2"}
+		templates, total, err = mgr.ListOnline(ctx, page, pageSize, spaceID, filter, nil, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 0)
+		assert.Equal(t, int64(0), total)
+	})
+
+	t.Run("带排序的查询", func(t *testing.T) {
+		// Mock ListTasks 返回两个 task
+		task1 := &taskdomain.Task{
+			ID:   gptr.Of(int64(1)),
+			Name: "task 1",
+			BaseInfo: &taskdomain.BaseInfo{
+				CreatedAt: gptr.Of(int64(1700000000000)),
+			},
+		}
+		task2 := &taskdomain.Task{
+			ID:   gptr.Of(int64(2)),
+			Name: "task 2",
+			BaseInfo: &taskdomain.BaseInfo{
+				CreatedAt: gptr.Of(int64(1700000000001)),
+			},
+		}
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task1, task2}, gptr.Of(int64(2)), nil)
+
+		// Mock templateRepo.List 返回空结果
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil)
+
+		// Mock mgetExptTupleByID 返回空结果
+		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+		mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+		// 按创建时间升序排序
+		orderBy := &entity.OrderBy{
+			Field: gptr.Of(entity.OrderByCreatedAt),
+			IsAsc: gptr.Of(true),
+		}
+		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, []*entity.OrderBy{orderBy}, session)
+		assert.NoError(t, err)
+		assert.Len(t, templates, 2)
+		assert.Equal(t, int64(2), total)
 	})
 }
