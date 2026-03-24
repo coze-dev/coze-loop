@@ -283,7 +283,8 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
-			entity.WithEnv(param.CreateEvalTargetParam.Env))
+			entity.WithEnv(param.CreateEvalTargetParam.Env),
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -801,7 +802,8 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
-			entity.WithEnv(param.CreateEvalTargetParam.Env))
+			entity.WithEnv(param.CreateEvalTargetParam.Env),
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,

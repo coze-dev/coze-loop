@@ -457,6 +457,7 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 		BotPublishVersion:   param.BotPublishVersion,
 		Region:              param.Region,
 		Env:                 param.Env,
+		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))

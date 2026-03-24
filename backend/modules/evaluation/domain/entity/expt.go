@@ -137,10 +137,10 @@ type Experiment struct {
 	StartAt *time.Time
 	EndAt   *time.Time
 
-	ExptType     ExptType
-	MaxAliveTime int64
-	SourceType   SourceType
-	SourceID     string
+	ExptType          ExptType
+	MaxAliveTime      int64
+	SourceType        SourceType
+	SourceID          string
 	TrialRunItemCount int64
 
 	Stats           *ExptStats
@@ -365,14 +365,15 @@ type VersionedEvalSetID struct {
 }
 
 type CreateEvalTargetParam struct {
-	SourceTargetID      *string
-	SourceTargetVersion *string
-	EvalTargetType      *EvalTargetType
-	BotInfoType         *CozeBotInfoType
-	BotPublishVersion   *string
-	CustomEvalTarget    *CustomEvalTarget // 搜索对象返回的信息
-	Region              *Region
-	Env                 *string
+	SourceTargetID       *string
+	SourceTargetVersion  *string
+	EvalTargetType       *EvalTargetType
+	BotInfoType          *CozeBotInfoType
+	BotPublishVersion    *string
+	CustomEvalTarget     *CustomEvalTarget // 搜索对象返回的信息
+	Region               *Region
+	Env                  *string
+	OperationInstruction *string
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {
