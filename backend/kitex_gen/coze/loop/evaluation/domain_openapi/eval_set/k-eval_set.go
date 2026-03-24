@@ -3431,7 +3431,7 @@ func (p *MultiModalStoreOption) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -3494,13 +3494,11 @@ func (p *MultiModalStoreOption) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *MultiModalStoreStrategy
-	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-
-		tmp := MultiModalStoreStrategy(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.MultiModalStoreStrategy = _field
 	return offset, nil
@@ -3563,8 +3561,8 @@ func (p *MultiModalStoreOption) BLength() int {
 func (p *MultiModalStoreOption) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetMultiModalStoreStrategy() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 1)
-		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.MultiModalStoreStrategy))
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.MultiModalStoreStrategy)
 	}
 	return offset
 }
@@ -3591,7 +3589,7 @@ func (p *MultiModalStoreOption) field1Length() int {
 	l := 0
 	if p.IsSetMultiModalStoreStrategy() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I32Length()
+		l += thrift.Binary.StringLengthNocopy(*p.MultiModalStoreStrategy)
 	}
 	return l
 }

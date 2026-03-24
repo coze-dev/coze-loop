@@ -3,8 +3,6 @@
 package eval_set
 
 import (
-	"database/sql"
-	"database/sql/driver"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
@@ -35,49 +33,11 @@ const (
 	SchemaKeyBool = "bool"
 
 	SchemaKeyTrajectory = "trajectory"
+
+	MultiModalStoreStrategyPassthrough = "passthrough"
+
+	MultiModalStoreStrategyStore = "store"
 )
-
-type MultiModalStoreStrategy int64
-
-const (
-	MultiModalStoreStrategy_Store       MultiModalStoreStrategy = 1
-	MultiModalStoreStrategy_Passthrough MultiModalStoreStrategy = 2
-)
-
-func (p MultiModalStoreStrategy) String() string {
-	switch p {
-	case MultiModalStoreStrategy_Store:
-		return "Store"
-	case MultiModalStoreStrategy_Passthrough:
-		return "Passthrough"
-	}
-	return "<UNSET>"
-}
-
-func MultiModalStoreStrategyFromString(s string) (MultiModalStoreStrategy, error) {
-	switch s {
-	case "Store":
-		return MultiModalStoreStrategy_Store, nil
-	case "Passthrough":
-		return MultiModalStoreStrategy_Passthrough, nil
-	}
-	return MultiModalStoreStrategy(0), fmt.Errorf("not a valid MultiModalStoreStrategy string")
-}
-
-func MultiModalStoreStrategyPtr(v MultiModalStoreStrategy) *MultiModalStoreStrategy { return &v }
-func (p *MultiModalStoreStrategy) Scan(value interface{}) (err error) {
-	var result sql.NullInt64
-	err = result.Scan(value)
-	*p = MultiModalStoreStrategy(result.Int64)
-	return
-}
-
-func (p *MultiModalStoreStrategy) Value() (driver.Value, error) {
-	if p == nil {
-		return nil, nil
-	}
-	return int64(*p), nil
-}
 
 // 评测集状态
 type EvaluationSetStatus = string
@@ -85,6 +45,8 @@ type EvaluationSetStatus = string
 type FieldDisplayFormat = string
 
 type SchemaKey = string
+
+type MultiModalStoreStrategy = string
 
 // 字段Schema
 type FieldSchema struct {
@@ -4906,7 +4868,7 @@ func (p *DatasetItemOutput) Field4DeepEqual(src *bool) bool {
 }
 
 type MultiModalStoreOption struct {
-	MultiModalStoreStrategy *MultiModalStoreStrategy `thrift:"multiModalStoreStrategy,1,optional" frugal:"1,optional,MultiModalStoreStrategy" form:"multiModalStoreStrategy" json:"multiModalStoreStrategy,omitempty" query:"multiModalStoreStrategy"`
+	MultiModalStoreStrategy *MultiModalStoreStrategy `thrift:"multiModalStoreStrategy,1,optional" frugal:"1,optional,string" form:"multiModalStoreStrategy" json:"multiModalStoreStrategy,omitempty" query:"multiModalStoreStrategy"`
 	// 未指定时默认填充为 true
 	SkipOnDownloadFailed *bool `thrift:"skipOnDownloadFailed,2,optional" frugal:"2,optional,bool" form:"skipOnDownloadFailed" json:"skipOnDownloadFailed,omitempty" query:"skipOnDownloadFailed"`
 	// 未指定时默认填充为 true
@@ -5002,7 +4964,7 @@ func (p *MultiModalStoreOption) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.I32 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -5057,11 +5019,10 @@ ReadStructEndError:
 func (p *MultiModalStoreOption) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *MultiModalStoreStrategy
-	if v, err := iprot.ReadI32(); err != nil {
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
-		tmp := MultiModalStoreStrategy(v)
-		_field = &tmp
+		_field = &v
 	}
 	p.MultiModalStoreStrategy = _field
 	return nil
@@ -5127,10 +5088,10 @@ WriteStructEndError:
 
 func (p *MultiModalStoreOption) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetMultiModalStoreStrategy() {
-		if err = oprot.WriteFieldBegin("multiModalStoreStrategy", thrift.I32, 1); err != nil {
+		if err = oprot.WriteFieldBegin("multiModalStoreStrategy", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI32(int32(*p.MultiModalStoreStrategy)); err != nil {
+		if err := oprot.WriteString(*p.MultiModalStoreStrategy); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -5213,7 +5174,7 @@ func (p *MultiModalStoreOption) Field1DeepEqual(src *MultiModalStoreStrategy) bo
 	} else if p.MultiModalStoreStrategy == nil || src == nil {
 		return false
 	}
-	if *p.MultiModalStoreStrategy != *src {
+	if strings.Compare(*p.MultiModalStoreStrategy, *src) != 0 {
 		return false
 	}
 	return true

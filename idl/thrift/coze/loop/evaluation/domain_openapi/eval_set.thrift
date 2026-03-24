@@ -114,10 +114,9 @@ struct DatasetItemOutput {
     4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 }
 
-enum MultiModalStoreStrategy {
-    Store = 1
-    Passthrough = 2
-}
+typedef string MultiModalStoreStrategy(ts.enum="true")
+const MultiModalStoreStrategy MultiModalStoreStrategy_Passthrough = "passthrough" // 保留用户的外链
+const MultiModalStoreStrategy MultiModalStoreStrategy_Store = "store"             // 转存用户的 url 到平台内
 
 struct MultiModalStoreOption {
     1: optional MultiModalStoreStrategy multiModalStoreStrategy
