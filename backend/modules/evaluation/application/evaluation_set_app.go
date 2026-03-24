@@ -209,6 +209,24 @@ func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context
 	return resp, nil
 }
 
+func (e *EvaluationSetApplicationImpl) ValidateMultiPartData(ctx context.Context, req *eval_set.ValidateMultiPartDataRequest) (r *eval_set.ValidateMultiPartDataResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.SpaceID, 10),
+		SpaceID:       req.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+	// notice: 此处先保留一个空实现，供前端获取接口定义。实际还是走 ml flow 调用
+	return &eval_set.ValidateMultiPartDataResponse{
+		BaseResp: base.NewBaseResp(),
+	}, nil
+}
+
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
 	// 参数校验
 	if req == nil {

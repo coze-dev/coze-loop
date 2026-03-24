@@ -255,6 +255,82 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	}
 }
 
+func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+
+	app := &EvaluationSetApplicationImpl{
+		auth:                 mockAuth,
+		evaluationSetService: mockSvc,
+	}
+
+	spaceID := int64(2002)
+
+	baseReq := func() *eval_set.ValidateMultiPartDataRequest {
+		return &eval_set.ValidateMultiPartDataRequest{
+			SpaceID:     spaceID,
+			PreviewData: []string{"https://example.com/a.png"},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *eval_set.ValidateMultiPartDataRequest
+		setup   func()
+		wantErr int32
+		check   func(t *testing.T, resp *eval_set.ValidateMultiPartDataResponse)
+	}{
+		{"nil req", nil, func() {}, errno.CommonInvalidParamCode, nil},
+		{
+			name: "鉴权失败",
+			req:  baseReq(),
+			setup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "成功",
+			req:  baseReq(),
+			setup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+			},
+			check: func(t *testing.T, resp *eval_set.ValidateMultiPartDataResponse) {
+				if assert.NotNil(t, resp) {
+					assert.NotNil(t, resp.BaseResp)
+					assert.Nil(t, resp.AttachmentUrlsCheckDetail)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
+			}
+			resp, err := app.ValidateMultiPartData(context.Background(), tc.req)
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+		})
+	}
+}
+
 func TestEvaluationSetApplicationImpl_GetEvaluationSetItemField(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
