@@ -22,6 +22,11 @@ var (
 )
 
 func (p *BatchGetPromptByPromptKeyRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -42,30 +47,18 @@ func (p *BatchGetPromptByPromptKeyResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *PromptResultData) IsValid() error {
+	return nil
+}
 func (p *ExecuteRequest) IsValid() error {
 	if p.PromptIdentifier != nil {
 		if err := p.PromptIdentifier.IsValid(); err != nil {
 			return fmt.Errorf("field PromptIdentifier not valid, %w", err)
 		}
 	}
-	if p.CustomToolCallConfig != nil {
-		if err := p.CustomToolCallConfig.IsValid(); err != nil {
-			return fmt.Errorf("field CustomToolCallConfig not valid, %w", err)
-		}
-	}
-	if p.CustomModelConfig != nil {
-		if err := p.CustomModelConfig.IsValid(); err != nil {
-			return fmt.Errorf("field CustomModelConfig not valid, %w", err)
-		}
-	}
-	if p.ResponseAPIConfig != nil {
-		if err := p.ResponseAPIConfig.IsValid(); err != nil {
-			return fmt.Errorf("field ResponseAPIConfig not valid, %w", err)
-		}
-	}
-	if p.CustomToolConfig != nil {
-		if err := p.CustomToolConfig.IsValid(); err != nil {
-			return fmt.Errorf("field CustomToolConfig not valid, %w", err)
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -88,6 +81,19 @@ func (p *ExecuteResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ExecuteData) IsValid() error {
+	if p.Message != nil {
+		if err := p.Message.IsValid(); err != nil {
+			return fmt.Errorf("field Message not valid, %w", err)
+		}
+	}
+	if p.Usage != nil {
+		if err := p.Usage.IsValid(); err != nil {
+			return fmt.Errorf("field Usage not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ExecuteStreamingResponse) IsValid() error {
 	if p.Data != nil {
 		if err := p.Data.IsValid(); err != nil {
@@ -99,6 +105,123 @@ func (p *ExecuteStreamingResponse) IsValid() error {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *ExecuteStreamingData) IsValid() error {
+	if p.Message != nil {
+		if err := p.Message.IsValid(); err != nil {
+			return fmt.Errorf("field Message not valid, %w", err)
+		}
+	}
+	if p.Usage != nil {
+		if err := p.Usage.IsValid(); err != nil {
+			return fmt.Errorf("field Usage not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptQuery) IsValid() error {
+	return nil
+}
+func (p *PromptResult_) IsValid() error {
+	if p.Query != nil {
+		if err := p.Query.IsValid(); err != nil {
+			return fmt.Errorf("field Query not valid, %w", err)
+		}
+	}
+	if p.Prompt != nil {
+		if err := p.Prompt.IsValid(); err != nil {
+			return fmt.Errorf("field Prompt not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Prompt) IsValid() error {
+	if p.PromptTemplate != nil {
+		if err := p.PromptTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field PromptTemplate not valid, %w", err)
+		}
+	}
+	if p.ToolCallConfig != nil {
+		if err := p.ToolCallConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ToolCallConfig not valid, %w", err)
+		}
+	}
+	if p.LlmConfig != nil {
+		if err := p.LlmConfig.IsValid(); err != nil {
+			return fmt.Errorf("field LlmConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptTemplate) IsValid() error {
+	return nil
+}
+func (p *ToolCallConfig) IsValid() error {
+	if p.ToolChoiceSpecification != nil {
+		if err := p.ToolChoiceSpecification.IsValid(); err != nil {
+			return fmt.Errorf("field ToolChoiceSpecification not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ToolChoiceSpecification) IsValid() error {
+	return nil
+}
+func (p *Message) IsValid() error {
+	return nil
+}
+func (p *ContentPart) IsValid() error {
+	if p.Config != nil {
+		if err := p.Config.IsValid(); err != nil {
+			return fmt.Errorf("field Config not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MediaConfig) IsValid() error {
+	if p.Fps != nil {
+		if *p.Fps < float64(0.2) {
+			return fmt.Errorf("field Fps ge rule failed, current value: %v", *p.Fps)
+		}
+		if *p.Fps > float64(5) {
+			return fmt.Errorf("field Fps le rule failed, current value: %v", *p.Fps)
+		}
+	}
+	return nil
+}
+func (p *VariableDef) IsValid() error {
+	return nil
+}
+func (p *Tool) IsValid() error {
+	if p.Function != nil {
+		if err := p.Function.IsValid(); err != nil {
+			return fmt.Errorf("field Function not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Function) IsValid() error {
+	return nil
+}
+func (p *ToolCall) IsValid() error {
+	if p.FunctionCall != nil {
+		if err := p.FunctionCall.IsValid(); err != nil {
+			return fmt.Errorf("field FunctionCall not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FunctionCall) IsValid() error {
+	return nil
+}
+func (p *LLMConfig) IsValid() error {
+	return nil
+}
+func (p *VariableVal) IsValid() error {
+	return nil
+}
+func (p *TokenUsage) IsValid() error {
 	return nil
 }
 func (p *ListPromptBasicRequest) IsValid() error {
@@ -113,6 +236,11 @@ func (p *ListPromptBasicRequest) IsValid() error {
 		}
 		if *p.PageSize > int32(200) {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
 		}
 	}
 	if p.Base != nil {
@@ -133,5 +261,11 @@ func (p *ListPromptBasicResponse) IsValid() error {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *PromptBasic) IsValid() error {
+	return nil
+}
+func (p *ListPromptBasicData) IsValid() error {
 	return nil
 }

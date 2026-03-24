@@ -10,6 +10,8 @@ import (
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -441,6 +443,18 @@ func TestOpenAPIEvaluatorDTO2DO(t *testing.T) {
 	t.Run("nil input", func(t *testing.T) {
 		do, err := OpenAPIEvaluatorDTO2DO(nil)
 		assert.NoError(t, err)
+		assert.Nil(t, do)
+	})
+
+	t.Run("agent evaluator rejected", func(t *testing.T) {
+		dto := &openapiEvaluator.Evaluator{
+			EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypeAgent),
+		}
+		do, err := OpenAPIEvaluatorDTO2DO(dto)
+		assert.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		assert.EqualValues(t, errno.CommonInvalidParamCode, statusErr.Code())
 		assert.Nil(t, do)
 	})
 

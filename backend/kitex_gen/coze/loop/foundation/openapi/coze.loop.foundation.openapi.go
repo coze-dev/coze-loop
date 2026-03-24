@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/extra"
 	"strings"
 )
 
@@ -15,8 +16,9 @@ type UploadLoopFileRequest struct {
 	// file type
 	ContentType string `thrift:"content_type,1,required" frugal:"1,required,string" header:"Content-Type,required" json:"content_type,required"`
 	// binary data
-	Body []byte     `thrift:"body,2,required" frugal:"2,required,binary" json:"body,required" raw_body:",required"`
-	Base *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Body  []byte       `thrift:"body,2,required" frugal:"2,required,binary" json:"body,required" raw_body:",required"`
+	Extra *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base  *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUploadLoopFileRequest() *UploadLoopFileRequest {
@@ -40,6 +42,18 @@ func (p *UploadLoopFileRequest) GetBody() (v []byte) {
 	return
 }
 
+var UploadLoopFileRequest_Extra_DEFAULT *extra.Extra
+
+func (p *UploadLoopFileRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return UploadLoopFileRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var UploadLoopFileRequest_Base_DEFAULT *base.Base
 
 func (p *UploadLoopFileRequest) GetBase() (v *base.Base) {
@@ -57,6 +71,9 @@ func (p *UploadLoopFileRequest) SetContentType(val string) {
 func (p *UploadLoopFileRequest) SetBody(val []byte) {
 	p.Body = val
 }
+func (p *UploadLoopFileRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *UploadLoopFileRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -64,7 +81,12 @@ func (p *UploadLoopFileRequest) SetBase(val *base.Base) {
 var fieldIDToName_UploadLoopFileRequest = map[int16]string{
 	1:   "content_type",
 	2:   "body",
+	254: "extra",
 	255: "Base",
+}
+
+func (p *UploadLoopFileRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *UploadLoopFileRequest) IsSetBase() bool {
@@ -106,6 +128,14 @@ func (p *UploadLoopFileRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetBody = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -179,6 +209,14 @@ func (p *UploadLoopFileRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.Body = _field
 	return nil
 }
+func (p *UploadLoopFileRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *UploadLoopFileRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -200,6 +238,10 @@ func (p *UploadLoopFileRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -256,6 +298,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *UploadLoopFileRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *UploadLoopFileRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -295,6 +355,9 @@ func (p *UploadLoopFileRequest) DeepEqual(ano *UploadLoopFileRequest) bool {
 	if !p.Field2DeepEqual(ano.Body) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -311,6 +374,13 @@ func (p *UploadLoopFileRequest) Field1DeepEqual(src string) bool {
 func (p *UploadLoopFileRequest) Field2DeepEqual(src []byte) bool {
 
 	if bytes.Compare(p.Body, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UploadLoopFileRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true

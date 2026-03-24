@@ -147,6 +147,99 @@ func (e *EvalOpenAPIApplication) CreateEvaluationSetOApi(ctx context.Context, re
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluationSetID(), kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	set, err := e.evaluationSetService.GetEvaluationSet(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluationSetID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if set == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluation set not found"))
+	}
+	var ownerID *string
+	if set.BaseInfo != nil && set.BaseInfo.CreatedBy != nil {
+		ownerID = set.BaseInfo.CreatedBy.UserID
+	}
+	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+		ObjectID:        strconv.FormatInt(set.ID, 10),
+		SpaceID:         req.GetWorkspaceID(),
+		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.AddItem), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationSet)}},
+		OwnerID:         ownerID,
+		ResourceSpaceID: set.SpaceID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// domain调用
+	jobID, err := e.evaluationSetService.ImportEvaluationSet(ctx, &entity.ImportEvaluationSetParam{
+		WorkspaceID:     req.GetWorkspaceID(),
+		EvaluationSetID: req.GetEvaluationSetID(),
+		File:            evaluation_set.DatasetIOFileDTO2DO(req.File),
+		FieldMappings:   evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
+		Option:          evaluation_set.OpenAPIDatasetIOJobOptionDTO2DO(req.Option),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.ImportEvaluationSetOApiResponse{
+		Data: &openapi.ImportEvaluationSetOpenAPIData{
+			JobID: gptr.Of(jobID),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("readLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	// domain调用
+	job, err := e.evaluationSetService.GetEvaluationSetIOJob(ctx, req.WorkspaceID, req.GetJobID())
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found"))
+	}
+
+	// Verify workspace ID matches
+	if job.SpaceID != req.GetWorkspaceID() {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("job not found in workspace"))
+	}
+
+	return &openapi.GetEvaluationSetIOJobOApiResponse{
+		Data: &openapi.GetEvaluationSetIOJobOpenAPIData{
+			Job: evaluation_set.OpenAPIDatasetIOJobDO2DTO(job),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) GetEvaluationSetOApi(ctx context.Context, req *openapi.GetEvaluationSetOApiRequest) (r *openapi.GetEvaluationSetOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -857,21 +950,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		if len(version) == 0 {
 			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator not found"))
 		}
-		var versionID int64
-		switch version[0].EvaluatorType {
-		case entity.EvaluatorTypePrompt:
-			if version[0].PromptEvaluatorVersion != nil {
-				versionID = version[0].PromptEvaluatorVersion.ID
-			}
-		case entity.EvaluatorTypeCode:
-			if version[0].CodeEvaluatorVersion != nil {
-				versionID = version[0].CodeEvaluatorVersion.ID
-			}
-		case entity.EvaluatorTypeCustomRPC:
-			if version[0].CustomRPCEvaluatorVersion != nil {
-				versionID = version[0].CustomRPCEvaluatorVersion.ID
-			}
-		}
+		versionID := version[0].GetEvaluatorVersionID()
 		evaluatorVersionIDs = append(evaluatorVersionIDs, versionID)
 		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
@@ -1448,7 +1527,8 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	}
 
 	// 校验评估器版本是否存在且有权限
-	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, gptr.Of(req.GetWorkspaceID()), req.GetEvaluatorVersionID(), false, false)
+	// 预置评估器（Builtin）允许跨 workspace 执行：查询时不传 spaceID
+	evaluator, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1456,19 +1536,25 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
 	}
 
-	var ownerID *string
-	if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
-		ownerID = evaluator.BaseInfo.CreatedBy.UserID
-	}
-	err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
-		ObjectID:        strconv.FormatInt(evaluator.ID, 10),
-		SpaceID:         req.GetWorkspaceID(),
-		ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
-		OwnerID:         ownerID,
-		ResourceSpaceID: evaluator.SpaceID,
-	})
-	if err != nil {
-		return nil, err
+	if !evaluator.Builtin {
+		if evaluator.SpaceID != req.GetWorkspaceID() {
+			return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("evaluator version not found"))
+		}
+
+		var ownerID *string
+		if evaluator.BaseInfo != nil && evaluator.BaseInfo.CreatedBy != nil {
+			ownerID = evaluator.BaseInfo.CreatedBy.UserID
+		}
+		err = e.auth.AuthorizationWithoutSPI(ctx, &rpc.AuthorizationWithoutSPIParam{
+			ObjectID:        strconv.FormatInt(evaluator.ID, 10),
+			SpaceID:         req.GetWorkspaceID(),
+			ActionObjects:   []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+			OwnerID:         ownerID,
+			ResourceSpaceID: evaluator.SpaceID,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
@@ -1496,6 +1582,73 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 	}
 
 	return &openapi.RunEvaluatorOApiResponse{
+		Data: &openapi.RunEvaluatorOpenAPIData{
+			Record: evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
+		},
+	}, nil
+}
+
+func (e *EvalOpenAPIApplication) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	var evaluatorVersionID int64
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluatorVersionID, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	hasID := req.IsSetBuiltinEvaluatorID()
+	hasName := req.IsSetBuiltinEvaluatorName()
+	if !hasID && !hasName {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id or builtin_evaluator_name is required"))
+	}
+
+	builtinEvaluatorID := req.GetBuiltinEvaluatorID()
+	builtinEvaluatorName := req.GetBuiltinEvaluatorName()
+	if hasID && builtinEvaluatorID == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id is invalid"))
+	}
+	if hasName && builtinEvaluatorName == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_name is invalid"))
+	}
+
+	evaluatorVersionID, err = e.evaluatorService.ResolveBuiltinEvaluatorVisibleVersionID(ctx, builtinEvaluatorID, builtinEvaluatorName)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorVersionID == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("builtin evaluator not found"))
+	}
+
+	inputData := evaluator_convertor.OpenAPIEvaluatorInputDataDTO2DO(req.InputData)
+	runConf := evaluator_convertor.OpenAPIEvaluatorRunConfigDTO2DO(req.EvaluatorRunConf)
+	if runConf != nil && runConf.EvaluatorRuntimeParam != nil && runConf.EvaluatorRuntimeParam.JSONValue != nil && len(*runConf.EvaluatorRuntimeParam.JSONValue) > 0 {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = *runConf.EvaluatorRuntimeParam.JSONValue
+	}
+
+	record, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+		SpaceID:            req.GetWorkspaceID(),
+		EvaluatorVersionID: evaluatorVersionID,
+		InputData:          inputData,
+		EvaluatorRunConf:   runConf,
+		Ext:                req.Ext,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.RunBuiltinEvaluatorOApiResponse{
 		Data: &openapi.RunEvaluatorOpenAPIData{
 			Record: evaluator_convertor.OpenAPIEvaluatorRecordDO2DTO(record),
 		},
