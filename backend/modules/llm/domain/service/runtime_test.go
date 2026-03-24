@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"testing"
@@ -545,6 +546,426 @@ func TestRuntimeImpl_Stream(t *testing.T) {
 				content += msg.Content
 			}
 			assert.Equal(t, tt.wantFinalContent, content)
+		})
+	}
+}
+
+func TestRuntimeImpl_buildLLM(t *testing.T) {
+	model := &entity.Model{
+		ID:          0,
+		WorkspaceID: 0,
+		Name:        "test model",
+		Frame:       entity.FrameEino,
+		Protocol:    entity.ProtocolArk,
+	}
+	var opts []entity.Option
+
+	type fields struct {
+		llmFact     llmfactory.IFactory
+		idGen       idgen.IIDGenerator
+		runtimeRepo repo.IRuntimeRepo
+		runtimeCfg  conf.IConfigRuntime
+	}
+	type args struct {
+		ctx   context.Context
+		model *entity.Model
+		opts  []entity.Option
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				llmMock := llmifacemocks.NewMockILLM(ctrl)
+				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any(), gomock.Any()).Return(llmMock, nil)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: model,
+				opts:  opts,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "create llm failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				factMock.EXPECT().CreateLLM(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("create llm failed"))
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: model,
+				opts:  opts,
+			},
+			wantErr: errorx.NewByCode(llm_errorx.BuildLLMFailedCode),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ttFields := tt.fieldsGetter(ctrl)
+			r := &RuntimeImpl{
+				llmFact:     ttFields.llmFact,
+				idGen:       ttFields.idGen,
+				runtimeRepo: ttFields.runtimeRepo,
+				runtimeCfg:  ttFields.runtimeCfg,
+			}
+			got, err := r.buildLLM(tt.args.ctx, tt.args.model, tt.args.opts...)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+			if err == nil {
+				assert.NotNil(t, got)
+			}
+		})
+	}
+}
+
+func TestRuntimeImpl_CreateModelRequestRecord(t *testing.T) {
+	record := &entity.ModelRequestRecord{
+		ID:                  1,
+		SpaceID:             1,
+		UserID:              "test-user",
+		UsageScene:          entity.ScenarioEvaluator,
+		UsageSceneEntityID:  "test-entity",
+		Frame:               entity.FrameEino,
+		Protocol:            entity.ProtocolArk,
+		ModelIdentification: "test-model",
+		ModelID:             "test-model-id",
+		ModelName:           "Test Model",
+		InputToken:          100,
+		OutputToken:         50,
+		Logid:               "test-logid",
+	}
+
+	type fields struct {
+		llmFact     llmfactory.IFactory
+		idGen       idgen.IIDGenerator
+		runtimeRepo repo.IRuntimeRepo
+		runtimeCfg  conf.IConfigRuntime
+	}
+	type args struct {
+		ctx    context.Context
+		record *entity.ModelRequestRecord
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				repoMock.EXPECT().CreateModelRequestRecord(gomock.Any(), gomock.Any()).Return(nil)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:    context.Background(),
+				record: record,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "create record failed",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				repoMock.EXPECT().CreateModelRequestRecord(gomock.Any(), gomock.Any()).Return(fmt.Errorf("create record failed"))
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:    context.Background(),
+				record: record,
+			},
+			wantErr: fmt.Errorf("create record failed"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ttFields := tt.fieldsGetter(ctrl)
+			r := &RuntimeImpl{
+				llmFact:     ttFields.llmFact,
+				idGen:       ttFields.idGen,
+				runtimeRepo: ttFields.runtimeRepo,
+				runtimeCfg:  ttFields.runtimeCfg,
+			}
+			err := r.CreateModelRequestRecord(tt.args.ctx, tt.args.record)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
+		})
+	}
+}
+
+func TestRuntimeImpl_ValidModelAndRequest(t *testing.T) {
+	// 基础模型
+	baseModel := &entity.Model{
+		ID:          0,
+		WorkspaceID: 0,
+		Name:        "base model",
+		Frame:       entity.FrameEino,
+		Protocol:    entity.ProtocolArk,
+	}
+
+	// 支持多模态的模型
+	multimodalModel := &entity.Model{
+		ID:          0,
+		WorkspaceID: 0,
+		Name:        "multimodal model",
+		Ability: &entity.Ability{
+			MultiModal: true,
+			AbilityMultiModal: &entity.AbilityMultiModal{
+				Image: true,
+				AbilityImage: &entity.AbilityImage{
+					URLEnabled:    true,
+					BinaryEnabled: true,
+					MaxImageSize:  20,
+					MaxImageCount: 5,
+				},
+			},
+		},
+		Frame:    entity.FrameEino,
+		Protocol: entity.ProtocolArk,
+	}
+
+	// 支持函数调用的模型
+	functionCallModel := &entity.Model{
+		ID:          0,
+		WorkspaceID: 0,
+		Name:        "function call model",
+		Ability: &entity.Ability{
+			FunctionCall: true,
+		},
+		Frame:    entity.FrameEino,
+		Protocol: entity.ProtocolArk,
+	}
+
+	// 文本消息
+	textMessage := []*entity.Message{
+		{
+			Role:    entity.RoleUser,
+			Content: "test message",
+		},
+	}
+
+	// 多模态消息（图片URL）
+	imageURLMessage := []*entity.Message{
+		{
+			Role: entity.RoleUser,
+			MultiModalContent: []*entity.ChatMessagePart{
+				{
+					Type: entity.ChatMessagePartTypeText,
+					Text: "test",
+				},
+				{
+					Type: entity.ChatMessagePartTypeImageURL,
+					ImageURL: &entity.ChatMessageImageURL{
+						URL: "https://example.com/image.jpg",
+					},
+				},
+			},
+		},
+	}
+
+	// 工具调用选项
+	toolCallOpts := []entity.Option{
+		entity.WithTools([]*entity.ToolInfo{
+			{
+				Name:        "get_weather",
+				Desc:        "Get weather information",
+				ToolDefType: entity.ToolDefTypeOpenAPIV3,
+				Def:         "{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}},\"required\":[\"location\"]}",
+			},
+		}),
+	}
+
+	type fields struct {
+		llmFact     llmfactory.IFactory
+		idGen       idgen.IIDGenerator
+		runtimeRepo repo.IRuntimeRepo
+		runtimeCfg  conf.IConfigRuntime
+	}
+	type args struct {
+		ctx   context.Context
+		model *entity.Model
+		input []*entity.Message
+		opts  []entity.Option
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name: "success - text only",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: baseModel,
+				input: textMessage,
+				opts:  nil,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "success - multimodal with supported model",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: multimodalModel,
+				input: imageURLMessage,
+				opts:  nil,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "success - function call with supported model",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: functionCallModel,
+				input: textMessage,
+				opts:  toolCallOpts,
+			},
+			wantErr: nil,
+		},
+		{
+			name: "error - multimodal content but model not support",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: baseModel,
+				input: imageURLMessage,
+				opts:  nil,
+			},
+			wantErr: errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode),
+		},
+		{
+			name: "error - tool call but model not support",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				factMock := llmfactorymocks.NewMockIFactory(ctrl)
+				repoMock := llmrepomocks.NewMockIRuntimeRepo(ctrl)
+				idgenMock := idgenmocks.NewMockIIDGenerator(ctrl)
+				cfgMock := llmconfmocks.NewMockIConfigRuntime(ctrl)
+				return fields{
+					llmFact:     factMock,
+					idGen:       idgenMock,
+					runtimeRepo: repoMock,
+					runtimeCfg:  cfgMock,
+				}
+			},
+			args: args{
+				ctx:   context.Background(),
+				model: baseModel,
+				input: textMessage,
+				opts:  toolCallOpts,
+			},
+			wantErr: errorx.NewByCode(llm_errorx.RequestNotCompatibleWithModelAbilityCode),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ttFields := tt.fieldsGetter(ctrl)
+			r := &RuntimeImpl{
+				llmFact:     ttFields.llmFact,
+				idGen:       ttFields.idGen,
+				runtimeRepo: ttFields.runtimeRepo,
+				runtimeCfg:  ttFields.runtimeCfg,
+			}
+			err := r.ValidModelAndRequest(tt.args.ctx, tt.args.model, tt.args.input, tt.args.opts...)
+			unittest.AssertErrorEqual(t, tt.wantErr, err)
 		})
 	}
 }
