@@ -311,3 +311,96 @@ func TestEmitPaasMetric(t *testing.T) {
 	assert.Equal(t, maxTokenSuffix, metric.values[5].GetSuffix())
 	assert.Equal(t, int64(4096), *metric.values[5].GetValue())
 }
+
+func TestEmitPaasMetric_NoMetricsCtx(t *testing.T) {
+	assert.NotPanics(t, func() {
+		EmitPaasMetric(context.Background())
+	})
+}
+
+func TestEmitPaasMetric_NilPromptPaasMetrics(t *testing.T) {
+	resetPromptPaasMetrics()
+	t.Cleanup(resetPromptPaasMetrics)
+
+	ctx := NewPaasMetricsCtx(context.Background())
+	WithPaasSpace(ctx, 1)
+	WithPaasStatus(ctx, nil)
+
+	assert.NotPanics(t, func() {
+		EmitPaasMetric(ctx)
+	})
+}
+
+func TestEmitPaasMetric_NegativeFirstTokenLatency(t *testing.T) {
+	resetPromptPaasMetrics()
+	t.Cleanup(resetPromptPaasMetrics)
+
+	metric := &captureMetric{}
+	promptPaasMetrics = &PromptPaasMetrics{metric: metric}
+
+	ctx := NewPaasMetricsCtx(context.Background())
+	WithPaasStatus(ctx, nil)
+
+	EmitPaasMetric(ctx)
+
+	assert.NotNil(t, metric.values)
+	assert.Equal(t, firstTokenLatencySuffix, metric.values[2].GetSuffix())
+	assert.Equal(t, int64(0), *metric.values[2].GetValue())
+}
+
+func TestPromptPaasMetrics_Emit_NilReceiver(t *testing.T) {
+	var m *PromptPaasMetrics
+	assert.NotPanics(t, func() {
+		m.Emit([]inframetrics.T{{Name: "k", Value: "v"}}, inframetrics.Counter(1))
+	})
+}
+
+func TestPromptPaasMetrics_Emit_NilMetric(t *testing.T) {
+	m := &PromptPaasMetrics{metric: nil}
+	assert.NotPanics(t, func() {
+		m.Emit([]inframetrics.T{{Name: "k", Value: "v"}}, inframetrics.Counter(1))
+	})
+}
+
+func TestWithPaasStatus_RegularError(t *testing.T) {
+	ctx := NewPaasMetricsCtx(context.Background())
+	WithPaasStatus(ctx, errors.New("plain error"))
+
+	mc := ctx.Value(paasMetricsCtxKey{}).(*paasMetricsCtx)
+	assert.Equal(t, "error", mc.tagMap[paasStatusTag])
+	assert.Empty(t, mc.tagMap[paasStatusCodeTag])
+	assert.Empty(t, mc.tagMap[paasIsErrAffectStabilityTag])
+}
+
+func TestWithPaasStatus_NoMetricsCtx(t *testing.T) {
+	assert.NotPanics(t, func() {
+		WithPaasStatus(context.Background(), errors.New("err"))
+	})
+}
+
+func TestGetIsErrAffectStability_AffectStabilityIsOne(t *testing.T) {
+	ctx := NewPaasMetricsCtx(context.Background())
+	WithPaasStatus(ctx, kerrors.NewBizStatusErrorWithExtra(5000, "err", map[string]string{
+		bizExtraKeyAffectStability: "1",
+	}))
+
+	mc := ctx.Value(paasMetricsCtxKey{}).(*paasMetricsCtx)
+	assert.Equal(t, "error", mc.tagMap[paasStatusTag])
+	assert.Equal(t, "5000", mc.tagMap[paasStatusCodeTag])
+	assert.Equal(t, "1", mc.tagMap[paasIsErrAffectStabilityTag])
+}
+
+func TestWithPaas_NoMetricsCtx_AllFunctions(t *testing.T) {
+	ctx := context.Background()
+	assert.NotPanics(t, func() {
+		WithPaasSpace(ctx, 1)
+		WithPaasMethod(ctx, "m")
+		WithPaasPromptKey(ctx, "k")
+		WithPaasPromptType(ctx, 1)
+		WithHasMessage(ctx, true)
+		WithHasContexts(ctx, true)
+		WithPaasUsageScenario(ctx, "s")
+		WithPaasVersion(ctx, "v")
+		WithPaasStatus(ctx, nil)
+	})
+}

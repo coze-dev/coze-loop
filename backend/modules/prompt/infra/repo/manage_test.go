@@ -828,6 +828,25 @@ func TestManageRepoImpl_BatchGetPromptBasic(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "partial result with missing prompt",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().MGet(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*model.PromptBasic{
+					1: {
+						ID:        1,
+						SpaceID:   100,
+						PromptKey: "prompt_a",
+					},
+				}, nil)
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:       context.Background(),
+				promptIDs: []int64{1, 999},
+			},
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode),
+		},
 	}
 
 	for _, tt := range tests {

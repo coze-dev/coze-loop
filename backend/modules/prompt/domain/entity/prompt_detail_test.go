@@ -1547,6 +1547,171 @@ func TestRenderGoTemplate(t *testing.T) {
 	}
 }
 
+func TestFormatMultiPart_MultiPartVariable(t *testing.T) {
+	defMap := map[string]*VariableDef{
+		"images": {Key: "images", Type: VariableTypeMultiPart},
+	}
+	valMap := map[string]*VariableVal{
+		"images": {
+			Key: "images",
+			MultiPartValues: []*ContentPart{
+				{Type: ContentTypeText, Text: ptr.Of("caption")},
+				{Type: ContentTypeImageURL, ImageURL: &ImageURL{URL: "http://img.png"}},
+				nil,
+				{Type: ContentTypeVideoURL, VideoURL: &VideoURL{URL: "http://vid.mp4"}},
+				{Type: ContentTypeBase64Data, Base64Data: ptr.Of("aGVsbG8=")},
+				{Type: ContentTypeText},
+			},
+		},
+	}
+	parts := []*ContentPart{
+		{Type: ContentTypeMultiPartVariable, Text: ptr.Of("images")},
+	}
+	result := formatMultiPart(parts, defMap, valMap)
+	assert.Len(t, result, 4)
+	assert.Equal(t, "caption", ptr.From(result[0].Text))
+	assert.Equal(t, "http://img.png", result[1].ImageURL.URL)
+	assert.Equal(t, "http://vid.mp4", result[2].VideoURL.URL)
+	assert.Equal(t, "aGVsbG8=", ptr.From(result[3].Base64Data))
+}
+
+func TestFormatMessages_DefaultRole(t *testing.T) {
+	pt := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages:     []*Message{},
+	}
+	messages := []*Message{
+		{
+			Role:    Role("custom_role"),
+			Content: ptr.Of("hello {{name}}"),
+		},
+	}
+	formattedMsgs, err := pt.formatMessages(messages, nil)
+	assert.NoError(t, err)
+	assert.Len(t, formattedMsgs, 1)
+	assert.Equal(t, ptr.Of("hello {{name}}"), formattedMsgs[0].Content)
+}
+
+func TestFormatMessages_NilMessageSkipped(t *testing.T) {
+	pt := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages:     []*Message{nil},
+	}
+	formattedMsgs, err := pt.formatMessages(nil, nil)
+	assert.NoError(t, err)
+	assert.Empty(t, formattedMsgs)
+}
+
+func TestFormatMessages_PlaceholderNilMessage(t *testing.T) {
+	pt := &PromptTemplate{
+		TemplateType: TemplateTypeNormal,
+		Messages: []*Message{
+			{Role: RolePlaceholder, Content: ptr.Of("ph")},
+		},
+	}
+	valMap := []*VariableVal{
+		{
+			Key: "ph",
+			PlaceholderMessages: []*Message{
+				nil,
+				{Role: RoleUser, Content: ptr.Of("valid")},
+			},
+		},
+	}
+	formattedMsgs, err := pt.formatMessages(nil, valMap)
+	assert.NoError(t, err)
+	assert.Len(t, formattedMsgs, 1)
+	assert.Equal(t, ptr.Of("valid"), formattedMsgs[0].Content)
+}
+
+func TestFormatMessages_AssistantRenderError(t *testing.T) {
+	pt := &PromptTemplate{
+		TemplateType: TemplateType("bad_type"),
+		Messages:     []*Message{},
+	}
+	messages := []*Message{
+		{
+			Role:       RoleAssistant,
+			Content:    ptr.Of("hello"),
+			SkipRender: ptr.Of(false),
+		},
+	}
+	_, err := pt.formatMessages(messages, nil)
+	assert.Error(t, err)
+}
+
+func TestRenderMessage_PartFormatError(t *testing.T) {
+	pt := &PromptTemplate{
+		TemplateType: TemplateType("bad_type"),
+	}
+	msg := &Message{
+		Role: RoleSystem,
+		Parts: []*ContentPart{
+			{Type: ContentTypeText, Text: ptr.Of("hello")},
+		},
+	}
+	err := pt.renderMessage(msg, nil, nil)
+	assert.Error(t, err)
+}
+
+func TestGetTemplateMessages_NilPT(t *testing.T) {
+	var pt *PromptTemplate
+	result := pt.getTemplateMessages([]*Message{{Role: RoleUser}})
+	assert.Nil(t, result)
+}
+
+func TestConvertVariablesToMap_ArrayErrors(t *testing.T) {
+	tests := []struct {
+		name   string
+		defMap map[string]*VariableDef
+		valMap map[string]*VariableVal
+	}{
+		{
+			name: "array boolean invalid",
+			defMap: map[string]*VariableDef{
+				"flags": {Key: "flags", Type: VariableTypeArrayBoolean},
+			},
+			valMap: map[string]*VariableVal{
+				"flags": {Key: "flags", Value: ptr.Of("not_json")},
+			},
+		},
+		{
+			name: "array integer invalid",
+			defMap: map[string]*VariableDef{
+				"nums": {Key: "nums", Type: VariableTypeArrayInteger},
+			},
+			valMap: map[string]*VariableVal{
+				"nums": {Key: "nums", Value: ptr.Of("not_json")},
+			},
+		},
+		{
+			name: "array float invalid",
+			defMap: map[string]*VariableDef{
+				"vals": {Key: "vals", Type: VariableTypeArrayFloat},
+			},
+			valMap: map[string]*VariableVal{
+				"vals": {Key: "vals", Value: ptr.Of("not_json")},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := convertVariablesToMap(tt.defMap, tt.valMap)
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestPromptDetail_DeepEqual(t *testing.T) {
+	pd1 := &PromptDetail{}
+	pd2 := &PromptDetail{}
+	assert.True(t, pd1.DeepEqual(pd2))
+
+	pd3 := &PromptDetail{ExtInfos: map[string]string{"k": "v"}}
+	assert.False(t, pd1.DeepEqual(pd3))
+}
+
 func TestFormatText_GoTemplate(t *testing.T) {
 	tests := []struct {
 		name          string
