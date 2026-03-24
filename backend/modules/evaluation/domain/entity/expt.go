@@ -174,10 +174,16 @@ func (e *Experiment) AsyncExec() bool {
 }
 
 func (e *Experiment) AsyncCallTarget() bool {
-	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil || e.Target.EvalTargetVersion.CustomRPCServer == nil {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil {
 		return false
 	}
-	return gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync)
+	if e.Target.EvalTargetVersion.CustomRPCServer != nil && gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync) {
+		return true
+	}
+	if e.Target.EvalTargetVersion.WebAgent != nil {
+		return true
+	}
+	return false
 }
 
 func (e *Experiment) AsyncCallEvaluators() bool {
