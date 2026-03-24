@@ -122,11 +122,12 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion   *string
-	BotInfoType      CozeBotInfoType
-	CustomEvalTarget *CustomEvalTarget
-	Region           *Region
-	Env              *string
+	PublishVersion       *string
+	BotInfoType          CozeBotInfoType
+	CustomEvalTarget     *CustomEvalTarget
+	Region               *Region
+	Env                  *string
+	OperationInstruction *string
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -156,6 +157,12 @@ func WithRegion(region *Region) Option {
 func WithEnv(env *string) Option {
 	return func(option *Opt) {
 		option.Env = env
+	}
+}
+
+func WithOperationInstruction(operationInstruction *string) Option {
+	return func(option *Opt) {
+		option.OperationInstruction = operationInstruction
 	}
 }
 
