@@ -17,6 +17,7 @@ type Client interface {
 	SaveToolDetail(ctx context.Context, request *manage.SaveToolDetailRequest, callOptions ...callopt.Option) (r *manage.SaveToolDetailResponse, err error)
 	CommitToolDraft(ctx context.Context, request *manage.CommitToolDraftRequest, callOptions ...callopt.Option) (r *manage.CommitToolDraftResponse, err error)
 	ListToolCommit(ctx context.Context, request *manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *manage.ListToolCommitResponse, err error)
+	BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *manage.BatchGetToolsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -76,4 +77,9 @@ func (p *kToolManageServiceClient) CommitToolDraft(ctx context.Context, request 
 func (p *kToolManageServiceClient) ListToolCommit(ctx context.Context, request *manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *manage.ListToolCommitResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListToolCommit(ctx, request)
+}
+
+func (p *kToolManageServiceClient) BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *manage.BatchGetToolsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchGetTools(ctx, request)
 }

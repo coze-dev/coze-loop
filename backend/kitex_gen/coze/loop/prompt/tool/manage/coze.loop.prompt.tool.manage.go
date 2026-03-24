@@ -5441,6 +5441,1279 @@ func (p *ListToolCommitResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+type ToolQuery struct {
+	ToolID  *int64  `thrift:"tool_id,1,optional" frugal:"1,optional,i64" json:"tool_id" form:"tool_id" query:"tool_id"`
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+}
+
+func NewToolQuery() *ToolQuery {
+	return &ToolQuery{}
+}
+
+func (p *ToolQuery) InitDefault() {
+}
+
+var ToolQuery_ToolID_DEFAULT int64
+
+func (p *ToolQuery) GetToolID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetToolID() {
+		return ToolQuery_ToolID_DEFAULT
+	}
+	return *p.ToolID
+}
+
+var ToolQuery_Version_DEFAULT string
+
+func (p *ToolQuery) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return ToolQuery_Version_DEFAULT
+	}
+	return *p.Version
+}
+func (p *ToolQuery) SetToolID(val *int64) {
+	p.ToolID = val
+}
+func (p *ToolQuery) SetVersion(val *string) {
+	p.Version = val
+}
+
+var fieldIDToName_ToolQuery = map[int16]string{
+	1: "tool_id",
+	2: "version",
+}
+
+func (p *ToolQuery) IsSetToolID() bool {
+	return p.ToolID != nil
+}
+
+func (p *ToolQuery) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *ToolQuery) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ToolQuery[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ToolQuery) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ToolID = _field
+	return nil
+}
+func (p *ToolQuery) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+
+func (p *ToolQuery) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ToolQuery"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ToolQuery) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetToolID() {
+		if err = oprot.WriteFieldBegin("tool_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ToolID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ToolQuery) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ToolQuery) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ToolQuery(%+v)", *p)
+
+}
+
+func (p *ToolQuery) DeepEqual(ano *ToolQuery) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ToolID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	return true
+}
+
+func (p *ToolQuery) Field1DeepEqual(src *int64) bool {
+
+	if p.ToolID == src {
+		return true
+	} else if p.ToolID == nil || src == nil {
+		return false
+	}
+	if *p.ToolID != *src {
+		return false
+	}
+	return true
+}
+func (p *ToolQuery) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type ToolResult_ struct {
+	Query *ToolQuery `thrift:"query,1,optional" frugal:"1,optional,ToolQuery" form:"query" json:"query,omitempty" query:"query"`
+	Tool  *tool.Tool `thrift:"tool,2,optional" frugal:"2,optional,tool.Tool" form:"tool" json:"tool,omitempty" query:"tool"`
+}
+
+func NewToolResult_() *ToolResult_ {
+	return &ToolResult_{}
+}
+
+func (p *ToolResult_) InitDefault() {
+}
+
+var ToolResult__Query_DEFAULT *ToolQuery
+
+func (p *ToolResult_) GetQuery() (v *ToolQuery) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQuery() {
+		return ToolResult__Query_DEFAULT
+	}
+	return p.Query
+}
+
+var ToolResult__Tool_DEFAULT *tool.Tool
+
+func (p *ToolResult_) GetTool() (v *tool.Tool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTool() {
+		return ToolResult__Tool_DEFAULT
+	}
+	return p.Tool
+}
+func (p *ToolResult_) SetQuery(val *ToolQuery) {
+	p.Query = val
+}
+func (p *ToolResult_) SetTool(val *tool.Tool) {
+	p.Tool = val
+}
+
+var fieldIDToName_ToolResult_ = map[int16]string{
+	1: "query",
+	2: "tool",
+}
+
+func (p *ToolResult_) IsSetQuery() bool {
+	return p.Query != nil
+}
+
+func (p *ToolResult_) IsSetTool() bool {
+	return p.Tool != nil
+}
+
+func (p *ToolResult_) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ToolResult_[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ToolResult_) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewToolQuery()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Query = _field
+	return nil
+}
+func (p *ToolResult_) ReadField2(iprot thrift.TProtocol) error {
+	_field := tool.NewTool()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Tool = _field
+	return nil
+}
+
+func (p *ToolResult_) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ToolResult"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ToolResult_) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQuery() {
+		if err = oprot.WriteFieldBegin("query", thrift.STRUCT, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Query.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ToolResult_) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTool() {
+		if err = oprot.WriteFieldBegin("tool", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Tool.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ToolResult_) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ToolResult_(%+v)", *p)
+
+}
+
+func (p *ToolResult_) DeepEqual(ano *ToolResult_) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Query) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Tool) {
+		return false
+	}
+	return true
+}
+
+func (p *ToolResult_) Field1DeepEqual(src *ToolQuery) bool {
+
+	if !p.Query.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ToolResult_) Field2DeepEqual(src *tool.Tool) bool {
+
+	if !p.Tool.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchGetToolsRequest struct {
+	WorkspaceID *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" query:"workspace_id"`
+	Queries     []*ToolQuery `thrift:"queries,2,optional" frugal:"2,optional,list<ToolQuery>" form:"queries" json:"queries,omitempty" query:"queries"`
+	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewBatchGetToolsRequest() *BatchGetToolsRequest {
+	return &BatchGetToolsRequest{}
+}
+
+func (p *BatchGetToolsRequest) InitDefault() {
+}
+
+var BatchGetToolsRequest_WorkspaceID_DEFAULT int64
+
+func (p *BatchGetToolsRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return BatchGetToolsRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var BatchGetToolsRequest_Queries_DEFAULT []*ToolQuery
+
+func (p *BatchGetToolsRequest) GetQueries() (v []*ToolQuery) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetQueries() {
+		return BatchGetToolsRequest_Queries_DEFAULT
+	}
+	return p.Queries
+}
+
+var BatchGetToolsRequest_Base_DEFAULT *base.Base
+
+func (p *BatchGetToolsRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return BatchGetToolsRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *BatchGetToolsRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *BatchGetToolsRequest) SetQueries(val []*ToolQuery) {
+	p.Queries = val
+}
+func (p *BatchGetToolsRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_BatchGetToolsRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "queries",
+	255: "Base",
+}
+
+func (p *BatchGetToolsRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *BatchGetToolsRequest) IsSetQueries() bool {
+	return p.Queries != nil
+}
+
+func (p *BatchGetToolsRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *BatchGetToolsRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetToolsRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetToolsRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *BatchGetToolsRequest) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ToolQuery, 0, size)
+	values := make([]ToolQuery, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Queries = _field
+	return nil
+}
+func (p *BatchGetToolsRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *BatchGetToolsRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetToolsRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetToolsRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetToolsRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetQueries() {
+		if err = oprot.WriteFieldBegin("queries", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Queries)); err != nil {
+			return err
+		}
+		for _, v := range p.Queries {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *BatchGetToolsRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetToolsRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetToolsRequest(%+v)", *p)
+
+}
+
+func (p *BatchGetToolsRequest) DeepEqual(ano *BatchGetToolsRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Queries) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetToolsRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *BatchGetToolsRequest) Field2DeepEqual(src []*ToolQuery) bool {
+
+	if len(p.Queries) != len(src) {
+		return false
+	}
+	for i, v := range p.Queries {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetToolsRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type BatchGetToolsResponse struct {
+	Items    []*ToolResult_ `thrift:"items,1,optional" frugal:"1,optional,list<ToolResult_>" form:"items" json:"items,omitempty" query:"items"`
+	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewBatchGetToolsResponse() *BatchGetToolsResponse {
+	return &BatchGetToolsResponse{}
+}
+
+func (p *BatchGetToolsResponse) InitDefault() {
+}
+
+var BatchGetToolsResponse_Items_DEFAULT []*ToolResult_
+
+func (p *BatchGetToolsResponse) GetItems() (v []*ToolResult_) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItems() {
+		return BatchGetToolsResponse_Items_DEFAULT
+	}
+	return p.Items
+}
+
+var BatchGetToolsResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *BatchGetToolsResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return BatchGetToolsResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *BatchGetToolsResponse) SetItems(val []*ToolResult_) {
+	p.Items = val
+}
+func (p *BatchGetToolsResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_BatchGetToolsResponse = map[int16]string{
+	1:   "items",
+	255: "BaseResp",
+}
+
+func (p *BatchGetToolsResponse) IsSetItems() bool {
+	return p.Items != nil
+}
+
+func (p *BatchGetToolsResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *BatchGetToolsResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_BatchGetToolsResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *BatchGetToolsResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ToolResult_, 0, size)
+	values := make([]ToolResult_, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Items = _field
+	return nil
+}
+func (p *BatchGetToolsResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *BatchGetToolsResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("BatchGetToolsResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *BatchGetToolsResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItems() {
+		if err = oprot.WriteFieldBegin("items", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Items)); err != nil {
+			return err
+		}
+		for _, v := range p.Items {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *BatchGetToolsResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *BatchGetToolsResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("BatchGetToolsResponse(%+v)", *p)
+
+}
+
+func (p *BatchGetToolsResponse) DeepEqual(ano *BatchGetToolsResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Items) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *BatchGetToolsResponse) Field1DeepEqual(src []*ToolResult_) bool {
+
+	if len(p.Items) != len(src) {
+		return false
+	}
+	for i, v := range p.Items {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *BatchGetToolsResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ToolManageService interface {
+	CreateTool(ctx context.Context, request *CreateToolRequest) (r *CreateToolResponse, err error)
+
+	GetToolDetail(ctx context.Context, request *GetToolDetailRequest) (r *GetToolDetailResponse, err error)
+
+	ListTool(ctx context.Context, request *ListToolRequest) (r *ListToolResponse, err error)
+
+	SaveToolDetail(ctx context.Context, request *SaveToolDetailRequest) (r *SaveToolDetailResponse, err error)
+
+	CommitToolDraft(ctx context.Context, request *CommitToolDraftRequest) (r *CommitToolDraftResponse, err error)
+
+	ListToolCommit(ctx context.Context, request *ListToolCommitRequest) (r *ListToolCommitResponse, err error)
+
+	BatchGetTools(ctx context.Context, request *BatchGetToolsRequest) (r *BatchGetToolsResponse, err error)
+
+	BatchGetTools(ctx context.Context, request *BatchGetToolsRequest) (r *BatchGetToolsResponse, err error)
+}
+
+type ToolManageServiceClient struct {
+	c thrift.TClient
+}
+
+func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		c: thrift.NewTStandardClient(f.GetProtocol(t), f.GetProtocol(t)),
+	}
+}
+
+func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		c: thrift.NewTStandardClient(iprot, oprot),
+	}
+}
+
+func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		c: c,
+	}
+}
+
+func (p *ToolManageServiceClient) Client_() thrift.TClient {
+	return p.c
+}
+
+func (p *ToolManageServiceClient) CreateTool(ctx context.Context, request *CreateToolRequest) (r *CreateToolResponse, err error) {
+	var _args ToolManageServiceCreateToolArgs
+	_args.Request = request
+	var _result ToolManageServiceCreateToolResult
+	if err = p.Client_().Call(ctx, "CreateTool", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) GetToolDetail(ctx context.Context, request *GetToolDetailRequest) (r *GetToolDetailResponse, err error) {
+	var _args ToolManageServiceGetToolDetailArgs
+	_args.Request = request
+	var _result ToolManageServiceGetToolDetailResult
+	if err = p.Client_().Call(ctx, "GetToolDetail", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) ListTool(ctx context.Context, request *ListToolRequest) (r *ListToolResponse, err error) {
+	var _args ToolManageServiceListToolArgs
+	_args.Request = request
+	var _result ToolManageServiceListToolResult
+	if err = p.Client_().Call(ctx, "ListTool", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) SaveToolDetail(ctx context.Context, request *SaveToolDetailRequest) (r *SaveToolDetailResponse, err error) {
+	var _args ToolManageServiceSaveToolDetailArgs
+	_args.Request = request
+	var _result ToolManageServiceSaveToolDetailResult
+	if err = p.Client_().Call(ctx, "SaveToolDetail", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) CommitToolDraft(ctx context.Context, request *CommitToolDraftRequest) (r *CommitToolDraftResponse, err error) {
+	var _args ToolManageServiceCommitToolDraftArgs
+	_args.Request = request
+	var _result ToolManageServiceCommitToolDraftResult
+	if err = p.Client_().Call(ctx, "CommitToolDraft", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) ListToolCommit(ctx context.Context, request *ListToolCommitRequest) (r *ListToolCommitResponse, err error) {
+	var _args ToolManageServiceListToolCommitArgs
+	_args.Request = request
+	var _result ToolManageServiceListToolCommitResult
+	if err = p.Client_().Call(ctx, "ListToolCommit", &_args, &_result); err != nil {
+		return
+	}
+equest *BatchGetToolsRequest) (r *BatchGetToolsResponse, err error) {
+	var _args ToolManageServiceBatchGetToolsArgs
+	_args.Request = request
+	var _result ToolManageServiceBatchGetToolsResult
+	if err = p.Client_().Call(ctx, "BatchGetTools", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+type ToolManageServiceProcessor struct {
+	processorMap map[string]th
+	return _result.GetSuccess(), nil
+}
+func (p *ToolManageServiceClient) BatchGetTools(ctx context.Context, request *BatchGetToolsRequest) (r *BatchGetToolsResponse, err error) {
+	var _args ToolManageServiceBatchGetToolsArgs
+	_args.Request = request
+	var _result ToolManageServiceBatchGetToolsResult
+	if err = p.Client_().Call(ctx, "BatchGetTools", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+type ToolManageServiceProcessor struct {
+	processorMap map[string]thrift.TProcessorFunction
+	handler      ToolManageService
+}
+
+func (p *ToolManageServiceProcessor) AddToProcessorMap(key string, processor thrift.TProcessorFunction) {
+	p.processorMap[key] = processor
+}
+
+func (p *ToolManageServiceProcessor) GetProcessorFunction(key string) (processor thrift.TProcessorFunction, ok bool) {
+	processor, ok = p.processorMap[key]
+	return processor, ok
+e
+}
+
+func (p *ToolManageServiceProcessor) ProcessorMap() map[string]thrift.TProcessorFunction {
+	return p.processorMap
+}
+
+func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
+	self := &ToolManageServiceProcessor{handler: handler, processorMap: make(map[string]thrift.TProcessorFunction)}
+	self.AddToProcessorMap("CreateTool", &toolManageServiceProcessorCreateTool{handler: handler})
+	self.AddToProcessorMap("GetToolDetail", &toolManageServiceProcessorGetToolDetail{handler: handler})
+	self.AddToProcessorMap("ListTool", &toolManageServiceProcessorListTool{handler: handler})
+	self.AddToProcessorMap("SaveToolDetail", &toolManageServiceProcessorSaveToolDetail{handler: handler})
+	self.AddToProcessorMap("CommitToolDraft", &toolManageServiceProcessorCommitToolDraft{handler: handler})
+	self.AddToProcessorMap("ListToolCommit", &toolManageServiceProcessorListToolCommit{handler: handler})
+	self.AddToProcessorMap("BatchGetTools", &toolManageServiceProcessorBatchGetTools{handler: handler})
+	retu
+		return false
+	}
+	return true
+}
+
 type ToolManageService interface {
 	CreateTool(ctx context.Context, request *CreateToolRequest) (r *CreateToolResponse, err error)
 
@@ -5728,6 +7001,70 @@ func (p *toolManageServiceProcessorListTool) Process(ctx context.Context, seqId 
 
 type toolManageServiceProcessorSaveToolDetail struct {
 	handler ToolManageService
+
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type ToolManageServiceCreateToolArgs struct {
+	Request *CreateToolRequest `thrift:"request,1" frugal:"1,default,CreateToolRequest"`
+}
+
+func NewToolManageServiceCreateToolArgs() *ToolManageServiceCreateToolArgs {
+	return &ToolManageServiceCreateToolArgs{}
+}
+
+func (p *ToolManageServiceCreateToolArgs) InitDefault() {
+}
+
+var ToolManageServiceCreateToolArgs_Request_DEFAULT *CreateToolRequest
+
+func (p *ToolManageServiceCreateToolArgs) GetRequest() (v *CreateToolRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRequest() {
+		return ToolManageServiceCreateToolArgs_Request_DEFAULT
+	}
+	return p.Request
+}
+func (p *ToolManageServiceCreateToolArgs) SetRequest(val *CreateToolRequest) {
+	p.Request = val
+}
+
+var fieldIDToName_ToolManageServiceCreateToolArgs = map[int16]string{
+	1: "request",
+}
+
+func (p *ToolManageServiceCreateToolArgs) IsSetRequest() bool {
+	return p.Request != nil
+}
+
+func (p *ToolManageServiceCreateToolArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFiel
 }
 
 func (p *toolManageServiceProcessorSaveToolDetail) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {

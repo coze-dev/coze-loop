@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"gorm.io/gen/field"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -23,7 +24,13 @@ type IToolCommitDAO interface {
 	Create(ctx context.Context, toolCommitPO *model.ToolCommit, timeNow time.Time, opts ...db.Option) (err error)
 	UpsertDraft(ctx context.Context, toolCommitPO *model.ToolCommit, timeNow time.Time, opts ...db.Option) (err error)
 	Get(ctx context.Context, toolID int64, version string, opts ...db.Option) (toolCommitPO *model.ToolCommit, err error)
+	BatchGet(ctx context.Context, toolIDVersionPairs []ToolIDVersionPair, opts ...db.Option) (commitPOs []*model.ToolCommit, err error)
 	List(ctx context.Context, param ListToolCommitParam, opts ...db.Option) (commitPOs []*model.ToolCommit, err error)
+}
+
+type ToolIDVersionPair struct {
+	ToolID  int64
+	Version string
 }
 
 type ListToolCommitParam struct {
@@ -112,6 +119,25 @@ func (d *ToolCommitDAOImpl) Get(ctx context.Context, toolID int64, version strin
 		return nil, nil
 	}
 	return toolCommitPOs[0], nil
+}
+
+func (d *ToolCommitDAOImpl) BatchGet(ctx context.Context, toolIDVersionPairs []ToolIDVersionPair, opts ...db.Option) (commitPOs []*model.ToolCommit, err error) {
+	if len(toolIDVersionPairs) == 0 {
+		return nil, nil
+	}
+	q := query.Use(d.db.NewSession(ctx, opts...))
+	tx := q.WithContext(ctx).ToolCommit
+
+	conditions := make([]field.Expr, 0, len(toolIDVersionPairs))
+	for _, pair := range toolIDVersionPairs {
+		conditions = append(conditions, field.And(q.ToolCommit.ToolID.Eq(pair.ToolID), q.ToolCommit.Version.Eq(pair.Version)))
+	}
+	tx = tx.Where(field.Or(conditions...))
+	commitPOs, err = tx.Find()
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
+	return commitPOs, nil
 }
 
 func (d *ToolCommitDAOImpl) List(ctx context.Context, param ListToolCommitParam, opts ...db.Option) (commitPOs []*model.ToolCommit, err error) {

@@ -148,6 +148,27 @@ func (l *LocalToolManageService) ListToolCommit(ctx context.Context, request *ma
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalToolManageService) BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest, callOptions ...callopt.Option) (*manage.BatchGetToolsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*manage.ToolManageServiceBatchGetToolsArgs)
+		result := out.(*manage.ToolManageServiceBatchGetToolsResult)
+		resp, err := l.impl.BatchGetTools(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &manage.ToolManageServiceBatchGetToolsArgs{Request: request}
+	result := &manage.ToolManageServiceBatchGetToolsResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetTools")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalToolManageService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

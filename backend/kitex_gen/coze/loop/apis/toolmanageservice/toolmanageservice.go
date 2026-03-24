@@ -56,6 +56,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchGetTools": kitex.NewMethodInfo(
+		batchGetToolsHandler,
+		newToolManageServiceBatchGetToolsArgs,
+		newToolManageServiceBatchGetToolsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -203,6 +210,25 @@ func newToolManageServiceListToolCommitResult() interface{} {
 	return manage.NewToolManageServiceListToolCommitResult()
 }
 
+func batchGetToolsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*manage.ToolManageServiceBatchGetToolsArgs)
+	realResult := result.(*manage.ToolManageServiceBatchGetToolsResult)
+	success, err := handler.(manage.ToolManageService).BatchGetTools(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newToolManageServiceBatchGetToolsArgs() interface{} {
+	return manage.NewToolManageServiceBatchGetToolsArgs()
+}
+
+func newToolManageServiceBatchGetToolsResult() interface{} {
+	return manage.NewToolManageServiceBatchGetToolsResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -270,6 +296,16 @@ func (p *kClient) ListToolCommit(ctx context.Context, request *manage.ListToolCo
 	_args.Request = request
 	var _result manage.ToolManageServiceListToolCommitResult
 	if err = p.c.Call(ctx, "ListToolCommit", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest) (r *manage.BatchGetToolsResponse, err error) {
+	var _args manage.ToolManageServiceBatchGetToolsArgs
+	_args.Request = request
+	var _result manage.ToolManageServiceBatchGetToolsResult
+	if err = p.c.Call(ctx, "BatchGetTools", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

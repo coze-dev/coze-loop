@@ -10,6 +10,7 @@ type IToolRepo interface {
 	CreateTool(ctx context.Context, tool *toolmgmt.Tool) (toolID int64, err error)
 	DeleteTool(ctx context.Context, toolID int64) (err error)
 	GetTool(ctx context.Context, param GetToolParam) (tool *toolmgmt.Tool, err error)
+	BatchGetTools(ctx context.Context, param BatchGetToolsParam) (result []*BatchGetToolsResult, err error)
 	ListTool(ctx context.Context, param ListToolParam) (result *ListToolResult, err error)
 	SaveToolDetail(ctx context.Context, param SaveToolDetailParam) (err error)
 	CommitToolDraft(ctx context.Context, param CommitToolDraftParam) (err error)
@@ -74,4 +75,19 @@ type ListToolCommitResult struct {
 	CommitInfos   []*toolmgmt.CommitInfo
 	CommitDetails map[string]*toolmgmt.ToolDetail
 	NextPageToken int64
+}
+
+type BatchGetToolsQuery struct {
+	ToolID  int64
+	Version string
+}
+
+type BatchGetToolsParam struct {
+	SpaceID int64
+	Queries []BatchGetToolsQuery
+}
+
+type BatchGetToolsResult struct {
+	Query BatchGetToolsQuery
+	Tool  *toolmgmt.Tool
 }

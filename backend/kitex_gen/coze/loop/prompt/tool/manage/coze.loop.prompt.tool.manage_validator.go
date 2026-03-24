@@ -220,3 +220,44 @@ func (p *ListToolCommitResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ToolQuery) IsValid() error {
+	return nil
+}
+func (p *ToolResult_) IsValid() error {
+	if p.Query != nil {
+		if err := p.Query.IsValid(); err != nil {
+			return fmt.Errorf("field Query not valid, %w", err)
+		}
+	}
+	if p.Tool != nil {
+		if err := p.Tool.IsValid(); err != nil {
+			return fmt.Errorf("field Tool not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetToolsRequest) IsValid() error {
+	if p.WorkspaceID == nil {
+		return fmt.Errorf("field WorkspaceID not_nil rule failed")
+	}
+	if *p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", *p.WorkspaceID)
+	}
+	if len(p.Queries) < int(1) {
+		return fmt.Errorf("field Queries MinLen rule failed, current value: %v", p.Queries)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *BatchGetToolsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

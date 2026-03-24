@@ -11,6 +11,7 @@ service ToolManageService {
     SaveToolDetailResponse SaveToolDetail(1: SaveToolDetailRequest request) (api.post = '/api/prompt/v1/tools/:tool_id/drafts/save')
     CommitToolDraftResponse CommitToolDraft(1: CommitToolDraftRequest request) (api.post = '/api/prompt/v1/tools/:tool_id/drafts/commit')
     ListToolCommitResponse ListToolCommit(1: ListToolCommitRequest request) (api.post = '/api/prompt/v1/tools/:tool_id/commits/list')
+    BatchGetToolsResponse BatchGetTools(1: BatchGetToolsRequest request) (api.post = '/api/prompt/v1/tools/mget')
 }
 
 struct CreateToolRequest {
@@ -126,6 +127,29 @@ struct ListToolCommitResponse {
 
     127: optional bool has_more
     128: optional string next_page_token
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ToolQuery {
+    1: optional i64 tool_id (api.js_conv='true', go.tag='json:"tool_id"')
+    2: optional string version
+}
+
+struct ToolResult {
+    1: optional ToolQuery query
+    2: optional tool.Tool tool
+}
+
+struct BatchGetToolsRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional list<ToolQuery> queries (vt.min_size="1")
+
+    255: optional base.Base Base
+}
+
+struct BatchGetToolsResponse {
+    1: optional list<ToolResult> items
 
     255: optional base.BaseResp BaseResp
 }

@@ -366,6 +366,62 @@ func (app *ToolManageApplicationImpl) ListToolCommit(ctx context.Context, reques
 	return r, nil
 }
 
+func (app *ToolManageApplicationImpl) BatchGetTools(ctx context.Context, request *toolmanage.BatchGetToolsRequest) (r *toolmanage.BatchGetToolsResponse, err error) {
+	r = toolmanage.NewBatchGetToolsResponse()
+
+	_, ok := session.UserIDInCtx(ctx)
+	if !ok {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
+	}
+
+	if request.GetWorkspaceID() <= 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Workspace ID is required"))
+	}
+	if len(request.GetQueries()) == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Queries is required"))
+	}
+
+	err = app.authRPCProvider.CheckSpacePermission(ctx, request.GetWorkspaceID(), consts.ActionLoopPromptRead)
+	if err != nil {
+		return r, err
+	}
+
+	queries := make([]repo.BatchGetToolsQuery, 0, len(request.GetQueries()))
+	for _, q := range request.GetQueries() {
+		if q == nil {
+			continue
+		}
+		queries = append(queries, repo.BatchGetToolsQuery{
+			ToolID:  q.GetToolID(),
+			Version: q.GetVersion(),
+		})
+	}
+
+	results, err := app.toolRepo.BatchGetTools(ctx, repo.BatchGetToolsParam{
+		SpaceID: request.GetWorkspaceID(),
+		Queries: queries,
+	})
+	if err != nil {
+		return r, err
+	}
+
+	items := make([]*toolmanage.ToolResult_, 0, len(results))
+	for _, result := range results {
+		if result == nil || result.Tool == nil {
+			continue
+		}
+		items = append(items, &toolmanage.ToolResult_{
+			Query: &toolmanage.ToolQuery{
+				ToolID:  ptr.Of(result.Query.ToolID),
+				Version: ptr.Of(result.Query.Version),
+			},
+			Tool: convertor.ToolMgmtDO2DTO(result.Tool),
+		})
+	}
+	r.Items = items
+	return r, nil
+}
+
 func (app *ToolManageApplicationImpl) listToolOrderBy(orderBy *toolmanage.ListToolOrderBy) int {
 	if orderBy == nil {
 		return mysql.ListToolBasicOrderByID

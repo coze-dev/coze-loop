@@ -255,6 +255,77 @@ func (d *ToolRepoImpl) CommitToolDraft(ctx context.Context, param repo.CommitToo
 	})
 }
 
+func (d *ToolRepoImpl) BatchGetTools(ctx context.Context, param repo.BatchGetToolsParam) (result []*repo.BatchGetToolsResult, err error) {
+	if len(param.Queries) == 0 {
+		return nil, nil
+	}
+
+	toolIDSet := make(map[int64]struct{}, len(param.Queries))
+	for _, q := range param.Queries {
+		toolIDSet[q.ToolID] = struct{}{}
+	}
+	toolIDs := make([]int64, 0, len(toolIDSet))
+	for id := range toolIDSet {
+		toolIDs = append(toolIDs, id)
+	}
+
+	basicPOs, err := d.toolBasicDAO.BatchGet(ctx, toolIDs)
+	if err != nil {
+		return nil, err
+	}
+	basicMap := make(map[int64]*mysqlmodel.ToolBasic, len(basicPOs))
+	for _, po := range basicPOs {
+		if po == nil {
+			continue
+		}
+		basicMap[po.ID] = po
+	}
+
+	var commitPairs []mysql.ToolIDVersionPair
+	for _, q := range param.Queries {
+		basicPO, ok := basicMap[q.ToolID]
+		if !ok {
+			continue
+		}
+		version := q.Version
+		if lo.IsEmpty(version) {
+			version = basicPO.LatestCommittedVersion
+		}
+		if lo.IsEmpty(version) {
+			continue
+		}
+		commitPairs = append(commitPairs, mysql.ToolIDVersionPair{ToolID: q.ToolID, Version: version})
+	}
+
+	commitMap := make(map[int64]*mysqlmodel.ToolCommit)
+	if len(commitPairs) > 0 {
+		commitPOs, err := d.toolCommitDAO.BatchGet(ctx, commitPairs)
+		if err != nil {
+			return nil, err
+		}
+		for _, po := range commitPOs {
+			if po == nil {
+				continue
+			}
+			commitMap[po.ToolID] = po
+		}
+	}
+
+	result = make([]*repo.BatchGetToolsResult, 0, len(param.Queries))
+	for _, q := range param.Queries {
+		basicPO, ok := basicMap[q.ToolID]
+		if !ok || (param.SpaceID > 0 && basicPO.SpaceID != param.SpaceID) {
+			continue
+		}
+		tool := convertor.ToolPO2DO(basicPO, commitMap[q.ToolID])
+		result = append(result, &repo.BatchGetToolsResult{
+			Query: q,
+			Tool:  tool,
+		})
+	}
+	return result, nil
+}
+
 func (d *ToolRepoImpl) ListToolCommit(ctx context.Context, param repo.ListToolCommitParam) (result *repo.ListToolCommitResult, err error) {
 	if param.ToolID <= 0 || param.PageSize <= 0 {
 		return nil, errorx.New("param is invalid, param = %s", json.Jsonify(param))

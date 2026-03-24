@@ -23,6 +23,7 @@ type IToolBasicDAO interface {
 	Create(ctx context.Context, basicPO *model.ToolBasic, opts ...db.Option) (err error)
 	Delete(ctx context.Context, toolID int64, spaceID int64, opts ...db.Option) (err error)
 	Get(ctx context.Context, toolID int64, opts ...db.Option) (basicPO *model.ToolBasic, err error)
+	BatchGet(ctx context.Context, toolIDs []int64, opts ...db.Option) (basicPOs []*model.ToolBasic, err error)
 	List(ctx context.Context, param ListToolBasicParam, opts ...db.Option) (basicPOs []*model.ToolBasic, total int64, err error)
 	Update(ctx context.Context, toolID int64, updateFields map[string]interface{}, opts ...db.Option) (err error)
 }
@@ -106,6 +107,19 @@ func (d *ToolBasicDAOImpl) Get(ctx context.Context, toolID int64, opts ...db.Opt
 		return nil, nil
 	}
 	return basicPOs[0], nil
+}
+
+func (d *ToolBasicDAOImpl) BatchGet(ctx context.Context, toolIDs []int64, opts ...db.Option) (basicPOs []*model.ToolBasic, err error) {
+	if len(toolIDs) == 0 {
+		return nil, nil
+	}
+	q := query.Use(d.db.NewSession(ctx, opts...))
+	tx := q.WithContext(ctx).ToolBasic
+	basicPOs, err = tx.Where(q.ToolBasic.ID.In(toolIDs...)).Find()
+	if err != nil {
+		return nil, errorx.WrapByCode(err, prompterr.CommonMySqlErrorCode)
+	}
+	return basicPOs, nil
 }
 
 func (d *ToolBasicDAOImpl) List(ctx context.Context, param ListToolBasicParam, opts ...db.Option) (basicPOs []*model.ToolBasic, total int64, err error) {
