@@ -898,6 +898,63 @@ func convert2ThriftDatasetIOJobOption(ctx context.Context, opt *entity.DatasetIO
 		return nil
 	}
 	return &dataset_job.DatasetIOJobOption{
-		OverwriteDataset: opt.OverwriteDataset,
+		OverwriteDataset:  opt.OverwriteDataset,
+		FieldWriteOptions: convert2DatasetFieldWriteOptions(ctx, opt.FieldWriteOptions),
+	}
+}
+
+func convert2DatasetFieldWriteOptions(ctx context.Context, options []*entity.FieldWriteOption) []*dataset.FieldWriteOption {
+	if len(options) == 0 {
+		return nil
+	}
+	res := make([]*dataset.FieldWriteOption, 0, len(options))
+	for _, opt := range options {
+		res = append(res, convert2DatasetFieldWriteOption(ctx, opt))
+	}
+	return res
+}
+
+func convert2DatasetFieldWriteOption(ctx context.Context, opt *entity.FieldWriteOption) *dataset.FieldWriteOption {
+	if opt == nil {
+		return nil
+	}
+	return &dataset.FieldWriteOption{
+		FieldName:          opt.FieldName,
+		FieldKey:           opt.FieldKey,
+		MultiModalStoreOpt: convert2DatasetMultiModalStoreOption(ctx, opt.MultiModalStoreOpt),
+	}
+}
+
+func convert2DatasetMultiModalStoreOption(ctx context.Context, opt *entity.MultiModalStoreOption) *dataset.MultiModalStoreOption {
+	if opt == nil {
+		return nil
+	}
+	var strategy *dataset.MultiModalStoreStrategy
+	if opt.MultiModalStoreStrategy != nil {
+		s := dataset.MultiModalStoreStrategy(*opt.MultiModalStoreStrategy)
+		strategy = &s
+	}
+	var contentType *dataset.ContentType
+	if opt.ContentType != nil {
+		var t dataset.ContentType
+		switch gptr.Indirect(opt.ContentType) {
+		case entity.ContentTypeText:
+			t = dataset.ContentType_Text
+		case entity.ContentTypeImage:
+			t = dataset.ContentType_Image
+		case entity.ContentTypeAudio:
+			t = dataset.ContentType_Audio
+		case entity.ContentTypeVideo:
+			t = dataset.ContentType_Video
+		case entity.ContentTypeMultipart:
+			t = dataset.ContentType_MultiPart
+		}
+		if t != 0 {
+			contentType = &t
+		}
+	}
+	return &dataset.MultiModalStoreOption{
+		MultiModalStoreStrategy: strategy,
+		ContentType:             contentType,
 	}
 }

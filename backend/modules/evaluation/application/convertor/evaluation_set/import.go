@@ -122,3 +122,13 @@ func ConflictFieldDO2DTO(do *entity.ConflictField) *evalsetpb.ConflictField {
 		DetailM:   detail,
 	}
 }
+
+func DatasetIOJobOptionDTO2DO(opt *dataset_job.DatasetIOJobOption) *entity.DatasetIOJobOption {
+	if opt == nil {
+		return nil
+	}
+	return &entity.DatasetIOJobOption{
+		OverwriteDataset:  opt.OverwriteDataset,
+		FieldWriteOptions: FieldWriteOptionDTO2DOs(opt.FieldWriteOptions),
+	}
+}

@@ -329,11 +329,12 @@ func (a *DatasetRPCAdapter) BatchCreateDatasetItems(ctx context.Context, param *
 		return nil, nil, nil, err
 	}
 	resp, err := a.client.BatchCreateDatasetItems(ctx, &dataset.BatchCreateDatasetItemsRequest{
-		WorkspaceID:      &param.SpaceID,
-		DatasetID:        param.EvaluationSetID,
-		Items:            datasetItems,
-		SkipInvalidItems: param.SkipInvalidItems,
-		AllowPartialAdd:  param.AllowPartialAdd,
+		WorkspaceID:       &param.SpaceID,
+		DatasetID:         param.EvaluationSetID,
+		Items:             datasetItems,
+		SkipInvalidItems:  param.SkipInvalidItems,
+		AllowPartialAdd:   param.AllowPartialAdd,
+		FieldWriteOptions: convert2DatasetFieldWriteOptions(ctx, param.FieldWriteOptions),
 	})
 	if err != nil {
 		return nil, nil, nil, err
@@ -356,16 +357,17 @@ func (a *DatasetRPCAdapter) BatchUpdateDatasetItems(ctx context.Context, param *
 	return nil, nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("BatchUpdateDatasetItems not implemented"))
 }
 
-func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error) {
+func (a *DatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error) {
 	data, err := convert2DatasetData(ctx, turns)
 	if err != nil {
 		return err
 	}
 	resp, err := a.client.UpdateDatasetItem(ctx, &dataset.UpdateDatasetItemRequest{
-		WorkspaceID: &spaceID,
-		DatasetID:   evaluationSetID,
-		ItemID:      itemID,
-		Data:        data,
+		WorkspaceID:       &spaceID,
+		DatasetID:         evaluationSetID,
+		ItemID:            itemID,
+		Data:              data,
+		FieldWriteOptions: convert2DatasetFieldWriteOptions(ctx, fieldWriteOptions),
 	})
 	if err != nil {
 		return err

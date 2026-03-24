@@ -60,6 +60,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Con
 		Source:             param.Source,
 		FieldMappings:      param.FieldMappings,
 		Session:            param.Session,
+		Option:             param.Option,
 	})
 }
 

@@ -61,7 +61,7 @@ struct ParseImportSourceFileResponse {
     10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
     3: optional list<ConflictField> conflicts            // 冲突详情。key: 列名，val：冲突详情
     4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
-    5: optional list<string> untypedUrlFields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
+    5: optional list<string> untypedURLFields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
     6: optional map<string, list<string>> precheck_data_by_field // 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 
     /*base*/

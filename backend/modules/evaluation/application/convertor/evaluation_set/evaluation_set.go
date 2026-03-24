@@ -63,3 +63,59 @@ func EvaluationSetDO2DTO(do *entity.EvaluationSet) *eval_set.EvaluationSet {
 		BaseInfo:             common.ConvertBaseInfoDO2DTO(do.BaseInfo),
 	}
 }
+
+func FieldWriteOptionDTO2DOs(dtos []*dataset.FieldWriteOption) []*entity.FieldWriteOption {
+	if dtos == nil {
+		return nil
+	}
+	var res []*entity.FieldWriteOption
+	for _, dto := range dtos {
+		res = append(res, FieldWriteOptionDTO2DO(dto))
+	}
+	return res
+}
+
+func FieldWriteOptionDTO2DO(dto *dataset.FieldWriteOption) *entity.FieldWriteOption {
+	if dto == nil {
+		return nil
+	}
+	return &entity.FieldWriteOption{
+		FieldName:          dto.FieldName,
+		FieldKey:           dto.FieldKey,
+		MultiModalStoreOpt: MultiModalStoreOptionDTO2DO(dto.MultiModalStoreOpt),
+	}
+}
+
+func MultiModalStoreOptionDTO2DO(dto *dataset.MultiModalStoreOption) *entity.MultiModalStoreOption {
+	if dto == nil {
+		return nil
+	}
+	var strategy *entity.MultiModalStoreStrategy
+	if dto.MultiModalStoreStrategy != nil {
+		s := entity.MultiModalStoreStrategy(*dto.MultiModalStoreStrategy)
+		strategy = &s
+	}
+	var contentType *entity.ContentType
+	if dto.ContentType != nil {
+		var t entity.ContentType
+		switch *dto.ContentType {
+		case dataset.ContentType_Text:
+			t = entity.ContentTypeText
+		case dataset.ContentType_Image:
+			t = entity.ContentTypeImage
+		case dataset.ContentType_Audio:
+			t = entity.ContentTypeAudio
+		case dataset.ContentType_Video:
+			t = entity.ContentTypeVideo
+		case dataset.ContentType_MultiPart:
+			t = entity.ContentTypeMultipart
+		}
+		if t != "" {
+			contentType = &t
+		}
+	}
+	return &entity.MultiModalStoreOption{
+		MultiModalStoreStrategy: strategy,
+		ContentType:             contentType,
+	}
+}

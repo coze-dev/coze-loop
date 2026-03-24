@@ -881,3 +881,42 @@ func OpenAPIDatasetIOJobOptionDTO2DO(opt *dataset_job.DatasetIOJobOption) *entit
 		OverwriteDataset: opt.OverwriteDataset,
 	}
 }
+
+func OpenAPIFieldWriteOptionDTO2DOs(dtos []*openapi_eval_set.FieldWriteOption) []*entity.FieldWriteOption {
+	if dtos == nil {
+		return nil
+	}
+	var res []*entity.FieldWriteOption
+	for _, dto := range dtos {
+		res = append(res, OpenAPIFieldWriteOptionDTO2DO(dto))
+	}
+	return res
+}
+
+func OpenAPIFieldWriteOptionDTO2DO(dto *openapi_eval_set.FieldWriteOption) *entity.FieldWriteOption {
+	if dto == nil {
+		return nil
+	}
+	var contentType *entity.ContentType
+	if dto.ModalityType != nil {
+		t := entity.ContentType(*dto.ModalityType)
+		contentType = &t
+	}
+	var strategy *entity.MultiModalStoreStrategy
+	if dto.MultiModalStoreOpt != nil && dto.MultiModalStoreOpt.MultiModalStoreStrategy != nil {
+		s := entity.MultiModalStoreStrategy(*dto.MultiModalStoreOpt.MultiModalStoreStrategy)
+		strategy = &s
+	}
+	var opt *entity.MultiModalStoreOption
+	if strategy != nil || contentType != nil {
+		opt = &entity.MultiModalStoreOption{
+			MultiModalStoreStrategy: strategy,
+			ContentType:             contentType,
+		}
+	}
+	return &entity.FieldWriteOption{
+		FieldName:          dto.FieldName,
+		FieldKey:           dto.FieldKey,
+		MultiModalStoreOpt: opt,
+	}
+}
