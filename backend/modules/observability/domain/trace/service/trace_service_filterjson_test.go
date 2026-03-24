@@ -16,7 +16,6 @@ import (
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	spanfiltermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -104,10 +103,8 @@ func TestTraceServiceImpl_ListSpans_QueryFilterJSON(t *testing.T) {
 
 	buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
-			require.NotEmpty(t, set.QueryFilterJSON)
-			var got loop_span.FilterFields
-			require.NoError(t, json.Unmarshal([]byte(set.QueryFilterJSON), &got))
-			assert.Equal(t, expectedCombined, &got)
+			require.NotNil(t, set.QueryFilter)
+			assert.Equal(t, expectedCombined, set.QueryFilter)
 			return []span_processor.Processor{}, nil
 		},
 	)
@@ -175,10 +172,8 @@ func TestTraceServiceImpl_GetTrace_QueryFilterJSON(t *testing.T) {
 
 	buildHelperMock.EXPECT().BuildGetTraceProcessors(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
-			require.NotEmpty(t, set.QueryFilterJSON)
-			var got loop_span.FilterFields
-			require.NoError(t, json.Unmarshal([]byte(set.QueryFilterJSON), &got))
-			assert.Equal(t, expectedCombined, &got)
+			require.NotNil(t, set.QueryFilter)
+			assert.Equal(t, expectedCombined, set.QueryFilter)
 			return []span_processor.Processor{}, nil
 		},
 	)

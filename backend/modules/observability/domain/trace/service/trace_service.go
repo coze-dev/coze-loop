@@ -1030,11 +1030,6 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		})
 	}
 	queryFilter := r.combineFilters(logTraceFilter, req.Filters)
-	queryFilterJSON, err := json.MarshalString(queryFilter)
-	if err != nil {
-		logs.CtxWarn(ctx, "marshal trace query filter failed, err=%v", err)
-		queryFilterJSON = ""
-	}
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:     req.WorkspaceID,
 		PlatformType:    req.PlatformType,
@@ -1044,7 +1039,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 		QueryTenants:    tenants,
 		QueryLogID:      req.LogID,
 		QueryTraceID:    req.TraceID,
-		QueryFilterJSON: queryFilterJSON,
+		QueryFilter:     queryFilter,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
@@ -1077,11 +1072,6 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		return &ListSpansResp{Spans: loop_span.SpanList{}}, nil
 	}
 	filters := r.combineFilters(builtinFilter, req.Filters)
-	filterJSON, err := json.MarshalString(filters)
-	if err != nil {
-		logs.CtxWarn(ctx, "marshal list spans filter failed, err=%v", err)
-		filterJSON = ""
-	}
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -1103,13 +1093,13 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}
 	spans := tRes.Spans
 	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
-		WorkspaceId:     req.WorkspaceID,
-		PlatformType:    req.PlatformType,
-		QueryStartTime:  req.StartTime,
-		QueryEndTime:    req.EndTime,
-		QueryTenants:    tenants,
-		QueryFilterJSON: filterJSON,
-		Scene:           req.Scene,
+		WorkspaceId:    req.WorkspaceID,
+		PlatformType:   req.PlatformType,
+		QueryStartTime: req.StartTime,
+		QueryEndTime:   req.EndTime,
+		QueryTenants:   tenants,
+		QueryFilter:    filters,
+		Scene:          req.Scene,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
