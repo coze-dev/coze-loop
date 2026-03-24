@@ -429,6 +429,27 @@ func (l *LocalEvaluationSetService) GetEvaluationSetItemField(ctx context.Contex
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) ValidateMultiPartData(ctx context.Context, req *eval_set.ValidateMultiPartDataRequest, callOptions ...callopt.Option) (*eval_set.ValidateMultiPartDataResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceValidateMultiPartDataArgs)
+		result := out.(*eval_set.EvaluationSetServiceValidateMultiPartDataResult)
+		resp, err := l.impl.ValidateMultiPartData(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceValidateMultiPartDataArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceValidateMultiPartDataResult{}
+	ctx = l.injectRPCInfo(ctx, "ValidateMultiPartData")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

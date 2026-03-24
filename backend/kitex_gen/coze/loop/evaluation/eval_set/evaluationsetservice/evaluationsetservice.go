@@ -146,6 +146,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ValidateMultiPartData": kitex.NewMethodInfo(
+		validateMultiPartDataHandler,
+		newEvaluationSetServiceValidateMultiPartDataArgs,
+		newEvaluationSetServiceValidateMultiPartDataResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -540,6 +547,25 @@ func newEvaluationSetServiceGetEvaluationSetItemFieldResult() interface{} {
 	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldResult()
 }
 
+func validateMultiPartDataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceValidateMultiPartDataArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceValidateMultiPartDataResult)
+	success, err := handler.(eval_set.EvaluationSetService).ValidateMultiPartData(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceValidateMultiPartDataArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceValidateMultiPartDataArgs()
+}
+
+func newEvaluationSetServiceValidateMultiPartDataResult() interface{} {
+	return eval_set.NewEvaluationSetServiceValidateMultiPartDataResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -737,6 +763,16 @@ func (p *kClient) GetEvaluationSetItemField(ctx context.Context, req *eval_set.G
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult
 	if err = p.c.Call(ctx, "GetEvaluationSetItemField", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ValidateMultiPartData(ctx context.Context, req *eval_set.ValidateMultiPartDataRequest) (r *eval_set.ValidateMultiPartDataResponse, err error) {
+	var _args eval_set.EvaluationSetServiceValidateMultiPartDataArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceValidateMultiPartDataResult
+	if err = p.c.Call(ctx, "ValidateMultiPartData", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

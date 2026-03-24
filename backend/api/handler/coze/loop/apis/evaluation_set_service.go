@@ -9,7 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
+	eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 )
 
@@ -133,4 +135,20 @@ func ParseImportSourceFile(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_id/field [GET]
 func GetEvaluationItemField(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemField)
+}
+
+// ValidateMultiPartData .
+// @router /api/evaluation/v1/evaluation_sets/multi_part_data/validate [POST]
+func ValidateMultiPartData(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req eval_set.ValidateMultiPartDataRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(eval_set.ValidateMultiPartDataResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }

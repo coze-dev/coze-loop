@@ -373,6 +373,35 @@ struct GetEvaluationSetItemFieldResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct UploadAttachmentDetail {
+    1: optional dataset.ContentType contentType
+    2: optional string imagex_service_id              // 图片处理服务 id
+    // [20,50) 多模态信息. 根据 contentType 获取对应内容
+    20: optional common.Image origin_image   // contentType=Image，原始图片
+    21: optional common.Image image         // contentType=Image，上传后的图片
+    22: optional common.Audio origin_audio   // contentType=Audio，原始音频
+    23: optional common.Audio audio        // contentType=Audio. 上传后的音频
+    24: optional common.Video origin_video   // contentType=Video，原始视频
+    25: optional common.Video video        // contentType=Video. 上传后的视频
+    // 错误信息
+    101: optional dataset.ItemErrorType error_type // notice: 只返回图片相关的错误类型
+    102: optional string errMsg
+}
+
+struct ValidateMultiPartDataRequest {
+    1: required i64 space_id (agw.js_conv = "str", vt.gt = "0")
+    2: optional list<string> preview_data (vt.min_size = "1") // 可以是包含特定格式的多模态数据或单一的 url 链接
+    3: optional dataset.MultiModalStoreOption store_option (vt.not_nil = "true") // 目前仅模态类型在当前接口有效
+
+    /*base*/
+    255: optional base.Base base
+}
+
+struct ValidateMultiPartDataResponse {
+    1: optional list<UploadAttachmentDetail> attachment_urls_check_detail // 根据校验结果中是否包含错误，判断数据是否合法
+    255: optional base.BaseResp baseResp
+}
+
 service EvaluationSetService {
     // 基本信息管理
     CreateEvaluationSetResponse CreateEvaluationSet(1: CreateEvaluationSetRequest req) (
@@ -437,6 +466,9 @@ service EvaluationSetService {
     )
     GetEvaluationSetItemFieldResponse GetEvaluationSetItemField(1: GetEvaluationSetItemFieldRequest req) (
         api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field", api.op_type = 'query', api.tag = 'volc-agentkit,open'
+    )
+    ValidateMultiPartDataResponse ValidateMultiPartData(1: ValidateMultiPartDataRequest req) (
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/multi_part_data/validate", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
 }
 
