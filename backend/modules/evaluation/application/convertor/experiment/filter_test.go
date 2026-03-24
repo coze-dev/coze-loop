@@ -144,6 +144,13 @@ func TestParseIntListAndStringList(t *testing.T) {
 	_, err = parseIntList("a,b")
 	assert.Error(t, err)
 
+	vals, err := parseCronActivateIntList("0,1")
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []int64{0, 1}, vals)
+
+	_, err = parseCronActivateIntList("2")
+	assert.Error(t, err)
+
 	strs := parseStringList("a,b,c")
 	assert.ElementsMatch(t, []string{"a", "b", "c"}, strs)
 }
