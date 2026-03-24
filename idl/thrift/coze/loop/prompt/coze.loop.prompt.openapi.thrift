@@ -72,7 +72,6 @@ struct ListPromptBasicRequest {
     5: optional string creator (api.body="creator") // 创建人
     6: optional map<string, string> extra (api.body="extra") // 额外查询条件
 
-    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
