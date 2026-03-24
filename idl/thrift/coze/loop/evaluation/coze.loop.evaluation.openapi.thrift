@@ -8,6 +8,7 @@ include "domain_openapi/experiment.thrift"
 include "domain_openapi/eval_target.thrift"
 include "domain_openapi/evaluator.thrift"
 include "../data/domain/dataset_job.thrift"
+include "../extra.thrift"
 
 // ===============================
 // 评测集相关接口 (9个接口)
@@ -20,6 +21,7 @@ struct CreateEvaluationSetOApiRequest {
     3: optional string description (api.body="description", vt.max_size = "2048")
     4: optional eval_set.EvaluationSetSchema evaluation_set_schema (api.body="evaluation_set_schema")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -40,6 +42,7 @@ struct GetEvaluationSetOApiRequest {
     1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -63,6 +66,7 @@ struct UpdateEvaluationSetOApiRequest {
     3: optional string name (api.body="name", vt.min_size = "1", vt.max_size = "255"),
     4: optional string description (api.body="description", vt.max_size = "2048"),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -82,6 +86,7 @@ struct DeleteEvaluationSetOApiRequest {
     1: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 evaluation_set_id (api.path = "evaluation_set_id", api.js_conv="true", go.tag='json:"evaluation_set_id"'),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -106,6 +111,7 @@ struct ListEvaluationSetsOApiRequest {
     100: optional string page_token (api.query="page_token")
     101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -132,6 +138,7 @@ struct CreateEvaluationSetVersionOApiRequest {
     3: optional string version (api.body="version", vt.min_size = "1", vt.max_size="50")
     4: optional string description (api.body="description", vt.max_size = "400")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -155,6 +162,7 @@ struct ListEvaluationSetVersionsOApiRequest {
     100: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200"),    // 分页大小 (0, 200]，默认为 20
     101: optional string page_token (api.query="page_token")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -181,6 +189,7 @@ struct BatchCreateEvaluationSetItemsOApiRequest {
     4: optional bool is_skip_invalid_items (api.body="is_skip_invalid_items")// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
     5: optional bool is_allow_partial_add (api.body="is_allow_partial_add")// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -205,6 +214,7 @@ struct BatchUpdateEvaluationSetItemsOApiRequest {
     3: optional list<eval_set.EvaluationSetItem> items (api.body="items", vt.min_size='1',vt.max_size='100')
     4: optional bool is_skip_invalid_items (api.body="is_skip_invalid_items")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -228,6 +238,7 @@ struct BatchDeleteEvaluationSetItemsOApiRequest {
     3: optional list<i64> item_ids (api.body="item_ids", api.js_conv="true", go.tag='json:"item_ids"')
     4: optional bool is_delete_all (api.body="is_delete_all")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -247,6 +258,7 @@ struct ListEvaluationSetVersionItemsOApiRequest {
     100: optional string page_token (api.query="page_token")
     101: optional i32 page_size (api.query="page_size", vt.gt = "0", vt.le = "200")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -266,6 +278,7 @@ struct GetEvaluationItemFieldOApiRequest {
     5: optional string field_name // 列名
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -293,6 +306,7 @@ struct UpdateEvaluationSetSchemaOApiRequest {
     // 删除（不支持恢复数据）的情况下，不需要写入入参的 field list；
     10: optional list<eval_set.FieldSchema> fields (api.body="fields"),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -316,6 +330,7 @@ struct ReportEvalTargetInvokeResultRequest {
     // set error_message if status=FAILED
     20: optional string error_message
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -335,6 +350,7 @@ struct ImportEvaluationSetOApiRequest {
     4: optional list<dataset_job.FieldMapping> field_mappings (vt.min_size = "1", vt.elem.skip = "false")
     5: optional dataset_job.DatasetIOJobOption option
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -352,6 +368,7 @@ struct GetEvaluationSetIOJobOApiRequest {
     1: required i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"'),
     2: required i64 job_id (api.path = "job_id", api.js_conv="true", go.tag='json:"workspace_id"'),
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -387,6 +404,7 @@ struct SubmitExperimentOApiRequest {
 
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -430,6 +448,7 @@ struct GetExperimentsOApiRequest {
     1: optional i64 workspace_id (api.query='workspace_id',api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path='experiment_id',api.js_conv='true', go.tag='json:"experiment_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -455,6 +474,7 @@ struct ListExperimentResultOApiRequest {
     100: optional i32 page_num (api.body = 'page_num')
     101: optional i32 page_size (api.body = 'page_size')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -480,6 +500,7 @@ struct GetExperimentAggrResultOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -513,6 +534,7 @@ struct ListEvaluatorsOApiRequest {
     101: optional i32 page_number (api.body="page_number", vt.gt = "0")
     102: optional list<common.OrderBy> order_bys (api.body="order_bys")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -535,6 +557,7 @@ struct BatchGetEvaluatorsOApiRequest {
     2: optional list<i64> evaluator_ids (api.body="evaluator_ids", api.js_conv="true", go.tag='json:"evaluator_ids"')
     3: optional bool include_deleted (api.body="include_deleted")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -555,6 +578,7 @@ struct CreateEvaluatorOApiRequest {
     1: optional evaluator.Evaluator evaluator (api.body="evaluator")
     2: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -577,6 +601,7 @@ struct UpdateEvaluatorOApiRequest {
     3: optional string name (api.body="name")
     4: optional string description (api.body="description")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -598,6 +623,7 @@ struct UpdateEvaluatorDraftOApiRequest {
     3: optional evaluator.EvaluatorContent evaluator_content (api.body="evaluator_content")
     4: optional evaluator.EvaluatorType evaluator_type (api.body="evaluator_type")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -618,6 +644,7 @@ struct DeleteEvaluatorOApiRequest {
     1: optional i64 evaluator_id (api.path="evaluator_id", api.js_conv="true", go.tag='json:"evaluator_id"')
     2: optional i64 workspace_id (api.query="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -641,6 +668,7 @@ struct ListEvaluatorVersionsOApiRequest {
     101: optional i32 page_number (api.body="page_number")
     102: optional list<common.OrderBy> order_bys (api.body="order_bys")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -663,6 +691,7 @@ struct BatchGetEvaluatorVersionsOApiRequest {
     2: optional list<i64> evaluator_version_ids (api.body="evaluator_version_ids", api.js_conv="true", go.tag='json:"evaluator_version_ids"')
     3: optional bool include_deleted (api.body="include_deleted")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -685,6 +714,7 @@ struct SubmitEvaluatorVersionOApiRequest {
     3: optional string version (api.body="version")
     4: optional string description (api.body="description")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -709,6 +739,7 @@ struct RunEvaluatorOApiRequest {
 
     100: optional map<string, string> ext (api.body="ext")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -724,12 +755,36 @@ struct RunEvaluatorOpenAPIData {
     1: optional evaluator.EvaluatorRecord record (api.body="record")
 }
 
+// 3.10.1 执行预置评估器（按标识）
+struct RunBuiltinEvaluatorOApiRequest {
+    1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
+    // 预置评估器标识：builtin_evaluator_id 和 builtin_evaluator_name 至少传一个；若两者都传则需匹配
+    2: optional i64 builtin_evaluator_id (api.body="builtin_evaluator_id", api.js_conv="true", go.tag='json:"builtin_evaluator_id"')
+    3: optional string builtin_evaluator_name (api.body="builtin_evaluator_name", go.tag='json:"builtin_evaluator_name"')
+    4: optional evaluator.EvaluatorInputData input_data (api.body="input_data")
+    5: optional evaluator.EvaluatorRunConfig evaluator_run_conf (api.body="evaluator_run_conf")
+
+    100: optional map<string, string> ext (api.body="ext")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct RunBuiltinEvaluatorOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional RunEvaluatorOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
 // 3.11 修正评估记录
 struct CorrectEvaluatorRecordOApiRequest {
     1: optional i64 evaluator_record_id (api.path="evaluator_record_id", api.js_conv="true", go.tag='json:"evaluator_record_id"')
     2: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     3: optional evaluator.Correction correction (api.body="correction")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -751,6 +806,7 @@ struct BatchGetEvaluatorRecordsOApiRequest {
     2: optional list<i64> evaluator_record_ids (api.body="evaluator_record_ids", api.js_conv="true", go.tag='json:"evaluator_record_ids"')
     3: optional bool include_deleted (api.body="include_deleted")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -785,6 +841,7 @@ struct CreateExptTemplateOApiRequest {
     20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -805,6 +862,7 @@ struct BatchGetExptTemplatesOApiRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional list<i64> template_ids (api.body="template_ids", api.js_conv="true", go.tag='json:"template_ids"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -826,6 +884,7 @@ struct UpdateExptTemplateMetaOApiRequest {
     2: optional i64 template_id (api.body="template_id", api.js_conv="true", go.tag='json:"template_id"')
     3: optional experiment.ExptTemplateMeta meta (api.body="meta")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -851,6 +910,7 @@ struct UpdateExptTemplateOApiRequest {
     20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -871,6 +931,7 @@ struct DeleteExptTemplateOApiRequest {
     1: optional i64 template_id (api.path="template_id", api.js_conv="true", go.tag='json:"template_id"')
     2: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -893,6 +954,7 @@ struct ListExptTemplatesOApiRequest {
     4: optional experiment.ExperimentTemplateFilter filter_option (api.body="filter_option")
     5: optional list<common.OrderBy> order_bys (api.body="order_bys")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -915,6 +977,7 @@ struct SubmitExptFromTemplateOApiRequest {
     2: optional i64 template_id (api.body="template_id", api.js_conv="true", go.tag='json:"template_id"')
     3: optional string name (api.body="name")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -937,6 +1000,7 @@ struct ReportEvaluatorInvokeResultRequest {
     // set output if status=SUCCESS
     10: optional coze.loop.evaluation.spi.InvokeEvaluatorOutputData output
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -1015,6 +1079,8 @@ service EvaluationOpenAPIService {
     SubmitEvaluatorVersionOApiResponse SubmitEvaluatorVersionOApi(1: SubmitEvaluatorVersionOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/:evaluator_id/submit_version")
     // 执行评估器
     RunEvaluatorOApiResponse RunEvaluatorOApi(1: RunEvaluatorOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators_versions/:evaluator_version_id/run")
+    // 执行预置评估器（按标识）
+    RunBuiltinEvaluatorOApiResponse RunBuiltinEvaluatorOApi(1: RunBuiltinEvaluatorOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/evaluators/builtin/run")
     // 修正评估记录
     CorrectEvaluatorRecordOApiResponse CorrectEvaluatorRecordOApi(1: CorrectEvaluatorRecordOApiRequest req) (api.category="openapi", api.patch = "/v1/loop/evaluation/evaluator_records/:evaluator_record_id")
     // 批量查询评估记录

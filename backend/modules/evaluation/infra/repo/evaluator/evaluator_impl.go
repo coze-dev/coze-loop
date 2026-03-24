@@ -209,6 +209,14 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorMetaByID(ctx context.Context, ids [
 	return evaluatorDOs, nil
 }
 
+func (r *EvaluatorRepoImpl) GetEvaluatorMetaBySpaceIDAndName(ctx context.Context, spaceID int64, name string, includeDeleted bool) (*entity.Evaluator, error) {
+	evaluatorPO, err := r.evaluatorDao.GetEvaluatorBySpaceIDAndName(ctx, spaceID, name, includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+	return convertor.ConvertEvaluatorPO2DO(evaluatorPO), nil
+}
+
 func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted, withTags bool) ([]*entity.Evaluator, error) {
 	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, spaceID, ids, includeDeleted)
 	if err != nil {

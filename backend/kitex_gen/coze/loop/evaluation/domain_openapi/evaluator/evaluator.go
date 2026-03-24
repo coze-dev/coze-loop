@@ -16,6 +16,8 @@ const (
 
 	EvaluatorTypeCustomRPC = "custom_rpc"
 
+	EvaluatorTypeAgent = "agent"
+
 	LanguageTypePython = "python"
 
 	LanguageTypeJS = "javascript"
