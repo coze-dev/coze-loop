@@ -85,7 +85,7 @@ type Task struct {
 	// 创建来源
 	TaskSource *TaskSource `thrift:"task_source,11,optional" frugal:"11,optional,string" form:"task_source" json:"task_source,omitempty" query:"task_source"`
 	// 对应工作流 ID
-	WorkflowID *int64 `thrift:"workflow_id,12,optional" frugal:"12,optional,i64" json:"worflow_id" form:"workflow_id" query:"workflow_id"`
+	WorkflowID *int64 `thrift:"workflow_id,12,optional" frugal:"12,optional,i64" json:"workflow_id" form:"workflow_id" query:"workflow_id"`
 	// 基础信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
