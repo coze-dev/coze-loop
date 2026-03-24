@@ -7,6 +7,7 @@ typedef string EvaluatorType(ts.enum="true")
 const EvaluatorType EvaluatorType_Prompt = "prompt"
 const EvaluatorType EvaluatorType_Code = "code"
 const EvaluatorType EvaluatorType_CustomRPC = "custom_rpc"
+const EvaluatorType EvaluatorType_Agent = "agent"
 
 // 语言类型
 typedef string LanguageType(ts.enum="true")

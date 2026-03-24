@@ -520,6 +520,11 @@ func (p *ImportEvaluationSetOApiRequest) IsValid() error {
 			return fmt.Errorf("field Option not valid, %w", err)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -549,6 +554,11 @@ func (p *GetEvaluationSetIOJobOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *GetEvaluationSetIOJobOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -1088,6 +1098,42 @@ func (p *RunEvaluatorOpenAPIData) IsValid() error {
 	if p.Record != nil {
 		if err := p.Record.IsValid(); err != nil {
 			return fmt.Errorf("field Record not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunBuiltinEvaluatorOApiRequest) IsValid() error {
+	if p.InputData != nil {
+		if err := p.InputData.IsValid(); err != nil {
+			return fmt.Errorf("field InputData not valid, %w", err)
+		}
+	}
+	if p.EvaluatorRunConf != nil {
+		if err := p.EvaluatorRunConf.IsValid(); err != nil {
+			return fmt.Errorf("field EvaluatorRunConf not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunBuiltinEvaluatorOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
 	return nil
