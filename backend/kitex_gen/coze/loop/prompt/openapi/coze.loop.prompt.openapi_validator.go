@@ -148,11 +148,6 @@ func (p *CreatePromptOApiRequest) IsValid() error {
 	if len(*p.PromptKey) < int(1) {
 		return fmt.Errorf("field PromptKey min_len rule failed, current value: %d", len(*p.PromptKey))
 	}
-	if p.DraftDetail != nil {
-		if err := p.DraftDetail.IsValid(); err != nil {
-			return fmt.Errorf("field DraftDetail not valid, %w", err)
-		}
-	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

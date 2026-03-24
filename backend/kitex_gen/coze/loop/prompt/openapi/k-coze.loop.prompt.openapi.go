@@ -2926,20 +2926,6 @@ func (p *CreatePromptOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 21:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField21(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -3056,18 +3042,6 @@ func (p *CreatePromptOApiRequest) FastReadField15(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *CreatePromptOApiRequest) FastReadField21(buf []byte) (int, error) {
-	offset := 0
-	_field := prompt.NewPromptDetail()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.DraftDetail = _field
-	return offset, nil
-}
-
 func (p *CreatePromptOApiRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -3093,7 +3067,6 @@ func (p *CreatePromptOApiRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField13(buf[offset:], w)
 		offset += p.fastWriteField14(buf[offset:], w)
 		offset += p.fastWriteField15(buf[offset:], w)
-		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -3109,7 +3082,6 @@ func (p *CreatePromptOApiRequest) BLength() int {
 		l += p.field13Length()
 		l += p.field14Length()
 		l += p.field15Length()
-		l += p.field21Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -3166,15 +3138,6 @@ func (p *CreatePromptOApiRequest) fastWriteField15(buf []byte, w thrift.NocopyWr
 	if p.IsSetSecurityLevel() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 15)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SecurityLevel)
-	}
-	return offset
-}
-
-func (p *CreatePromptOApiRequest) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetDraftDetail() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 21)
-		offset += p.DraftDetail.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -3242,15 +3205,6 @@ func (p *CreatePromptOApiRequest) field15Length() int {
 	return l
 }
 
-func (p *CreatePromptOApiRequest) field21Length() int {
-	l := 0
-	if p.IsSetDraftDetail() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.DraftDetail.BLength()
-	}
-	return l
-}
-
 func (p *CreatePromptOApiRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -3304,15 +3258,6 @@ func (p *CreatePromptOApiRequest) DeepCopy(s interface{}) error {
 		tmp := *src.SecurityLevel
 		p.SecurityLevel = &tmp
 	}
-
-	var _draftDetail *prompt.PromptDetail
-	if src.DraftDetail != nil {
-		_draftDetail = &prompt.PromptDetail{}
-		if err := _draftDetail.DeepCopy(src.DraftDetail); err != nil {
-			return err
-		}
-	}
-	p.DraftDetail = _draftDetail
 
 	var _base *base.Base
 	if src.Base != nil {

@@ -95,8 +95,6 @@ struct CreatePromptOApiRequest {
     14: optional prompt.PromptType prompt_type (api.body="prompt_type")
     15: optional prompt.SecurityLevel security_level (api.body="security_level")
 
-    21: optional prompt.PromptDetail draft_detail (api.body="draft_detail")
-
     255: optional base.Base Base
 }
 

@@ -305,8 +305,6 @@ struct PromptDetail {
     2: optional list<Tool> tools
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
-
-    255: optional map<string, string> ext_infos
 }
 
 struct CommitInfo {

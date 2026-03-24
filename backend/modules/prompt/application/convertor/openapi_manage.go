@@ -20,7 +20,6 @@ func OpenAPIPromptDetailDO2DTO(do *entity.PromptDetail) *domainopenapi.PromptDet
 		Tools:          OpenAPIBatchToolDO2DTO(do.Tools),
 		ToolCallConfig: OpenAPIToolCallConfigDO2DTO(do.ToolCallConfig),
 		ModelConfig:    OpenAPIModelConfigForDetailDO2DTO(do.ModelConfig),
-		ExtInfos:       do.ExtInfos,
 	}
 }
 
@@ -124,7 +123,6 @@ func OpenAPIPromptDetailDTO2DO(dto *domainopenapi.PromptDetail) *entity.PromptDe
 		Tools:          OpenAPIBatchToolDTO2DO(dto.Tools),
 		ToolCallConfig: OpenAPIToolCallConfigDTO2DO(dto.ToolCallConfig),
 		ModelConfig:    OpenAPIModelConfigDTO2DO(dto.ModelConfig),
-		ExtInfos:       dto.ExtInfos,
 	}
 }
 

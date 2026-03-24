@@ -9414,20 +9414,6 @@ func (p *PromptDetail) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 255:
-			if fieldTypeId == thrift.MAP {
-				l, err = p.FastReadField255(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -9507,38 +9493,6 @@ func (p *PromptDetail) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *PromptDetail) FastReadField255(buf []byte) (int, error) {
-	offset := 0
-
-	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
-	offset += l
-	if err != nil {
-		return offset, err
-	}
-	_field := make(map[string]string, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_key = v
-		}
-
-		var _val string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	p.ExtInfos = _field
-	return offset, nil
-}
-
 func (p *PromptDetail) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -9550,7 +9504,6 @@ func (p *PromptDetail) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
-		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -9563,7 +9516,6 @@ func (p *PromptDetail) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
-		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -9612,23 +9564,6 @@ func (p *PromptDetail) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *PromptDetail) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetExtInfos() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 255)
-		mapBeginOffset := offset
-		offset += thrift.Binary.MapBeginLength()
-		var length int
-		for k, v := range p.ExtInfos {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
-		}
-		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
-	}
-	return offset
-}
-
 func (p *PromptDetail) field1Length() int {
 	l := 0
 	if p.IsSetPromptTemplate() {
@@ -9665,21 +9600,6 @@ func (p *PromptDetail) field4Length() int {
 	if p.IsSetModelConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ModelConfig.BLength()
-	}
-	return l
-}
-
-func (p *PromptDetail) field255Length() int {
-	l := 0
-	if p.IsSetExtInfos() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.MapBeginLength()
-		for k, v := range p.ExtInfos {
-			_, _ = k, v
-
-			l += thrift.Binary.StringLengthNocopy(k)
-			l += thrift.Binary.StringLengthNocopy(v)
-		}
 	}
 	return l
 }
@@ -9731,23 +9651,6 @@ func (p *PromptDetail) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ModelConfig = _modelConfig
-
-	if src.ExtInfos != nil {
-		p.ExtInfos = make(map[string]string, len(src.ExtInfos))
-		for key, val := range src.ExtInfos {
-			var _key string
-			if key != "" {
-				_key = kutils.StringDeepCopy(key)
-			}
-
-			var _val string
-			if val != "" {
-				_val = kutils.StringDeepCopy(val)
-			}
-
-			p.ExtInfos[_key] = _val
-		}
-	}
 
 	return nil
 }

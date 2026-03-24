@@ -13321,11 +13321,10 @@ func (p *ExecuteStreamingData) Field5DeepEqual(src *TokenUsage) bool {
 }
 
 type PromptDetail struct {
-	PromptTemplate *PromptTemplate   `thrift:"prompt_template,1,optional" frugal:"1,optional,PromptTemplate" form:"prompt_template" json:"prompt_template,omitempty" query:"prompt_template"`
-	Tools          []*Tool           `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
-	ToolCallConfig *ToolCallConfig   `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
-	ModelConfig    *ModelConfig      `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
-	ExtInfos       map[string]string `thrift:"ext_infos,255,optional" frugal:"255,optional,map<string:string>" form:"ext_infos" json:"ext_infos,omitempty" query:"ext_infos"`
+	PromptTemplate *PromptTemplate `thrift:"prompt_template,1,optional" frugal:"1,optional,PromptTemplate" form:"prompt_template" json:"prompt_template,omitempty" query:"prompt_template"`
+	Tools          []*Tool         `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
+	ToolCallConfig *ToolCallConfig `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
+	ModelConfig    *ModelConfig    `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
 }
 
 func NewPromptDetail() *PromptDetail {
@@ -13382,18 +13381,6 @@ func (p *PromptDetail) GetModelConfig() (v *ModelConfig) {
 	}
 	return p.ModelConfig
 }
-
-var PromptDetail_ExtInfos_DEFAULT map[string]string
-
-func (p *PromptDetail) GetExtInfos() (v map[string]string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetExtInfos() {
-		return PromptDetail_ExtInfos_DEFAULT
-	}
-	return p.ExtInfos
-}
 func (p *PromptDetail) SetPromptTemplate(val *PromptTemplate) {
 	p.PromptTemplate = val
 }
@@ -13406,16 +13393,12 @@ func (p *PromptDetail) SetToolCallConfig(val *ToolCallConfig) {
 func (p *PromptDetail) SetModelConfig(val *ModelConfig) {
 	p.ModelConfig = val
 }
-func (p *PromptDetail) SetExtInfos(val map[string]string) {
-	p.ExtInfos = val
-}
 
 var fieldIDToName_PromptDetail = map[int16]string{
-	1:   "prompt_template",
-	2:   "tools",
-	3:   "tool_call_config",
-	4:   "model_config",
-	255: "ext_infos",
+	1: "prompt_template",
+	2: "tools",
+	3: "tool_call_config",
+	4: "model_config",
 }
 
 func (p *PromptDetail) IsSetPromptTemplate() bool {
@@ -13432,10 +13415,6 @@ func (p *PromptDetail) IsSetToolCallConfig() bool {
 
 func (p *PromptDetail) IsSetModelConfig() bool {
 	return p.ModelConfig != nil
-}
-
-func (p *PromptDetail) IsSetExtInfos() bool {
-	return p.ExtInfos != nil
 }
 
 func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
@@ -13483,14 +13462,6 @@ func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 255:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField255(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13572,35 +13543,6 @@ func (p *PromptDetail) ReadField4(iprot thrift.TProtocol) error {
 	p.ModelConfig = _field
 	return nil
 }
-func (p *PromptDetail) ReadField255(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
-		return err
-	}
-	_field := make(map[string]string, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
-		return err
-	}
-	p.ExtInfos = _field
-	return nil
-}
 
 func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -13622,10 +13564,6 @@ func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
-			goto WriteFieldError
-		}
-		if err = p.writeField255(oprot); err != nil {
-			fieldId = 255
 			goto WriteFieldError
 		}
 	}
@@ -13726,35 +13664,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *PromptDetail) writeField255(oprot thrift.TProtocol) (err error) {
-	if p.IsSetExtInfos() {
-		if err = oprot.WriteFieldBegin("ext_infos", thrift.MAP, 255); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.ExtInfos)); err != nil {
-			return err
-		}
-		for k, v := range p.ExtInfos {
-			if err := oprot.WriteString(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
-}
 
 func (p *PromptDetail) String() string {
 	if p == nil {
@@ -13780,9 +13689,6 @@ func (p *PromptDetail) DeepEqual(ano *PromptDetail) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ModelConfig) {
-		return false
-	}
-	if !p.Field255DeepEqual(ano.ExtInfos) {
 		return false
 	}
 	return true
@@ -13819,19 +13725,6 @@ func (p *PromptDetail) Field4DeepEqual(src *ModelConfig) bool {
 
 	if !p.ModelConfig.DeepEqual(src) {
 		return false
-	}
-	return true
-}
-func (p *PromptDetail) Field255DeepEqual(src map[string]string) bool {
-
-	if len(p.ExtInfos) != len(src) {
-		return false
-	}
-	for k, v := range p.ExtInfos {
-		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
-			return false
-		}
 	}
 	return true
 }

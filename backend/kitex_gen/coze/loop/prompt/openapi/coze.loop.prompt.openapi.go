@@ -3828,7 +3828,6 @@ type CreatePromptOApiRequest struct {
 	PromptDescription *string               `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty"`
 	PromptType        *prompt.PromptType    `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty"`
 	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,15,optional" frugal:"15,optional,string" form:"security_level" json:"security_level,omitempty"`
-	DraftDetail       *prompt.PromptDetail  `thrift:"draft_detail,21,optional" frugal:"21,optional,prompt.PromptDetail" form:"draft_detail" json:"draft_detail,omitempty"`
 	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -3911,18 +3910,6 @@ func (p *CreatePromptOApiRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
 	return *p.SecurityLevel
 }
 
-var CreatePromptOApiRequest_DraftDetail_DEFAULT *prompt.PromptDetail
-
-func (p *CreatePromptOApiRequest) GetDraftDetail() (v *prompt.PromptDetail) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetDraftDetail() {
-		return CreatePromptOApiRequest_DraftDetail_DEFAULT
-	}
-	return p.DraftDetail
-}
-
 var CreatePromptOApiRequest_Base_DEFAULT *base.Base
 
 func (p *CreatePromptOApiRequest) GetBase() (v *base.Base) {
@@ -3952,9 +3939,6 @@ func (p *CreatePromptOApiRequest) SetPromptType(val *prompt.PromptType) {
 func (p *CreatePromptOApiRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
 	p.SecurityLevel = val
 }
-func (p *CreatePromptOApiRequest) SetDraftDetail(val *prompt.PromptDetail) {
-	p.DraftDetail = val
-}
 func (p *CreatePromptOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -3966,7 +3950,6 @@ var fieldIDToName_CreatePromptOApiRequest = map[int16]string{
 	13:  "prompt_description",
 	14:  "prompt_type",
 	15:  "security_level",
-	21:  "draft_detail",
 	255: "Base",
 }
 
@@ -3992,10 +3975,6 @@ func (p *CreatePromptOApiRequest) IsSetPromptType() bool {
 
 func (p *CreatePromptOApiRequest) IsSetSecurityLevel() bool {
 	return p.SecurityLevel != nil
-}
-
-func (p *CreatePromptOApiRequest) IsSetDraftDetail() bool {
-	return p.DraftDetail != nil
 }
 
 func (p *CreatePromptOApiRequest) IsSetBase() bool {
@@ -4063,14 +4042,6 @@ func (p *CreatePromptOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField15(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 21:
-			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField21(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4179,14 +4150,6 @@ func (p *CreatePromptOApiRequest) ReadField15(iprot thrift.TProtocol) error {
 	p.SecurityLevel = _field
 	return nil
 }
-func (p *CreatePromptOApiRequest) ReadField21(iprot thrift.TProtocol) error {
-	_field := prompt.NewPromptDetail()
-	if err := _field.Read(iprot); err != nil {
-		return err
-	}
-	p.DraftDetail = _field
-	return nil
-}
 func (p *CreatePromptOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -4224,10 +4187,6 @@ func (p *CreatePromptOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
-			goto WriteFieldError
-		}
-		if err = p.writeField21(oprot); err != nil {
-			fieldId = 21
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -4360,24 +4319,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
-func (p *CreatePromptOApiRequest) writeField21(oprot thrift.TProtocol) (err error) {
-	if p.IsSetDraftDetail() {
-		if err = oprot.WriteFieldBegin("draft_detail", thrift.STRUCT, 21); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := p.DraftDetail.Write(oprot); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
-}
 func (p *CreatePromptOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -4427,9 +4368,6 @@ func (p *CreatePromptOApiRequest) DeepEqual(ano *CreatePromptOApiRequest) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.SecurityLevel) {
-		return false
-	}
-	if !p.Field21DeepEqual(ano.DraftDetail) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -4506,13 +4444,6 @@ func (p *CreatePromptOApiRequest) Field15DeepEqual(src *prompt.SecurityLevel) bo
 		return false
 	}
 	if strings.Compare(*p.SecurityLevel, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *CreatePromptOApiRequest) Field21DeepEqual(src *prompt.PromptDetail) bool {
-
-	if !p.DraftDetail.DeepEqual(src) {
 		return false
 	}
 	return true

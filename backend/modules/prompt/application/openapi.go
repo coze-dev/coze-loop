@@ -172,15 +172,6 @@ func (p *PromptOpenAPIApplicationImpl) CreatePromptOApi(ctx context.Context, req
 			SecurityLevel: entity.SecurityLevel(req.GetSecurityLevel()),
 		},
 	}
-	if req.DraftDetail != nil {
-		promptDO.PromptDraft = &entity.PromptDraft{
-			DraftInfo: &entity.DraftInfo{
-				UserID:     consts.OpenAPIUserID,
-				IsModified: true,
-			},
-			PromptDetail: convertor.OpenAPIPromptDetailDTO2DO(req.DraftDetail),
-		}
-	}
 
 	promptID, err := p.promptService.CreatePrompt(ctx, promptDO)
 	if err != nil {
@@ -269,7 +260,7 @@ func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *o
 	}
 
 	savingPromptDO := &entity.Prompt{
-		ID:     req.GetPromptID(),
+		ID:      req.GetPromptID(),
 		SpaceID: promptDO.SpaceID,
 		PromptDraft: &entity.PromptDraft{
 			DraftInfo: func() *entity.DraftInfo {
@@ -317,10 +308,10 @@ func (p *PromptOpenAPIApplicationImpl) ListCommitOApi(ctx context.Context, req *
 	}
 
 	listCommitResult, err := p.promptManageRepo.ListCommitInfo(ctx, repo.ListCommitInfoParam{
-		PromptID:   req.GetPromptID(),
-		PageSize:   int(req.GetPageSize()),
-		PageToken:  pageTokenPtr,
-		Asc:        false,
+		PromptID:  req.GetPromptID(),
+		PageSize:  int(req.GetPageSize()),
+		PageToken: pageTokenPtr,
+		Asc:       false,
 	})
 	if err != nil {
 		return r, err
@@ -374,10 +365,10 @@ func (p *PromptOpenAPIApplicationImpl) CommitDraftOApi(ctx context.Context, req 
 	}
 
 	err = p.promptManageRepo.CommitDraft(ctx, repo.CommitDraftParam{
-		PromptID:           req.GetPromptID(),
-		UserID:             userID,
-		CommitVersion:      req.GetCommitVersion(),
-		CommitDescription:  req.GetCommitDescription(),
+		PromptID:          req.GetPromptID(),
+		UserID:            userID,
+		CommitVersion:     req.GetCommitVersion(),
+		CommitDescription: req.GetCommitDescription(),
 	})
 	return r, err
 }
