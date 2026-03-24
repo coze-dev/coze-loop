@@ -23,7 +23,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/space"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
-	manage1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
+	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
@@ -33,7 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
-	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 var (
@@ -50,7 +50,7 @@ var (
 	_ = openapi.KitexUnusedProtection
 	_ = space.KitexUnusedProtection
 	_ = user.KitexUnusedProtection
-	_ = manage1.KitexUnusedProtection
+	_ = manage0.KitexUnusedProtection
 	_ = runtime.KitexUnusedProtection
 	_ = metric.KitexUnusedProtection
 	_ = openapi2.KitexUnusedProtection
@@ -60,7 +60,7 @@ var (
 	_ = execute.KitexUnusedProtection
 	_ = manage.KitexUnusedProtection
 	_ = openapi1.KitexUnusedProtection
-	_ = manage0.KitexUnusedProtection
+	_ = tool_manage.KitexUnusedProtection
 )
 
 // unused protection

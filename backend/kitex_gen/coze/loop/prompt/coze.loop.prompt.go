@@ -8,7 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
-	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 type PromptManageService interface {
@@ -38,28 +38,28 @@ func NewPromptManageServiceClient(c thrift.TClient) *PromptManageServiceClient {
 }
 
 type ToolManageService interface {
-	manage0.ToolManageService
+	tool_manage.ToolManageService
 }
 
 type ToolManageServiceClient struct {
-	*manage0.ToolManageServiceClient
+	*tool_manage.ToolManageServiceClient
 }
 
 func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClientFactory(t, f),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientFactory(t, f),
 	}
 }
 
 func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClientProtocol(t, iprot, oprot),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClient(c),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClient(c),
 	}
 }
 
@@ -151,11 +151,11 @@ func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageS
 }
 
 type ToolManageServiceProcessor struct {
-	*manage0.ToolManageServiceProcessor
+	*tool_manage.ToolManageServiceProcessor
 }
 
 func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
-	self := &ToolManageServiceProcessor{manage0.NewToolManageServiceProcessor(handler)}
+	self := &ToolManageServiceProcessor{tool_manage.NewToolManageServiceProcessor(handler)}
 	return self
 }
 

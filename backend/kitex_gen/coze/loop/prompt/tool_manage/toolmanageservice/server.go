@@ -3,11 +3,11 @@ package toolmanageservice
 
 import (
 	server "github.com/cloudwego/kitex/server"
-	manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	tool_manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 // NewServer creates a server.Server with the given handler and options.
-func NewServer(handler manage.ToolManageService, opts ...server.Option) server.Server {
+func NewServer(handler tool_manage.ToolManageService, opts ...server.Option) server.Server {
 	var options []server.Option
 
 	options = append(options, opts...)
@@ -20,6 +20,6 @@ func NewServer(handler manage.ToolManageService, opts ...server.Option) server.S
 	return svr
 }
 
-func RegisterService(svr server.Server, handler manage.ToolManageService, opts ...server.RegisterOption) error {
+func RegisterService(svr server.Server, handler tool_manage.ToolManageService, opts ...server.RegisterOption) error {
 	return svr.RegisterService(serviceInfo(), handler, opts...)
 }

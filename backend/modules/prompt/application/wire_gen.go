@@ -22,7 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
-	manage2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	manage2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"

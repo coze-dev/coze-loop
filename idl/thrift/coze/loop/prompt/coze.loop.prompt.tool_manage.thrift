@@ -1,4 +1,4 @@
-namespace go coze.loop.prompt.tool.manage
+namespace go coze.loop.prompt.tool_manage
 
 include "../../../base.thrift"
 include "./domain/tool.thrift"

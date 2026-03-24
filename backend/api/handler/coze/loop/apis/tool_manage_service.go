@@ -7,7 +7,7 @@ import (
 
 	"github.com/cloudwego/hertz/pkg/app"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage/toolmanageservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage/toolmanageservice"
 )
 
 var toolManageSvc toolmanageservice.Client

@@ -11,7 +11,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/tool"
-	toolmanage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	toolmanage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity/toolmgmt"

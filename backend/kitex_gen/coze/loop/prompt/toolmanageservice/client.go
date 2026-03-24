@@ -6,18 +6,18 @@ import (
 	"context"
 	client "github.com/cloudwego/kitex/client"
 	callopt "github.com/cloudwego/kitex/client/callopt"
-	manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	tool_manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 // Client is designed to provide IDL-compatible methods with call-option parameter for kitex framework.
 type Client interface {
-	CreateTool(ctx context.Context, request *manage.CreateToolRequest, callOptions ...callopt.Option) (r *manage.CreateToolResponse, err error)
-	GetToolDetail(ctx context.Context, request *manage.GetToolDetailRequest, callOptions ...callopt.Option) (r *manage.GetToolDetailResponse, err error)
-	ListTool(ctx context.Context, request *manage.ListToolRequest, callOptions ...callopt.Option) (r *manage.ListToolResponse, err error)
-	SaveToolDetail(ctx context.Context, request *manage.SaveToolDetailRequest, callOptions ...callopt.Option) (r *manage.SaveToolDetailResponse, err error)
-	CommitToolDraft(ctx context.Context, request *manage.CommitToolDraftRequest, callOptions ...callopt.Option) (r *manage.CommitToolDraftResponse, err error)
-	ListToolCommit(ctx context.Context, request *manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *manage.ListToolCommitResponse, err error)
-	BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *manage.BatchGetToolsResponse, err error)
+	CreateTool(ctx context.Context, request *tool_manage.CreateToolRequest, callOptions ...callopt.Option) (r *tool_manage.CreateToolResponse, err error)
+	GetToolDetail(ctx context.Context, request *tool_manage.GetToolDetailRequest, callOptions ...callopt.Option) (r *tool_manage.GetToolDetailResponse, err error)
+	ListTool(ctx context.Context, request *tool_manage.ListToolRequest, callOptions ...callopt.Option) (r *tool_manage.ListToolResponse, err error)
+	SaveToolDetail(ctx context.Context, request *tool_manage.SaveToolDetailRequest, callOptions ...callopt.Option) (r *tool_manage.SaveToolDetailResponse, err error)
+	CommitToolDraft(ctx context.Context, request *tool_manage.CommitToolDraftRequest, callOptions ...callopt.Option) (r *tool_manage.CommitToolDraftResponse, err error)
+	ListToolCommit(ctx context.Context, request *tool_manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *tool_manage.ListToolCommitResponse, err error)
+	BatchGetTools(ctx context.Context, request *tool_manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *tool_manage.BatchGetToolsResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -49,37 +49,37 @@ type kToolManageServiceClient struct {
 	*kClient
 }
 
-func (p *kToolManageServiceClient) CreateTool(ctx context.Context, request *manage.CreateToolRequest, callOptions ...callopt.Option) (r *manage.CreateToolResponse, err error) {
+func (p *kToolManageServiceClient) CreateTool(ctx context.Context, request *tool_manage.CreateToolRequest, callOptions ...callopt.Option) (r *tool_manage.CreateToolResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CreateTool(ctx, request)
 }
 
-func (p *kToolManageServiceClient) GetToolDetail(ctx context.Context, request *manage.GetToolDetailRequest, callOptions ...callopt.Option) (r *manage.GetToolDetailResponse, err error) {
+func (p *kToolManageServiceClient) GetToolDetail(ctx context.Context, request *tool_manage.GetToolDetailRequest, callOptions ...callopt.Option) (r *tool_manage.GetToolDetailResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetToolDetail(ctx, request)
 }
 
-func (p *kToolManageServiceClient) ListTool(ctx context.Context, request *manage.ListToolRequest, callOptions ...callopt.Option) (r *manage.ListToolResponse, err error) {
+func (p *kToolManageServiceClient) ListTool(ctx context.Context, request *tool_manage.ListToolRequest, callOptions ...callopt.Option) (r *tool_manage.ListToolResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTool(ctx, request)
 }
 
-func (p *kToolManageServiceClient) SaveToolDetail(ctx context.Context, request *manage.SaveToolDetailRequest, callOptions ...callopt.Option) (r *manage.SaveToolDetailResponse, err error) {
+func (p *kToolManageServiceClient) SaveToolDetail(ctx context.Context, request *tool_manage.SaveToolDetailRequest, callOptions ...callopt.Option) (r *tool_manage.SaveToolDetailResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SaveToolDetail(ctx, request)
 }
 
-func (p *kToolManageServiceClient) CommitToolDraft(ctx context.Context, request *manage.CommitToolDraftRequest, callOptions ...callopt.Option) (r *manage.CommitToolDraftResponse, err error) {
+func (p *kToolManageServiceClient) CommitToolDraft(ctx context.Context, request *tool_manage.CommitToolDraftRequest, callOptions ...callopt.Option) (r *tool_manage.CommitToolDraftResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CommitToolDraft(ctx, request)
 }
 
-func (p *kToolManageServiceClient) ListToolCommit(ctx context.Context, request *manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *manage.ListToolCommitResponse, err error) {
+func (p *kToolManageServiceClient) ListToolCommit(ctx context.Context, request *tool_manage.ListToolCommitRequest, callOptions ...callopt.Option) (r *tool_manage.ListToolCommitResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListToolCommit(ctx, request)
 }
 
-func (p *kToolManageServiceClient) BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *manage.BatchGetToolsResponse, err error) {
+func (p *kToolManageServiceClient) BatchGetTools(ctx context.Context, request *tool_manage.BatchGetToolsRequest, callOptions ...callopt.Option) (r *tool_manage.BatchGetToolsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetTools(ctx, request)
 }

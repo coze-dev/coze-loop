@@ -8,7 +8,7 @@ import (
 	client "github.com/cloudwego/kitex/client"
 	kitex "github.com/cloudwego/kitex/pkg/serviceinfo"
 	apis "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis"
-	manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	tool_manage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 var errInvalidMessageType = errors.New("invalid message type for service method handler")
@@ -97,9 +97,9 @@ func newServiceInfo() *kitex.ServiceInfo {
 }
 
 func createToolHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceCreateToolArgs)
-	realResult := result.(*manage.ToolManageServiceCreateToolResult)
-	success, err := handler.(manage.ToolManageService).CreateTool(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceCreateToolArgs)
+	realResult := result.(*tool_manage.ToolManageServiceCreateToolResult)
+	success, err := handler.(tool_manage.ToolManageService).CreateTool(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -108,17 +108,17 @@ func createToolHandler(ctx context.Context, handler interface{}, arg, result int
 }
 
 func newToolManageServiceCreateToolArgs() interface{} {
-	return manage.NewToolManageServiceCreateToolArgs()
+	return tool_manage.NewToolManageServiceCreateToolArgs()
 }
 
 func newToolManageServiceCreateToolResult() interface{} {
-	return manage.NewToolManageServiceCreateToolResult()
+	return tool_manage.NewToolManageServiceCreateToolResult()
 }
 
 func getToolDetailHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceGetToolDetailArgs)
-	realResult := result.(*manage.ToolManageServiceGetToolDetailResult)
-	success, err := handler.(manage.ToolManageService).GetToolDetail(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceGetToolDetailArgs)
+	realResult := result.(*tool_manage.ToolManageServiceGetToolDetailResult)
+	success, err := handler.(tool_manage.ToolManageService).GetToolDetail(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -127,17 +127,17 @@ func getToolDetailHandler(ctx context.Context, handler interface{}, arg, result 
 }
 
 func newToolManageServiceGetToolDetailArgs() interface{} {
-	return manage.NewToolManageServiceGetToolDetailArgs()
+	return tool_manage.NewToolManageServiceGetToolDetailArgs()
 }
 
 func newToolManageServiceGetToolDetailResult() interface{} {
-	return manage.NewToolManageServiceGetToolDetailResult()
+	return tool_manage.NewToolManageServiceGetToolDetailResult()
 }
 
 func listToolHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceListToolArgs)
-	realResult := result.(*manage.ToolManageServiceListToolResult)
-	success, err := handler.(manage.ToolManageService).ListTool(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceListToolArgs)
+	realResult := result.(*tool_manage.ToolManageServiceListToolResult)
+	success, err := handler.(tool_manage.ToolManageService).ListTool(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -146,17 +146,17 @@ func listToolHandler(ctx context.Context, handler interface{}, arg, result inter
 }
 
 func newToolManageServiceListToolArgs() interface{} {
-	return manage.NewToolManageServiceListToolArgs()
+	return tool_manage.NewToolManageServiceListToolArgs()
 }
 
 func newToolManageServiceListToolResult() interface{} {
-	return manage.NewToolManageServiceListToolResult()
+	return tool_manage.NewToolManageServiceListToolResult()
 }
 
 func saveToolDetailHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceSaveToolDetailArgs)
-	realResult := result.(*manage.ToolManageServiceSaveToolDetailResult)
-	success, err := handler.(manage.ToolManageService).SaveToolDetail(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceSaveToolDetailArgs)
+	realResult := result.(*tool_manage.ToolManageServiceSaveToolDetailResult)
+	success, err := handler.(tool_manage.ToolManageService).SaveToolDetail(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -165,17 +165,17 @@ func saveToolDetailHandler(ctx context.Context, handler interface{}, arg, result
 }
 
 func newToolManageServiceSaveToolDetailArgs() interface{} {
-	return manage.NewToolManageServiceSaveToolDetailArgs()
+	return tool_manage.NewToolManageServiceSaveToolDetailArgs()
 }
 
 func newToolManageServiceSaveToolDetailResult() interface{} {
-	return manage.NewToolManageServiceSaveToolDetailResult()
+	return tool_manage.NewToolManageServiceSaveToolDetailResult()
 }
 
 func commitToolDraftHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceCommitToolDraftArgs)
-	realResult := result.(*manage.ToolManageServiceCommitToolDraftResult)
-	success, err := handler.(manage.ToolManageService).CommitToolDraft(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceCommitToolDraftArgs)
+	realResult := result.(*tool_manage.ToolManageServiceCommitToolDraftResult)
+	success, err := handler.(tool_manage.ToolManageService).CommitToolDraft(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -184,17 +184,17 @@ func commitToolDraftHandler(ctx context.Context, handler interface{}, arg, resul
 }
 
 func newToolManageServiceCommitToolDraftArgs() interface{} {
-	return manage.NewToolManageServiceCommitToolDraftArgs()
+	return tool_manage.NewToolManageServiceCommitToolDraftArgs()
 }
 
 func newToolManageServiceCommitToolDraftResult() interface{} {
-	return manage.NewToolManageServiceCommitToolDraftResult()
+	return tool_manage.NewToolManageServiceCommitToolDraftResult()
 }
 
 func listToolCommitHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceListToolCommitArgs)
-	realResult := result.(*manage.ToolManageServiceListToolCommitResult)
-	success, err := handler.(manage.ToolManageService).ListToolCommit(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceListToolCommitArgs)
+	realResult := result.(*tool_manage.ToolManageServiceListToolCommitResult)
+	success, err := handler.(tool_manage.ToolManageService).ListToolCommit(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -203,17 +203,17 @@ func listToolCommitHandler(ctx context.Context, handler interface{}, arg, result
 }
 
 func newToolManageServiceListToolCommitArgs() interface{} {
-	return manage.NewToolManageServiceListToolCommitArgs()
+	return tool_manage.NewToolManageServiceListToolCommitArgs()
 }
 
 func newToolManageServiceListToolCommitResult() interface{} {
-	return manage.NewToolManageServiceListToolCommitResult()
+	return tool_manage.NewToolManageServiceListToolCommitResult()
 }
 
 func batchGetToolsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*manage.ToolManageServiceBatchGetToolsArgs)
-	realResult := result.(*manage.ToolManageServiceBatchGetToolsResult)
-	success, err := handler.(manage.ToolManageService).BatchGetTools(ctx, realArg.Request)
+	realArg := arg.(*tool_manage.ToolManageServiceBatchGetToolsArgs)
+	realResult := result.(*tool_manage.ToolManageServiceBatchGetToolsResult)
+	success, err := handler.(tool_manage.ToolManageService).BatchGetTools(ctx, realArg.Request)
 	if err != nil {
 		return err
 	}
@@ -222,11 +222,11 @@ func batchGetToolsHandler(ctx context.Context, handler interface{}, arg, result 
 }
 
 func newToolManageServiceBatchGetToolsArgs() interface{} {
-	return manage.NewToolManageServiceBatchGetToolsArgs()
+	return tool_manage.NewToolManageServiceBatchGetToolsArgs()
 }
 
 func newToolManageServiceBatchGetToolsResult() interface{} {
-	return manage.NewToolManageServiceBatchGetToolsResult()
+	return tool_manage.NewToolManageServiceBatchGetToolsResult()
 }
 
 type kClient struct {
@@ -241,70 +241,70 @@ func newServiceClient(c client.Client) *kClient {
 	}
 }
 
-func (p *kClient) CreateTool(ctx context.Context, request *manage.CreateToolRequest) (r *manage.CreateToolResponse, err error) {
-	var _args manage.ToolManageServiceCreateToolArgs
+func (p *kClient) CreateTool(ctx context.Context, request *tool_manage.CreateToolRequest) (r *tool_manage.CreateToolResponse, err error) {
+	var _args tool_manage.ToolManageServiceCreateToolArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceCreateToolResult
+	var _result tool_manage.ToolManageServiceCreateToolResult
 	if err = p.c.Call(ctx, "CreateTool", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetToolDetail(ctx context.Context, request *manage.GetToolDetailRequest) (r *manage.GetToolDetailResponse, err error) {
-	var _args manage.ToolManageServiceGetToolDetailArgs
+func (p *kClient) GetToolDetail(ctx context.Context, request *tool_manage.GetToolDetailRequest) (r *tool_manage.GetToolDetailResponse, err error) {
+	var _args tool_manage.ToolManageServiceGetToolDetailArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceGetToolDetailResult
+	var _result tool_manage.ToolManageServiceGetToolDetailResult
 	if err = p.c.Call(ctx, "GetToolDetail", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) ListTool(ctx context.Context, request *manage.ListToolRequest) (r *manage.ListToolResponse, err error) {
-	var _args manage.ToolManageServiceListToolArgs
+func (p *kClient) ListTool(ctx context.Context, request *tool_manage.ListToolRequest) (r *tool_manage.ListToolResponse, err error) {
+	var _args tool_manage.ToolManageServiceListToolArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceListToolResult
+	var _result tool_manage.ToolManageServiceListToolResult
 	if err = p.c.Call(ctx, "ListTool", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) SaveToolDetail(ctx context.Context, request *manage.SaveToolDetailRequest) (r *manage.SaveToolDetailResponse, err error) {
-	var _args manage.ToolManageServiceSaveToolDetailArgs
+func (p *kClient) SaveToolDetail(ctx context.Context, request *tool_manage.SaveToolDetailRequest) (r *tool_manage.SaveToolDetailResponse, err error) {
+	var _args tool_manage.ToolManageServiceSaveToolDetailArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceSaveToolDetailResult
+	var _result tool_manage.ToolManageServiceSaveToolDetailResult
 	if err = p.c.Call(ctx, "SaveToolDetail", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) CommitToolDraft(ctx context.Context, request *manage.CommitToolDraftRequest) (r *manage.CommitToolDraftResponse, err error) {
-	var _args manage.ToolManageServiceCommitToolDraftArgs
+func (p *kClient) CommitToolDraft(ctx context.Context, request *tool_manage.CommitToolDraftRequest) (r *tool_manage.CommitToolDraftResponse, err error) {
+	var _args tool_manage.ToolManageServiceCommitToolDraftArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceCommitToolDraftResult
+	var _result tool_manage.ToolManageServiceCommitToolDraftResult
 	if err = p.c.Call(ctx, "CommitToolDraft", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) ListToolCommit(ctx context.Context, request *manage.ListToolCommitRequest) (r *manage.ListToolCommitResponse, err error) {
-	var _args manage.ToolManageServiceListToolCommitArgs
+func (p *kClient) ListToolCommit(ctx context.Context, request *tool_manage.ListToolCommitRequest) (r *tool_manage.ListToolCommitResponse, err error) {
+	var _args tool_manage.ToolManageServiceListToolCommitArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceListToolCommitResult
+	var _result tool_manage.ToolManageServiceListToolCommitResult
 	if err = p.c.Call(ctx, "ListToolCommit", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) BatchGetTools(ctx context.Context, request *manage.BatchGetToolsRequest) (r *manage.BatchGetToolsResponse, err error) {
-	var _args manage.ToolManageServiceBatchGetToolsArgs
+func (p *kClient) BatchGetTools(ctx context.Context, request *tool_manage.BatchGetToolsRequest) (r *tool_manage.BatchGetToolsResponse, err error) {
+	var _args tool_manage.ToolManageServiceBatchGetToolsArgs
 	_args.Request = request
-	var _result manage.ToolManageServiceBatchGetToolsResult
+	var _result tool_manage.ToolManageServiceBatchGetToolsResult
 	if err = p.c.Call(ctx, "BatchGetTools", &_args, &_result); err != nil {
 		return
 	}

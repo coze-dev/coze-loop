@@ -17,7 +17,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/space"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
-	manage1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
+	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
@@ -27,7 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	openapi1 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
-	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool/manage"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 type EvaluationSetService interface {
@@ -239,28 +239,28 @@ func NewPromptManageServiceClient(c thrift.TClient) *PromptManageServiceClient {
 }
 
 type ToolManageService interface {
-	manage0.ToolManageService
+	tool_manage.ToolManageService
 }
 
 type ToolManageServiceClient struct {
-	*manage0.ToolManageServiceClient
+	*tool_manage.ToolManageServiceClient
 }
 
 func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClientFactory(t, f),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientFactory(t, f),
 	}
 }
 
 func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClientProtocol(t, iprot, oprot),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
 	return &ToolManageServiceClient{
-		ToolManageServiceClient: manage0.NewToolManageServiceClient(c),
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClient(c),
 	}
 }
 
@@ -343,28 +343,28 @@ func NewPromptOpenAPIServiceClient(c thrift.TClient) *PromptOpenAPIServiceClient
 }
 
 type LLMManageService interface {
-	manage1.LLMManageService
+	manage0.LLMManageService
 }
 
 type LLMManageServiceClient struct {
-	*manage1.LLMManageServiceClient
+	*manage0.LLMManageServiceClient
 }
 
 func NewLLMManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage1.NewLLMManageServiceClientFactory(t, f),
+		LLMManageServiceClient: manage0.NewLLMManageServiceClientFactory(t, f),
 	}
 }
 
 func NewLLMManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage1.NewLLMManageServiceClientProtocol(t, iprot, oprot),
+		LLMManageServiceClient: manage0.NewLLMManageServiceClientProtocol(t, iprot, oprot),
 	}
 }
 
 func NewLLMManageServiceClient(c thrift.TClient) *LLMManageServiceClient {
 	return &LLMManageServiceClient{
-		LLMManageServiceClient: manage1.NewLLMManageServiceClient(c),
+		LLMManageServiceClient: manage0.NewLLMManageServiceClient(c),
 	}
 }
 
@@ -727,11 +727,11 @@ func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageS
 }
 
 type ToolManageServiceProcessor struct {
-	*manage0.ToolManageServiceProcessor
+	*tool_manage.ToolManageServiceProcessor
 }
 
 func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
-	self := &ToolManageServiceProcessor{manage0.NewToolManageServiceProcessor(handler)}
+	self := &ToolManageServiceProcessor{tool_manage.NewToolManageServiceProcessor(handler)}
 	return self
 }
 
@@ -763,11 +763,11 @@ func NewPromptOpenAPIServiceProcessor(handler PromptOpenAPIService) *PromptOpenA
 }
 
 type LLMManageServiceProcessor struct {
-	*manage1.LLMManageServiceProcessor
+	*manage0.LLMManageServiceProcessor
 }
 
 func NewLLMManageServiceProcessor(handler LLMManageService) *LLMManageServiceProcessor {
-	self := &LLMManageServiceProcessor{manage1.NewLLMManageServiceProcessor(handler)}
+	self := &LLMManageServiceProcessor{manage0.NewLLMManageServiceProcessor(handler)}
 	return self
 }
 
