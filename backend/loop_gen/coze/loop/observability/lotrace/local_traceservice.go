@@ -505,11 +505,11 @@ func (l *LocalTraceService) ListTrajectory(ctx context.Context, req *trace.ListT
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalTraceService) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest, callOptions ...callopt.Option) (*trace.GetTraceChatResponse, error) {
+func (l *LocalTraceService) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (*trace.ListTraceChatResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*trace.TraceServiceGetTraceChatArgs)
-		result := out.(*trace.TraceServiceGetTraceChatResult)
-		resp, err := l.impl.GetTraceChat(ctx, arg.Req)
+		arg := in.(*trace.TraceServiceListTraceChatArgs)
+		result := out.(*trace.TraceServiceListTraceChatResult)
+		resp, err := l.impl.ListTraceChat(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -517,20 +517,20 @@ func (l *LocalTraceService) GetTraceChat(ctx context.Context, req *trace.GetTrac
 		return nil
 	})
 
-	arg := &trace.TraceServiceGetTraceChatArgs{Req: req}
-	result := &trace.TraceServiceGetTraceChatResult{}
-	ctx = l.injectRPCInfo(ctx, "GetTraceChat")
+	arg := &trace.TraceServiceListTraceChatArgs{Req: req}
+	result := &trace.TraceServiceListTraceChatResult{}
+	ctx = l.injectRPCInfo(ctx, "ListTraceChat")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalTraceService) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest, callOptions ...callopt.Option) (*trace.GetThreadChatResponse, error) {
+func (l *LocalTraceService) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (*trace.ListThreadChatResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*trace.TraceServiceGetThreadChatArgs)
-		result := out.(*trace.TraceServiceGetThreadChatResult)
-		resp, err := l.impl.GetThreadChat(ctx, arg.Req)
+		arg := in.(*trace.TraceServiceListThreadChatArgs)
+		result := out.(*trace.TraceServiceListThreadChatResult)
+		resp, err := l.impl.ListThreadChat(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -538,9 +538,9 @@ func (l *LocalTraceService) GetThreadChat(ctx context.Context, req *trace.GetThr
 		return nil
 	})
 
-	arg := &trace.TraceServiceGetThreadChatArgs{Req: req}
-	result := &trace.TraceServiceGetThreadChatResult{}
-	ctx = l.injectRPCInfo(ctx, "GetThreadChat")
+	arg := &trace.TraceServiceListThreadChatArgs{Req: req}
+	result := &trace.TraceServiceListThreadChatResult{}
+	ctx = l.injectRPCInfo(ctx, "ListThreadChat")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

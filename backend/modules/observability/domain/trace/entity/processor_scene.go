@@ -14,4 +14,5 @@ const (
 	SceneListSpansOApi   ProcessorScene = "list_spans_oapi"
 	SceneTraceChat       ProcessorScene = "trace_chat"
 	SceneThreadChat      ProcessorScene = "thread_chat"
+	SceneThreadStat      ProcessorScene = "thread_stat"
 )

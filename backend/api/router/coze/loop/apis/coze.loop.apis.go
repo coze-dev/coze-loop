@@ -355,8 +355,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				{
 					_threads := _v14.Group("/threads", _threadsMw(handler)...)
-					_threads.POST("/chat", append(_getthreadchatMw(handler), apis.GetThreadChat)...)
 					_threads.POST("/stat", append(_getthreadstatMw(handler), apis.GetThreadStat)...)
+					{
+						_chat := _threads.Group("/chat", _chatMw(handler)...)
+						_chat.POST("/list", append(_listthreadchatMw(handler), apis.ListThreadChat)...)
+					}
 				}
 				{
 					_trace := _v14.Group("/trace", _traceMw(handler)...)
@@ -366,7 +369,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
 					_traces.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
-					_traces.POST("/chat", append(_gettracechatMw(handler), apis.GetTraceChat)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)
@@ -375,6 +377,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
 					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
 					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
+					{
+						_chat0 := _traces.Group("/chat", _chat0Mw(handler)...)
+						_chat0.POST("/list", append(_listtracechatMw(handler), apis.ListTraceChat)...)
+					}
 				}
 			}
 		}

@@ -15559,7 +15559,7 @@ func (p *ListTrajectoryResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -15728,14 +15728,14 @@ func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTraceChatRequest[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTraceChatRequest[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetTraceChatRequest[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ListTraceChatRequest[fieldId]))
 }
 
-func (p *GetTraceChatRequest) FastReadField1(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field int64
@@ -15749,7 +15749,7 @@ func (p *GetTraceChatRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField2(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -15763,7 +15763,7 @@ func (p *GetTraceChatRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField3(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -15777,7 +15777,7 @@ func (p *GetTraceChatRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField4(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -15791,7 +15791,7 @@ func (p *GetTraceChatRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField5(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int32
@@ -15805,7 +15805,7 @@ func (p *GetTraceChatRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField6(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -15819,7 +15819,7 @@ func (p *GetTraceChatRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField7(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField7(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *common.PlatformType
@@ -15833,7 +15833,7 @@ func (p *GetTraceChatRequest) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField8(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField8(buf []byte) (int, error) {
 	offset := 0
 	_field := filter.NewFilterFields()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -15845,7 +15845,7 @@ func (p *GetTraceChatRequest) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastReadField255(buf []byte) (int, error) {
+func (p *ListTraceChatRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -15857,11 +15857,11 @@ func (p *GetTraceChatRequest) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatRequest) FastWrite(buf []byte) int {
+func (p *ListTraceChatRequest) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetTraceChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -15878,7 +15878,7 @@ func (p *GetTraceChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) BLength() int {
+func (p *ListTraceChatRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -15895,21 +15895,21 @@ func (p *GetTraceChatRequest) BLength() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 	offset += thrift.Binary.WriteI64(buf[offset:], p.WorkspaceID)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.TraceID)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetStartTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
@@ -15918,7 +15918,7 @@ func (p *GetTraceChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEndTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
@@ -15927,7 +15927,7 @@ func (p *GetTraceChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPageSize() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
@@ -15936,7 +15936,7 @@ func (p *GetTraceChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPageToken() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
@@ -15945,7 +15945,7 @@ func (p *GetTraceChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPlatformType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
@@ -15954,7 +15954,7 @@ func (p *GetTraceChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFilters() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
@@ -15963,7 +15963,7 @@ func (p *GetTraceChatRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter)
 	return offset
 }
 
-func (p *GetTraceChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -15972,21 +15972,21 @@ func (p *GetTraceChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
-func (p *GetTraceChatRequest) field1Length() int {
+func (p *ListTraceChatRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
 	return l
 }
 
-func (p *GetTraceChatRequest) field2Length() int {
+func (p *ListTraceChatRequest) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.TraceID)
 	return l
 }
 
-func (p *GetTraceChatRequest) field3Length() int {
+func (p *ListTraceChatRequest) field3Length() int {
 	l := 0
 	if p.IsSetStartTime() {
 		l += thrift.Binary.FieldBeginLength()
@@ -15995,7 +15995,7 @@ func (p *GetTraceChatRequest) field3Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field4Length() int {
+func (p *ListTraceChatRequest) field4Length() int {
 	l := 0
 	if p.IsSetEndTime() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16004,7 +16004,7 @@ func (p *GetTraceChatRequest) field4Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field5Length() int {
+func (p *ListTraceChatRequest) field5Length() int {
 	l := 0
 	if p.IsSetPageSize() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16013,7 +16013,7 @@ func (p *GetTraceChatRequest) field5Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field6Length() int {
+func (p *ListTraceChatRequest) field6Length() int {
 	l := 0
 	if p.IsSetPageToken() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16022,7 +16022,7 @@ func (p *GetTraceChatRequest) field6Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field7Length() int {
+func (p *ListTraceChatRequest) field7Length() int {
 	l := 0
 	if p.IsSetPlatformType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16031,7 +16031,7 @@ func (p *GetTraceChatRequest) field7Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field8Length() int {
+func (p *ListTraceChatRequest) field8Length() int {
 	l := 0
 	if p.IsSetFilters() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16040,7 +16040,7 @@ func (p *GetTraceChatRequest) field8Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) field255Length() int {
+func (p *ListTraceChatRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16049,8 +16049,8 @@ func (p *GetTraceChatRequest) field255Length() int {
 	return l
 }
 
-func (p *GetTraceChatRequest) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetTraceChatRequest)
+func (p *ListTraceChatRequest) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListTraceChatRequest)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -16110,7 +16110,7 @@ func (p *GetTraceChatRequest) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetTraceChatResponse) FastRead(buf []byte) (int, error) {
+func (p *ListTraceChatResponse) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -16216,14 +16216,14 @@ func (p *GetTraceChatResponse) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTraceChatResponse[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTraceChatResponse[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetTraceChatResponse[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ListTraceChatResponse[fieldId]))
 }
 
-func (p *GetTraceChatResponse) FastReadField1(buf []byte) (int, error) {
+func (p *ListTraceChatResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -16248,7 +16248,7 @@ func (p *GetTraceChatResponse) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatResponse) FastReadField2(buf []byte) (int, error) {
+func (p *ListTraceChatResponse) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -16262,7 +16262,7 @@ func (p *GetTraceChatResponse) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatResponse) FastReadField3(buf []byte) (int, error) {
+func (p *ListTraceChatResponse) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field bool
@@ -16276,7 +16276,7 @@ func (p *GetTraceChatResponse) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatResponse) FastReadField255(buf []byte) (int, error) {
+func (p *ListTraceChatResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -16288,11 +16288,11 @@ func (p *GetTraceChatResponse) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetTraceChatResponse) FastWrite(buf []byte) int {
+func (p *ListTraceChatResponse) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetTraceChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -16304,7 +16304,7 @@ func (p *GetTraceChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetTraceChatResponse) BLength() int {
+func (p *ListTraceChatResponse) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -16316,7 +16316,7 @@ func (p *GetTraceChatResponse) BLength() int {
 	return l
 }
 
-func (p *GetTraceChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
 	listBeginOffset := offset
@@ -16330,21 +16330,21 @@ func (p *GetTraceChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetTraceChatResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.NextPageToken)
 	return offset
 }
 
-func (p *GetTraceChatResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
 	offset += thrift.Binary.WriteBool(buf[offset:], p.HasMore)
 	return offset
 }
 
-func (p *GetTraceChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListTraceChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -16353,7 +16353,7 @@ func (p *GetTraceChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
-func (p *GetTraceChatResponse) field1Length() int {
+func (p *ListTraceChatResponse) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.ListBeginLength()
@@ -16364,21 +16364,21 @@ func (p *GetTraceChatResponse) field1Length() int {
 	return l
 }
 
-func (p *GetTraceChatResponse) field2Length() int {
+func (p *ListTraceChatResponse) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.NextPageToken)
 	return l
 }
 
-func (p *GetTraceChatResponse) field3Length() int {
+func (p *ListTraceChatResponse) field3Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.BoolLength()
 	return l
 }
 
-func (p *GetTraceChatResponse) field255Length() int {
+func (p *ListTraceChatResponse) field255Length() int {
 	l := 0
 	if p.IsSetBaseResp() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16387,8 +16387,8 @@ func (p *GetTraceChatResponse) field255Length() int {
 	return l
 }
 
-func (p *GetTraceChatResponse) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetTraceChatResponse)
+func (p *ListTraceChatResponse) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListTraceChatResponse)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -16426,7 +16426,7 @@ func (p *GetTraceChatResponse) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -16581,14 +16581,14 @@ func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetThreadChatRequest[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListThreadChatRequest[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetThreadChatRequest[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ListThreadChatRequest[fieldId]))
 }
 
-func (p *GetThreadChatRequest) FastReadField1(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field int64
@@ -16602,7 +16602,7 @@ func (p *GetThreadChatRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField2(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -16616,7 +16616,7 @@ func (p *GetThreadChatRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField3(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -16630,7 +16630,7 @@ func (p *GetThreadChatRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField4(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -16644,7 +16644,7 @@ func (p *GetThreadChatRequest) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField5(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int32
@@ -16658,7 +16658,7 @@ func (p *GetThreadChatRequest) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField6(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -16672,7 +16672,7 @@ func (p *GetThreadChatRequest) FastReadField6(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField7(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField7(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *common.PlatformType
@@ -16686,7 +16686,7 @@ func (p *GetThreadChatRequest) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastReadField255(buf []byte) (int, error) {
+func (p *ListThreadChatRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -16698,11 +16698,11 @@ func (p *GetThreadChatRequest) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatRequest) FastWrite(buf []byte) int {
+func (p *ListThreadChatRequest) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetThreadChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -16718,7 +16718,7 @@ func (p *GetThreadChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) BLength() int {
+func (p *ListThreadChatRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -16734,21 +16734,21 @@ func (p *GetThreadChatRequest) BLength() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 	offset += thrift.Binary.WriteI64(buf[offset:], p.WorkspaceID)
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.ThreadID)
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetStartTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
@@ -16757,7 +16757,7 @@ func (p *GetThreadChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetEndTime() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
@@ -16766,7 +16766,7 @@ func (p *GetThreadChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPageSize() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 5)
@@ -16775,7 +16775,7 @@ func (p *GetThreadChatRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPageToken() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
@@ -16784,7 +16784,7 @@ func (p *GetThreadChatRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPlatformType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
@@ -16793,7 +16793,7 @@ func (p *GetThreadChatRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *GetThreadChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -16802,21 +16802,21 @@ func (p *GetThreadChatRequest) fastWriteField255(buf []byte, w thrift.NocopyWrit
 	return offset
 }
 
-func (p *GetThreadChatRequest) field1Length() int {
+func (p *ListThreadChatRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
 	return l
 }
 
-func (p *GetThreadChatRequest) field2Length() int {
+func (p *ListThreadChatRequest) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.ThreadID)
 	return l
 }
 
-func (p *GetThreadChatRequest) field3Length() int {
+func (p *ListThreadChatRequest) field3Length() int {
 	l := 0
 	if p.IsSetStartTime() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16825,7 +16825,7 @@ func (p *GetThreadChatRequest) field3Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) field4Length() int {
+func (p *ListThreadChatRequest) field4Length() int {
 	l := 0
 	if p.IsSetEndTime() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16834,7 +16834,7 @@ func (p *GetThreadChatRequest) field4Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) field5Length() int {
+func (p *ListThreadChatRequest) field5Length() int {
 	l := 0
 	if p.IsSetPageSize() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16843,7 +16843,7 @@ func (p *GetThreadChatRequest) field5Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) field6Length() int {
+func (p *ListThreadChatRequest) field6Length() int {
 	l := 0
 	if p.IsSetPageToken() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16852,7 +16852,7 @@ func (p *GetThreadChatRequest) field6Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) field7Length() int {
+func (p *ListThreadChatRequest) field7Length() int {
 	l := 0
 	if p.IsSetPlatformType() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16861,7 +16861,7 @@ func (p *GetThreadChatRequest) field7Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) field255Length() int {
+func (p *ListThreadChatRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
 		l += thrift.Binary.FieldBeginLength()
@@ -16870,8 +16870,8 @@ func (p *GetThreadChatRequest) field255Length() int {
 	return l
 }
 
-func (p *GetThreadChatRequest) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetThreadChatRequest)
+func (p *ListThreadChatRequest) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListThreadChatRequest)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -16922,7 +16922,7 @@ func (p *GetThreadChatRequest) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *GetThreadChatResponse) FastRead(buf []byte) (int, error) {
+func (p *ListThreadChatResponse) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -17028,14 +17028,14 @@ func (p *GetThreadChatResponse) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetThreadChatResponse[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListThreadChatResponse[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_GetThreadChatResponse[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ListThreadChatResponse[fieldId]))
 }
 
-func (p *GetThreadChatResponse) FastReadField1(buf []byte) (int, error) {
+func (p *ListThreadChatResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -17060,7 +17060,7 @@ func (p *GetThreadChatResponse) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatResponse) FastReadField2(buf []byte) (int, error) {
+func (p *ListThreadChatResponse) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field string
@@ -17074,7 +17074,7 @@ func (p *GetThreadChatResponse) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatResponse) FastReadField3(buf []byte) (int, error) {
+func (p *ListThreadChatResponse) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field bool
@@ -17088,7 +17088,7 @@ func (p *GetThreadChatResponse) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatResponse) FastReadField255(buf []byte) (int, error) {
+func (p *ListThreadChatResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -17100,11 +17100,11 @@ func (p *GetThreadChatResponse) FastReadField255(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *GetThreadChatResponse) FastWrite(buf []byte) int {
+func (p *ListThreadChatResponse) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *GetThreadChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -17116,7 +17116,7 @@ func (p *GetThreadChatResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
-func (p *GetThreadChatResponse) BLength() int {
+func (p *ListThreadChatResponse) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -17128,7 +17128,7 @@ func (p *GetThreadChatResponse) BLength() int {
 	return l
 }
 
-func (p *GetThreadChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
 	listBeginOffset := offset
@@ -17142,21 +17142,21 @@ func (p *GetThreadChatResponse) fastWriteField1(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
-func (p *GetThreadChatResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
 	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.NextPageToken)
 	return offset
 }
 
-func (p *GetThreadChatResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
 	offset += thrift.Binary.WriteBool(buf[offset:], p.HasMore)
 	return offset
 }
 
-func (p *GetThreadChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ListThreadChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -17165,7 +17165,7 @@ func (p *GetThreadChatResponse) fastWriteField255(buf []byte, w thrift.NocopyWri
 	return offset
 }
 
-func (p *GetThreadChatResponse) field1Length() int {
+func (p *ListThreadChatResponse) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.ListBeginLength()
@@ -17176,21 +17176,21 @@ func (p *GetThreadChatResponse) field1Length() int {
 	return l
 }
 
-func (p *GetThreadChatResponse) field2Length() int {
+func (p *ListThreadChatResponse) field2Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.NextPageToken)
 	return l
 }
 
-func (p *GetThreadChatResponse) field3Length() int {
+func (p *ListThreadChatResponse) field3Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.BoolLength()
 	return l
 }
 
-func (p *GetThreadChatResponse) field255Length() int {
+func (p *ListThreadChatResponse) field255Length() int {
 	l := 0
 	if p.IsSetBaseResp() {
 		l += thrift.Binary.FieldBeginLength()
@@ -17199,8 +17199,8 @@ func (p *GetThreadChatResponse) field255Length() int {
 	return l
 }
 
-func (p *GetThreadChatResponse) DeepCopy(s interface{}) error {
-	src, ok := s.(*GetThreadChatResponse)
+func (p *ListThreadChatResponse) DeepCopy(s interface{}) error {
+	src, ok := s.(*ListThreadChatResponse)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -23652,7 +23652,7 @@ func (p *TraceServiceListTrajectoryResult) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TraceServiceGetTraceChatArgs) FastRead(buf []byte) (int, error) {
+func (p *TraceServiceListTraceChatArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -23696,14 +23696,14 @@ func (p *TraceServiceGetTraceChatArgs) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetTraceChatArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListTraceChatArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *TraceServiceGetTraceChatArgs) FastReadField1(buf []byte) (int, error) {
+func (p *TraceServiceListTraceChatArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := NewGetTraceChatRequest()
+	_field := NewListTraceChatRequest()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -23713,11 +23713,11 @@ func (p *TraceServiceGetTraceChatArgs) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *TraceServiceGetTraceChatArgs) FastWrite(buf []byte) int {
+func (p *TraceServiceListTraceChatArgs) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *TraceServiceGetTraceChatArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListTraceChatArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -23726,7 +23726,7 @@ func (p *TraceServiceGetTraceChatArgs) FastWriteNocopy(buf []byte, w thrift.Noco
 	return offset
 }
 
-func (p *TraceServiceGetTraceChatArgs) BLength() int {
+func (p *TraceServiceListTraceChatArgs) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -23735,29 +23735,29 @@ func (p *TraceServiceGetTraceChatArgs) BLength() int {
 	return l
 }
 
-func (p *TraceServiceGetTraceChatArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListTraceChatArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Req.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *TraceServiceGetTraceChatArgs) field1Length() int {
+func (p *TraceServiceListTraceChatArgs) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Req.BLength()
 	return l
 }
 
-func (p *TraceServiceGetTraceChatArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetTraceChatArgs)
+func (p *TraceServiceListTraceChatArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceListTraceChatArgs)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _req *GetTraceChatRequest
+	var _req *ListTraceChatRequest
 	if src.Req != nil {
-		_req = &GetTraceChatRequest{}
+		_req = &ListTraceChatRequest{}
 		if err := _req.DeepCopy(src.Req); err != nil {
 			return err
 		}
@@ -23767,7 +23767,7 @@ func (p *TraceServiceGetTraceChatArgs) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TraceServiceGetTraceChatResult) FastRead(buf []byte) (int, error) {
+func (p *TraceServiceListTraceChatResult) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -23811,14 +23811,14 @@ func (p *TraceServiceGetTraceChatResult) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetTraceChatResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListTraceChatResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *TraceServiceGetTraceChatResult) FastReadField0(buf []byte) (int, error) {
+func (p *TraceServiceListTraceChatResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
-	_field := NewGetTraceChatResponse()
+	_field := NewListTraceChatResponse()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -23828,11 +23828,11 @@ func (p *TraceServiceGetTraceChatResult) FastReadField0(buf []byte) (int, error)
 	return offset, nil
 }
 
-func (p *TraceServiceGetTraceChatResult) FastWrite(buf []byte) int {
+func (p *TraceServiceListTraceChatResult) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *TraceServiceGetTraceChatResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListTraceChatResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], w)
@@ -23841,7 +23841,7 @@ func (p *TraceServiceGetTraceChatResult) FastWriteNocopy(buf []byte, w thrift.No
 	return offset
 }
 
-func (p *TraceServiceGetTraceChatResult) BLength() int {
+func (p *TraceServiceListTraceChatResult) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field0Length()
@@ -23850,7 +23850,7 @@ func (p *TraceServiceGetTraceChatResult) BLength() int {
 	return l
 }
 
-func (p *TraceServiceGetTraceChatResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListTraceChatResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
@@ -23859,7 +23859,7 @@ func (p *TraceServiceGetTraceChatResult) fastWriteField0(buf []byte, w thrift.No
 	return offset
 }
 
-func (p *TraceServiceGetTraceChatResult) field0Length() int {
+func (p *TraceServiceListTraceChatResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += thrift.Binary.FieldBeginLength()
@@ -23868,15 +23868,15 @@ func (p *TraceServiceGetTraceChatResult) field0Length() int {
 	return l
 }
 
-func (p *TraceServiceGetTraceChatResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetTraceChatResult)
+func (p *TraceServiceListTraceChatResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceListTraceChatResult)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _success *GetTraceChatResponse
+	var _success *ListTraceChatResponse
 	if src.Success != nil {
-		_success = &GetTraceChatResponse{}
+		_success = &ListTraceChatResponse{}
 		if err := _success.DeepCopy(src.Success); err != nil {
 			return err
 		}
@@ -23886,7 +23886,7 @@ func (p *TraceServiceGetTraceChatResult) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TraceServiceGetThreadChatArgs) FastRead(buf []byte) (int, error) {
+func (p *TraceServiceListThreadChatArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -23930,14 +23930,14 @@ func (p *TraceServiceGetThreadChatArgs) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetThreadChatArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListThreadChatArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *TraceServiceGetThreadChatArgs) FastReadField1(buf []byte) (int, error) {
+func (p *TraceServiceListThreadChatArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := NewGetThreadChatRequest()
+	_field := NewListThreadChatRequest()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -23947,11 +23947,11 @@ func (p *TraceServiceGetThreadChatArgs) FastReadField1(buf []byte) (int, error) 
 	return offset, nil
 }
 
-func (p *TraceServiceGetThreadChatArgs) FastWrite(buf []byte) int {
+func (p *TraceServiceListThreadChatArgs) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *TraceServiceGetThreadChatArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListThreadChatArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -23960,7 +23960,7 @@ func (p *TraceServiceGetThreadChatArgs) FastWriteNocopy(buf []byte, w thrift.Noc
 	return offset
 }
 
-func (p *TraceServiceGetThreadChatArgs) BLength() int {
+func (p *TraceServiceListThreadChatArgs) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -23969,29 +23969,29 @@ func (p *TraceServiceGetThreadChatArgs) BLength() int {
 	return l
 }
 
-func (p *TraceServiceGetThreadChatArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListThreadChatArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Req.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *TraceServiceGetThreadChatArgs) field1Length() int {
+func (p *TraceServiceListThreadChatArgs) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Req.BLength()
 	return l
 }
 
-func (p *TraceServiceGetThreadChatArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetThreadChatArgs)
+func (p *TraceServiceListThreadChatArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceListThreadChatArgs)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _req *GetThreadChatRequest
+	var _req *ListThreadChatRequest
 	if src.Req != nil {
-		_req = &GetThreadChatRequest{}
+		_req = &ListThreadChatRequest{}
 		if err := _req.DeepCopy(src.Req); err != nil {
 			return err
 		}
@@ -24001,7 +24001,7 @@ func (p *TraceServiceGetThreadChatArgs) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TraceServiceGetThreadChatResult) FastRead(buf []byte) (int, error) {
+func (p *TraceServiceListThreadChatResult) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -24045,14 +24045,14 @@ func (p *TraceServiceGetThreadChatResult) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetThreadChatResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListThreadChatResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *TraceServiceGetThreadChatResult) FastReadField0(buf []byte) (int, error) {
+func (p *TraceServiceListThreadChatResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
-	_field := NewGetThreadChatResponse()
+	_field := NewListThreadChatResponse()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -24062,11 +24062,11 @@ func (p *TraceServiceGetThreadChatResult) FastReadField0(buf []byte) (int, error
 	return offset, nil
 }
 
-func (p *TraceServiceGetThreadChatResult) FastWrite(buf []byte) int {
+func (p *TraceServiceListThreadChatResult) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *TraceServiceGetThreadChatResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListThreadChatResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], w)
@@ -24075,7 +24075,7 @@ func (p *TraceServiceGetThreadChatResult) FastWriteNocopy(buf []byte, w thrift.N
 	return offset
 }
 
-func (p *TraceServiceGetThreadChatResult) BLength() int {
+func (p *TraceServiceListThreadChatResult) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field0Length()
@@ -24084,7 +24084,7 @@ func (p *TraceServiceGetThreadChatResult) BLength() int {
 	return l
 }
 
-func (p *TraceServiceGetThreadChatResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+func (p *TraceServiceListThreadChatResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
@@ -24093,7 +24093,7 @@ func (p *TraceServiceGetThreadChatResult) fastWriteField0(buf []byte, w thrift.N
 	return offset
 }
 
-func (p *TraceServiceGetThreadChatResult) field0Length() int {
+func (p *TraceServiceListThreadChatResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += thrift.Binary.FieldBeginLength()
@@ -24102,15 +24102,15 @@ func (p *TraceServiceGetThreadChatResult) field0Length() int {
 	return l
 }
 
-func (p *TraceServiceGetThreadChatResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetThreadChatResult)
+func (p *TraceServiceListThreadChatResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceListThreadChatResult)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _success *GetThreadChatResponse
+	var _success *ListThreadChatResponse
 	if src.Success != nil {
-		_success = &GetThreadChatResponse{}
+		_success = &ListThreadChatResponse{}
 		if err := _success.DeepCopy(src.Success); err != nil {
 			return err
 		}
@@ -24538,19 +24538,19 @@ func (p *TraceServiceListTrajectoryResult) GetResult() interface{} {
 	return p.Success
 }
 
-func (p *TraceServiceGetTraceChatArgs) GetFirstArgument() interface{} {
+func (p *TraceServiceListTraceChatArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
 
-func (p *TraceServiceGetTraceChatResult) GetResult() interface{} {
+func (p *TraceServiceListTraceChatResult) GetResult() interface{} {
 	return p.Success
 }
 
-func (p *TraceServiceGetThreadChatArgs) GetFirstArgument() interface{} {
+func (p *TraceServiceListThreadChatArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
 
-func (p *TraceServiceGetThreadChatResult) GetResult() interface{} {
+func (p *TraceServiceListThreadChatResult) GetResult() interface{} {
 	return p.Success
 }
 

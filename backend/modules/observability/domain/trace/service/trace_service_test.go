@@ -5930,12 +5930,31 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 	})
 }
 
+type errorProcessor struct {
+	err error
+}
+
+func (e *errorProcessor) Transform(_ context.Context, _ loop_span.SpanList) (loop_span.SpanList, error) {
+	return nil, e.err
+}
+
+type errorBuildHelper struct {
+	TraceFilterProcessorBuilder
+	threadStatResult []span_processor.Processor
+	threadStatErr    error
+}
+
+func (e *errorBuildHelper) BuildThreadStatProcessors(_ context.Context, _ span_processor.Settings) ([]span_processor.Processor, error) {
+	return e.threadStatResult, e.threadStatErr
+}
+
 func newChatTestFields(ctrl *gomock.Controller) (fields struct {
 	traceRepo      repo.ITraceRepo
 	traceConfig    config.ITraceConfig
 	buildHelper    TraceFilterProcessorBuilder
 	tenantProvider tenant.ITenantProvider
-}, repoMock *repomocks.MockITraceRepo, tenantProviderMock *tenantmocks.MockITenantProvider) {
+}, repoMock *repomocks.MockITraceRepo, tenantProviderMock *tenantmocks.MockITenantProvider,
+) {
 	repoMock = repomocks.NewMockITraceRepo(ctrl)
 	confMock := confmocks.NewMockITraceConfig(ctrl)
 	tenantProviderMock = tenantmocks.NewMockITenantProvider(ctrl)
@@ -5949,6 +5968,7 @@ func newChatTestFields(ctrl *gomock.Controller) (fields struct {
 		entity.SceneListSpansOApi:   {},
 		entity.SceneTraceChat:       {},
 		entity.SceneThreadChat:      {},
+		entity.SceneThreadStat:      {},
 	})
 	fields.traceRepo = repoMock
 	fields.traceConfig = confMock
@@ -5962,7 +5982,7 @@ func newTraceServiceForChat(ctrl *gomock.Controller, repoMock *repomocks.MockITr
 	return r.(*TraceServiceImpl)
 }
 
-func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
+func TestTraceServiceImpl_ListTraceChat(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -5977,7 +5997,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 			PageToken: "next",
 		}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		resp, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		resp, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6001,7 +6021,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 		fields, _, tenantMock := newChatTestFields(ctrl)
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
 		r := newTraceServiceForChat(ctrl, fields.traceRepo.(*repomocks.MockITraceRepo), fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		_, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		_, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6016,7 +6036,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		_, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		_, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6031,7 +6051,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		resp, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		resp, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6047,7 +6067,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		resp, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		resp, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6064,7 +6084,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{Spans: loop_span.SpanList{}}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		resp, err := r.GetTraceChat(context.Background(), &GetTraceChatRequest{
+		resp, err := r.ListTraceChat(context.Background(), &ListTraceChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			TraceID:      "t1",
@@ -6077,7 +6097,7 @@ func TestTraceServiceImpl_GetTraceChat(t *testing.T) {
 	})
 }
 
-func TestTraceServiceImpl_GetThreadChat(t *testing.T) {
+func TestTraceServiceImpl_ListThreadChat(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -6091,7 +6111,7 @@ func TestTraceServiceImpl_GetThreadChat(t *testing.T) {
 			PageToken: "",
 		}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		resp, err := r.GetThreadChat(context.Background(), &GetThreadChatRequest{
+		resp, err := r.ListThreadChat(context.Background(), &ListThreadChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			ThreadID:     "thread-1",
@@ -6113,7 +6133,7 @@ func TestTraceServiceImpl_GetThreadChat(t *testing.T) {
 		fields, _, tenantMock := newChatTestFields(ctrl)
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
 		r := newTraceServiceForChat(ctrl, fields.traceRepo.(*repomocks.MockITraceRepo), fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		_, err := r.GetThreadChat(context.Background(), &GetThreadChatRequest{
+		_, err := r.ListThreadChat(context.Background(), &ListThreadChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			ThreadID:     "thread-1",
@@ -6128,7 +6148,7 @@ func TestTraceServiceImpl_GetThreadChat(t *testing.T) {
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
-		_, err := r.GetThreadChat(context.Background(), &GetThreadChatRequest{
+		_, err := r.ListThreadChat(context.Background(), &ListThreadChatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,
 			ThreadID:     "thread-1",
@@ -6143,26 +6163,24 @@ func TestTraceServiceImpl_GetThreadStat(t *testing.T) {
 		defer ctrl.Finish()
 		fields, repoMock, tenantMock := newChatTestFields(ctrl)
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
-		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
-			Spans: loop_span.SpanList{
-				{
-					TraceID:        "t1",
-					SpanID:         "s1",
-					SpanType:       loop_span.SpanTypeModel,
-					StartTime:      1000,
-					DurationMicros: 500,
-					TagsString:     map[string]string{loop_span.SpanFieldUserID: "user-1", loop_span.SpanFieldModelProvider: "gpt-4"},
-					TagsLong:       map[string]int64{loop_span.SpanFieldInputTokens: 100, loop_span.SpanFieldOutputTokens: 200},
-				},
-				{
-					TraceID:        "t1",
-					SpanID:         "s2",
-					SpanType:       loop_span.SpanTypeModel,
-					StartTime:      2000,
-					DurationMicros: 300,
-					TagsString:     map[string]string{loop_span.SpanFieldModelProvider: "claude"},
-					TagsLong:       map[string]int64{loop_span.SpanFieldInputTokens: 50, loop_span.SpanFieldOutputTokens: 80},
-				},
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{
+			{
+				TraceID:        "t1",
+				SpanID:         "s1",
+				SpanType:       loop_span.SpanTypeModel,
+				StartTime:      1000,
+				DurationMicros: 500,
+				TagsString:     map[string]string{loop_span.SpanFieldUserID: "user-1", loop_span.SpanFieldModelProvider: "gpt-4"},
+				TagsLong:       map[string]int64{loop_span.SpanFieldInputTokens: 100, loop_span.SpanFieldOutputTokens: 200},
+			},
+			{
+				TraceID:        "t1",
+				SpanID:         "s2",
+				SpanType:       loop_span.SpanTypeModel,
+				StartTime:      2000,
+				DurationMicros: 300,
+				TagsString:     map[string]string{loop_span.SpanFieldModelProvider: "claude"},
+				TagsLong:       map[string]int64{loop_span.SpanFieldInputTokens: 50, loop_span.SpanFieldOutputTokens: 80},
 			},
 		}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
@@ -6188,9 +6206,7 @@ func TestTraceServiceImpl_GetThreadStat(t *testing.T) {
 		defer ctrl.Finish()
 		fields, repoMock, tenantMock := newChatTestFields(ctrl)
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
-		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
-			Spans: loop_span.SpanList{},
-		}, nil)
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{}, nil)
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
 		resp, err := r.GetThreadStat(context.Background(), &GetThreadStatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
@@ -6218,13 +6234,48 @@ func TestTraceServiceImpl_GetThreadStat(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("list spans error", func(t *testing.T) {
+	t.Run("get trace error", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		fields, repoMock, tenantMock := newChatTestFields(ctrl)
 		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
-		repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
 		r := newTraceServiceForChat(ctrl, repoMock, fields.traceConfig, fields.buildHelper, fields.tenantProvider)
+		_, err := r.GetThreadStat(context.Background(), &GetThreadStatRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("build processors error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		_, _, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock := repomocks.NewMockITraceRepo(ctrl)
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{}, nil)
+		buildHelper := &errorBuildHelper{threadStatErr: fmt.Errorf("build error")}
+		r := newTraceServiceForChat(ctrl, repoMock, confmocks.NewMockITraceConfig(ctrl), buildHelper, tenantMock)
+		_, err := r.GetThreadStat(context.Background(), &GetThreadStatRequest{
+			PlatformType: loop_span.PlatformCozeLoop,
+			WorkspaceID:  1,
+			ThreadID:     "thread-1",
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("transform error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		_, _, tenantMock := newChatTestFields(ctrl)
+		tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+		repoMock := repomocks.NewMockITraceRepo(ctrl)
+		repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{{TraceID: "t1"}}, nil)
+		errProc := &errorProcessor{err: fmt.Errorf("transform error")}
+		buildHelper := &errorBuildHelper{threadStatResult: []span_processor.Processor{errProc}}
+		r := newTraceServiceForChat(ctrl, repoMock, confmocks.NewMockITraceConfig(ctrl), buildHelper, tenantMock)
 		_, err := r.GetThreadStat(context.Background(), &GetThreadStatRequest{
 			PlatformType: loop_span.PlatformCozeLoop,
 			WorkspaceID:  1,

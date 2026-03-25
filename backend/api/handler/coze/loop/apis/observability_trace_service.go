@@ -179,16 +179,16 @@ func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListTrajectory)
 }
 
-// GetTraceChat .
+// ListTraceChat .
 // @router /api/observability/v1/traces/chat [POST]
-func GetTraceChat(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.GetTraceChat)
+func ListTraceChat(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListTraceChat)
 }
 
-// GetThreadChat .
+// ListThreadChat .
 // @router /api/observability/v1/threads/chat [POST]
-func GetThreadChat(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.GetThreadChat)
+func ListThreadChat(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListThreadChat)
 }
 
 // GetThreadStat .

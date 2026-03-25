@@ -592,7 +592,7 @@ func (p *ListTrajectoryResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *GetTraceChatRequest) IsValid() error {
+func (p *ListTraceChatRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
@@ -611,7 +611,7 @@ func (p *GetTraceChatRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *GetTraceChatResponse) IsValid() error {
+func (p *ListTraceChatResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
@@ -619,7 +619,7 @@ func (p *GetTraceChatResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *GetThreadChatRequest) IsValid() error {
+func (p *ListThreadChatRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
 	}
@@ -633,7 +633,7 @@ func (p *GetThreadChatRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *GetThreadChatResponse) IsValid() error {
+func (p *ListThreadChatResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

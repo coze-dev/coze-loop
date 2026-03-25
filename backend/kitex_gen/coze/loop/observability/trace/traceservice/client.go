@@ -34,8 +34,8 @@ type Client interface {
 	UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertTrajectoryConfigResponse, err error)
 	GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.GetTrajectoryConfigResponse, err error)
 	ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error)
-	GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest, callOptions ...callopt.Option) (r *trace.GetTraceChatResponse, err error)
-	GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest, callOptions ...callopt.Option) (r *trace.GetThreadChatResponse, err error)
+	ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error)
+	ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (r *trace.ListThreadChatResponse, err error)
 	GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error)
 }
 
@@ -183,14 +183,14 @@ func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.Lis
 	return p.kClient.ListTrajectory(ctx, req)
 }
 
-func (p *kTraceServiceClient) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest, callOptions ...callopt.Option) (r *trace.GetTraceChatResponse, err error) {
+func (p *kTraceServiceClient) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetTraceChat(ctx, req)
+	return p.kClient.ListTraceChat(ctx, req)
 }
 
-func (p *kTraceServiceClient) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest, callOptions ...callopt.Option) (r *trace.GetThreadChatResponse, err error) {
+func (p *kTraceServiceClient) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (r *trace.ListThreadChatResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetThreadChat(ctx, req)
+	return p.kClient.ListThreadChat(ctx, req)
 }
 
 func (p *kTraceServiceClient) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error) {

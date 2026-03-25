@@ -256,6 +256,10 @@ func NewTraceProcessorBuilder(
 			span_processor.NewCheckProcessorFactory(),
 			span_processor.NewChatProcessorFactory(),
 		},
+		entity.SceneThreadStat: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+		},
 	}
 	return service.NewTraceFilterProcessorBuilder(
 		span_filter.NewPlatformFilterFactory(

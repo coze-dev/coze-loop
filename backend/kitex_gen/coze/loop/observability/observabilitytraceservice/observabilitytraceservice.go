@@ -175,17 +175,17 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetTraceChat": kitex.NewMethodInfo(
-		getTraceChatHandler,
-		newTraceServiceGetTraceChatArgs,
-		newTraceServiceGetTraceChatResult,
+	"ListTraceChat": kitex.NewMethodInfo(
+		listTraceChatHandler,
+		newTraceServiceListTraceChatArgs,
+		newTraceServiceListTraceChatResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"GetThreadChat": kitex.NewMethodInfo(
-		getThreadChatHandler,
-		newTraceServiceGetThreadChatArgs,
-		newTraceServiceGetThreadChatResult,
+	"ListThreadChat": kitex.NewMethodInfo(
+		listThreadChatHandler,
+		newTraceServiceListThreadChatArgs,
+		newTraceServiceListThreadChatResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -666,10 +666,10 @@ func newTraceServiceListTrajectoryResult() interface{} {
 	return trace.NewTraceServiceListTrajectoryResult()
 }
 
-func getTraceChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceGetTraceChatArgs)
-	realResult := result.(*trace.TraceServiceGetTraceChatResult)
-	success, err := handler.(trace.TraceService).GetTraceChat(ctx, realArg.Req)
+func listTraceChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListTraceChatArgs)
+	realResult := result.(*trace.TraceServiceListTraceChatResult)
+	success, err := handler.(trace.TraceService).ListTraceChat(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -677,18 +677,18 @@ func getTraceChatHandler(ctx context.Context, handler interface{}, arg, result i
 	return nil
 }
 
-func newTraceServiceGetTraceChatArgs() interface{} {
-	return trace.NewTraceServiceGetTraceChatArgs()
+func newTraceServiceListTraceChatArgs() interface{} {
+	return trace.NewTraceServiceListTraceChatArgs()
 }
 
-func newTraceServiceGetTraceChatResult() interface{} {
-	return trace.NewTraceServiceGetTraceChatResult()
+func newTraceServiceListTraceChatResult() interface{} {
+	return trace.NewTraceServiceListTraceChatResult()
 }
 
-func getThreadChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*trace.TraceServiceGetThreadChatArgs)
-	realResult := result.(*trace.TraceServiceGetThreadChatResult)
-	success, err := handler.(trace.TraceService).GetThreadChat(ctx, realArg.Req)
+func listThreadChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListThreadChatArgs)
+	realResult := result.(*trace.TraceServiceListThreadChatResult)
+	success, err := handler.(trace.TraceService).ListThreadChat(ctx, realArg.Req)
 	if err != nil {
 		return err
 	}
@@ -696,12 +696,12 @@ func getThreadChatHandler(ctx context.Context, handler interface{}, arg, result 
 	return nil
 }
 
-func newTraceServiceGetThreadChatArgs() interface{} {
-	return trace.NewTraceServiceGetThreadChatArgs()
+func newTraceServiceListThreadChatArgs() interface{} {
+	return trace.NewTraceServiceListThreadChatArgs()
 }
 
-func newTraceServiceGetThreadChatResult() interface{} {
-	return trace.NewTraceServiceGetThreadChatResult()
+func newTraceServiceListThreadChatResult() interface{} {
+	return trace.NewTraceServiceListThreadChatResult()
 }
 
 func getThreadStatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -965,21 +965,21 @@ func (p *kClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryR
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest) (r *trace.GetTraceChatResponse, err error) {
-	var _args trace.TraceServiceGetTraceChatArgs
+func (p *kClient) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest) (r *trace.ListTraceChatResponse, err error) {
+	var _args trace.TraceServiceListTraceChatArgs
 	_args.Req = req
-	var _result trace.TraceServiceGetTraceChatResult
-	if err = p.c.Call(ctx, "GetTraceChat", &_args, &_result); err != nil {
+	var _result trace.TraceServiceListTraceChatResult
+	if err = p.c.Call(ctx, "ListTraceChat", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
 
-func (p *kClient) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest) (r *trace.GetThreadChatResponse, err error) {
-	var _args trace.TraceServiceGetThreadChatArgs
+func (p *kClient) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest) (r *trace.ListThreadChatResponse, err error) {
+	var _args trace.TraceServiceListThreadChatArgs
 	_args.Req = req
-	var _result trace.TraceServiceGetThreadChatResult
-	if err = p.c.Call(ctx, "GetThreadChat", &_args, &_result); err != nil {
+	var _result trace.TraceServiceListThreadChatResult
+	if err = p.c.Call(ctx, "ListThreadChat", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

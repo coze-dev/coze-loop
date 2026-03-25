@@ -20894,7 +20894,7 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-type GetTraceChatRequest struct {
+type ListTraceChatRequest struct {
 	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TraceID      string               `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id" form:"trace_id,required" `
 	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
@@ -20906,139 +20906,139 @@ type GetTraceChatRequest struct {
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetTraceChatRequest() *GetTraceChatRequest {
-	return &GetTraceChatRequest{}
+func NewListTraceChatRequest() *ListTraceChatRequest {
+	return &ListTraceChatRequest{}
 }
 
-func (p *GetTraceChatRequest) InitDefault() {
+func (p *ListTraceChatRequest) InitDefault() {
 }
 
-func (p *GetTraceChatRequest) GetWorkspaceID() (v int64) {
+func (p *ListTraceChatRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetTraceChatRequest) GetTraceID() (v string) {
+func (p *ListTraceChatRequest) GetTraceID() (v string) {
 	if p != nil {
 		return p.TraceID
 	}
 	return
 }
 
-var GetTraceChatRequest_StartTime_DEFAULT int64
+var ListTraceChatRequest_StartTime_DEFAULT int64
 
-func (p *GetTraceChatRequest) GetStartTime() (v int64) {
+func (p *ListTraceChatRequest) GetStartTime() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetStartTime() {
-		return GetTraceChatRequest_StartTime_DEFAULT
+		return ListTraceChatRequest_StartTime_DEFAULT
 	}
 	return *p.StartTime
 }
 
-var GetTraceChatRequest_EndTime_DEFAULT int64
+var ListTraceChatRequest_EndTime_DEFAULT int64
 
-func (p *GetTraceChatRequest) GetEndTime() (v int64) {
+func (p *ListTraceChatRequest) GetEndTime() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEndTime() {
-		return GetTraceChatRequest_EndTime_DEFAULT
+		return ListTraceChatRequest_EndTime_DEFAULT
 	}
 	return *p.EndTime
 }
 
-var GetTraceChatRequest_PageSize_DEFAULT int32
+var ListTraceChatRequest_PageSize_DEFAULT int32
 
-func (p *GetTraceChatRequest) GetPageSize() (v int32) {
+func (p *ListTraceChatRequest) GetPageSize() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageSize() {
-		return GetTraceChatRequest_PageSize_DEFAULT
+		return ListTraceChatRequest_PageSize_DEFAULT
 	}
 	return *p.PageSize
 }
 
-var GetTraceChatRequest_PageToken_DEFAULT string
+var ListTraceChatRequest_PageToken_DEFAULT string
 
-func (p *GetTraceChatRequest) GetPageToken() (v string) {
+func (p *ListTraceChatRequest) GetPageToken() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageToken() {
-		return GetTraceChatRequest_PageToken_DEFAULT
+		return ListTraceChatRequest_PageToken_DEFAULT
 	}
 	return *p.PageToken
 }
 
-var GetTraceChatRequest_PlatformType_DEFAULT common.PlatformType
+var ListTraceChatRequest_PlatformType_DEFAULT common.PlatformType
 
-func (p *GetTraceChatRequest) GetPlatformType() (v common.PlatformType) {
+func (p *ListTraceChatRequest) GetPlatformType() (v common.PlatformType) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPlatformType() {
-		return GetTraceChatRequest_PlatformType_DEFAULT
+		return ListTraceChatRequest_PlatformType_DEFAULT
 	}
 	return *p.PlatformType
 }
 
-var GetTraceChatRequest_Filters_DEFAULT *filter.FilterFields
+var ListTraceChatRequest_Filters_DEFAULT *filter.FilterFields
 
-func (p *GetTraceChatRequest) GetFilters() (v *filter.FilterFields) {
+func (p *ListTraceChatRequest) GetFilters() (v *filter.FilterFields) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetFilters() {
-		return GetTraceChatRequest_Filters_DEFAULT
+		return ListTraceChatRequest_Filters_DEFAULT
 	}
 	return p.Filters
 }
 
-var GetTraceChatRequest_Base_DEFAULT *base.Base
+var ListTraceChatRequest_Base_DEFAULT *base.Base
 
-func (p *GetTraceChatRequest) GetBase() (v *base.Base) {
+func (p *ListTraceChatRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetTraceChatRequest_Base_DEFAULT
+		return ListTraceChatRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetTraceChatRequest) SetWorkspaceID(val int64) {
+func (p *ListTraceChatRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetTraceChatRequest) SetTraceID(val string) {
+func (p *ListTraceChatRequest) SetTraceID(val string) {
 	p.TraceID = val
 }
-func (p *GetTraceChatRequest) SetStartTime(val *int64) {
+func (p *ListTraceChatRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetTraceChatRequest) SetEndTime(val *int64) {
+func (p *ListTraceChatRequest) SetEndTime(val *int64) {
 	p.EndTime = val
 }
-func (p *GetTraceChatRequest) SetPageSize(val *int32) {
+func (p *ListTraceChatRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *GetTraceChatRequest) SetPageToken(val *string) {
+func (p *ListTraceChatRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
-func (p *GetTraceChatRequest) SetPlatformType(val *common.PlatformType) {
+func (p *ListTraceChatRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *GetTraceChatRequest) SetFilters(val *filter.FilterFields) {
+func (p *ListTraceChatRequest) SetFilters(val *filter.FilterFields) {
 	p.Filters = val
 }
-func (p *GetTraceChatRequest) SetBase(val *base.Base) {
+func (p *ListTraceChatRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetTraceChatRequest = map[int16]string{
+var fieldIDToName_ListTraceChatRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "trace_id",
 	3:   "start_time",
@@ -21050,35 +21050,35 @@ var fieldIDToName_GetTraceChatRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *GetTraceChatRequest) IsSetStartTime() bool {
+func (p *ListTraceChatRequest) IsSetStartTime() bool {
 	return p.StartTime != nil
 }
 
-func (p *GetTraceChatRequest) IsSetEndTime() bool {
+func (p *ListTraceChatRequest) IsSetEndTime() bool {
 	return p.EndTime != nil
 }
 
-func (p *GetTraceChatRequest) IsSetPageSize() bool {
+func (p *ListTraceChatRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *GetTraceChatRequest) IsSetPageToken() bool {
+func (p *ListTraceChatRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
 }
 
-func (p *GetTraceChatRequest) IsSetPlatformType() bool {
+func (p *ListTraceChatRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
 }
 
-func (p *GetTraceChatRequest) IsSetFilters() bool {
+func (p *ListTraceChatRequest) IsSetFilters() bool {
 	return p.Filters != nil
 }
 
-func (p *GetTraceChatRequest) IsSetBase() bool {
+func (p *ListTraceChatRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -21200,7 +21200,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTraceChatRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTraceChatRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21209,10 +21209,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetTraceChatRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListTraceChatRequest[fieldId]))
 }
 
-func (p *GetTraceChatRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -21223,7 +21223,7 @@ func (p *GetTraceChatRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -21234,7 +21234,7 @@ func (p *GetTraceChatRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.TraceID = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -21245,7 +21245,7 @@ func (p *GetTraceChatRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.StartTime = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -21256,7 +21256,7 @@ func (p *GetTraceChatRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.EndTime = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -21267,7 +21267,7 @@ func (p *GetTraceChatRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.PageSize = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField6(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -21278,7 +21278,7 @@ func (p *GetTraceChatRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.PageToken = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField7(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField7(iprot thrift.TProtocol) error {
 
 	var _field *common.PlatformType
 	if v, err := iprot.ReadString(); err != nil {
@@ -21289,7 +21289,7 @@ func (p *GetTraceChatRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField8(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField8(iprot thrift.TProtocol) error {
 	_field := filter.NewFilterFields()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -21297,7 +21297,7 @@ func (p *GetTraceChatRequest) ReadField8(iprot thrift.TProtocol) error {
 	p.Filters = _field
 	return nil
 }
-func (p *GetTraceChatRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListTraceChatRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -21306,9 +21306,9 @@ func (p *GetTraceChatRequest) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetTraceChatRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTraceChatRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ListTraceChatRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21366,7 +21366,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetTraceChatRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21382,7 +21382,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("trace_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21398,7 +21398,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStartTime() {
 		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
 			goto WriteFieldBeginError
@@ -21416,7 +21416,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEndTime() {
 		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
 			goto WriteFieldBeginError
@@ -21434,7 +21434,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 5); err != nil {
 			goto WriteFieldBeginError
@@ -21452,7 +21452,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 6); err != nil {
 			goto WriteFieldBeginError
@@ -21470,7 +21470,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
 		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 7); err != nil {
 			goto WriteFieldBeginError
@@ -21488,7 +21488,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField8(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField8(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFilters() {
 		if err = oprot.WriteFieldBegin("filters", thrift.STRUCT, 8); err != nil {
 			goto WriteFieldBeginError
@@ -21506,7 +21506,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
-func (p *GetTraceChatRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -21525,15 +21525,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetTraceChatRequest) String() string {
+func (p *ListTraceChatRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetTraceChatRequest(%+v)", *p)
+	return fmt.Sprintf("ListTraceChatRequest(%+v)", *p)
 
 }
 
-func (p *GetTraceChatRequest) DeepEqual(ano *GetTraceChatRequest) bool {
+func (p *ListTraceChatRequest) DeepEqual(ano *ListTraceChatRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -21569,21 +21569,21 @@ func (p *GetTraceChatRequest) DeepEqual(ano *GetTraceChatRequest) bool {
 	return true
 }
 
-func (p *GetTraceChatRequest) Field1DeepEqual(src int64) bool {
+func (p *ListTraceChatRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field2DeepEqual(src string) bool {
+func (p *ListTraceChatRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.TraceID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field3DeepEqual(src *int64) bool {
+func (p *ListTraceChatRequest) Field3DeepEqual(src *int64) bool {
 
 	if p.StartTime == src {
 		return true
@@ -21595,7 +21595,7 @@ func (p *GetTraceChatRequest) Field3DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field4DeepEqual(src *int64) bool {
+func (p *ListTraceChatRequest) Field4DeepEqual(src *int64) bool {
 
 	if p.EndTime == src {
 		return true
@@ -21607,7 +21607,7 @@ func (p *GetTraceChatRequest) Field4DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field5DeepEqual(src *int32) bool {
+func (p *ListTraceChatRequest) Field5DeepEqual(src *int32) bool {
 
 	if p.PageSize == src {
 		return true
@@ -21619,7 +21619,7 @@ func (p *GetTraceChatRequest) Field5DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field6DeepEqual(src *string) bool {
+func (p *ListTraceChatRequest) Field6DeepEqual(src *string) bool {
 
 	if p.PageToken == src {
 		return true
@@ -21631,7 +21631,7 @@ func (p *GetTraceChatRequest) Field6DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
+func (p *ListTraceChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
 		return true
@@ -21643,14 +21643,14 @@ func (p *GetTraceChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field8DeepEqual(src *filter.FilterFields) bool {
+func (p *ListTraceChatRequest) Field8DeepEqual(src *filter.FilterFields) bool {
 
 	if !p.Filters.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ListTraceChatRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -21658,77 +21658,77 @@ func (p *GetTraceChatRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type GetTraceChatResponse struct {
+type ListTraceChatResponse struct {
 	Messages      []*ChatMessage `thrift:"messages,1,required" frugal:"1,required,list<ChatMessage>" json:"messages" form:"messages,required" query:"messages,required"`
 	NextPageToken string         `thrift:"next_page_token,2,required" frugal:"2,required,string" json:"next_page_token" form:"next_page_token,required" query:"next_page_token,required"`
 	HasMore       bool           `thrift:"has_more,3,required" frugal:"3,required,bool" json:"has_more" form:"has_more,required" query:"has_more,required"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
-func NewGetTraceChatResponse() *GetTraceChatResponse {
-	return &GetTraceChatResponse{}
+func NewListTraceChatResponse() *ListTraceChatResponse {
+	return &ListTraceChatResponse{}
 }
 
-func (p *GetTraceChatResponse) InitDefault() {
+func (p *ListTraceChatResponse) InitDefault() {
 }
 
-func (p *GetTraceChatResponse) GetMessages() (v []*ChatMessage) {
+func (p *ListTraceChatResponse) GetMessages() (v []*ChatMessage) {
 	if p != nil {
 		return p.Messages
 	}
 	return
 }
 
-func (p *GetTraceChatResponse) GetNextPageToken() (v string) {
+func (p *ListTraceChatResponse) GetNextPageToken() (v string) {
 	if p != nil {
 		return p.NextPageToken
 	}
 	return
 }
 
-func (p *GetTraceChatResponse) GetHasMore() (v bool) {
+func (p *ListTraceChatResponse) GetHasMore() (v bool) {
 	if p != nil {
 		return p.HasMore
 	}
 	return
 }
 
-var GetTraceChatResponse_BaseResp_DEFAULT *base.BaseResp
+var ListTraceChatResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetTraceChatResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ListTraceChatResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetTraceChatResponse_BaseResp_DEFAULT
+		return ListTraceChatResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetTraceChatResponse) SetMessages(val []*ChatMessage) {
+func (p *ListTraceChatResponse) SetMessages(val []*ChatMessage) {
 	p.Messages = val
 }
-func (p *GetTraceChatResponse) SetNextPageToken(val string) {
+func (p *ListTraceChatResponse) SetNextPageToken(val string) {
 	p.NextPageToken = val
 }
-func (p *GetTraceChatResponse) SetHasMore(val bool) {
+func (p *ListTraceChatResponse) SetHasMore(val bool) {
 	p.HasMore = val
 }
-func (p *GetTraceChatResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ListTraceChatResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetTraceChatResponse = map[int16]string{
+var fieldIDToName_ListTraceChatResponse = map[int16]string{
 	1:   "messages",
 	2:   "next_page_token",
 	3:   "has_more",
 	255: "BaseResp",
 }
 
-func (p *GetTraceChatResponse) IsSetBaseResp() bool {
+func (p *ListTraceChatResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetTraceChatResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetMessages bool = false
@@ -21817,7 +21817,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetTraceChatResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTraceChatResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21826,10 +21826,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetTraceChatResponse[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListTraceChatResponse[fieldId]))
 }
 
-func (p *GetTraceChatResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListTraceChatResponse) ReadField1(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -21852,7 +21852,7 @@ func (p *GetTraceChatResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Messages = _field
 	return nil
 }
-func (p *GetTraceChatResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListTraceChatResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -21863,7 +21863,7 @@ func (p *GetTraceChatResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.NextPageToken = _field
 	return nil
 }
-func (p *GetTraceChatResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListTraceChatResponse) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -21874,7 +21874,7 @@ func (p *GetTraceChatResponse) ReadField3(iprot thrift.TProtocol) error {
 	p.HasMore = _field
 	return nil
 }
-func (p *GetTraceChatResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListTraceChatResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -21883,9 +21883,9 @@ func (p *GetTraceChatResponse) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetTraceChatResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTraceChatResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ListTraceChatResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -21923,7 +21923,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetTraceChatResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("messages", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21947,7 +21947,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetTraceChatResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("next_page_token", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21963,7 +21963,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetTraceChatResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("has_more", thrift.BOOL, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -21979,7 +21979,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetTraceChatResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListTraceChatResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -21998,15 +21998,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetTraceChatResponse) String() string {
+func (p *ListTraceChatResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetTraceChatResponse(%+v)", *p)
+	return fmt.Sprintf("ListTraceChatResponse(%+v)", *p)
 
 }
 
-func (p *GetTraceChatResponse) DeepEqual(ano *GetTraceChatResponse) bool {
+func (p *ListTraceChatResponse) DeepEqual(ano *ListTraceChatResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22027,7 +22027,7 @@ func (p *GetTraceChatResponse) DeepEqual(ano *GetTraceChatResponse) bool {
 	return true
 }
 
-func (p *GetTraceChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
+func (p *ListTraceChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
 
 	if len(p.Messages) != len(src) {
 		return false
@@ -22040,21 +22040,21 @@ func (p *GetTraceChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
 	}
 	return true
 }
-func (p *GetTraceChatResponse) Field2DeepEqual(src string) bool {
+func (p *ListTraceChatResponse) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.NextPageToken, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatResponse) Field3DeepEqual(src bool) bool {
+func (p *ListTraceChatResponse) Field3DeepEqual(src bool) bool {
 
 	if p.HasMore != src {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ListTraceChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -22062,7 +22062,7 @@ func (p *GetTraceChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-type GetThreadChatRequest struct {
+type ListThreadChatRequest struct {
 	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ThreadID     string               `thrift:"thread_id,2,required" frugal:"2,required,string" json:"thread_id" form:"thread_id,required" `
 	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
@@ -22073,124 +22073,124 @@ type GetThreadChatRequest struct {
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewGetThreadChatRequest() *GetThreadChatRequest {
-	return &GetThreadChatRequest{}
+func NewListThreadChatRequest() *ListThreadChatRequest {
+	return &ListThreadChatRequest{}
 }
 
-func (p *GetThreadChatRequest) InitDefault() {
+func (p *ListThreadChatRequest) InitDefault() {
 }
 
-func (p *GetThreadChatRequest) GetWorkspaceID() (v int64) {
+func (p *ListThreadChatRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-func (p *GetThreadChatRequest) GetThreadID() (v string) {
+func (p *ListThreadChatRequest) GetThreadID() (v string) {
 	if p != nil {
 		return p.ThreadID
 	}
 	return
 }
 
-var GetThreadChatRequest_StartTime_DEFAULT int64
+var ListThreadChatRequest_StartTime_DEFAULT int64
 
-func (p *GetThreadChatRequest) GetStartTime() (v int64) {
+func (p *ListThreadChatRequest) GetStartTime() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetStartTime() {
-		return GetThreadChatRequest_StartTime_DEFAULT
+		return ListThreadChatRequest_StartTime_DEFAULT
 	}
 	return *p.StartTime
 }
 
-var GetThreadChatRequest_EndTime_DEFAULT int64
+var ListThreadChatRequest_EndTime_DEFAULT int64
 
-func (p *GetThreadChatRequest) GetEndTime() (v int64) {
+func (p *ListThreadChatRequest) GetEndTime() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetEndTime() {
-		return GetThreadChatRequest_EndTime_DEFAULT
+		return ListThreadChatRequest_EndTime_DEFAULT
 	}
 	return *p.EndTime
 }
 
-var GetThreadChatRequest_PageSize_DEFAULT int32
+var ListThreadChatRequest_PageSize_DEFAULT int32
 
-func (p *GetThreadChatRequest) GetPageSize() (v int32) {
+func (p *ListThreadChatRequest) GetPageSize() (v int32) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageSize() {
-		return GetThreadChatRequest_PageSize_DEFAULT
+		return ListThreadChatRequest_PageSize_DEFAULT
 	}
 	return *p.PageSize
 }
 
-var GetThreadChatRequest_PageToken_DEFAULT string
+var ListThreadChatRequest_PageToken_DEFAULT string
 
-func (p *GetThreadChatRequest) GetPageToken() (v string) {
+func (p *ListThreadChatRequest) GetPageToken() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPageToken() {
-		return GetThreadChatRequest_PageToken_DEFAULT
+		return ListThreadChatRequest_PageToken_DEFAULT
 	}
 	return *p.PageToken
 }
 
-var GetThreadChatRequest_PlatformType_DEFAULT common.PlatformType
+var ListThreadChatRequest_PlatformType_DEFAULT common.PlatformType
 
-func (p *GetThreadChatRequest) GetPlatformType() (v common.PlatformType) {
+func (p *ListThreadChatRequest) GetPlatformType() (v common.PlatformType) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPlatformType() {
-		return GetThreadChatRequest_PlatformType_DEFAULT
+		return ListThreadChatRequest_PlatformType_DEFAULT
 	}
 	return *p.PlatformType
 }
 
-var GetThreadChatRequest_Base_DEFAULT *base.Base
+var ListThreadChatRequest_Base_DEFAULT *base.Base
 
-func (p *GetThreadChatRequest) GetBase() (v *base.Base) {
+func (p *ListThreadChatRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return GetThreadChatRequest_Base_DEFAULT
+		return ListThreadChatRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *GetThreadChatRequest) SetWorkspaceID(val int64) {
+func (p *ListThreadChatRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *GetThreadChatRequest) SetThreadID(val string) {
+func (p *ListThreadChatRequest) SetThreadID(val string) {
 	p.ThreadID = val
 }
-func (p *GetThreadChatRequest) SetStartTime(val *int64) {
+func (p *ListThreadChatRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetThreadChatRequest) SetEndTime(val *int64) {
+func (p *ListThreadChatRequest) SetEndTime(val *int64) {
 	p.EndTime = val
 }
-func (p *GetThreadChatRequest) SetPageSize(val *int32) {
+func (p *ListThreadChatRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
-func (p *GetThreadChatRequest) SetPageToken(val *string) {
+func (p *ListThreadChatRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
-func (p *GetThreadChatRequest) SetPlatformType(val *common.PlatformType) {
+func (p *ListThreadChatRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *GetThreadChatRequest) SetBase(val *base.Base) {
+func (p *ListThreadChatRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_GetThreadChatRequest = map[int16]string{
+var fieldIDToName_ListThreadChatRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "thread_id",
 	3:   "start_time",
@@ -22201,31 +22201,31 @@ var fieldIDToName_GetThreadChatRequest = map[int16]string{
 	255: "Base",
 }
 
-func (p *GetThreadChatRequest) IsSetStartTime() bool {
+func (p *ListThreadChatRequest) IsSetStartTime() bool {
 	return p.StartTime != nil
 }
 
-func (p *GetThreadChatRequest) IsSetEndTime() bool {
+func (p *ListThreadChatRequest) IsSetEndTime() bool {
 	return p.EndTime != nil
 }
 
-func (p *GetThreadChatRequest) IsSetPageSize() bool {
+func (p *ListThreadChatRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
 
-func (p *GetThreadChatRequest) IsSetPageToken() bool {
+func (p *ListThreadChatRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
 }
 
-func (p *GetThreadChatRequest) IsSetPlatformType() bool {
+func (p *ListThreadChatRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
 }
 
-func (p *GetThreadChatRequest) IsSetBase() bool {
+func (p *ListThreadChatRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *GetThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -22339,7 +22339,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetThreadChatRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListThreadChatRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22348,10 +22348,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetThreadChatRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListThreadChatRequest[fieldId]))
 }
 
-func (p *GetThreadChatRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -22362,7 +22362,7 @@ func (p *GetThreadChatRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -22373,7 +22373,7 @@ func (p *GetThreadChatRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.ThreadID = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -22384,7 +22384,7 @@ func (p *GetThreadChatRequest) ReadField3(iprot thrift.TProtocol) error {
 	p.StartTime = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField4(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -22395,7 +22395,7 @@ func (p *GetThreadChatRequest) ReadField4(iprot thrift.TProtocol) error {
 	p.EndTime = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField5(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *int32
 	if v, err := iprot.ReadI32(); err != nil {
@@ -22406,7 +22406,7 @@ func (p *GetThreadChatRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.PageSize = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField6(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField6(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -22417,7 +22417,7 @@ func (p *GetThreadChatRequest) ReadField6(iprot thrift.TProtocol) error {
 	p.PageToken = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField7(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField7(iprot thrift.TProtocol) error {
 
 	var _field *common.PlatformType
 	if v, err := iprot.ReadString(); err != nil {
@@ -22428,7 +22428,7 @@ func (p *GetThreadChatRequest) ReadField7(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
-func (p *GetThreadChatRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListThreadChatRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -22437,9 +22437,9 @@ func (p *GetThreadChatRequest) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetThreadChatRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetThreadChatRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ListThreadChatRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22493,7 +22493,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetThreadChatRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22509,7 +22509,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22525,7 +22525,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStartTime() {
 		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
 			goto WriteFieldBeginError
@@ -22543,7 +22543,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEndTime() {
 		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
 			goto WriteFieldBeginError
@@ -22561,7 +22561,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageSize() {
 		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 5); err != nil {
 			goto WriteFieldBeginError
@@ -22579,7 +22579,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField6(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPageToken() {
 		if err = oprot.WriteFieldBegin("page_token", thrift.STRING, 6); err != nil {
 			goto WriteFieldBeginError
@@ -22597,7 +22597,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField7(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField7(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
 		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 7); err != nil {
 			goto WriteFieldBeginError
@@ -22615,7 +22615,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
-func (p *GetThreadChatRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -22634,15 +22634,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetThreadChatRequest) String() string {
+func (p *ListThreadChatRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetThreadChatRequest(%+v)", *p)
+	return fmt.Sprintf("ListThreadChatRequest(%+v)", *p)
 
 }
 
-func (p *GetThreadChatRequest) DeepEqual(ano *GetThreadChatRequest) bool {
+func (p *ListThreadChatRequest) DeepEqual(ano *ListThreadChatRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22675,21 +22675,21 @@ func (p *GetThreadChatRequest) DeepEqual(ano *GetThreadChatRequest) bool {
 	return true
 }
 
-func (p *GetThreadChatRequest) Field1DeepEqual(src int64) bool {
+func (p *ListThreadChatRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field2DeepEqual(src string) bool {
+func (p *ListThreadChatRequest) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.ThreadID, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field3DeepEqual(src *int64) bool {
+func (p *ListThreadChatRequest) Field3DeepEqual(src *int64) bool {
 
 	if p.StartTime == src {
 		return true
@@ -22701,7 +22701,7 @@ func (p *GetThreadChatRequest) Field3DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field4DeepEqual(src *int64) bool {
+func (p *ListThreadChatRequest) Field4DeepEqual(src *int64) bool {
 
 	if p.EndTime == src {
 		return true
@@ -22713,7 +22713,7 @@ func (p *GetThreadChatRequest) Field4DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field5DeepEqual(src *int32) bool {
+func (p *ListThreadChatRequest) Field5DeepEqual(src *int32) bool {
 
 	if p.PageSize == src {
 		return true
@@ -22725,7 +22725,7 @@ func (p *GetThreadChatRequest) Field5DeepEqual(src *int32) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field6DeepEqual(src *string) bool {
+func (p *ListThreadChatRequest) Field6DeepEqual(src *string) bool {
 
 	if p.PageToken == src {
 		return true
@@ -22737,7 +22737,7 @@ func (p *GetThreadChatRequest) Field6DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
+func (p *ListThreadChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
 		return true
@@ -22749,7 +22749,7 @@ func (p *GetThreadChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ListThreadChatRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -22757,77 +22757,77 @@ func (p *GetThreadChatRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type GetThreadChatResponse struct {
+type ListThreadChatResponse struct {
 	Messages      []*ChatMessage `thrift:"messages,1,required" frugal:"1,required,list<ChatMessage>" json:"messages" form:"messages,required" query:"messages,required"`
 	NextPageToken string         `thrift:"next_page_token,2,required" frugal:"2,required,string" json:"next_page_token" form:"next_page_token,required" query:"next_page_token,required"`
 	HasMore       bool           `thrift:"has_more,3,required" frugal:"3,required,bool" json:"has_more" form:"has_more,required" query:"has_more,required"`
 	BaseResp      *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
-func NewGetThreadChatResponse() *GetThreadChatResponse {
-	return &GetThreadChatResponse{}
+func NewListThreadChatResponse() *ListThreadChatResponse {
+	return &ListThreadChatResponse{}
 }
 
-func (p *GetThreadChatResponse) InitDefault() {
+func (p *ListThreadChatResponse) InitDefault() {
 }
 
-func (p *GetThreadChatResponse) GetMessages() (v []*ChatMessage) {
+func (p *ListThreadChatResponse) GetMessages() (v []*ChatMessage) {
 	if p != nil {
 		return p.Messages
 	}
 	return
 }
 
-func (p *GetThreadChatResponse) GetNextPageToken() (v string) {
+func (p *ListThreadChatResponse) GetNextPageToken() (v string) {
 	if p != nil {
 		return p.NextPageToken
 	}
 	return
 }
 
-func (p *GetThreadChatResponse) GetHasMore() (v bool) {
+func (p *ListThreadChatResponse) GetHasMore() (v bool) {
 	if p != nil {
 		return p.HasMore
 	}
 	return
 }
 
-var GetThreadChatResponse_BaseResp_DEFAULT *base.BaseResp
+var ListThreadChatResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *GetThreadChatResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ListThreadChatResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return GetThreadChatResponse_BaseResp_DEFAULT
+		return ListThreadChatResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *GetThreadChatResponse) SetMessages(val []*ChatMessage) {
+func (p *ListThreadChatResponse) SetMessages(val []*ChatMessage) {
 	p.Messages = val
 }
-func (p *GetThreadChatResponse) SetNextPageToken(val string) {
+func (p *ListThreadChatResponse) SetNextPageToken(val string) {
 	p.NextPageToken = val
 }
-func (p *GetThreadChatResponse) SetHasMore(val bool) {
+func (p *ListThreadChatResponse) SetHasMore(val bool) {
 	p.HasMore = val
 }
-func (p *GetThreadChatResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ListThreadChatResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_GetThreadChatResponse = map[int16]string{
+var fieldIDToName_ListThreadChatResponse = map[int16]string{
 	1:   "messages",
 	2:   "next_page_token",
 	3:   "has_more",
 	255: "BaseResp",
 }
 
-func (p *GetThreadChatResponse) IsSetBaseResp() bool {
+func (p *ListThreadChatResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *GetThreadChatResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetMessages bool = false
@@ -22916,7 +22916,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetThreadChatResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListThreadChatResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22925,10 +22925,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetThreadChatResponse[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListThreadChatResponse[fieldId]))
 }
 
-func (p *GetThreadChatResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ListThreadChatResponse) ReadField1(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -22951,7 +22951,7 @@ func (p *GetThreadChatResponse) ReadField1(iprot thrift.TProtocol) error {
 	p.Messages = _field
 	return nil
 }
-func (p *GetThreadChatResponse) ReadField2(iprot thrift.TProtocol) error {
+func (p *ListThreadChatResponse) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field string
 	if v, err := iprot.ReadString(); err != nil {
@@ -22962,7 +22962,7 @@ func (p *GetThreadChatResponse) ReadField2(iprot thrift.TProtocol) error {
 	p.NextPageToken = _field
 	return nil
 }
-func (p *GetThreadChatResponse) ReadField3(iprot thrift.TProtocol) error {
+func (p *ListThreadChatResponse) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field bool
 	if v, err := iprot.ReadBool(); err != nil {
@@ -22973,7 +22973,7 @@ func (p *GetThreadChatResponse) ReadField3(iprot thrift.TProtocol) error {
 	p.HasMore = _field
 	return nil
 }
-func (p *GetThreadChatResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ListThreadChatResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -22982,9 +22982,9 @@ func (p *GetThreadChatResponse) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *GetThreadChatResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetThreadChatResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ListThreadChatResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -23022,7 +23022,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *GetThreadChatResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("messages", thrift.LIST, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23046,7 +23046,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *GetThreadChatResponse) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) writeField2(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("next_page_token", thrift.STRING, 2); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23062,7 +23062,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *GetThreadChatResponse) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) writeField3(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("has_more", thrift.BOOL, 3); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -23078,7 +23078,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *GetThreadChatResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ListThreadChatResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -23097,15 +23097,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *GetThreadChatResponse) String() string {
+func (p *ListThreadChatResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("GetThreadChatResponse(%+v)", *p)
+	return fmt.Sprintf("ListThreadChatResponse(%+v)", *p)
 
 }
 
-func (p *GetThreadChatResponse) DeepEqual(ano *GetThreadChatResponse) bool {
+func (p *ListThreadChatResponse) DeepEqual(ano *ListThreadChatResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -23126,7 +23126,7 @@ func (p *GetThreadChatResponse) DeepEqual(ano *GetThreadChatResponse) bool {
 	return true
 }
 
-func (p *GetThreadChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
+func (p *ListThreadChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
 
 	if len(p.Messages) != len(src) {
 		return false
@@ -23139,21 +23139,21 @@ func (p *GetThreadChatResponse) Field1DeepEqual(src []*ChatMessage) bool {
 	}
 	return true
 }
-func (p *GetThreadChatResponse) Field2DeepEqual(src string) bool {
+func (p *ListThreadChatResponse) Field2DeepEqual(src string) bool {
 
 	if strings.Compare(p.NextPageToken, src) != 0 {
 		return false
 	}
 	return true
 }
-func (p *GetThreadChatResponse) Field3DeepEqual(src bool) bool {
+func (p *ListThreadChatResponse) Field3DeepEqual(src bool) bool {
 
 	if p.HasMore != src {
 		return false
 	}
 	return true
 }
-func (p *GetThreadChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ListThreadChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -24639,9 +24639,9 @@ type TraceService interface {
 
 	ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (r *ListTrajectoryResponse, err error)
 
-	GetTraceChat(ctx context.Context, req *GetTraceChatRequest) (r *GetTraceChatResponse, err error)
+	ListTraceChat(ctx context.Context, req *ListTraceChatRequest) (r *ListTraceChatResponse, err error)
 
-	GetThreadChat(ctx context.Context, req *GetThreadChatRequest) (r *GetThreadChatResponse, err error)
+	ListThreadChat(ctx context.Context, req *ListThreadChatRequest) (r *ListThreadChatResponse, err error)
 
 	GetThreadStat(ctx context.Context, req *GetThreadStatRequest) (r *GetThreadStatResponse, err error)
 }
@@ -24879,20 +24879,20 @@ func (p *TraceServiceClient) ListTrajectory(ctx context.Context, req *ListTrajec
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *TraceServiceClient) GetTraceChat(ctx context.Context, req *GetTraceChatRequest) (r *GetTraceChatResponse, err error) {
-	var _args TraceServiceGetTraceChatArgs
+func (p *TraceServiceClient) ListTraceChat(ctx context.Context, req *ListTraceChatRequest) (r *ListTraceChatResponse, err error) {
+	var _args TraceServiceListTraceChatArgs
 	_args.Req = req
-	var _result TraceServiceGetTraceChatResult
-	if err = p.Client_().Call(ctx, "GetTraceChat", &_args, &_result); err != nil {
+	var _result TraceServiceListTraceChatResult
+	if err = p.Client_().Call(ctx, "ListTraceChat", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *TraceServiceClient) GetThreadChat(ctx context.Context, req *GetThreadChatRequest) (r *GetThreadChatResponse, err error) {
-	var _args TraceServiceGetThreadChatArgs
+func (p *TraceServiceClient) ListThreadChat(ctx context.Context, req *ListThreadChatRequest) (r *ListThreadChatResponse, err error) {
+	var _args TraceServiceListThreadChatArgs
 	_args.Req = req
-	var _result TraceServiceGetThreadChatResult
-	if err = p.Client_().Call(ctx, "GetThreadChat", &_args, &_result); err != nil {
+	var _result TraceServiceListThreadChatResult
+	if err = p.Client_().Call(ctx, "ListThreadChat", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -24950,8 +24950,8 @@ func NewTraceServiceProcessor(handler TraceService) *TraceServiceProcessor {
 	self.AddToProcessorMap("UpsertTrajectoryConfig", &traceServiceProcessorUpsertTrajectoryConfig{handler: handler})
 	self.AddToProcessorMap("GetTrajectoryConfig", &traceServiceProcessorGetTrajectoryConfig{handler: handler})
 	self.AddToProcessorMap("ListTrajectory", &traceServiceProcessorListTrajectory{handler: handler})
-	self.AddToProcessorMap("GetTraceChat", &traceServiceProcessorGetTraceChat{handler: handler})
-	self.AddToProcessorMap("GetThreadChat", &traceServiceProcessorGetThreadChat{handler: handler})
+	self.AddToProcessorMap("ListTraceChat", &traceServiceProcessorListTraceChat{handler: handler})
+	self.AddToProcessorMap("ListThreadChat", &traceServiceProcessorListThreadChat{handler: handler})
 	self.AddToProcessorMap("GetThreadStat", &traceServiceProcessorGetThreadStat{handler: handler})
 	return self
 }
@@ -26077,16 +26077,16 @@ func (p *traceServiceProcessorListTrajectory) Process(ctx context.Context, seqId
 	return true, err
 }
 
-type traceServiceProcessorGetTraceChat struct {
+type traceServiceProcessorListTraceChat struct {
 	handler TraceService
 }
 
-func (p *traceServiceProcessorGetTraceChat) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := TraceServiceGetTraceChatArgs{}
+func (p *traceServiceProcessorListTraceChat) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TraceServiceListTraceChatArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetTraceChat", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ListTraceChat", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -26095,11 +26095,11 @@ func (p *traceServiceProcessorGetTraceChat) Process(ctx context.Context, seqId i
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := TraceServiceGetTraceChatResult{}
-	var retval *GetTraceChatResponse
-	if retval, err2 = p.handler.GetTraceChat(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetTraceChat: "+err2.Error())
-		oprot.WriteMessageBegin("GetTraceChat", thrift.EXCEPTION, seqId)
+	result := TraceServiceListTraceChatResult{}
+	var retval *ListTraceChatResponse
+	if retval, err2 = p.handler.ListTraceChat(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListTraceChat: "+err2.Error())
+		oprot.WriteMessageBegin("ListTraceChat", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -26107,7 +26107,7 @@ func (p *traceServiceProcessorGetTraceChat) Process(ctx context.Context, seqId i
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetTraceChat", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ListTraceChat", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -26125,16 +26125,16 @@ func (p *traceServiceProcessorGetTraceChat) Process(ctx context.Context, seqId i
 	return true, err
 }
 
-type traceServiceProcessorGetThreadChat struct {
+type traceServiceProcessorListThreadChat struct {
 	handler TraceService
 }
 
-func (p *traceServiceProcessorGetThreadChat) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := TraceServiceGetThreadChatArgs{}
+func (p *traceServiceProcessorListThreadChat) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TraceServiceListThreadChatArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("GetThreadChat", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ListThreadChat", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -26143,11 +26143,11 @@ func (p *traceServiceProcessorGetThreadChat) Process(ctx context.Context, seqId 
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := TraceServiceGetThreadChatResult{}
-	var retval *GetThreadChatResponse
-	if retval, err2 = p.handler.GetThreadChat(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetThreadChat: "+err2.Error())
-		oprot.WriteMessageBegin("GetThreadChat", thrift.EXCEPTION, seqId)
+	result := TraceServiceListThreadChatResult{}
+	var retval *ListThreadChatResponse
+	if retval, err2 = p.handler.ListThreadChat(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListThreadChat: "+err2.Error())
+		oprot.WriteMessageBegin("ListThreadChat", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -26155,7 +26155,7 @@ func (p *traceServiceProcessorGetThreadChat) Process(ctx context.Context, seqId 
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("GetThreadChat", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ListThreadChat", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -34133,41 +34133,41 @@ func (p *TraceServiceListTrajectoryResult) Field0DeepEqual(src *ListTrajectoryRe
 	return true
 }
 
-type TraceServiceGetTraceChatArgs struct {
-	Req *GetTraceChatRequest `thrift:"req,1" frugal:"1,default,GetTraceChatRequest"`
+type TraceServiceListTraceChatArgs struct {
+	Req *ListTraceChatRequest `thrift:"req,1" frugal:"1,default,ListTraceChatRequest"`
 }
 
-func NewTraceServiceGetTraceChatArgs() *TraceServiceGetTraceChatArgs {
-	return &TraceServiceGetTraceChatArgs{}
+func NewTraceServiceListTraceChatArgs() *TraceServiceListTraceChatArgs {
+	return &TraceServiceListTraceChatArgs{}
 }
 
-func (p *TraceServiceGetTraceChatArgs) InitDefault() {
+func (p *TraceServiceListTraceChatArgs) InitDefault() {
 }
 
-var TraceServiceGetTraceChatArgs_Req_DEFAULT *GetTraceChatRequest
+var TraceServiceListTraceChatArgs_Req_DEFAULT *ListTraceChatRequest
 
-func (p *TraceServiceGetTraceChatArgs) GetReq() (v *GetTraceChatRequest) {
+func (p *TraceServiceListTraceChatArgs) GetReq() (v *ListTraceChatRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return TraceServiceGetTraceChatArgs_Req_DEFAULT
+		return TraceServiceListTraceChatArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *TraceServiceGetTraceChatArgs) SetReq(val *GetTraceChatRequest) {
+func (p *TraceServiceListTraceChatArgs) SetReq(val *ListTraceChatRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_TraceServiceGetTraceChatArgs = map[int16]string{
+var fieldIDToName_TraceServiceListTraceChatArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *TraceServiceGetTraceChatArgs) IsSetReq() bool {
+func (p *TraceServiceListTraceChatArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *TraceServiceGetTraceChatArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -34212,7 +34212,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetTraceChatArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListTraceChatArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -34222,8 +34222,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetTraceChatRequest()
+func (p *TraceServiceListTraceChatArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListTraceChatRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -34231,9 +34231,9 @@ func (p *TraceServiceGetTraceChatArgs) ReadField1(iprot thrift.TProtocol) error 
 	return nil
 }
 
-func (p *TraceServiceGetTraceChatArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTraceChat_args"); err != nil {
+	if err = oprot.WriteStructBegin("ListTraceChat_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -34259,7 +34259,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -34276,15 +34276,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatArgs) String() string {
+func (p *TraceServiceListTraceChatArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceGetTraceChatArgs(%+v)", *p)
+	return fmt.Sprintf("TraceServiceListTraceChatArgs(%+v)", *p)
 
 }
 
-func (p *TraceServiceGetTraceChatArgs) DeepEqual(ano *TraceServiceGetTraceChatArgs) bool {
+func (p *TraceServiceListTraceChatArgs) DeepEqual(ano *TraceServiceListTraceChatArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -34296,7 +34296,7 @@ func (p *TraceServiceGetTraceChatArgs) DeepEqual(ano *TraceServiceGetTraceChatAr
 	return true
 }
 
-func (p *TraceServiceGetTraceChatArgs) Field1DeepEqual(src *GetTraceChatRequest) bool {
+func (p *TraceServiceListTraceChatArgs) Field1DeepEqual(src *ListTraceChatRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -34304,41 +34304,41 @@ func (p *TraceServiceGetTraceChatArgs) Field1DeepEqual(src *GetTraceChatRequest)
 	return true
 }
 
-type TraceServiceGetTraceChatResult struct {
-	Success *GetTraceChatResponse `thrift:"success,0,optional" frugal:"0,optional,GetTraceChatResponse"`
+type TraceServiceListTraceChatResult struct {
+	Success *ListTraceChatResponse `thrift:"success,0,optional" frugal:"0,optional,ListTraceChatResponse"`
 }
 
-func NewTraceServiceGetTraceChatResult() *TraceServiceGetTraceChatResult {
-	return &TraceServiceGetTraceChatResult{}
+func NewTraceServiceListTraceChatResult() *TraceServiceListTraceChatResult {
+	return &TraceServiceListTraceChatResult{}
 }
 
-func (p *TraceServiceGetTraceChatResult) InitDefault() {
+func (p *TraceServiceListTraceChatResult) InitDefault() {
 }
 
-var TraceServiceGetTraceChatResult_Success_DEFAULT *GetTraceChatResponse
+var TraceServiceListTraceChatResult_Success_DEFAULT *ListTraceChatResponse
 
-func (p *TraceServiceGetTraceChatResult) GetSuccess() (v *GetTraceChatResponse) {
+func (p *TraceServiceListTraceChatResult) GetSuccess() (v *ListTraceChatResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return TraceServiceGetTraceChatResult_Success_DEFAULT
+		return TraceServiceListTraceChatResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *TraceServiceGetTraceChatResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetTraceChatResponse)
+func (p *TraceServiceListTraceChatResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListTraceChatResponse)
 }
 
-var fieldIDToName_TraceServiceGetTraceChatResult = map[int16]string{
+var fieldIDToName_TraceServiceListTraceChatResult = map[int16]string{
 	0: "success",
 }
 
-func (p *TraceServiceGetTraceChatResult) IsSetSuccess() bool {
+func (p *TraceServiceListTraceChatResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *TraceServiceGetTraceChatResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -34383,7 +34383,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetTraceChatResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListTraceChatResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -34393,8 +34393,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetTraceChatResponse()
+func (p *TraceServiceListTraceChatResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListTraceChatResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -34402,9 +34402,9 @@ func (p *TraceServiceGetTraceChatResult) ReadField0(iprot thrift.TProtocol) erro
 	return nil
 }
 
-func (p *TraceServiceGetTraceChatResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetTraceChat_result"); err != nil {
+	if err = oprot.WriteStructBegin("ListTraceChat_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -34430,7 +34430,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListTraceChatResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -34449,15 +34449,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *TraceServiceGetTraceChatResult) String() string {
+func (p *TraceServiceListTraceChatResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceGetTraceChatResult(%+v)", *p)
+	return fmt.Sprintf("TraceServiceListTraceChatResult(%+v)", *p)
 
 }
 
-func (p *TraceServiceGetTraceChatResult) DeepEqual(ano *TraceServiceGetTraceChatResult) bool {
+func (p *TraceServiceListTraceChatResult) DeepEqual(ano *TraceServiceListTraceChatResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -34469,7 +34469,7 @@ func (p *TraceServiceGetTraceChatResult) DeepEqual(ano *TraceServiceGetTraceChat
 	return true
 }
 
-func (p *TraceServiceGetTraceChatResult) Field0DeepEqual(src *GetTraceChatResponse) bool {
+func (p *TraceServiceListTraceChatResult) Field0DeepEqual(src *ListTraceChatResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false
@@ -34477,41 +34477,41 @@ func (p *TraceServiceGetTraceChatResult) Field0DeepEqual(src *GetTraceChatRespon
 	return true
 }
 
-type TraceServiceGetThreadChatArgs struct {
-	Req *GetThreadChatRequest `thrift:"req,1" frugal:"1,default,GetThreadChatRequest"`
+type TraceServiceListThreadChatArgs struct {
+	Req *ListThreadChatRequest `thrift:"req,1" frugal:"1,default,ListThreadChatRequest"`
 }
 
-func NewTraceServiceGetThreadChatArgs() *TraceServiceGetThreadChatArgs {
-	return &TraceServiceGetThreadChatArgs{}
+func NewTraceServiceListThreadChatArgs() *TraceServiceListThreadChatArgs {
+	return &TraceServiceListThreadChatArgs{}
 }
 
-func (p *TraceServiceGetThreadChatArgs) InitDefault() {
+func (p *TraceServiceListThreadChatArgs) InitDefault() {
 }
 
-var TraceServiceGetThreadChatArgs_Req_DEFAULT *GetThreadChatRequest
+var TraceServiceListThreadChatArgs_Req_DEFAULT *ListThreadChatRequest
 
-func (p *TraceServiceGetThreadChatArgs) GetReq() (v *GetThreadChatRequest) {
+func (p *TraceServiceListThreadChatArgs) GetReq() (v *ListThreadChatRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return TraceServiceGetThreadChatArgs_Req_DEFAULT
+		return TraceServiceListThreadChatArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *TraceServiceGetThreadChatArgs) SetReq(val *GetThreadChatRequest) {
+func (p *TraceServiceListThreadChatArgs) SetReq(val *ListThreadChatRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_TraceServiceGetThreadChatArgs = map[int16]string{
+var fieldIDToName_TraceServiceListThreadChatArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *TraceServiceGetThreadChatArgs) IsSetReq() bool {
+func (p *TraceServiceListThreadChatArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *TraceServiceGetThreadChatArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -34556,7 +34556,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetThreadChatArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListThreadChatArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -34566,8 +34566,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewGetThreadChatRequest()
+func (p *TraceServiceListThreadChatArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListThreadChatRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -34575,9 +34575,9 @@ func (p *TraceServiceGetThreadChatArgs) ReadField1(iprot thrift.TProtocol) error
 	return nil
 }
 
-func (p *TraceServiceGetThreadChatArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetThreadChat_args"); err != nil {
+	if err = oprot.WriteStructBegin("ListThreadChat_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -34603,7 +34603,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -34620,15 +34620,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatArgs) String() string {
+func (p *TraceServiceListThreadChatArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceGetThreadChatArgs(%+v)", *p)
+	return fmt.Sprintf("TraceServiceListThreadChatArgs(%+v)", *p)
 
 }
 
-func (p *TraceServiceGetThreadChatArgs) DeepEqual(ano *TraceServiceGetThreadChatArgs) bool {
+func (p *TraceServiceListThreadChatArgs) DeepEqual(ano *TraceServiceListThreadChatArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -34640,7 +34640,7 @@ func (p *TraceServiceGetThreadChatArgs) DeepEqual(ano *TraceServiceGetThreadChat
 	return true
 }
 
-func (p *TraceServiceGetThreadChatArgs) Field1DeepEqual(src *GetThreadChatRequest) bool {
+func (p *TraceServiceListThreadChatArgs) Field1DeepEqual(src *ListThreadChatRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -34648,41 +34648,41 @@ func (p *TraceServiceGetThreadChatArgs) Field1DeepEqual(src *GetThreadChatReques
 	return true
 }
 
-type TraceServiceGetThreadChatResult struct {
-	Success *GetThreadChatResponse `thrift:"success,0,optional" frugal:"0,optional,GetThreadChatResponse"`
+type TraceServiceListThreadChatResult struct {
+	Success *ListThreadChatResponse `thrift:"success,0,optional" frugal:"0,optional,ListThreadChatResponse"`
 }
 
-func NewTraceServiceGetThreadChatResult() *TraceServiceGetThreadChatResult {
-	return &TraceServiceGetThreadChatResult{}
+func NewTraceServiceListThreadChatResult() *TraceServiceListThreadChatResult {
+	return &TraceServiceListThreadChatResult{}
 }
 
-func (p *TraceServiceGetThreadChatResult) InitDefault() {
+func (p *TraceServiceListThreadChatResult) InitDefault() {
 }
 
-var TraceServiceGetThreadChatResult_Success_DEFAULT *GetThreadChatResponse
+var TraceServiceListThreadChatResult_Success_DEFAULT *ListThreadChatResponse
 
-func (p *TraceServiceGetThreadChatResult) GetSuccess() (v *GetThreadChatResponse) {
+func (p *TraceServiceListThreadChatResult) GetSuccess() (v *ListThreadChatResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return TraceServiceGetThreadChatResult_Success_DEFAULT
+		return TraceServiceListThreadChatResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *TraceServiceGetThreadChatResult) SetSuccess(x interface{}) {
-	p.Success = x.(*GetThreadChatResponse)
+func (p *TraceServiceListThreadChatResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListThreadChatResponse)
 }
 
-var fieldIDToName_TraceServiceGetThreadChatResult = map[int16]string{
+var fieldIDToName_TraceServiceListThreadChatResult = map[int16]string{
 	0: "success",
 }
 
-func (p *TraceServiceGetThreadChatResult) IsSetSuccess() bool {
+func (p *TraceServiceListThreadChatResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *TraceServiceGetThreadChatResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -34727,7 +34727,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetThreadChatResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListThreadChatResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -34737,8 +34737,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewGetThreadChatResponse()
+func (p *TraceServiceListThreadChatResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListThreadChatResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -34746,9 +34746,9 @@ func (p *TraceServiceGetThreadChatResult) ReadField0(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *TraceServiceGetThreadChatResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("GetThreadChat_result"); err != nil {
+	if err = oprot.WriteStructBegin("ListThreadChat_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -34774,7 +34774,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceListThreadChatResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -34793,15 +34793,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *TraceServiceGetThreadChatResult) String() string {
+func (p *TraceServiceListThreadChatResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceGetThreadChatResult(%+v)", *p)
+	return fmt.Sprintf("TraceServiceListThreadChatResult(%+v)", *p)
 
 }
 
-func (p *TraceServiceGetThreadChatResult) DeepEqual(ano *TraceServiceGetThreadChatResult) bool {
+func (p *TraceServiceListThreadChatResult) DeepEqual(ano *TraceServiceListThreadChatResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -34813,7 +34813,7 @@ func (p *TraceServiceGetThreadChatResult) DeepEqual(ano *TraceServiceGetThreadCh
 	return true
 }
 
-func (p *TraceServiceGetThreadChatResult) Field0DeepEqual(src *GetThreadChatResponse) bool {
+func (p *TraceServiceListThreadChatResult) Field0DeepEqual(src *ListThreadChatResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

@@ -1159,7 +1159,7 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 	}, nil
 }
 
-func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest) (*trace.GetTraceChatResponse, error) {
+func (t *TraceApplication) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest) (*trace.ListTraceChatResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
@@ -1181,7 +1181,7 @@ func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTrace
 		platformType = loop_span.PlatformCozeLoop
 	}
 
-	sResp, err := t.traceService.GetTraceChat(ctx, &service.GetTraceChatRequest{
+	sResp, err := t.traceService.ListTraceChat(ctx, &service.ListTraceChatRequest{
 		PlatformType: platformType,
 		WorkspaceID:  req.GetWorkspaceID(),
 		TraceID:      req.GetTraceID(),
@@ -1195,14 +1195,14 @@ func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTrace
 		return nil, err
 	}
 
-	return &trace.GetTraceChatResponse{
+	return &trace.ListTraceChatResponse{
 		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}, nil
 }
 
-func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest) (*trace.GetThreadChatResponse, error) {
+func (t *TraceApplication) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest) (*trace.ListThreadChatResponse, error) {
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
@@ -1233,7 +1233,7 @@ func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThre
 		platformType = loop_span.PlatformCozeLoop
 	}
 
-	sResp, err := t.traceService.GetThreadChat(ctx, &service.GetThreadChatRequest{
+	sResp, err := t.traceService.ListThreadChat(ctx, &service.ListThreadChatRequest{
 		PlatformType: platformType,
 		WorkspaceID:  req.GetWorkspaceID(),
 		ThreadID:     req.GetThreadID(),
@@ -1246,7 +1246,7 @@ func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThre
 		return nil, err
 	}
 
-	return &trace.GetThreadChatResponse{
+	return &trace.ListThreadChatResponse{
 		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
