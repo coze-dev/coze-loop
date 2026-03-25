@@ -382,6 +382,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_labels.POST("/list", append(_listlabelMw(handler), apis.ListLabel)...)
 				_v15.POST("/prompts", append(_promptsMw(handler), apis.CreatePrompt)...)
 				_prompts := _v15.Group("/prompts", _promptsMw(handler)...)
+				_prompts.POST("/batch_get_prompt_basic", append(_batchgetpromptbasicMw(handler), apis.BatchGetPromptBasic)...)
 				_prompts.POST("/list", append(_listpromptMw(handler), apis.ListPrompt)...)
 				_prompts.POST("/list_parent", append(_listparentpromptMw(handler), apis.ListParentPrompt)...)
 				_prompts.DELETE("/:prompt_id", append(_prompt_idMw(handler), apis.DeletePrompt)...)
@@ -425,6 +426,20 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_loop := _v16.Group("/loop", _loopMw(handler)...)
 			_loop.DELETE("/annotations", append(_deleteannotationMw(handler), apis.DeleteAnnotation)...)
 			_loop.POST("/annotations", append(_createannotationMw(handler), apis.CreateAnnotation)...)
+			_loop.POST("/prompts", append(_prompts0Mw(handler), apis.CreatePromptOApi)...)
+			_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
+			_prompts0.DELETE("/:prompt_id", append(_prompt_id1Mw(handler), apis.DeletePromptOApi)...)
+			_prompt_id1 := _prompts0.Group("/:prompt_id", _prompt_id1Mw(handler)...)
+			{
+				_commits0 := _prompt_id1.Group("/commits", _commits0Mw(handler)...)
+				_commits0.POST("/list", append(_listcommitoapiMw(handler), apis.ListCommitOApi)...)
+			}
+			{
+				_drafts0 := _prompt_id1.Group("/drafts", _drafts0Mw(handler)...)
+				_drafts0.POST("/commit", append(_commitdraftoapiMw(handler), apis.CommitDraftOApi)...)
+				_drafts0.POST("/save", append(_savedraftoapiMw(handler), apis.SaveDraftOApi)...)
+			}
+			_prompts0.GET("/:prompt_id", append(_getpromptoapiMw(handler), apis.GetPromptOApi)...)
 			{
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)
@@ -524,11 +539,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_pre_span.POST("/search", append(_listprespanoapiMw(handler), apis.ListPreSpanOApi)...)
 			}
 			{
-				_prompts0 := _loop.Group("/prompts", _prompts0Mw(handler)...)
-				_prompts0.POST("/execute", append(_executeMw(handler), apis.Execute)...)
-				_prompts0.POST("/execute_streaming", append(_executestreamingMw(handler), apis.ExecuteStreaming)...)
-				_prompts0.POST("/list", append(_listpromptbasicMw(handler), apis.ListPromptBasic)...)
-				_prompts0.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
+				_prompts1 := _loop.Group("/prompts", _prompts1Mw(handler)...)
+				_prompts1.POST("/execute", append(_executeMw(handler), apis.Execute)...)
+				_prompts1.POST("/execute_streaming", append(_executestreamingMw(handler), apis.ExecuteStreaming)...)
+				_prompts1.POST("/list", append(_listpromptbasicMw(handler), apis.ListPromptBasic)...)
+				_prompts1.POST("/mget", append(_batchgetpromptbypromptkeyMw(handler), apis.BatchGetPromptByPromptKey)...)
 			}
 			{
 				_spans0 := _loop.Group("/spans", _spans0Mw(handler)...)

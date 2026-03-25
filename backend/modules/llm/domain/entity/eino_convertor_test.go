@@ -131,6 +131,13 @@ func TestFromDOToolChoice(t *testing.T) {
 			},
 			wantEinoToolChoice: schema.ToolChoiceForced,
 		},
+		{
+			name: "TestFromDOToolChoice_unknown",
+			args: args{
+				do: ToolChoice("unknown"),
+			},
+			wantEinoToolChoice: "",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

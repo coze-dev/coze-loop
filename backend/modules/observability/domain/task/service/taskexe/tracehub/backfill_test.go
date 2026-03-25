@@ -532,6 +532,61 @@ func TestTraceHubServiceImpl_FlushSpans_SamplingZero(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestTraceHubServiceImpl_FlushSpans_ReturnsProcessResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	impl := &TraceHubServiceImpl{
+		taskRepo:     mockTaskRepo,
+		traceService: mockTraceService,
+	}
+
+	now := time.Now()
+	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
+	proc.invokeErr = errors.New("invoke fail")
+
+	span := newTestSpan(now)
+	domainRun := newDomainBackfillTaskRun(now)
+
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil)
+	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
+	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
+
+	err, shouldFinish := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
+	require.ErrorContains(t, err, "invoke fail")
+	require.False(t, shouldFinish)
+}
+
+func TestTraceHubServiceImpl_ProcessSpansForBackfill_ReturnsShouldFinish(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	impl := &TraceHubServiceImpl{
+		taskRepo:     mockTaskRepo,
+		traceService: mockTraceService,
+	}
+
+	now := time.Now()
+	sub, _ := newBackfillSubscriber(mockTaskRepo, now)
+	sub.t.Sampler.SampleSize = 0
+
+	spans := []*loop_span.Span{newTestSpan(now)}
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil)
+	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
+
+	err, shouldFinish := impl.processSpansForBackfill(context.Background(), spans, sub)
+	require.NoError(t, err)
+	require.True(t, shouldFinish)
+}
+
 func TestTraceHubServiceImpl_IsBackfillDone(t *testing.T) {
 	t.Parallel()
 

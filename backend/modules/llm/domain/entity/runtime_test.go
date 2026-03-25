@@ -84,6 +84,19 @@ func TestMessage_MultiModal(t *testing.T) {
 		assert.Equal(t, int64(2), cnt)
 		assert.True(t, maxSize > 0)
 	})
+
+	t.Run("get_image_count_and_max_size_without_multimodal_returns_zero_values", func(t *testing.T) {
+		m := &Message{
+			MultiModalContent: []*ChatMessagePart{
+				{Type: ChatMessagePartTypeText, Text: "plain text"},
+			},
+		}
+		hasURL, hasBinary, cnt, maxSize := m.GetImageCountAndMaxSize()
+		assert.False(t, hasURL)
+		assert.False(t, hasBinary)
+		assert.Zero(t, cnt)
+		assert.Zero(t, maxSize)
+	})
 }
 
 func TestChatMessagePart_Checks(t *testing.T) {
