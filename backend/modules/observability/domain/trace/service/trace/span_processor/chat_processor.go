@@ -105,7 +105,7 @@ func (c *ChatProcessor) convertResponsesAPIToStandard(input []interface{}) []int
 }
 
 func (c *ChatProcessor) filterLastUserMessage(messages []interface{}) []interface{} {
-	var lastUserIndex = -1
+	lastUserIndex := -1
 	for i := len(messages) - 1; i >= 0; i-- {
 		msg, ok := messages[i].(map[string]interface{})
 		if !ok {

@@ -23,6 +23,7 @@ import (
 type MockITraceService struct {
 	ctrl     *gomock.Controller
 	recorder *MockITraceServiceMockRecorder
+	isgomock struct{}
 }
 
 // MockITraceServiceMockRecorder is the mock recorder for MockITraceService.
@@ -129,6 +130,36 @@ func (mr *MockITraceServiceMockRecorder) ExtractSpanInfo(ctx, req any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractSpanInfo", reflect.TypeOf((*MockITraceService)(nil).ExtractSpanInfo), ctx, req)
 }
 
+// GetThreadChat mocks base method.
+func (m *MockITraceService) GetThreadChat(ctx context.Context, req *service.GetThreadChatRequest) (*service.GetThreadChatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetThreadChat", ctx, req)
+	ret0, _ := ret[0].(*service.GetThreadChatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetThreadChat indicates an expected call of GetThreadChat.
+func (mr *MockITraceServiceMockRecorder) GetThreadChat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetThreadChat", reflect.TypeOf((*MockITraceService)(nil).GetThreadChat), ctx, req)
+}
+
+// GetThreadStat mocks base method.
+func (m *MockITraceService) GetThreadStat(ctx context.Context, req *service.GetThreadStatRequest) (*service.GetThreadStatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetThreadStat", ctx, req)
+	ret0, _ := ret[0].(*service.GetThreadStatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetThreadStat indicates an expected call of GetThreadStat.
+func (mr *MockITraceServiceMockRecorder) GetThreadStat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetThreadStat", reflect.TypeOf((*MockITraceService)(nil).GetThreadStat), ctx, req)
+}
+
 // GetTrace mocks base method.
 func (m *MockITraceService) GetTrace(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
 	m.ctrl.T.Helper()
@@ -142,6 +173,21 @@ func (m *MockITraceService) GetTrace(ctx context.Context, req *service.GetTraceR
 func (mr *MockITraceServiceMockRecorder) GetTrace(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrace", reflect.TypeOf((*MockITraceService)(nil).GetTrace), ctx, req)
+}
+
+// GetTraceChat mocks base method.
+func (m *MockITraceService) GetTraceChat(ctx context.Context, req *service.GetTraceChatRequest) (*service.GetTraceChatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceChat", ctx, req)
+	ret0, _ := ret[0].(*service.GetTraceChatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTraceChat indicates an expected call of GetTraceChat.
+func (mr *MockITraceServiceMockRecorder) GetTraceChat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceChat", reflect.TypeOf((*MockITraceService)(nil).GetTraceChat), ctx, req)
 }
 
 // GetTracesAdvanceInfo mocks base method.
@@ -175,18 +221,18 @@ func (mr *MockITraceServiceMockRecorder) GetTracesMetaInfo(ctx, req any) *gomock
 }
 
 // GetTrajectories mocks base method.
-func (m *MockITraceService) GetTrajectories(ctx context.Context, req int64, arg2 []string, arg3, arg4 int64, arg5 loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
+func (m *MockITraceService) GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64, platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetTrajectories", ctx, req, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "GetTrajectories", ctx, workspaceID, traceIDs, startTime, endTime, platformType)
 	ret0, _ := ret[0].(map[string]*loop_span.Trajectory)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetTrajectories indicates an expected call of GetTrajectories.
-func (mr *MockITraceServiceMockRecorder) GetTrajectories(ctx, req, arg2, arg3, arg4, arg5 any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) GetTrajectories(ctx, workspaceID, traceIDs, startTime, endTime, platformType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectories", reflect.TypeOf((*MockITraceService)(nil).GetTrajectories), ctx, req, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectories", reflect.TypeOf((*MockITraceService)(nil).GetTrajectories), ctx, workspaceID, traceIDs, startTime, endTime, platformType)
 }
 
 // GetTrajectoryConfig mocks base method.
@@ -368,17 +414,17 @@ func (mr *MockITraceServiceMockRecorder) SearchTraceOApi(ctx, req any) *gomock.C
 }
 
 // Send mocks base method.
-func (m *MockITraceService) Send(ctx context.Context, req *entity.AnnotationEvent) error {
+func (m *MockITraceService) Send(ctx context.Context, msg *entity.AnnotationEvent) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Send", ctx, req)
+	ret := m.ctrl.Call(m, "Send", ctx, msg)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockITraceServiceMockRecorder) Send(ctx, req any) *gomock.Call {
+func (mr *MockITraceServiceMockRecorder) Send(ctx, msg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockITraceService)(nil).Send), ctx, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockITraceService)(nil).Send), ctx, msg)
 }
 
 // UpdateManualAnnotation mocks base method.
