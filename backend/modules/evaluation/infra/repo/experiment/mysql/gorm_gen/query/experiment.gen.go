@@ -54,7 +54,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
 	_experiment.Visibility = field.NewInt32(tableName, "visibility")
 	_experiment.ThreadID = field.NewInt64(tableName, "thread_id")
-	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
+	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
 
 	_experiment.fillFieldMap()
 
@@ -65,35 +65,35 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 type experiment struct {
 	experimentDo experimentDo
 
-	ALL              field.Asterisk
-	ID               field.Int64  // id
-	SpaceID          field.Int64  // 空间 id
-	CreatedBy        field.String // 创建者 id
-	Name             field.String // 实验名称
-	Description      field.String // 实验描述
-	EvalSetVersionID field.Int64  // 评测集版本 id
-	TargetType       field.Int64  // 评估对象类型
-	TargetVersionID  field.Int64  // 评估对象版本 id
-	EvalConf         field.Bytes  // 实验评估流程配置
-	Status           field.Int32  // 状态
-	StatusMessage    field.Bytes  // 状态提示信息
-	StartAt          field.Time   // 开始执行时间
-	EndAt            field.Time   // 结束执行时间
-	CreatedAt        field.Time   // 创建时间
-	UpdatedAt        field.Time   // 更新时间
-	DeletedAt        field.Field  // 删除时间
-	LatestRunID      field.Int64  // 最后运行id
-	TargetID         field.Int64  // 评估对象 id
-	EvalSetID        field.Int64  // 评测集 id
-	ExptTemplateID   field.Int64  // 实验模板 id
-	CreditCost       field.Int32  // 权益消耗模式
-	SourceType       field.Int32  // 实验来源类型，评测:1,自动化任务:2...
-	SourceID         field.String // 实验来源id
-	ExptType         field.Int32  // 实验类型，offline:1,online:2...
-	MaxAliveTime     field.Int64  // 最大存活时间
-	Visibility       field.Int32  // 可见性，默认0-可见，1-隐藏
-	ThreadID         field.Int64  // 智能生成会话ID
-	MaxAliveTime     field.Int64  // 试运行行数
+	ALL               field.Asterisk
+	ID                field.Int64  // id
+	SpaceID           field.Int64  // 空间 id
+	CreatedBy         field.String // 创建者 id
+	Name              field.String // 实验名称
+	Description       field.String // 实验描述
+	EvalSetVersionID  field.Int64  // 评测集版本 id
+	TargetType        field.Int64  // 评估对象类型
+	TargetVersionID   field.Int64  // 评估对象版本 id
+	EvalConf          field.Bytes  // 实验评估流程配置
+	Status            field.Int32  // 状态
+	StatusMessage     field.Bytes  // 状态提示信息
+	StartAt           field.Time   // 开始执行时间
+	EndAt             field.Time   // 结束执行时间
+	CreatedAt         field.Time   // 创建时间
+	UpdatedAt         field.Time   // 更新时间
+	DeletedAt         field.Field  // 删除时间
+	LatestRunID       field.Int64  // 最后运行id
+	TargetID          field.Int64  // 评估对象 id
+	EvalSetID         field.Int64  // 评测集 id
+	ExptTemplateID    field.Int64  // 实验模板 id
+	CreditCost        field.Int32  // 权益消耗模式
+	SourceType        field.Int32  // 实验来源类型，评测:1,自动化任务:2...
+	SourceID          field.String // 实验来源id
+	ExptType          field.Int32  // 实验类型，offline:1,online:2...
+	MaxAliveTime      field.Int64  // 最大存活时间
+	Visibility        field.Int32  // 可见性，默认0-可见，1-隐藏
+	ThreadID          field.Int64  // 智能生成会话ID
+	TrialRunItemCount field.Int64  // 试运行行数
 
 	fieldMap map[string]field.Expr
 }
@@ -137,7 +137,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
 	e.Visibility = field.NewInt32(table, "visibility")
 	e.ThreadID = field.NewInt64(table, "thread_id")
-	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
+	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
 
 	e.fillFieldMap()
 
@@ -192,7 +192,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["max_alive_time"] = e.MaxAliveTime
 	e.fieldMap["visibility"] = e.Visibility
 	e.fieldMap["thread_id"] = e.ThreadID
-	e.fieldMap["max_alive_time"] = e.MaxAliveTime
+	e.fieldMap["trial_run_item_count"] = e.TrialRunItemCount
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {
