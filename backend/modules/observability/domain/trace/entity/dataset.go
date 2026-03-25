@@ -425,7 +425,6 @@ func GetContentInfo(ctx context.Context, contentType ContentType, value string) 
 			logs.CtxInfo(ctx, "Unmarshal multi part failed, err:%v", err)
 			return nil, DatasetErrorType_MismatchSchema
 		}
-		logs.CtxInfo(ctx, "Unmarshal multi part success, parts:%v", parts)
 		var multiPart []*Content
 		for _, part := range parts {
 			// 本期仅支持回流图片的多模态数据，非ImageURL信息的，打包放进text

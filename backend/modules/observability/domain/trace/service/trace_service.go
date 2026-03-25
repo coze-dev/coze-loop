@@ -1472,7 +1472,6 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	if err != nil {
 		return nil, err
 	}
-	logs.CtxInfo(ctx, "Span info: %v", listSpansResp.Spans)
 	result := make(map[string][]string)
 	valueSetMap := make(map[string]map[string]bool)
 
