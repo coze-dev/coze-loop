@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluationsetservice"
 )
 
@@ -135,8 +134,8 @@ func GetEvaluationItemField(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalSetSvc.GetEvaluationSetItemField)
 }
 
-// ValidateMultiPartData .
+// ValidateEvaluationSetMultiPartData .
 // @router /api/evaluation/v1/evaluation_sets/multi_part_data/validate [POST]
-func ValidateMultiPartData(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, localEvalSetSvc.ValidateMultiPartData)
+func ValidateEvaluationSetMultiPartData(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalSetSvc.ValidateEvaluationSetMultiPartData)
 }

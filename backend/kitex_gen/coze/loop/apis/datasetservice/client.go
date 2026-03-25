@@ -37,7 +37,6 @@ type Client interface {
 	BatchGetDatasetItems(ctx context.Context, req *dataset.BatchGetDatasetItemsRequest, callOptions ...callopt.Option) (r *dataset.BatchGetDatasetItemsResponse, err error)
 	BatchGetDatasetItemsByVersion(ctx context.Context, req *dataset.BatchGetDatasetItemsByVersionRequest, callOptions ...callopt.Option) (r *dataset.BatchGetDatasetItemsByVersionResponse, err error)
 	ClearDatasetItem(ctx context.Context, req *dataset.ClearDatasetItemRequest, callOptions ...callopt.Option) (r *dataset.ClearDatasetItemResponse, err error)
-	ValidateMultiPartData(ctx context.Context, req *dataset.ValidateMultiPartDataRequest, callOptions ...callopt.Option) (r *dataset.ValidateMultiPartDataResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -197,9 +196,4 @@ func (p *kDatasetServiceClient) BatchGetDatasetItemsByVersion(ctx context.Contex
 func (p *kDatasetServiceClient) ClearDatasetItem(ctx context.Context, req *dataset.ClearDatasetItemRequest, callOptions ...callopt.Option) (r *dataset.ClearDatasetItemResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ClearDatasetItem(ctx, req)
-}
-
-func (p *kDatasetServiceClient) ValidateMultiPartData(ctx context.Context, req *dataset.ValidateMultiPartDataRequest, callOptions ...callopt.Option) (r *dataset.ValidateMultiPartDataResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.ValidateMultiPartData(ctx, req)
 }

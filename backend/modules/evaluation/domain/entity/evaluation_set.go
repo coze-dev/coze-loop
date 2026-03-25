@@ -207,6 +207,18 @@ type MultiModalStoreOption struct {
 	ContentType             *ContentType
 }
 
+type UploadAttachmentDetail struct {
+	ContentType     *ContentType
+	ImagexServiceID *string
+	OriginImage     *Image
+	Image           *Image
+	OriginAudio     *Audio
+	Audio           *Audio
+	OriginVideo     *Video
+	Video           *Video
+	ErrMsg          *string
+}
+
 type FieldWriteOption struct {
 	FieldName          *string
 	FieldKey           *string

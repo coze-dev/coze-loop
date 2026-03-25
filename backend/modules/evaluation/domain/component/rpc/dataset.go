@@ -16,6 +16,7 @@ type IDatasetRPCAdapter interface {
 	ImportDataset(ctx context.Context, param *ImportDatasetParam) (jobID int64, err error)
 	GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
+	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)

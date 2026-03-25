@@ -606,7 +606,7 @@ func (p *UploadAttachmentDetail) IsValid() error {
 	}
 	return nil
 }
-func (p *ValidateMultiPartDataRequest) IsValid() error {
+func (p *ValidateEvaluationSetMultiPartDataRequest) IsValid() error {
 	if p.SpaceID <= int64(0) {
 		return fmt.Errorf("field SpaceID gt rule failed, current value: %v", p.SpaceID)
 	}
@@ -626,7 +626,7 @@ func (p *ValidateMultiPartDataRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *ValidateMultiPartDataResponse) IsValid() error {
+func (p *ValidateEvaluationSetMultiPartDataResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

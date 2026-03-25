@@ -297,6 +297,7 @@ func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
 			req:  baseReq(),
 			setup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				mockSvc.EXPECT().ValidateMultiPartData(gomock.Any(), spaceID, []string{"https://example.com/a.png"}, gomock.Nil()).Return(nil, nil)
 			},
 			check: func(t *testing.T, resp *eval_set.ValidateMultiPartDataResponse) {
 				if assert.NotNil(t, resp) {

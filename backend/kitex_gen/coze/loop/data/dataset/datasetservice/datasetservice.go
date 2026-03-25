@@ -195,13 +195,6 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
-	"ValidateMultiPartData": kitex.NewMethodInfo(
-		validateMultiPartDataHandler,
-		newDatasetServiceValidateMultiPartDataArgs,
-		newDatasetServiceValidateMultiPartDataResult,
-		false,
-		kitex.WithStreamingMode(kitex.StreamingNone),
-	),
 }
 
 var (
@@ -729,25 +722,6 @@ func newDatasetServiceClearDatasetItemResult() interface{} {
 	return dataset.NewDatasetServiceClearDatasetItemResult()
 }
 
-func validateMultiPartDataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
-	realArg := arg.(*dataset.DatasetServiceValidateMultiPartDataArgs)
-	realResult := result.(*dataset.DatasetServiceValidateMultiPartDataResult)
-	success, err := handler.(dataset.DatasetService).ValidateMultiPartData(ctx, realArg.Req)
-	if err != nil {
-		return err
-	}
-	realResult.Success = success
-	return nil
-}
-
-func newDatasetServiceValidateMultiPartDataArgs() interface{} {
-	return dataset.NewDatasetServiceValidateMultiPartDataArgs()
-}
-
-func newDatasetServiceValidateMultiPartDataResult() interface{} {
-	return dataset.NewDatasetServiceValidateMultiPartDataResult()
-}
-
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1015,16 +989,6 @@ func (p *kClient) ClearDatasetItem(ctx context.Context, req *dataset.ClearDatase
 	_args.Req = req
 	var _result dataset.DatasetServiceClearDatasetItemResult
 	if err = p.c.Call(ctx, "ClearDatasetItem", &_args, &_result); err != nil {
-		return
-	}
-	return _result.GetSuccess(), nil
-}
-
-func (p *kClient) ValidateMultiPartData(ctx context.Context, req *dataset.ValidateMultiPartDataRequest) (r *dataset.ValidateMultiPartDataResponse, err error) {
-	var _args dataset.DatasetServiceValidateMultiPartDataArgs
-	_args.Req = req
-	var _result dataset.DatasetServiceValidateMultiPartDataResult
-	if err = p.c.Call(ctx, "ValidateMultiPartData", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

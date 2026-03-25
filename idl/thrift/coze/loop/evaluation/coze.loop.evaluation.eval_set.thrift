@@ -61,7 +61,7 @@ struct ParseImportSourceFileResponse {
     10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
     3: optional list<ConflictField> conflicts            // 冲突详情。key: 列名，val：冲突详情
     4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
-    5: optional list<string> untypedURLFields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
+    5: optional list<string> untyped_url_fields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
     6: optional map<string, list<string>> precheck_data_by_field // 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 
     /*base*/
@@ -388,7 +388,7 @@ struct UploadAttachmentDetail {
     102: optional string errMsg
 }
 
-struct ValidateMultiPartDataRequest {
+struct ValidateEvaluationSetMultiPartDataRequest {
     1: required i64 space_id (agw.js_conv = "str", vt.gt = "0")
     2: optional list<string> preview_data (vt.min_size = "1") // 可以是包含特定格式的多模态数据或单一的 url 链接
     3: optional dataset.MultiModalStoreOption store_option (vt.not_nil = "true") // 目前仅模态类型在当前接口有效
@@ -397,7 +397,7 @@ struct ValidateMultiPartDataRequest {
     255: optional base.Base base
 }
 
-struct ValidateMultiPartDataResponse {
+struct ValidateEvaluationSetMultiPartDataResponse {
     1: optional list<UploadAttachmentDetail> attachment_urls_check_detail // 根据校验结果中是否包含错误，判断数据是否合法
     255: optional base.BaseResp baseResp
 }
@@ -467,7 +467,7 @@ service EvaluationSetService {
     GetEvaluationSetItemFieldResponse GetEvaluationSetItemField(1: GetEvaluationSetItemFieldRequest req) (
         api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
-    ValidateMultiPartDataResponse ValidateMultiPartData(1: ValidateMultiPartDataRequest req) (
+    ValidateEvaluationSetMultiPartDataResponse ValidateEvaluationSetMultiPartData(1: ValidateEvaluationSetMultiPartDataRequest req) (
         api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/multi_part_data/validate", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
 }

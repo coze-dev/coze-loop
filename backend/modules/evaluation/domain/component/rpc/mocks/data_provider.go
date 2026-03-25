@@ -378,6 +378,21 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ParseImportSourceFile(arg0, arg1 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ParseImportSourceFile), arg0, arg1)
 }
 
+// ValidateMultiPartData mocks base method.
+func (m *MockIDatasetRPCAdapter) ValidateMultiPartData(arg0 context.Context, arg1 int64, arg2 []string, arg3 *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateMultiPartData", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].([]*entity.UploadAttachmentDetail)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateMultiPartData indicates an expected call of ValidateMultiPartData.
+func (mr *MockIDatasetRPCAdapterMockRecorder) ValidateMultiPartData(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMultiPartData", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ValidateMultiPartData), arg0, arg1, arg2, arg3)
+}
+
 // QueryItemSnapshotMappings mocks base method.
 func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(arg0 context.Context, arg1, arg2 int64, arg3 *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()

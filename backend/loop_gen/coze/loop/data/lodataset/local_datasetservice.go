@@ -624,29 +624,6 @@ func (l *LocalDatasetService) ClearDatasetItem(ctx context.Context, req *dataset
 	return result.GetSuccess(), nil
 }
 
-// ValidateMultiPartData
-// 校验多模态数据
-func (l *LocalDatasetService) ValidateMultiPartData(ctx context.Context, req *dataset.ValidateMultiPartDataRequest, callOptions ...callopt.Option) (*dataset.ValidateMultiPartDataResponse, error) {
-	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*dataset.DatasetServiceValidateMultiPartDataArgs)
-		result := out.(*dataset.DatasetServiceValidateMultiPartDataResult)
-		resp, err := l.impl.ValidateMultiPartData(ctx, arg.Req)
-		if err != nil {
-			return err
-		}
-		result.SetSuccess(resp)
-		return nil
-	})
-
-	arg := &dataset.DatasetServiceValidateMultiPartDataArgs{Req: req}
-	result := &dataset.DatasetServiceValidateMultiPartDataResult{}
-	ctx = l.injectRPCInfo(ctx, "ValidateMultiPartData")
-	if err := chain(ctx, arg, result); err != nil {
-		return nil, err
-	}
-	return result.GetSuccess(), nil
-}
-
 func (l *LocalDatasetService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

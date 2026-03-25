@@ -13604,7 +13604,7 @@ func (p *UploadAttachmentDetail) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *ValidateMultiPartDataRequest) FastRead(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -13696,14 +13696,14 @@ func (p *ValidateMultiPartDataRequest) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateMultiPartDataRequest[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateEvaluationSetMultiPartDataRequest[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ValidateMultiPartDataRequest[fieldId]))
+	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_ValidateEvaluationSetMultiPartDataRequest[fieldId]))
 }
 
-func (p *ValidateMultiPartDataRequest) FastReadField1(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field int64
@@ -13717,7 +13717,7 @@ func (p *ValidateMultiPartDataRequest) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataRequest) FastReadField2(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -13741,7 +13741,7 @@ func (p *ValidateMultiPartDataRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataRequest) FastReadField3(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 	_field := dataset.NewMultiModalStoreOption()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -13753,7 +13753,7 @@ func (p *ValidateMultiPartDataRequest) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataRequest) FastReadField255(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -13765,11 +13765,11 @@ func (p *ValidateMultiPartDataRequest) FastReadField255(buf []byte) (int, error)
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataRequest) FastWrite(buf []byte) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *ValidateMultiPartDataRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -13781,7 +13781,7 @@ func (p *ValidateMultiPartDataRequest) FastWriteNocopy(buf []byte, w thrift.Noco
 	return offset
 }
 
-func (p *ValidateMultiPartDataRequest) BLength() int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -13793,14 +13793,14 @@ func (p *ValidateMultiPartDataRequest) BLength() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 	offset += thrift.Binary.WriteI64(buf[offset:], p.SpaceID)
 	return offset
 }
 
-func (p *ValidateMultiPartDataRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetPreviewData() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
@@ -13816,7 +13816,7 @@ func (p *ValidateMultiPartDataRequest) fastWriteField2(buf []byte, w thrift.Noco
 	return offset
 }
 
-func (p *ValidateMultiPartDataRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetStoreOption() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
@@ -13825,7 +13825,7 @@ func (p *ValidateMultiPartDataRequest) fastWriteField3(buf []byte, w thrift.Noco
 	return offset
 }
 
-func (p *ValidateMultiPartDataRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBase() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -13834,14 +13834,14 @@ func (p *ValidateMultiPartDataRequest) fastWriteField255(buf []byte, w thrift.No
 	return offset
 }
 
-func (p *ValidateMultiPartDataRequest) field1Length() int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.I64Length()
 	return l
 }
 
-func (p *ValidateMultiPartDataRequest) field2Length() int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) field2Length() int {
 	l := 0
 	if p.IsSetPreviewData() {
 		l += thrift.Binary.FieldBeginLength()
@@ -13854,7 +13854,7 @@ func (p *ValidateMultiPartDataRequest) field2Length() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataRequest) field3Length() int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) field3Length() int {
 	l := 0
 	if p.IsSetStoreOption() {
 		l += thrift.Binary.FieldBeginLength()
@@ -13863,7 +13863,7 @@ func (p *ValidateMultiPartDataRequest) field3Length() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataRequest) field255Length() int {
+func (p *ValidateEvaluationSetMultiPartDataRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
 		l += thrift.Binary.FieldBeginLength()
@@ -13872,8 +13872,8 @@ func (p *ValidateMultiPartDataRequest) field255Length() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataRequest) DeepCopy(s interface{}) error {
-	src, ok := s.(*ValidateMultiPartDataRequest)
+func (p *ValidateEvaluationSetMultiPartDataRequest) DeepCopy(s interface{}) error {
+	src, ok := s.(*ValidateEvaluationSetMultiPartDataRequest)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -13912,7 +13912,7 @@ func (p *ValidateMultiPartDataRequest) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *ValidateMultiPartDataResponse) FastRead(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -13970,12 +13970,12 @@ func (p *ValidateMultiPartDataResponse) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateMultiPartDataResponse[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateEvaluationSetMultiPartDataResponse[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *ValidateMultiPartDataResponse) FastReadField1(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
@@ -14000,7 +14000,7 @@ func (p *ValidateMultiPartDataResponse) FastReadField1(buf []byte) (int, error) 
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataResponse) FastReadField255(buf []byte) (int, error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBaseResp()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -14012,11 +14012,11 @@ func (p *ValidateMultiPartDataResponse) FastReadField255(buf []byte) (int, error
 	return offset, nil
 }
 
-func (p *ValidateMultiPartDataResponse) FastWrite(buf []byte) int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *ValidateMultiPartDataResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -14026,7 +14026,7 @@ func (p *ValidateMultiPartDataResponse) FastWriteNocopy(buf []byte, w thrift.Noc
 	return offset
 }
 
-func (p *ValidateMultiPartDataResponse) BLength() int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -14036,7 +14036,7 @@ func (p *ValidateMultiPartDataResponse) BLength() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetAttachmentUrlsCheckDetail() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
@@ -14052,7 +14052,7 @@ func (p *ValidateMultiPartDataResponse) fastWriteField1(buf []byte, w thrift.Noc
 	return offset
 }
 
-func (p *ValidateMultiPartDataResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) fastWriteField255(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetBaseResp() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 255)
@@ -14061,7 +14061,7 @@ func (p *ValidateMultiPartDataResponse) fastWriteField255(buf []byte, w thrift.N
 	return offset
 }
 
-func (p *ValidateMultiPartDataResponse) field1Length() int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) field1Length() int {
 	l := 0
 	if p.IsSetAttachmentUrlsCheckDetail() {
 		l += thrift.Binary.FieldBeginLength()
@@ -14074,7 +14074,7 @@ func (p *ValidateMultiPartDataResponse) field1Length() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataResponse) field255Length() int {
+func (p *ValidateEvaluationSetMultiPartDataResponse) field255Length() int {
 	l := 0
 	if p.IsSetBaseResp() {
 		l += thrift.Binary.FieldBeginLength()
@@ -14083,8 +14083,8 @@ func (p *ValidateMultiPartDataResponse) field255Length() int {
 	return l
 }
 
-func (p *ValidateMultiPartDataResponse) DeepCopy(s interface{}) error {
-	src, ok := s.(*ValidateMultiPartDataResponse)
+func (p *ValidateEvaluationSetMultiPartDataResponse) DeepCopy(s interface{}) error {
+	src, ok := s.(*ValidateEvaluationSetMultiPartDataResponse)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
@@ -18562,7 +18562,7 @@ func (p *EvaluationSetServiceGetEvaluationSetItemFieldResult) DeepCopy(s interfa
 	return nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastRead(buf []byte) (int, error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -18606,14 +18606,14 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastRead(buf []byte) (in
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateMultiPartDataArgs[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastReadField1(buf []byte) (int, error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) FastReadField1(buf []byte) (int, error) {
 	offset := 0
-	_field := NewValidateMultiPartDataRequest()
+	_field := NewValidateEvaluationSetMultiPartDataRequest()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -18623,11 +18623,11 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastReadField1(buf []byt
 	return offset, nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastWrite(buf []byte) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -18636,7 +18636,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) FastWriteNocopy(buf []by
 	return offset
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) BLength() int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -18645,29 +18645,29 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) BLength() int {
 	return l
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
 	offset += p.Req.FastWriteNocopy(buf[offset:], w)
 	return offset
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) field1Length() int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += p.Req.BLength()
 	return l
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*EvaluationSetServiceValidateMultiPartDataArgs)
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _req *ValidateMultiPartDataRequest
+	var _req *ValidateEvaluationSetMultiPartDataRequest
 	if src.Req != nil {
-		_req = &ValidateMultiPartDataRequest{}
+		_req = &ValidateEvaluationSetMultiPartDataRequest{}
 		if err := _req.DeepCopy(src.Req); err != nil {
 			return err
 		}
@@ -18677,7 +18677,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) DeepCopy(s interface{}) 
 	return nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) FastRead(buf []byte) (int, error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -18721,14 +18721,14 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) FastRead(buf []byte) (
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateMultiPartDataResult[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataResult[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) FastReadField0(buf []byte) (int, error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) FastReadField0(buf []byte) (int, error) {
 	offset := 0
-	_field := NewValidateMultiPartDataResponse()
+	_field := NewValidateEvaluationSetMultiPartDataResponse()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -18738,11 +18738,11 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) FastReadField0(buf []b
 	return offset, nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) FastWrite(buf []byte) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField0(buf[offset:], w)
@@ -18751,7 +18751,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) FastWriteNocopy(buf []
 	return offset
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) BLength() int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field0Length()
@@ -18760,7 +18760,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) BLength() int {
 	return l
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSuccess() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
@@ -18769,7 +18769,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) fastWriteField0(buf []
 	return offset
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) field0Length() int {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) field0Length() int {
 	l := 0
 	if p.IsSetSuccess() {
 		l += thrift.Binary.FieldBeginLength()
@@ -18778,15 +18778,15 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) field0Length() int {
 	return l
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*EvaluationSetServiceValidateMultiPartDataResult)
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*EvaluationSetServiceValidateEvaluationSetMultiPartDataResult)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	var _success *ValidateMultiPartDataResponse
+	var _success *ValidateEvaluationSetMultiPartDataResponse
 	if src.Success != nil {
-		_success = &ValidateMultiPartDataResponse{}
+		_success = &ValidateEvaluationSetMultiPartDataResponse{}
 		if err := _success.DeepCopy(src.Success); err != nil {
 			return err
 		}
@@ -18948,10 +18948,10 @@ func (p *EvaluationSetServiceGetEvaluationSetItemFieldResult) GetResult() interf
 	return p.Success
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) GetFirstArgument() interface{} {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) GetResult() interface{} {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) GetResult() interface{} {
 	return p.Success
 }

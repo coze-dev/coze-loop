@@ -934,27 +934,31 @@ func convert2DatasetMultiModalStoreOption(ctx context.Context, opt *entity.Multi
 		s := dataset.MultiModalStoreStrategy(*opt.MultiModalStoreStrategy)
 		strategy = &s
 	}
-	var contentType *dataset.ContentType
-	if opt.ContentType != nil {
-		var t dataset.ContentType
-		switch gptr.Indirect(opt.ContentType) {
-		case entity.ContentTypeText:
-			t = dataset.ContentType_Text
-		case entity.ContentTypeImage:
-			t = dataset.ContentType_Image
-		case entity.ContentTypeAudio:
-			t = dataset.ContentType_Audio
-		case entity.ContentTypeVideo:
-			t = dataset.ContentType_Video
-		case entity.ContentTypeMultipart:
-			t = dataset.ContentType_MultiPart
-		}
-		if t != 0 {
-			contentType = &t
-		}
-	}
 	return &dataset.MultiModalStoreOption{
 		MultiModalStoreStrategy: strategy,
-		ContentType:             contentType,
+		ContentType:             convert2DatasetContentType(opt.ContentType),
 	}
+}
+
+func convert2DatasetContentType(contentType *entity.ContentType) *dataset.ContentType {
+	if contentType == nil {
+		return nil
+	}
+	var t dataset.ContentType
+	switch gptr.Indirect(contentType) {
+	case entity.ContentTypeText:
+		t = dataset.ContentType_Text
+	case entity.ContentTypeImage:
+		t = dataset.ContentType_Image
+	case entity.ContentTypeAudio:
+		t = dataset.ContentType_Audio
+	case entity.ContentTypeVideo:
+		t = dataset.ContentType_Video
+	case entity.ContentTypeMultipart:
+		t = dataset.ContentType_MultiPart
+	}
+	if t == 0 {
+		return nil
+	}
+	return &t
 }

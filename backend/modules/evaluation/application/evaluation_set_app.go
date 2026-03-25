@@ -209,7 +209,7 @@ func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context
 	return resp, nil
 }
 
-func (e *EvaluationSetApplicationImpl) ValidateMultiPartData(ctx context.Context, req *eval_set.ValidateMultiPartDataRequest) (r *eval_set.ValidateMultiPartDataResponse, err error) {
+func (e *EvaluationSetApplicationImpl) ValidateEvaluationSetMultiPartData(ctx context.Context, req *eval_set.ValidateEvaluationSetMultiPartDataRequest) (r *eval_set.ValidateEvaluationSetMultiPartDataResponse, err error) {
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
@@ -221,9 +221,15 @@ func (e *EvaluationSetApplicationImpl) ValidateMultiPartData(ctx context.Context
 	}); err != nil {
 		return nil, err
 	}
-	// notice: 此处先保留一个空实现，供前端获取接口定义。实际还是走 ml flow 调用
-	return &eval_set.ValidateMultiPartDataResponse{
-		BaseResp: base.NewBaseResp(),
+
+	details, err := e.evaluationSetService.ValidateMultiPartData(ctx, req.SpaceID, req.GetPreviewData(), evaluation_set.MultiModalStoreOptionDTO2DO(req.GetStoreOption()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &eval_set.ValidateEvaluationSetMultiPartDataResponse{
+		BaseResp:                  base.NewBaseResp(),
+		AttachmentUrlsCheckDetail: evaluation_set.UploadAttachmentDetailsDO2DTOs(details),
 	}, nil
 }
 

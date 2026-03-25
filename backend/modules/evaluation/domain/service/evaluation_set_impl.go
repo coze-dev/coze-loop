@@ -71,6 +71,10 @@ func (d *EvaluationSetServiceImpl) ParseImportSourceFile(ctx context.Context, pa
 	return d.datasetRPCAdapter.ParseImportSourceFile(ctx, param)
 }
 
+func (d *EvaluationSetServiceImpl) ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
+	return d.datasetRPCAdapter.ValidateMultiPartData(ctx, spaceID, previewData, storeOption)
+}
+
 func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error) {
 	if param == nil {
 		return errorx.NewByCode(errno.CommonInternalErrorCode)

@@ -2453,7 +2453,7 @@ type ParseImportSourceFileResponse struct {
 	// 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
 	FilesWithAmbiguousColumn []string `thrift:"files_with_ambiguous_column,4,optional" frugal:"4,optional,list<string>" form:"files_with_ambiguous_column" json:"files_with_ambiguous_column,omitempty" query:"files_with_ambiguous_column"`
 	// 无类型标记的 URL 列名列表（内容为文件中的列名）
-	UntypedURLFields []string `thrift:"untypedURLFields,5,optional" frugal:"5,optional,list<string>" form:"untypedURLFields" json:"untypedURLFields,omitempty" query:"untypedURLFields"`
+	UntypedURLFields []string `thrift:"untyped_url_fields,5,optional" frugal:"5,optional,list<string>" form:"untyped_url_fields" json:"untyped_url_fields,omitempty" query:"untyped_url_fields"`
 	// 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 	PrecheckDataByField map[string][]string `thrift:"precheck_data_by_field,6,optional" frugal:"6,optional,map<string:list<string>>" form:"precheck_data_by_field" json:"precheck_data_by_field,omitempty" query:"precheck_data_by_field"`
 	/*base*/
@@ -2577,7 +2577,7 @@ var fieldIDToName_ParseImportSourceFileResponse = map[int16]string{
 	10:  "field_schemas",
 	3:   "conflicts",
 	4:   "files_with_ambiguous_column",
-	5:   "untypedURLFields",
+	5:   "untyped_url_fields",
 	6:   "precheck_data_by_field",
 	255: "baseResp",
 }
@@ -3016,7 +3016,7 @@ WriteFieldEndError:
 }
 func (p *ParseImportSourceFileResponse) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetUntypedURLFields() {
-		if err = oprot.WriteFieldBegin("untypedURLFields", thrift.LIST, 5); err != nil {
+		if err = oprot.WriteFieldBegin("untyped_url_fields", thrift.LIST, 5); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteListBegin(thrift.STRING, len(p.UntypedURLFields)); err != nil {
@@ -18496,7 +18496,7 @@ func (p *UploadAttachmentDetail) Field102DeepEqual(src *string) bool {
 	return true
 }
 
-type ValidateMultiPartDataRequest struct {
+type ValidateEvaluationSetMultiPartDataRequest struct {
 	SpaceID int64 `thrift:"space_id,1,required" frugal:"1,required,i64" form:"space_id,required" json:"space_id,required" query:"space_id,required"`
 	// 可以是包含特定格式的多模态数据或单一的 url 链接
 	PreviewData []string `thrift:"preview_data,2,optional" frugal:"2,optional,list<string>" form:"preview_data" json:"preview_data,omitempty" query:"preview_data"`
@@ -18506,88 +18506,88 @@ type ValidateMultiPartDataRequest struct {
 	Base *base.Base `thrift:"base,255,optional" frugal:"255,optional,base.Base" form:"base" json:"base,omitempty" query:"base"`
 }
 
-func NewValidateMultiPartDataRequest() *ValidateMultiPartDataRequest {
-	return &ValidateMultiPartDataRequest{}
+func NewValidateEvaluationSetMultiPartDataRequest() *ValidateEvaluationSetMultiPartDataRequest {
+	return &ValidateEvaluationSetMultiPartDataRequest{}
 }
 
-func (p *ValidateMultiPartDataRequest) InitDefault() {
+func (p *ValidateEvaluationSetMultiPartDataRequest) InitDefault() {
 }
 
-func (p *ValidateMultiPartDataRequest) GetSpaceID() (v int64) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) GetSpaceID() (v int64) {
 	if p != nil {
 		return p.SpaceID
 	}
 	return
 }
 
-var ValidateMultiPartDataRequest_PreviewData_DEFAULT []string
+var ValidateEvaluationSetMultiPartDataRequest_PreviewData_DEFAULT []string
 
-func (p *ValidateMultiPartDataRequest) GetPreviewData() (v []string) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) GetPreviewData() (v []string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPreviewData() {
-		return ValidateMultiPartDataRequest_PreviewData_DEFAULT
+		return ValidateEvaluationSetMultiPartDataRequest_PreviewData_DEFAULT
 	}
 	return p.PreviewData
 }
 
-var ValidateMultiPartDataRequest_StoreOption_DEFAULT *dataset.MultiModalStoreOption
+var ValidateEvaluationSetMultiPartDataRequest_StoreOption_DEFAULT *dataset.MultiModalStoreOption
 
-func (p *ValidateMultiPartDataRequest) GetStoreOption() (v *dataset.MultiModalStoreOption) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) GetStoreOption() (v *dataset.MultiModalStoreOption) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetStoreOption() {
-		return ValidateMultiPartDataRequest_StoreOption_DEFAULT
+		return ValidateEvaluationSetMultiPartDataRequest_StoreOption_DEFAULT
 	}
 	return p.StoreOption
 }
 
-var ValidateMultiPartDataRequest_Base_DEFAULT *base.Base
+var ValidateEvaluationSetMultiPartDataRequest_Base_DEFAULT *base.Base
 
-func (p *ValidateMultiPartDataRequest) GetBase() (v *base.Base) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return ValidateMultiPartDataRequest_Base_DEFAULT
+		return ValidateEvaluationSetMultiPartDataRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *ValidateMultiPartDataRequest) SetSpaceID(val int64) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) SetSpaceID(val int64) {
 	p.SpaceID = val
 }
-func (p *ValidateMultiPartDataRequest) SetPreviewData(val []string) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) SetPreviewData(val []string) {
 	p.PreviewData = val
 }
-func (p *ValidateMultiPartDataRequest) SetStoreOption(val *dataset.MultiModalStoreOption) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) SetStoreOption(val *dataset.MultiModalStoreOption) {
 	p.StoreOption = val
 }
-func (p *ValidateMultiPartDataRequest) SetBase(val *base.Base) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_ValidateMultiPartDataRequest = map[int16]string{
+var fieldIDToName_ValidateEvaluationSetMultiPartDataRequest = map[int16]string{
 	1:   "space_id",
 	2:   "preview_data",
 	3:   "store_option",
 	255: "base",
 }
 
-func (p *ValidateMultiPartDataRequest) IsSetPreviewData() bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) IsSetPreviewData() bool {
 	return p.PreviewData != nil
 }
 
-func (p *ValidateMultiPartDataRequest) IsSetStoreOption() bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) IsSetStoreOption() bool {
 	return p.StoreOption != nil
 }
 
-func (p *ValidateMultiPartDataRequest) IsSetBase() bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *ValidateMultiPartDataRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetSpaceID bool = false
@@ -18662,7 +18662,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateMultiPartDataRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateEvaluationSetMultiPartDataRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -18671,10 +18671,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ValidateMultiPartDataRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ValidateEvaluationSetMultiPartDataRequest[fieldId]))
 }
 
-func (p *ValidateMultiPartDataRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -18685,7 +18685,7 @@ func (p *ValidateMultiPartDataRequest) ReadField1(iprot thrift.TProtocol) error 
 	p.SpaceID = _field
 	return nil
 }
-func (p *ValidateMultiPartDataRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataRequest) ReadField2(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -18708,7 +18708,7 @@ func (p *ValidateMultiPartDataRequest) ReadField2(iprot thrift.TProtocol) error 
 	p.PreviewData = _field
 	return nil
 }
-func (p *ValidateMultiPartDataRequest) ReadField3(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataRequest) ReadField3(iprot thrift.TProtocol) error {
 	_field := dataset.NewMultiModalStoreOption()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -18716,7 +18716,7 @@ func (p *ValidateMultiPartDataRequest) ReadField3(iprot thrift.TProtocol) error 
 	p.StoreOption = _field
 	return nil
 }
-func (p *ValidateMultiPartDataRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -18725,9 +18725,9 @@ func (p *ValidateMultiPartDataRequest) ReadField255(iprot thrift.TProtocol) erro
 	return nil
 }
 
-func (p *ValidateMultiPartDataRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ValidateMultiPartDataRequest"); err != nil {
+	if err = oprot.WriteStructBegin("ValidateEvaluationSetMultiPartDataRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -18765,7 +18765,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ValidateMultiPartDataRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("space_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -18781,7 +18781,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ValidateMultiPartDataRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPreviewData() {
 		if err = oprot.WriteFieldBegin("preview_data", thrift.LIST, 2); err != nil {
 			goto WriteFieldBeginError
@@ -18807,7 +18807,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ValidateMultiPartDataRequest) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetStoreOption() {
 		if err = oprot.WriteFieldBegin("store_option", thrift.STRUCT, 3); err != nil {
 			goto WriteFieldBeginError
@@ -18825,7 +18825,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *ValidateMultiPartDataRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -18844,15 +18844,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ValidateMultiPartDataRequest) String() string {
+func (p *ValidateEvaluationSetMultiPartDataRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ValidateMultiPartDataRequest(%+v)", *p)
+	return fmt.Sprintf("ValidateEvaluationSetMultiPartDataRequest(%+v)", *p)
 
 }
 
-func (p *ValidateMultiPartDataRequest) DeepEqual(ano *ValidateMultiPartDataRequest) bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) DeepEqual(ano *ValidateEvaluationSetMultiPartDataRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -18873,14 +18873,14 @@ func (p *ValidateMultiPartDataRequest) DeepEqual(ano *ValidateMultiPartDataReque
 	return true
 }
 
-func (p *ValidateMultiPartDataRequest) Field1DeepEqual(src int64) bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Field1DeepEqual(src int64) bool {
 
 	if p.SpaceID != src {
 		return false
 	}
 	return true
 }
-func (p *ValidateMultiPartDataRequest) Field2DeepEqual(src []string) bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Field2DeepEqual(src []string) bool {
 
 	if len(p.PreviewData) != len(src) {
 		return false
@@ -18893,14 +18893,14 @@ func (p *ValidateMultiPartDataRequest) Field2DeepEqual(src []string) bool {
 	}
 	return true
 }
-func (p *ValidateMultiPartDataRequest) Field3DeepEqual(src *dataset.MultiModalStoreOption) bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Field3DeepEqual(src *dataset.MultiModalStoreOption) bool {
 
 	if !p.StoreOption.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ValidateMultiPartDataRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *ValidateEvaluationSetMultiPartDataRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -18908,63 +18908,63 @@ func (p *ValidateMultiPartDataRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type ValidateMultiPartDataResponse struct {
+type ValidateEvaluationSetMultiPartDataResponse struct {
 	// 根据校验结果中是否包含错误，判断数据是否合法
 	AttachmentUrlsCheckDetail []*UploadAttachmentDetail `thrift:"attachment_urls_check_detail,1,optional" frugal:"1,optional,list<UploadAttachmentDetail>" form:"attachment_urls_check_detail" json:"attachment_urls_check_detail,omitempty" query:"attachment_urls_check_detail"`
 	BaseResp                  *base.BaseResp            `thrift:"baseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"baseResp" json:"baseResp,omitempty" query:"baseResp"`
 }
 
-func NewValidateMultiPartDataResponse() *ValidateMultiPartDataResponse {
-	return &ValidateMultiPartDataResponse{}
+func NewValidateEvaluationSetMultiPartDataResponse() *ValidateEvaluationSetMultiPartDataResponse {
+	return &ValidateEvaluationSetMultiPartDataResponse{}
 }
 
-func (p *ValidateMultiPartDataResponse) InitDefault() {
+func (p *ValidateEvaluationSetMultiPartDataResponse) InitDefault() {
 }
 
-var ValidateMultiPartDataResponse_AttachmentUrlsCheckDetail_DEFAULT []*UploadAttachmentDetail
+var ValidateEvaluationSetMultiPartDataResponse_AttachmentUrlsCheckDetail_DEFAULT []*UploadAttachmentDetail
 
-func (p *ValidateMultiPartDataResponse) GetAttachmentUrlsCheckDetail() (v []*UploadAttachmentDetail) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) GetAttachmentUrlsCheckDetail() (v []*UploadAttachmentDetail) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetAttachmentUrlsCheckDetail() {
-		return ValidateMultiPartDataResponse_AttachmentUrlsCheckDetail_DEFAULT
+		return ValidateEvaluationSetMultiPartDataResponse_AttachmentUrlsCheckDetail_DEFAULT
 	}
 	return p.AttachmentUrlsCheckDetail
 }
 
-var ValidateMultiPartDataResponse_BaseResp_DEFAULT *base.BaseResp
+var ValidateEvaluationSetMultiPartDataResponse_BaseResp_DEFAULT *base.BaseResp
 
-func (p *ValidateMultiPartDataResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return ValidateMultiPartDataResponse_BaseResp_DEFAULT
+		return ValidateEvaluationSetMultiPartDataResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *ValidateMultiPartDataResponse) SetAttachmentUrlsCheckDetail(val []*UploadAttachmentDetail) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) SetAttachmentUrlsCheckDetail(val []*UploadAttachmentDetail) {
 	p.AttachmentUrlsCheckDetail = val
 }
-func (p *ValidateMultiPartDataResponse) SetBaseResp(val *base.BaseResp) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_ValidateMultiPartDataResponse = map[int16]string{
+var fieldIDToName_ValidateEvaluationSetMultiPartDataResponse = map[int16]string{
 	1:   "attachment_urls_check_detail",
 	255: "baseResp",
 }
 
-func (p *ValidateMultiPartDataResponse) IsSetAttachmentUrlsCheckDetail() bool {
+func (p *ValidateEvaluationSetMultiPartDataResponse) IsSetAttachmentUrlsCheckDetail() bool {
 	return p.AttachmentUrlsCheckDetail != nil
 }
 
-func (p *ValidateMultiPartDataResponse) IsSetBaseResp() bool {
+func (p *ValidateEvaluationSetMultiPartDataResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *ValidateMultiPartDataResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -19017,7 +19017,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateMultiPartDataResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ValidateEvaluationSetMultiPartDataResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -19027,7 +19027,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *ValidateMultiPartDataResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataResponse) ReadField1(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
@@ -19050,7 +19050,7 @@ func (p *ValidateMultiPartDataResponse) ReadField1(iprot thrift.TProtocol) error
 	p.AttachmentUrlsCheckDetail = _field
 	return nil
 }
-func (p *ValidateMultiPartDataResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *ValidateEvaluationSetMultiPartDataResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -19059,9 +19059,9 @@ func (p *ValidateMultiPartDataResponse) ReadField255(iprot thrift.TProtocol) err
 	return nil
 }
 
-func (p *ValidateMultiPartDataResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ValidateMultiPartDataResponse"); err != nil {
+	if err = oprot.WriteStructBegin("ValidateEvaluationSetMultiPartDataResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -19091,7 +19091,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ValidateMultiPartDataResponse) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAttachmentUrlsCheckDetail() {
 		if err = oprot.WriteFieldBegin("attachment_urls_check_detail", thrift.LIST, 1); err != nil {
 			goto WriteFieldBeginError
@@ -19117,7 +19117,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ValidateMultiPartDataResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *ValidateEvaluationSetMultiPartDataResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("baseResp", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -19136,15 +19136,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ValidateMultiPartDataResponse) String() string {
+func (p *ValidateEvaluationSetMultiPartDataResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ValidateMultiPartDataResponse(%+v)", *p)
+	return fmt.Sprintf("ValidateEvaluationSetMultiPartDataResponse(%+v)", *p)
 
 }
 
-func (p *ValidateMultiPartDataResponse) DeepEqual(ano *ValidateMultiPartDataResponse) bool {
+func (p *ValidateEvaluationSetMultiPartDataResponse) DeepEqual(ano *ValidateEvaluationSetMultiPartDataResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -19159,7 +19159,7 @@ func (p *ValidateMultiPartDataResponse) DeepEqual(ano *ValidateMultiPartDataResp
 	return true
 }
 
-func (p *ValidateMultiPartDataResponse) Field1DeepEqual(src []*UploadAttachmentDetail) bool {
+func (p *ValidateEvaluationSetMultiPartDataResponse) Field1DeepEqual(src []*UploadAttachmentDetail) bool {
 
 	if len(p.AttachmentUrlsCheckDetail) != len(src) {
 		return false
@@ -19172,7 +19172,7 @@ func (p *ValidateMultiPartDataResponse) Field1DeepEqual(src []*UploadAttachmentD
 	}
 	return true
 }
-func (p *ValidateMultiPartDataResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *ValidateEvaluationSetMultiPartDataResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -19220,7 +19220,7 @@ type EvaluationSetService interface {
 
 	GetEvaluationSetItemField(ctx context.Context, req *GetEvaluationSetItemFieldRequest) (r *GetEvaluationSetItemFieldResponse, err error)
 
-	ValidateMultiPartData(ctx context.Context, req *ValidateMultiPartDataRequest) (r *ValidateMultiPartDataResponse, err error)
+	ValidateEvaluationSetMultiPartData(ctx context.Context, req *ValidateEvaluationSetMultiPartDataRequest) (r *ValidateEvaluationSetMultiPartDataResponse, err error)
 }
 
 type EvaluationSetServiceClient struct {
@@ -19420,11 +19420,11 @@ func (p *EvaluationSetServiceClient) GetEvaluationSetItemField(ctx context.Conte
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *EvaluationSetServiceClient) ValidateMultiPartData(ctx context.Context, req *ValidateMultiPartDataRequest) (r *ValidateMultiPartDataResponse, err error) {
-	var _args EvaluationSetServiceValidateMultiPartDataArgs
+func (p *EvaluationSetServiceClient) ValidateEvaluationSetMultiPartData(ctx context.Context, req *ValidateEvaluationSetMultiPartDataRequest) (r *ValidateEvaluationSetMultiPartDataResponse, err error) {
+	var _args EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs
 	_args.Req = req
-	var _result EvaluationSetServiceValidateMultiPartDataResult
-	if err = p.Client_().Call(ctx, "ValidateMultiPartData", &_args, &_result); err != nil {
+	var _result EvaluationSetServiceValidateEvaluationSetMultiPartDataResult
+	if err = p.Client_().Call(ctx, "ValidateEvaluationSetMultiPartData", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -19469,7 +19469,7 @@ func NewEvaluationSetServiceProcessor(handler EvaluationSetService) *EvaluationS
 	self.AddToProcessorMap("BatchGetEvaluationSetItems", &evaluationSetServiceProcessorBatchGetEvaluationSetItems{handler: handler})
 	self.AddToProcessorMap("ClearEvaluationSetDraftItem", &evaluationSetServiceProcessorClearEvaluationSetDraftItem{handler: handler})
 	self.AddToProcessorMap("GetEvaluationSetItemField", &evaluationSetServiceProcessorGetEvaluationSetItemField{handler: handler})
-	self.AddToProcessorMap("ValidateMultiPartData", &evaluationSetServiceProcessorValidateMultiPartData{handler: handler})
+	self.AddToProcessorMap("ValidateEvaluationSetMultiPartData", &evaluationSetServiceProcessorValidateEvaluationSetMultiPartData{handler: handler})
 	return self
 }
 func (p *EvaluationSetServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -20402,16 +20402,16 @@ func (p *evaluationSetServiceProcessorGetEvaluationSetItemField) Process(ctx con
 	return true, err
 }
 
-type evaluationSetServiceProcessorValidateMultiPartData struct {
+type evaluationSetServiceProcessorValidateEvaluationSetMultiPartData struct {
 	handler EvaluationSetService
 }
 
-func (p *evaluationSetServiceProcessorValidateMultiPartData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := EvaluationSetServiceValidateMultiPartDataArgs{}
+func (p *evaluationSetServiceProcessorValidateEvaluationSetMultiPartData) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ValidateMultiPartData", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("ValidateEvaluationSetMultiPartData", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -20420,11 +20420,11 @@ func (p *evaluationSetServiceProcessorValidateMultiPartData) Process(ctx context
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := EvaluationSetServiceValidateMultiPartDataResult{}
-	var retval *ValidateMultiPartDataResponse
-	if retval, err2 = p.handler.ValidateMultiPartData(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ValidateMultiPartData: "+err2.Error())
-		oprot.WriteMessageBegin("ValidateMultiPartData", thrift.EXCEPTION, seqId)
+	result := EvaluationSetServiceValidateEvaluationSetMultiPartDataResult{}
+	var retval *ValidateEvaluationSetMultiPartDataResponse
+	if retval, err2 = p.handler.ValidateEvaluationSetMultiPartData(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ValidateEvaluationSetMultiPartData: "+err2.Error())
+		oprot.WriteMessageBegin("ValidateEvaluationSetMultiPartData", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -20432,7 +20432,7 @@ func (p *evaluationSetServiceProcessorValidateMultiPartData) Process(ctx context
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("ValidateMultiPartData", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("ValidateEvaluationSetMultiPartData", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -26986,41 +26986,41 @@ func (p *EvaluationSetServiceGetEvaluationSetItemFieldResult) Field0DeepEqual(sr
 	return true
 }
 
-type EvaluationSetServiceValidateMultiPartDataArgs struct {
-	Req *ValidateMultiPartDataRequest `thrift:"req,1" frugal:"1,default,ValidateMultiPartDataRequest"`
+type EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs struct {
+	Req *ValidateEvaluationSetMultiPartDataRequest `thrift:"req,1" frugal:"1,default,ValidateEvaluationSetMultiPartDataRequest"`
 }
 
-func NewEvaluationSetServiceValidateMultiPartDataArgs() *EvaluationSetServiceValidateMultiPartDataArgs {
-	return &EvaluationSetServiceValidateMultiPartDataArgs{}
+func NewEvaluationSetServiceValidateEvaluationSetMultiPartDataArgs() *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs {
+	return &EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs{}
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) InitDefault() {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) InitDefault() {
 }
 
-var EvaluationSetServiceValidateMultiPartDataArgs_Req_DEFAULT *ValidateMultiPartDataRequest
+var EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs_Req_DEFAULT *ValidateEvaluationSetMultiPartDataRequest
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) GetReq() (v *ValidateMultiPartDataRequest) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) GetReq() (v *ValidateEvaluationSetMultiPartDataRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return EvaluationSetServiceValidateMultiPartDataArgs_Req_DEFAULT
+		return EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) SetReq(val *ValidateMultiPartDataRequest) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) SetReq(val *ValidateEvaluationSetMultiPartDataRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_EvaluationSetServiceValidateMultiPartDataArgs = map[int16]string{
+var fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) IsSetReq() bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -27065,7 +27065,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateMultiPartDataArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -27075,8 +27075,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewValidateMultiPartDataRequest()
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewValidateEvaluationSetMultiPartDataRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -27084,9 +27084,9 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) ReadField1(iprot thrift.
 	return nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ValidateMultiPartData_args"); err != nil {
+	if err = oprot.WriteStructBegin("ValidateEvaluationSetMultiPartData_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -27112,7 +27112,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -27129,15 +27129,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) String() string {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationSetServiceValidateMultiPartDataArgs(%+v)", *p)
+	return fmt.Sprintf("EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs(%+v)", *p)
 
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) DeepEqual(ano *EvaluationSetServiceValidateMultiPartDataArgs) bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) DeepEqual(ano *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -27149,7 +27149,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) DeepEqual(ano *Evaluatio
 	return true
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataArgs) Field1DeepEqual(src *ValidateMultiPartDataRequest) bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs) Field1DeepEqual(src *ValidateEvaluationSetMultiPartDataRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -27157,41 +27157,41 @@ func (p *EvaluationSetServiceValidateMultiPartDataArgs) Field1DeepEqual(src *Val
 	return true
 }
 
-type EvaluationSetServiceValidateMultiPartDataResult struct {
-	Success *ValidateMultiPartDataResponse `thrift:"success,0,optional" frugal:"0,optional,ValidateMultiPartDataResponse"`
+type EvaluationSetServiceValidateEvaluationSetMultiPartDataResult struct {
+	Success *ValidateEvaluationSetMultiPartDataResponse `thrift:"success,0,optional" frugal:"0,optional,ValidateEvaluationSetMultiPartDataResponse"`
 }
 
-func NewEvaluationSetServiceValidateMultiPartDataResult() *EvaluationSetServiceValidateMultiPartDataResult {
-	return &EvaluationSetServiceValidateMultiPartDataResult{}
+func NewEvaluationSetServiceValidateEvaluationSetMultiPartDataResult() *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult {
+	return &EvaluationSetServiceValidateEvaluationSetMultiPartDataResult{}
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) InitDefault() {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) InitDefault() {
 }
 
-var EvaluationSetServiceValidateMultiPartDataResult_Success_DEFAULT *ValidateMultiPartDataResponse
+var EvaluationSetServiceValidateEvaluationSetMultiPartDataResult_Success_DEFAULT *ValidateEvaluationSetMultiPartDataResponse
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) GetSuccess() (v *ValidateMultiPartDataResponse) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) GetSuccess() (v *ValidateEvaluationSetMultiPartDataResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return EvaluationSetServiceValidateMultiPartDataResult_Success_DEFAULT
+		return EvaluationSetServiceValidateEvaluationSetMultiPartDataResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *EvaluationSetServiceValidateMultiPartDataResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ValidateMultiPartDataResponse)
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ValidateEvaluationSetMultiPartDataResponse)
 }
 
-var fieldIDToName_EvaluationSetServiceValidateMultiPartDataResult = map[int16]string{
+var fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataResult = map[int16]string{
 	0: "success",
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) IsSetSuccess() bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -27236,7 +27236,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateMultiPartDataResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationSetServiceValidateEvaluationSetMultiPartDataResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -27246,8 +27246,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewValidateMultiPartDataResponse()
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewValidateEvaluationSetMultiPartDataResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -27255,9 +27255,9 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) ReadField0(iprot thrif
 	return nil
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ValidateMultiPartData_result"); err != nil {
+	if err = oprot.WriteStructBegin("ValidateEvaluationSetMultiPartData_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -27283,7 +27283,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -27302,15 +27302,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) String() string {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("EvaluationSetServiceValidateMultiPartDataResult(%+v)", *p)
+	return fmt.Sprintf("EvaluationSetServiceValidateEvaluationSetMultiPartDataResult(%+v)", *p)
 
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) DeepEqual(ano *EvaluationSetServiceValidateMultiPartDataResult) bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) DeepEqual(ano *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -27322,7 +27322,7 @@ func (p *EvaluationSetServiceValidateMultiPartDataResult) DeepEqual(ano *Evaluat
 	return true
 }
 
-func (p *EvaluationSetServiceValidateMultiPartDataResult) Field0DeepEqual(src *ValidateMultiPartDataResponse) bool {
+func (p *EvaluationSetServiceValidateEvaluationSetMultiPartDataResult) Field0DeepEqual(src *ValidateEvaluationSetMultiPartDataResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

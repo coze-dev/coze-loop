@@ -429,11 +429,11 @@ func (l *LocalEvaluationSetService) GetEvaluationSetItemField(ctx context.Contex
 	return result.GetSuccess(), nil
 }
 
-func (l *LocalEvaluationSetService) ValidateMultiPartData(ctx context.Context, req *eval_set.ValidateMultiPartDataRequest, callOptions ...callopt.Option) (*eval_set.ValidateMultiPartDataResponse, error) {
+func (l *LocalEvaluationSetService) ValidateEvaluationSetMultiPartData(ctx context.Context, req *eval_set.ValidateEvaluationSetMultiPartDataRequest, callOptions ...callopt.Option) (*eval_set.ValidateEvaluationSetMultiPartDataResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
-		arg := in.(*eval_set.EvaluationSetServiceValidateMultiPartDataArgs)
-		result := out.(*eval_set.EvaluationSetServiceValidateMultiPartDataResult)
-		resp, err := l.impl.ValidateMultiPartData(ctx, arg.Req)
+		arg := in.(*eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs)
+		result := out.(*eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataResult)
+		resp, err := l.impl.ValidateEvaluationSetMultiPartData(ctx, arg.Req)
 		if err != nil {
 			return err
 		}
@@ -441,9 +441,9 @@ func (l *LocalEvaluationSetService) ValidateMultiPartData(ctx context.Context, r
 		return nil
 	})
 
-	arg := &eval_set.EvaluationSetServiceValidateMultiPartDataArgs{Req: req}
-	result := &eval_set.EvaluationSetServiceValidateMultiPartDataResult{}
-	ctx = l.injectRPCInfo(ctx, "ValidateMultiPartData")
+	arg := &eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataResult{}
+	ctx = l.injectRPCInfo(ctx, "ValidateEvaluationSetMultiPartData")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}

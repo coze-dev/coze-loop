@@ -2099,3 +2099,8 @@ func _validatemultipartdata0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _validateevaluationsetmultipartdataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

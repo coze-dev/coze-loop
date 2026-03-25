@@ -8,6 +8,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	app_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -118,4 +119,54 @@ func MultiModalStoreOptionDTO2DO(dto *dataset.MultiModalStoreOption) *entity.Mul
 		MultiModalStoreStrategy: strategy,
 		ContentType:             contentType,
 	}
+}
+
+func UploadAttachmentDetailsDO2DTOs(dos []*entity.UploadAttachmentDetail) []*app_eval_set.UploadAttachmentDetail {
+	if dos == nil {
+		return nil
+	}
+	res := make([]*app_eval_set.UploadAttachmentDetail, 0, len(dos))
+	for _, do := range dos {
+		res = append(res, UploadAttachmentDetailDO2DTO(do))
+	}
+	return res
+}
+
+func UploadAttachmentDetailDO2DTO(do *entity.UploadAttachmentDetail) *app_eval_set.UploadAttachmentDetail {
+	if do == nil {
+		return nil
+	}
+	return &app_eval_set.UploadAttachmentDetail{
+		ContentType:     contentTypeDO2DTO(do.ContentType),
+		ImagexServiceID: do.ImagexServiceID,
+		OriginImage:     common.ConvertImageDO2DTO(do.OriginImage),
+		Image:           common.ConvertImageDO2DTO(do.Image),
+		OriginAudio:     common.ConvertAudioDO2DTO(do.OriginAudio),
+		Audio:           common.ConvertAudioDO2DTO(do.Audio),
+		OriginVideo:     common.ConvertVideoDO2DTO(do.OriginVideo),
+		Video:           common.ConvertVideoDO2DTO(do.Video),
+		ErrMsg:          do.ErrMsg,
+	}
+}
+
+func contentTypeDO2DTO(ct *entity.ContentType) *dataset.ContentType {
+	if ct == nil {
+		return nil
+	}
+	var t dataset.ContentType
+	switch *ct {
+	case entity.ContentTypeText:
+		t = dataset.ContentType_Text
+	case entity.ContentTypeImage:
+		t = dataset.ContentType_Image
+	case entity.ContentTypeAudio:
+		t = dataset.ContentType_Audio
+	case entity.ContentTypeVideo:
+		t = dataset.ContentType_Video
+	case entity.ContentTypeMultipart:
+		t = dataset.ContentType_MultiPart
+	default:
+		return nil
+	}
+	return &t
 }
