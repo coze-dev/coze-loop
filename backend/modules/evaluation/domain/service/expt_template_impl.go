@@ -1070,6 +1070,7 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 // enrichExptSourceFromPipeline 对在线实验模板，根据 source_id 和 space_id 调用 ListPipeline，
 // 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters 到 ExptSource.SpanFilterFields，
 // 提取 Pipeline.Scheduler 到 ExptSource.Scheduler
+// 仅当 ExptSource.SourceType 为 IDL SourceType.Workflow（Pipeline）时拉取 Pipeline 详情。
 func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) error {
 	if e.pipelineRPCAdapter == nil {
 		return nil
@@ -1078,7 +1079,7 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 	pipelineIDs := make([]int64, 0)
 	templateByPipelineID := make(map[int64][]*entity.ExptTemplate)
 	for _, t := range templates {
-		if t.ExptSource == nil || t.ExptSource.SourceType != entity.SourceType_AutoTask || t.ExptSource.SourceID == "" {
+		if t.ExptSource == nil || t.ExptSource.SourceType != entity.SourceType_Workflow || t.ExptSource.SourceID == "" {
 			continue
 		}
 		pid, err := strconv.ParseInt(t.ExptSource.SourceID, 10, 64)
