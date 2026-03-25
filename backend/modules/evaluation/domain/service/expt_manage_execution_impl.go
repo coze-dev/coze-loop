@@ -302,7 +302,7 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	}
 
 	switch runMode {
-	case entity.EvaluationModeSubmit:
+	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
 		if err = e.sendExptNotify(ctx, expt); err != nil {
 			logs.CtxWarn(ctx, "[Run] SendExptNotify failed, expt_id: %v, error: %v", exptID, err)
 		}

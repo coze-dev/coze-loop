@@ -351,6 +351,14 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 				templateID, event.ExptID, entity.ExptStatus_Processing)
 		}
 	}
+
+	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
+		return err
+	}
+
+	time.Sleep(time.Second * 3)
+
 	return nil
 }
 
