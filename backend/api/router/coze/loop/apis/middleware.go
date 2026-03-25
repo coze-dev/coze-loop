@@ -2079,3 +2079,23 @@ func _runbuiltinevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _threadsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getthreadchatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getthreadstatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _gettracechatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -175,6 +175,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetTraceChat": kitex.NewMethodInfo(
+		getTraceChatHandler,
+		newTraceServiceGetTraceChatArgs,
+		newTraceServiceGetTraceChatResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetThreadChat": kitex.NewMethodInfo(
+		getThreadChatHandler,
+		newTraceServiceGetThreadChatArgs,
+		newTraceServiceGetThreadChatResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetThreadStat": kitex.NewMethodInfo(
+		getThreadStatHandler,
+		newTraceServiceGetThreadStatArgs,
+		newTraceServiceGetThreadStatResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -645,6 +666,63 @@ func newTraceServiceListTrajectoryResult() interface{} {
 	return trace.NewTraceServiceListTrajectoryResult()
 }
 
+func getTraceChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetTraceChatArgs)
+	realResult := result.(*trace.TraceServiceGetTraceChatResult)
+	success, err := handler.(trace.TraceService).GetTraceChat(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetTraceChatArgs() interface{} {
+	return trace.NewTraceServiceGetTraceChatArgs()
+}
+
+func newTraceServiceGetTraceChatResult() interface{} {
+	return trace.NewTraceServiceGetTraceChatResult()
+}
+
+func getThreadChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetThreadChatArgs)
+	realResult := result.(*trace.TraceServiceGetThreadChatResult)
+	success, err := handler.(trace.TraceService).GetThreadChat(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetThreadChatArgs() interface{} {
+	return trace.NewTraceServiceGetThreadChatArgs()
+}
+
+func newTraceServiceGetThreadChatResult() interface{} {
+	return trace.NewTraceServiceGetThreadChatResult()
+}
+
+func getThreadStatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetThreadStatArgs)
+	realResult := result.(*trace.TraceServiceGetThreadStatResult)
+	success, err := handler.(trace.TraceService).GetThreadStat(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetThreadStatArgs() interface{} {
+	return trace.NewTraceServiceGetThreadStatArgs()
+}
+
+func newTraceServiceGetThreadStatResult() interface{} {
+	return trace.NewTraceServiceGetThreadStatResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -882,6 +960,36 @@ func (p *kClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryR
 	_args.Req = req
 	var _result trace.TraceServiceListTrajectoryResult
 	if err = p.c.Call(ctx, "ListTrajectory", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest) (r *trace.GetTraceChatResponse, err error) {
+	var _args trace.TraceServiceGetTraceChatArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetTraceChatResult
+	if err = p.c.Call(ctx, "GetTraceChat", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest) (r *trace.GetThreadChatResponse, err error) {
+	var _args trace.TraceServiceGetThreadChatArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetThreadChatResult
+	if err = p.c.Call(ctx, "GetThreadChat", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest) (r *trace.GetThreadStatResponse, err error) {
+	var _args trace.TraceServiceGetThreadStatArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetThreadStatResult
+	if err = p.c.Call(ctx, "GetThreadStat", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

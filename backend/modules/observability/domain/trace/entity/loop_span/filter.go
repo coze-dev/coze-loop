@@ -59,9 +59,10 @@ const (
 	PlatformVeADK        PlatformType = "veadk"
 	PlatformCallbackAll  PlatformType = "callback_all"
 
-	SpanListTypeRootSpan SpanListType = "root_span"
-	SpanListTypeAllSpan  SpanListType = "all_span"
-	SpanListTypeLLMSpan  SpanListType = "llm_span"
+	SpanListTypeRootSpan  SpanListType = "root_span"
+	SpanListTypeAllSpan   SpanListType = "all_span"
+	SpanListTypeLLMSpan   SpanListType = "llm_span"
+	SpanListTypeModelSpan SpanListType = "model_span"
 )
 
 var validFieldComb = map[FieldType]map[QueryTypeEnum]bool{

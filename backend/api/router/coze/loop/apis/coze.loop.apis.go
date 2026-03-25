@@ -354,6 +354,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_tasks0.POST("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
 				}
 				{
+					_threads := _v14.Group("/threads", _threadsMw(handler)...)
+					_threads.POST("/chat", append(_getthreadchatMw(handler), apis.GetThreadChat)...)
+					_threads.POST("/stat", append(_getthreadstatMw(handler), apis.GetThreadStat)...)
+				}
+				{
 					_trace := _v14.Group("/trace", _traceMw(handler)...)
 					_trace.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
 				}
@@ -361,6 +366,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces := _v14.Group("/traces", _tracesMw(handler)...)
 					_traces.POST("/batch_get_advance_info", append(_batchgettracesadvanceinfoMw(handler), apis.BatchGetTracesAdvanceInfo)...)
 					_traces.POST("/change_eval_score", append(_changeevaluatorscoreMw(handler), apis.ChangeEvaluatorScore)...)
+					_traces.POST("/chat", append(_gettracechatMw(handler), apis.GetTraceChat)...)
 					_traces.POST("/export_to_dataset", append(_exporttracestodatasetMw(handler), apis.ExportTracesToDataset)...)
 					_traces.GET("/meta_info", append(_gettracesmetainfoMw(handler), apis.GetTracesMetaInfo)...)
 					_traces.POST("/preview_export_to_dataset", append(_previewexporttracestodatasetMw(handler), apis.PreviewExportTracesToDataset)...)

@@ -57,6 +57,7 @@ const (
 	SpanFieldTenant                  = "tenant"
 	SpanFieldKeyPreviousResponseID   = "previous_response_id"
 	SpanFieldKeyResponseID           = "response_id"
+	SpanFieldThreadId                = "thread_id"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"

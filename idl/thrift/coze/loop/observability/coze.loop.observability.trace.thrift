@@ -421,6 +421,73 @@ struct ListTrajectoryResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct GetTraceChatRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: required string trace_id (go.tag='json:"trace_id"', api.body="trace_id")
+    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
+    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    5: optional i32 page_size (go.tag='json:"page_size,omitempty"', api.body="page_size")
+    6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
+    7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
+    8: optional filter.FilterFields filters (api.body="filters")
+
+    255: optional base.Base Base
+}
+
+struct GetTraceChatResponse {
+    1: required list<ChatMessage> messages (go.tag='json:"messages"')
+    2: required string next_page_token (go.tag='json:"next_page_token"')
+    3: required bool has_more (go.tag='json:"has_more"')
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetThreadChatRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id")
+    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
+    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    5: optional i32 page_size (go.tag='json:"page_size,omitempty"', api.body="page_size")
+    6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
+    7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct GetThreadChatResponse {
+    1: required list<ChatMessage> messages (go.tag='json:"messages"')
+    2: required string next_page_token (go.tag='json:"next_page_token"')
+    3: required bool has_more (go.tag='json:"has_more"')
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetThreadStatRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id")
+    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
+    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    5: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
+
+    255: optional base.Base Base
+}
+
+struct GetThreadStatResponse {
+    1: required string thread_id (go.tag='json:"thread_id"')
+    2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
+    3: required i64 duration (api.js_conv='true', go.tag='json:"duration"')
+    4: optional string user_id (go.tag='json:"user_id,omitempty"')
+    5: required i64 total_tokens (api.js_conv='true', go.tag='json:"total_tokens"')
+    6: required list<string> used_models (go.tag='json:"used_models"')
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct ChatMessage {
+    1: required string message_type (go.tag='json:"message_type"')
+    2: optional span.OutputSpan span (go.tag='json:"span,omitempty"')
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
@@ -445,4 +512,7 @@ service TraceService {
     UpsertTrajectoryConfigResponse UpsertTrajectoryConfig(1: UpsertTrajectoryConfigRequest req) (api.post = '/api/observability/v1/traces/trajectory_config')
     GetTrajectoryConfigResponse GetTrajectoryConfig(1: GetTrajectoryConfigRequest req) (api.get = '/api/observability/v1/traces/trajectory_config')
     ListTrajectoryResponse ListTrajectory(1: ListTrajectoryRequest req) (api.post = '/api/observability/v1/traces/trajectory')
+    GetTraceChatResponse GetTraceChat(1: GetTraceChatRequest req) (api.post = '/api/observability/v1/traces/chat')
+    GetThreadChatResponse GetThreadChat(1: GetThreadChatRequest req) (api.post = '/api/observability/v1/threads/chat')
+    GetThreadStatResponse GetThreadStat(1: GetThreadStatRequest req) (api.post = '/api/observability/v1/threads/stat')
 }

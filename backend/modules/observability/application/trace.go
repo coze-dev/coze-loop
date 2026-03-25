@@ -1155,6 +1155,152 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 	}, nil
 }
 
+func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest) (*trace.GetTraceChatResponse, error) {
+	if req == nil || req.WorkspaceID == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if req.TraceID == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.GetTraceChat(ctx, &service.GetTraceChatRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		TraceID:      req.GetTraceID(),
+		StartTime:    startTime,
+		EndTime:      endTime,
+		PageSize:     req.GetPageSize(),
+		PageToken:    req.GetPageToken(),
+		Filters:      tconv.FilterFieldsDTO2DO(req.Filters),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.GetTraceChatResponse{
+		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
+		NextPageToken: sResp.NextPageToken,
+		HasMore:       sResp.HasMore,
+	}, nil
+}
+
+func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest) (*trace.GetThreadChatResponse, error) {
+	if req == nil || req.WorkspaceID == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if req.ThreadID == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid thread_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.GetThreadChat(ctx, &service.GetThreadChatRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		ThreadID:     req.GetThreadID(),
+		StartTime:    startTime,
+		EndTime:      endTime,
+		PageSize:     req.GetPageSize(),
+		PageToken:    req.GetPageToken(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.GetThreadChatResponse{
+		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
+		NextPageToken: sResp.NextPageToken,
+		HasMore:       sResp.HasMore,
+	}, nil
+}
+
+func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest) (*trace.GetThreadStatResponse, error) {
+	if req == nil || req.WorkspaceID == 0 {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	}
+	if req.ThreadID == "" {
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid thread_id"))
+	}
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.GetThreadStat(ctx, &service.GetThreadStatRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		ThreadID:     req.GetThreadID(),
+		StartTime:    startTime,
+		EndTime:      endTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.GetThreadStatResponse{
+		ThreadID:    sResp.ThreadID,
+		StartTime:   sResp.StartTime,
+		Duration:    sResp.Duration,
+		UserID:      &sResp.UserID,
+		TotalTokens: sResp.TotalTokens,
+		UsedModels:  sResp.UsedModels,
+	}, nil
+}
+
 // inner usage
 type GetDisplayInfoRequest struct {
 	WorkspaceID  int64
