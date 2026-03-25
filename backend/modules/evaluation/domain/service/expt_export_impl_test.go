@@ -28,6 +28,62 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
 
+func TestFilterTrajectoryEvalTargetColumns(t *testing.T) {
+	in := []*entity.ColumnEvalTarget{
+		{Name: consts.ReportColumnNameEvalTargetActualOutput},
+		{Name: consts.ReportColumnNameEvalTargetTrajectory},
+		{Name: "custom_field"},
+		nil,
+	}
+	got := filterTrajectoryEvalTargetColumns(in)
+	assert.Len(t, got, 2)
+	assert.Equal(t, consts.ReportColumnNameEvalTargetActualOutput, got[0].Name)
+	assert.Equal(t, "custom_field", got[1].Name)
+
+	assert.Nil(t, filterTrajectoryEvalTargetColumns(nil))
+	assert.Empty(t, filterTrajectoryEvalTargetColumns([]*entity.ColumnEvalTarget{}))
+}
+
+func TestMergeExtraEvalTargetOutputColumns(t *testing.T) {
+	schema := []*entity.ColumnEvalTarget{{Name: "actual_output"}}
+	extras := map[string]struct{}{
+		"my_custom": {},
+		"actual_output": {},
+		consts.EvalTargetOutputFieldKeyTrajectory: {},
+	}
+	got := mergeExtraEvalTargetOutputColumns(schema, extras)
+	assert.Len(t, got, 2)
+	assert.Equal(t, "actual_output", got[0].Name)
+	assert.Equal(t, "my_custom", got[1].Name)
+}
+
+func TestCollectEvalTargetOutputFieldKeysFromItemResults(t *testing.T) {
+	into := make(map[string]struct{})
+	items := []*entity.ItemResult{{
+		TurnResults: []*entity.TurnResult{{
+			ExperimentResults: []*entity.ExperimentResult{{
+				Payload: &entity.ExperimentTurnPayload{
+					TargetOutput: &entity.TurnTargetOutput{
+						EvalTargetRecord: &entity.EvalTargetRecord{
+							EvalTargetOutputData: &entity.EvalTargetOutputData{
+								OutputFields: map[string]*entity.Content{
+									"foo":       {Text: ptr.Of("a")},
+									"trajectory": {Text: ptr.Of("{}")},
+								},
+							},
+						},
+					},
+				},
+			}},
+		}},
+	}}
+	collectEvalTargetOutputFieldKeysFromItemResults(items, into)
+	_, hasFoo := into["foo"]
+	_, hasTraj := into[consts.EvalTargetOutputFieldKeyTrajectory]
+	assert.True(t, hasFoo)
+	assert.False(t, hasTraj)
+}
+
 func TestExportCSVHelper_buildColumnEvalTargetContent(t *testing.T) {
 	ctx := context.Background()
 	helper := &exportCSVHelper{}

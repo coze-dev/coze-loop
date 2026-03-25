@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -271,10 +272,25 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 		BaseExptID:                ptr.Of(exptID),
 		LoadEvaluatorFullContent:  gptr.Of(false), // 导出 CSV 仅需 score/reason，不加载 Evaluator input/output 大对象
 		LoadEvalTargetFullContent: gptr.Of(true),  // Target output 需完整内容（如 OutputFields 大字段）
-		FullTrajectory:            true,
+		// 导出不包含 trajectory 列，且不需要完整轨迹 JSON，减轻 TOS/序列化压力
+		FullTrajectory: false,
 	}
 
 	var helper *exportCSVHelper
+
+	// 第一遍分页：收集所有 TargetOutput.OutputFields 中出现的键（排除 trajectory），避免自定义列仅出现在后页时漏列。
+	extraOutputKeys := make(map[string]struct{})
+	for pageNum := 1; pageNum <= maxPage; pageNum++ {
+		param.Page = entity.NewPage(pageNum, pageSize)
+		result, err := e.exptResultService.MGetExperimentResult(ctx, param)
+		if err != nil {
+			return err
+		}
+		collectEvalTargetOutputFieldKeysFromItemResults(result.ItemResults, extraOutputKeys)
+		if pageNum*pageSize >= int(result.Total) {
+			break
+		}
+	}
 
 	for pageNum := 1; pageNum <= maxPage; pageNum++ {
 		param.Page = entity.NewPage(pageNum, pageSize)
@@ -291,10 +307,8 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 					break
 				}
 			}
-			var columnsEvalTarget []*entity.ColumnEvalTarget
-			if len(result.ExptColumnsEvalTarget) > 0 {
-				columnsEvalTarget = result.ExptColumnsEvalTarget[0].Columns
-			}
+			schemaCols := filterTrajectoryEvalTargetColumns(pickExptColumnsEvalTargetColumns(result, exptID))
+			columnsEvalTarget := mergeExtraEvalTargetOutputColumns(schemaCols, extraOutputKeys)
 			helper = &exportCSVHelper{
 				spaceID:            spaceID,
 				exptID:             exptID,
@@ -373,6 +387,100 @@ const (
 	columnNameTargetTraceID = "targetTraceID"
 	columnNameWeightedScore = "weightedScore"
 )
+
+// filterTrajectoryEvalTargetColumns 导出 CSV 不输出 trajectory 列，其余评测对象输出列（含 schema 自定义字段与性能指标）保留。
+func filterTrajectoryEvalTargetColumns(cols []*entity.ColumnEvalTarget) []*entity.ColumnEvalTarget {
+	if len(cols) == 0 {
+		return cols
+	}
+	out := make([]*entity.ColumnEvalTarget, 0, len(cols))
+	for _, col := range cols {
+		if col == nil || col.Name == consts.ReportColumnNameEvalTargetTrajectory {
+			continue
+		}
+		out = append(out, col)
+	}
+	return out
+}
+
+func pickExptColumnsEvalTargetColumns(report *entity.MGetExperimentReportResult, exptID int64) []*entity.ColumnEvalTarget {
+	if report == nil {
+		return nil
+	}
+	for _, row := range report.ExptColumnsEvalTarget {
+		if row != nil && row.ExptID == exptID {
+			return row.Columns
+		}
+	}
+	if len(report.ExptColumnsEvalTarget) > 0 && report.ExptColumnsEvalTarget[0] != nil {
+		return report.ExptColumnsEvalTarget[0].Columns
+	}
+	return nil
+}
+
+// collectEvalTargetOutputFieldKeysFromItemResults 汇总行数据里实际出现的 OutputFields 键（不含 trajectory），用于补齐 schema 未声明的自定义列。
+func collectEvalTargetOutputFieldKeysFromItemResults(items []*entity.ItemResult, into map[string]struct{}) {
+	if len(items) == 0 || into == nil {
+		return
+	}
+	for _, item := range items {
+		if item == nil {
+			continue
+		}
+		for _, turn := range item.TurnResults {
+			if turn == nil || len(turn.ExperimentResults) == 0 || turn.ExperimentResults[0] == nil {
+				continue
+			}
+			payload := turn.ExperimentResults[0].Payload
+			if payload == nil || payload.TargetOutput == nil || payload.TargetOutput.EvalTargetRecord == nil {
+				continue
+			}
+			data := payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData
+			if data == nil || data.OutputFields == nil {
+				continue
+			}
+			for k := range data.OutputFields {
+				if k == "" || k == consts.EvalTargetOutputFieldKeyTrajectory {
+					continue
+				}
+				into[k] = struct{}{}
+			}
+		}
+	}
+}
+
+// mergeExtraEvalTargetOutputColumns 在 schema 列（已去 trajectory）之后追加数据中出现过、但 schema 未覆盖的输出字段列，保证自定义动态字段也能导出。
+func mergeExtraEvalTargetOutputColumns(schema []*entity.ColumnEvalTarget, extraKeys map[string]struct{}) []*entity.ColumnEvalTarget {
+	if len(extraKeys) == 0 {
+		return schema
+	}
+	seen := make(map[string]struct{}, len(schema)+len(extraKeys))
+	for _, c := range schema {
+		if c != nil && c.Name != "" {
+			seen[c.Name] = struct{}{}
+		}
+	}
+	extras := make([]string, 0, len(extraKeys))
+	for k := range extraKeys {
+		if k == consts.EvalTargetOutputFieldKeyTrajectory {
+			continue
+		}
+		if _, ok := seen[k]; ok {
+			continue
+		}
+		extras = append(extras, k)
+	}
+	if len(extras) == 0 {
+		return schema
+	}
+	sort.Strings(extras)
+	out := make([]*entity.ColumnEvalTarget, len(schema), len(schema)+len(extras))
+	copy(out, schema)
+	for _, k := range extras {
+		out = append(out, &entity.ColumnEvalTarget{Name: k})
+	}
+	return out
+}
 
 func (e exportCSVHelper) buildColumns(ctx context.Context) ([]string, error) {
 	columns := []string{}
