@@ -4129,9 +4129,11 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		templates := []*entity.ExptTemplate{
 			{ExptSource: nil},
 			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Evaluation}},
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: ""}},
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "invalid"}},
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "0"}},
+			// AutoTask 不再触发 ListPipeline，仅 Workflow + 合法 pipeline id 会查询
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "123"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: ""}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "invalid"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "0"}},
 		}
 		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
 		assert.NoError(t, err)
@@ -4139,7 +4141,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("ListPipelineFlow失败，返回错误", func(t *testing.T) {
 		templates := []*entity.ExptTemplate{
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"}},
 		}
 		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, errors.New("rpc error"))
 		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
@@ -4148,7 +4150,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("ListPipelineFlow返回nil或空，直接返回", func(t *testing.T) {
 		templates := []*entity.ExptTemplate{
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"}},
 		}
 		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, nil)
 		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
@@ -4161,7 +4163,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline ID为nil，跳过处理", func(t *testing.T) {
 		templates := []*entity.ExptTemplate{
-			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"}},
 		}
 		pipeline := &entity.Pipeline{
 			ID: nil,
@@ -4175,10 +4177,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("成功处理，填充span filter和scheduler", func(t *testing.T) {
 		template1 := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		template2 := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template1, template2}
 
@@ -4242,7 +4244,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline没有data_reflow节点，不填充数据", func(t *testing.T) {
 		template := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template}
 
@@ -4267,7 +4269,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline没有scheduler，只填充span filter", func(t *testing.T) {
 		template := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template}
 
@@ -4306,7 +4308,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline有data_reflow节点但无task ref，不填充数据", func(t *testing.T) {
 		template := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template}
 
@@ -4332,7 +4334,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline有data_reflow节点但task内容为空，不填充数据", func(t *testing.T) {
 		template := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template}
 
@@ -4362,7 +4364,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 
 	t.Run("pipeline有data_reflow节点但task内容为无效JSON，不填充数据", func(t *testing.T) {
 		template := &entity.ExptTemplate{
-			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_AutoTask, SourceID: "1"},
+			ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"},
 		}
 		templates := []*entity.ExptTemplate{template}
 
@@ -4455,7 +4457,7 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 					ExptType:    entity.ExptType_Online,
 				},
 				ExptSource: &entity.ExptSource{
-					SourceType: entity.SourceType_AutoTask,
+					SourceType: entity.SourceType_Workflow,
 					SourceID:   "1",
 				},
 			},

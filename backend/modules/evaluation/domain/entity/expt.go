@@ -52,6 +52,8 @@ const (
 	SourceType_Trace      SourceType = 2
 	// SourceType_AutoTask 用于 ExptSource，与 IDL domain_expt.SourceType_AutoTask 一致
 	SourceType_AutoTask SourceType = 2
+	// SourceType_Workflow 与 IDL domain_expt.SourceType_Workflow 一致（Pipeline / 工作流来源，用于 enrichExptSourceFromPipeline 等）
+	SourceType_Workflow SourceType = 3
 )
 
 type ExptRunLog struct {
