@@ -983,3 +983,64 @@ func (p *ClearDatasetItemResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *UploadAttachmentDetail) IsValid() error {
+	if p.OriginImage != nil {
+		if err := p.OriginImage.IsValid(); err != nil {
+			return fmt.Errorf("field OriginImage not valid, %w", err)
+		}
+	}
+	if p.Image != nil {
+		if err := p.Image.IsValid(); err != nil {
+			return fmt.Errorf("field Image not valid, %w", err)
+		}
+	}
+	if p.OriginAudio != nil {
+		if err := p.OriginAudio.IsValid(); err != nil {
+			return fmt.Errorf("field OriginAudio not valid, %w", err)
+		}
+	}
+	if p.Audio != nil {
+		if err := p.Audio.IsValid(); err != nil {
+			return fmt.Errorf("field Audio not valid, %w", err)
+		}
+	}
+	if p.OriginVideo != nil {
+		if err := p.OriginVideo.IsValid(); err != nil {
+			return fmt.Errorf("field OriginVideo not valid, %w", err)
+		}
+	}
+	if p.Video != nil {
+		if err := p.Video.IsValid(); err != nil {
+			return fmt.Errorf("field Video not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ValidateMultiPartDataRequest) IsValid() error {
+	if p.SpaceID <= int64(0) {
+		return fmt.Errorf("field SpaceID gt rule failed, current value: %v", p.SpaceID)
+	}
+	if len(p.PreviewData) < int(1) {
+		return fmt.Errorf("field PreviewData MinLen rule failed, current value: %v", p.PreviewData)
+	}
+	if p.StoreOption == nil {
+		return fmt.Errorf("field StoreOption not_nil rule failed")
+	}
+	if err := p.StoreOption.IsValid(); err != nil {
+		return fmt.Errorf("field StoreOption not valid, %w", err)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ValidateMultiPartDataResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

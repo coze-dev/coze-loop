@@ -165,3 +165,27 @@ func (p *FieldWriteOption) IsValid() error {
 func (p *MultiModalStoreOption) IsValid() error {
 	return nil
 }
+func (p *Video) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
+	return nil
+}
+func (p *Audio) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
+	return nil
+}
+func (p *Image) IsValid() error {
+	if p.StorageProvider != nil {
+		if p.StorageProvider.String() == "<UNSET>" {
+			return fmt.Errorf("field StorageProvider defined_only rule failed")
+		}
+	}
+	return nil
+}

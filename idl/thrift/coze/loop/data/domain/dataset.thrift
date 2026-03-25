@@ -318,3 +318,30 @@ struct MultiModalStoreOption {
     1: optional MultiModalStoreStrategy multi_modal_store_strategy,
     2: optional ContentType content_type, // 手动标记当前列本次导入的多模态类型，仅 image/video/audio 有效
 }
+
+struct Video {
+    1: optional string name,
+    2: optional string url,
+    3: optional string uri,
+    4: optional string thumb_url,
+
+    10: optional StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
+}
+
+struct Audio {
+    1: optional string format,
+    2: optional string url,
+    3: optional string name,
+    4: optional string uri,
+
+    10: optional StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
+}
+
+struct Image {
+    1: optional string name,
+    2: optional string url,
+    3: optional string uri,
+    4: optional string thumb_url,
+
+    10: optional StorageProvider storage_provider (vt.defined_only = "true") // 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri
+}

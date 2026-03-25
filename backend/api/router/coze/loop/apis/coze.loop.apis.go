@@ -70,6 +70,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_datasets.GET("/:dataset_id", append(_getdatasetMw(handler), apis.GetDataset)...)
 				_datasets.PATCH("/:dataset_id", append(_updatedatasetMw(handler), apis.UpdateDataset)...)
 				_datasets.POST("/list", append(_listdatasetsMw(handler), apis.ListDatasets)...)
+				{
+					_multi_part_data := _datasets.Group("/multi_part_data", _multi_part_dataMw(handler)...)
+					_multi_part_data.POST("/validate", append(_validatemultipartdataMw(handler), apis.ValidateMultiPartData)...)
+				}
 				_v10.GET("/tag_spec", append(_gettagspecMw(handler), apis.GetTagSpec)...)
 				_v10.POST("/tags", append(_tagsMw(handler), apis.CreateTag)...)
 				_tags := _v10.Group("/tags", _tagsMw(handler)...)
@@ -147,8 +151,8 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets.POST("/list", append(_listevaluationsetsMw(handler), apis.ListEvaluationSets)...)
 				_evaluation_sets.POST("/parse_import_source_file", append(_parseimportsourcefileMw(handler), apis.ParseImportSourceFile)...)
 				{
-					_multi_part_data := _evaluation_sets.Group("/multi_part_data", _multi_part_dataMw(handler)...)
-					_multi_part_data.POST("/validate", append(_validatemultipartdataMw(handler), apis.ValidateMultiPartData)...)
+					_multi_part_data0 := _evaluation_sets.Group("/multi_part_data", _multi_part_data0Mw(handler)...)
+					_multi_part_data0.POST("/validate", append(_validatemultipartdata0Mw(handler), apis.ValidateMultiPartData)...)
 				}
 				_v11.POST("/evaluator_template", append(_evaluator_templateMw(handler), apis.CreateEvaluatorTemplate)...)
 				_evaluator_template := _v11.Group("/evaluator_template", _evaluator_templateMw(handler)...)
