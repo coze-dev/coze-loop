@@ -98,6 +98,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ImportEvaluationSetOApi": kitex.NewMethodInfo(
+		importEvaluationSetOApiHandler,
+		newEvaluationOpenAPIServiceImportEvaluationSetOApiArgs,
+		newEvaluationOpenAPIServiceImportEvaluationSetOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetEvaluationSetJobOApi": kitex.NewMethodInfo(
+		getEvaluationSetJobOApiHandler,
+		newEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs,
+		newEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpdateEvaluationSetSchemaOApi": kitex.NewMethodInfo(
 		updateEvaluationSetSchemaOApiHandler,
 		newEvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs,
@@ -207,6 +221,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		runEvaluatorOApiHandler,
 		newEvaluationOpenAPIServiceRunEvaluatorOApiArgs,
 		newEvaluationOpenAPIServiceRunEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RunBuiltinEvaluatorOApi": kitex.NewMethodInfo(
+		runBuiltinEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -541,6 +562,44 @@ func newEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetEvaluationItemFieldOApiResult()
 }
 
+func importEvaluationSetOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ImportEvaluationSetOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceImportEvaluationSetOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceImportEvaluationSetOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceImportEvaluationSetOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceImportEvaluationSetOApiResult()
+}
+
+func getEvaluationSetJobOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetEvaluationSetJobOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetEvaluationSetJobOApiResult()
+}
+
 func updateEvaluationSetSchemaOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiResult)
@@ -843,6 +902,25 @@ func newEvaluationOpenAPIServiceRunEvaluatorOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceRunEvaluatorOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiResult()
+}
+
+func runBuiltinEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).RunBuiltinEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult()
 }
 
 func correctEvaluatorRecordOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1167,6 +1245,26 @@ func (p *kClient) GetEvaluationItemFieldOApi(ctx context.Context, req *openapi.G
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) ImportEvaluationSetOApi(ctx context.Context, req *openapi.ImportEvaluationSetOApiRequest) (r *openapi.ImportEvaluationSetOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceImportEvaluationSetOApiResult
+	if err = p.c.Call(ctx, "ImportEvaluationSetOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetEvaluationSetJobOApiResult
+	if err = p.c.Call(ctx, "GetEvaluationSetJobOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error) {
 	var _args openapi.EvaluationOpenAPIServiceUpdateEvaluationSetSchemaOApiArgs
 	_args.Req = req
@@ -1322,6 +1420,16 @@ func (p *kClient) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluato
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult
 	if err = p.c.Call(ctx, "RunEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult
+	if err = p.c.Call(ctx, "RunBuiltinEvaluatorOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

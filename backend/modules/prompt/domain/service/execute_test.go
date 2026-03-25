@@ -6,12 +6,14 @@ package service
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
+	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc/mocks"
@@ -21,6 +23,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/unittest"
+	loopentity "github.com/coze-dev/cozeloop-go/entity"
+	"github.com/coze-dev/cozeloop-go/spec/tracespec"
 )
 
 func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
@@ -227,23 +231,35 @@ func TestPromptServiceImpl_FormatPrompt(t *testing.T) {
 			ttFields := tt.fieldsGetter(ctrl)
 
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsCollector: NewToolResultsCollector(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 			gotFormattedMessages, err := p.FormatPrompt(tt.args.ctx, tt.args.prompt, tt.args.messages, tt.args.variableVals)
 
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if tt.wantErr == nil {
-				assert.Equal(t, tt.wantFormattedMessages, gotFormattedMessages)
+				assert.Equal(t, normalizeSkipRender(tt.wantFormattedMessages), normalizeSkipRender(gotFormattedMessages))
 			}
 		})
 	}
+}
+
+func normalizeSkipRender(messages []*entity.Message) []*entity.Message {
+	for _, message := range messages {
+		if message == nil {
+			continue
+		}
+		message.SkipRender = nil
+	}
+	return messages
 }
 
 func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
@@ -251,7 +267,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -267,7 +285,9 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 		t.Parallel()
 
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
 		}
 		param := ExecuteStreamingParam{
 			ExecuteParam: ExecuteParam{
@@ -333,9 +353,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 1,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -534,9 +556,11 @@ func TestPromptServiceImpl_ExecuteStreaming(t *testing.T) {
 			DebugStep: 2,
 		}
 		p := &PromptServiceImpl{
-			formatter: NewPromptFormatter(),
-			idgen:     mockIDGen,
-			llm:       mockLLM,
+			formatter:            NewPromptFormatter(),
+			toolConfigProvider:   NewToolConfigProvider(),
+			toolResultsCollector: NewToolResultsCollector(),
+			idgen:                mockIDGen,
+			llm:                  mockLLM,
 		}
 
 		stream := make(chan *entity.Reply)
@@ -922,14 +946,16 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 
 			ttFields := tt.fieldsGetter(ctrl)
 			p := &PromptServiceImpl{
-				formatter:        NewPromptFormatter(),
-				idgen:            ttFields.idgen,
-				debugLogRepo:     ttFields.debugLogRepo,
-				debugContextRepo: ttFields.debugContextRepo,
-				manageRepo:       ttFields.manageRepo,
-				configProvider:   ttFields.configProvider,
-				llm:              ttFields.llm,
-				file:             ttFields.file,
+				formatter:            NewPromptFormatter(),
+				toolConfigProvider:   NewToolConfigProvider(),
+				toolResultsCollector: NewToolResultsCollector(),
+				idgen:                ttFields.idgen,
+				debugLogRepo:         ttFields.debugLogRepo,
+				debugContextRepo:     ttFields.debugContextRepo,
+				manageRepo:           ttFields.manageRepo,
+				configProvider:       ttFields.configProvider,
+				llm:                  ttFields.llm,
+				file:                 ttFields.file,
 			}
 
 			gotReply, err := p.Execute(tt.args.ctx, tt.args.param)
@@ -947,6 +973,11 @@ func TestPromptServiceImpl_Execute(t *testing.T) {
 func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 	t.Parallel()
 	extra := ptr.Of(`{"foo":"bar"}`)
+	responseAPIConfig := &entity.ResponseAPIConfig{
+		PreviousResponseID: ptr.Of("prev-id"),
+		EnableCaching:      ptr.Of(true),
+		SessionID:          ptr.Of("session-123"),
+	}
 	prompt := &entity.Prompt{
 		ID:        1,
 		SpaceID:   42,
@@ -974,7 +1005,9 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 		},
 	}
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 	param := ExecuteParam{
 		Prompt: prompt,
@@ -984,21 +1017,25 @@ func TestPromptServiceImpl_prepareLLMCallParam_PreservesExtra(t *testing.T) {
 				Content: ptr.Of("Hi"),
 			},
 		},
-		VariableVals: nil,
-		Scenario:     entity.ScenarioPromptDebug,
+		VariableVals:      nil,
+		Scenario:          entity.ScenarioPromptDebug,
+		ResponseAPIConfig: responseAPIConfig,
 	}
-	got, err := svc.prepareLLMCallParam(context.Background(), param)
+	_, got, err := svc.prepareLLMCallParam(context.Background(), param)
 	assert.NoError(t, err)
 	if assert.NotNil(t, got.ModelConfig) {
 		assert.Equal(t, extra, got.ModelConfig.Extra)
 		assert.Equal(t, prompt.PromptCommit.PromptDetail.ModelConfig.Extra, got.ModelConfig.Extra)
 	}
+	assert.Equal(t, responseAPIConfig, got.ResponseAPIConfig)
 }
 
 func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	t.Parallel()
 	svc := &PromptServiceImpl{
-		formatter: NewPromptFormatter(),
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
 	}
 
 	tests := []struct {
@@ -1252,7 +1289,7 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
+			_, got, err := svc.prepareLLMCallParam(context.Background(), tt.param)
 			if tt.wantErr {
 				assert.Error(t, err)
 				if tt.errContains != "" {
@@ -1267,4 +1304,583 @@ func TestPromptServiceImpl_prepareLLMCallParam_ValidationErrors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPromptServiceImpl_reorganizeContexts_ToolResultMap(t *testing.T) {
+	t.Parallel()
+
+	p := &PromptServiceImpl{}
+	reply := &entity.Reply{
+		Item: &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("assistant"),
+				ToolCalls: []*entity.ToolCall{
+					{
+						ID: "call_1",
+						FunctionCall: &entity.FunctionCall{
+							Name:      "tool_a",
+							Arguments: ptr.Of(`{"k":"v"}`),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := p.reorganizeContexts(
+		[]*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("user")}},
+		map[string]string{"call_1tool_a": "tool output"},
+		reply,
+	)
+	assert.NoError(t, err)
+	assert.Len(t, got, 3)
+	assert.Equal(t, entity.RoleUser, got[0].Role)
+	assert.Equal(t, entity.RoleAssistant, got[1].Role)
+	assert.Equal(t, entity.RoleTool, got[2].Role)
+	assert.Equal(t, ptr.Of("call_1"), got[2].ToolCallID)
+	assert.Equal(t, ptr.Of("tool output"), got[2].Content)
+}
+
+func TestPromptServiceImpl_reportToolSpan_UsesToolResultMap(t *testing.T) {
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	p := &PromptServiceImpl{}
+	prompt := &entity.Prompt{
+		SpaceID:   42,
+		PromptKey: "pk",
+		PromptCommit: &entity.PromptCommit{
+			CommitInfo: &entity.CommitInfo{Version: "v1"},
+		},
+	}
+	args := ptr.Of(`{"a":1}`)
+	replyItem := &entity.ReplyItem{
+		Message: &entity.Message{
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID: "call_1",
+					FunctionCall: &entity.FunctionCall{
+						Name:      "tool_a",
+						Arguments: args,
+					},
+				},
+			},
+		},
+	}
+
+	p.reportToolSpan(context.Background(), prompt, map[string]string{"call_1tool_a": "tool output"}, replyItem)
+
+	if assert.Len(t, recorder.spans, 1) {
+		assert.Equal(t, "tool output", recorder.spans[0].output)
+		assert.Same(t, args, recorder.spans[0].input)
+		assert.Equal(t, loopentity.Prompt{PromptKey: "pk", Version: "v1"}, recorder.spans[0].prompt)
+		assert.True(t, recorder.spans[0].finished)
+	}
+}
+
+type recordingTracer struct {
+	spans []*recordingSpan
+}
+
+func (r *recordingTracer) StartSpan(ctx context.Context, name, spanType string, _ ...looptracer.StartSpanOption) (context.Context, looptracer.Span) {
+	span := &recordingSpan{name: name, spanType: spanType, startTime: time.Now()}
+	r.spans = append(r.spans, span)
+	return ctx, span
+}
+
+func (r *recordingTracer) GetSpanFromContext(ctx context.Context) looptracer.Span { return nil }
+func (r *recordingTracer) Flush(ctx context.Context)                              {}
+func (r *recordingTracer) Inject(ctx context.Context) context.Context             { return ctx }
+func (r *recordingTracer) InjectW3CTraceContext(ctx context.Context) map[string]string {
+	return map[string]string{}
+}
+
+type recordingSpan struct {
+	name      string
+	spanType  string
+	startTime time.Time
+
+	input    any
+	output   any
+	prompt   loopentity.Prompt
+	finished bool
+}
+
+func (s *recordingSpan) SetServiceName(ctx context.Context, serviceName string) {}
+func (s *recordingSpan) SetLogID(ctx context.Context, logID string)             {}
+func (s *recordingSpan) SetFinishTime(finishTime time.Time)                     {}
+func (s *recordingSpan) SetSystemTags(ctx context.Context, systemTags map[string]interface{}) {
+}
+func (s *recordingSpan) SetDeploymentEnv(ctx context.Context, deploymentEnv string) {}
+func (s *recordingSpan) GetSpanID() string                                          { return "" }
+func (s *recordingSpan) GetTraceID() string                                         { return "" }
+func (s *recordingSpan) GetBaggage() map[string]string                              { return nil }
+func (s *recordingSpan) SetInput(ctx context.Context, input interface{})            { s.input = input }
+func (s *recordingSpan) SetOutput(ctx context.Context, output interface{})          { s.output = output }
+func (s *recordingSpan) SetError(ctx context.Context, err error)                    {}
+func (s *recordingSpan) SetStatusCode(ctx context.Context, code int)                {}
+func (s *recordingSpan) SetUserID(ctx context.Context, userID string)               {}
+func (s *recordingSpan) SetUserIDBaggage(ctx context.Context, userID string)        {}
+func (s *recordingSpan) SetMessageID(ctx context.Context, messageID string)         {}
+func (s *recordingSpan) SetMessageIDBaggage(ctx context.Context, messageID string)  {}
+func (s *recordingSpan) SetThreadID(ctx context.Context, threadID string)           {}
+func (s *recordingSpan) SetThreadIDBaggage(ctx context.Context, threadID string)    {}
+func (s *recordingSpan) SetPrompt(ctx context.Context, prompt loopentity.Prompt)    { s.prompt = prompt }
+func (s *recordingSpan) SetModelProvider(ctx context.Context, modelProvider string) {
+}
+func (s *recordingSpan) SetModelName(ctx context.Context, modelName string) {}
+func (s *recordingSpan) SetModelCallOptions(ctx context.Context, callOptions interface{}) {
+}
+func (s *recordingSpan) SetInputTokens(ctx context.Context, inputTokens int) {}
+func (s *recordingSpan) SetOutputTokens(ctx context.Context, outputTokens int) {
+}
+
+func (s *recordingSpan) SetStartTimeFirstResp(ctx context.Context, startTimeFirstResp int64) {
+}
+func (s *recordingSpan) SetRuntime(ctx context.Context, runtime tracespec.Runtime) {}
+func (s *recordingSpan) SetTags(ctx context.Context, tagKVs map[string]interface{}) {
+}
+func (s *recordingSpan) SetBaggage(ctx context.Context, baggageItems map[string]string) {}
+func (s *recordingSpan) Finish(ctx context.Context)                                     { s.finished = true }
+func (s *recordingSpan) GetStartTime() time.Time                                        { return s.startTime }
+func (s *recordingSpan) ToHeader() (map[string]string, error)                           { return map[string]string{}, nil }
+func (s *recordingSpan) SetCallType(callType string)                                    {}
+
+func TestPromptServiceImpl_reportToolSpan_WithSignature(t *testing.T) {
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	p := &PromptServiceImpl{}
+	prompt := &entity.Prompt{
+		SpaceID:   10,
+		PromptKey: "pk",
+		PromptCommit: &entity.PromptCommit{
+			CommitInfo: &entity.CommitInfo{Version: "v2"},
+		},
+	}
+	sig := "sig_abc"
+	replyItem := &entity.ReplyItem{
+		Message: &entity.Message{
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID:        "call_1",
+					Signature: &sig,
+					FunctionCall: &entity.FunctionCall{
+						Name:      "tool_a",
+						Arguments: ptr.Of(`{"x":1}`),
+					},
+				},
+			},
+		},
+	}
+
+	p.reportToolSpan(context.Background(), prompt, map[string]string{"call_1tool_asig_abc": "result with sig"}, replyItem)
+
+	if assert.Len(t, recorder.spans, 1) {
+		assert.Equal(t, "result with sig", recorder.spans[0].output)
+		assert.Equal(t, loopentity.Prompt{PromptKey: "pk", Version: "v2"}, recorder.spans[0].prompt)
+		assert.True(t, recorder.spans[0].finished)
+	}
+}
+
+func TestPromptServiceImpl_reorganizeContexts_WithSignature(t *testing.T) {
+	t.Parallel()
+
+	p := &PromptServiceImpl{}
+	sig := "sig_xyz"
+	reply := &entity.Reply{
+		Item: &entity.ReplyItem{
+			Message: &entity.Message{
+				Role: entity.RoleAssistant,
+				ToolCalls: []*entity.ToolCall{
+					{
+						ID:        "call_2",
+						Signature: &sig,
+						FunctionCall: &entity.FunctionCall{
+							Name:      "tool_b",
+							Arguments: ptr.Of(`{}`),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := p.reorganizeContexts(
+		[]*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("hi")}},
+		map[string]string{"call_2tool_bsig_xyz": "tool output with sig"},
+		reply,
+	)
+	assert.NoError(t, err)
+	assert.Len(t, got, 3)
+	assert.Equal(t, entity.RoleTool, got[2].Role)
+	assert.Equal(t, ptr.Of("call_2"), got[2].ToolCallID)
+	assert.Equal(t, ptr.Of("tool output with sig"), got[2].Content)
+}
+
+func TestPromptServiceImpl_Execute_WithTracing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(111), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("traced response"),
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID: "tc1",
+					FunctionCall: &entity.FunctionCall{
+						Name:      "fn1",
+						Arguments: ptr.Of(`{"a":"b"}`),
+					},
+				},
+			},
+		},
+		FinishReason: "tool_calls",
+		TokenUsage: &entity.TokenUsage{
+			InputTokens:  5,
+			OutputTokens: 3,
+		},
+	}, nil)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("final"),
+		},
+		FinishReason: "stop",
+		TokenUsage: &entity.TokenUsage{
+			InputTokens:  7,
+			OutputTokens: 4,
+		},
+	}, nil)
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	reply, err := p.Execute(context.Background(), ExecuteParam{
+		Prompt: &entity.Prompt{
+			ID:        1,
+			SpaceID:   100,
+			PromptKey: "traced_prompt",
+			PromptDraft: &entity.PromptDraft{
+				PromptDetail: &entity.PromptDetail{
+					PromptTemplate: &entity.PromptTemplate{
+						TemplateType: entity.TemplateTypeNormal,
+						Messages: []*entity.Message{
+							{Role: entity.RoleSystem, Content: ptr.Of("system")},
+						},
+					},
+				},
+			},
+		},
+		Messages: []*entity.Message{
+			{Role: entity.RoleUser, Content: ptr.Of("hello")},
+		},
+		MockTools: []*entity.MockTool{
+			{Name: "fn1", MockResponse: "mock_result"},
+		},
+		SingleStep:     false,
+		DisableTracing: false,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, reply)
+	assert.Equal(t, ptr.Of("final"), reply.Item.Message.Content)
+	assert.Equal(t, int64(12), reply.Item.TokenUsage.InputTokens)
+	assert.Equal(t, int64(7), reply.Item.TokenUsage.OutputTokens)
+	assert.True(t, len(recorder.spans) >= 2)
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_WithTracing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(222), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		param.ResultStream <- &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+		}
+		return &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+			FinishReason: "stop",
+			TokenUsage: &entity.TokenUsage{
+				InputTokens:  8,
+				OutputTokens: 4,
+			},
+		}, nil
+	})
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	reply, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        2,
+				SpaceID:   200,
+				PromptKey: "stream_traced",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages: []*entity.Message{
+				{Role: entity.RoleUser, Content: ptr.Of("q")},
+			},
+			SingleStep:     true,
+			DisableTracing: false,
+		},
+		ResultStream: stream,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, reply)
+	assert.Equal(t, ptr.Of("streamed"), reply.Item.Message.Content)
+	assert.True(t, len(recorder.spans) >= 1)
+}
+
+func TestPromptServiceImpl_Execute_CollectToolResultsError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(333), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("ok"),
+		},
+		TokenUsage: &entity.TokenUsage{InputTokens: 1, OutputTokens: 1},
+	}, nil)
+
+	collectErr := errorx.New("collect tool results failed")
+	mockCollector := &failingToolResultsCollector{err: collectErr}
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: mockCollector,
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	_, err := p.Execute(context.Background(), ExecuteParam{
+		Prompt: &entity.Prompt{
+			ID:        1,
+			SpaceID:   100,
+			PromptKey: "test",
+			PromptDraft: &entity.PromptDraft{
+				PromptDetail: &entity.PromptDetail{
+					PromptTemplate: &entity.PromptTemplate{
+						TemplateType: entity.TemplateTypeNormal,
+						Messages: []*entity.Message{
+							{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+						},
+					},
+				},
+			},
+		},
+		Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("hi")}},
+		SingleStep:     true,
+		DisableTracing: true,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "collect tool results failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_CollectToolResultsError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(444), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		return &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+			TokenUsage: &entity.TokenUsage{InputTokens: 1, OutputTokens: 1},
+		}, nil
+	})
+
+	collectErr := errorx.New("streaming collect failed")
+	mockCollector := &failingToolResultsCollector{err: collectErr}
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: mockCollector,
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        2,
+				SpaceID:   200,
+				PromptKey: "stream_test",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("q")}},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "streaming collect failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_StreamingCallError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(555), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		return nil, errorx.New("streaming call failed")
+	})
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        3,
+				SpaceID:   300,
+				PromptKey: "stream_err",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("q")}},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "streaming call failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_FormatPromptError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(666), nil)
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        4,
+				SpaceID:   400,
+				PromptKey: "stream_fmt_err",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeGoTemplate,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("{{.Bad")},
+							},
+						},
+					},
+				},
+			},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+}
+
+type failingToolResultsCollector struct {
+	err error
+}
+
+func (f *failingToolResultsCollector) CollectToolResults(ctx context.Context, param CollectToolResultsParam) (map[string]string, error) {
+	return nil, f.err
 }

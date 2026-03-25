@@ -9,8 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 )
@@ -18,7 +17,7 @@ import (
 type openAPIPromptTestCase struct {
 	name string
 	do   *entity.Prompt
-	dto  *openapi.Prompt
+	dto  *domainopenapi.Prompt
 }
 
 func mockOpenAPIPromptCases() []openAPIPromptTestCase {
@@ -35,7 +34,7 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 				SpaceID:   0,
 				PromptKey: "",
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(0)),
 				PromptKey:   ptr.Of(""),
 				Version:     ptr.Of(""),
@@ -53,7 +52,7 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
@@ -92,23 +91,23 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				PromptTemplate: &openapi.PromptTemplate{
-					TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-					Messages: []*openapi.Message{
+				PromptTemplate: &domainopenapi.PromptTemplate{
+					TemplateType: ptr.Of(domainopenapi.TemplateTypeNormal),
+					Messages: []*domainopenapi.Message{
 						{
-							Role:    ptr.Of(prompt.RoleSystem),
+							Role:    ptr.Of(domainopenapi.RoleSystem),
 							Content: ptr.Of("You are a helpful assistant."),
 						},
 					},
-					VariableDefs: []*openapi.VariableDef{
+					VariableDefs: []*domainopenapi.VariableDef{
 						{
 							Key:  ptr.Of("var1"),
 							Desc: ptr.Of("Variable 1"),
-							Type: ptr.Of(prompt.VariableTypeString),
+							Type: ptr.Of(domainopenapi.VariableTypeString),
 						},
 					},
 				},
@@ -141,14 +140,14 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				Tools: []*openapi.Tool{
+				Tools: []*domainopenapi.Tool{
 					{
-						Type: ptr.Of(prompt.ToolTypeFunction),
-						Function: &openapi.Function{
+						Type: ptr.Of(domainopenapi.ToolTypeFunction),
+						Function: &domainopenapi.Function{
 							Name:        ptr.Of("test_function"),
 							Description: ptr.Of("Test Function"),
 							Parameters:  ptr.Of(`{"type":"object","properties":{}}`),
@@ -177,12 +176,12 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				ToolCallConfig: &openapi.ToolCallConfig{
-					ToolChoice: ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolCallConfig: &domainopenapi.ToolCallConfig{
+					ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 				},
 			},
 		},
@@ -213,11 +212,11 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				LlmConfig: &openapi.LLMConfig{
+				LlmConfig: &domainopenapi.LLMConfig{
 					Temperature:      ptr.Of(0.7),
 					MaxTokens:        ptr.Of(int32(1000)),
 					TopK:             ptr.Of(int32(50)),
@@ -284,40 +283,40 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				PromptTemplate: &openapi.PromptTemplate{
-					TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-					Messages: []*openapi.Message{
+				PromptTemplate: &domainopenapi.PromptTemplate{
+					TemplateType: ptr.Of(domainopenapi.TemplateTypeNormal),
+					Messages: []*domainopenapi.Message{
 						{
-							Role:    ptr.Of(prompt.RoleSystem),
+							Role:    ptr.Of(domainopenapi.RoleSystem),
 							Content: ptr.Of("You are a helpful assistant."),
 						},
 					},
-					VariableDefs: []*openapi.VariableDef{
+					VariableDefs: []*domainopenapi.VariableDef{
 						{
 							Key:  ptr.Of("var1"),
 							Desc: ptr.Of("Variable 1"),
-							Type: ptr.Of(prompt.VariableTypeString),
+							Type: ptr.Of(domainopenapi.VariableTypeString),
 						},
 					},
 				},
-				Tools: []*openapi.Tool{
+				Tools: []*domainopenapi.Tool{
 					{
-						Type: ptr.Of(prompt.ToolTypeFunction),
-						Function: &openapi.Function{
+						Type: ptr.Of(domainopenapi.ToolTypeFunction),
+						Function: &domainopenapi.Function{
 							Name:        ptr.Of("test_function"),
 							Description: ptr.Of("Test Function"),
 							Parameters:  ptr.Of(`{"type":"object","properties":{}}`),
 						},
 					},
 				},
-				ToolCallConfig: &openapi.ToolCallConfig{
-					ToolChoice: ptr.Of(prompt.ToolChoiceTypeAuto),
+				ToolCallConfig: &domainopenapi.ToolCallConfig{
+					ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 				},
-				LlmConfig: &openapi.LLMConfig{
+				LlmConfig: &domainopenapi.LLMConfig{
 					Temperature:      ptr.Of(0.7),
 					MaxTokens:        ptr.Of(int32(1000)),
 					TopK:             ptr.Of(int32(50)),
@@ -344,7 +343,7 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					PromptDetail: nil,
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
@@ -365,13 +364,13 @@ func mockOpenAPIPromptCases() []openAPIPromptTestCase {
 					},
 				},
 			},
-			dto: &openapi.Prompt{
+			dto: &domainopenapi.Prompt{
 				WorkspaceID: ptr.Of(int64(456)),
 				PromptKey:   ptr.Of("test_prompt"),
 				Version:     ptr.Of("1.0.0"),
-				PromptTemplate: &openapi.PromptTemplate{
+				PromptTemplate: &domainopenapi.PromptTemplate{
 					TemplateType: ptr.Of(""),
-					VariableDefs: []*openapi.VariableDef{},
+					VariableDefs: []*domainopenapi.VariableDef{},
 					Metadata:     map[string]string{"commit": "meta"},
 				},
 			},
@@ -394,7 +393,7 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.PromptTemplate
-		want *openapi.PromptTemplate
+		want *domainopenapi.PromptTemplate
 	}{
 		{
 			name: "nil input",
@@ -419,19 +418,19 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 					},
 				},
 			},
-			want: &openapi.PromptTemplate{
-				TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-				Messages: []*openapi.Message{
+			want: &domainopenapi.PromptTemplate{
+				TemplateType: ptr.Of(domainopenapi.TemplateTypeNormal),
+				Messages: []*domainopenapi.Message{
 					{
-						Role:    ptr.Of(prompt.RoleSystem),
+						Role:    ptr.Of(domainopenapi.RoleSystem),
 						Content: ptr.Of("You are a helpful assistant."),
 					},
 				},
-				VariableDefs: []*openapi.VariableDef{
+				VariableDefs: []*domainopenapi.VariableDef{
 					{
 						Key:  ptr.Of("var1"),
 						Desc: ptr.Of("Variable 1"),
-						Type: ptr.Of(prompt.VariableTypeString),
+						Type: ptr.Of(domainopenapi.VariableTypeString),
 					},
 				},
 			},
@@ -441,10 +440,10 @@ func TestOpenAPIPromptTemplateDO2DTO(t *testing.T) {
 			do: &entity.PromptTemplate{
 				Metadata: map[string]string{"k": "v"},
 			},
-			want: &openapi.PromptTemplate{
+			want: &domainopenapi.PromptTemplate{
 				TemplateType: ptr.Of(""),
 				Messages:     nil,
-				VariableDefs: []*openapi.VariableDef{},
+				VariableDefs: []*domainopenapi.VariableDef{},
 				Metadata:     map[string]string{"k": "v"},
 			},
 		},
@@ -461,7 +460,7 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ModelConfig
-		want *openapi.LLMConfig
+		want *domainopenapi.LLMConfig
 	}{
 		{
 			name: "nil input",
@@ -480,7 +479,7 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 				FrequencyPenalty: ptr.Of(0.5),
 				JSONMode:         ptr.Of(true),
 			},
-			want: &openapi.LLMConfig{
+			want: &domainopenapi.LLMConfig{
 				Temperature:      ptr.Of(0.7),
 				MaxTokens:        ptr.Of(int32(1000)),
 				TopK:             ptr.Of(int32(50)),
@@ -488,6 +487,30 @@ func TestOpenAPIModelConfigDO2DTO(t *testing.T) {
 				PresencePenalty:  ptr.Of(0.5),
 				FrequencyPenalty: ptr.Of(0.5),
 				JSONMode:         ptr.Of(true),
+			},
+		},
+		{
+			name: "model config with thinking and extra",
+			do: &entity.ModelConfig{
+				ModelID:     456,
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &entity.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+					ReasoningEffort: ptr.Of(entity.ReasoningEffortLow),
+				},
+			},
+			want: &domainopenapi.LLMConfig{
+				MaxTokens:   ptr.Of(int32(512)),
+				Temperature: ptr.Of(0.3),
+				Extra:       ptr.Of(`{"trace":"on"}`),
+				Thinking: &domainopenapi.ThinkingConfig{
+					BudgetTokens:    ptr.Of(int64(128)),
+					ThinkingOption:  ptr.Of(domainopenapi.ThinkingOptionEnabled),
+					ReasoningEffort: ptr.Of(domainopenapi.ReasoningEffortLow),
+				},
 			},
 		},
 	}
@@ -503,7 +526,7 @@ func TestOpenAPIToolCallConfigDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ToolCallConfig
-		want *openapi.ToolCallConfig
+		want *domainopenapi.ToolCallConfig
 	}{
 		{
 			name: "nil input",
@@ -515,8 +538,8 @@ func TestOpenAPIToolCallConfigDO2DTO(t *testing.T) {
 			do: &entity.ToolCallConfig{
 				ToolChoice: entity.ToolChoiceTypeAuto,
 			},
-			want: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(prompt.ToolChoiceTypeAuto),
+			want: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 			},
 		},
 	}
@@ -532,32 +555,32 @@ func TestOpenAPIContentTypeDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   entity.ContentType
-		want openapi.ContentType
+		want domainopenapi.ContentType
 	}{
 		{
 			name: "text content type",
 			do:   entity.ContentTypeText,
-			want: openapi.ContentTypeText,
+			want: domainopenapi.ContentTypeText,
 		},
 		{
 			name: "multi part variable content type",
 			do:   entity.ContentTypeMultiPartVariable,
-			want: openapi.ContentTypeMultiPartVariable,
+			want: domainopenapi.ContentTypeMultiPartVariable,
 		},
 		{
 			name: "image url content type",
 			do:   entity.ContentTypeImageURL,
-			want: openapi.ContentTypeImageURL,
+			want: domainopenapi.ContentTypeImageURL,
 		},
 		{
 			name: "video url content type",
 			do:   entity.ContentTypeVideoURL,
-			want: openapi.ContentTypeVideoURL,
+			want: domainopenapi.ContentTypeVideoURL,
 		},
 		{
 			name: "unknown content type - should default to text",
 			do:   entity.ContentType("unknown"),
-			want: openapi.ContentTypeText,
+			want: domainopenapi.ContentTypeText,
 		},
 	}
 	for _, tt := range tests {
@@ -572,7 +595,7 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ContentPart
-		want *openapi.ContentPart
+		want *domainopenapi.ContentPart
 	}{
 		{
 			name: "nil input",
@@ -585,8 +608,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				Type: entity.ContentTypeText,
 				Text: ptr.Of("Hello world"),
 			},
-			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeText),
+			want: &domainopenapi.ContentPart{
+				Type: ptr.Of(domainopenapi.ContentTypeText),
 				Text: ptr.Of("Hello world"),
 			},
 		},
@@ -596,8 +619,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				Type: entity.ContentTypeMultiPartVariable,
 				Text: ptr.Of("{{variable}}"),
 			},
-			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+			want: &domainopenapi.ContentPart{
+				Type: ptr.Of(domainopenapi.ContentTypeMultiPartVariable),
 				Text: ptr.Of("{{variable}}"),
 			},
 		},
@@ -607,8 +630,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				Type: entity.ContentTypeText,
 				Text: nil,
 			},
-			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeText),
+			want: &domainopenapi.ContentPart{
+				Type: ptr.Of(domainopenapi.ContentTypeText),
 				Text: nil,
 			},
 		},
@@ -622,8 +645,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 					URL: "https://example.com/image.jpg",
 				},
 			},
-			want: &openapi.ContentPart{
-				Type:     ptr.Of(openapi.ContentTypeImageURL),
+			want: &domainopenapi.ContentPart{
+				Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 				Text:     ptr.Of("image description"),
 				ImageURL: ptr.Of("https://example.com/image.jpg"),
 			},
@@ -634,8 +657,8 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 				Type: entity.ContentTypeText,
 				Text: ptr.Of(""),
 			},
-			want: &openapi.ContentPart{
-				Type: ptr.Of(openapi.ContentTypeText),
+			want: &domainopenapi.ContentPart{
+				Type: ptr.Of(domainopenapi.ContentTypeText),
 				Text: ptr.Of(""),
 			},
 		},
@@ -650,10 +673,10 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 					Fps: ptr.Of(2.0),
 				},
 			},
-			want: &openapi.ContentPart{
-				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+			want: &domainopenapi.ContentPart{
+				Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
 				VideoURL: ptr.Of("https://example.com/video.mp4"),
-				Config: &openapi.MediaConfig{
+				Config: &domainopenapi.MediaConfig{
 					Fps: ptr.Of(2.0),
 				},
 			},
@@ -666,8 +689,37 @@ func TestOpenAPIContentPartDO2DTO(t *testing.T) {
 					URL: "https://example.com/video.mp4",
 				},
 			},
-			want: &openapi.ContentPart{
-				Type:     ptr.Of(openapi.ContentTypeVideoURL),
+			want: &domainopenapi.ContentPart{
+				Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
+				VideoURL: ptr.Of("https://example.com/video.mp4"),
+			},
+		},
+		{
+			name: "video url empty string keeps nil in dto",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "",
+				},
+				MediaConfig: &entity.MediaConfig{},
+			},
+			want: &domainopenapi.ContentPart{
+				Type: ptr.Of(domainopenapi.ContentTypeVideoURL),
+			},
+		},
+		{
+			name: "media config with nil fps keeps nil config",
+			do: &entity.ContentPart{
+				Type: entity.ContentTypeVideoURL,
+				VideoURL: &entity.VideoURL{
+					URL: "https://example.com/video.mp4",
+				},
+				MediaConfig: &entity.MediaConfig{
+					Fps: nil,
+				},
+			},
+			want: &domainopenapi.ContentPart{
+				Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
 				VideoURL: ptr.Of("https://example.com/video.mp4"),
 			},
 		},
@@ -684,7 +736,7 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   []*entity.ContentPart
-		want []*openapi.ContentPart
+		want []*domainopenapi.ContentPart
 	}{
 		{
 			name: "nil input",
@@ -694,7 +746,7 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 		{
 			name: "empty array",
 			do:   []*entity.ContentPart{},
-			want: []*openapi.ContentPart{},
+			want: []*domainopenapi.ContentPart{},
 		},
 		{
 			name: "array with nil elements",
@@ -706,9 +758,9 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 				},
 				nil,
 			},
-			want: []*openapi.ContentPart{
+			want: []*domainopenapi.ContentPart{
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Hello"),
 				},
 			},
@@ -725,13 +777,13 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					Text: ptr.Of("{{variable}}"),
 				},
 			},
-			want: []*openapi.ContentPart{
+			want: []*domainopenapi.ContentPart{
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Hello"),
 				},
 				{
-					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+					Type: ptr.Of(domainopenapi.ContentTypeMultiPartVariable),
 					Text: ptr.Of("{{variable}}"),
 				},
 			},
@@ -756,18 +808,18 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					Text: ptr.Of("{{user_input}}"),
 				},
 			},
-			want: []*openapi.ContentPart{
+			want: []*domainopenapi.ContentPart{
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Text content"),
 				},
 				{
-					Type:     ptr.Of(openapi.ContentTypeImageURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 					Text:     ptr.Of("Image description"),
 					ImageURL: ptr.Of("https://example.com/image.jpg"),
 				},
 				{
-					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+					Type: ptr.Of(domainopenapi.ContentTypeMultiPartVariable),
 					Text: ptr.Of("{{user_input}}"),
 				},
 			},
@@ -779,7 +831,7 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 				nil,
 				nil,
 			},
-			want: []*openapi.ContentPart{},
+			want: []*domainopenapi.ContentPart{},
 		},
 		{
 			name: "array with video url part",
@@ -794,11 +846,11 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					},
 				},
 			},
-			want: []*openapi.ContentPart{
+			want: []*domainopenapi.ContentPart{
 				{
-					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
 					VideoURL: ptr.Of("https://example.com/video.mp4"),
-					Config: &openapi.MediaConfig{
+					Config: &domainopenapi.MediaConfig{
 						Fps: ptr.Of(1.5),
 					},
 				},
@@ -815,11 +867,11 @@ func TestOpenAPIBatchContentPartDO2DTO(t *testing.T) {
 					},
 				},
 			},
-			want: []*openapi.ContentPart{
+			want: []*domainopenapi.ContentPart{
 				{
-					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
-					Config: &openapi.MediaConfig{
+					Config: &domainopenapi.MediaConfig{
 						Fps: ptr.Of(2.4),
 					},
 				},
@@ -840,7 +892,7 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.Message
-		want *openapi.Message
+		want *domainopenapi.Message
 	}{
 		{
 			name: "nil input",
@@ -854,8 +906,8 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 				ReasoningContent: ptr.Of("thinking..."),
 				Content:          ptr.Of("response"),
 			},
-			want: &openapi.Message{
-				Role:             ptr.Of(prompt.RoleAssistant),
+			want: &domainopenapi.Message{
+				Role:             ptr.Of(domainopenapi.RoleAssistant),
 				ReasoningContent: ptr.Of("thinking..."),
 				Content:          ptr.Of("response"),
 			},
@@ -867,8 +919,8 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 				Content:    ptr.Of("tool response"),
 				ToolCallID: ptr.Of("call_123"),
 			},
-			want: &openapi.Message{
-				Role:       ptr.Of(prompt.RoleTool),
+			want: &domainopenapi.Message{
+				Role:       ptr.Of(domainopenapi.RoleTool),
 				Content:    ptr.Of("tool response"),
 				ToolCallID: ptr.Of("call_123"),
 			},
@@ -890,20 +942,33 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 					},
 				},
 			},
-			want: &openapi.Message{
-				Role:    ptr.Of(prompt.RoleAssistant),
+			want: &domainopenapi.Message{
+				Role:    ptr.Of(domainopenapi.RoleAssistant),
 				Content: ptr.Of("I'll use a tool"),
-				ToolCalls: []*openapi.ToolCall{
+				ToolCalls: []*domainopenapi.ToolCall{
 					{
 						Index: ptr.Of(int32(0)),
 						ID:    ptr.Of("call_123"),
-						Type:  ptr.Of(openapi.ToolTypeFunction),
-						FunctionCall: &openapi.FunctionCall{
+						Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+						FunctionCall: &domainopenapi.FunctionCall{
 							Name:      ptr.Of("test_function"),
 							Arguments: ptr.Of(`{"arg1": "value1"}`),
 						},
 					},
 				},
+			},
+		},
+		{
+			name: "message with skip render",
+			do: &entity.Message{
+				Role:       entity.RoleUser,
+				Content:    ptr.Of("skip this"),
+				SkipRender: ptr.Of(true),
+			},
+			want: &domainopenapi.Message{
+				Role:       ptr.Of(domainopenapi.RoleUser),
+				Content:    ptr.Of("skip this"),
+				SkipRender: ptr.Of(true),
 			},
 		},
 		{
@@ -925,17 +990,17 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 					},
 				},
 			},
-			want: &openapi.Message{
-				Role:             ptr.Of(prompt.RoleAssistant),
+			want: &domainopenapi.Message{
+				Role:             ptr.Of(domainopenapi.RoleAssistant),
 				ReasoningContent: ptr.Of("analyzing the request"),
 				Content:          ptr.Of("I need to call a function"),
 				ToolCallID:       ptr.Of("call_456"),
-				ToolCalls: []*openapi.ToolCall{
+				ToolCalls: []*domainopenapi.ToolCall{
 					{
 						Index: ptr.Of(int32(1)),
 						ID:    ptr.Of("call_789"),
-						Type:  ptr.Of(openapi.ToolTypeFunction),
-						FunctionCall: &openapi.FunctionCall{
+						Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+						FunctionCall: &domainopenapi.FunctionCall{
 							Name:      ptr.Of("another_function"),
 							Arguments: ptr.Of(`{"param": "test"}`),
 						},
@@ -949,8 +1014,8 @@ func TestOpenAPIMessageDO2DTO_NewFields(t *testing.T) {
 				Role:     entity.RoleAssistant,
 				Metadata: map[string]string{"meta": "value"},
 			},
-			want: &openapi.Message{
-				Role:     ptr.Of(prompt.RoleAssistant),
+			want: &domainopenapi.Message{
+				Role:     ptr.Of(domainopenapi.RoleAssistant),
 				Metadata: map[string]string{"meta": "value"},
 			},
 		},
@@ -967,7 +1032,7 @@ func TestOpenAPIContentPartDO2DTO_NewFields(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ContentPart
-		want *openapi.ContentPart
+		want *domainopenapi.ContentPart
 	}{
 		{
 			name: "nil input",
@@ -984,8 +1049,8 @@ func TestOpenAPIContentPartDO2DTO_NewFields(t *testing.T) {
 					URL: "https://example.com/image.jpg",
 				},
 			},
-			want: &openapi.ContentPart{
-				Type:     ptr.Of(openapi.ContentTypeImageURL),
+			want: &domainopenapi.ContentPart{
+				Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 				Text:     ptr.Of("image description"),
 				ImageURL: ptr.Of("https://example.com/image.jpg"),
 			},
@@ -997,8 +1062,8 @@ func TestOpenAPIContentPartDO2DTO_NewFields(t *testing.T) {
 				Text:       ptr.Of("base64 image"),
 				Base64Data: ptr.Of("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="),
 			},
-			want: &openapi.ContentPart{
-				Type:       ptr.Of(openapi.ContentTypeBase64Data),
+			want: &domainopenapi.ContentPart{
+				Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 				Text:       ptr.Of("base64 image"),
 				Base64Data: ptr.Of("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="),
 			},
@@ -1014,8 +1079,8 @@ func TestOpenAPIContentPartDO2DTO_NewFields(t *testing.T) {
 				},
 				Base64Data: ptr.Of("base64data"),
 			},
-			want: &openapi.ContentPart{
-				Type:       ptr.Of(openapi.ContentTypeImageURL),
+			want: &domainopenapi.ContentPart{
+				Type:       ptr.Of(domainopenapi.ContentTypeImageURL),
 				Text:       ptr.Of("image with multiple formats"),
 				ImageURL:   ptr.Of("https://example.com/image.png"),
 				Base64Data: ptr.Of("base64data"),
@@ -1029,8 +1094,8 @@ func TestOpenAPIContentPartDO2DTO_NewFields(t *testing.T) {
 				ImageURL:   nil,
 				Base64Data: nil,
 			},
-			want: &openapi.ContentPart{
-				Type:       ptr.Of(openapi.ContentTypeText),
+			want: &domainopenapi.ContentPart{
+				Type:       ptr.Of(domainopenapi.ContentTypeText),
 				Text:       ptr.Of("just text"),
 				ImageURL:   nil,
 				Base64Data: nil,
@@ -1049,37 +1114,37 @@ func TestOpenAPIContentTypeDO2DTO_NewTypes(t *testing.T) {
 	tests := []struct {
 		name string
 		do   entity.ContentType
-		want openapi.ContentType
+		want domainopenapi.ContentType
 	}{
 		{
 			name: "text content type",
 			do:   entity.ContentTypeText,
-			want: openapi.ContentTypeText,
+			want: domainopenapi.ContentTypeText,
 		},
 		{
 			name: "image url content type",
 			do:   entity.ContentTypeImageURL,
-			want: openapi.ContentTypeImageURL,
+			want: domainopenapi.ContentTypeImageURL,
 		},
 		{
 			name: "video url content type",
 			do:   entity.ContentTypeVideoURL,
-			want: openapi.ContentTypeVideoURL,
+			want: domainopenapi.ContentTypeVideoURL,
 		},
 		{
 			name: "base64 data content type",
 			do:   entity.ContentTypeBase64Data,
-			want: openapi.ContentTypeBase64Data,
+			want: domainopenapi.ContentTypeBase64Data,
 		},
 		{
 			name: "multi part variable content type",
 			do:   entity.ContentTypeMultiPartVariable,
-			want: openapi.ContentTypeMultiPartVariable,
+			want: domainopenapi.ContentTypeMultiPartVariable,
 		},
 		{
 			name: "unknown content type - should default to text",
 			do:   entity.ContentType("unknown"),
-			want: openapi.ContentTypeText,
+			want: domainopenapi.ContentTypeText,
 		},
 	}
 	for _, tt := range tests {
@@ -1095,7 +1160,7 @@ func TestOpenAPIContentTypeDO2DTO_NewTypes(t *testing.T) {
 func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
-		dtos []*openapi.Message
+		dtos []*domainopenapi.Message
 		want []*entity.Message
 	}{
 		{
@@ -1105,15 +1170,15 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 		},
 		{
 			name: "empty array",
-			dtos: []*openapi.Message{},
+			dtos: []*domainopenapi.Message{},
 			want: nil,
 		},
 		{
 			name: "array with nil elements",
-			dtos: []*openapi.Message{
+			dtos: []*domainopenapi.Message{
 				nil,
 				{
-					Role:    ptr.Of(prompt.RoleUser),
+					Role:    ptr.Of(domainopenapi.RoleUser),
 					Content: ptr.Of("Hello"),
 				},
 				nil,
@@ -1127,15 +1192,16 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 		},
 		{
 			name: "normal array conversion",
-			dtos: []*openapi.Message{
+			dtos: []*domainopenapi.Message{
 				{
-					Role:    ptr.Of(prompt.RoleSystem),
+					Role:    ptr.Of(domainopenapi.RoleSystem),
 					Content: ptr.Of("You are a helpful assistant."),
 				},
 				{
-					Role:             ptr.Of(prompt.RoleAssistant),
+					Role:             ptr.Of(domainopenapi.RoleAssistant),
 					ReasoningContent: ptr.Of("thinking..."),
 					Content:          ptr.Of("I can help you."),
+					SkipRender:       ptr.Of(true),
 				},
 			},
 			want: []*entity.Message{
@@ -1147,25 +1213,26 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 					Role:             entity.RoleAssistant,
 					ReasoningContent: ptr.Of("thinking..."),
 					Content:          ptr.Of("I can help you."),
+					SkipRender:       ptr.Of(true),
 				},
 			},
 		},
 		{
 			name: "complex messages with tool calls",
-			dtos: []*openapi.Message{
+			dtos: []*domainopenapi.Message{
 				{
-					Role:    ptr.Of(prompt.RoleUser),
+					Role:    ptr.Of(domainopenapi.RoleUser),
 					Content: ptr.Of("Calculate 2+2"),
 				},
 				{
-					Role:    ptr.Of(prompt.RoleAssistant),
+					Role:    ptr.Of(domainopenapi.RoleAssistant),
 					Content: ptr.Of("I'll calculate that for you."),
-					ToolCalls: []*openapi.ToolCall{
+					ToolCalls: []*domainopenapi.ToolCall{
 						{
 							Index: ptr.Of(int32(0)),
 							ID:    ptr.Of("call_123"),
-							Type:  ptr.Of(openapi.ToolTypeFunction),
-							FunctionCall: &openapi.FunctionCall{
+							Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+							FunctionCall: &domainopenapi.FunctionCall{
 								Name:      ptr.Of("calculator"),
 								Arguments: ptr.Of(`{"expression": "2+2"}`),
 							},
@@ -1173,7 +1240,7 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 					},
 				},
 				{
-					Role:       ptr.Of(prompt.RoleTool),
+					Role:       ptr.Of(domainopenapi.RoleTool),
 					Content:    ptr.Of("4"),
 					ToolCallID: ptr.Of("call_123"),
 				},
@@ -1207,16 +1274,16 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 		},
 		{
 			name: "messages with content parts",
-			dtos: []*openapi.Message{
+			dtos: []*domainopenapi.Message{
 				{
-					Role: ptr.Of(prompt.RoleUser),
-					Parts: []*openapi.ContentPart{
+					Role: ptr.Of(domainopenapi.RoleUser),
+					Parts: []*domainopenapi.ContentPart{
 						{
-							Type: ptr.Of(openapi.ContentTypeText),
+							Type: ptr.Of(domainopenapi.ContentTypeText),
 							Text: ptr.Of("What's in this image?"),
 						},
 						{
-							Type:     ptr.Of(openapi.ContentTypeImageURL),
+							Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 							ImageURL: ptr.Of("https://example.com/image.jpg"),
 						},
 					},
@@ -1242,9 +1309,9 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 		},
 		{
 			name: "messages with metadata",
-			dtos: []*openapi.Message{
+			dtos: []*domainopenapi.Message{
 				{
-					Role:     ptr.Of(prompt.RoleAssistant),
+					Role:     ptr.Of(domainopenapi.RoleAssistant),
 					Metadata: map[string]string{"meta": "value"},
 				},
 			},
@@ -1267,7 +1334,7 @@ func TestOpenAPIBatchMessageDTO2DO(t *testing.T) {
 func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
-		dtos []*openapi.ContentPart
+		dtos []*domainopenapi.ContentPart
 		want []*entity.ContentPart
 	}{
 		{
@@ -1277,15 +1344,15 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 		},
 		{
 			name: "empty array",
-			dtos: []*openapi.ContentPart{},
+			dtos: []*domainopenapi.ContentPart{},
 			want: []*entity.ContentPart{},
 		},
 		{
 			name: "array with nil elements",
-			dtos: []*openapi.ContentPart{
+			dtos: []*domainopenapi.ContentPart{
 				nil,
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Hello"),
 				},
 				nil,
@@ -1299,13 +1366,13 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 		},
 		{
 			name: "normal array conversion",
-			dtos: []*openapi.ContentPart{
+			dtos: []*domainopenapi.ContentPart{
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Hello world"),
 				},
 				{
-					Type: ptr.Of(openapi.ContentTypeMultiPartVariable),
+					Type: ptr.Of(domainopenapi.ContentTypeMultiPartVariable),
 					Text: ptr.Of("{{variable}}"),
 				},
 			},
@@ -1322,18 +1389,18 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 		},
 		{
 			name: "mixed types with image url and base64",
-			dtos: []*openapi.ContentPart{
+			dtos: []*domainopenapi.ContentPart{
 				{
-					Type: ptr.Of(openapi.ContentTypeText),
+					Type: ptr.Of(domainopenapi.ContentTypeText),
 					Text: ptr.Of("Text content"),
 				},
 				{
-					Type:     ptr.Of(openapi.ContentTypeImageURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 					Text:     ptr.Of("Image description"),
 					ImageURL: ptr.Of("https://example.com/image.jpg"),
 				},
 				{
-					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 					Text:       ptr.Of("Base64 image"),
 					Base64Data: ptr.Of("base64data"),
 				},
@@ -1359,13 +1426,13 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 		},
 		{
 			name: "empty image url handling",
-			dtos: []*openapi.ContentPart{
+			dtos: []*domainopenapi.ContentPart{
 				{
-					Type:     ptr.Of(openapi.ContentTypeImageURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 					ImageURL: ptr.Of(""),
 				},
 				{
-					Type:     ptr.Of(openapi.ContentTypeImageURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 					ImageURL: nil,
 				},
 			},
@@ -1382,11 +1449,11 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 		},
 		{
 			name: "video url handling with fps config",
-			dtos: []*openapi.ContentPart{
+			dtos: []*domainopenapi.ContentPart{
 				{
-					Type:     ptr.Of(openapi.ContentTypeVideoURL),
+					Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
 					VideoURL: ptr.Of("https://example.com/video.mp4"),
-					Config: &openapi.MediaConfig{
+					Config: &domainopenapi.MediaConfig{
 						Fps: ptr.Of(1.8),
 					},
 				},
@@ -1404,12 +1471,39 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 			},
 		},
 		{
-			name: "base64 video carries fps without video url",
-			dtos: []*openapi.ContentPart{
+			name: "video url empty string and nil config handling",
+			dtos: []*domainopenapi.ContentPart{
 				{
-					Type:       ptr.Of(openapi.ContentTypeBase64Data),
+					Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of(""),
+				},
+				{
+					Type:     ptr.Of(domainopenapi.ContentTypeVideoURL),
+					VideoURL: ptr.Of("https://example.com/video.mp4"),
+					Config:   nil,
+				},
+			},
+			want: []*entity.ContentPart{
+				{
+					Type:     entity.ContentTypeVideoURL,
+					VideoURL: nil,
+				},
+				{
+					Type: entity.ContentTypeVideoURL,
+					VideoURL: &entity.VideoURL{
+						URL: "https://example.com/video.mp4",
+					},
+					MediaConfig: nil,
+				},
+			},
+		},
+		{
+			name: "base64 video carries fps without video url",
+			dtos: []*domainopenapi.ContentPart{
+				{
+					Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 					Base64Data: ptr.Of("data:video/mp4;base64,QUJDRA=="),
-					Config: &openapi.MediaConfig{
+					Config: &domainopenapi.MediaConfig{
 						Fps: ptr.Of(2.2),
 					},
 				},
@@ -1436,7 +1530,7 @@ func TestOpenAPIBatchContentPartDTO2DO(t *testing.T) {
 func TestOpenAPIBatchVariableValDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
-		dtos []*openapi.VariableVal
+		dtos []*domainopenapi.VariableVal
 		want []*entity.VariableVal
 	}{
 		{
@@ -1446,12 +1540,12 @@ func TestOpenAPIBatchVariableValDTO2DO(t *testing.T) {
 		},
 		{
 			name: "empty array",
-			dtos: []*openapi.VariableVal{},
+			dtos: []*domainopenapi.VariableVal{},
 			want: nil,
 		},
 		{
 			name: "array with nil elements",
-			dtos: []*openapi.VariableVal{
+			dtos: []*domainopenapi.VariableVal{
 				nil,
 				{
 					Key:   ptr.Of("var1"),
@@ -1468,7 +1562,7 @@ func TestOpenAPIBatchVariableValDTO2DO(t *testing.T) {
 		},
 		{
 			name: "normal array conversion",
-			dtos: []*openapi.VariableVal{
+			dtos: []*domainopenapi.VariableVal{
 				{
 					Key:   ptr.Of("var1"),
 					Value: ptr.Of("simple value"),
@@ -1491,13 +1585,13 @@ func TestOpenAPIBatchVariableValDTO2DO(t *testing.T) {
 		},
 		{
 			name: "complex variable values with placeholder messages",
-			dtos: []*openapi.VariableVal{
+			dtos: []*domainopenapi.VariableVal{
 				{
 					Key:   ptr.Of("placeholder_var"),
 					Value: ptr.Of("placeholder value"),
-					PlaceholderMessages: []*openapi.Message{
+					PlaceholderMessages: []*domainopenapi.Message{
 						{
-							Role:    ptr.Of(prompt.RoleUser),
+							Role:    ptr.Of(domainopenapi.RoleUser),
 							Content: ptr.Of("Placeholder content"),
 						},
 					},
@@ -1518,17 +1612,17 @@ func TestOpenAPIBatchVariableValDTO2DO(t *testing.T) {
 		},
 		{
 			name: "variable values with multi part values",
-			dtos: []*openapi.VariableVal{
+			dtos: []*domainopenapi.VariableVal{
 				{
 					Key:   ptr.Of("multipart_var"),
 					Value: ptr.Of("multipart value"),
-					MultiPartValues: []*openapi.ContentPart{
+					MultiPartValues: []*domainopenapi.ContentPart{
 						{
-							Type: ptr.Of(openapi.ContentTypeText),
+							Type: ptr.Of(domainopenapi.ContentTypeText),
 							Text: ptr.Of("Part 1"),
 						},
 						{
-							Type:     ptr.Of(openapi.ContentTypeImageURL),
+							Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 							ImageURL: ptr.Of("https://example.com/image.jpg"),
 						},
 					},
@@ -1566,7 +1660,7 @@ func TestOpenAPITokenUsageDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.TokenUsage
-		want *openapi.TokenUsage
+		want *domainopenapi.TokenUsage
 	}{
 		{
 			name: "nil input",
@@ -1579,7 +1673,7 @@ func TestOpenAPITokenUsageDO2DTO(t *testing.T) {
 				InputTokens:  0,
 				OutputTokens: 0,
 			},
-			want: &openapi.TokenUsage{
+			want: &domainopenapi.TokenUsage{
 				InputTokens:  ptr.Of(int32(0)),
 				OutputTokens: ptr.Of(int32(0)),
 			},
@@ -1590,7 +1684,7 @@ func TestOpenAPITokenUsageDO2DTO(t *testing.T) {
 				InputTokens:  100,
 				OutputTokens: 50,
 			},
-			want: &openapi.TokenUsage{
+			want: &domainopenapi.TokenUsage{
 				InputTokens:  ptr.Of(int32(100)),
 				OutputTokens: ptr.Of(int32(50)),
 			},
@@ -1601,7 +1695,7 @@ func TestOpenAPITokenUsageDO2DTO(t *testing.T) {
 				InputTokens:  999999,
 				OutputTokens: 888888,
 			},
-			want: &openapi.TokenUsage{
+			want: &domainopenapi.TokenUsage{
 				InputTokens:  ptr.Of(int32(999999)),
 				OutputTokens: ptr.Of(int32(888888)),
 			},
@@ -1619,7 +1713,7 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		dos  []*entity.ToolCall
-		want []*openapi.ToolCall
+		want []*domainopenapi.ToolCall
 	}{
 		{
 			name: "nil input",
@@ -1629,7 +1723,7 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 		{
 			name: "empty array",
 			dos:  []*entity.ToolCall{},
-			want: []*openapi.ToolCall{},
+			want: []*domainopenapi.ToolCall{},
 		},
 		{
 			name: "array with nil elements",
@@ -1646,12 +1740,12 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 				},
 				nil,
 			},
-			want: []*openapi.ToolCall{
+			want: []*domainopenapi.ToolCall{
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_123"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("test_function"),
 						Arguments: ptr.Of(`{"arg": "value"}`),
 					},
@@ -1680,12 +1774,12 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 					},
 				},
 			},
-			want: []*openapi.ToolCall{
+			want: []*domainopenapi.ToolCall{
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_123"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function1"),
 						Arguments: ptr.Of(`{"param1": "value1"}`),
 					},
@@ -1693,8 +1787,8 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 				{
 					Index: ptr.Of(int32(1)),
 					ID:    ptr.Of("call_456"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function2"),
 						Arguments: ptr.Of(`{"param2": "value2"}`),
 					},
@@ -1711,11 +1805,11 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 					FunctionCall: nil,
 				},
 			},
-			want: []*openapi.ToolCall{
+			want: []*domainopenapi.ToolCall{
 				{
 					Index:        ptr.Of(int32(0)),
 					ID:           ptr.Of("call_789"),
-					Type:         ptr.Of(openapi.ToolTypeFunction),
+					Type:         ptr.Of(domainopenapi.ToolTypeFunction),
 					FunctionCall: nil,
 				},
 			},
@@ -1733,12 +1827,12 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 					},
 				},
 			},
-			want: []*openapi.ToolCall{
+			want: []*domainopenapi.ToolCall{
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_999"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function_no_args"),
 						Arguments: nil,
 					},
@@ -1757,7 +1851,7 @@ func TestOpenAPIBatchToolCallDO2DTO(t *testing.T) {
 func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
-		dtos []*openapi.ToolCall
+		dtos []*domainopenapi.ToolCall
 		want []*entity.ToolCall
 	}{
 		{
@@ -1767,18 +1861,18 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		},
 		{
 			name: "empty array",
-			dtos: []*openapi.ToolCall{},
+			dtos: []*domainopenapi.ToolCall{},
 			want: []*entity.ToolCall{},
 		},
 		{
 			name: "array with nil elements",
-			dtos: []*openapi.ToolCall{
+			dtos: []*domainopenapi.ToolCall{
 				nil,
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_123"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("test_function"),
 						Arguments: ptr.Of(`{"arg": "value"}`),
 					},
@@ -1799,12 +1893,12 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		},
 		{
 			name: "normal array conversion",
-			dtos: []*openapi.ToolCall{
+			dtos: []*domainopenapi.ToolCall{
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_123"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function1"),
 						Arguments: ptr.Of(`{"param1": "value1"}`),
 					},
@@ -1812,8 +1906,8 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 				{
 					Index: ptr.Of(int32(1)),
 					ID:    ptr.Of("call_456"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function2"),
 						Arguments: ptr.Of(`{"param2": "value2"}`),
 					},
@@ -1842,11 +1936,11 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		},
 		{
 			name: "tool call with nil function call",
-			dtos: []*openapi.ToolCall{
+			dtos: []*domainopenapi.ToolCall{
 				{
 					Index:        ptr.Of(int32(0)),
 					ID:           ptr.Of("call_789"),
-					Type:         ptr.Of(openapi.ToolTypeFunction),
+					Type:         ptr.Of(domainopenapi.ToolTypeFunction),
 					FunctionCall: nil,
 				},
 			},
@@ -1861,12 +1955,12 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		},
 		{
 			name: "tool call with function call having nil arguments",
-			dtos: []*openapi.ToolCall{
+			dtos: []*domainopenapi.ToolCall{
 				{
 					Index: ptr.Of(int32(0)),
 					ID:    ptr.Of("call_999"),
-					Type:  ptr.Of(openapi.ToolTypeFunction),
-					FunctionCall: &openapi.FunctionCall{
+					Type:  ptr.Of(domainopenapi.ToolTypeFunction),
+					FunctionCall: &domainopenapi.FunctionCall{
 						Name:      ptr.Of("function_no_args"),
 						Arguments: nil,
 					},
@@ -1886,7 +1980,7 @@ func TestOpenAPIBatchToolCallDTO2DO(t *testing.T) {
 		},
 		{
 			name: "tool call with default values from getters",
-			dtos: []*openapi.ToolCall{
+			dtos: []*domainopenapi.ToolCall{
 				{
 					// 测试GetIndex()、GetID()、GetType()的默认值处理
 				},
@@ -1916,7 +2010,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.Prompt
-		want *openapi.PromptBasic
+		want *domainopenapi.PromptBasic
 	}{
 		{
 			name: "nil input",
@@ -1941,7 +2035,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 				PromptKey:   "test_prompt",
 				PromptBasic: &entity.PromptBasic{},
 			},
-			want: &openapi.PromptBasic{
+			want: &domainopenapi.PromptBasic{
 				ID:                ptr.Of(int64(123)),
 				WorkspaceID:       ptr.Of(int64(456)),
 				PromptKey:         ptr.Of("test_prompt"),
@@ -1972,7 +2066,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 					LatestCommittedAt: nil,
 				},
 			},
-			want: &openapi.PromptBasic{
+			want: &domainopenapi.PromptBasic{
 				ID:                ptr.Of(int64(123)),
 				WorkspaceID:       ptr.Of(int64(456)),
 				PromptKey:         ptr.Of("test_prompt"),
@@ -2003,7 +2097,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 					LatestCommittedAt: &latestCommittedAt,
 				},
 			},
-			want: &openapi.PromptBasic{
+			want: &domainopenapi.PromptBasic{
 				ID:                ptr.Of(int64(123)),
 				WorkspaceID:       ptr.Of(int64(456)),
 				PromptKey:         ptr.Of("test_prompt"),
@@ -2033,7 +2127,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 					UpdatedAt:     createdAt,
 				},
 			},
-			want: &openapi.PromptBasic{
+			want: &domainopenapi.PromptBasic{
 				ID:                ptr.Of(int64(0)),
 				WorkspaceID:       ptr.Of(int64(0)),
 				PromptKey:         ptr.Of(""),
@@ -2063,7 +2157,7 @@ func TestOpenAPIPromptBasicDO2DTO(t *testing.T) {
 					UpdatedAt:     updatedAt,
 				},
 			},
-			want: &openapi.PromptBasic{
+			want: &domainopenapi.PromptBasic{
 				ID:                ptr.Of(int64(999)),
 				WorkspaceID:       ptr.Of(int64(888)),
 				PromptKey:         ptr.Of("prompt_with_special_chars_@#$"),
@@ -2090,22 +2184,22 @@ func TestOpenAPIToolTypeDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   entity.ToolType
-		want openapi.ToolType
+		want domainopenapi.ToolType
 	}{
 		{
 			name: "function type",
 			do:   entity.ToolTypeFunction,
-			want: openapi.ToolTypeFunction,
+			want: domainopenapi.ToolTypeFunction,
 		},
 		{
 			name: "google_search type",
 			do:   entity.ToolTypeGoogleSearch,
-			want: openapi.ToolTypeGoogleSearch,
+			want: domainopenapi.ToolTypeGoogleSearch,
 		},
 		{
 			name: "unknown type defaults to function",
 			do:   entity.ToolType("unknown"),
-			want: openapi.ToolTypeFunction,
+			want: domainopenapi.ToolTypeFunction,
 		},
 	}
 	for _, tt := range tests {
@@ -2119,22 +2213,22 @@ func TestOpenAPIToolTypeDO2DTO(t *testing.T) {
 func TestOpenAPIToolTypeDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
-		dto  openapi.ToolType
+		dto  domainopenapi.ToolType
 		want entity.ToolType
 	}{
 		{
 			name: "function type",
-			dto:  openapi.ToolTypeFunction,
+			dto:  domainopenapi.ToolTypeFunction,
 			want: entity.ToolTypeFunction,
 		},
 		{
 			name: "google_search type",
-			dto:  openapi.ToolTypeGoogleSearch,
+			dto:  domainopenapi.ToolTypeGoogleSearch,
 			want: entity.ToolTypeGoogleSearch,
 		},
 		{
 			name: "unknown type defaults to function",
-			dto:  openapi.ToolType("unknown"),
+			dto:  domainopenapi.ToolType("unknown"),
 			want: entity.ToolTypeFunction,
 		},
 	}
@@ -2150,7 +2244,7 @@ func TestOpenAPIToolChoiceSpecificationDO2DTO(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ToolChoiceSpecification
-		want *openapi.ToolChoiceSpecification
+		want *domainopenapi.ToolChoiceSpecification
 	}{
 		{
 			name: "nil input",
@@ -2163,8 +2257,8 @@ func TestOpenAPIToolChoiceSpecificationDO2DTO(t *testing.T) {
 				Type: entity.ToolTypeFunction,
 				Name: "get_weather",
 			},
-			want: &openapi.ToolChoiceSpecification{
-				Type: ptr.Of(prompt.ToolTypeFunction),
+			want: &domainopenapi.ToolChoiceSpecification{
+				Type: ptr.Of(domainopenapi.ToolTypeFunction),
 				Name: ptr.Of("get_weather"),
 			},
 		},
@@ -2174,8 +2268,8 @@ func TestOpenAPIToolChoiceSpecificationDO2DTO(t *testing.T) {
 				Type: entity.ToolTypeGoogleSearch,
 				Name: "search",
 			},
-			want: &openapi.ToolChoiceSpecification{
-				Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+			want: &domainopenapi.ToolChoiceSpecification{
+				Type: ptr.Of(domainopenapi.ToolTypeGoogleSearch),
 				Name: ptr.Of("search"),
 			},
 		},
@@ -2192,7 +2286,7 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 	tests := []struct {
 		name string
 		do   *entity.ToolCallConfig
-		want *openapi.ToolCallConfig
+		want *domainopenapi.ToolCallConfig
 	}{
 		{
 			name: "nil input",
@@ -2204,8 +2298,8 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 			do: &entity.ToolCallConfig{
 				ToolChoice: entity.ToolChoiceTypeAuto,
 			},
-			want: &openapi.ToolCallConfig{
-				ToolChoice:              ptr.Of(prompt.ToolChoiceTypeAuto),
+			want: &domainopenapi.ToolCallConfig{
+				ToolChoice:              ptr.Of(domainopenapi.ToolChoiceTypeAuto),
 				ToolChoiceSpecification: nil,
 			},
 		},
@@ -2218,10 +2312,10 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 					Name: "get_weather",
 				},
 			},
-			want: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
-				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
-					Type: ptr.Of(prompt.ToolTypeFunction),
+			want: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &domainopenapi.ToolChoiceSpecification{
+					Type: ptr.Of(domainopenapi.ToolTypeFunction),
 					Name: ptr.Of("get_weather"),
 				},
 			},
@@ -2235,10 +2329,10 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 					Name: "search",
 				},
 			},
-			want: &openapi.ToolCallConfig{
-				ToolChoice: ptr.Of(prompt.ToolChoiceTypeSpecific),
-				ToolChoiceSpecification: &openapi.ToolChoiceSpecification{
-					Type: ptr.Of(prompt.ToolTypeGoogleSearch),
+			want: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &domainopenapi.ToolChoiceSpecification{
+					Type: ptr.Of(domainopenapi.ToolTypeGoogleSearch),
 					Name: ptr.Of("search"),
 				},
 			},
@@ -2248,6 +2342,166 @@ func TestOpenAPIToolCallConfigDO2DTO_WithSpecification(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, OpenAPIToolCallConfigDO2DTO(tt.do))
+		})
+	}
+}
+
+func TestOpenAPIBatchToolDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dtos []*domainopenapi.Tool
+		want []*entity.Tool
+	}{
+		{
+			name: "nil input",
+			dtos: nil,
+			want: nil,
+		},
+		{
+			name: "array with nil elements",
+			dtos: []*domainopenapi.Tool{
+				nil,
+				{
+					Type: ptr.Of(domainopenapi.ToolTypeFunction),
+					Function: &domainopenapi.Function{
+						Name:        ptr.Of("tool_a"),
+						Description: ptr.Of("desc"),
+						Parameters:  ptr.Of("{}"),
+					},
+				},
+			},
+			want: []*entity.Tool{
+				{
+					Type: entity.ToolTypeFunction,
+					Function: &entity.Function{
+						Name:        "tool_a",
+						Description: "desc",
+						Parameters:  "{}",
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIBatchToolDTO2DO(tt.dtos))
+		})
+	}
+}
+
+func TestOpenAPIToolCallConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *domainopenapi.ToolCallConfig
+		want *entity.ToolCallConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "specific tool choice with specification",
+			dto: &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeSpecific),
+				ToolChoiceSpecification: &domainopenapi.ToolChoiceSpecification{
+					Type: ptr.Of(domainopenapi.ToolTypeFunction),
+					Name: ptr.Of("tool_a"),
+				},
+			},
+			want: &entity.ToolCallConfig{
+				ToolChoice: entity.ToolChoiceTypeSpecific,
+				ToolChoiceSpecification: &entity.ToolChoiceSpecification{
+					Type: entity.ToolTypeFunction,
+					Name: "tool_a",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIToolCallConfigDTO2DO(tt.dto))
+		})
+	}
+}
+
+func TestOpenAPIModelConfigDTO2DO(t *testing.T) {
+	dto := &domainopenapi.ModelConfig{
+		ModelID:     ptr.Of(int64(123)),
+		MaxTokens:   ptr.Of(int32(2048)),
+		Temperature: ptr.Of(0.8),
+		Thinking: &domainopenapi.ThinkingConfig{
+			BudgetTokens:    ptr.Of(int64(256)),
+			ThinkingOption:  ptr.Of(domainopenapi.ThinkingOptionEnabled),
+			ReasoningEffort: ptr.Of(domainopenapi.ReasoningEffortHigh),
+		},
+		ParamConfigValues: []*domainopenapi.ParamConfigValue{
+			{
+				Name:  ptr.Of("top_p"),
+				Label: ptr.Of("Top P"),
+				Value: &domainopenapi.ParamOption{
+					Value: ptr.Of("0.9"),
+					Label: ptr.Of("0.9"),
+				},
+			},
+		},
+	}
+	want := &entity.ModelConfig{
+		ModelID:     123,
+		MaxTokens:   ptr.Of(int32(2048)),
+		Temperature: ptr.Of(0.8),
+		Thinking: &entity.ThinkingConfig{
+			BudgetTokens:    ptr.Of(int64(256)),
+			ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+			ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+		},
+		ParamConfigValues: []*entity.ParamConfigValue{
+			{
+				Name:  "top_p",
+				Label: "Top P",
+				Value: &entity.ParamOption{
+					Value: "0.9",
+					Label: "0.9",
+				},
+			},
+		},
+	}
+
+	assert.Equal(t, want, OpenAPIModelConfigDTO2DO(dto))
+}
+
+func TestOpenAPIResponseAPIConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *domainopenapi.ResponseAPIConfig
+		want *entity.ResponseAPIConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "response api config with values",
+			dto: &domainopenapi.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+			want: &entity.ResponseAPIConfig{
+				PreviousResponseID: ptr.Of("prev-id"),
+				EnableCaching:      ptr.Of(true),
+				SessionID:          ptr.Of("session-123"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, OpenAPIResponseAPIConfigDTO2DO(tt.dto))
 		})
 	}
 }

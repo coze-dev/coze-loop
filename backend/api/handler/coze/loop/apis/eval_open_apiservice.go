@@ -254,3 +254,21 @@ func ReportEvaluatorInvokeResult(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// ImportEvaluationSetOApi .
+// @router /v1/loop/evaluation/evaluation_sets/:evaluation_set_id/import [POST]
+func ImportEvaluationSetOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ImportEvaluationSetOApi)
+}
+
+// GetEvaluationSetJobOApi .
+// @router /v1/loop/evaluation/evaluation_set_io_job/:job_id [GET]
+func GetEvaluationSetJobOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvaluationSetJobOApi)
+}
+
+// RunBuiltinEvaluatorOApi .
+// @router /v1/loop/evaluation/evaluators/builtin/run [POST]
+func RunBuiltinEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.RunBuiltinEvaluatorOApi)
+}
