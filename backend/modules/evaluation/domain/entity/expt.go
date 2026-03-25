@@ -369,7 +369,14 @@ type CreateEvalTargetParam struct {
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {
-	return c == nil || (c.SourceTargetID == nil && c.SourceTargetVersion == nil)
+	if c == nil {
+		return true
+	}
+	// 仅传 eval_target_type（如仅记录型 Online 评测对象）时也应走创建逻辑，不能仅依据 source 指针判断
+	if c.EvalTargetType != nil {
+		return false
+	}
+	return c.SourceTargetID == nil && c.SourceTargetVersion == nil
 }
 
 type InvokeExptReq struct {
