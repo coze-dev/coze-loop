@@ -334,6 +334,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	}
 	req.TraceID = strings.TrimSpace(req.TraceID)
 	req.LogID = strings.TrimSpace(req.LogID)
+	req.ThreadID = strings.TrimSpace(req.ThreadID)
 	if req.TraceID != "" {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 			FieldName: loop_span.SpanFieldTraceId,
@@ -348,9 +349,16 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 			Values:    []string{req.LogID},
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
+	} else if req.ThreadID != "" {
+		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
+			FieldName: loop_span.SpanFieldThreadId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.ThreadID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
+		})
 	} else {
-		// traceID or logID is expected
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("traceID or logID is expected"))
+		// traceID or logID or threadID is expected
+		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("traceID or logID or threadID is expected"))
 	}
 	if len(req.SpanIDs) > 0 {
 		filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{

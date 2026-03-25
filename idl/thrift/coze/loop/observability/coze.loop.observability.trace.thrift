@@ -474,17 +474,17 @@ struct GetThreadStatRequest {
 
 struct GetThreadStatResponse {
     1: required string thread_id (go.tag='json:"thread_id"')
-    2: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
-    3: required i64 duration (api.js_conv='true', go.tag='json:"duration"')
+    2: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
+    3: optional i64 duration (api.js_conv='true', go.tag='json:"duration"')
     4: optional string user_id (go.tag='json:"user_id,omitempty"')
-    5: required i64 total_tokens (api.js_conv='true', go.tag='json:"total_tokens"')
-    6: required list<string> used_models (go.tag='json:"used_models"')
+    5: optional i64 total_tokens (api.js_conv='true', go.tag='json:"total_tokens"')
+    6: optional list<string> used_models (go.tag='json:"used_models"')
 
     255: optional base.BaseResp BaseResp
 }
 
 struct ChatMessage {
-    1: required string message_type (go.tag='json:"message_type"')
+    1: required string role (go.tag='json:"role"')
     2: optional span.OutputSpan span (go.tag='json:"span,omitempty"')
 }
 

@@ -15,6 +15,7 @@ type GetTraceParam struct {
 	Tenants            []string
 	TraceID            string
 	LogID              string
+	ThreadID           string
 	StartAt            int64 // ms
 	EndAt              int64 // ms
 	Limit              int32

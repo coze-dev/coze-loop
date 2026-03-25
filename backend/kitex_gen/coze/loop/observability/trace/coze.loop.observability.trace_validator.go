@@ -593,6 +593,12 @@ func (p *ListTrajectoryResponse) IsValid() error {
 	return nil
 }
 func (p *GetTraceChatRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.TraceID) < int(1) {
+		return fmt.Errorf("field TraceID min_len rule failed, current value: %d", len(p.TraceID))
+	}
 	if p.Filters != nil {
 		if err := p.Filters.IsValid(); err != nil {
 			return fmt.Errorf("field Filters not valid, %w", err)
@@ -614,6 +620,12 @@ func (p *GetTraceChatResponse) IsValid() error {
 	return nil
 }
 func (p *GetThreadChatRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.ThreadID) < int(1) {
+		return fmt.Errorf("field ThreadID min_len rule failed, current value: %d", len(p.ThreadID))
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -630,6 +642,12 @@ func (p *GetThreadChatResponse) IsValid() error {
 	return nil
 }
 func (p *GetThreadStatRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.ThreadID) < int(1) {
+		return fmt.Errorf("field ThreadID min_len rule failed, current value: %d", len(p.ThreadID))
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)

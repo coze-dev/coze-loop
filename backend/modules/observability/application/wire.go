@@ -123,6 +123,7 @@ var (
 		user.NewUserRPCProvider,
 		tag.NewTagRPCProvider,
 		workflow.NewWorkflowProvider,
+		time_range.NewTimeRangeProvider,
 		traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
@@ -244,6 +245,16 @@ func NewTraceProcessorBuilder(
 		entity.SceneListSpansOApi: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewExpireErrorProcessorFactory(benefitSvc),
+		},
+		entity.SceneTraceChat: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewChatProcessorFactory(),
+		},
+		entity.SceneThreadChat: {
+			span_processor.NewPlatformProcessorFactory(traceConfig),
+			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewChatProcessorFactory(),
 		},
 	}
 	return service.NewTraceFilterProcessorBuilder(

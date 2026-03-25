@@ -73,6 +73,7 @@ const (
 	SpanTypeVectorStore     = "vector_store"
 	SpanTypeVectorRetriever = "vector_retriever"
 	SpanTypeAgent           = "agent"
+	SpanTypeTool            = "tool"
 	SpanTypeLLMCall         = "LLMCall"
 
 	SpanStatusSuccess = "success"
@@ -301,6 +302,14 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 
 func (s *Span) IsModelSpan() bool {
 	return s.SpanType == SpanTypeModel
+}
+
+func (s *Span) IsToolSpan() bool {
+	return s.SpanType == SpanTypeTool
+}
+
+func (s *Span) IsChatSpan() bool {
+	return s.IsModelSpan() || s.IsToolSpan()
 }
 
 func (s *Span) getTags() []*Tag {

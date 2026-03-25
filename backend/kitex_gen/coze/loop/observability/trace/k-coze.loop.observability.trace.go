@@ -15568,8 +15568,6 @@ func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetTraceID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -15617,7 +15615,6 @@ func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -15632,7 +15629,6 @@ func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -15728,16 +15724,6 @@ func (p *GetTraceChatRequest) FastRead(buf []byte) (int, error) {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -15780,12 +15766,12 @@ func (p *GetTraceChatRequest) FastReadField2(buf []byte) (int, error) {
 func (p *GetTraceChatRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return offset, nil
@@ -15794,12 +15780,12 @@ func (p *GetTraceChatRequest) FastReadField3(buf []byte) (int, error) {
 func (p *GetTraceChatRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return offset, nil
@@ -15925,15 +15911,19 @@ func (p *GetTraceChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter)
 
 func (p *GetTraceChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
+	if p.IsSetStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
 	return offset
 }
 
 func (p *GetTraceChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EndTime)
+	if p.IsSetEndTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndTime)
+	}
 	return offset
 }
 
@@ -15998,15 +15988,19 @@ func (p *GetTraceChatRequest) field2Length() int {
 
 func (p *GetTraceChatRequest) field3Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *GetTraceChatRequest) field4Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetEndTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
@@ -16067,9 +16061,15 @@ func (p *GetTraceChatRequest) DeepCopy(s interface{}) error {
 		p.TraceID = kutils.StringDeepCopy(src.TraceID)
 	}
 
-	p.StartTime = src.StartTime
+	if src.StartTime != nil {
+		tmp := *src.StartTime
+		p.StartTime = &tmp
+	}
 
-	p.EndTime = src.EndTime
+	if src.EndTime != nil {
+		tmp := *src.EndTime
+		p.EndTime = &tmp
+	}
 
 	if src.PageSize != nil {
 		tmp := *src.PageSize
@@ -16435,8 +16435,6 @@ func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -16484,7 +16482,6 @@ func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -16499,7 +16496,6 @@ func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -16581,16 +16577,6 @@ func (p *GetThreadChatRequest) FastRead(buf []byte) (int, error) {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -16633,12 +16619,12 @@ func (p *GetThreadChatRequest) FastReadField2(buf []byte) (int, error) {
 func (p *GetThreadChatRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return offset, nil
@@ -16647,12 +16633,12 @@ func (p *GetThreadChatRequest) FastReadField3(buf []byte) (int, error) {
 func (p *GetThreadChatRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return offset, nil
@@ -16764,15 +16750,19 @@ func (p *GetThreadChatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter
 
 func (p *GetThreadChatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
+	if p.IsSetStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
 	return offset
 }
 
 func (p *GetThreadChatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EndTime)
+	if p.IsSetEndTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndTime)
+	}
 	return offset
 }
 
@@ -16828,15 +16818,19 @@ func (p *GetThreadChatRequest) field2Length() int {
 
 func (p *GetThreadChatRequest) field3Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *GetThreadChatRequest) field4Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetEndTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
@@ -16888,9 +16882,15 @@ func (p *GetThreadChatRequest) DeepCopy(s interface{}) error {
 		p.ThreadID = kutils.StringDeepCopy(src.ThreadID)
 	}
 
-	p.StartTime = src.StartTime
+	if src.StartTime != nil {
+		tmp := *src.StartTime
+		p.StartTime = &tmp
+	}
 
-	p.EndTime = src.EndTime
+	if src.EndTime != nil {
+		tmp := *src.EndTime
+		p.EndTime = &tmp
+	}
 
 	if src.PageSize != nil {
 		tmp := *src.PageSize
@@ -17247,8 +17247,6 @@ func (p *GetThreadStatRequest) FastRead(buf []byte) (int, error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -17296,7 +17294,6 @@ func (p *GetThreadStatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17311,7 +17308,6 @@ func (p *GetThreadStatRequest) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17365,16 +17361,6 @@ func (p *GetThreadStatRequest) FastRead(buf []byte) (int, error) {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -17417,12 +17403,12 @@ func (p *GetThreadStatRequest) FastReadField2(buf []byte) (int, error) {
 func (p *GetThreadStatRequest) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return offset, nil
@@ -17431,12 +17417,12 @@ func (p *GetThreadStatRequest) FastReadField3(buf []byte) (int, error) {
 func (p *GetThreadStatRequest) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return offset, nil
@@ -17516,15 +17502,19 @@ func (p *GetThreadStatRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter
 
 func (p *GetThreadStatRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
+	if p.IsSetStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
 	return offset
 }
 
 func (p *GetThreadStatRequest) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.EndTime)
+	if p.IsSetEndTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndTime)
+	}
 	return offset
 }
 
@@ -17562,15 +17552,19 @@ func (p *GetThreadStatRequest) field2Length() int {
 
 func (p *GetThreadStatRequest) field3Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *GetThreadStatRequest) field4Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetEndTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
@@ -17604,9 +17598,15 @@ func (p *GetThreadStatRequest) DeepCopy(s interface{}) error {
 		p.ThreadID = kutils.StringDeepCopy(src.ThreadID)
 	}
 
-	p.StartTime = src.StartTime
+	if src.StartTime != nil {
+		tmp := *src.StartTime
+		p.StartTime = &tmp
+	}
 
-	p.EndTime = src.EndTime
+	if src.EndTime != nil {
+		tmp := *src.EndTime
+		p.EndTime = &tmp
+	}
 
 	if src.PlatformType != nil {
 		tmp := *src.PlatformType
@@ -17633,10 +17633,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetDuration bool = false
-	var issetTotalTokens bool = false
-	var issetUsedModels bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -17669,7 +17665,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17684,7 +17679,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetDuration = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17713,7 +17707,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetTotalTokens = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17728,7 +17721,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetUsedModels = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -17763,26 +17755,6 @@ func (p *GetThreadStatResponse) FastRead(buf []byte) (int, error) {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetDuration {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetTotalTokens {
-		fieldId = 5
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetUsedModels {
-		fieldId = 6
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -17811,12 +17783,12 @@ func (p *GetThreadStatResponse) FastReadField1(buf []byte) (int, error) {
 func (p *GetThreadStatResponse) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return offset, nil
@@ -17825,12 +17797,12 @@ func (p *GetThreadStatResponse) FastReadField2(buf []byte) (int, error) {
 func (p *GetThreadStatResponse) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.Duration = _field
 	return offset, nil
@@ -17853,12 +17825,12 @@ func (p *GetThreadStatResponse) FastReadField4(buf []byte) (int, error) {
 func (p *GetThreadStatResponse) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
-	var _field int64
+	var _field *int64
 	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.TotalTokens = _field
 	return offset, nil
@@ -17943,15 +17915,19 @@ func (p *GetThreadStatResponse) fastWriteField1(buf []byte, w thrift.NocopyWrite
 
 func (p *GetThreadStatResponse) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.StartTime)
+	if p.IsSetStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
 	return offset
 }
 
 func (p *GetThreadStatResponse) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.Duration)
+	if p.IsSetDuration() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 3)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Duration)
+	}
 	return offset
 }
 
@@ -17966,22 +17942,26 @@ func (p *GetThreadStatResponse) fastWriteField4(buf []byte, w thrift.NocopyWrite
 
 func (p *GetThreadStatResponse) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
-	offset += thrift.Binary.WriteI64(buf[offset:], p.TotalTokens)
+	if p.IsSetTotalTokens() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.TotalTokens)
+	}
 	return offset
 }
 
 func (p *GetThreadStatResponse) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
-	listBeginOffset := offset
-	offset += thrift.Binary.ListBeginLength()
-	var length int
-	for _, v := range p.UsedModels {
-		length++
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+	if p.IsSetUsedModels() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.UsedModels {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 	}
-	thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
 	return offset
 }
 
@@ -18003,15 +17983,19 @@ func (p *GetThreadStatResponse) field1Length() int {
 
 func (p *GetThreadStatResponse) field2Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *GetThreadStatResponse) field3Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetDuration() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
@@ -18026,18 +18010,22 @@ func (p *GetThreadStatResponse) field4Length() int {
 
 func (p *GetThreadStatResponse) field5Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.I64Length()
+	if p.IsSetTotalTokens() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
 	return l
 }
 
 func (p *GetThreadStatResponse) field6Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.ListBeginLength()
-	for _, v := range p.UsedModels {
-		_ = v
-		l += thrift.Binary.StringLengthNocopy(v)
+	if p.IsSetUsedModels() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.UsedModels {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
 	}
 	return l
 }
@@ -18061,9 +18049,15 @@ func (p *GetThreadStatResponse) DeepCopy(s interface{}) error {
 		p.ThreadID = kutils.StringDeepCopy(src.ThreadID)
 	}
 
-	p.StartTime = src.StartTime
+	if src.StartTime != nil {
+		tmp := *src.StartTime
+		p.StartTime = &tmp
+	}
 
-	p.Duration = src.Duration
+	if src.Duration != nil {
+		tmp := *src.Duration
+		p.Duration = &tmp
+	}
 
 	if src.UserID != nil {
 		var tmp string
@@ -18073,7 +18067,10 @@ func (p *GetThreadStatResponse) DeepCopy(s interface{}) error {
 		p.UserID = &tmp
 	}
 
-	p.TotalTokens = src.TotalTokens
+	if src.TotalTokens != nil {
+		tmp := *src.TotalTokens
+		p.TotalTokens = &tmp
+	}
 
 	if src.UsedModels != nil {
 		p.UsedModels = make([]string, 0, len(src.UsedModels))
@@ -18105,7 +18102,7 @@ func (p *ChatMessage) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetMessageType bool = false
+	var issetRole bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -18123,7 +18120,7 @@ func (p *ChatMessage) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetMessageType = true
+				issetRole = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -18154,7 +18151,7 @@ func (p *ChatMessage) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetMessageType {
+	if !issetRole {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -18179,7 +18176,7 @@ func (p *ChatMessage) FastReadField1(buf []byte) (int, error) {
 		offset += l
 		_field = v
 	}
-	p.MessageType = _field
+	p.Role = _field
 	return offset, nil
 }
 
@@ -18222,7 +18219,7 @@ func (p *ChatMessage) BLength() int {
 func (p *ChatMessage) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
-	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.MessageType)
+	offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, p.Role)
 	return offset
 }
 
@@ -18238,7 +18235,7 @@ func (p *ChatMessage) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 func (p *ChatMessage) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.StringLengthNocopy(p.MessageType)
+	l += thrift.Binary.StringLengthNocopy(p.Role)
 	return l
 }
 
@@ -18257,8 +18254,8 @@ func (p *ChatMessage) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	if src.MessageType != "" {
-		p.MessageType = kutils.StringDeepCopy(src.MessageType)
+	if src.Role != "" {
+		p.Role = kutils.StringDeepCopy(src.Role)
 	}
 
 	var _span *span.OutputSpan

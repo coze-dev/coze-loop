@@ -1116,6 +1116,100 @@ func TestSpan_ExtractByJsonpathRaw(t *testing.T) {
 	})
 }
 
+func TestSpan_IsToolSpan(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		spanType string
+		want     bool
+	}{
+		{
+			name:     "tool span",
+			spanType: SpanTypeTool,
+			want:     true,
+		},
+		{
+			name:     "model span",
+			spanType: SpanTypeModel,
+			want:     false,
+		},
+		{
+			name:     "prompt span",
+			spanType: SpanTypePrompt,
+			want:     false,
+		},
+		{
+			name:     "LLMCall span",
+			spanType: SpanTypeLLMCall,
+			want:     false,
+		},
+		{
+			name:     "empty span type",
+			spanType: "",
+			want:     false,
+		},
+		{
+			name:     "unknown span type",
+			spanType: "unknown",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			span := &Span{SpanType: tt.spanType}
+			assert.Equal(t, tt.want, span.IsToolSpan())
+		})
+	}
+}
+
+func TestSpan_IsChatSpan(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		spanType string
+		want     bool
+	}{
+		{
+			name:     "model span",
+			spanType: SpanTypeModel,
+			want:     true,
+		},
+		{
+			name:     "tool span",
+			spanType: SpanTypeTool,
+			want:     true,
+		},
+		{
+			name:     "prompt span",
+			spanType: SpanTypePrompt,
+			want:     false,
+		},
+		{
+			name:     "LLMCall span",
+			spanType: SpanTypeLLMCall,
+			want:     false,
+		},
+		{
+			name:     "empty span type",
+			spanType: "",
+			want:     false,
+		},
+		{
+			name:     "unknown span type",
+			spanType: "unknown",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			span := &Span{SpanType: tt.spanType}
+			assert.Equal(t, tt.want, span.IsChatSpan())
+		})
+	}
+}
+
 func TestEncryptionInfo(t *testing.T) {
 	t.Run("encryption info with need workflow", func(t *testing.T) {
 		encryption := EncryptionInfo{

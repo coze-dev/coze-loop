@@ -6,8 +6,8 @@ package trace
 import (
 	traced "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 )
 
 func AdvanceInfoDO2DTO(info *loop_span.TraceAdvanceInfo) *trace.TraceAdvanceInfo {
@@ -49,7 +49,7 @@ func BatchAdvanceInfoDO2TraceDTO(infos []*loop_span.TraceAdvanceInfo) []*traced.
 	return ret
 }
 
-func ChatMessagesDO2DTO(messages []*service.ChatMessage) []*trace.ChatMessage {
+func ChatMessagesDO2DTO(messages []*entity.ChatMessage) []*trace.ChatMessage {
 	if messages == nil {
 		return nil
 	}
@@ -59,8 +59,8 @@ func ChatMessagesDO2DTO(messages []*service.ChatMessage) []*trace.ChatMessage {
 			continue
 		}
 		ret = append(ret, &trace.ChatMessage{
-			MessageType: msg.MessageType,
-			Span:        SpanDO2DTO(msg.Span, nil, nil, nil, nil, false),
+			Role: msg.Role,
+			Span: SpanDO2DTO(msg.Span, nil, nil, nil, nil, false),
 		})
 	}
 	return ret

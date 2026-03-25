@@ -44,6 +44,11 @@ import (
 	"github.com/samber/lo"
 )
 
+const (
+	defaultChatPageSize int32 = 50
+	maxChatPageSize     int32 = 100
+)
+
 type ListSpansReq struct {
 	WorkspaceID           int64
 	ThirdPartyWorkspaceID string
@@ -394,7 +399,7 @@ type GetTraceChatRequest struct {
 }
 
 type GetTraceChatResponse struct {
-	Messages      []*ChatMessage
+	Messages      []*entity.ChatMessage
 	NextPageToken string
 	HasMore       bool
 }
@@ -410,7 +415,7 @@ type GetThreadChatRequest struct {
 }
 
 type GetThreadChatResponse struct {
-	Messages      []*ChatMessage
+	Messages      []*entity.ChatMessage
 	NextPageToken string
 	HasMore       bool
 }
@@ -431,16 +436,6 @@ type GetThreadStatResponse struct {
 	TotalTokens int64
 	UsedModels  []string
 }
-
-type ChatMessage struct {
-	MessageType string
-	Span        *loop_span.Span
-}
-
-const (
-	ChatMessageTypeRequest  = "request"
-	ChatMessageTypeResponse = "response"
-)
 
 type IAnnotationEvent interface {
 	Send(ctx context.Context, msg *entity.AnnotationEvent) error
@@ -2597,13 +2592,32 @@ func (r *TraceServiceImpl) GetTraceChat(ctx context.Context, req *GetTraceChatRe
 		return nil, err
 	}
 
-	pageSize := int32(100)
-	if req.PageSize > 0 && req.PageSize <= 1000 {
+	pageSize := defaultChatPageSize
+	if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
 		pageSize = req.PageSize
 	}
 
-	filters := r.buildTraceIDFilter(req.TraceID, req.Filters)
-	filters = r.buildModelSpanFilter(filters)
+	filterFields := []*loop_span.FilterField{
+		{
+			FieldName: loop_span.SpanFieldTraceId,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{req.TraceID},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+		},
+		{
+			FieldName: loop_span.SpanFieldSpanType,
+			FieldType: loop_span.FieldTypeString,
+			Values:    []string{loop_span.SpanTypeModel, loop_span.SpanTypeTool},
+			QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+		},
+	}
+	if req.Filters != nil {
+		filterFields = append(filterFields, &loop_span.FilterField{SubFilter: req.Filters})
+	}
+	filters := &loop_span.FilterFields{
+		QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: filterFields,
+	}
 
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
@@ -2619,7 +2633,15 @@ func (r *TraceServiceImpl) GetTraceChat(ctx context.Context, req *GetTraceChatRe
 	}
 
 	spans := listResp.Spans
-	processors, err := r.buildHelper.BuildTraceChatProcessors(ctx, span_processor.Settings{})
+	processors, err := r.buildHelper.BuildTraceChatProcessors(ctx, span_processor.Settings{
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		QueryTenants:    tenants,
+		SpanDoubleCheck: true,
+		QueryTraceID:    req.TraceID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -2645,18 +2667,33 @@ func (r *TraceServiceImpl) GetThreadChat(ctx context.Context, req *GetThreadChat
 		return nil, err
 	}
 
-	pageSize := int32(100)
-	if req.PageSize > 0 && req.PageSize <= 1000 {
+	pageSize := defaultChatPageSize
+	if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
 		pageSize = req.PageSize
 	}
 
-	threadFilter := r.buildThreadFilter(req.ThreadID)
-	threadFilter = r.buildModelSpanFilter(threadFilter)
+	filters := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldThreadId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.ThreadID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+			{
+				FieldName: loop_span.SpanFieldSpanType,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{loop_span.SpanTypeModel},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+		},
+	}
 
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:     tenants,
-		Filters:     threadFilter,
+		Filters:     filters,
 		StartAt:     req.StartTime,
 		EndAt:       req.EndTime,
 		PageToken:   req.PageToken,
@@ -2667,7 +2704,15 @@ func (r *TraceServiceImpl) GetThreadChat(ctx context.Context, req *GetThreadChat
 	}
 
 	spans := listResp.Spans
-	processors, err := r.buildHelper.BuildThreadChatProcessors(ctx, span_processor.Settings{})
+	processors, err := r.buildHelper.BuildThreadChatProcessors(ctx, span_processor.Settings{
+		WorkspaceId:     req.WorkspaceID,
+		PlatformType:    req.PlatformType,
+		QueryStartTime:  req.StartTime,
+		QueryEndTime:    req.EndTime,
+		QueryTenants:    tenants,
+		SpanDoubleCheck: true,
+		QueryThreadID:   req.ThreadID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -2693,15 +2738,32 @@ func (r *TraceServiceImpl) GetThreadStat(ctx context.Context, req *GetThreadStat
 		return nil, err
 	}
 
-	threadFilter := r.buildThreadFilter(req.ThreadID)
+	filters := &loop_span.FilterFields{
+		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: loop_span.SpanFieldThreadId,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{req.ThreadID},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+			{
+				FieldName: loop_span.SpanFieldSpanType,
+				FieldType: loop_span.FieldTypeString,
+				Values:    []string{loop_span.SpanTypeModel},
+				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
+			},
+		},
+	}
 
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:     tenants,
-		Filters:     threadFilter,
+		Filters:     filters,
 		StartAt:     req.StartTime,
 		EndAt:       req.EndTime,
-		Limit:       1000,
+		Limit:       maxChatPageSize,
+		OmitColumns: []string{loop_span.SpanFieldInput, loop_span.SpanFieldOutput},
 	})
 	if err != nil {
 		return nil, err
@@ -2710,145 +2772,33 @@ func (r *TraceServiceImpl) GetThreadStat(ctx context.Context, req *GetThreadStat
 	return r.buildThreadStat(ctx, req.ThreadID, listResp.Spans), nil
 }
 
-func (r *TraceServiceImpl) buildTraceIDFilter(traceID string, filters *loop_span.FilterFields) *loop_span.FilterFields {
-	traceFilter := &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldTraceId,
-		FieldType: loop_span.FieldTypeString,
-		Values:    []string{traceID},
-		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-	}
-
-	if filters == nil {
-		return &loop_span.FilterFields{
-			QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-			FilterFields: []*loop_span.FilterField{traceFilter},
-		}
-	}
-
-	return &loop_span.FilterFields{
-		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-		FilterFields: []*loop_span.FilterField{
-			traceFilter,
-			{SubFilter: filters},
-		},
-	}
-}
-
-func (r *TraceServiceImpl) buildThreadFilter(threadID string) *loop_span.FilterFields {
-	return &loop_span.FilterFields{
-		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-		FilterFields: []*loop_span.FilterField{
-			{
-				FieldName: loop_span.SpanFieldThreadId,
-				FieldType: loop_span.FieldTypeString,
-				Values:    []string{threadID},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-			},
-		},
-	}
-}
-
-func (r *TraceServiceImpl) buildModelSpanFilter(filters *loop_span.FilterFields) *loop_span.FilterFields {
-	modelFilter := &loop_span.FilterField{
-		FieldName: loop_span.SpanFieldSpanType,
-		FieldType: loop_span.FieldTypeString,
-		Values:    []string{loop_span.SpanTypeModel},
-		QueryType: ptr.Of(loop_span.QueryTypeEnumIn),
-	}
-
-	if filters == nil {
-		return &loop_span.FilterFields{
-			QueryAndOr:   lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-			FilterFields: []*loop_span.FilterField{modelFilter},
-		}
-	}
-
-	return &loop_span.FilterFields{
-		QueryAndOr: lo.ToPtr(loop_span.QueryAndOrEnumAnd),
-		FilterFields: []*loop_span.FilterField{
-			modelFilter,
-			{SubFilter: filters},
-		},
-	}
-}
-
-func (r *TraceServiceImpl) buildChatMessages(ctx context.Context, spans loop_span.SpanList) []*ChatMessage {
-	messages := make([]*ChatMessage, 0, len(spans)*2)
+func (r *TraceServiceImpl) buildChatMessages(ctx context.Context, spans loop_span.SpanList) []*entity.ChatMessage {
+	messages := make([]*entity.ChatMessage, 0, len(spans)*2)
 	for _, span := range spans {
 		if span == nil {
 			continue
 		}
-		requestSpan := r.cloneSpanForRequest(span)
-		messages = append(messages, &ChatMessage{
-			MessageType: ChatMessageTypeRequest,
-			Span:        requestSpan,
-		})
-
-		responseSpan := r.cloneSpanForResponse(span)
-		messages = append(messages, &ChatMessage{
-			MessageType: ChatMessageTypeResponse,
-			Span:        responseSpan,
-		})
+		if span.IsModelSpan() {
+			if span.Input != "" {
+				messages = append(messages, &entity.ChatMessage{
+					Role: entity.ChatRoleUser,
+					Span: span,
+				})
+			}
+			if span.Output != "" {
+				messages = append(messages, &entity.ChatMessage{
+					Role: entity.ChatRoleAssistant,
+					Span: span,
+				})
+			}
+		} else if span.IsToolSpan() {
+			messages = append(messages, &entity.ChatMessage{
+				Role: entity.ChatRoleTool,
+				Span: span,
+			})
+		}
 	}
 	return messages
-}
-
-func (r *TraceServiceImpl) cloneSpanForRequest(span *loop_span.Span) *loop_span.Span {
-	return &loop_span.Span{
-		StartTime:        span.StartTime,
-		SpanID:           span.SpanID,
-		ParentID:         span.ParentID,
-		TraceID:          span.TraceID,
-		DurationMicros:   span.DurationMicros,
-		CallType:         span.CallType,
-		PSM:              span.PSM,
-		LogID:            span.LogID,
-		WorkspaceID:      span.WorkspaceID,
-		SpanName:         span.SpanName,
-		SpanType:         span.SpanType,
-		Method:           span.Method,
-		StatusCode:       span.StatusCode,
-		Input:            span.Input,
-		Output:           "",
-		ObjectStorage:    span.ObjectStorage,
-		SystemTagsString: span.SystemTagsString,
-		SystemTagsLong:   span.SystemTagsLong,
-		SystemTagsDouble: span.SystemTagsDouble,
-		TagsString:       span.TagsString,
-		TagsLong:         span.TagsLong,
-		TagsDouble:       span.TagsDouble,
-		TagsBool:         span.TagsBool,
-		TagsByte:         span.TagsByte,
-	}
-}
-
-func (r *TraceServiceImpl) cloneSpanForResponse(span *loop_span.Span) *loop_span.Span {
-	return &loop_span.Span{
-		StartTime:        span.StartTime,
-		SpanID:           span.SpanID,
-		ParentID:         span.ParentID,
-		TraceID:          span.TraceID,
-		DurationMicros:   span.DurationMicros,
-		CallType:         span.CallType,
-		PSM:              span.PSM,
-		LogID:            span.LogID,
-		WorkspaceID:      span.WorkspaceID,
-		SpanName:         span.SpanName,
-		SpanType:         span.SpanType,
-		Method:           span.Method,
-		StatusCode:       span.StatusCode,
-		Input:            "",
-		Output:           span.Output,
-		ObjectStorage:    span.ObjectStorage,
-		SystemTagsString: span.SystemTagsString,
-		SystemTagsLong:   span.SystemTagsLong,
-		SystemTagsDouble: span.SystemTagsDouble,
-		TagsString:       span.TagsString,
-		TagsLong:         span.TagsLong,
-		TagsDouble:       span.TagsDouble,
-		TagsBool:         span.TagsBool,
-		TagsByte:         span.TagsByte,
-	}
 }
 
 func (r *TraceServiceImpl) buildThreadStat(ctx context.Context, threadID string, spans loop_span.SpanList) *GetThreadStatResponse {

@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	commdo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -63,6 +64,7 @@ func NewTraceApplication(
 	userService rpc.IUserProvider,
 	tagService rpc.ITagRPCAdapter,
 	workflowService rpc.IWorkflowProvider,
+	timeRangeProvider time_range.ITimeRangeProvider,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
 		traceService:       traceService,
@@ -77,6 +79,7 @@ func NewTraceApplication(
 		userSvc:            userService,
 		tagSvc:             tagService,
 		workflowSvc:        workflowService,
+		timeRange:          timeRangeProvider,
 	}, nil
 }
 
@@ -93,6 +96,7 @@ type TraceApplication struct {
 	userSvc            rpc.IUserProvider
 	tagSvc             rpc.ITagRPCAdapter
 	workflowSvc        rpc.IWorkflowProvider
+	timeRange          time_range.ITimeRangeProvider
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
@@ -1205,9 +1209,18 @@ func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThre
 		return nil, err
 	}
 
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+	if startTime == 0 && endTime == 0 {
+		st, et := t.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", "", 0)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
 	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
+		Start:        startTime,
+		End:          endTime,
 		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
 	}
 	startTime, endTime, err := v.CorrectDate()
@@ -1247,9 +1260,18 @@ func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThre
 		return nil, err
 	}
 
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+	if startTime == 0 && endTime == 0 {
+		st, et := t.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", "", 0)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
 	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
+		Start:        startTime,
+		End:          endTime,
 		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
 	}
 	startTime, endTime, err := v.CorrectDate()
@@ -1275,10 +1297,10 @@ func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThre
 
 	return &trace.GetThreadStatResponse{
 		ThreadID:    sResp.ThreadID,
-		StartTime:   sResp.StartTime,
-		Duration:    sResp.Duration,
+		StartTime:   &sResp.StartTime,
+		Duration:    &sResp.Duration,
 		UserID:      &sResp.UserID,
-		TotalTokens: sResp.TotalTokens,
+		TotalTokens: &sResp.TotalTokens,
 		UsedModels:  sResp.UsedModels,
 	}, nil
 }

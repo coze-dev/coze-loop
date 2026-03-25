@@ -16,7 +16,7 @@ type ChatProcessor struct{}
 
 func (c *ChatProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	for _, span := range spans {
-		if span == nil || !span.IsModelSpan() {
+		if span == nil || !span.IsChatSpan() {
 			continue
 		}
 		if span.Input == "" {

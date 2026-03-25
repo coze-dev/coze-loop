@@ -20897,8 +20897,8 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type GetTraceChatRequest struct {
 	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	TraceID      string               `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id" form:"trace_id,required" `
-	StartTime    int64                `thrift:"start_time,3,required" frugal:"3,required,i64" json:"start_time" form:"start_time,required" `
-	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" form:"end_time,required" `
+	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
+	EndTime      *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
 	PageSize     *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
 	PageToken    *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
 	PlatformType *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
@@ -20927,18 +20927,28 @@ func (p *GetTraceChatRequest) GetTraceID() (v string) {
 	return
 }
 
+var GetTraceChatRequest_StartTime_DEFAULT int64
+
 func (p *GetTraceChatRequest) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetStartTime() {
+		return GetTraceChatRequest_StartTime_DEFAULT
+	}
+	return *p.StartTime
 }
 
+var GetTraceChatRequest_EndTime_DEFAULT int64
+
 func (p *GetTraceChatRequest) GetEndTime() (v int64) {
-	if p != nil {
-		return p.EndTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetEndTime() {
+		return GetTraceChatRequest_EndTime_DEFAULT
+	}
+	return *p.EndTime
 }
 
 var GetTraceChatRequest_PageSize_DEFAULT int32
@@ -21006,10 +21016,10 @@ func (p *GetTraceChatRequest) SetWorkspaceID(val int64) {
 func (p *GetTraceChatRequest) SetTraceID(val string) {
 	p.TraceID = val
 }
-func (p *GetTraceChatRequest) SetStartTime(val int64) {
+func (p *GetTraceChatRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetTraceChatRequest) SetEndTime(val int64) {
+func (p *GetTraceChatRequest) SetEndTime(val *int64) {
 	p.EndTime = val
 }
 func (p *GetTraceChatRequest) SetPageSize(val *int32) {
@@ -21040,6 +21050,14 @@ var fieldIDToName_GetTraceChatRequest = map[int16]string{
 	255: "Base",
 }
 
+func (p *GetTraceChatRequest) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *GetTraceChatRequest) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
 func (p *GetTraceChatRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
@@ -21065,8 +21083,6 @@ func (p *GetTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetTraceID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -21105,7 +21121,6 @@ func (p *GetTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -21114,7 +21129,6 @@ func (p *GetTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -21180,16 +21194,6 @@ func (p *GetTraceChatRequest) Read(iprot thrift.TProtocol) (err error) {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
 	return nil
 ReadStructBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
@@ -21232,22 +21236,22 @@ func (p *GetTraceChatRequest) ReadField2(iprot thrift.TProtocol) error {
 }
 func (p *GetTraceChatRequest) ReadField3(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return nil
 }
 func (p *GetTraceChatRequest) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return nil
@@ -21395,14 +21399,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetTraceChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -21411,14 +21417,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *GetTraceChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EndTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -21575,16 +21583,26 @@ func (p *GetTraceChatRequest) Field2DeepEqual(src string) bool {
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field3DeepEqual(src int64) bool {
+func (p *GetTraceChatRequest) Field3DeepEqual(src *int64) bool {
 
-	if p.StartTime != src {
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
 		return false
 	}
 	return true
 }
-func (p *GetTraceChatRequest) Field4DeepEqual(src int64) bool {
+func (p *GetTraceChatRequest) Field4DeepEqual(src *int64) bool {
 
-	if p.EndTime != src {
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
 		return false
 	}
 	return true
@@ -22047,8 +22065,8 @@ func (p *GetTraceChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type GetThreadChatRequest struct {
 	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ThreadID     string               `thrift:"thread_id,2,required" frugal:"2,required,string" json:"thread_id" form:"thread_id,required" `
-	StartTime    int64                `thrift:"start_time,3,required" frugal:"3,required,i64" json:"start_time" form:"start_time,required" `
-	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" form:"end_time,required" `
+	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
+	EndTime      *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
 	PageSize     *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
 	PageToken    *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
 	PlatformType *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
@@ -22076,18 +22094,28 @@ func (p *GetThreadChatRequest) GetThreadID() (v string) {
 	return
 }
 
+var GetThreadChatRequest_StartTime_DEFAULT int64
+
 func (p *GetThreadChatRequest) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetStartTime() {
+		return GetThreadChatRequest_StartTime_DEFAULT
+	}
+	return *p.StartTime
 }
 
+var GetThreadChatRequest_EndTime_DEFAULT int64
+
 func (p *GetThreadChatRequest) GetEndTime() (v int64) {
-	if p != nil {
-		return p.EndTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetEndTime() {
+		return GetThreadChatRequest_EndTime_DEFAULT
+	}
+	return *p.EndTime
 }
 
 var GetThreadChatRequest_PageSize_DEFAULT int32
@@ -22143,10 +22171,10 @@ func (p *GetThreadChatRequest) SetWorkspaceID(val int64) {
 func (p *GetThreadChatRequest) SetThreadID(val string) {
 	p.ThreadID = val
 }
-func (p *GetThreadChatRequest) SetStartTime(val int64) {
+func (p *GetThreadChatRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetThreadChatRequest) SetEndTime(val int64) {
+func (p *GetThreadChatRequest) SetEndTime(val *int64) {
 	p.EndTime = val
 }
 func (p *GetThreadChatRequest) SetPageSize(val *int32) {
@@ -22173,6 +22201,14 @@ var fieldIDToName_GetThreadChatRequest = map[int16]string{
 	255: "Base",
 }
 
+func (p *GetThreadChatRequest) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *GetThreadChatRequest) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
 func (p *GetThreadChatRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
 }
@@ -22194,8 +22230,6 @@ func (p *GetThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -22234,7 +22268,6 @@ func (p *GetThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22243,7 +22276,6 @@ func (p *GetThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22301,16 +22333,6 @@ func (p *GetThreadChatRequest) Read(iprot thrift.TProtocol) (err error) {
 		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
-		goto RequiredFieldNotSetError
-	}
 	return nil
 ReadStructBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
@@ -22353,22 +22375,22 @@ func (p *GetThreadChatRequest) ReadField2(iprot thrift.TProtocol) error {
 }
 func (p *GetThreadChatRequest) ReadField3(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return nil
 }
 func (p *GetThreadChatRequest) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return nil
@@ -22504,14 +22526,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetThreadChatRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -22520,14 +22544,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *GetThreadChatRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EndTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -22663,16 +22689,26 @@ func (p *GetThreadChatRequest) Field2DeepEqual(src string) bool {
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field3DeepEqual(src int64) bool {
+func (p *GetThreadChatRequest) Field3DeepEqual(src *int64) bool {
 
-	if p.StartTime != src {
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
 		return false
 	}
 	return true
 }
-func (p *GetThreadChatRequest) Field4DeepEqual(src int64) bool {
+func (p *GetThreadChatRequest) Field4DeepEqual(src *int64) bool {
 
-	if p.EndTime != src {
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
 		return false
 	}
 	return true
@@ -23128,8 +23164,8 @@ func (p *GetThreadChatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type GetThreadStatRequest struct {
 	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
 	ThreadID     string               `thrift:"thread_id,2,required" frugal:"2,required,string" json:"thread_id" form:"thread_id,required" `
-	StartTime    int64                `thrift:"start_time,3,required" frugal:"3,required,i64" json:"start_time" form:"start_time,required" `
-	EndTime      int64                `thrift:"end_time,4,required" frugal:"4,required,i64" json:"end_time" form:"end_time,required" `
+	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
+	EndTime      *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
 	PlatformType *common.PlatformType `thrift:"platform_type,5,optional" frugal:"5,optional,string" json:"platform_type,omitempty" form:"platform_type" `
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -23155,18 +23191,28 @@ func (p *GetThreadStatRequest) GetThreadID() (v string) {
 	return
 }
 
+var GetThreadStatRequest_StartTime_DEFAULT int64
+
 func (p *GetThreadStatRequest) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetStartTime() {
+		return GetThreadStatRequest_StartTime_DEFAULT
+	}
+	return *p.StartTime
 }
 
+var GetThreadStatRequest_EndTime_DEFAULT int64
+
 func (p *GetThreadStatRequest) GetEndTime() (v int64) {
-	if p != nil {
-		return p.EndTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetEndTime() {
+		return GetThreadStatRequest_EndTime_DEFAULT
+	}
+	return *p.EndTime
 }
 
 var GetThreadStatRequest_PlatformType_DEFAULT common.PlatformType
@@ -23198,10 +23244,10 @@ func (p *GetThreadStatRequest) SetWorkspaceID(val int64) {
 func (p *GetThreadStatRequest) SetThreadID(val string) {
 	p.ThreadID = val
 }
-func (p *GetThreadStatRequest) SetStartTime(val int64) {
+func (p *GetThreadStatRequest) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetThreadStatRequest) SetEndTime(val int64) {
+func (p *GetThreadStatRequest) SetEndTime(val *int64) {
 	p.EndTime = val
 }
 func (p *GetThreadStatRequest) SetPlatformType(val *common.PlatformType) {
@@ -23220,6 +23266,14 @@ var fieldIDToName_GetThreadStatRequest = map[int16]string{
 	255: "Base",
 }
 
+func (p *GetThreadStatRequest) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *GetThreadStatRequest) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
 func (p *GetThreadStatRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
 }
@@ -23233,8 +23287,6 @@ func (p *GetThreadStatRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	var issetWorkspaceID bool = false
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetEndTime bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -23273,7 +23325,6 @@ func (p *GetThreadStatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23282,7 +23333,6 @@ func (p *GetThreadStatRequest) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetEndTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23322,16 +23372,6 @@ func (p *GetThreadStatRequest) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetThreadID {
 		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetStartTime {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetEndTime {
-		fieldId = 4
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -23376,22 +23416,22 @@ func (p *GetThreadStatRequest) ReadField2(iprot thrift.TProtocol) error {
 }
 func (p *GetThreadStatRequest) ReadField3(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return nil
 }
 func (p *GetThreadStatRequest) ReadField4(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.EndTime = _field
 	return nil
@@ -23497,14 +23537,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetThreadStatRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -23513,14 +23555,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *GetThreadStatRequest) writeField4(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.EndTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -23614,16 +23658,26 @@ func (p *GetThreadStatRequest) Field2DeepEqual(src string) bool {
 	}
 	return true
 }
-func (p *GetThreadStatRequest) Field3DeepEqual(src int64) bool {
+func (p *GetThreadStatRequest) Field3DeepEqual(src *int64) bool {
 
-	if p.StartTime != src {
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
 		return false
 	}
 	return true
 }
-func (p *GetThreadStatRequest) Field4DeepEqual(src int64) bool {
+func (p *GetThreadStatRequest) Field4DeepEqual(src *int64) bool {
 
-	if p.EndTime != src {
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
 		return false
 	}
 	return true
@@ -23650,11 +23704,11 @@ func (p *GetThreadStatRequest) Field255DeepEqual(src *base.Base) bool {
 
 type GetThreadStatResponse struct {
 	ThreadID    string         `thrift:"thread_id,1,required" frugal:"1,required,string" json:"thread_id" form:"thread_id,required" query:"thread_id,required"`
-	StartTime   int64          `thrift:"start_time,2,required" frugal:"2,required,i64" json:"start_time" form:"start_time,required" query:"start_time,required"`
-	Duration    int64          `thrift:"duration,3,required" frugal:"3,required,i64" json:"duration" form:"duration,required" query:"duration,required"`
+	StartTime   *int64         `thrift:"start_time,2,optional" frugal:"2,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
+	Duration    *int64         `thrift:"duration,3,optional" frugal:"3,optional,i64" json:"duration" form:"duration" query:"duration"`
 	UserID      *string        `thrift:"user_id,4,optional" frugal:"4,optional,string" json:"user_id,omitempty" form:"user_id" query:"user_id"`
-	TotalTokens int64          `thrift:"total_tokens,5,required" frugal:"5,required,i64" json:"total_tokens" form:"total_tokens,required" query:"total_tokens,required"`
-	UsedModels  []string       `thrift:"used_models,6,required" frugal:"6,required,list<string>" json:"used_models" form:"used_models,required" query:"used_models,required"`
+	TotalTokens *int64         `thrift:"total_tokens,5,optional" frugal:"5,optional,i64" json:"total_tokens" form:"total_tokens" query:"total_tokens"`
+	UsedModels  []string       `thrift:"used_models,6,optional" frugal:"6,optional,list<string>" json:"used_models" form:"used_models" query:"used_models"`
 	BaseResp    *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
@@ -23672,18 +23726,28 @@ func (p *GetThreadStatResponse) GetThreadID() (v string) {
 	return
 }
 
+var GetThreadStatResponse_StartTime_DEFAULT int64
+
 func (p *GetThreadStatResponse) GetStartTime() (v int64) {
-	if p != nil {
-		return p.StartTime
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetStartTime() {
+		return GetThreadStatResponse_StartTime_DEFAULT
+	}
+	return *p.StartTime
 }
 
+var GetThreadStatResponse_Duration_DEFAULT int64
+
 func (p *GetThreadStatResponse) GetDuration() (v int64) {
-	if p != nil {
-		return p.Duration
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetDuration() {
+		return GetThreadStatResponse_Duration_DEFAULT
+	}
+	return *p.Duration
 }
 
 var GetThreadStatResponse_UserID_DEFAULT string
@@ -23698,18 +23762,28 @@ func (p *GetThreadStatResponse) GetUserID() (v string) {
 	return *p.UserID
 }
 
+var GetThreadStatResponse_TotalTokens_DEFAULT int64
+
 func (p *GetThreadStatResponse) GetTotalTokens() (v int64) {
-	if p != nil {
-		return p.TotalTokens
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetTotalTokens() {
+		return GetThreadStatResponse_TotalTokens_DEFAULT
+	}
+	return *p.TotalTokens
 }
 
+var GetThreadStatResponse_UsedModels_DEFAULT []string
+
 func (p *GetThreadStatResponse) GetUsedModels() (v []string) {
-	if p != nil {
-		return p.UsedModels
+	if p == nil {
+		return
 	}
-	return
+	if !p.IsSetUsedModels() {
+		return GetThreadStatResponse_UsedModels_DEFAULT
+	}
+	return p.UsedModels
 }
 
 var GetThreadStatResponse_BaseResp_DEFAULT *base.BaseResp
@@ -23726,16 +23800,16 @@ func (p *GetThreadStatResponse) GetBaseResp() (v *base.BaseResp) {
 func (p *GetThreadStatResponse) SetThreadID(val string) {
 	p.ThreadID = val
 }
-func (p *GetThreadStatResponse) SetStartTime(val int64) {
+func (p *GetThreadStatResponse) SetStartTime(val *int64) {
 	p.StartTime = val
 }
-func (p *GetThreadStatResponse) SetDuration(val int64) {
+func (p *GetThreadStatResponse) SetDuration(val *int64) {
 	p.Duration = val
 }
 func (p *GetThreadStatResponse) SetUserID(val *string) {
 	p.UserID = val
 }
-func (p *GetThreadStatResponse) SetTotalTokens(val int64) {
+func (p *GetThreadStatResponse) SetTotalTokens(val *int64) {
 	p.TotalTokens = val
 }
 func (p *GetThreadStatResponse) SetUsedModels(val []string) {
@@ -23755,8 +23829,24 @@ var fieldIDToName_GetThreadStatResponse = map[int16]string{
 	255: "BaseResp",
 }
 
+func (p *GetThreadStatResponse) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *GetThreadStatResponse) IsSetDuration() bool {
+	return p.Duration != nil
+}
+
 func (p *GetThreadStatResponse) IsSetUserID() bool {
 	return p.UserID != nil
+}
+
+func (p *GetThreadStatResponse) IsSetTotalTokens() bool {
+	return p.TotalTokens != nil
+}
+
+func (p *GetThreadStatResponse) IsSetUsedModels() bool {
+	return p.UsedModels != nil
 }
 
 func (p *GetThreadStatResponse) IsSetBaseResp() bool {
@@ -23767,10 +23857,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetThreadID bool = false
-	var issetStartTime bool = false
-	var issetDuration bool = false
-	var issetTotalTokens bool = false
-	var issetUsedModels bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -23800,7 +23886,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetStartTime = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23809,7 +23894,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetDuration = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23826,7 +23910,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetTotalTokens = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23835,7 +23918,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetUsedModels = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -23862,26 +23944,6 @@ func (p *GetThreadStatResponse) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetThreadID {
 		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetStartTime {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetDuration {
-		fieldId = 3
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetTotalTokens {
-		fieldId = 5
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetUsedModels {
-		fieldId = 6
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -23915,22 +23977,22 @@ func (p *GetThreadStatResponse) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *GetThreadStatResponse) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.StartTime = _field
 	return nil
 }
 func (p *GetThreadStatResponse) ReadField3(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.Duration = _field
 	return nil
@@ -23948,11 +24010,11 @@ func (p *GetThreadStatResponse) ReadField4(iprot thrift.TProtocol) error {
 }
 func (p *GetThreadStatResponse) ReadField5(iprot thrift.TProtocol) error {
 
-	var _field int64
+	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
 		return err
 	} else {
-		_field = v
+		_field = &v
 	}
 	p.TotalTokens = _field
 	return nil
@@ -24058,14 +24120,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *GetThreadStatResponse) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("start_time", thrift.I64, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.StartTime); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -24074,14 +24138,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *GetThreadStatResponse) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("duration", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.Duration); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetDuration() {
+		if err = oprot.WriteFieldBegin("duration", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Duration); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -24108,14 +24174,16 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
 func (p *GetThreadStatResponse) writeField5(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("total_tokens", thrift.I64, 5); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.TotalTokens); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+	if p.IsSetTotalTokens() {
+		if err = oprot.WriteFieldBegin("total_tokens", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TotalTokens); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -24124,22 +24192,24 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *GetThreadStatResponse) writeField6(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("used_models", thrift.LIST, 6); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteListBegin(thrift.STRING, len(p.UsedModels)); err != nil {
-		return err
-	}
-	for _, v := range p.UsedModels {
-		if err := oprot.WriteString(v); err != nil {
+	if p.IsSetUsedModels() {
+		if err = oprot.WriteFieldBegin("used_models", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.UsedModels)); err != nil {
 			return err
 		}
-	}
-	if err := oprot.WriteListEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+		for _, v := range p.UsedModels {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -24211,16 +24281,26 @@ func (p *GetThreadStatResponse) Field1DeepEqual(src string) bool {
 	}
 	return true
 }
-func (p *GetThreadStatResponse) Field2DeepEqual(src int64) bool {
+func (p *GetThreadStatResponse) Field2DeepEqual(src *int64) bool {
 
-	if p.StartTime != src {
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
 		return false
 	}
 	return true
 }
-func (p *GetThreadStatResponse) Field3DeepEqual(src int64) bool {
+func (p *GetThreadStatResponse) Field3DeepEqual(src *int64) bool {
 
-	if p.Duration != src {
+	if p.Duration == src {
+		return true
+	} else if p.Duration == nil || src == nil {
+		return false
+	}
+	if *p.Duration != *src {
 		return false
 	}
 	return true
@@ -24237,9 +24317,14 @@ func (p *GetThreadStatResponse) Field4DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *GetThreadStatResponse) Field5DeepEqual(src int64) bool {
+func (p *GetThreadStatResponse) Field5DeepEqual(src *int64) bool {
 
-	if p.TotalTokens != src {
+	if p.TotalTokens == src {
+		return true
+	} else if p.TotalTokens == nil || src == nil {
+		return false
+	}
+	if *p.TotalTokens != *src {
 		return false
 	}
 	return true
@@ -24266,8 +24351,8 @@ func (p *GetThreadStatResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ChatMessage struct {
-	MessageType string           `thrift:"message_type,1,required" frugal:"1,required,string" json:"message_type" form:"message_type,required" query:"message_type,required"`
-	Span        *span.OutputSpan `thrift:"span,2,optional" frugal:"2,optional,span.OutputSpan" json:"span,omitempty" form:"span" query:"span"`
+	Role string           `thrift:"role,1,required" frugal:"1,required,string" json:"role" form:"role,required" query:"role,required"`
+	Span *span.OutputSpan `thrift:"span,2,optional" frugal:"2,optional,span.OutputSpan" json:"span,omitempty" form:"span" query:"span"`
 }
 
 func NewChatMessage() *ChatMessage {
@@ -24277,9 +24362,9 @@ func NewChatMessage() *ChatMessage {
 func (p *ChatMessage) InitDefault() {
 }
 
-func (p *ChatMessage) GetMessageType() (v string) {
+func (p *ChatMessage) GetRole() (v string) {
 	if p != nil {
-		return p.MessageType
+		return p.Role
 	}
 	return
 }
@@ -24295,15 +24380,15 @@ func (p *ChatMessage) GetSpan() (v *span.OutputSpan) {
 	}
 	return p.Span
 }
-func (p *ChatMessage) SetMessageType(val string) {
-	p.MessageType = val
+func (p *ChatMessage) SetRole(val string) {
+	p.Role = val
 }
 func (p *ChatMessage) SetSpan(val *span.OutputSpan) {
 	p.Span = val
 }
 
 var fieldIDToName_ChatMessage = map[int16]string{
-	1: "message_type",
+	1: "role",
 	2: "span",
 }
 
@@ -24314,7 +24399,7 @@ func (p *ChatMessage) IsSetSpan() bool {
 func (p *ChatMessage) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetMessageType bool = false
+	var issetRole bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -24335,7 +24420,7 @@ func (p *ChatMessage) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetMessageType = true
+				issetRole = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -24360,7 +24445,7 @@ func (p *ChatMessage) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetMessageType {
+	if !issetRole {
 		fieldId = 1
 		goto RequiredFieldNotSetError
 	}
@@ -24390,7 +24475,7 @@ func (p *ChatMessage) ReadField1(iprot thrift.TProtocol) error {
 	} else {
 		_field = v
 	}
-	p.MessageType = _field
+	p.Role = _field
 	return nil
 }
 func (p *ChatMessage) ReadField2(iprot thrift.TProtocol) error {
@@ -24435,10 +24520,10 @@ WriteStructEndError:
 }
 
 func (p *ChatMessage) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("message_type", thrift.STRING, 1); err != nil {
+	if err = oprot.WriteFieldBegin("role", thrift.STRING, 1); err != nil {
 		goto WriteFieldBeginError
 	}
-	if err := oprot.WriteString(p.MessageType); err != nil {
+	if err := oprot.WriteString(p.Role); err != nil {
 		return err
 	}
 	if err = oprot.WriteFieldEnd(); err != nil {
@@ -24483,7 +24568,7 @@ func (p *ChatMessage) DeepEqual(ano *ChatMessage) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.MessageType) {
+	if !p.Field1DeepEqual(ano.Role) {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Span) {
@@ -24494,7 +24579,7 @@ func (p *ChatMessage) DeepEqual(ano *ChatMessage) bool {
 
 func (p *ChatMessage) Field1DeepEqual(src string) bool {
 
-	if strings.Compare(p.MessageType, src) != 0 {
+	if strings.Compare(p.Role, src) != 0 {
 		return false
 	}
 	return true
