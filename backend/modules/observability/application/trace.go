@@ -1,4 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
+// Copyright (c) 2026 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package application
@@ -1156,12 +1156,6 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 }
 
 func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTraceChatRequest) (*trace.GetTraceChatResponse, error) {
-	if req == nil || req.WorkspaceID == 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	}
-	if req.TraceID == "" {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
@@ -1205,12 +1199,6 @@ func (t *TraceApplication) GetTraceChat(ctx context.Context, req *trace.GetTrace
 }
 
 func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThreadChatRequest) (*trace.GetThreadChatResponse, error) {
-	if req == nil || req.WorkspaceID == 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	}
-	if req.ThreadID == "" {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid thread_id"))
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
@@ -1253,12 +1241,6 @@ func (t *TraceApplication) GetThreadChat(ctx context.Context, req *trace.GetThre
 }
 
 func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest) (*trace.GetThreadStatResponse, error) {
-	if req == nil || req.WorkspaceID == 0 {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
-	}
-	if req.ThreadID == "" {
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid thread_id"))
-	}
 	if err := t.authSvc.CheckWorkspacePermission(ctx,
 		rpc.AuthActionTraceRead,
 		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {

@@ -2483,7 +2483,8 @@ type TraceFilterProcessorBuilder interface {
 	BuildIngestTraceProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 	BuildSearchTraceOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 	BuildListSpansOApiProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
-	BuildChatProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
+	BuildTraceChatProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
+	BuildThreadChatProcessors(context.Context, span_processor.Settings) ([]span_processor.Processor, error)
 }
 
 type TraceFilterProcessorBuilderImpl struct {
@@ -2566,11 +2567,18 @@ func (t *TraceFilterProcessorBuilderImpl) BuildListSpansOApiProcessors(
 	return t.buildProcessors(ctx, set, entity.SceneListSpansOApi)
 }
 
-func (t *TraceFilterProcessorBuilderImpl) BuildChatProcessors(
+func (t *TraceFilterProcessorBuilderImpl) BuildTraceChatProcessors(
 	ctx context.Context,
 	set span_processor.Settings,
 ) ([]span_processor.Processor, error) {
-	return t.buildProcessors(ctx, set, entity.SceneChat)
+	return t.buildProcessors(ctx, set, entity.SceneTraceChat)
+}
+
+func (t *TraceFilterProcessorBuilderImpl) BuildThreadChatProcessors(
+	ctx context.Context,
+	set span_processor.Settings,
+) ([]span_processor.Processor, error) {
+	return t.buildProcessors(ctx, set, entity.SceneThreadChat)
 }
 
 func NewTraceFilterProcessorBuilder(
@@ -2611,7 +2619,7 @@ func (r *TraceServiceImpl) GetTraceChat(ctx context.Context, req *GetTraceChatRe
 	}
 
 	spans := listResp.Spans
-	processors, err := r.buildHelper.BuildChatProcessors(ctx, span_processor.Settings{})
+	processors, err := r.buildHelper.BuildTraceChatProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return nil, err
 	}
@@ -2659,7 +2667,7 @@ func (r *TraceServiceImpl) GetThreadChat(ctx context.Context, req *GetThreadChat
 	}
 
 	spans := listResp.Spans
-	processors, err := r.buildHelper.BuildChatProcessors(ctx, span_processor.Settings{})
+	processors, err := r.buildHelper.BuildThreadChatProcessors(ctx, span_processor.Settings{})
 	if err != nil {
 		return nil, err
 	}

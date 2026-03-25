@@ -422,10 +422,10 @@ struct ListTrajectoryResponse {
 }
 
 struct GetTraceChatRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
-    2: required string trace_id (go.tag='json:"trace_id"', api.body="trace_id")
-    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
-    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string trace_id (go.tag='json:"trace_id"', api.body="trace_id", vt.min_size="1")
+    3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time,omitempty"', api.body="start_time")
+    4: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time,omitempty"', api.body="end_time")
     5: optional i32 page_size (go.tag='json:"page_size,omitempty"', api.body="page_size")
     6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
     7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
@@ -443,10 +443,10 @@ struct GetTraceChatResponse {
 }
 
 struct GetThreadChatRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
-    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id")
-    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
-    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id", vt.min_size="1")
+    3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time,omitempty"', api.body="start_time")
+    4: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time,omitempty"', api.body="end_time")
     5: optional i32 page_size (go.tag='json:"page_size,omitempty"', api.body="page_size")
     6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
     7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
@@ -463,10 +463,10 @@ struct GetThreadChatResponse {
 }
 
 struct GetThreadStatRequest {
-    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
-    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id")
-    3: required i64 start_time (api.js_conv='true', go.tag='json:"start_time"', api.body="start_time")
-    4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.body="end_time")
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: required string thread_id (go.tag='json:"thread_id"', api.body="thread_id", vt.min_size="1")
+    3: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time,omitempty"', api.body="start_time")
+    4: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time,omitempty"', api.body="end_time")
     5: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
 
     255: optional base.Base Base

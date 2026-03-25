@@ -182,47 +182,17 @@ func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 // GetTraceChat .
 // @router /api/observability/v1/traces/chat [POST]
 func GetTraceChat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.GetTraceChatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.GetTraceChatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.GetTraceChat)
 }
 
 // GetThreadChat .
 // @router /api/observability/v1/threads/chat [POST]
 func GetThreadChat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.GetThreadChatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.GetThreadChatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.GetThreadChat)
 }
 
 // GetThreadStat .
 // @router /api/observability/v1/threads/stat [POST]
 func GetThreadStat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.GetThreadStatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.GetThreadStatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.GetThreadStat)
 }

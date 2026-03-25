@@ -1,4 +1,4 @@
-// Copyright (c) 2025 coze-dev Authors
+// Copyright (c) 2026 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package entity
@@ -12,5 +12,6 @@ const (
 	SceneIngestTrace     ProcessorScene = "ingest_trace"
 	SceneSearchTraceOApi ProcessorScene = "search_trace_oapi"
 	SceneListSpansOApi   ProcessorScene = "list_spans_oapi"
-	SceneChat            ProcessorScene = "chat"
+	SceneTraceChat       ProcessorScene = "trace_chat"
+	SceneThreadChat      ProcessorScene = "thread_chat"
 )
