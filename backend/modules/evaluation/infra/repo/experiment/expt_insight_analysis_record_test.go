@@ -141,7 +141,7 @@ func TestExptInsightAnalysisRecordRepo_GetAnalysisRecordByID_ForceMaster(t *test
 	mocks.writeTracker.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), int64(1)).Return(true)
 	mocks.writeTracker.EXPECT().CheckWriteFlagBySearchParam(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 	mocks.analysisRecordDAO.EXPECT().GetByID(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ int64, opts ...db.Option) (*model.ExptInsightAnalysisRecord, error) {
+		func(_ context.Context, _, _, _ int64, opts ...db.Option) (*model.ExptInsightAnalysisRecord, error) {
 			assert.True(t, db.ContainWithMasterOpt(opts))
 			return &model.ExptInsightAnalysisRecord{ID: 1, SpaceID: 1, ExptID: 1}, nil
 		},
@@ -369,7 +369,7 @@ func TestExptInsightAnalysisRecordRepo_CountFeedbackVote_ForceMaster(t *testing.
 	mocks.writeTracker.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 	mocks.writeTracker.EXPECT().CheckWriteFlagBySearchParam(gomock.Any(), gomock.Any(), gomock.Any()).Return(true)
 	mocks.feedbackVoteDAO.EXPECT().Count(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ int64, opts ...db.Option) (int64, int64, error) {
+		func(_ context.Context, _, _, _ int64, opts ...db.Option) (int64, int64, error) {
 			assert.True(t, db.ContainWithMasterOpt(opts))
 			return 3, 2, nil
 		},
@@ -535,7 +535,7 @@ func TestExptInsightAnalysisRecordRepo_GetFeedbackCommentByRecordID_ForceMaster(
 	mocks.writeTracker.EXPECT().CheckWriteFlagByID(gomock.Any(), gomock.Any(), int64(1)).Return(true)
 	mocks.writeTracker.EXPECT().CheckWriteFlagBySearchParam(gomock.Any(), gomock.Any(), gomock.Any()).Return(false).AnyTimes()
 	mocks.feedbackCommentDAO.EXPECT().GetByRecordID(gomock.Any(), int64(1), int64(1), int64(1), gomock.Any()).DoAndReturn(
-		func(_ context.Context, _ int64, _ int64, _ int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
+		func(_ context.Context, _, _, _ int64, opts ...db.Option) (*model.ExptInsightAnalysisFeedbackComment, error) {
 			assert.True(t, db.ContainWithMasterOpt(opts))
 			return &model.ExptInsightAnalysisFeedbackComment{ID: 1, SpaceID: 1, ExptID: 1, AnalysisRecordID: ptr.Of(int64(1))}, nil
 		},

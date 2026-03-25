@@ -61,6 +61,8 @@ struct Image {
 struct OrderBy {
     1: optional string field,
     2: optional bool is_asc,
+
+    100: optional bool is_field_key, // 用于区分当前字段是否是 field key，仅在评测集场景下生效
 }
 
 enum Role {
@@ -104,8 +106,8 @@ struct UserInfo {
 }
 
 struct BaseInfo {
-    1: optional UserInfo created_by                       
-    2: optional UserInfo updated_by                     
+    1: optional UserInfo created_by
+    2: optional UserInfo updated_by
     3: optional i64 created_at      (api.js_conv="true", go.tag = 'json:"created_at"')
     4: optional i64 updated_at      (api.js_conv="true", go.tag = 'json:"updated_at"')
     5: optional i64 deleted_at      (api.js_conv="true", go.tag = 'json:"deleted_at"')
@@ -139,4 +141,16 @@ struct RateLimit {
     1: optional i32 rate
     2: optional i32 burst
     3: optional string period
+}
+
+typedef string AgentType(ts.enum="true")
+const AgentType AgentType_Vibe = "vibe"
+
+struct AgentConfig {
+    1: optional AgentType agent_type // Agent type
+}
+
+struct SkillConfig {
+    1: optional i64 skill_id (api.js_conv="true") // skill id
+    2: optional string version // skill version
 }

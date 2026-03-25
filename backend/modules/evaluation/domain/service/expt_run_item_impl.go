@@ -169,7 +169,13 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	}
 
 	if evalErr != nil {
-		errMsg := e.Configer.GetErrCtrl(ctx).ConvertErrMsg(evalErr.Error())
+		var errMsg string
+		if se, ok := errorx.FromStatusError(evalErr); ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode) {
+			errMsg = errorx.ErrorWithoutStack(evalErr)
+		} else {
+			errMsg = e.Configer.GetErrCtrl(ctx).ConvertErrMsg(evalErr.Error())
+		}
+
 		logs.CtxWarn(ctx, "[ExptTurnEval] store turn run err, before: %v, after: %v", evalErr, errMsg)
 
 		ei, ok := errno.ParseErrImpl(evalErr)
@@ -254,7 +260,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 
 	if erids := existTurnRunResult.EvaluatorResultIds; erids != nil && len(erids.EvalVerIDToResID) > 0 {
 		// evaluatorRecords, err := e.EvalCall.BatchGetEvaluatorRecord(ctx, spaceID, maps.ToSlice(erids.EvalVerIDToResID, func(k int64, v int64) int64 { return v }))
-		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, maps.ToSlice(erids.EvalVerIDToResID, func(k, v int64) int64 { return v }), false)
+		evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, maps.ToSlice(erids.EvalVerIDToResID, func(k, v int64) int64 { return v }), false, false)
 		if err != nil {
 			return nil, err
 		}
@@ -270,7 +276,7 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) error {
 	if evalErr != nil {
-		if retry, _ := e.evalErrNeedRetry(ctx, event.SpaceID, event.RetryTimes, evalErr); retry {
+		if retry, _ := e.evalErrNeedRetry(ctx, event, evalErr); retry {
 			return evalErr
 		}
 	}
@@ -300,12 +306,18 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	return nil
 }
 
-func (e *ExptItemEvalCtxExecutor) evalErrNeedRetry(ctx context.Context, spaceID int64, retryTimes int, evalErr error) (bool, time.Duration) {
+func (e *ExptItemEvalCtxExecutor) evalErrNeedRetry(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) (bool, time.Duration) {
 	if evalErr == nil {
 		return false, 0
 	}
+	spaceID := event.SpaceID
+	retryTimes := event.RetryTimes
 	conf := e.Configer.GetErrRetryConf(ctx, spaceID, evalErr)
-	return retryTimes < conf.GetRetryTimes(), conf.GetRetryInterval()
+	maxRetryTimes := conf.GetRetryTimes()
+	if event.MaxRetryTimes > 0 {
+		maxRetryTimes = event.MaxRetryTimes
+	}
+	return retryTimes < maxRetryTimes, conf.GetRetryInterval()
 }
 
 func (e *ExptItemEvalCtxExecutor) evalErrNeedTerminateExpt(ctx context.Context, spaceID int64, evalErr error) bool {

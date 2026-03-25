@@ -133,14 +133,15 @@ func (mr *MockEvaluationSetItemServiceMockRecorder) GetEvaluationSetItemField(ct
 }
 
 // ListEvaluationSetItems mocks base method.
-func (m *MockEvaluationSetItemService) ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *string, error) {
+func (m *MockEvaluationSetItemService) ListEvaluationSetItems(ctx context.Context, param *entity.ListEvaluationSetItemsParam) ([]*entity.EvaluationSetItem, *int64, *int64, *string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListEvaluationSetItems", ctx, param)
 	ret0, _ := ret[0].([]*entity.EvaluationSetItem)
 	ret1, _ := ret[1].(*int64)
-	ret2, _ := ret[2].(*string)
-	ret3, _ := ret[3].(error)
-	return ret0, ret1, ret2, ret3
+	ret2, _ := ret[2].(*int64)
+	ret3, _ := ret[3].(*string)
+	ret4, _ := ret[4].(error)
+	return ret0, ret1, ret2, ret3, ret4
 }
 
 // ListEvaluationSetItems indicates an expected call of ListEvaluationSetItems.

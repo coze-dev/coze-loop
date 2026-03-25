@@ -64,6 +64,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeNormal),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -180,6 +181,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeNormal,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -297,6 +299,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("test_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeNormal),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Test Prompt"),
 					Description:   ptr.Of("Test PromptDescription"),
 					LatestVersion: ptr.Of("1.0.0"),
@@ -312,6 +315,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "test_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeNormal,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Test Prompt",
 					Description:   "Test PromptDescription",
 					LatestVersion: "1.0.0",
@@ -438,6 +442,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey:   ptr.Of("snippet_prompt"),
 				PromptBasic: &prompt.PromptBasic{
 					PromptType:    ptr.Of(prompt.PromptTypeSnippet),
+					SecurityLevel: ptr.Of(string(entity.SecurityLevelL3)),
 					DisplayName:   ptr.Of("Snippet Prompt"),
 					Description:   ptr.Of("Snippet description"),
 					LatestVersion: ptr.Of("2.0.0"),
@@ -495,6 +500,7 @@ func mockPromptCases() []promptTestCase {
 				PromptKey: "snippet_prompt",
 				PromptBasic: &entity.PromptBasic{
 					PromptType:    entity.PromptTypeSnippet,
+					SecurityLevel: entity.SecurityLevelL3,
 					DisplayName:   "Snippet Prompt",
 					Description:   "Snippet description",
 					LatestVersion: "2.0.0",
@@ -829,6 +835,55 @@ func TestModelConfigExtraConversion(t *testing.T) {
 	assert.Equal(t, extra, dtoBack.Extra)
 }
 
+func TestThinkingConfigConversion(t *testing.T) {
+	tests := []struct {
+		name      string
+		dto       *prompt.ThinkingConfig
+		do        *entity.ThinkingConfig
+		expectDTO *prompt.ThinkingConfig
+		expectDO  *entity.ThinkingConfig
+	}{
+		{
+			name:      "nil input",
+			dto:       nil,
+			do:        nil,
+			expectDTO: nil,
+			expectDO:  nil,
+		},
+		{
+			name: "thinking config with values",
+			dto: &prompt.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffortHigh),
+			},
+			do: &entity.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+			},
+			expectDTO: &prompt.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(prompt.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(prompt.ReasoningEffortHigh),
+			},
+			expectDO: &entity.ThinkingConfig{
+				BudgetTokens:    ptr.Of(int64(256)),
+				ThinkingOption:  ptr.Of(entity.ThinkingOptionEnabled),
+				ReasoningEffort: ptr.Of(entity.ReasoningEffortHigh),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expectDO, ThinkingConfigDTO2DO(tt.dto))
+			assert.Equal(t, tt.expectDTO, ThinkingConfigDO2DTO(tt.do))
+		})
+	}
+}
+
 func TestTemplateTypeDTO2DO(t *testing.T) {
 	tests := []struct {
 		name string
@@ -853,7 +908,7 @@ func TestTemplateTypeDTO2DO(t *testing.T) {
 		{
 			name: "custom template m type",
 			dto:  prompt.TemplateTypeCustomTemplateM,
-			want: entity.TemplateTYpeCustomTemplateM,
+			want: entity.TemplateTypeCustomTemplateM,
 		},
 		{
 			name: "unknown template type defaults to normal",
@@ -867,6 +922,54 @@ func TestTemplateTypeDTO2DO(t *testing.T) {
 			t.Parallel()
 			got := TemplateTypeDTO2DO(tt.dto)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMcpConfigDTO2DO(t *testing.T) {
+	tests := []struct {
+		name string
+		dto  *prompt.McpConfig
+		want *entity.McpConfig
+	}{
+		{
+			name: "nil input",
+			dto:  nil,
+			want: nil,
+		},
+		{
+			name: "mcp config with servers",
+			dto: &prompt.McpConfig{
+				IsMcpCallAutoRetry: ptr.Of(true),
+				McpServers: []*prompt.McpServerCombine{
+					{
+						McpServerID:    ptr.Of(int64(1)),
+						AccessPointID:  ptr.Of(int64(2)),
+						DisabledTools:  []string{"tool_x"},
+						EnabledTools:   []string{"tool_y"},
+						IsEnabledTools: ptr.Of(true),
+					},
+					nil,
+				},
+			},
+			want: &entity.McpConfig{
+				IsMcpCallAutoRetry: ptr.Of(true),
+				McpServers: []*entity.McpServerCombine{
+					{
+						McpServerID:    ptr.Of(int64(1)),
+						AccessPointID:  ptr.Of(int64(2)),
+						DisabledTools:  []string{"tool_x"},
+						EnabledTools:   []string{"tool_y"},
+						IsEnabledTools: ptr.Of(true),
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, McpConfigDTO2DO(tt.dto))
 		})
 	}
 }
@@ -954,7 +1057,7 @@ func TestPromptTemplateWithDifferentTypes(t *testing.T) {
 				},
 			},
 			want: &entity.PromptTemplate{
-				TemplateType: entity.TemplateTYpeCustomTemplateM,
+				TemplateType: entity.TemplateTypeCustomTemplateM,
 				Messages: []*entity.Message{
 					{
 						Role:    entity.RoleUser,

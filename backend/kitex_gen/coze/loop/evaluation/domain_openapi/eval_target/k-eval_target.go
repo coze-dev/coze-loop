@@ -387,6 +387,20 @@ func (p *EvalTarget) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField3(buf[offset:])
@@ -475,6 +489,20 @@ func (p *EvalTarget) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTarget) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
 func (p *EvalTarget) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
@@ -535,6 +563,7 @@ func (p *EvalTarget) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -548,6 +577,7 @@ func (p *EvalTarget) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field10Length()
@@ -562,6 +592,15 @@ func (p *EvalTarget) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
+	}
+	return offset
+}
+
+func (p *EvalTarget) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
 	}
 	return offset
 }
@@ -605,6 +644,15 @@ func (p *EvalTarget) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
 func (p *EvalTarget) field1Length() int {
 	l := 0
 	if p.IsSetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTarget) field2Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -656,6 +704,11 @@ func (p *EvalTarget) DeepCopy(s interface{}) error {
 	if src.ID != nil {
 		tmp := *src.ID
 		p.ID = &tmp
+	}
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
 	}
 
 	if src.SourceTargetID != nil {
@@ -712,6 +765,20 @@ func (p *EvalTargetVersion) FastRead(buf []byte) (int, error) {
 		case 1:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -811,6 +878,20 @@ func (p *EvalTargetVersion) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvalTargetVersion) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return offset, nil
+}
+
 func (p *EvalTargetVersion) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
@@ -871,6 +952,7 @@ func (p *EvalTargetVersion) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) i
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -884,6 +966,7 @@ func (p *EvalTargetVersion) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
@@ -898,6 +981,15 @@ func (p *EvalTargetVersion) fastWriteField1(buf []byte, w thrift.NocopyWriter) i
 	if p.IsSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.ID)
+	}
+	return offset
+}
+
+func (p *EvalTargetVersion) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWorkspaceID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
 	}
 	return offset
 }
@@ -941,6 +1033,15 @@ func (p *EvalTargetVersion) fastWriteField100(buf []byte, w thrift.NocopyWriter)
 func (p *EvalTargetVersion) field1Length() int {
 	l := 0
 	if p.IsSetID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *EvalTargetVersion) field2Length() int {
+	l := 0
+	if p.IsSetWorkspaceID() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I64Length()
 	}
@@ -992,6 +1093,11 @@ func (p *EvalTargetVersion) DeepCopy(s interface{}) error {
 	if src.ID != nil {
 		tmp := *src.ID
 		p.ID = &tmp
+	}
+
+	if src.WorkspaceID != nil {
+		tmp := *src.WorkspaceID
+		p.WorkspaceID = &tmp
 	}
 
 	if src.TargetID != nil {

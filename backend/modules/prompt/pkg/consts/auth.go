@@ -8,6 +8,7 @@ const (
 	ActionLoopPromptEdit            = "edit"
 	ActionLoopPromptDebug           = "debug"
 	ActionLoopPromptExecute         = "execute"
+	ActionLoopPromptEditSecLevel    = "editSecLevel"
 	ActionWorkspaceListLoopPrompt   = "listLoopPrompt"
 	ActionWorkspaceCreateLoopPrompt = "createLoopPrompt"
 )

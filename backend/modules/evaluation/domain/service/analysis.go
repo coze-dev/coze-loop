@@ -13,12 +13,5 @@ import (
 type IEvaluationAnalysisService interface {
 	GetAnalysisRecord(ctx context.Context, id, spaceID int64) (record *entity.AnalysisRecord, err error)
 	BatchGetAnalysisRecordByUniqueKeys(ctx context.Context, uniqueKey []string) (record map[string]*entity.AnalysisRecord, err error) // 批量获取
-	TrajectoryAnalysis(ctx context.Context, param TrajectoryAnalysisParam) (recordID int64, err error)
-}
-
-type TrajectoryAnalysisParam struct {
-	WorkspaceID int64
-	ExptID      int64
-	ItemID      int64
-	TurnID      int64
+	TrajectoryAnalysis(ctx context.Context, param entity.TrajectoryAnalysisParam) (recordID int64, err error)
 }

@@ -31,6 +31,10 @@ struct AttrTos {
     3: optional map<string, string> multimodal_data
 }
 
+struct EncryptionInfo {
+    1: optional string workflow (go.tag='json:"workflow"')
+}
+
 struct OutputSpan {
     1: required string trace_id
     2: required string span_id
@@ -63,6 +67,7 @@ struct OutputSpan {
     102: optional AttrTos attr_tos
     103: optional map<string, string> system_tags
     104: optional list<annotation.Annotation> annotations
+    105: optional EncryptionInfo encryption
 }
 
 struct InputSpan {

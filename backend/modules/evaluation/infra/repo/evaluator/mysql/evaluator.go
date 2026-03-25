@@ -24,6 +24,7 @@ import (
 type EvaluatorDAO interface {
 	CreateEvaluator(ctx context.Context, evaluator *model.Evaluator, opts ...db.Option) error
 	GetEvaluatorByID(ctx context.Context, id int64, includeDeleted bool, opts ...db.Option) (*model.Evaluator, error)
+	GetEvaluatorBySpaceIDAndName(ctx context.Context, spaceID int64, name string, includeDeleted bool, opts ...db.Option) (*model.Evaluator, error)
 	BatchGetEvaluatorByID(ctx context.Context, ids []int64, includeDeleted bool, opts ...db.Option) ([]*model.Evaluator, error)
 	UpdateEvaluatorMeta(ctx context.Context, do *model.Evaluator, opts ...db.Option) error
 	UpdateEvaluatorDraftSubmitted(ctx context.Context, evaluatorID int64, draftSubmitted bool, userID string, opts ...db.Option) error
@@ -70,6 +71,24 @@ func (dao *EvaluatorDAOImpl) GetEvaluatorByID(ctx context.Context, id int64, inc
 	query := dbsession.WithContext(ctx).Where("id = ?", id)
 	if includeDeleted {
 		query = query.Unscoped() // 解除软删除过滤
+	}
+	err := query.First(po).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return po, nil
+}
+
+func (dao *EvaluatorDAOImpl) GetEvaluatorBySpaceIDAndName(ctx context.Context, spaceID int64, name string, includeDeleted bool, opts ...db.Option) (*model.Evaluator, error) {
+	dbsession := dao.provider.NewSession(ctx, opts...)
+
+	po := &model.Evaluator{}
+	query := dbsession.WithContext(ctx).Where("space_id = ? AND name = ?", spaceID, name)
+	if includeDeleted {
+		query = query.Unscoped()
 	}
 	err := query.First(po).Error
 	if err != nil {
@@ -167,18 +186,14 @@ func (dao *EvaluatorDAOImpl) BatchDeleteEvaluator(ctx context.Context, ids []int
 		return nil
 	}
 
-	// 通过opts获取当前的db session实例
 	dbsession := dao.provider.NewSession(ctx, opts...)
 
-	// 开启事务确保操作的原子性
-	return dbsession.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		return tx.Model(&model.Evaluator{}).
-			Where("id IN (?)", ids).
-			Updates(map[string]interface{}{
-				"deleted_at": gorm.DeletedAt{Time: time.Now(), Valid: true},
-				"updated_by": userID,
-			}).Error
-	})
+	return dbsession.WithContext(ctx).Model(&model.Evaluator{}).
+		Where("id IN (?)", ids).
+		Updates(map[string]interface{}{
+			"deleted_at": gorm.DeletedAt{Time: time.Now(), Valid: true},
+			"updated_by": userID,
+		}).Error
 }
 
 // CheckNameExist 校验当前名称是否存在

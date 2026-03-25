@@ -9,9 +9,12 @@ import (
 	"strconv"
 	"time"
 
+	"gorm.io/gorm/clause"
+
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	gslice "github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
 )
 
 type FieldType int64
@@ -244,6 +247,12 @@ type ExptItemEvalResult struct {
 	TurnResultRunLogs map[int64]*ExptTurnResultRunLog
 }
 
+type ExptEvalItems []*ExptEvalItem
+
+func (e ExptEvalItems) GetItemIDs() []int64 {
+	return gslice.Map(e, func(f *ExptEvalItem) int64 { return f.ItemID })
+}
+
 type ExptEvalItem struct {
 	ExptID           int64
 	EvalSetVersionID int64
@@ -340,6 +349,12 @@ type MGetExperimentResultParam struct {
 	Page               Page
 	// FullTrajectory 表示在构建 eval_target_result 时是否需要包含轨迹（trajectory）相关信息
 	FullTrajectory bool
+	// ExportFullContent 表示导出场景下需要从 TOS 加载完整字段内容（RDS 中大对象会被剪裁）
+	ExportFullContent bool
+	// LoadEvaluatorFullContent 为 true 时从 TOS 加载 Evaluator input 大对象；nil 时沿用 ExportFullContent
+	LoadEvaluatorFullContent *bool
+	// LoadEvalTargetFullContent 为 true 时从 TOS 加载 EvalTarget output 大对象；nil 时沿用 ExportFullContent
+	LoadEvalTargetFullContent *bool
 }
 
 type MGetExperimentReportResult struct {
@@ -465,9 +480,15 @@ func (e *ExptTemplateFilterFields) IsValid() bool {
 type ExptItemRunLogFilter struct {
 	Status      []ItemRunState
 	ResultState *ExptItemResultState
+
+	RawFilter bool
+	RawCond   clause.Expr
 }
 
 func (e *ExptItemRunLogFilter) GetResultState() ExptItemResultState {
+	if e.ResultState == nil {
+		return 0
+	}
 	return *e.ResultState
 }
 

@@ -92,7 +92,11 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
 
-	return trr.SetEvaluatorResults(evaluatorResults)
+	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults() {
+		return trr
+	}
+
+	return trr
 }
 
 func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *entity.ExptTurnEvalCtx) (*entity.EvalTargetRecord, error) {
@@ -100,7 +104,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if existRecord := e.existedTargetRecord(etec); existRecord != nil {
+	if existRecord := e.existedTargetRecord(etec); !etec.Event.IgnoreExistedResult() && existRecord != nil {
 		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
 		return existRecord, nil
 	}
@@ -259,6 +263,11 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		return make(map[int64]*entity.EvaluatorRecord), nil
 	}
 
+	if etec.Event.AsyncEvaluatorReportTrigger {
+		logs.CtxInfo(ctx, "CallEvaluators skip re-run due to async report trigger, return existing evaluator results: %d", len(etec.ExptTurnRunResult.EvaluatorResults))
+		return etec.ExptTurnRunResult.EvaluatorResults, nil
+	}
+
 	expt := etec.Expt
 	evaluatorResults := make(map[int64]*entity.EvaluatorRecord)
 	pendingEvaluatorVersionIDs := make([]int64, 0, len(expt.Evaluators))
@@ -266,7 +275,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
-		if existResult != nil && existResult.Status == entity.EvaluatorRunStatusSuccess {
+		if !etec.Event.IgnoreExistedResult() && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}
@@ -311,6 +320,21 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	execEvalVerIDMap := gslice.ToMap(execEvaluatorVersionIDs, func(t int64) (int64, bool) { return t, true })
 	targetFields := targetResult.EvalTargetOutputData.OutputFields
 
+	// 评估器需要完整的 target_output，从 TOS 加载被裁剪的大字段
+	if targetResult.EvalTargetOutputData != nil && targetResult.EvalTargetOutputData.OutputFields != nil {
+		omitKeys := make([]string, 0)
+		for k, c := range targetResult.EvalTargetOutputData.OutputFields {
+			if c != nil && c.IsContentOmitted() {
+				omitKeys = append(omitKeys, k)
+			}
+		}
+		if len(omitKeys) > 0 {
+			if err := e.evalTargetService.LoadRecordOutputFields(ctx, targetResult, omitKeys); err != nil {
+				logs.CtxWarn(ctx, "[CallEvaluators] LoadRecordOutputFields fail, err: %v", err)
+			}
+		}
+	}
+
 	pool, err := goroutine.NewPool(evaluatorsConf.GetEvaluatorConcurNum())
 	if err != nil {
 		return nil, err
@@ -334,29 +358,40 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			return nil, err
 		}
 
-		pool.Add(func() error {
-			var err error
-			defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
-
-			evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
-				SpaceID:            spaceID,
-				Name:               "",
-				EvaluatorVersionID: ev.GetEvaluatorVersionID(),
-				InputData:          inputData,
-				ExperimentID:       etec.Event.ExptID,
-				ExperimentRunID:    etec.Event.ExptRunID,
-				ItemID:             item.ItemID,
-				TurnID:             turn.ID,
-				Ext:                etec.Ext,
-				EvaluatorRunConf:   ec.RunConf,
+		// 闭包捕获：必须在 Add 前将当前迭代的变量复制到局部变量，否则 goroutine 执行时可能读到最后一次循环的值
+		evForCapture := ev
+		// 深拷贝 inputData：多个 evaluator 并发执行时，CreateEvaluatorRecord 内的 SaveEvaluatorRecordData 会调用 processContent 就地修改 Content（大字段裁剪）。
+		// 若共享同一 inputData 的 *Content 指针，先完成的 evaluator 会污染未执行 evaluator 的输入，导致 content_omitted。
+		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
+		ecForCapture := ec
+		if evForCapture.IsAsync() {
+			pool.Add(func() error {
+				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)
 			})
-			if err != nil {
-				return err
-			}
+		} else {
+			pool.Add(func() error {
+				var err error
+				defer e.metric.EmitTurnExecEvaluatorResult(spaceID, err != nil)
+				evaluatorRecord, err := e.evaluatorService.RunEvaluator(ctx, &entity.RunEvaluatorRequest{
+					SpaceID:            spaceID,
+					Name:               "",
+					EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
+					InputData:          inputDataForCapture,
+					ExperimentID:       etec.Event.ExptID,
+					ExperimentRunID:    etec.Event.ExptRunID,
+					ItemID:             item.ItemID,
+					TurnID:             turn.ID,
+					Ext:                etec.Ext,
+					EvaluatorRunConf:   ecForCapture.RunConf,
+				})
+				if err != nil {
+					return err
+				}
 
-			recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
-			return nil
-		})
+				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
+				return nil
+			})
+		}
 	}
 
 	err = pool.Exec(ctx)
@@ -370,14 +405,65 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 	return records, err
 }
 
+func (e *DefaultExptTurnEvaluationImpl) asyncCallEvaluator(
+	ctx context.Context,
+	ev *entity.Evaluator,
+	ec *entity.EvaluatorConf,
+	etec *entity.ExptTurnEvalCtx,
+	inputData *entity.EvaluatorInputData,
+	recordMap *sync.Map,
+) error {
+	var err error
+	defer func() { e.metric.EmitTurnExecEvaluatorResult(etec.Event.SpaceID, err != nil) }()
+
+	ts := time.Now()
+
+	evaluatorRecord, err := e.evaluatorService.AsyncRunEvaluator(ctx, &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            etec.Event.SpaceID,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+		InputData:          inputData,
+		ExperimentID:       etec.Event.ExptID,
+		ExperimentRunID:    etec.Event.ExptRunID,
+		ItemID:             etec.EvalSetItem.ItemID,
+		TurnID:             etec.Turn.ID,
+		Ext:                etec.Ext,
+		EvaluatorRunConf:   ec.RunConf,
+	})
+	if err != nil {
+		return err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", evaluatorRecord.ID)
+	if err = e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		Event:              etec.Event,
+		RecordID:           evaluatorRecord.ID,
+		AsyncUnixMS:        ts.UnixMilli(),
+		Session:            etec.Event.Session,
+		EvaluatorVersionID: ev.GetEvaluatorVersionID(),
+	}); err != nil {
+		return err
+	}
+
+	recordMap.Store(ev.GetEvaluatorVersionID(), evaluatorRecord)
+	return nil
+}
+
 func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Context, spaceID int64, evaluatorType entity.EvaluatorType,
 	ec *entity.EvaluatorConf, evalSetTurn *entity.Turn, targetFields map[string]*entity.Content, inputSchemas []*entity.ArgsSchema, ext map[string]string,
 ) (*entity.EvaluatorInputData, error) {
-	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, ec.IngressConf.EvalSetAdapter.FieldConfs, evalSetTurn)
+	var targetFieldConfs []*entity.FieldConf
+	if ec.IngressConf != nil && ec.IngressConf.TargetAdapter != nil {
+		targetFieldConfs = ec.IngressConf.TargetAdapter.FieldConfs
+	}
+	var evalSetFieldConfs []*entity.FieldConf
+	if ec.IngressConf != nil && ec.IngressConf.EvalSetAdapter != nil {
+		evalSetFieldConfs = ec.IngressConf.EvalSetAdapter.FieldConfs
+	}
+	fromEvalSet, err := e.buildEvalSetFields(ctx, spaceID, evalSetFieldConfs, evalSetTurn)
 	if err != nil {
 		return nil, err
 	}
-	fromTarget, err := e.buildFieldsFromSource(ctx, ec.IngressConf.TargetAdapter.FieldConfs, targetFields, evaluatorType, inputSchemas)
+	fromTarget, err := e.buildFieldsFromSource(ctx, targetFieldConfs, targetFields, evaluatorType, inputSchemas)
 	if err != nil {
 		return nil, err
 	}
@@ -398,6 +484,20 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 				}
 			}
 		}
+	case entity.EvaluatorTypeAgent:
+		// For Agent evaluators, we need to provide the full dataset context, not just the mapped fields.
+		// This ensures the agent has access to all available information for its reasoning process.
+		allEvalSetFields, err := e.getAllEvalSetFields(ctx, spaceID, evalSetTurn)
+		if err != nil {
+			return nil, err
+		}
+		res.EvaluateDatasetFields = allEvalSetFields
+		res.EvaluateTargetOutputFields = targetFields
+		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+			for key, content := range fieldCnt {
+				res.InputFields[key] = content
+			}
+		}
 	default:
 		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 			for key, content := range fieldCnt {
@@ -407,19 +507,39 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	}
 
 	res.Ext = e.buildEvaluatorInputDataExt(ext, ec.RunConf)
-
 	return res, nil
 }
 
-// buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic
+// deepCopyEvaluatorInputData 深拷贝 EvaluatorInputData，避免多 evaluator 并发时 SaveEvaluatorRecordData 的 processContent 就地修改共享 *Content 导致其他 evaluator 收到 content_omitted。
+func deepCopyEvaluatorInputData(in *entity.EvaluatorInputData) *entity.EvaluatorInputData {
+	if in == nil {
+		return nil
+	}
+	b, err := json.Marshal(in)
+	if err != nil {
+		return in // 拷贝失败时退回原对象，避免 panic
+	}
+	out := new(entity.EvaluatorInputData)
+	if err := json.Unmarshal(b, out); err != nil {
+		return in
+	}
+	return out
+}
+
+// buildFieldsFromSource build field mapping from specified data source, extracting common field processing logic.
+// 评估器评测需要完整的 target_output，故：1) Code 或 无 input_schemas 的 CustomRPC 直接透传全部 sourceFields；
+// 2) 有 FieldConfs 时按配置映射，并确保 actual_output 等 target 正常输出字段始终包含（避免遗漏）。
 func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Context, fieldConfs []*entity.FieldConf,
 	sourceFields map[string]*entity.Content, evaluatorType entity.EvaluatorType, inputSchemas []*entity.ArgsSchema,
 ) (map[string]*entity.Content, error) {
 	if evaluatorType == entity.EvaluatorTypeCode || (evaluatorType == entity.EvaluatorTypeCustomRPC && len(inputSchemas) == 0) {
 		return sourceFields, nil
 	}
+	// FieldConfs 为空时透传全部 target 输出，确保 actual_output 等字段不丢失
+	if len(fieldConfs) == 0 {
+		return sourceFields, nil
+	}
 	result := make(map[string]*entity.Content)
-
 	for _, fc := range fieldConfs {
 		content, err := e.getFieldContent(fc, sourceFields)
 		if err != nil {
@@ -427,7 +547,12 @@ func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Contex
 		}
 		result[fc.FieldName] = content
 	}
-
+	// 确保 actual_output 始终传入评估器（target 正常输出字段，评测必需）
+	if c := sourceFields[consts.EvalTargetOutputFieldKeyActualOutput]; c != nil {
+		if _, has := result[consts.EvalTargetOutputFieldKeyActualOutput]; !has {
+			result[consts.EvalTargetOutputFieldKeyActualOutput] = c
+		}
+	}
 	return result, nil
 }
 
@@ -436,6 +561,27 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 	fields := gcond.IfLazyL(evalSetTurn != nil && len(evalSetTurn.FieldDataList) > 0, func() map[string]*entity.Content {
 		return gslice.ToMap(evalSetTurn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
 	}, nil)
+
+	// 评测集大对象：在按 FieldConf 处理前，先加载所有被裁剪字段的完整内容，避免 JSON Path 提取时使用剪裁后的数据
+	if len(fcs) > 0 && fields != nil && evalSetTurn != nil {
+		for fieldName, content := range fields {
+			if content != nil && content.IsContentOmitted() {
+				fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+					SpaceID:         spaceID,
+					EvaluationSetID: evalSetTurn.EvalSetID,
+					ItemPK:          evalSetTurn.ItemID,
+					FieldName:       fieldName,
+					TurnID:          gptr.Of(evalSetTurn.ID),
+				})
+				if err != nil {
+					return nil, err
+				}
+				if fd != nil && fd.Content != nil {
+					fields[fieldName] = fd.Content
+				}
+			}
+		}
+	}
 
 	for _, fc := range fcs {
 		content, err := e.getFieldContent(fc, fields)
@@ -459,7 +605,6 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 		}
 		result[fc.FieldName] = content
 	}
-
 	return result, nil
 }
 
@@ -517,4 +662,35 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputDataExt(ext map[strin
 	}
 
 	return builtExt
+}
+
+func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context, spaceID int64, evalSetTurn *entity.Turn) (map[string]*entity.Content, error) {
+	if evalSetTurn == nil {
+		return nil, nil
+	}
+
+	result := make(map[string]*entity.Content, len(evalSetTurn.FieldDataList))
+	for _, field := range evalSetTurn.FieldDataList {
+		content := field.Content
+		if content == nil {
+			continue
+		}
+		if content.IsContentOmitted() {
+			req := &entity.GetEvaluationSetItemFieldParam{
+				SpaceID:         spaceID,
+				EvaluationSetID: evalSetTurn.EvalSetID,
+				ItemPK:          evalSetTurn.ItemID,
+				FieldName:       field.Name,
+				TurnID:          gptr.Of(evalSetTurn.ID),
+			}
+			logs.CtxInfo(ctx, "found omitted content turn in getAllEvalSetFields, turn_info: %v", json.Jsonify(req))
+			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+			if err != nil {
+				return nil, err
+			}
+			content = fd.Content
+		}
+		result[field.Name] = content
+	}
+	return result, nil
 }

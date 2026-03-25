@@ -27,6 +27,7 @@ type PromptBasic struct {
 	UpdatedAt        time.Time             `gorm:"column:updated_at;type:datetime;not null;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"`                                                                                                                               // 更新时间
 	DeletedAt        soft_delete.DeletedAt `gorm:"column:deleted_at;type:bigint(20);not null;uniqueIndex:uniq_space_id_prompt_key_deleted_at,priority:3;index:idx_pid_ptype_delat,priority:3;column:deleted_at;not null;default:0;softDelete:milli;comment:删除时间" json:"deleted_at"` // 删除时间
 	PromptType       string                `gorm:"column:prompt_type;type:varchar(64);not null;index:idx_pid_ptype_delat,priority:2;default:normal;comment:Prompt类型" json:"prompt_type"`                                                                                            // Prompt类型
+	SecurityLevel    string                `gorm:"column:security_level;type:varchar(64);not null;default:L3;comment:security level" json:"security_level"`                                                                                                                         // security level
 }
 
 // TableName PromptBasic's table name

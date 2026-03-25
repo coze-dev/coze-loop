@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 
 	"github.com/Masterminds/semver/v3"
@@ -30,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/encoding"
@@ -56,6 +58,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 	fileProvider rpc.IFileProvider,
 	evaluatorSourceServices map[entity.EvaluatorType]service.EvaluatorSourceService,
 	exptResultService service.ExptResultService,
+	evalAsyncRepo repo.IEvalAsyncRepo,
 ) evaluation.EvaluatorService {
 	handler := &EvaluatorHandlerImpl{
 		idgen:                    idgen,
@@ -71,6 +74,7 @@ func NewEvaluatorHandlerImpl(idgen idgen.IIDGenerator,
 		fileProvider:             fileProvider,
 		evaluatorSourceServices:  evaluatorSourceServices,
 		exptResultService:        exptResultService,
+		evalAsyncRepo:            evalAsyncRepo,
 	}
 	return handler
 }
@@ -90,6 +94,7 @@ type EvaluatorHandlerImpl struct {
 	fileProvider             rpc.IFileProvider
 	evaluatorSourceServices  map[entity.EvaluatorType]service.EvaluatorSourceService
 	exptResultService        service.ExptResultService
+	evalAsyncRepo            repo.IEvalAsyncRepo
 }
 
 // ListEvaluators 按查询条件查询 evaluator
@@ -286,6 +291,12 @@ func (e *EvaluatorHandlerImpl) CreateEvaluator(ctx context.Context, request *eva
 	}
 	if request.GetEvaluator().GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.GetEvaluator().GetWorkspaceID())
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.GetEvaluator().GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -499,6 +510,12 @@ func (e *EvaluatorHandlerImpl) UpdateEvaluatorDraft(ctx context.Context, request
 	}
 	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, evaluatorDO.SpaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1025,6 +1042,12 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 			return nil, err
 		}
 	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	userID := session.UserIDInCtxOrEmpty(ctx)
 
@@ -1159,21 +1182,16 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 	if evaluatorRecord == nil {
 		return &evaluatorservice.GetEvaluatorRecordResponse{}, nil
 	}
-	// 鉴权
-	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, evaluatorRecord.EvaluatorVersionID, request.GetIncludeDeleted(), false)
-	if err != nil {
-		return nil, err
-	}
-	if evaluatorDO == nil {
-		return &evaluatorservice.GetEvaluatorRecordResponse{}, nil
-	}
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
-		SpaceID:       evaluatorDO.SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		ObjectID:      strconv.FormatInt(evaluatorRecord.SpaceID, 10),
+		SpaceID:       evaluatorRecord.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
 	})
 	if err != nil {
 		return nil, err
+	}
+	if err := e.transformExtraOutputURIToURL(ctx, evaluatorRecord); err != nil {
+		logs.CtxError(ctx, "[GetEvaluatorRecord] transformExtraOutputURIToURL fail, err: %v", err)
 	}
 	dto := evaluatorconvertor.ConvertEvaluatorRecordDO2DTO(evaluatorRecord)
 	e.userInfoService.PackUserInfo(ctx, []userinfo.UserInfoCarrier{dto})
@@ -1184,7 +1202,7 @@ func (e *EvaluatorHandlerImpl) GetEvaluatorRecord(ctx context.Context, request *
 
 func (e *EvaluatorHandlerImpl) BatchGetEvaluatorRecords(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorRecordsRequest) (resp *evaluatorservice.BatchGetEvaluatorRecordsResponse, err error) {
 	evaluatorRecordIDs := request.GetEvaluatorRecordIds()
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, request.GetIncludeDeleted())
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, request.GetIncludeDeleted(), false)
 	if err != nil {
 		return nil, err
 	}
@@ -1388,6 +1406,25 @@ func (e *EvaluatorHandlerImpl) fillVideoURLs(uriToContentMap map[string][]*evalu
 	}
 }
 
+func (e *EvaluatorHandlerImpl) transformExtraOutputURIToURL(ctx context.Context, record *entity.EvaluatorRecord) error {
+	if record == nil || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.ExtraOutput == nil {
+		return nil
+	}
+	extraOutput := record.EvaluatorOutputData.ExtraOutput
+	if extraOutput.URI == nil || *extraOutput.URI == "" {
+		return nil
+	}
+	uri := *extraOutput.URI
+	urlMap, err := e.fileProvider.MGetFileURL(ctx, []string{uri})
+	if err != nil {
+		return err
+	}
+	if url, ok := urlMap[uri]; ok {
+		extraOutput.URL = gptr.Of(url)
+	}
+	return nil
+}
+
 // ValidateEvaluator 验证评估器
 func (e *EvaluatorHandlerImpl) ValidateEvaluator(ctx context.Context, request *evaluatorservice.ValidateEvaluatorRequest) (resp *evaluatorservice.ValidateEvaluatorResponse, err error) {
 	// 鉴权
@@ -1458,6 +1495,12 @@ func (e *EvaluatorHandlerImpl) BatchDebugEvaluator(ctx context.Context, request 
 	}
 	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_CustomRPC {
 		err = e.authCustomRPCEvaluatorContentWritable(ctx, request.WorkspaceID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if request.GetEvaluatorType() == evaluatordto.EvaluatorType_Agent {
+		err = e.authAgentEvaluatorContentWritable(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1877,6 +1920,138 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorTags(ctx context.Context, request *e
 	}, nil
 }
 
+func (e *EvaluatorHandlerImpl) AsyncRunEvaluator(ctx context.Context, req *evaluatorservice.AsyncRunEvaluatorRequest) (r *evaluatorservice.AsyncRunEvaluatorResponse, err error) {
+	startTime := time.Now()
+	evaluatorDO, err := e.evaluatorService.GetEvaluatorVersion(ctx, nil, req.GetEvaluatorVersionID(), false, false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+	}
+	if !evaluatorDO.Builtin {
+		err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(evaluatorDO.ID, 10),
+			SpaceID:       evaluatorDO.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_Evaluator)}},
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	resp, err := e.evaluatorService.AsyncRunEvaluator(ctx, buildAsyncRunEvaluatorRequest(evaluatorDO.Name, req))
+	if err != nil {
+		return nil, err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.ID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           resp.ID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: req.GetEvaluatorVersionID(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncRunEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.ID, err)
+		return nil, err
+	}
+
+	return &evaluatorservice.AsyncRunEvaluatorResponse{
+		InvokeID: gptr.Of(resp.ID),
+	}, nil
+}
+
+func buildAsyncRunEvaluatorRequest(evaluatorName string, request *evaluatorservice.AsyncRunEvaluatorRequest) *entity.AsyncRunEvaluatorRequest {
+	srvReq := &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            request.WorkspaceID,
+		Name:               evaluatorName,
+		EvaluatorVersionID: request.EvaluatorVersionID,
+		ExperimentID:       request.GetExperimentID(),
+		ExperimentRunID:    request.GetExperimentRunID(),
+		ItemID:             request.GetItemID(),
+		TurnID:             request.GetTurnID(),
+		EvaluatorRunConf:   evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(request.GetEvaluatorRunConf()),
+	}
+	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(request.GetInputData())
+	if request.IsSetEvaluatorRunConf() && request.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = request.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+	srvReq.InputData = inputData
+	return srvReq
+}
+
+func (e *EvaluatorHandlerImpl) AsyncDebugEvaluator(ctx context.Context, req *evaluatorservice.AsyncDebugEvaluatorRequest) (r *evaluatorservice.AsyncDebugEvaluatorResponse, err error) {
+	startTime := time.Now()
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("debugLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	if req.InputData != nil {
+		err = e.transformURIsToURLs(ctx, req.InputData.InputFields)
+		if err != nil {
+			logs.CtxError(ctx, "failed to transform URIs to URLs: %v", err)
+			return nil, err
+		}
+	}
+	dto := &evaluatordto.Evaluator{
+		WorkspaceID:   gptr.Of(req.WorkspaceID),
+		EvaluatorType: gptr.Of(req.EvaluatorType),
+		CurrentVersion: &evaluatordto.EvaluatorVersion{
+			EvaluatorContent: req.EvaluatorContent,
+		},
+	}
+	do, err := evaluatorconvertor.ConvertEvaluatorDTO2DO(dto)
+	if err != nil {
+		return nil, err
+	}
+	inputData := evaluatorconvertor.ConvertEvaluatorInputDataDTO2DO(req.GetInputData())
+	evaluatorRunConf := evaluatorconvertor.ConvertEvaluatorRunConfDTO2DO(req.GetEvaluatorRunConf())
+	if req.IsSetEvaluatorRunConf() && req.GetEvaluatorRunConf().IsSetEvaluatorRuntimeParam() &&
+		req.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().IsSetJSONValue() {
+		if inputData == nil {
+			inputData = &entity.EvaluatorInputData{}
+		}
+		if inputData.Ext == nil {
+			inputData.Ext = make(map[string]string)
+		}
+		inputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam] = req.GetEvaluatorRunConf().GetEvaluatorRuntimeParam().GetJSONValue()
+	}
+	resp, err := e.evaluatorService.AsyncDebugEvaluator(ctx, &entity.AsyncDebugEvaluatorRequest{
+		SpaceID:          req.WorkspaceID,
+		EvaluatorDO:      do,
+		InputData:        inputData,
+		EvaluatorRunConf: evaluatorRunConf,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	asyncCtxKey := fmt.Sprintf("evaluator:%d", resp.InvokeID)
+	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, asyncCtxKey, &entity.EvalAsyncCtx{
+		RecordID:           resp.InvokeID,
+		AsyncUnixMS:        startTime.UnixMilli(),
+		Session:            &entity.Session{UserID: session.UserIDInCtxOrEmpty(ctx)},
+		EvaluatorVersionID: do.GetEvaluatorVersionID(),
+	}); err != nil {
+		logs.CtxError(ctx, "[AsyncDebugEvaluator] SetEvalAsyncCtx fail, invokeID: %d, err: %v", resp.InvokeID, err)
+		return nil, err
+	}
+
+	return &evaluatorservice.AsyncDebugEvaluatorResponse{
+		InvokeID: gptr.Of(resp.InvokeID),
+	}, nil
+}
+
 func convertListEvaluatorTagType(tagType evaluatordto.EvaluatorTagType) entity.EvaluatorTagKeyType {
 	switch tagType {
 	case evaluatordto.EvaluatorTagTypeTemplate:
@@ -1960,6 +2135,17 @@ func (e *EvaluatorHandlerImpl) authCustomRPCEvaluatorContentWritable(ctx context
 	}
 	if !ok {
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current space does not support custom RPC evaluator"))
+	}
+	return nil
+}
+
+func (e *EvaluatorHandlerImpl) authAgentEvaluatorContentWritable(ctx context.Context) error {
+	ok, err := e.configer.CheckAgentEvaluatorWritable(ctx)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current space does not support agent evaluator"))
 	}
 	return nil
 }

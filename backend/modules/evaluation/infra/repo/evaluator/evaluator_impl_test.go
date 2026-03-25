@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
 	evaluatormocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
 func TestEvaluatorRepoImpl_SubmitEvaluatorVersion(t *testing.T) {
@@ -542,6 +543,101 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorMetaByID(t *testing.T) {
 					assert.Equal(t, tt.expectedResult[i].EvaluatorType, result[i].EvaluatorType)
 					assert.Equal(t, tt.expectedResult[i].Name, result[i].Name)
 				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorRepoImpl_GetEvaluatorMetaBySpaceIDAndName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	tests := []struct {
+		name           string
+		spaceID        int64
+		evaluatorName  string
+		includeDeleted bool
+		mockSetup      func()
+		want           *entity.Evaluator
+		wantErr        error
+	}{
+		{
+			name:           "success",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(&model.Evaluator{
+						ID:            1,
+						EvaluatorType: int32(entity.EvaluatorTypePrompt),
+						Name:          gptr.Of("builtin"),
+					}, nil)
+			},
+			want: &entity.Evaluator{
+				ID:            1,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				Name:          "builtin",
+			},
+		},
+		{
+			name:           "not found",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(nil, nil)
+			},
+		},
+		{
+			name:           "dao error",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(nil, assert.AnError)
+			},
+			wantErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			tc.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:        mockEvaluatorDAO,
+				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				dbProvider:          mockDBProvider,
+				idgen:               mockIDGen,
+				lwt:                 mockLWT,
+			}
+
+			got, err := repo.GetEvaluatorMetaBySpaceIDAndName(context.Background(), tc.spaceID, tc.evaluatorName, tc.includeDeleted)
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			if tc.want == nil {
+				assert.Nil(t, got)
+				return
+			}
+			if assert.NotNil(t, got) {
+				assert.Equal(t, tc.want.ID, got.ID)
+				assert.Equal(t, tc.want.EvaluatorType, got.EvaluatorType)
+				assert.Equal(t, tc.want.Name, got.Name)
 			}
 		})
 	}
@@ -1480,7 +1576,7 @@ func TestEvaluatorRepoImpl_BatchDeleteEvaluator(t *testing.T) {
 					BatchDeleteEvaluatorVersionByEvaluatorIDs(gomock.Any(), []int64{1, 2}, "test_user", gomock.Any()).
 					Return(nil)
 				mockTagDAO.EXPECT().
-					DeleteEvaluatorTagsByConditions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					DeleteEvaluatorTagsByConditions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil).Times(2)
 			},
 			expectedError: nil,
@@ -3097,4 +3193,61 @@ func TestEvaluatorRepoImpl_ListEvaluatorTags(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvaluatorRepoImpl_BatchGetEvaluatorByVersionID_Agent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+	mockTagDAO := evaluatormocks.NewMockEvaluatorTagDAO(ctrl)
+	mockTemplateDAO := evaluatormocks.NewMockEvaluatorTemplateDAO(ctrl)
+
+	repo := NewEvaluatorRepo(mockIDGen, mockDBProvider, mockEvaluatorDAO, mockEvaluatorVersionDAO, mockTagDAO, mockLWT, mockTemplateDAO)
+
+	t.Run("成功批量获取Agent评估器版本", func(t *testing.T) {
+		ids := []int64{100}
+
+		agentVer := &entity.AgentEvaluatorVersion{
+			// AgentConfig: "{}", // AgentEvaluatorVersion definition depends on entity
+		}
+		metaBytes, _ := json.Marshal(agentVer)
+
+		// 设置获取评估器版本的期望
+		mockEvaluatorVersionDAO.EXPECT().
+			BatchGetEvaluatorVersionByID(gomock.Any(), gomock.Any(), ids, false).
+			Return([]*model.EvaluatorVersion{
+				{
+					ID:            100,
+					EvaluatorID:   100,
+					EvaluatorType: gptr.Of(int32(entity.EvaluatorTypeAgent)),
+					Version:       "1.0.0",
+					Metainfo:      gptr.Of(metaBytes),
+				},
+			}, nil)
+
+		// 设置获取评估器的期望
+		mockEvaluatorDAO.EXPECT().
+			BatchGetEvaluatorByID(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*model.Evaluator{
+				{
+					ID:            100,
+					EvaluatorType: int32(entity.EvaluatorTypeAgent),
+					Name:          gptr.Of("agent-test"),
+				},
+			}, nil)
+
+		result, err := repo.BatchGetEvaluatorByVersionID(context.Background(), nil, ids, false, false)
+		assert.NoError(t, err)
+		assert.Len(t, result, 1)
+		assert.Equal(t, int64(100), result[0].ID)
+		assert.Equal(t, entity.EvaluatorTypeAgent, result[0].EvaluatorType)
+		assert.Equal(t, "agent-test", result[0].Name)
+		// 验证 AgentEvaluatorVersion 是否正确设置
+		assert.NotNil(t, result[0].AgentEvaluatorVersion)
+	})
 }

@@ -14,7 +14,8 @@ type ExptScheduleEvent struct {
 	Ext       map[string]string
 	Session   *Session
 
-	RetryTimes int
+	ItemRetryTimes     int
+	ExecEvalSetItemIDs []int64
 }
 
 type ExptItemEvalEvent struct {
@@ -23,13 +24,19 @@ type ExptItemEvalEvent struct {
 	ExptRunID   int64
 	ExptRunMode ExptRunMode
 
-	EvalSetItemID      int64
-	AsyncReportTrigger bool
+	EvalSetItemID               int64
+	AsyncReportTrigger          bool
+	AsyncEvaluatorReportTrigger bool
 
-	CreateAt   int64
-	RetryTimes int
-	Ext        map[string]string
-	Session    *Session
+	CreateAt      int64
+	RetryTimes    int
+	MaxRetryTimes int
+	Ext           map[string]string
+	Session       *Session
+}
+
+func (e *ExptItemEvalEvent) IgnoreExistedResult() bool {
+	return (e.ExptRunMode == EvaluationModeRetryItems || e.ExptRunMode == EvaluationModeRetryAll) && e.RetryTimes == 0
 }
 
 func (e *ExptItemEvalEvent) GetExptID() int64 {

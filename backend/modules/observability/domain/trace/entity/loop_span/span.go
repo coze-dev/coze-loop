@@ -138,7 +138,8 @@ type Span struct {
 
 	AttrTos         *AttrTos       `json:"-"`
 	LogicDeleteTime int64          `json:"-"` // us
-	Annotations     AnnotationList `json:"-"`
+	Annotations     AnnotationList `json:"annotations"`
+	Encryption      EncryptionInfo `json:"-"`
 }
 
 type ObjectStorage struct {
@@ -164,6 +165,10 @@ type AttrTos struct {
 	InputDataURL   string
 	OutputDataURL  string
 	MultimodalData map[string]string
+}
+
+type EncryptionInfo struct {
+	NeedWorkflow bool
 }
 
 func (s *Span) GetSystemTags() map[string]string {
@@ -589,7 +594,18 @@ func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersion
 }
 
 // ExtractByJsonpath 从Span的Input/Output/Tags中提取数据，根据jsonpath返回结果。时间戳按毫秒返回。
+// 会递归解析嵌套的 JSON 字符串。
 func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath string) (string, error) {
+	return s.extractByJsonpath(ctx, key, jsonpath, true)
+}
+
+// ExtractByJsonpathRaw 从Span的Input/Output/Tags中提取数据，根据jsonpath返回结果。时间戳按毫秒返回。
+// 不会递归解析嵌套的 JSON 字符串，保持原始格式。适用于 MultiPart 类型数据提取。
+func (s *Span) ExtractByJsonpathRaw(ctx context.Context, key string, jsonpath string) (string, error) {
+	return s.extractByJsonpath(ctx, key, jsonpath, false)
+}
+
+func (s *Span) extractByJsonpath(ctx context.Context, key string, jsonpath string, recursive bool) (string, error) {
 	jsonpath = strings.TrimPrefix(jsonpath, key)
 	jsonpath = strings.TrimPrefix(jsonpath, ".")
 	data := ""
@@ -618,7 +634,10 @@ func (s *Span) ExtractByJsonpath(ctx context.Context, key string, jsonpath strin
 		return data, nil
 	}
 
-	return json.GetStringByJSONPathRecursively(data, jsonpath)
+	if recursive {
+		return json.GetStringByJSONPathRecursively(data, jsonpath)
+	}
+	return json.GetStringByJSONPath(data, jsonpath)
 }
 
 func validField(clipFields *[]string, key, value string) string {

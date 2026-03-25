@@ -159,6 +159,21 @@ func (mr *MockIBenefitServiceMockRecorder) DeductTraceBenefit(ctx, param any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeductTraceBenefit", reflect.TypeOf((*MockIBenefitService)(nil).DeductTraceBenefit), ctx, param)
 }
 
+// GetTraceBenefitSource mocks base method.
+func (m *MockIBenefitService) GetTraceBenefitSource(ctx context.Context, param *benefit.GetTraceBenefitSourceParams) (*benefit.GetTraceBenefitSourceResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTraceBenefitSource", ctx, param)
+	ret0, _ := ret[0].(*benefit.GetTraceBenefitSourceResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetTraceBenefitSource indicates an expected call of GetTraceBenefitSource.
+func (mr *MockIBenefitServiceMockRecorder) GetTraceBenefitSource(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTraceBenefitSource", reflect.TypeOf((*MockIBenefitService)(nil).GetTraceBenefitSource), ctx, param)
+}
+
 // ReplenishExtraTraceBenefit mocks base method.
 func (m *MockIBenefitService) ReplenishExtraTraceBenefit(ctx context.Context, param *benefit.ReplenishExtraTraceBenefitParams) error {
 	m.ctrl.T.Helper()

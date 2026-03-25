@@ -46,7 +46,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSet(ctx context.Context, para
 	})
 }
 
-func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id int64, jobID int64, err error) {
+func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Context, param *entity.CreateEvaluationSetWithImportParam) (id, jobID int64, err error) {
 	if param == nil {
 		return 0, 0, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
@@ -108,6 +108,23 @@ func (d *EvaluationSetServiceImpl) ListEvaluationSets(ctx context.Context, param
 		PageToken:        param.PageToken,
 		OrderBys:         param.OrderBys,
 	})
+}
+
+func (d *EvaluationSetServiceImpl) ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error) {
+	if param == nil {
+		return 0, errorx.NewByCode(errno.CommonInternalErrorCode)
+	}
+	return d.datasetRPCAdapter.ImportDataset(ctx, &rpc.ImportDatasetParam{
+		WorkspaceID:   param.WorkspaceID,
+		DatasetID:     param.EvaluationSetID,
+		File:          param.File,
+		FieldMappings: param.FieldMappings,
+		Option:        param.Option,
+	})
+}
+
+func (d *EvaluationSetServiceImpl) GetEvaluationSetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error) {
+	return d.datasetRPCAdapter.GetDatasetIOJob(ctx, spaceID, jobID)
 }
 
 func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {

@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
@@ -66,6 +67,7 @@ func NewOpenAPIApplication(
 	traceConfig config.ITraceConfig,
 	metrics metrics.ITraceMetrics,
 	collector collector.ICollectorProvider,
+	timeRange time_range.ITimeRangeProvider,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService: traceService,
@@ -77,6 +79,7 @@ func NewOpenAPIApplication(
 		traceConfig:  traceConfig,
 		metrics:      metrics,
 		collector:    collector,
+		timeRange:    timeRange,
 	}, nil
 }
 
@@ -90,15 +93,17 @@ type OpenAPIApplication struct {
 	traceConfig  config.ITraceConfig
 	metrics      metrics.ITraceMetrics
 	collector    collector.ICollectorProvider
+	timeRange    time_range.ITimeRangeProvider
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
 	if err := o.validateIngestTracesReq(ctx, req); err != nil {
 		return nil, err
 	}
-	// unpack
+	// unpack space
 	spanMap := o.unpackSpace(ctx, req.Spans)
 	connectorUid := session.UserIDInCtxOrEmpty(ctx)
+	hasErr := false
 	for workspaceId := range spanMap {
 		workSpaceIdNum, err := strconv.ParseInt(workspaceId, 10, 64)
 		if err != nil {
@@ -108,48 +113,57 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 		if err = o.auth.CheckIngestPermission(ctx, workspaceId); err != nil {
 			return nil, err
 		}
-		// check benefit
-		benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: connectorUid,
-			SpaceID:      workSpaceIdNum,
-		})
-		if err != nil {
-			logs.CtxError(ctx, "Fail to check benefit, %v", err)
-		}
-		if benefitRes == nil {
-			benefitRes = &benefit.CheckTraceBenefitResult{
-				AccountAvailable: true,
-				IsEnough:         true,
-				StorageDuration:  3,
-				WhichIsEnough:    -1,
+		// unpack source
+		sourceMap := o.unpackSource(ctx, spanMap[workspaceId])
+		for source := range sourceMap {
+			// check benefit
+			benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+				Source:       source,
+				ConnectorUID: connectorUid,
+				SpaceID:      workSpaceIdNum,
+			})
+			if err != nil {
+				logs.CtxError(ctx, "Fail to check benefit, %v", err)
+			}
+			if benefitRes == nil {
+				benefitRes = &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  3,
+					WhichIsEnough:    -1,
+				}
+			}
+			if !benefitRes.IsEnough {
+				hasErr = true
+				continue
+			} else if !benefitRes.AccountAvailable {
+				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
+			}
+			// ingest
+			spans := tconv.SpanListDTO2DO(sourceMap[source])
+			for i := range spans {
+				spans[i].CallType = "Custom"
+			}
+			tenantSpanMap := o.unpackTenant(ctx, spans)
+			for ingestTenant := range tenantSpanMap {
+				if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
+					return nil, err
+				}
+				if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+					Tenant:           ingestTenant,
+					TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+					WhichIsEnough:    benefitRes.WhichIsEnough,
+					CozeAccountId:    connectorUid,
+					VolcanoAccountID: benefitRes.VolcanoAccountID,
+					Spans:            tenantSpanMap[ingestTenant],
+				}); err != nil {
+					return nil, err
+				}
 			}
 		}
-		if !benefitRes.IsEnough {
-			return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-		} else if !benefitRes.AccountAvailable {
-			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-		}
-
-		spans := tconv.SpanListDTO2DO(spanMap[workspaceId])
-		for i := range spans {
-			spans[i].CallType = "Custom"
-		}
-		tenantSpanMap := o.unpackTenant(ctx, spans)
-		for ingestTenant := range tenantSpanMap {
-			if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
-				return nil, err
-			}
-			if err = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-				Tenant:           ingestTenant,
-				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-				WhichIsEnough:    benefitRes.WhichIsEnough,
-				CozeAccountId:    connectorUid,
-				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            tenantSpanMap[ingestTenant],
-			}); err != nil {
-				return nil, err
-			}
-		}
+	}
+	if hasErr {
+		return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
 	}
 	return openapi.NewIngestTracesResponse(), nil
 }
@@ -170,6 +184,50 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 			spansMap[workspaceID] = make([]*span.InputSpan, 0)
 		}
 		spansMap[workspaceID] = append(spansMap[workspaceID], spans[i])
+	}
+	return spansMap
+}
+
+func (o *OpenAPIApplication) unpackSource(ctx context.Context, spans []*span.InputSpan) map[int64][]*span.InputSpan {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[int64][]*span.InputSpan)
+	for i := range spans {
+		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
+			Tags:       spans[i].TagsString,
+			SystemTags: spans[i].SystemTagsString,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
+			continue
+		}
+		if spansMap[result.Source] == nil {
+			spansMap[result.Source] = make([]*span.InputSpan, 0)
+		}
+		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
+	}
+	return spansMap
+}
+
+func (o *OpenAPIApplication) unpackOtelSource(ctx context.Context, spans []*loop_span.Span) map[int64][]*loop_span.Span {
+	if spans == nil {
+		return nil
+	}
+	spansMap := make(map[int64][]*loop_span.Span)
+	for i := range spans {
+		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
+			Tags:       spans[i].TagsString,
+			SystemTags: spans[i].SystemTagsString,
+		})
+		if err != nil {
+			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
+			continue
+		}
+		if spansMap[result.Source] == nil {
+			spansMap[result.Source] = make([]*loop_span.Span, 0)
+		}
+		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
 	}
 	return spansMap
 }
@@ -247,43 +305,52 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 			return nil, e
 		}
 		connectorUid := session.UserIDInCtxOrEmpty(ctx)
-		benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
-			ConnectorUID: connectorUid,
-			SpaceID:      workSpaceIdNum,
-		})
-		if e != nil {
-			logs.CtxError(ctx, "Fail to check benefit, %v", e)
-		}
-		if benefitRes == nil {
-			benefitRes = &benefit.CheckTraceBenefitResult{
-				AccountAvailable: true,
-				IsEnough:         true,
-				StorageDuration:  3,
-				WhichIsEnough:    -1,
+
+		spans := tconv.OtelSpans2LoopSpans(otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans))
+		sourceSpanMap := o.unpackOtelSource(ctx, spans)
+		for source := range sourceSpanMap {
+			benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+				Source:       source,
+				ConnectorUID: connectorUid,
+				SpaceID:      workSpaceIdNum,
+			})
+			if e != nil {
+				logs.CtxError(ctx, "Fail to check benefit, %v", e)
 			}
-		}
-		if !benefitRes.IsEnough {
-			return nil, errorx.NewByCode(obErrorx.TraceNoCapacityAvailableErrorCode)
-		} else if !benefitRes.AccountAvailable {
-			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
-		}
-
-		spans := otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans)
-
-		tenantSpanMap := o.unpackTenant(ctx, tconv.OtelSpans2LoopSpans(spans))
-		for ingestTenant := range tenantSpanMap {
-			if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
-				Tenant:           ingestTenant,
-				TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
-				WhichIsEnough:    benefitRes.WhichIsEnough,
-				CozeAccountId:    connectorUid,
-				VolcanoAccountID: benefitRes.VolcanoAccountID,
-				Spans:            tenantSpanMap[ingestTenant],
-			}); e != nil {
-				logs.CtxError(ctx, "IngestTraces err: %v", e)
-				partialFailSpanNumber += len(tenantSpanMap[ingestTenant])
-				partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
+			if benefitRes == nil {
+				benefitRes = &benefit.CheckTraceBenefitResult{
+					AccountAvailable: true,
+					IsEnough:         true,
+					StorageDuration:  3,
+					WhichIsEnough:    -1,
+				}
+			}
+			if !benefitRes.IsEnough {
+				if benefitRes.WhichIsEnough != 3 {
+					partialFailSpanNumber += len(sourceSpanMap[source])
+					if partialErrMessage == "" {
+						partialErrMessage = "TraceNoCapacityAvailable"
+					}
+				}
 				continue
+			} else if !benefitRes.AccountAvailable {
+				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
+			}
+			tenantSpanMap := o.unpackTenant(ctx, sourceSpanMap[source])
+			for ingestTenant := range tenantSpanMap {
+				if e = o.traceService.IngestTraces(ctx, &service.IngestTracesReq{
+					Tenant:           ingestTenant,
+					TTL:              loop_span.TTLFromInteger(benefitRes.StorageDuration),
+					WhichIsEnough:    benefitRes.WhichIsEnough,
+					CozeAccountId:    connectorUid,
+					VolcanoAccountID: benefitRes.VolcanoAccountID,
+					Spans:            tenantSpanMap[ingestTenant],
+				}); e != nil {
+					logs.CtxError(ctx, "IngestTraces err: %v", e)
+					partialFailSpanNumber += len(tenantSpanMap[ingestTenant])
+					partialErrMessage = fmt.Sprintf("SendTraceInner err: %v", e)
+					continue
+				}
 			}
 		}
 	}
@@ -499,8 +566,12 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	errCode := 0
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceOApi", req.WorkspaceID, req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
@@ -535,7 +606,7 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 	logs.CtxInfo(ctx, "SearchTrace successfully, spans count %d", len(sResp.Spans))
 	return &openapi.SearchTraceOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, req.GetNeedOriginalTags()),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -554,17 +625,7 @@ func (o *OpenAPIApplication) validateSearchTraceOApiReq(ctx context.Context, req
 	} else if req.Limit > MaxListSpansLimit || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
 	}
-	v := utils.DateValidator{
-		Start:        req.GetStartTime(),
-		End:          req.GetEndTime(),
-		EarliestDays: 365,
-	}
-	newStartTime, newEndTime, err := v.CorrectDate()
-	if err != nil {
-		return err
-	}
-	req.SetStartTime(newStartTime)
-	req.SetEndTime(newEndTime)
+
 	return nil
 }
 
@@ -574,14 +635,35 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		platformType = loop_span.PlatformCozeLoop
 	}
 
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+
+	if startTime == 0 && endTime == 0 {
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.WorkspaceID, 10), req.GetLogid(), req.GetTraceID(), 1000*60*60*24)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
+
+	v := utils.DateValidator{
+		Start:        startTime,
+		End:          endTime,
+		EarliestDays: 365,
+	}
+	newStartTime, newEndTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
 	ret := &service.SearchTraceOApiReq{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: o.workspace.GetThirdPartyQueryWorkSpaceID(ctx, req.WorkspaceID),
 		Tenants:               o.tenant.GetOAPIQueryTenants(ctx, platformType),
 		TraceID:               req.GetTraceID(),
 		LogID:                 req.GetLogid(),
-		StartTime:             req.GetStartTime(),
-		EndTime:               req.GetEndTime(),
+		StartTime:             newStartTime,
+		EndTime:               newEndTime,
 		Limit:                 req.GetLimit(),
 		PlatformType:          platformType,
 		WithDetail:            true,
@@ -602,8 +684,12 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 	errCode := 0
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "SearchTraceTreeOApi", req.GetWorkspaceID(), req.GetPlatformType(), "", src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 
@@ -641,7 +727,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 
 	return &openapi.SearchTraceTreeOApiResponse{
 		Data: &openapi.SearchTraceOApiData{
-			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
+			Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, false),
 			TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 				Tokens: &trace.TokenCost{
 					Input:  inTokens,
@@ -713,8 +799,12 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	resp := openapi.NewListSpansOApiResponse()
 	defer func() {
 		if req != nil {
-			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
-			o.collector.CollectTraceOpenAPIEvent(ctx, "ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), int64(spansSize), errCode, st, err != nil)
+			src := ""
+			if req.Extra != nil {
+				src = req.Extra.GetSrc()
+			}
+			o.metrics.EmitTraceOapi("ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), src, int64(spansSize), errCode, st, err != nil)
+			o.collector.CollectTraceOpenAPIEvent(ctx, "ListSpansOApi", req.WorkspaceID, req.GetPlatformType(), req.GetSpanListType(), src, int64(spansSize), errCode, st, err != nil)
 		}
 	}()
 	if err = o.validateListSpansOApi(ctx, req); err != nil {
@@ -746,7 +836,7 @@ func (o *OpenAPIApplication) ListSpansOApi(ctx context.Context, req *openapi.Lis
 	spansSize = loop_span.SizeofSpans(sResp.Spans)
 
 	resp.Data = &openapi.ListSpansOApiData{
-		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, req.GetNeedOriginalTags()),
+		Spans:         tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, req.GetNeedOriginalTags()),
 		NextPageToken: sResp.NextPageToken,
 		HasMore:       sResp.HasMore,
 	}
@@ -824,8 +914,12 @@ func (o *OpenAPIApplication) ListPreSpanOApi(ctx context.Context, req *openapi.L
 	st := time.Now()
 	errCode := 0
 	defer func() {
-		o.metrics.EmitTraceOapi("ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
-		o.collector.CollectTraceOpenAPIEvent(ctx, "ListPreSpanOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		src := ""
+		if req.Extra != nil {
+			src = req.Extra.GetSrc()
+		}
+		o.metrics.EmitTraceOapi("ListPreSpanOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListPreSpanOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListPreSpanOApiReq(ctx, req); err != nil {
@@ -856,7 +950,7 @@ func (o *OpenAPIApplication) ListPreSpanOApi(ctx context.Context, req *openapi.L
 		return nil, err
 	}
 	return &openapi.ListPreSpanOApiResponse{
-		Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, false),
+		Spans: tconv.SpanListDO2DTO(sResp.Spans, nil, nil, nil, nil, false),
 	}, nil
 }
 
@@ -919,8 +1013,8 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	st := time.Now()
 	errCode := 0
 	defer func() {
-		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
-		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTracesOApi", req.WorkspaceID, "", "", 0, errCode, st, err != nil)
+		o.metrics.EmitTraceOapi("ListTracesOApi", req.WorkspaceID, "", "", "", 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTracesOApi", req.WorkspaceID, "", "", "", 0, errCode, st, err != nil)
 	}()
 
 	if err = o.validateListTracesOApiReq(ctx, req); err != nil {

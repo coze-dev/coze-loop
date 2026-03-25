@@ -220,7 +220,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 			}
 
 			if len(evaluatorResultIDs) > 0 {
-				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+				records, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 				if err != nil {
 					logs.CtxError(ctx, "[ExptEval] RecordItemRunLogs BatchGetEvaluatorRecord failed, expt_id=%v, expt_run_id=%v, item_id=%v, turn_id=%v, err=%v",
 						exptID, exptRunID, itemID, tid, err)
@@ -298,6 +298,20 @@ func NewTurnEvaluatorResultRefs(id, exptID, turnResultID, spaceID int64, evaluat
 		})
 	}
 	return refs
+}
+
+func resolveLoadEvaluatorFullContent(param *entity.MGetExperimentResultParam) bool {
+	if param.LoadEvaluatorFullContent != nil {
+		return *param.LoadEvaluatorFullContent
+	}
+	return param.ExportFullContent
+}
+
+func resolveLoadEvalTargetFullContent(param *entity.MGetExperimentResultParam) bool {
+	if param.LoadEvalTargetFullContent != nil {
+		return *param.LoadEvalTargetFullContent
+	}
+	return param.ExportFullContent
 }
 
 func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (res *entity.MGetExperimentReportResult, err error) {
@@ -857,6 +871,12 @@ type PayloadBuilder struct {
 
 	// 控制是否在构建 eval_target_result 时保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容（LoadEvaluatorFullContent/LoadEvalTargetFullContent 未设置时沿用）
+	ExportFullContent bool
+	// LoadEvaluatorFullContent 为 true 时从 TOS 加载 Evaluator input 大对象
+	LoadEvaluatorFullContent bool
+	// LoadEvalTargetFullContent 为 true 时从 TOS 加载 EvalTarget output 大对象
+	LoadEvalTargetFullContent bool
 }
 
 func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultParam, baselineExptID int64, baselineTurnResults []*entity.ExptTurnResult,
@@ -885,8 +905,11 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		AnalysisService:          analysisService,
 		ExptTurnResultFilterKeyMappingEvaluatorMap:  exptTurnResultFilterKeyMappingEvaluatorMap,
 		ExptTurnResultFilterKeyMappingAnnotationMap: exptTurnResultFilterKeyMappingAnnotationMap,
-		ExptAnnotateRepo: exptAnnotateRepo,
-		FullTrajectory:   param.FullTrajectory,
+		ExptAnnotateRepo:          exptAnnotateRepo,
+		FullTrajectory:            param.FullTrajectory,
+		ExportFullContent:         param.ExportFullContent,
+		LoadEvaluatorFullContent:  resolveLoadEvaluatorFullContent(param),
+		LoadEvalTargetFullContent: resolveLoadEvalTargetFullContent(param),
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -1008,6 +1031,12 @@ type ExptResultBuilder struct {
 
 	// 控制是否保留 trajectory 字段
 	FullTrajectory bool
+	// ExportFullContent 导出场景下从 TOS 加载完整字段内容
+	ExportFullContent bool
+	// LoadEvaluatorFullContent 为 true 时从 TOS 加载 Evaluator input 大对象
+	LoadEvaluatorFullContent bool
+	// LoadEvalTargetFullContent 为 true 时从 TOS 加载 EvalTarget output 大对象
+	LoadEvalTargetFullContent bool
 }
 
 // 1.确定当前分页下数据范围
@@ -1018,19 +1047,22 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 	exptResultBuilders := make([]*ExptResultBuilder, 0)
 	for _, exptID := range b.ExptIDs {
 		exptResultBuilder := &ExptResultBuilder{
-			ExptID:                   exptID,
-			BaselineExptID:           b.BaselineExptID,
-			SpaceID:                  b.SpaceID,
-			ItemIDs:                  b.ItemIDs,
-			TurnIDMap:                b.TurnIDMap,
-			ExperimentRepo:           b.ExperimentRepo,
-			ExptTurnResultRepo:       b.ExptTurnResultRepo,
-			evalTargetService:        b.EvalTargetService,
-			evaluatorRecordService:   b.EvaluatorRecordService,
-			evaluationSetItemService: b.EvaluationSetItemService,
-			ExptAnnotateRepo:         b.ExptAnnotateRepo,
-			analysisService:          b.AnalysisService,
-			FullTrajectory:           b.FullTrajectory,
+			ExptID:                    exptID,
+			BaselineExptID:            b.BaselineExptID,
+			SpaceID:                   b.SpaceID,
+			ItemIDs:                   b.ItemIDs,
+			TurnIDMap:                 b.TurnIDMap,
+			ExperimentRepo:            b.ExperimentRepo,
+			ExptTurnResultRepo:        b.ExptTurnResultRepo,
+			evalTargetService:         b.EvalTargetService,
+			evaluatorRecordService:    b.EvaluatorRecordService,
+			evaluationSetItemService:  b.EvaluationSetItemService,
+			ExptAnnotateRepo:          b.ExptAnnotateRepo,
+			analysisService:           b.AnalysisService,
+			FullTrajectory:            b.FullTrajectory,
+			ExportFullContent:         b.ExportFullContent,
+			LoadEvaluatorFullContent:  b.LoadEvaluatorFullContent,
+			LoadEvalTargetFullContent: b.LoadEvalTargetFullContent,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1094,19 +1126,22 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.ExptTurnResultFilterEntity, error) {
 	// 分实验获取数据
 	exptResultBuilder := &ExptResultBuilder{
-		ExptID:                   b.BaselineExptID,
-		BaselineExptID:           b.BaselineExptID,
-		SpaceID:                  b.SpaceID,
-		ItemIDs:                  b.ItemIDs,
-		TurnIDMap:                b.TurnIDMap,
-		ExperimentRepo:           b.ExperimentRepo,
-		ExptTurnResultRepo:       b.ExptTurnResultRepo,
-		evalTargetService:        b.EvalTargetService,
-		evaluatorRecordService:   b.EvaluatorRecordService,
-		evaluationSetItemService: b.EvaluationSetItemService,
-		turnResultDO:             b.BaseExptTurnResultDO,
-		ExptAnnotateRepo:         b.ExptAnnotateRepo,
-		FullTrajectory:           b.FullTrajectory,
+		ExptID:                    b.BaselineExptID,
+		BaselineExptID:            b.BaselineExptID,
+		SpaceID:                   b.SpaceID,
+		ItemIDs:                   b.ItemIDs,
+		TurnIDMap:                 b.TurnIDMap,
+		ExperimentRepo:            b.ExperimentRepo,
+		ExptTurnResultRepo:        b.ExptTurnResultRepo,
+		evalTargetService:         b.EvalTargetService,
+		evaluatorRecordService:    b.EvaluatorRecordService,
+		evaluationSetItemService:  b.EvaluationSetItemService,
+		turnResultDO:              b.BaseExptTurnResultDO,
+		ExptAnnotateRepo:          b.ExptAnnotateRepo,
+		FullTrajectory:            b.FullTrajectory,
+		ExportFullContent:         b.ExportFullContent,
+		LoadEvaluatorFullContent:  b.LoadEvaluatorFullContent,
+		LoadEvalTargetFullContent: b.LoadEvalTargetFullContent,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1397,7 +1432,7 @@ func (e *ExptResultBuilder) buildEvaluatorResult(ctx context.Context) error {
 		evaluatorResultID2TurnResultID[turnEvaluatorResultRef.EvaluatorResultID] = turnEvaluatorResultRef.ExptTurnResultID
 	}
 
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, e.LoadEvaluatorFullContent)
 	if err != nil {
 		return err
 	}
@@ -1766,6 +1801,17 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		return err
 	}
 
+	// 导出场景下从 TOS 加载完整字段内容
+	if e.LoadEvalTargetFullContent {
+		for _, targetRecord := range targetRecords {
+			if targetRecord != nil {
+				if err := e.evalTargetService.LoadRecordFullData(ctx, targetRecord); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	turnResultID2TargetOutput := make(map[int64]*entity.TurnTargetOutput) // turn_result_id -> version_id -> result
 	for _, targetRecord := range targetRecords {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
@@ -1815,10 +1861,6 @@ func (e *ExptResultBuilder) getTurnTargetOutput(ctx context.Context, itemID, tur
 	turnTargetOutput, ok := e.turnResultID2TargetOutput[turnResultID]
 	if !ok {
 		return &entity.TurnTargetOutput{}
-	}
-
-	if turnTargetOutput.EvalTargetRecord != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData != nil && turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError != nil {
-		turnTargetOutput.EvalTargetRecord.EvalTargetOutputData.EvalTargetRunError.Message = errno.ServiceInternalErrMsg
 	}
 
 	return turnTargetOutput
@@ -2795,7 +2837,7 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 	}
 
 	// 批量获取评估器记录
-	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false)
+	evaluatorRecords, err := e.evaluatorRecordService.BatchGetEvaluatorRecord(ctx, evaluatorResultIDs, false, false)
 	if err != nil {
 		return err
 	}

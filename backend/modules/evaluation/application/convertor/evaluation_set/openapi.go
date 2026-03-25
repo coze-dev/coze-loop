@@ -6,6 +6,8 @@ package evaluation_set
 import (
 	"github.com/bytedance/gg/gptr"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapi_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -28,6 +30,8 @@ func convertOpenAPIContentTypeToDO(contentType *common.ContentType) entity.Conte
 		return entity.ContentTypeVideo
 	case common.ContentTypeMultiPart:
 		return entity.ContentTypeMultipart
+	case common.ContentTypeMultiPartVariable:
+		return entity.ContentTypeMultipartVariable
 	default:
 		return entity.ContentTypeText // 默认使用Text类型
 	}
@@ -52,8 +56,11 @@ func convertDOContentTypeToOpenAPI(contentType entity.ContentType) *common.Conte
 	case entity.ContentTypeVideo:
 		ct := common.ContentTypeVideo
 		return &ct
-	case entity.ContentTypeMultipart, entity.ContentTypeMultipartVariable:
+	case entity.ContentTypeMultipart:
 		ct := common.ContentTypeMultiPart
+		return &ct
+	case entity.ContentTypeMultipartVariable:
+		ct := common.ContentTypeMultiPartVariable
 		return &ct
 	default:
 		// 默认使用text类型
@@ -697,5 +704,180 @@ func OpenAPIDatasetItemOutputDO2DTO(do *entity.DatasetItemOutput) *openapi_eval_
 		ItemKey:   do.ItemKey,
 		ItemID:    do.ItemID,
 		IsNewItem: do.IsNewItem,
+	}
+}
+
+func OpenAPIDatasetIOJobDO2DTO(job *entity.DatasetIOJob) *dataset_job.DatasetIOJob {
+	if job == nil {
+		return nil
+	}
+	return &dataset_job.DatasetIOJob{
+		ID:            job.ID,
+		AppID:         job.AppID,
+		SpaceID:       job.SpaceID,
+		DatasetID:     job.DatasetID,
+		JobType:       dataset_job.JobType(job.JobType),
+		Source:        OpenAPIDatasetIOEndpointDO2DTO(job.Source),
+		Target:        OpenAPIDatasetIOEndpointDO2DTO(job.Target),
+		FieldMappings: OpenAPIDatasetIOFieldMappingsDO2DTO(job.FieldMappings),
+		Option:        OpenAPIDatasetIOJobOptionDO2DTO(job.Option),
+		Status:        (*dataset_job.JobStatus)(job.Status),
+		Progress:      OpenAPIDatasetIOJobProgressDO2DTO(job.Progress),
+		Errors:        OpenAPIDatasetIOJobErrorsDO2DTO(job.Errors),
+		CreatedBy:     job.CreatedBy,
+		CreatedAt:     job.CreatedAt,
+		UpdatedBy:     job.UpdatedBy,
+		UpdatedAt:     job.UpdatedAt,
+		StartedAt:     job.StartedAt,
+		EndedAt:       job.EndedAt,
+	}
+}
+
+func OpenAPIDatasetIOEndpointDO2DTO(endpoint *entity.DatasetIOEndpoint) *dataset_job.DatasetIOEndpoint {
+	if endpoint == nil {
+		return nil
+	}
+	return &dataset_job.DatasetIOEndpoint{
+		File:    OpenAPIDatasetIOFileDO2DTO(endpoint.File),
+		Dataset: OpenAPIDatasetIODatasetDO2DTO(endpoint.Dataset),
+	}
+}
+
+func OpenAPIDatasetIOFileDO2DTO(file *entity.DatasetIOFile) *dataset_job.DatasetIOFile {
+	if file == nil {
+		return nil
+	}
+	provider := dataset.StorageProvider(file.Provider)
+
+	return &dataset_job.DatasetIOFile{
+		Provider:         provider,
+		Path:             file.Path,
+		Format:           (*dataset_job.FileFormat)(file.Format),
+		CompressFormat:   (*dataset_job.FileFormat)(file.CompressFormat),
+		Files:            file.Files,
+		OriginalFileName: file.OriginalFileName,
+		DownloadURL:      file.DownloadURL,
+		ProviderID:       file.ProviderID,
+		ProviderAuth:     OpenAPIProviderAuthDO2DTO(file.ProviderAuth),
+	}
+}
+
+func OpenAPIProviderAuthDO2DTO(auth *entity.ProviderAuth) *dataset_job.ProviderAuth {
+	if auth == nil {
+		return nil
+	}
+	return &dataset_job.ProviderAuth{
+		ProviderAccountID: auth.ProviderAccountID,
+	}
+}
+
+func OpenAPIDatasetIODatasetDO2DTO(ds *entity.DatasetIODataset) *dataset_job.DatasetIODataset {
+	if ds == nil {
+		return nil
+	}
+	return &dataset_job.DatasetIODataset{
+		SpaceID:   ds.SpaceID,
+		DatasetID: ds.DatasetID,
+		VersionID: ds.VersionID,
+	}
+}
+
+func OpenAPIDatasetIOFieldMappingsDO2DTO(mappings []*entity.FieldMapping) []*dataset_job.FieldMapping {
+	if len(mappings) == 0 {
+		return nil
+	}
+	res := make([]*dataset_job.FieldMapping, len(mappings))
+	for i, m := range mappings {
+		res[i] = &dataset_job.FieldMapping{
+			Source: m.Source,
+			Target: m.Target,
+		}
+	}
+	return res
+}
+
+func OpenAPIDatasetIOJobOptionDO2DTO(opt *entity.DatasetIOJobOption) *dataset_job.DatasetIOJobOption {
+	if opt == nil {
+		return nil
+	}
+	return &dataset_job.DatasetIOJobOption{
+		OverwriteDataset: opt.OverwriteDataset,
+	}
+}
+
+func OpenAPIDatasetIOJobProgressDO2DTO(progress *entity.DatasetIOJobProgress) *dataset_job.DatasetIOJobProgress {
+	if progress == nil {
+		return nil
+	}
+	return &dataset_job.DatasetIOJobProgress{
+		Total:         progress.Total,
+		Processed:     progress.Processed,
+		Added:         progress.Added,
+		Name:          progress.Name,
+		SubProgresses: OpenAPIDatasetIOJobSubProgressesDO2DTO(progress.SubProgresses),
+	}
+}
+
+func OpenAPIDatasetIOJobSubProgressesDO2DTO(progresses []*entity.DatasetIOJobProgress) []*dataset_job.DatasetIOJobProgress {
+	if len(progresses) == 0 {
+		return nil
+	}
+	res := make([]*dataset_job.DatasetIOJobProgress, len(progresses))
+	for i, p := range progresses {
+		res[i] = OpenAPIDatasetIOJobProgressDO2DTO(p)
+	}
+	return res
+}
+
+func OpenAPIDatasetIOJobErrorsDO2DTO(errors []*entity.ItemErrorGroup) []*dataset.ItemErrorGroup {
+	if len(errors) == 0 {
+		return nil
+	}
+	res := make([]*dataset.ItemErrorGroup, len(errors))
+	for i, e := range errors {
+		res[i] = OpenAPIDatasetIOJobErrorGroupDO2DTO(e)
+	}
+	return res
+}
+
+func OpenAPIDatasetIOJobErrorGroupDO2DTO(e *entity.ItemErrorGroup) *dataset.ItemErrorGroup {
+	if e == nil {
+		return nil
+	}
+	var typ *dataset.ItemErrorType
+	if e.Type != nil {
+		t := dataset.ItemErrorType(*e.Type)
+		typ = &t
+	}
+	return &dataset.ItemErrorGroup{
+		Type:       typ,
+		Summary:    e.Summary,
+		ErrorCount: e.ErrorCount,
+		Details:    OpenAPIDatasetIOJobErrorDetailsDO2DTO(e.Details),
+	}
+}
+
+func OpenAPIDatasetIOJobErrorDetailsDO2DTO(details []*entity.ItemErrorDetail) []*dataset.ItemErrorDetail {
+	if len(details) == 0 {
+		return nil
+	}
+	res := make([]*dataset.ItemErrorDetail, len(details))
+	for i, d := range details {
+		res[i] = &dataset.ItemErrorDetail{
+			Message:    d.Message,
+			Index:      d.Index,
+			StartIndex: d.StartIndex,
+			EndIndex:   d.EndIndex,
+		}
+	}
+	return res
+}
+
+func OpenAPIDatasetIOJobOptionDTO2DO(opt *dataset_job.DatasetIOJobOption) *entity.DatasetIOJobOption {
+	if opt == nil {
+		return nil
+	}
+	return &entity.DatasetIOJobOption{
+		OverwriteDataset: opt.OverwriteDataset,
 	}
 }

@@ -246,7 +246,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			if ok {
 				outputData.EvalTargetRunError = &entity.EvalTargetRunError{
 					Code:    statusErr.Code(),
-					Message: statusErr.Error(),
+					Message: errorx.ErrorWithoutStack(err),
 				}
 				spanParam.ErrCode = strconv.FormatInt(int64(statusErr.Code()), 10)
 			} else {
@@ -323,8 +323,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 			},
 		}
+		e.convEvalTargetRunErr(ctx, record)
 
-		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record)
+		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, nil)
 		if errCreate != nil {
 			return
 		}
@@ -384,7 +385,7 @@ func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID i
 	return trajectories[0], nil
 }
 
-func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID int64, targetID int64, targetVersionID int64,
+func (e *EvalTargetServiceImpl) AsyncExecuteTarget(ctx context.Context, spaceID, targetID, targetVersionID int64,
 	param *entity.ExecuteTargetCtx, inputData *entity.EvalTargetInputData,
 ) (record *entity.EvalTargetRecord, callee string, err error) {
 	if inputData == nil || param == nil {
@@ -476,7 +477,9 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	traceID, _ := e.emitTargetTrace(ctx, span, record, &entity.Session{UserID: userID})
 	record.TraceID = traceID
 
-	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
+	// 仅 DebugTarget 传入 TruncateLargeContent，其他场景 nil 默认剪裁
+	truncateLargeContent := param.TruncateLargeContent
+	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, truncateLargeContent); err != nil {
 		return nil, callee, err
 	}
 
@@ -548,23 +551,37 @@ func (e *EvalTargetServiceImpl) DebugTarget(ctx context.Context, param *entity.D
 			UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 		},
 	}
-	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record); err != nil {
+	e.convEvalTargetRunErr(ctx, record)
+
+	if _, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, param.TruncateLargeContent); err != nil {
 		return nil, err
 	}
 
 	return record, nil
 }
 
+func (e *EvalTargetServiceImpl) convEvalTargetRunErr(ctx context.Context, record *entity.EvalTargetRecord) {
+	if record == nil || record.EvalTargetOutputData == nil || record.EvalTargetOutputData.EvalTargetRunError == nil {
+		return
+	}
+	if record.EvalTargetOutputData.EvalTargetRunError.Code == int32(errno.CustomEvalTargetInvokeFailCode) {
+		return
+	}
+	if len(record.EvalTargetOutputData.EvalTargetRunError.Message) > 0 {
+		record.EvalTargetOutputData.EvalTargetRunError.Message = e.configer.GetErrCtrl(ctx).ConvertErrMsg(record.EvalTargetOutputData.EvalTargetRunError.Message)
+	}
+}
+
 func (e *EvalTargetServiceImpl) AsyncDebugTarget(ctx context.Context, param *entity.DebugTargetParam) (record *entity.EvalTargetRecord, callee string, err error) {
-	return e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{}, param.InputData)
+	return e.asyncExecuteTarget(ctx, param.SpaceID, param.PatchyTarget, &entity.ExecuteTargetCtx{TruncateLargeContent: param.TruncateLargeContent}, param.InputData)
 }
 
 func (e *EvalTargetServiceImpl) CreateRecord(ctx context.Context, record *entity.EvalTargetRecord) error {
-	_, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record)
+	_, err := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, nil)
 	return err
 }
 
-func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID int64, recordID int64) (*entity.EvalTargetRecord, error) {
+func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID, recordID int64) (*entity.EvalTargetRecord, error) {
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 
@@ -574,6 +591,20 @@ func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID
 	}
 
 	return e.evalTargetRepo.ListEvalTargetRecordByIDsAndSpaceID(ctx, spaceID, recordIDs)
+}
+
+func (e *EvalTargetServiceImpl) LoadRecordOutputFields(ctx context.Context, record *entity.EvalTargetRecord, fieldKeys []string) error {
+	if record == nil || len(fieldKeys) == 0 {
+		return nil
+	}
+	return e.evalTargetRepo.LoadEvalTargetRecordOutputFields(ctx, record, fieldKeys)
+}
+
+func (e *EvalTargetServiceImpl) LoadRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error {
+	if record == nil {
+		return nil
+	}
+	return e.evalTargetRepo.LoadEvalTargetRecordFullData(ctx, record)
 }
 
 func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *entity.ReportTargetRecordParam) error {
@@ -592,7 +623,9 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
-	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record); err != nil {
+	e.convEvalTargetRunErr(ctx, record)
+
+	if err := e.evalTargetRepo.SaveEvalTargetRecord(ctx, record, nil); err != nil {
 		return err
 	}
 
@@ -618,11 +651,12 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 			od.OutputFields = map[string]*entity.Content{}
 		}
 		od.OutputFields[consts.EvalTargetOutputFieldKeyTrajectory] = trajectory.ToContent(ctx)
-		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, &entity.EvalTargetRecord{
+		updateRec := &entity.EvalTargetRecord{
 			ID:                   record.ID,
 			TraceID:              record.TraceID,
 			EvalTargetOutputData: od,
-		})
+		}
+		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, updateRec, nil)
 	}
 
 	goroutine.Go(ctx, func() {

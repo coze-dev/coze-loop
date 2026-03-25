@@ -17,15 +17,20 @@ type ICollectorProvider interface {
 }
 
 type ExecuteLog struct {
-	SpaceID      int64     `json:"space_id,omitempty"`
-	PromptKey    string    `json:"prompt_key,omitempty"`
-	Version      string    `json:"version,omitempty"`
-	Stream       bool      `json:"stream,omitempty"`
-	InputTokens  int64     `json:"input_tokens,omitempty"`
-	OutputTokens int64     `json:"output_tokens,omitempty"`
-	StartedAt    time.Time `json:"started_at,omitempty"`
-	EndedAt      time.Time `json:"ended_at,omitempty"`
-	StatusCode   int32     `json:"status_code,omitempty"`
+	SpaceID       int64     `json:"space_id,omitempty"`
+	PromptKey     string    `json:"prompt_key,omitempty"`
+	Version       string    `json:"version,omitempty"`
+	Method        string    `json:"method,omitempty"`
+	Stream        bool      `json:"stream,omitempty"`
+	HasMessage    bool      `json:"has_message,omitempty"`
+	HasContexts   bool      `json:"has_contexts,omitempty"`
+	AccountMode   string    `json:"account_mode,omitempty"`
+	UsageScenario string    `json:"usage_scenario,omitempty"`
+	InputTokens   int64     `json:"input_tokens,omitempty"`
+	OutputTokens  int64     `json:"output_tokens,omitempty"`
+	StartedAt     time.Time `json:"started_at,omitempty"`
+	EndedAt       time.Time `json:"ended_at,omitempty"`
+	StatusCode    int32     `json:"status_code,omitempty"`
 }
 
 type EventCollectorProviderImpl struct{}

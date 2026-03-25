@@ -18,6 +18,7 @@ import (
 	mqmocks "github.com/coze-dev/coze-loop/backend/infra/mq/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
+	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 
@@ -42,8 +43,8 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 	mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
 	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+	mockErrConfiger := componentMocks.NewMockIConfiger(ctrl)
 
-	// 这里需要传递一个 EvaluatorSourceService 的 slice
 	service := NewEvaluatorServiceImpl(
 		mockIdgen,
 		mockLimiter,
@@ -56,6 +57,7 @@ func TestNewEvaluatorServiceImpl(t *testing.T) {
 			entity.EvaluatorTypePrompt: mockSourceService,
 		},
 		mockPlainLimiter,
+		mockErrConfiger,
 	)
 
 	assert.IsType(t, &EvaluatorServiceImpl{}, service)
@@ -112,6 +114,430 @@ func Test_GetBuiltinEvaluator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Nil(t, got)
 	})
+}
+
+func Test_EvaluatorServiceImpl_BatchGetBuiltinEvaluator(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		evaluatorIDs []int64
+		setup        func(repo *repomocks.MockIEvaluatorRepo)
+		wantLen      int
+		wantErr      bool
+	}{
+		{
+			name:         "empty input",
+			evaluatorIDs: []int64{},
+			setup:        func(*repomocks.MockIEvaluatorRepo) {},
+			wantLen:      0,
+		},
+		{
+			name:         "batch get meta error",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(nil, errors.New("meta error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:         "no valid builtin visible version pairs",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: false},
+					{ID: 2, Builtin: true, BuiltinVisibleVersion: ""},
+					nil,
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(metas, nil)
+			},
+			wantLen: 0,
+		},
+		{
+			name:         "batch get versions error",
+			evaluatorIDs: []int64{1},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: true, BuiltinVisibleVersion: "1.0.0"},
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1}, false).Return(metas, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}}).Return(nil, errors.New("version error"))
+			},
+			wantErr: true,
+		},
+		{
+			name:         "success",
+			evaluatorIDs: []int64{1, 2},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				metas := []*entity.Evaluator{
+					{ID: 1, Builtin: true, BuiltinVisibleVersion: "1.0.0", Name: "eval1"},
+					{ID: 2, Builtin: true, BuiltinVisibleVersion: "2.0.0", Name: "eval2"},
+				}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{1, 2}, false).Return(metas, nil)
+
+				versions := []*entity.Evaluator{
+					{ID: 101, EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 1, Version: "1.0.0"}},
+					{ID: 102, EvaluatorType: entity.EvaluatorTypeCode, CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{EvaluatorID: 2, Version: "2.0.0"}},
+				}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}, {int64(2), "2.0.0"}}).Return(versions, nil)
+			},
+			wantLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			got, err := s.BatchGetBuiltinEvaluator(context.Background(), tc.evaluatorIDs)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Len(t, got, tc.wantLen)
+			}
+		})
+	}
+}
+
+func Test_EvaluatorServiceImpl_UpdateBuiltinEvaluatorTags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		evaluatorID int64
+		tags        map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string
+		setup       func(repo *repomocks.MockIEvaluatorRepo)
+		wantErr     bool
+	}{
+		{
+			name:        "success",
+			evaluatorID: 1,
+			tags: map[entity.EvaluatorTagLangType]map[entity.EvaluatorTagKey][]string{
+				entity.EvaluatorTagLangType_Zh: {
+					entity.EvaluatorTagKey_Category: {"llm"},
+				},
+			},
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().UpdateEvaluatorTags(gomock.Any(), int64(1), gomock.Any()).Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error",
+			evaluatorID: 1,
+			tags:        nil,
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().UpdateEvaluatorTags(gomock.Any(), int64(1), gomock.Any()).Return(errors.New("update error"))
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			err := s.UpdateBuiltinEvaluatorTags(context.Background(), tc.evaluatorID, tc.tags)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func Test_EvaluatorServiceImpl_CheckNameExist(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		spaceID     int64
+		evaluatorID int64
+		evalName    string
+		setup       func(repo *repomocks.MockIEvaluatorRepo)
+		wantExist   bool
+		wantErr     bool
+	}{
+		{
+			name:        "exist",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(true, nil)
+			},
+			wantExist: true,
+			wantErr:   false,
+		},
+		{
+			name:        "not exist",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(false, nil)
+			},
+			wantExist: false,
+			wantErr:   false,
+		},
+		{
+			name:        "error",
+			spaceID:     1,
+			evaluatorID: 2,
+			evalName:    "test_name",
+			setup: func(repo *repomocks.MockIEvaluatorRepo) {
+				repo.EXPECT().CheckNameExist(gomock.Any(), int64(1), int64(2), "test_name").Return(false, errors.New("check error"))
+			},
+			wantExist: false,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			tc.setup(repo)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: repo,
+			}
+
+			got, err := s.CheckNameExist(context.Background(), tc.spaceID, tc.evaluatorID, tc.evalName)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.wantExist, got)
+			}
+		})
+	}
+}
+
+func Test_EvaluatorServiceImpl_ResolveBuiltinEvaluatorVisibleVersionID(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		evaluatorID   int64
+		evaluatorName string
+		setup         func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo)
+		wantID        int64
+		wantErrCode   int32
+		wantErr       bool
+	}{
+		{
+			name:        "neither id nor name",
+			evaluatorID: 0,
+			setup:       func(context.Context, *confmocks.MockIConfiger, *repomocks.MockIEvaluatorRepo) {},
+			wantErrCode: errno.CommonInvalidParamCode,
+			wantErr:     true,
+		},
+		{
+			name:          "empty builtin space config",
+			evaluatorID:   1,
+			evaluatorName: "",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, _ *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{})
+			},
+		},
+		{
+			name:        "invalid builtin space id",
+			evaluatorID: 1,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, _ *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"abc"})
+			},
+			wantErr: true,
+		},
+		{
+			name:        "resolve by id success",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 333, EvaluatorID: 11, Version: "1.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(11), "1.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 333,
+		},
+		{
+			name:        "resolve by id failed to get meta",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return(nil, errors.New("get meta failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:        "resolve by id empty meta",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{}, nil)
+			},
+			wantID: 0,
+		},
+		{
+			name:          "resolve by id and name mismatch",
+			evaluatorID:   11,
+			evaluatorName: "other",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+			},
+			wantErrCode: errno.CommonInvalidParamCode,
+			wantErr:     true,
+		},
+		{
+			name:        "resolve by id not in allowed space",
+			evaluatorID: 11,
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 11, SpaceID: 200, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().BatchGetEvaluatorMetaByID(gomock.Any(), []int64{int64(11)}, false).Return([]*entity.Evaluator{meta}, nil)
+			},
+		},
+		{
+			name:          "resolve by name success",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100", "200"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, nil)
+				meta := &entity.Evaluator{ID: 22, SpaceID: 200, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(200), "builtin", false).Return(meta, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypePrompt, PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{ID: 444, EvaluatorID: 22, Version: "2.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 444,
+		},
+		{
+			name:          "resolve by name failed to get meta",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, errors.New("get meta failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:          "resolve by name not found in any space",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100", "200"})
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(nil, nil)
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(200), "builtin", false).Return(nil, nil)
+			},
+			wantID: 0,
+		},
+		{
+			name:          "resolve by name batch get versions failed",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return(nil, errors.New("get version failed"))
+			},
+			wantErr: true,
+		},
+		{
+			name:          "resolve by name version not found",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{}, nil)
+			},
+			wantID: 0,
+		},
+		{
+			name:          "resolve by name code evaluator success",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: true, BuiltinVisibleVersion: "2.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+				ver := &entity.Evaluator{EvaluatorType: entity.EvaluatorTypeCode, CodeEvaluatorVersion: &entity.CodeEvaluatorVersion{ID: 555, EvaluatorID: 22, Version: "2.0.0"}}
+				repo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(gomock.Any(), [][2]interface{}{{int64(22), "2.0.0"}}).Return([]*entity.Evaluator{ver}, nil)
+			},
+			wantID: 555,
+		},
+		{
+			name:          "resolve by name not builtin",
+			evaluatorName: "builtin",
+			setup: func(ctx context.Context, cfg *confmocks.MockIConfiger, repo *repomocks.MockIEvaluatorRepo) {
+				cfg.EXPECT().GetBuiltinEvaluatorSpaceConf(ctx).Return([]string{"100"})
+				meta := &entity.Evaluator{ID: 22, SpaceID: 100, Name: "builtin", Builtin: false, BuiltinVisibleVersion: "1.0.0"}
+				repo.EXPECT().GetEvaluatorMetaBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).Return(meta, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			mockCfg := confmocks.NewMockIConfiger(ctrl)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: mockRepo,
+				configer:      mockCfg,
+			}
+
+			tc.setup(ctx, mockCfg, mockRepo)
+			got, err := s.ResolveBuiltinEvaluatorVisibleVersionID(ctx, tc.evaluatorID, tc.evaluatorName)
+			if tc.wantErr {
+				assert.Error(t, err)
+				if tc.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErrCode, statusErr.Code())
+				}
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tc.wantID, got)
+		})
+	}
 }
 
 // Test_BatchGetBuiltinEvaluator 覆盖批量可见版本查询与元信息回填
@@ -1876,6 +2302,194 @@ func TestEvaluatorServiceImpl_RunEvaluator(t *testing.T) {
 	}
 }
 
+func Test_roundEvaluatorOutputScore(t *testing.T) {
+	tests := []struct {
+		name           string
+		outputData     *entity.EvaluatorOutputData
+		wantScore      *float64
+		wantCorrection *float64
+	}{
+		{
+			name:       "nil outputData",
+			outputData: nil,
+		},
+		{
+			name:       "nil EvaluatorResult",
+			outputData: &entity.EvaluatorOutputData{},
+		},
+		{
+			name: "round Score and Correction.Score",
+			outputData: func() *entity.EvaluatorOutputData {
+				score := 0.125
+				cScore := 0.124
+				return &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: &score,
+						Correction: &entity.Correction{
+							Score: &cScore,
+						},
+					},
+				}
+			}(),
+			wantScore:      gptr.Of(0.13),
+			wantCorrection: gptr.Of(0.12),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			roundEvaluatorOutputScore(tt.outputData)
+			if tt.outputData == nil {
+				return
+			}
+			if tt.wantScore == nil && tt.wantCorrection == nil {
+				return
+			}
+			if assert.NotNil(t, tt.outputData.EvaluatorResult) {
+				if tt.wantScore != nil && assert.NotNil(t, tt.outputData.EvaluatorResult.Score) {
+					assert.InDelta(t, *tt.wantScore, *tt.outputData.EvaluatorResult.Score, 1e-9)
+				}
+				if tt.wantCorrection != nil &&
+					assert.NotNil(t, tt.outputData.EvaluatorResult.Correction) &&
+					assert.NotNil(t, tt.outputData.EvaluatorResult.Correction.Score) {
+					assert.InDelta(t, *tt.wantCorrection, *tt.outputData.EvaluatorResult.Correction.Score, 1e-9)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_RunEvaluator_RoundAndConvertErrMsg(t *testing.T) {
+	tests := []struct {
+		name           string
+		outputData     *entity.EvaluatorOutputData
+		wantMsg        string
+		wantScore      *float64
+		wantCorrection *float64
+	}{
+		{
+			name: func() string {
+				return "convert error message when code not custom and message non-empty"
+			}(),
+			outputData: func() *entity.EvaluatorOutputData {
+				rawScore := 0.125
+				rawCorrectionScore := 0.124
+				return &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: &rawScore,
+						Correction: &entity.Correction{
+							Score: &rawCorrectionScore,
+						},
+					},
+					EvaluatorRunError: &entity.EvaluatorRunError{
+						Code:    10001,
+						Message: "raw-msg",
+					},
+				}
+			}(),
+			wantMsg:        "converted-msg",
+			wantScore:      gptr.Of(0.13),
+			wantCorrection: gptr.Of(0.12),
+		},
+		{
+			name: "do not convert when code is custom rpc evaluator run failed",
+			outputData: &entity.EvaluatorOutputData{
+				EvaluatorRunError: &entity.EvaluatorRunError{
+					Code:    int32(errno.CustomRPCEvaluatorRunFailedCode),
+					Message: "raw-msg",
+				},
+			},
+			wantMsg: "raw-msg",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			mockLimiter := repomocks.NewMockRateLimiter(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+			mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+
+			req := &entity.RunEvaluatorRequest{
+				SpaceID:            1,
+				EvaluatorVersionID: 101,
+				InputData:          &entity.EvaluatorInputData{},
+			}
+			evaluatorDO := &entity.Evaluator{
+				ID:            100,
+				SpaceID:       1,
+				Builtin:       false,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:          101,
+					EvaluatorID: 100,
+					SpaceID:     1,
+				},
+			}
+
+			mockErrConfiger := componentMocks.NewMockIConfiger(ctrl)
+			if tt.wantMsg == "converted-msg" {
+				mockErrConfiger.EXPECT().GetErrCtrl(gomock.Any()).Return(&entity.ExptErrCtrl{
+					ResultErrConverts: []*entity.ResultErrConvert{
+						{AsDefault: true, ToErrMsg: "converted-msg"},
+					},
+				})
+			}
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo:       mockEvaluatorRepo,
+				limiter:             mockLimiter,
+				idgen:               mockIDGen,
+				evaluatorRecordRepo: mockEvaluatorRecordRepo,
+				evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+					entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
+				},
+				plainRateLimiter: mockPlainLimiter,
+				cConfiger:        mockErrConfiger,
+			}
+
+			mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).
+				Return([]*entity.Evaluator{evaluatorDO}, nil)
+			mockLimiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
+			mockPlainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "run_evaluator:100", gomock.Any()).Return(true)
+			mockEvaluatorSourceService.EXPECT().PreHandle(gomock.Any(), evaluatorDO).Return(nil)
+			mockEvaluatorSourceService.EXPECT().Run(gomock.Any(), evaluatorDO, req.InputData, req.EvaluatorRunConf, req.SpaceID, req.DisableTracing).
+				Return(tt.outputData, entity.EvaluatorRunStatusFail, "trace-1")
+			mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+			mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, record *entity.EvaluatorRecord) error {
+					if assert.NotNil(t, record.EvaluatorOutputData) && assert.NotNil(t, record.EvaluatorOutputData.EvaluatorRunError) {
+						assert.Equal(t, tt.wantMsg, record.EvaluatorOutputData.EvaluatorRunError.Message)
+					}
+					if tt.wantScore != nil &&
+						assert.NotNil(t, record.EvaluatorOutputData) &&
+						assert.NotNil(t, record.EvaluatorOutputData.EvaluatorResult) &&
+						assert.NotNil(t, record.EvaluatorOutputData.EvaluatorResult.Score) {
+						assert.InDelta(t, *tt.wantScore, *record.EvaluatorOutputData.EvaluatorResult.Score, 1e-9)
+					}
+					if tt.wantCorrection != nil &&
+						assert.NotNil(t, record.EvaluatorOutputData) &&
+						assert.NotNil(t, record.EvaluatorOutputData.EvaluatorResult) &&
+						assert.NotNil(t, record.EvaluatorOutputData.EvaluatorResult.Correction) &&
+						assert.NotNil(t, record.EvaluatorOutputData.EvaluatorResult.Correction.Score) {
+						assert.InDelta(t, *tt.wantCorrection, *record.EvaluatorOutputData.EvaluatorResult.Correction.Score, 1e-9)
+					}
+					return nil
+				},
+			)
+
+			_, err := s.RunEvaluator(ctx, req)
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func Test_EvaluatorServiceImpl_DebugEvaluator(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -2581,6 +3195,745 @@ func TestEvaluatorServiceImpl_ListEvaluatorTags(t *testing.T) {
 					assert.True(t, ok, "key %s should exist", key)
 					assert.Equal(t, expectedValues, actualValues)
 				}
+			}
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_AsyncRunEvaluator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		evaluatorRepo:       mockEvaluatorRepo,
+		limiter:             mockLimiter,
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
+		},
+		plainRateLimiter: mockPlainLimiter,
+	}
+
+	req := &entity.AsyncRunEvaluatorRequest{
+		SpaceID:            2,
+		EvaluatorVersionID: 101,
+		InputData:          &entity.EvaluatorInputData{},
+		ExperimentID:       1,
+		ExperimentRunID:    2,
+		ItemID:             3,
+		TurnID:             4,
+		Ext:                map[string]string{"k": "v"},
+	}
+
+	agentEvaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       2,
+		EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+			ID:          101,
+			EvaluatorID: 100,
+			SpaceID:     2,
+		},
+	}
+
+	nonAgentEvaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       2,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          101,
+			EvaluatorID: 100,
+			SpaceID:     2,
+		},
+	}
+
+	tests := []struct {
+		name            string
+		setupMocks      func()
+		expectedErrCode int32
+	}{
+		{
+			name: "成功 - 异步运行 Agent 评估器",
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).Return([]*entity.Evaluator{agentEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
+				mockPlainLimiter.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+				mockEvaluatorSourceService.EXPECT().AsyncRun(gomock.Any(), agentEvaluatorDO, req.InputData, req.EvaluatorRunConf, req.SpaceID, int64(999)).
+					Return(map[string]string{"async": "1"}, "trace-1", nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, record *entity.EvaluatorRecord) error {
+						assert.Equal(t, int64(999), record.ID)
+						assert.Equal(t, req.SpaceID, record.SpaceID)
+						assert.Equal(t, req.EvaluatorVersionID, record.EvaluatorVersionID)
+						assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+						assert.Equal(t, req.Ext, record.Ext)
+						if assert.NotNil(t, record.EvaluatorOutputData) {
+							assert.Equal(t, map[string]string{"async": "1"}, record.EvaluatorOutputData.Ext)
+						}
+						return nil
+					},
+				)
+			},
+			expectedErrCode: 0,
+		},
+		{
+			name: "失败 - evaluator_version 不存在",
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).Return([]*entity.Evaluator{}, nil)
+			},
+			expectedErrCode: int32(errno.EvaluatorVersionNotFoundCode),
+		},
+		{
+			name: "失败 - 非 Agent 类型不支持异步运行",
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).Return([]*entity.Evaluator{nonAgentEvaluatorDO}, nil)
+			},
+			expectedErrCode: int32(errno.InvalidEvaluatorTypeCode),
+		},
+		{
+			name: "失败 - SpaceID 不匹配",
+			setupMocks: func() {
+				mismatch := *agentEvaluatorDO
+				mismatch.SpaceID = 3
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).Return([]*entity.Evaluator{&mismatch}, nil)
+			},
+			expectedErrCode: int32(errno.EvaluatorVersionNotFoundCode),
+		},
+		{
+			name: "失败 - 触发 space 级限流",
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).Return([]*entity.Evaluator{agentEvaluatorDO}, nil)
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(false)
+			},
+			expectedErrCode: int32(errno.EvaluatorQPSLimitCode),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMocks()
+			_, err := s.AsyncRunEvaluator(ctx, req)
+
+			if tt.expectedErrCode == 0 {
+				assert.NoError(t, err)
+				return
+			}
+			assert.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			assert.True(t, ok)
+			assert.Equal(t, tt.expectedErrCode, statusErr.Code())
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_AsyncDebugEvaluator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	mockLimiter := repomocks.NewMockRateLimiter(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		limiter:             mockLimiter,
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+			entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
+		},
+	}
+
+	agentEvaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       2,
+		EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+			ID:          101,
+			EvaluatorID: 100,
+			SpaceID:     2,
+		},
+	}
+
+	tests := []struct {
+		name            string
+		req             *entity.AsyncDebugEvaluatorRequest
+		setupMocks      func()
+		expectedErrCode int32
+	}{
+		{
+			name: "成功 - 异步调试 Agent 评估器",
+			req: &entity.AsyncDebugEvaluatorRequest{
+				SpaceID:     2,
+				EvaluatorDO: agentEvaluatorDO,
+				InputData:   &entity.EvaluatorInputData{},
+			},
+			setupMocks: func() {
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(888), nil)
+				mockEvaluatorSourceService.EXPECT().AsyncDebug(gomock.Any(), agentEvaluatorDO, gomock.Any(), gomock.Any(), int64(2), int64(888)).
+					Return(map[string]string{"d": "1"}, "trace-d", nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, record *entity.EvaluatorRecord) error {
+						assert.Equal(t, int64(888), record.ID)
+						assert.Equal(t, int64(2), record.SpaceID)
+						assert.Equal(t, entity.EvaluatorRunStatusAsyncInvoking, record.Status)
+						if assert.NotNil(t, record.EvaluatorOutputData) {
+							assert.Equal(t, map[string]string{"d": "1"}, record.EvaluatorOutputData.Ext)
+						}
+						return nil
+					},
+				)
+			},
+			expectedErrCode: 0,
+		},
+		{
+			name: "失败 - evaluator 为空",
+			req: &entity.AsyncDebugEvaluatorRequest{
+				SpaceID:     2,
+				EvaluatorDO: nil,
+				InputData:   &entity.EvaluatorInputData{},
+			},
+			setupMocks:      func() {},
+			expectedErrCode: int32(errno.EvaluatorNotExistCode),
+		},
+		{
+			name: "失败 - 非 Agent 类型不支持异步调试",
+			req: &entity.AsyncDebugEvaluatorRequest{
+				SpaceID: 2,
+				EvaluatorDO: &entity.Evaluator{
+					ID:            100,
+					SpaceID:       2,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID:          101,
+						EvaluatorID: 100,
+						SpaceID:     2,
+					},
+				},
+				InputData: &entity.EvaluatorInputData{},
+			},
+			setupMocks:      func() {},
+			expectedErrCode: int32(errno.InvalidEvaluatorTypeCode),
+		},
+		{
+			name: "失败 - 触发 space 级限流",
+			req: &entity.AsyncDebugEvaluatorRequest{
+				SpaceID:     2,
+				EvaluatorDO: agentEvaluatorDO,
+				InputData:   &entity.EvaluatorInputData{},
+			},
+			setupMocks: func() {
+				mockLimiter.EXPECT().AllowInvoke(gomock.Any(), int64(2)).Return(false)
+			},
+			expectedErrCode: int32(errno.EvaluatorQPSLimitCode),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMocks()
+			_, err := s.AsyncDebugEvaluator(ctx, tt.req)
+
+			if tt.expectedErrCode == 0 {
+				assert.NoError(t, err)
+				return
+			}
+			assert.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			assert.True(t, ok)
+			assert.Equal(t, tt.expectedErrCode, statusErr.Code())
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+	s := &EvaluatorServiceImpl{
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+	}
+
+	tests := []struct {
+		name            string
+		param           *entity.ReportEvaluatorRecordParam
+		setupMocks      func()
+		expectedErrCode int32
+	}{
+		{
+			name: "成功 - 合并 Ext 并更新记录",
+			param: &entity.ReportEvaluatorRecordParam{
+				SpaceID:  2,
+				RecordID: 100,
+				Status:   entity.EvaluatorRunStatusSuccess,
+				OutputData: &entity.EvaluatorOutputData{
+					Ext: map[string]string{"new": "1"},
+				},
+			},
+			setupMocks: func() {
+				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(
+					&entity.EvaluatorRecord{
+						ID:      100,
+						SpaceID: 2,
+						EvaluatorOutputData: &entity.EvaluatorOutputData{
+							Ext: map[string]string{"old": "1"},
+						},
+					}, nil,
+				)
+				mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(100), entity.EvaluatorRunStatusSuccess, gomock.Any()).
+					DoAndReturn(func(_ context.Context, _ int64, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) error {
+						if assert.NotNil(t, out) {
+							assert.Equal(t, "1", out.Ext["new"])
+							assert.Equal(t, "1", out.Ext["old"])
+						}
+						return nil
+					})
+			},
+			expectedErrCode: 0,
+		},
+		{
+			name: "失败 - record 不存在",
+			param: &entity.ReportEvaluatorRecordParam{
+				SpaceID:  2,
+				RecordID: 100,
+				Status:   entity.EvaluatorRunStatusSuccess,
+			},
+			setupMocks: func() {
+				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(nil, nil)
+			},
+			expectedErrCode: int32(errno.EvaluatorRecordNotFoundCode),
+		},
+		{
+			name: "失败 - SpaceID 不匹配",
+			param: &entity.ReportEvaluatorRecordParam{
+				SpaceID:  3,
+				RecordID: 100,
+				Status:   entity.EvaluatorRunStatusSuccess,
+			},
+			setupMocks: func() {
+				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, SpaceID: 2}, nil)
+			},
+			expectedErrCode: int32(errno.CommonInvalidParamCode),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupMocks()
+			err := s.ReportEvaluatorInvokeResult(ctx, tt.param)
+
+			if tt.expectedErrCode == 0 {
+				assert.NoError(t, err)
+				return
+			}
+			assert.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			assert.True(t, ok)
+			assert.Equal(t, tt.expectedErrCode, statusErr.Code())
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_OutputDataNilOrExtNil(t *testing.T) {
+	tests := []struct {
+		name       string
+		outputData *entity.EvaluatorOutputData
+	}{
+		{
+			name:       "param.OutputData is nil, keep existing ext",
+			outputData: nil,
+		},
+		{
+			name: "param.OutputData.Ext is nil, keep existing ext",
+			outputData: &entity.EvaluatorOutputData{
+				Ext: nil,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			s := &EvaluatorServiceImpl{
+				evaluatorRecordRepo: mockEvaluatorRecordRepo,
+			}
+
+			param := &entity.ReportEvaluatorRecordParam{
+				SpaceID:    2,
+				RecordID:   100,
+				Status:     entity.EvaluatorRunStatusSuccess,
+				OutputData: tt.outputData,
+			}
+
+			mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(
+				&entity.EvaluatorRecord{
+					ID:      100,
+					SpaceID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						Ext: map[string]string{"old": "1"},
+					},
+				}, nil,
+			)
+			mockEvaluatorRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(100), entity.EvaluatorRunStatusSuccess, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int64, _ entity.EvaluatorRunStatus, out *entity.EvaluatorOutputData) error {
+					if assert.NotNil(t, out) && assert.NotNil(t, out.Ext) {
+						assert.Equal(t, "1", out.Ext["old"])
+					}
+					return nil
+				})
+
+			err := s.ReportEvaluatorInvokeResult(ctx, param)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_AsyncRunEvaluator_EvaluatorLevelLimitAndSourceMissing(t *testing.T) {
+	tests := []struct {
+		name       string
+		setupMocks func(ctx context.Context, s *EvaluatorServiceImpl, evaluatorDO *entity.Evaluator, req *entity.AsyncRunEvaluatorRequest, deps *struct {
+			repo       *repomocks.MockIEvaluatorRepo
+			limiter    *repomocks.MockRateLimiter
+			idgen      *idgenmocks.MockIIDGenerator
+			plain      *repomocks.MockIPlainRateLimiter
+			source     *mocks.MockEvaluatorSourceService
+			recordRepo *repomocks.MockIEvaluatorRecordRepo
+		})
+		expectedErrCode int32
+	}{
+		{
+			name: "evaluator level limit",
+			setupMocks: func(_ context.Context, _ *EvaluatorServiceImpl, evaluatorDO *entity.Evaluator, req *entity.AsyncRunEvaluatorRequest, deps *struct {
+				repo       *repomocks.MockIEvaluatorRepo
+				limiter    *repomocks.MockRateLimiter
+				idgen      *idgenmocks.MockIIDGenerator
+				plain      *repomocks.MockIPlainRateLimiter
+				source     *mocks.MockEvaluatorSourceService
+				recordRepo *repomocks.MockIEvaluatorRecordRepo
+			},
+			) {
+				deps.repo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).
+					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				deps.limiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
+				deps.plain.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(false)
+			},
+			expectedErrCode: int32(errno.EvaluatorQPSLimitCode),
+		},
+		{
+			name: "source service missing for agent type",
+			setupMocks: func(_ context.Context, s *EvaluatorServiceImpl, evaluatorDO *entity.Evaluator, req *entity.AsyncRunEvaluatorRequest, deps *struct {
+				repo       *repomocks.MockIEvaluatorRepo
+				limiter    *repomocks.MockRateLimiter
+				idgen      *idgenmocks.MockIIDGenerator
+				plain      *repomocks.MockIPlainRateLimiter
+				source     *mocks.MockEvaluatorSourceService
+				recordRepo *repomocks.MockIEvaluatorRecordRepo
+			},
+			) {
+				s.evaluatorSourceServices = map[entity.EvaluatorType]EvaluatorSourceService{}
+				deps.repo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{req.EvaluatorVersionID}, false, false).
+					Return([]*entity.Evaluator{evaluatorDO}, nil)
+				deps.limiter.EXPECT().AllowInvoke(gomock.Any(), req.SpaceID).Return(true)
+				deps.plain.EXPECT().AllowInvokeWithKeyLimit(gomock.Any(), "async_run_evaluator:100", gomock.Any()).Return(true)
+				deps.idgen.EXPECT().GenID(gomock.Any()).Return(int64(999), nil)
+			},
+			expectedErrCode: int32(errno.InvalidEvaluatorTypeCode),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			mockLimiter := repomocks.NewMockRateLimiter(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+			mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+			mockPlainLimiter := repomocks.NewMockIPlainRateLimiter(ctrl)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo:       mockEvaluatorRepo,
+				limiter:             mockLimiter,
+				idgen:               mockIDGen,
+				evaluatorRecordRepo: mockEvaluatorRecordRepo,
+				evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+					entity.EvaluatorTypeAgent: mockEvaluatorSourceService,
+				},
+				plainRateLimiter: mockPlainLimiter,
+			}
+
+			req := &entity.AsyncRunEvaluatorRequest{
+				SpaceID:            2,
+				EvaluatorVersionID: 101,
+				InputData:          &entity.EvaluatorInputData{},
+			}
+			agentEvaluatorDO := &entity.Evaluator{
+				ID:            100,
+				SpaceID:       2,
+				EvaluatorType: entity.EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+					ID:          101,
+					EvaluatorID: 100,
+					SpaceID:     2,
+				},
+			}
+
+			tt.setupMocks(ctx, s, agentEvaluatorDO, req, &struct {
+				repo       *repomocks.MockIEvaluatorRepo
+				limiter    *repomocks.MockRateLimiter
+				idgen      *idgenmocks.MockIIDGenerator
+				plain      *repomocks.MockIPlainRateLimiter
+				source     *mocks.MockEvaluatorSourceService
+				recordRepo *repomocks.MockIEvaluatorRecordRepo
+			}{
+				repo:       mockEvaluatorRepo,
+				limiter:    mockLimiter,
+				idgen:      mockIDGen,
+				plain:      mockPlainLimiter,
+				source:     mockEvaluatorSourceService,
+				recordRepo: mockEvaluatorRecordRepo,
+			})
+
+			_, err := s.AsyncRunEvaluator(ctx, req)
+			assert.Error(t, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			assert.True(t, ok)
+			assert.Equal(t, tt.expectedErrCode, statusErr.Code())
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_SubmitEvaluatorVersion_ValidateAndVersionExist(t *testing.T) {
+	evaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       1,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:                100,
+			EvaluatorID:       100,
+			SpaceID:           1,
+			PromptTemplateKey: "test-template-key",
+			PromptSuffix:      "test-prompt-suffix",
+			ModelConfig: &entity.ModelConfig{
+				ModelID: gptr.Of(int64(1)),
+			},
+			ParseType: entity.ParseTypeFunctionCall,
+			MessageList: []*entity.Message{
+				{
+					Role: entity.RoleSystem,
+					Content: &entity.Content{
+						ContentType: ptr.Of(entity.ContentTypeText),
+						Text:        ptr.Of("test-content"),
+					},
+				},
+			},
+			InputSchemas: []*entity.ArgsSchema{
+				{
+					Key:        ptr.Of("test-input-key"),
+					JsonSchema: ptr.Of("test-json-schema"),
+					SupportContentTypes: []entity.ContentType{
+						entity.ContentTypeText,
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name            string
+		setupMocks      func(mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockSource *mocks.MockEvaluatorSourceService)
+		expectedErrCode int32
+		expectedErrMsg  string
+	}{
+		{
+			name: "validate fails when source service exists",
+			setupMocks: func(mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, _ *repomocks.MockIEvaluatorRepo, mockSource *mocks.MockEvaluatorSourceService) {
+				mockIdem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(123), nil)
+				mockSource.EXPECT().Validate(gomock.Any(), evaluatorDO).Return(errors.New("validate error"))
+			},
+			expectedErrCode: -1,
+			expectedErrMsg:  "validate error",
+		},
+		{
+			name: "version exists",
+			setupMocks: func(mockIdem *idemmocks.MockIdempotentService, mockIdgen *idgenmocks.MockIIDGenerator, mockRepo *repomocks.MockIEvaluatorRepo, mockSource *mocks.MockEvaluatorSourceService) {
+				mockIdem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockIdgen.EXPECT().GenID(gomock.Any()).Return(int64(123), nil)
+				mockSource.EXPECT().Validate(gomock.Any(), evaluatorDO).Return(nil)
+				mockRepo.EXPECT().CheckVersionExist(gomock.Any(), evaluatorDO.ID, "v1.0.0").Return(true, nil)
+			},
+			expectedErrCode: int32(errno.EvaluatorVersionExistCode),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockIdemService := idemmocks.NewMockIdempotentService(ctrl)
+			mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+			mockEvalRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+			mockSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+
+			s := &EvaluatorServiceImpl{
+				evaluatorRepo: mockEvalRepo,
+				idem:          mockIdemService,
+				idgen:         mockIDGen,
+				evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+					entity.EvaluatorTypePrompt: mockSourceService,
+				},
+			}
+
+			tt.setupMocks(mockIdemService, mockIDGen, mockEvalRepo, mockSourceService)
+
+			_, err := s.SubmitEvaluatorVersion(ctx, evaluatorDO, "v1.0.0", "desc", "cid-1")
+			assert.Error(t, err)
+			if tt.expectedErrCode > 0 {
+				statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, tt.expectedErrCode, statusErr.Code())
+				return
+			}
+			if tt.expectedErrMsg != "" {
+				assert.Equal(t, tt.expectedErrMsg, err.Error())
+			}
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_DebugEvaluator_InvalidAndRound(t *testing.T) {
+	tests := []struct {
+		name           string
+		evaluatorDO    *entity.Evaluator
+		setupMocks     func(mockSource *mocks.MockEvaluatorSourceService, evaluatorDO *entity.Evaluator)
+		wantErrCode    int32
+		wantErrMsg     string
+		wantScore      *float64
+		wantCorrection *float64
+	}{
+		{
+			name:        "invalid evaluator is nil",
+			evaluatorDO: nil,
+			wantErrCode: int32(errno.EvaluatorNotExistCode),
+		},
+		{
+			name:        "invalid prompt evaluator version is nil",
+			evaluatorDO: &entity.Evaluator{EvaluatorType: entity.EvaluatorTypePrompt},
+			wantErrCode: int32(errno.EvaluatorNotExistCode),
+		},
+		{
+			name: "validate fails",
+			evaluatorDO: &entity.Evaluator{
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:          101,
+					EvaluatorID: 100,
+				},
+			},
+			setupMocks: func(mockSource *mocks.MockEvaluatorSourceService, evaluatorDO *entity.Evaluator) {
+				mockSource.EXPECT().PreHandle(gomock.Any(), evaluatorDO).Return(nil)
+				mockSource.EXPECT().Validate(gomock.Any(), evaluatorDO).Return(errors.New("validate error"))
+			},
+			wantErrMsg: "validate error",
+		},
+		{
+			name: "round output scores in debug",
+			evaluatorDO: &entity.Evaluator{
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					ID:          101,
+					EvaluatorID: 100,
+				},
+			},
+			setupMocks: func(mockSource *mocks.MockEvaluatorSourceService, evaluatorDO *entity.Evaluator) {
+				rawScore := 0.125
+				rawCorrectionScore := 0.124
+				out := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: &rawScore,
+						Correction: &entity.Correction{
+							Score: &rawCorrectionScore,
+						},
+					},
+				}
+				mockSource.EXPECT().PreHandle(gomock.Any(), evaluatorDO).Return(nil)
+				mockSource.EXPECT().Validate(gomock.Any(), evaluatorDO).Return(nil)
+				mockSource.EXPECT().Debug(gomock.Any(), evaluatorDO, gomock.Any(), gomock.Any(), int64(0)).Return(out, nil)
+			},
+			wantScore:      gptr.Of(0.13),
+			wantCorrection: gptr.Of(0.12),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+
+			var mockSource *mocks.MockEvaluatorSourceService
+			sourceMap := map[entity.EvaluatorType]EvaluatorSourceService{}
+			if tt.evaluatorDO != nil {
+				mockSource = mocks.NewMockEvaluatorSourceService(ctrl)
+				sourceMap[entity.EvaluatorTypePrompt] = mockSource
+			}
+			s := &EvaluatorServiceImpl{
+				evaluatorSourceServices: sourceMap,
+			}
+
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockSource, tt.evaluatorDO)
+			}
+
+			got, err := s.DebugEvaluator(ctx, tt.evaluatorDO, &entity.EvaluatorInputData{}, &entity.EvaluatorRunConfig{}, int64(0))
+			if tt.wantErrCode > 0 {
+				assert.Error(t, err)
+				statusErr, ok := errorx.FromStatusError(err)
+				assert.True(t, ok)
+				assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				return
+			}
+			if tt.wantErrMsg != "" {
+				assert.Error(t, err)
+				assert.Equal(t, tt.wantErrMsg, err.Error())
+				return
+			}
+
+			assert.NoError(t, err)
+			if tt.wantScore != nil && assert.NotNil(t, got) && assert.NotNil(t, got.EvaluatorResult) && assert.NotNil(t, got.EvaluatorResult.Score) {
+				assert.InDelta(t, *tt.wantScore, *got.EvaluatorResult.Score, 1e-9)
+			}
+			if tt.wantCorrection != nil &&
+				assert.NotNil(t, got) &&
+				assert.NotNil(t, got.EvaluatorResult) &&
+				assert.NotNil(t, got.EvaluatorResult.Correction) &&
+				assert.NotNil(t, got.EvaluatorResult.Correction.Score) {
+				assert.InDelta(t, *tt.wantCorrection, *got.EvaluatorResult.Correction.Score, 1e-9)
 			}
 		})
 	}

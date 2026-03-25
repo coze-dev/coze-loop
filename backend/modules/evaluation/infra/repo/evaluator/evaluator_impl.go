@@ -209,7 +209,15 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorMetaByID(ctx context.Context, ids [
 	return evaluatorDOs, nil
 }
 
-func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted bool, withTags bool) ([]*entity.Evaluator, error) {
+func (r *EvaluatorRepoImpl) GetEvaluatorMetaBySpaceIDAndName(ctx context.Context, spaceID int64, name string, includeDeleted bool) (*entity.Evaluator, error) {
+	evaluatorPO, err := r.evaluatorDao.GetEvaluatorBySpaceIDAndName(ctx, spaceID, name, includeDeleted)
+	if err != nil {
+		return nil, err
+	}
+	return convertor.ConvertEvaluatorPO2DO(evaluatorPO), nil
+}
+
+func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, spaceID *int64, ids []int64, includeDeleted, withTags bool) ([]*entity.Evaluator, error) {
 	evaluatorVersionPOS, err := r.evaluatorVersionDao.BatchGetEvaluatorVersionByID(ctx, spaceID, ids, includeDeleted)
 	if err != nil {
 		return nil, err
@@ -287,6 +295,18 @@ func (r *EvaluatorRepoImpl) BatchGetEvaluatorByVersionID(ctx context.Context, sp
 			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
 			evaluatorDO.CustomRPCEvaluatorVersion = evaluatorVersionDO.CustomRPCEvaluatorVersion
 			evaluatorDO.EvaluatorType = entity.EvaluatorTypeCustomRPC
+			if withTags {
+				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
+			}
+			evaluatorDOList = append(evaluatorDOList, evaluatorDO)
+		case int32(entity.EvaluatorTypeAgent):
+			evaluatorVersionDO, err := convertor.ConvertEvaluatorVersionPO2DO(evaluatorVersionPO)
+			if err != nil {
+				return nil, err
+			}
+			evaluatorDO := convertor.ConvertEvaluatorPO2DO(evaluatorPO)
+			evaluatorDO.AgentEvaluatorVersion = evaluatorVersionDO.AgentEvaluatorVersion
+			evaluatorDO.EvaluatorType = entity.EvaluatorTypeAgent
 			if withTags {
 				r.setEvaluatorTags(evaluatorDO, evaluatorVersionPO.EvaluatorID, tagsBySourceID)
 			}
@@ -635,7 +655,7 @@ func (r *EvaluatorRepoImpl) BatchDeleteEvaluator(ctx context.Context, ids []int6
 			return err
 		}
 		for _, id := range ids {
-			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Evaluator), "", nil); err != nil {
+			if err := r.tagDAO.DeleteEvaluatorTagsByConditions(ctx, id, int32(entity.EvaluatorTagKeyType_Evaluator), "", nil, opt); err != nil {
 				return err
 			}
 		}
