@@ -235,6 +235,10 @@ func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64,
 		templates[idx].Evaluators = exptTuples[idx].Evaluators
 	}
 
+	if err := e.enrichExptSourceFromPipeline(ctx, templates, spaceID); err != nil {
+		return nil, errorx.Wrapf(err, "enrich expt source from pipeline fail, workspace_id: %d", spaceID)
+	}
+
 	return templates, nil
 }
 
@@ -623,6 +627,11 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 		templates[idx].EvalSet = exptTuples[idx].EvalSet
 		templates[idx].Target = exptTuples[idx].Target
 		templates[idx].Evaluators = exptTuples[idx].Evaluators
+	}
+
+	// ListExperimentTemplates 走 List 分支时也需要填充：ExptSource 来自 DB，span_filter / scheduler 依赖 Pipeline
+	if err := e.enrichExptSourceFromPipeline(ctx, templates, spaceID); err != nil {
+		return nil, 0, errorx.Wrapf(err, "enrich expt source from pipeline fail, workspace_id: %d", spaceID)
 	}
 
 	return templates, count, nil
