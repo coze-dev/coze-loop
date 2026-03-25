@@ -133,10 +133,12 @@ func (d *exptTemplateDAOImpl) List(ctx context.Context, page, size int32, filter
 			Joins("INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id").
 			Where("expt_template.space_id = ?", spaceID).
 			Where("expt_template.deleted_at IS NULL")
+		db = db.Where("experiment.visibility <> ?", int32(entity.Visibility_Hidden))
 	} else {
 		db = db.Model(&model.ExptTemplate{}).
 			Where("space_id = ?", spaceID).
 			Where("deleted_at IS NULL")
+		db = db.Where("experiment.visibility <> ?", int32(entity.Visibility_Hidden))
 	}
 
 	conds, ok := d.toConditions(filter, orders)
