@@ -19,6 +19,39 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
+// ConvertCreateExptTemplateReq 须把请求里的 expt_source 合并进 TemplateConf，否则落库 template_conf 会丢失 expt_source。
+func TestConvertCreateExptTemplateReq_ExptSourceInTemplateConf(t *testing.T) {
+	t.Parallel()
+
+	req := &expt.CreateExperimentTemplateRequest{
+		WorkspaceID: 1,
+		Meta: &domain_expt.ExptTemplateMeta{
+			Name:     gptr.Of("n"),
+			ExptType: gptr.Of(domain_expt.ExptType_Offline),
+		},
+		TripleConfig: &domain_expt.ExptTuple{
+			EvalSetID:        gptr.Of(int64(1)),
+			EvalSetVersionID: gptr.Of(int64(1)),
+			TargetID:         gptr.Of(int64(2)),
+			TargetVersionID:  gptr.Of(int64(2)),
+		},
+		ExptSource: &domain_expt.ExptSource{
+			SourceType: gptr.Of(domain_expt.SourceType_Evaluation),
+			SourceID:   gptr.Of("pipe-9"),
+		},
+	}
+
+	param, err := ConvertCreateExptTemplateReq(req)
+	if assert.NoError(t, err) && assert.NotNil(t, param.TemplateConf) && assert.NotNil(t, param.TemplateConf.ExptSource) {
+		assert.Equal(t, entity.SourceType_Evaluation, param.TemplateConf.ExptSource.SourceType)
+		assert.Equal(t, "pipe-9", param.TemplateConf.ExptSource.SourceID)
+	}
+	if assert.NotNil(t, param.ExptSource) {
+		assert.Equal(t, entity.SourceType_Evaluation, param.ExptSource.SourceType)
+		assert.Equal(t, "pipe-9", param.ExptSource.SourceID)
+	}
+}
+
 func TestBuildTemplateConfForCreate_WithExptSourceOnly(t *testing.T) {
 	t.Parallel()
 
