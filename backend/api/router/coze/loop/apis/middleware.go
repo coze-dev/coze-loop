@@ -2005,37 +2005,52 @@ func _batchgetpromptbasicMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _importevaluationsetoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _createpromptoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _evaluation_set_io_jobMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _prompt_id1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _getevaluationsetjoboapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _deletepromptoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _io_jobMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _commits0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _builtin_evaluatorsMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _listcommitoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _runbuiltinevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _drafts0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
 
-func _builtinMw(handler *apis.APIHandler) []app.HandlerFunc {
+func _commitdraftoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _savedraftoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getpromptoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _prompts1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

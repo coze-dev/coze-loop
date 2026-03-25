@@ -111,6 +111,132 @@ func (l *LocalPromptOpenAPIService) ListPromptBasic(ctx context.Context, req *op
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalPromptOpenAPIService) CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest, callOptions ...callopt.Option) (*openapi.CreatePromptOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceCreatePromptOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceCreatePromptOApiResult)
+		resp, err := l.impl.CreatePromptOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceCreatePromptOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceCreatePromptOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CreatePromptOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest, callOptions ...callopt.Option) (*openapi.DeletePromptOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceDeletePromptOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceDeletePromptOApiResult)
+		resp, err := l.impl.DeletePromptOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceDeletePromptOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceDeletePromptOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "DeletePromptOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest, callOptions ...callopt.Option) (*openapi.GetPromptOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceGetPromptOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceGetPromptOApiResult)
+		resp, err := l.impl.GetPromptOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceGetPromptOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceGetPromptOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetPromptOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest, callOptions ...callopt.Option) (*openapi.SaveDraftOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceSaveDraftOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceSaveDraftOApiResult)
+		resp, err := l.impl.SaveDraftOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceSaveDraftOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceSaveDraftOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "SaveDraftOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest, callOptions ...callopt.Option) (*openapi.ListCommitOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceListCommitOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceListCommitOApiResult)
+		resp, err := l.impl.ListCommitOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceListCommitOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceListCommitOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListCommitOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalPromptOpenAPIService) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest, callOptions ...callopt.Option) (*openapi.CommitDraftOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.PromptOpenAPIServiceCommitDraftOApiArgs)
+		result := out.(*openapi.PromptOpenAPIServiceCommitDraftOApiResult)
+		resp, err := l.impl.CommitDraftOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.PromptOpenAPIServiceCommitDraftOApiArgs{Req: req}
+	result := &openapi.PromptOpenAPIServiceCommitDraftOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CommitDraftOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalPromptOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

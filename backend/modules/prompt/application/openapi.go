@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/asaskevich/govalidator"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
@@ -136,6 +137,242 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	return r, nil
 }
 
+func (p *PromptOpenAPIApplicationImpl) CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest) (r *openapi.CreatePromptOApiResponse, err error) {
+	r = openapi.NewCreatePromptOApiResponse()
+	if req.GetWorkspaceID() == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	if req.GetPromptKey() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	}
+	if req.GetPromptName() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_name参数为空"}))
+	}
+
+	if err = p.auth.CheckSpacePermissionForOpenAPI(ctx, req.GetWorkspaceID(), consts.ActionWorkspaceCreateLoopPrompt); err != nil {
+		return r, err
+	}
+
+	if req.PromptType == nil {
+		req.PromptType = ptr.Of(domainopenapi.PromptType(domainopenapi.PromptTypeNormal))
+	}
+	if req.SecurityLevel == nil {
+		req.SecurityLevel = ptr.Of(domainopenapi.SecurityLevel(domainopenapi.SecurityLevelL3))
+	}
+
+	promptDO := &entity.Prompt{
+		SpaceID:   req.GetWorkspaceID(),
+		PromptKey: req.GetPromptKey(),
+		PromptBasic: &entity.PromptBasic{
+			PromptType:    entity.PromptType(req.GetPromptType()),
+			DisplayName:   req.GetPromptName(),
+			Description:   req.GetPromptDescription(),
+			CreatedBy:     consts.OpenAPIUserID,
+			UpdatedBy:     consts.OpenAPIUserID,
+			SecurityLevel: entity.SecurityLevel(req.GetSecurityLevel()),
+		},
+	}
+
+	promptID, err := p.promptService.CreatePrompt(ctx, promptDO)
+	if err != nil {
+		return r, err
+	}
+	r.PromptID = ptr.Of(promptID)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest) (r *openapi.DeletePromptOApiResponse, err error) {
+	r = openapi.NewDeletePromptOApiResponse()
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Snippet prompt can not be deleted"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	err = p.promptManageRepo.DeletePrompt(ctx, req.GetPromptID())
+	return r, err
+}
+
+func (p *PromptOpenAPIApplicationImpl) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest) (r *openapi.GetPromptOApiResponse, err error) {
+	r = openapi.NewGetPromptOApiResponse()
+	userID := consts.OpenAPIUserID
+
+	commitVersion := req.GetCommitVersion()
+	if req.GetWithCommit() && commitVersion == "" {
+		promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+		if err != nil {
+			return r, err
+		}
+		if promptDO.PromptBasic != nil {
+			commitVersion = promptDO.PromptBasic.LatestVersion
+		}
+	}
+
+	promptDO, err := p.promptService.GetPrompt(ctx, service.GetPromptParam{
+		PromptID:      req.GetPromptID(),
+		WithCommit:    commitVersion != "",
+		CommitVersion: commitVersion,
+		WithDraft:     req.GetWithDraft(),
+		UserID:        userID,
+	})
+	if err != nil {
+		return r, err
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptRead); err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	r.Prompt = convertor.OpenAPIPromptManageDO2DTO(promptDO)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest) (r *openapi.SaveDraftOApiResponse, err error) {
+	r = openapi.NewSaveDraftOApiResponse()
+	userID := consts.OpenAPIUserID
+	if req.PromptDraft == nil || req.PromptDraft.DraftInfo == nil || req.PromptDraft.Detail == nil {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Draft is not specified"))
+	}
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	savingPromptDO := &entity.Prompt{
+		ID:      req.GetPromptID(),
+		SpaceID: promptDO.SpaceID,
+		PromptDraft: &entity.PromptDraft{
+			DraftInfo: func() *entity.DraftInfo {
+				draftInfo := convertor.OpenAPIDraftInfoDTO2DO(req.PromptDraft.DraftInfo)
+				if draftInfo == nil {
+					draftInfo = &entity.DraftInfo{}
+				}
+				draftInfo.UserID = userID
+				return draftInfo
+			}(),
+			PromptDetail: convertor.OpenAPIPromptDetailDTO2DO(req.PromptDraft.Detail),
+		},
+	}
+
+	draftInfoDO, err := p.promptService.SaveDraft(ctx, savingPromptDO)
+	if err != nil {
+		return r, err
+	}
+	r.DraftInfo = convertor.OpenAPIDraftInfoDO2DTO(draftInfoDO)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest) (r *openapi.ListCommitOApiResponse, err error) {
+	r = openapi.NewListCommitOApiResponse()
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptRead); err != nil {
+		return r, err
+	}
+
+	var pageTokenPtr *int64
+	if req.PageToken != nil {
+		pageToken, err := strconv.ParseInt(req.GetPageToken(), 10, 64)
+		if err != nil {
+			return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("Page token is invalid, page token = %s", req.GetPageToken())))
+		}
+		pageTokenPtr = ptr.Of(pageToken)
+	}
+
+	listCommitResult, err := p.promptManageRepo.ListCommitInfo(ctx, repo.ListCommitInfoParam{
+		PromptID:  req.GetPromptID(),
+		PageSize:  int(req.GetPageSize()),
+		PageToken: pageTokenPtr,
+		Asc:       false,
+	})
+	if err != nil {
+		return r, err
+	}
+	if listCommitResult == nil {
+		return r, nil
+	}
+
+	if listCommitResult.NextPageToken > 0 {
+		r.NextPageToken = ptr.Of(strconv.FormatInt(listCommitResult.NextPageToken, 10))
+		r.HasMore = ptr.Of(true)
+	}
+	r.PromptCommitInfos = convertor.OpenAPIBatchCommitInfoDO2DTO(listCommitResult.CommitInfoDOs)
+
+	if req.GetWithCommitDetail() {
+		promptCommitDetailMap := make(map[string]*domainopenapi.PromptDetail)
+		for _, commitDO := range listCommitResult.CommitDOs {
+			if commitDO == nil || commitDO.CommitInfo == nil || commitDO.CommitInfo.Version == "" {
+				continue
+			}
+			promptCommitDetailMap[commitDO.CommitInfo.Version] = convertor.OpenAPIPromptDetailDO2DTO(commitDO.PromptDetail)
+		}
+		r.PromptCommitDetailMapping = promptCommitDetailMap
+	}
+
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest) (r *openapi.CommitDraftOApiResponse, err error) {
+	r = openapi.NewCommitDraftOApiResponse()
+	userID := consts.OpenAPIUserID
+
+	if _, err = semver.StrictNewVersion(req.GetCommitVersion()); err != nil {
+		return r, err
+	}
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID:  req.GetPromptID(),
+		UserID:    userID,
+		WithDraft: true,
+	})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	err = p.promptManageRepo.CommitDraft(ctx, repo.CommitDraftParam{
+		PromptID:          req.GetPromptID(),
+		UserID:            userID,
+		CommitVersion:     req.GetCommitVersion(),
+		CommitDescription: req.GetCommitDescription(),
+	})
+	return r, err
+}
+
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
 	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
@@ -235,11 +472,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 			commitParams = append(commitParams, param)
 		} else {
 			param.WithDraft = true
-			userID, ok := p.user.GetUserIdInCtx(ctx)
-			if !ok || userID == "" {
-				return nil, errorx.NewByCode(prompterr.CommonNoPermissionCode, errorx.WithExtraMsg("user not found"))
-			}
-			param.UserID = userID
+			param.UserID = consts.OpenAPIUserID
 			draftParams = append(draftParams, param)
 		}
 	}

@@ -145,3 +145,169 @@ func (p *ListPromptBasicResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreatePromptOApiRequest) IsValid() error {
+	if p.PromptName == nil {
+		return fmt.Errorf("field PromptName not_nil rule failed")
+	}
+	if len(*p.PromptName) < int(1) {
+		return fmt.Errorf("field PromptName min_len rule failed, current value: %d", len(*p.PromptName))
+	}
+	if p.PromptKey == nil {
+		return fmt.Errorf("field PromptKey not_nil rule failed")
+	}
+	if len(*p.PromptKey) < int(1) {
+		return fmt.Errorf("field PromptKey min_len rule failed, current value: %d", len(*p.PromptKey))
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreatePromptOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeletePromptOApiRequest) IsValid() error {
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *DeletePromptOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetPromptOApiRequest) IsValid() error {
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetPromptOApiResponse) IsValid() error {
+	if p.Prompt != nil {
+		if err := p.Prompt.IsValid(); err != nil {
+			return fmt.Errorf("field Prompt not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SaveDraftOApiRequest) IsValid() error {
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.PromptDraft == nil {
+		return fmt.Errorf("field PromptDraft not_nil rule failed")
+	}
+	if err := p.PromptDraft.IsValid(); err != nil {
+		return fmt.Errorf("field PromptDraft not valid, %w", err)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SaveDraftOApiResponse) IsValid() error {
+	if p.DraftInfo != nil {
+		if err := p.DraftInfo.IsValid(); err != nil {
+			return fmt.Errorf("field DraftInfo not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListCommitOApiRequest) IsValid() error {
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.PageSize == nil {
+		return fmt.Errorf("field PageSize not_nil rule failed")
+	}
+	if *p.PageSize <= int32(0) {
+		return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ListCommitOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CommitDraftOApiRequest) IsValid() error {
+	if p.PromptID == nil {
+		return fmt.Errorf("field PromptID not_nil rule failed")
+	}
+	if *p.PromptID <= int64(0) {
+		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.CommitVersion == nil {
+		return fmt.Errorf("field CommitVersion not_nil rule failed")
+	}
+	if len(*p.CommitVersion) < int(1) {
+		return fmt.Errorf("field CommitVersion min_len rule failed, current value: %d", len(*p.CommitVersion))
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CommitDraftOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

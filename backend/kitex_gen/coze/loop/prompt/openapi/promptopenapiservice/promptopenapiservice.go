@@ -42,6 +42,48 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreatePromptOApi": kitex.NewMethodInfo(
+		createPromptOApiHandler,
+		newPromptOpenAPIServiceCreatePromptOApiArgs,
+		newPromptOpenAPIServiceCreatePromptOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"DeletePromptOApi": kitex.NewMethodInfo(
+		deletePromptOApiHandler,
+		newPromptOpenAPIServiceDeletePromptOApiArgs,
+		newPromptOpenAPIServiceDeletePromptOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetPromptOApi": kitex.NewMethodInfo(
+		getPromptOApiHandler,
+		newPromptOpenAPIServiceGetPromptOApiArgs,
+		newPromptOpenAPIServiceGetPromptOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"SaveDraftOApi": kitex.NewMethodInfo(
+		saveDraftOApiHandler,
+		newPromptOpenAPIServiceSaveDraftOApiArgs,
+		newPromptOpenAPIServiceSaveDraftOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListCommitOApi": kitex.NewMethodInfo(
+		listCommitOApiHandler,
+		newPromptOpenAPIServiceListCommitOApiArgs,
+		newPromptOpenAPIServiceListCommitOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"CommitDraftOApi": kitex.NewMethodInfo(
+		commitDraftOApiHandler,
+		newPromptOpenAPIServiceCommitDraftOApiArgs,
+		newPromptOpenAPIServiceCommitDraftOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -153,6 +195,120 @@ func newPromptOpenAPIServiceListPromptBasicResult() interface{} {
 	return openapi.NewPromptOpenAPIServiceListPromptBasicResult()
 }
 
+func createPromptOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceCreatePromptOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceCreatePromptOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).CreatePromptOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceCreatePromptOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceCreatePromptOApiArgs()
+}
+
+func newPromptOpenAPIServiceCreatePromptOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceCreatePromptOApiResult()
+}
+
+func deletePromptOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceDeletePromptOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceDeletePromptOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).DeletePromptOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceDeletePromptOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceDeletePromptOApiArgs()
+}
+
+func newPromptOpenAPIServiceDeletePromptOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceDeletePromptOApiResult()
+}
+
+func getPromptOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceGetPromptOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceGetPromptOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).GetPromptOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceGetPromptOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceGetPromptOApiArgs()
+}
+
+func newPromptOpenAPIServiceGetPromptOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceGetPromptOApiResult()
+}
+
+func saveDraftOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceSaveDraftOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceSaveDraftOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).SaveDraftOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceSaveDraftOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceSaveDraftOApiArgs()
+}
+
+func newPromptOpenAPIServiceSaveDraftOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceSaveDraftOApiResult()
+}
+
+func listCommitOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceListCommitOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceListCommitOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).ListCommitOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceListCommitOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceListCommitOApiArgs()
+}
+
+func newPromptOpenAPIServiceListCommitOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceListCommitOApiResult()
+}
+
+func commitDraftOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.PromptOpenAPIServiceCommitDraftOApiArgs)
+	realResult := result.(*openapi.PromptOpenAPIServiceCommitDraftOApiResult)
+	success, err := handler.(openapi.PromptOpenAPIService).CommitDraftOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newPromptOpenAPIServiceCommitDraftOApiArgs() interface{} {
+	return openapi.NewPromptOpenAPIServiceCommitDraftOApiArgs()
+}
+
+func newPromptOpenAPIServiceCommitDraftOApiResult() interface{} {
+	return openapi.NewPromptOpenAPIServiceCommitDraftOApiResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -205,6 +361,66 @@ func (p *kClient) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBa
 	_args.Req = req
 	var _result openapi.PromptOpenAPIServiceListPromptBasicResult
 	if err = p.c.Call(ctx, "ListPromptBasic", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest) (r *openapi.CreatePromptOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceCreatePromptOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceCreatePromptOApiResult
+	if err = p.c.Call(ctx, "CreatePromptOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest) (r *openapi.DeletePromptOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceDeletePromptOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceDeletePromptOApiResult
+	if err = p.c.Call(ctx, "DeletePromptOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest) (r *openapi.GetPromptOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceGetPromptOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceGetPromptOApiResult
+	if err = p.c.Call(ctx, "GetPromptOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest) (r *openapi.SaveDraftOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceSaveDraftOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceSaveDraftOApiResult
+	if err = p.c.Call(ctx, "SaveDraftOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest) (r *openapi.ListCommitOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceListCommitOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceListCommitOApiResult
+	if err = p.c.Call(ctx, "ListCommitOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest) (r *openapi.CommitDraftOApiResponse, err error) {
+	var _args openapi.PromptOpenAPIServiceCommitDraftOApiArgs
+	_args.Req = req
+	var _result openapi.PromptOpenAPIServiceCommitDraftOApiResult
+	if err = p.c.Call(ctx, "CommitDraftOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
