@@ -1343,8 +1343,6 @@ func TestPromptServiceImpl_reorganizeContexts_ToolResultMap(t *testing.T) {
 }
 
 func TestPromptServiceImpl_reportToolSpan_UsesToolResultMap(t *testing.T) {
-	t.Parallel()
-
 	originalTracer := looptracer.GetTracer()
 	recorder := &recordingTracer{}
 	looptracer.InitTracer(recorder)
@@ -1452,8 +1450,6 @@ func (s *recordingSpan) ToHeader() (map[string]string, error)                   
 func (s *recordingSpan) SetCallType(callType string)                                    {}
 
 func TestPromptServiceImpl_reportToolSpan_WithSignature(t *testing.T) {
-	t.Parallel()
-
 	originalTracer := looptracer.GetTracer()
 	recorder := &recordingTracer{}
 	looptracer.InitTracer(recorder)

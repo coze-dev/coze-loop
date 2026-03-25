@@ -198,3 +198,71 @@ func (p *ExecuteStreamingData) IsValid() error {
 	}
 	return nil
 }
+func (p *PromptDetail) IsValid() error {
+	if p.PromptTemplate != nil {
+		if err := p.PromptTemplate.IsValid(); err != nil {
+			return fmt.Errorf("field PromptTemplate not valid, %w", err)
+		}
+	}
+	if p.ToolCallConfig != nil {
+		if err := p.ToolCallConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ToolCallConfig not valid, %w", err)
+		}
+	}
+	if p.ModelConfig != nil {
+		if err := p.ModelConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ModelConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CommitInfo) IsValid() error {
+	return nil
+}
+func (p *DraftInfo) IsValid() error {
+	return nil
+}
+func (p *PromptCommit) IsValid() error {
+	if p.Detail != nil {
+		if err := p.Detail.IsValid(); err != nil {
+			return fmt.Errorf("field Detail not valid, %w", err)
+		}
+	}
+	if p.CommitInfo != nil {
+		if err := p.CommitInfo.IsValid(); err != nil {
+			return fmt.Errorf("field CommitInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptDraft) IsValid() error {
+	if p.Detail != nil {
+		if err := p.Detail.IsValid(); err != nil {
+			return fmt.Errorf("field Detail not valid, %w", err)
+		}
+	}
+	if p.DraftInfo != nil {
+		if err := p.DraftInfo.IsValid(); err != nil {
+			return fmt.Errorf("field DraftInfo not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *PromptManage) IsValid() error {
+	if p.PromptBasic != nil {
+		if err := p.PromptBasic.IsValid(); err != nil {
+			return fmt.Errorf("field PromptBasic not valid, %w", err)
+		}
+	}
+	if p.PromptDraft != nil {
+		if err := p.PromptDraft.IsValid(); err != nil {
+			return fmt.Errorf("field PromptDraft not valid, %w", err)
+		}
+	}
+	if p.PromptCommit != nil {
+		if err := p.PromptCommit.IsValid(); err != nil {
+			return fmt.Errorf("field PromptCommit not valid, %w", err)
+		}
+	}
+	return nil
+}

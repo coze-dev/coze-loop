@@ -299,3 +299,46 @@ struct ExecuteStreamingData {
     4: optional string finish_reason // 结束原因
     5: optional TokenUsage usage // token消耗
 }
+
+struct PromptDetail {
+    1: optional PromptTemplate prompt_template
+    2: optional list<Tool> tools
+    3: optional ToolCallConfig tool_call_config
+    4: optional ModelConfig model_config
+}
+
+struct CommitInfo {
+    1: optional string version
+    2: optional string base_version
+    3: optional string description
+    4: optional string committed_by
+    5: optional i64 committed_at (api.js_conv="true", go.tag='json:"committed_at"')
+}
+
+struct DraftInfo {
+    1: optional string user_id
+    2: optional string base_version
+    3: optional bool is_modified
+
+    11: optional i64 created_at (api.js_conv="true", go.tag='json:"created_at"')
+    12: optional i64 updated_at (api.js_conv="true", go.tag='json:"updated_at"')
+}
+
+struct PromptCommit {
+    1: optional PromptDetail detail
+    2: optional CommitInfo commit_info
+}
+
+struct PromptDraft {
+    1: optional PromptDetail detail
+    2: optional DraftInfo draft_info
+}
+
+struct PromptManage {
+    1: optional i64 id (api.js_conv="true", go.tag='json:"id"')
+    2: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"')
+    3: optional string prompt_key
+    4: optional PromptBasic prompt_basic
+    5: optional PromptDraft prompt_draft
+    6: optional PromptCommit prompt_commit
+}
