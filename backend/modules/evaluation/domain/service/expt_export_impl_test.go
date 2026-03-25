@@ -375,7 +375,7 @@ func TestExptResultExportService_ExportCSV(t *testing.T) {
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
-			got, err := svc.ExportCSV(context.Background(), tt.spaceID, tt.exptID, tt.session)
+			got, err := svc.ExportCSV(context.Background(), tt.spaceID, tt.exptID, tt.session, (*entity.ExptResultExportColumnSpec)(nil))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ExportCSV() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -725,7 +725,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 				itemResults1 := []*entity.ItemResult{{ItemID: 1}}
 				itemResults2 := []*entity.ItemResult{{ItemID: 2}}
 
-				// 第一次调用返回第一页数据（pageSize=20，total=25 需 2 页）
+				// 第一次调用：游标分页，返回下一批游标以触发第二次拉取
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
 					Return(&entity.MGetExperimentReportResult{
@@ -734,10 +734,11 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults1,
 						Total:                 int64(25),
+						NextTurnListCursor:    &entity.ExptTurnResultListCursor{ItemIdx: 0, TurnIdx: -1, ItemID: 1, TurnID: 0},
 					}, nil).
 					Times(1)
 
-				// 第二次调用返回第二页数据
+				// 第二次调用：无更多数据
 				svc.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
 					MGetExperimentResult(gomock.Any(), gomock.Any()).
 					Return(&entity.MGetExperimentReportResult{
@@ -745,7 +746,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 						ColumnEvalSetFields:   colEvalSetFields,
 						ExptColumnAnnotations: exptColAnnotation,
 						ItemResults:           itemResults2,
-						Total:                 int64(25),
+						Total:                 0,
 					}, nil).
 					Times(1)
 
@@ -793,7 +794,7 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			tt.setup(svc)
 
 			out := filepath.Join(t.TempDir(), "file_name")
-			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, out, true)
+			err := svc.DoExportCSV(context.Background(), tt.spaceID, tt.exptID, out, true, (*entity.ExptResultExportColumnSpec)(nil))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DoExportCSV() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -980,7 +981,11 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 			svc := newTestExptResultExportService(ctrl)
 			tt.setup(svc)
 
-			err := svc.HandleExportEvent(context.Background(), tt.spaceID, tt.exptID, tt.exportID)
+			err := svc.HandleExportEvent(context.Background(), &entity.ExportCSVEvent{
+				SpaceID:      tt.spaceID,
+				ExperimentID: tt.exptID,
+				ExportID:     tt.exportID,
+			})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HandleExportEvent() error = %v, wantErr %v", err, tt.wantErr)
 			}

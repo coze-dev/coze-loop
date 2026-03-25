@@ -564,10 +564,23 @@ struct UpdateAnnotateRecordResp {
     255: base.BaseResp BaseResp
 }
 
+/** 实验报告 CSV 导出列：四个一级分组，组内 list<string>。不传 export_columns：导出全部；不传某一 list：该组全选；传 []：该组不导出。item_id、status 始终导出。部分导出时不含标注列（全量导出仍含标注）。 */
+struct ExptResultExportColumnSpec {
+    /** 评测集字段：ColumnEvalSetField.Key */
+    1: optional list<string> eval_set_fields (api.body = "eval_set_fields")
+    /** 评测对象输出（非性能指标）：ColumnEvalTarget.Name，如 actual_output、trajectory、自定义输出名 */
+    2: optional list<string> eval_target_outputs (api.body = "eval_target_outputs")
+    /** 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等） */
+    3: optional list<string> metrics (api.body = "metrics")
+    /** 评估器版本列选择：weighted_score；{evaluator_version_id}:score / :reason；亦支持 evaluator:{id}:score|reason */
+    4: optional list<string> evaluator_version_ids (api.body = "evaluator_version_ids")
+}
 
 struct ExportExptResultRequest {
     1: required i64 workspace_id (api.body = 'workspace_id', api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     2: required i64 expt_id (api.path = 'expt_id' , api.js_conv = 'true', go.tag = 'json:"expt_id"')
+
+    3: optional ExptResultExportColumnSpec export_columns (api.body = "export_columns")
     4: optional expt.ExptResultExportType export_type (api.body = "export_type")
 
     200: optional common.Session session
