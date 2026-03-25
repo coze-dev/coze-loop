@@ -26,6 +26,9 @@ import (
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	platestwrite "github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtmocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	observability_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	observability_dataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
+	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -3296,13 +3299,13 @@ func Test_taskToExptTemplate(t *testing.T) {
 		task := &taskdomain.Task{
 			ID:   &taskID,
 			Name: "test-task",
-			BaseInfo: &taskdomain.BaseInfo{
+			BaseInfo: &observability_common.BaseInfo{
 				CreatedAt: &createdAt,
 				UpdatedAt: &updatedAt,
-				CreatedBy: &taskdomain.UserInfo{
+				CreatedBy: &observability_common.UserInfo{
 					UserID: &userID,
 				},
-				UpdatedBy: &taskdomain.UserInfo{
+				UpdatedBy: &observability_common.UserInfo{
 					UserID: &userID,
 				},
 			},
@@ -3395,7 +3398,7 @@ func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
 				},
 				{
 					EvaluatorID:        0, // 无效的评估器ID
-					EvaluatorVersionID: 1001,
+					EvaluatorVersionID: 0, // 无效的版本ID
 				},
 			},
 		}
@@ -3413,7 +3416,7 @@ func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
 					EvaluatorVersionID: 1001,
 					FieldMappings: []*taskdomain.EvaluateFieldMapping{
 						{
-							FieldSchema: &taskdomain.FieldSchema{
+							FieldSchema: &observability_dataset.FieldSchema{
 								Key: gptr.Of("field1"),
 							},
 							TraceFieldKey: "trace_field1",
@@ -3425,7 +3428,7 @@ func Test_autoEvaluateConfigsToExptTemplateConf(t *testing.T) {
 					EvaluatorVersionID: 1002,
 					FieldMappings: []*taskdomain.EvaluateFieldMapping{
 						{
-							FieldSchema: &taskdomain.FieldSchema{
+							FieldSchema: &observability_dataset.FieldSchema{
 								Name: gptr.Of("field2"),
 							},
 							EvalSetName: gptr.Of("eval_set_field"),
@@ -3477,7 +3480,7 @@ func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
 		mappings := []*taskdomain.EvaluateFieldMapping{
 			nil,
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Key: gptr.Of("test_field"),
 				},
 				TraceFieldKey: "trace_field",
@@ -3492,11 +3495,11 @@ func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
 	t.Run("mappings包含无效元素", func(t *testing.T) {
 		mappings := []*taskdomain.EvaluateFieldMapping{
 			{
-				FieldSchema: &taskdomain.FieldSchema{}, // 无Key和Name
+				FieldSchema: &observability_dataset.FieldSchema{}, // 无Key和Name
 				TraceFieldKey: "trace_field",
 			},
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Key: gptr.Of(""), // 空Key
 				},
 				TraceFieldKey: "trace_field",
@@ -3511,7 +3514,7 @@ func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
 	t.Run("正常转换-TraceFieldKey", func(t *testing.T) {
 		mappings := []*taskdomain.EvaluateFieldMapping{
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Key: gptr.Of("field1"),
 				},
 				TraceFieldKey: "trace_field1",
@@ -3528,7 +3531,7 @@ func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
 	t.Run("正常转换-EvalSetName", func(t *testing.T) {
 		mappings := []*taskdomain.EvaluateFieldMapping{
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Name: gptr.Of("field2"),
 				},
 				EvalSetName: gptr.Of("eval_set_field"),
@@ -3545,13 +3548,13 @@ func Test_evaluateFieldMappingsToIngressConf(t *testing.T) {
 	t.Run("正常转换-多个字段", func(t *testing.T) {
 		mappings := []*taskdomain.EvaluateFieldMapping{
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Key: gptr.Of("field1"),
 				},
 				TraceFieldKey: "trace_field1",
 			},
 			{
-				FieldSchema: &taskdomain.FieldSchema{
+				FieldSchema: &observability_dataset.FieldSchema{
 					Name: gptr.Of("field2"),
 				},
 				EvalSetName: gptr.Of("eval_set_field"),
@@ -3695,7 +3698,7 @@ func Test_convertTaskFrequency(t *testing.T) {
 		assert.Equal(t, "monday", *result)
 
 		// 测试周日
-		startAt = int64(1704672000000) // 2024-01-07 00:00:00 UTC (周日)
+		startAt = int64(1704585600000) // 2024-01-07 00:00:00 UTC (周日)
 		effectiveTime = &taskdomain.EffectiveTime{
 			StartAt: &startAt,
 		}
@@ -3743,8 +3746,8 @@ func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
 	})
 
 	t.Run("正常转换-只有基本字段", func(t *testing.T) {
-		platformType := taskfilter.PlatformTypeTCE
-		spanListType := taskfilter.SpanListTypeNormal
+		platformType := observability_common.PlatformTypeCozeloop
+		spanListType := observability_common.SpanListTypeRootSpan
 		sf := &taskfilter.SpanFilterFields{
 			PlatformType: &platformType,
 			SpanListType: &spanListType,
@@ -3756,12 +3759,12 @@ func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
 	})
 
 	t.Run("正常转换-包含过滤器", func(t *testing.T) {
-		platformType := taskfilter.PlatformTypeTCE
-		spanListType := taskfilter.SpanListTypeNormal
-		queryAndOr := taskfilter.QueryAndOrAnd
+		platformType := observability_common.PlatformTypeCozeloop
+		spanListType := observability_common.SpanListTypeRootSpan
+		queryAndOr := taskfilter.QueryRelationAnd
 		fieldType := taskfilter.FieldTypeString
 		queryType := taskfilter.QueryTypeEq
-		subQueryAndOr := taskfilter.QueryAndOrOr
+		subQueryAndOr := taskfilter.QueryRelationOr
 		sf := &taskfilter.SpanFilterFields{
 			PlatformType: &platformType,
 			SpanListType: &spanListType,
@@ -3769,7 +3772,7 @@ func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
 				QueryAndOr: &queryAndOr,
 				FilterFields: []*taskfilter.FilterField{
 					{
-						FieldName:  "field1",
+						FieldName:  gptr.Of("field1"),
 						FieldType:  &fieldType,
 						Values:     []string{"value1", "value2"},
 						QueryType:  &queryType,
@@ -3778,7 +3781,7 @@ func Test_spanFilterFieldsFromTaskRule(t *testing.T) {
 							QueryAndOr: &subQueryAndOr,
 							FilterFields: []*taskfilter.FilterField{
 								{
-									FieldName: "sub_field",
+									FieldName: gptr.Of("sub_field"),
 									Values:    []string{"sub_value"},
 								},
 							},
@@ -3804,7 +3807,7 @@ func Test_filterFieldsFromTaskRule(t *testing.T) {
 	})
 
 	t.Run("正常转换-只有QueryAndOr", func(t *testing.T) {
-		queryAndOr := taskfilter.QueryAndOrAnd
+		queryAndOr := taskfilter.QueryRelationAnd
 		ff := &taskfilter.FilterFields{
 			QueryAndOr: &queryAndOr,
 		}
@@ -3814,21 +3817,21 @@ func Test_filterFieldsFromTaskRule(t *testing.T) {
 	})
 
 	t.Run("正常转换-包含FilterFields", func(t *testing.T) {
-		queryAndOr := taskfilter.QueryAndOrAnd
+		queryAndOr := taskfilter.QueryRelationAnd
 		fieldType := taskfilter.FieldTypeString
 		queryType := taskfilter.QueryTypeEq
 		ff := &taskfilter.FilterFields{
 			QueryAndOr: &queryAndOr,
 			FilterFields: []*taskfilter.FilterField{
 				{
-					FieldName: "field1",
+					FieldName: gptr.Of("field1"),
 					FieldType: &fieldType,
 					Values:    []string{"value1"},
 					QueryType: &queryType,
 				},
 				nil, // 测试nil元素
 				{
-					FieldName: "field2",
+					FieldName: gptr.Of("field2"),
 					Values:    []string{"value2"},
 				},
 			},
@@ -3849,9 +3852,9 @@ func Test_filterFieldFromTaskRule(t *testing.T) {
 	t.Run("正常转换-基本字段", func(t *testing.T) {
 		fieldType := taskfilter.FieldTypeString
 		queryType := taskfilter.QueryTypeEq
-		queryAndOr := taskfilter.QueryAndOrAnd
+		queryAndOr := taskfilter.QueryRelationAnd
 		f := &taskfilter.FilterField{
-			FieldName:  "field1",
+			FieldName:  gptr.Of("field1"),
 			FieldType:  &fieldType,
 			Values:     []string{"value1", "value2"},
 			QueryType:  &queryType,
@@ -3859,7 +3862,7 @@ func Test_filterFieldFromTaskRule(t *testing.T) {
 		}
 		result := filterFieldFromTaskRule(f)
 		assert.NotNil(t, result)
-		assert.Equal(t, "field1", result.FieldName)
+		assert.Equal(t, "field1", *result.FieldName)
 		assert.Equal(t, string(fieldType), *result.FieldType)
 		assert.Equal(t, []string{"value1", "value2"}, result.Values)
 		assert.Equal(t, string(queryType), *result.QueryType)
@@ -3869,9 +3872,9 @@ func Test_filterFieldFromTaskRule(t *testing.T) {
 	t.Run("正常转换-包含SubFilter", func(t *testing.T) {
 		fieldType := taskfilter.FieldTypeString
 		queryType := taskfilter.QueryTypeEq
-		subQueryAndOr := taskfilter.QueryAndOrOr
+		subQueryAndOr := taskfilter.QueryRelationOr
 		f := &taskfilter.FilterField{
-			FieldName: "field1",
+			FieldName: gptr.Of("field1"),
 			FieldType: &fieldType,
 			Values:    []string{"value1"},
 			QueryType: &queryType,
@@ -3881,7 +3884,7 @@ func Test_filterFieldFromTaskRule(t *testing.T) {
 		}
 		result := filterFieldFromTaskRule(f)
 		assert.NotNil(t, result)
-		assert.Equal(t, "field1", result.FieldName)
+		assert.Equal(t, "field1", *result.FieldName)
 		assert.NotNil(t, result.SubFilter)
 		assert.Equal(t, string(subQueryAndOr), *result.SubFilter.QueryAndOr)
 	})
@@ -3910,7 +3913,7 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 	t.Run("Nodes中无data_reflow节点返回nil", func(t *testing.T) {
 		p := &entity.Pipeline{
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "other_type",
 					},
@@ -3924,7 +3927,7 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 	t.Run("data_reflow节点无Refs返回nil", func(t *testing.T) {
 		p := &entity.Pipeline{
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
 					},
@@ -3938,10 +3941,10 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 	t.Run("data_reflow节点无task Ref返回nil", func(t *testing.T) {
 		p := &entity.Pipeline{
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"other": {Content: "{}"},
 						},
 					},
@@ -3955,10 +3958,10 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 	t.Run("data_reflow节点task Ref为空返回nil", func(t *testing.T) {
 		p := &entity.Pipeline{
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {Content: ""},
 						},
 					},
@@ -3989,10 +3992,10 @@ func Test_extractSpanFilterFieldsFromPipeline(t *testing.T) {
 		}`
 		p := &entity.Pipeline{
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {Content: taskJSON},
 						},
 					},
@@ -4208,10 +4211,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {
 								Content: taskContent,
 							},
@@ -4222,7 +4225,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 			Scheduler: &entity.Scheduler{
 				Enabled:   gptr.Of(true),
 				Frequency: gptr.Of("daily"),
-				TriggerAt: gptr.Of("00:00"),
+				TriggerAt: gptr.Of(int64(0)),
 				StartTime: gptr.Of(int64(1700000000000)),
 				EndTime:   gptr.Of(int64(1700000000000)),
 			},
@@ -4251,7 +4254,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "other_type",
 					},
@@ -4284,10 +4287,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {
 								Content: taskContent,
 							},
@@ -4315,10 +4318,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{},
+						Refs: map[string]*entity.NodeRef{},
 					},
 				},
 			},
@@ -4341,10 +4344,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {
 								Content: "",
 							},
@@ -4371,10 +4374,10 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		pipeline := &entity.Pipeline{
 			ID: gptr.Of(int64(1)),
 			Flow: &entity.FlowSchema{
-				Nodes: []*entity.FlowNode{
+				Nodes: []*entity.Node{
 					{
 						NodeTemplateType: "data_reflow",
-						Refs: map[string]*entity.FlowNodeRef{
+						Refs: map[string]*entity.NodeRef{
 							"task": {
 								Content: "invalid json",
 							},
@@ -4440,7 +4443,7 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 
 	t.Run("templateRepo.List失败，返回错误", func(t *testing.T) {
 		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{}, gptr.Of(int64(0)), nil)
-		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, 0, errors.New("list templates fail"))
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, int64(0), errors.New("list templates fail"))
 		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
 		assert.Error(t, err)
 		assert.Nil(t, templates)
@@ -4462,6 +4465,10 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 				},
 			},
 		}, int64(1), nil)
+		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+		mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+		mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
 		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(nil, errors.New("list pipeline flow fail"))
 		templates, total, err := mgr.ListOnline(ctx, page, pageSize, spaceID, nil, nil, session)
 		assert.Error(t, err)
@@ -4474,13 +4481,13 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 		task := &taskdomain.Task{
 			ID:   gptr.Of(int64(1)),
 			Name: "test task",
-			BaseInfo: &taskdomain.BaseInfo{
+			BaseInfo: &observability_common.BaseInfo{
 				CreatedAt: gptr.Of(int64(1700000000000)),
 				UpdatedAt: gptr.Of(int64(1700000000000)),
-				CreatedBy: &taskdomain.UserInfo{
+				CreatedBy: &observability_common.UserInfo{
 					UserID: gptr.Of("u1"),
 				},
-				UpdatedBy: &taskdomain.UserInfo{
+				UpdatedBy: &observability_common.UserInfo{
 					UserID: gptr.Of("u1"),
 				},
 			},
@@ -4492,7 +4499,7 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 						FieldMappings: []*taskdomain.EvaluateFieldMapping{
 							{
 								TraceFieldKey: "test_field",
-								FieldSchema: &taskdomain.FieldSchema{
+								FieldSchema: &observability_dataset.FieldSchema{
 									Key: gptr.Of("test_key"),
 									Name: gptr.Of("test_name"),
 								},
@@ -4528,9 +4535,6 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 			},
 		}
 		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{dbTemplate}, int64(1), nil)
-
-		// Mock ListPipelineFlow 返回空结果
-		mockPipelineAdapter.EXPECT().ListPipelineFlow(ctx, gomock.Any()).Return(&rpc.ListPipelineFlowResponse{Items: []*entity.Pipeline{}}, nil)
 
 		// Mock mgetExptTupleByID 返回空结果
 		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
@@ -4573,16 +4577,16 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 		task := &taskdomain.Task{
 			ID:   gptr.Of(int64(1)),
 			Name: "test task",
-			BaseInfo: &taskdomain.BaseInfo{
-				CreatedBy: &taskdomain.UserInfo{
+			BaseInfo: &observability_common.BaseInfo{
+				CreatedBy: &observability_common.UserInfo{
 					UserID: gptr.Of("u1"),
 				},
 			},
 		}
-		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task}, gptr.Of(int64(1)), nil)
+		mockTaskAdapter.EXPECT().ListTasks(ctx, gomock.Any()).Return([]*taskdomain.Task{task}, gptr.Of(int64(1)), nil).Times(2)
 
 		// Mock templateRepo.List 返回空结果
-		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil)
+		mockRepo.EXPECT().List(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptTemplate{}, int64(0), nil).Times(2)
 
 		// Mock mgetExptTupleByID 返回空结果
 		mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
@@ -4614,14 +4618,14 @@ func TestExptTemplateManagerImpl_ListOnline(t *testing.T) {
 		task1 := &taskdomain.Task{
 			ID:   gptr.Of(int64(1)),
 			Name: "task 1",
-			BaseInfo: &taskdomain.BaseInfo{
+			BaseInfo: &observability_common.BaseInfo{
 				CreatedAt: gptr.Of(int64(1700000000000)),
 			},
 		}
 		task2 := &taskdomain.Task{
 			ID:   gptr.Of(int64(2)),
 			Name: "task 2",
-			BaseInfo: &taskdomain.BaseInfo{
+			BaseInfo: &observability_common.BaseInfo{
 				CreatedAt: gptr.Of(int64(1700000000001)),
 			},
 		}
