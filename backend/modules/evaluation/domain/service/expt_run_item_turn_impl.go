@@ -92,7 +92,7 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
 
-	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults() {
+	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults(ctx, etec.Event) {
 		return trr
 	}
 

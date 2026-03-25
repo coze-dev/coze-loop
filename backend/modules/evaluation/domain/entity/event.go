@@ -26,6 +26,8 @@ type ExptScheduleEvent struct {
 
 type ctxTargetCalledCacheKey struct{}
 
+type ctxForceNoRetryKey struct{}
+
 type ExptItemEvalEvent struct {
 	SpaceID     int64
 	ExptID      int64
@@ -41,6 +43,15 @@ type ExptItemEvalEvent struct {
 	MaxRetryTimes int
 	Ext           map[string]string
 	Session       *Session
+}
+
+func (e *ExptItemEvalEvent) WithCtxForceNoRetry(ctx context.Context) {
+	ctxcache.Store(ctx, ctxForceNoRetryKey{}, struct{}{})
+}
+
+func (e *ExptItemEvalEvent) CtxForceNoRetry(ctx context.Context) bool {
+	_, ok := ctxcache.Get[struct{}](ctx, ctxForceNoRetryKey{})
+	return ok
 }
 
 func (e *ExptItemEvalEvent) IgnoreExistedTargetResult() bool {
