@@ -22,6 +22,7 @@ service PromptManageService {
     ListPromptResponse ListPrompt(1: ListPromptRequest request) (api.post = '/api/prompt/v1/prompts/list')
     // 查询片段的引用记录
     ListParentPromptResponse ListParentPrompt (1: ListParentPromptRequest request) (api.post = '/api/prompt/v1/prompts/list_parent')
+    BatchGetPromptBasicResponse BatchGetPromptBasic (1: BatchGetPromptBasicRequest request) (api.post = '/api/prompt/v1/prompts/batch_get_prompt_basic')
 
     // 改
     UpdatePromptResponse UpdatePrompt(1: UpdatePromptRequest request) (api.put = '/api/prompt/v1/prompts/:prompt_id')
@@ -52,6 +53,7 @@ struct CreatePromptRequest {
     12: optional string prompt_key (vt.not_nil="true", vt.min_size="1")
     13: optional string prompt_description
     14: optional prompt.PromptType prompt_type
+    15: optional prompt.SecurityLevel security_level
 
     21: optional prompt.PromptDetail draft_detail
 
@@ -168,6 +170,8 @@ struct UpdatePromptRequest {
 
     11: optional string prompt_name (vt.not_nil="true", vt.min_size="1")
     12: optional string prompt_description
+    13: optional prompt.SecurityLevel security_level
+    14: optional string downgrade_reason
 
     255: optional base.Base Base
 }
@@ -308,6 +312,19 @@ struct ListParentPromptRequest {
 
 struct ListParentPromptResponse {
     1: optional map<string, list<prompt.PromptCommitVersions>> parent_prompts // 不同片段版本被引用的父prompt记录
+
+    255: optional base.BaseResp  BaseResp
+}
+
+struct BatchGetPromptBasicRequest {
+    1: optional i64 workspace_id (api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"workspace_id"')
+    2: optional list<i64> prompt_ids
+
+    255: optional base.Base Base
+}
+
+struct BatchGetPromptBasicResponse {
+    1: optional list<prompt.Prompt> prompts
 
     255: optional base.BaseResp  BaseResp
 }

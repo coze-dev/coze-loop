@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `prompt_user_draft`
     `tools`            longtext COLLATE utf8mb4_general_ci COMMENT 'tools',
     `tool_call_config` text COLLATE utf8mb4_general_ci COMMENT 'tool调用配置',
     `metadata`         text COLLATE utf8mb4_general_ci COMMENT '模板元信息',
+    `mcp_config`       text COLLATE utf8mb4_general_ci COMMENT 'mcp config info',
     `base_version`     varchar(128) COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '草稿关联版本',
     `is_draft_edited`  tinyint                                 NOT NULL DEFAULT '0' COMMENT '草稿内容是否基于BaseVersion有变更',
     `ext_info`         text COLLATE utf8mb4_general_ci COMMENT '扩展字段',
@@ -18,6 +19,7 @@ CREATE TABLE IF NOT EXISTS `prompt_user_draft`
     `updated_at`       datetime                                NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`       bigint                                  NOT NULL DEFAULT '0' COMMENT '删除时间',
     `has_snippets` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否包含prompt片段',
+    `encrypt_messages` longtext COLLATE utf8mb4_general_ci COMMENT 'encrypt message list',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_prompt_id_user_id_deleted_at` (`prompt_id`, `user_id`, `deleted_at`),
     KEY `idx_prompt_id_user_id` (`prompt_id`, `user_id`)

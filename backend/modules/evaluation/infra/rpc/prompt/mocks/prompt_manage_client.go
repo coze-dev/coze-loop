@@ -82,6 +82,26 @@ func (mr *MockPromptManageClientMockRecorder) BatchGetPrompt(ctx, request any, c
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPrompt", reflect.TypeOf((*MockPromptManageClient)(nil).BatchGetPrompt), varargs...)
 }
 
+// BatchGetPromptBasic mocks base method.
+func (m *MockPromptManageClient) BatchGetPromptBasic(ctx context.Context, request *manage.BatchGetPromptBasicRequest, callOptions ...callopt.Option) (*manage.BatchGetPromptBasicResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, request}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BatchGetPromptBasic", varargs...)
+	ret0, _ := ret[0].(*manage.BatchGetPromptBasicResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BatchGetPromptBasic indicates an expected call of BatchGetPromptBasic.
+func (mr *MockPromptManageClientMockRecorder) BatchGetPromptBasic(ctx, request any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, request}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetPromptBasic", reflect.TypeOf((*MockPromptManageClient)(nil).BatchGetPromptBasic), varargs...)
+}
+
 // ClonePrompt mocks base method.
 func (m *MockPromptManageClient) ClonePrompt(ctx context.Context, request *manage.ClonePromptRequest, callOptions ...callopt.Option) (*manage.ClonePromptResponse, error) {
 	m.ctrl.T.Helper()

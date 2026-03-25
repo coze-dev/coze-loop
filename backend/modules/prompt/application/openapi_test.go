@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	limitermocks "github.com/coze-dev/coze-loop/backend/infra/limiter/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain/prompt"
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
 	confmocks "github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf/mocks"
@@ -190,7 +191,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -203,52 +204,52 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				},
 			},
 			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
-				Data: &openapi.PromptResultData{
-					Items: []*openapi.PromptResult_{
+				Data: &domainopenapi.PromptResultData{
+					Items: []*domainopenapi.PromptResult_{
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 								Version:   ptr.Of("1.0.0"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("1.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
 						},
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt2"),
 								Version:   ptr.Of("1.0.0"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt2"),
 								Version:     ptr.Of("1.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
@@ -336,7 +337,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -477,7 +478,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -493,75 +494,75 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				},
 			},
 			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
-				Data: &openapi.PromptResultData{
-					Items: []*openapi.PromptResult_{
+				Data: &domainopenapi.PromptResultData{
+					Items: []*domainopenapi.PromptResult_{
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 								Version:   ptr.Of("1.0.0"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("1.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
 						},
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 								Version:   ptr.Of("2.0.0"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("2.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
 						},
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("2.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
@@ -591,7 +592,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -628,7 +629,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -671,7 +672,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -715,7 +716,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -764,7 +765,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -813,7 +814,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("non_existent_version"),
@@ -833,7 +834,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(0)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -853,7 +854,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: nil,
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -904,7 +905,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -1002,7 +1003,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Label:     ptr.Of("stable"),
@@ -1011,28 +1012,28 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				},
 			},
 			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
-				Data: &openapi.PromptResultData{
-					Items: []*openapi.PromptResult_{
+				Data: &domainopenapi.PromptResultData{
+					Items: []*domainopenapi.PromptResult_{
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 								Label:     ptr.Of("stable"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("2.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
@@ -1172,7 +1173,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -1185,52 +1186,52 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				},
 			},
 			wantR: &openapi.BatchGetPromptByPromptKeyResponse{
-				Data: &openapi.PromptResultData{
-					Items: []*openapi.PromptResult_{
+				Data: &domainopenapi.PromptResultData{
+					Items: []*domainopenapi.PromptResult_{
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt1"),
 								Version:   ptr.Of("1.0.0"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt1"),
 								Version:     ptr.Of("1.0.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
 						},
 						{
-							Query: &openapi.PromptQuery{
+							Query: &domainopenapi.PromptQuery{
 								PromptKey: ptr.Of("test_prompt2"),
 								Label:     ptr.Of("beta"),
 							},
-							Prompt: &openapi.Prompt{
+							Prompt: &domainopenapi.Prompt{
 								WorkspaceID: ptr.Of(int64(123456)),
 								PromptKey:   ptr.Of("test_prompt2"),
 								Version:     ptr.Of("1.5.0"),
-								PromptTemplate: &openapi.PromptTemplate{
+								PromptTemplate: &domainopenapi.PromptTemplate{
 									TemplateType: ptr.Of(prompt.TemplateTypeNormal),
-									Messages: []*openapi.Message{
+									Messages: []*domainopenapi.Message{
 										{
 											Role:    ptr.Of(prompt.RoleSystem),
 											Content: ptr.Of("You are a helpful assistant."),
 										},
 									},
-									VariableDefs: make([]*openapi.VariableDef, 0),
+									VariableDefs: make([]*domainopenapi.VariableDef, 0),
 								},
-								LlmConfig: &openapi.LLMConfig{
+								LlmConfig: &domainopenapi.LLMConfig{
 									Temperature: ptr.Of(0.7),
 								},
 							},
@@ -1273,7 +1274,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Label:     ptr.Of("non_existent_label"),
@@ -1367,7 +1368,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -1420,7 +1421,7 @@ func TestPromptOpenAPIApplicationImpl_BatchGetPromptByPromptKey(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.BatchGetPromptByPromptKeyRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					Queries: []*openapi.PromptQuery{
+					Queries: []*domainopenapi.PromptQuery{
 						{
 							PromptKey: ptr.Of("test_prompt1"),
 							Version:   ptr.Of("1.0.0"),
@@ -1465,11 +1466,11 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "success: valid request",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
-				Messages: []*openapi.Message{
+				Messages: []*domainopenapi.Message{
 					{
 						Role:    ptr.Of(prompt.RoleUser),
 						Content: ptr.Of("Hello"),
@@ -1482,7 +1483,7 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: workspace_id is zero",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(0)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
 			},
@@ -1492,7 +1493,7 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: workspace_id is nil",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: nil,
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
 			},
@@ -1510,7 +1511,7 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: prompt_key is empty",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of(""),
 				},
 			},
@@ -1520,7 +1521,7 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: prompt_key is nil",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: nil,
 				},
 			},
@@ -1530,15 +1531,15 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: invalid image URL",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
-				Messages: []*openapi.Message{
+				Messages: []*domainopenapi.Message{
 					{
 						Role: ptr.Of(prompt.RoleUser),
-						Parts: []*openapi.ContentPart{
+						Parts: []*domainopenapi.ContentPart{
 							{
-								Type:     ptr.Of(openapi.ContentTypeImageURL),
+								Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 								ImageURL: ptr.Of("invalid-url"),
 							},
 						},
@@ -1551,15 +1552,15 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: invalid base64 data",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
-				Messages: []*openapi.Message{
+				Messages: []*domainopenapi.Message{
 					{
 						Role: ptr.Of(prompt.RoleUser),
-						Parts: []*openapi.ContentPart{
+						Parts: []*domainopenapi.ContentPart{
 							{
-								Type:       ptr.Of(openapi.ContentTypeBase64Data),
+								Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 								Base64Data: ptr.Of("invalid-base64"),
 							},
 						},
@@ -1572,15 +1573,15 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "success: valid image URL",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
-				Messages: []*openapi.Message{
+				Messages: []*domainopenapi.Message{
 					{
 						Role: ptr.Of(prompt.RoleUser),
-						Parts: []*openapi.ContentPart{
+						Parts: []*domainopenapi.ContentPart{
 							{
-								Type:     ptr.Of(openapi.ContentTypeImageURL),
+								Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 								ImageURL: ptr.Of("https://example.com/image.jpg"),
 							},
 						},
@@ -1593,15 +1594,15 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "success: valid base64 data",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
-				Messages: []*openapi.Message{
+				Messages: []*domainopenapi.Message{
 					{
 						Role: ptr.Of(prompt.RoleUser),
-						Parts: []*openapi.ContentPart{
+						Parts: []*domainopenapi.ContentPart{
 							{
-								Type:       ptr.Of(openapi.ContentTypeBase64Data),
+								Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 								Base64Data: ptr.Of("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="),
 							},
 						},
@@ -1614,15 +1615,15 @@ func TestValidateExecuteRequest(t *testing.T) {
 			name: "error: invalid base64 data in variable vals",
 			req: &openapi.ExecuteRequest{
 				WorkspaceID: ptr.Of(int64(123456)),
-				PromptIdentifier: &openapi.PromptQuery{
+				PromptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 				},
-				VariableVals: []*openapi.VariableVal{
+				VariableVals: []*domainopenapi.VariableVal{
 					{
 						Key: ptr.Of("image_var"),
-						MultiPartValues: []*openapi.ContentPart{
+						MultiPartValues: []*domainopenapi.ContentPart{
 							{
-								Type:       ptr.Of(openapi.ContentTypeBase64Data),
+								Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 								Base64Data: ptr.Of("invalid-base64"),
 							},
 						},
@@ -1792,7 +1793,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 	type args struct {
 		ctx              context.Context
 		spaceID          int64
-		promptIdentifier *openapi.PromptQuery
+		promptIdentifier *domainopenapi.PromptQuery
 	}
 
 	tests := []struct {
@@ -1868,7 +1869,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
@@ -1937,7 +1938,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
@@ -1964,7 +1965,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
@@ -1997,7 +1998,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
@@ -2032,7 +2033,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Version:   ptr.Of("1.0.0"),
 				},
@@ -2107,7 +2108,7 @@ func TestPromptOpenAPIApplicationImpl_getPromptByPromptKey(t *testing.T) {
 			args: args{
 				ctx:     context.Background(),
 				spaceID: 123456,
-				promptIdentifier: &openapi.PromptQuery{
+				promptIdentifier: &domainopenapi.PromptQuery{
 					PromptKey: ptr.Of("test_prompt"),
 					Label:     ptr.Of("stable"),
 				},
@@ -2469,7 +2470,16 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 						},
 					},
 				}
-				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).Return(expectedReply, nil)
+				expectedResponseAPIConfig := &entity.ResponseAPIConfig{
+					PreviousResponseID: ptr.Of("prev-id"),
+					EnableCaching:      ptr.Of(true),
+					SessionID:          ptr.Of("session-123"),
+				}
+				mockPromptService.EXPECT().Execute(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param service.ExecuteParam) (*entity.Reply, error) {
+						assert.Equal(t, expectedResponseAPIConfig, param.ResponseAPIConfig)
+						return expectedReply, nil
+					})
 				mockPromptService.EXPECT().MConvertBase64DataURLToFileURL(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 				return fields{
@@ -2484,15 +2494,20 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
-					Messages: []*openapi.Message{
+					Messages: []*domainopenapi.Message{
 						{
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
 						},
+					},
+					ResponseAPIConfig: &domainopenapi.ResponseAPIConfig{
+						PreviousResponseID: ptr.Of("prev-id"),
+						EnableCaching:      ptr.Of(true),
+						SessionID:          ptr.Of("session-123"),
 					},
 				},
 			},
@@ -2581,7 +2596,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
@@ -2615,7 +2630,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
@@ -2650,7 +2665,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
@@ -2705,7 +2720,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
@@ -2766,7 +2781,7 @@ func TestPromptOpenAPIApplicationImpl_doExecute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
@@ -2942,11 +2957,11 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
-					Messages: []*openapi.Message{
+					Messages: []*domainopenapi.Message{
 						{
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
@@ -2955,13 +2970,13 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				},
 			},
 			wantR: &openapi.ExecuteResponse{
-				Data: &openapi.ExecuteData{
-					Message: &openapi.Message{
+				Data: &domainopenapi.ExecuteData{
+					Message: &domainopenapi.Message{
 						Role:    ptr.Of(prompt.RoleAssistant),
 						Content: ptr.Of("Hello, how can I help you?"),
 					},
 					FinishReason: ptr.Of("stop"),
-					Usage: &openapi.TokenUsage{
+					Usage: &domainopenapi.TokenUsage{
 						InputTokens:  ptr.Of(int32(10)),
 						OutputTokens: ptr.Of(int32(20)),
 					},
@@ -3037,11 +3052,11 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
-					Messages: []*openapi.Message{
+					Messages: []*domainopenapi.Message{
 						{
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
@@ -3066,7 +3081,7 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(0)), // 无效的 workspace_id
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 					},
 				},
@@ -3098,11 +3113,11 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
-					Messages: []*openapi.Message{
+					Messages: []*domainopenapi.Message{
 						{
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
@@ -3174,11 +3189,11 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 				ctx: context.Background(),
 				req: &openapi.ExecuteRequest{
 					WorkspaceID: ptr.Of(int64(123456)),
-					PromptIdentifier: &openapi.PromptQuery{
+					PromptIdentifier: &domainopenapi.PromptQuery{
 						PromptKey: ptr.Of("test_prompt"),
 						Version:   ptr.Of("1.0.0"),
 					},
-					Messages: []*openapi.Message{
+					Messages: []*domainopenapi.Message{
 						{
 							Role:    ptr.Of(prompt.RoleUser),
 							Content: ptr.Of("Hello"),
@@ -3235,6 +3250,283 @@ func TestPromptOpenAPIApplicationImpl_Execute(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPromptTypeToMetricValue(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		promptType entity.PromptType
+		want       int64
+	}{
+		{
+			name:       "normal prompt type",
+			promptType: entity.PromptTypeNormal,
+			want:       1,
+		},
+		{
+			name:       "snippet prompt type",
+			promptType: entity.PromptTypeSnippet,
+			want:       2,
+		},
+		{
+			name:       "unknown prompt type returns 0",
+			promptType: entity.PromptType("unknown"),
+			want:       0,
+		},
+		{
+			name:       "empty prompt type returns 0",
+			promptType: entity.PromptType(""),
+			want:       0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := promptTypeToMetricValue(tt.promptType)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetRequestPromptKey(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		req  *openapi.ExecuteRequest
+		want string
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			want: "",
+		},
+		{
+			name: "nil PromptIdentifier",
+			req:  &openapi.ExecuteRequest{},
+			want: "",
+		},
+		{
+			name: "normal case",
+			req: &openapi.ExecuteRequest{
+				PromptIdentifier: &domainopenapi.PromptQuery{
+					PromptKey: ptr.Of("my_prompt"),
+				},
+			},
+			want: "my_prompt",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getRequestPromptKey(tt.req)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetRequestAccountMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		req  *openapi.ExecuteRequest
+		want domainopenapi.AccountMode
+	}{
+		{
+			name: "nil request defaults to SharedAccount",
+			req:  nil,
+			want: domainopenapi.AccountModeSharedAccount,
+		},
+		{
+			name: "nil AccountMode defaults to SharedAccount",
+			req:  &openapi.ExecuteRequest{},
+			want: domainopenapi.AccountModeSharedAccount,
+		},
+		{
+			name: "normal case returns set value",
+			req: &openapi.ExecuteRequest{
+				AccountMode: ptr.Of(domainopenapi.AccountModeCustomAccount),
+			},
+			want: domainopenapi.AccountModeCustomAccount,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getRequestAccountMode(tt.req)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetRequestUsageScenario(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		req  *openapi.ExecuteRequest
+		want domainopenapi.UsageScenario
+	}{
+		{
+			name: "nil request defaults to PromptAsAService",
+			req:  nil,
+			want: domainopenapi.UsageScenarioPromptAsAService,
+		},
+		{
+			name: "nil UsageScenario defaults to PromptAsAService",
+			req:  &openapi.ExecuteRequest{},
+			want: domainopenapi.UsageScenarioPromptAsAService,
+		},
+		{
+			name: "normal case returns set value",
+			req: &openapi.ExecuteRequest{
+				UsageScenario: ptr.Of(domainopenapi.UsageScenarioEvaluation),
+			},
+			want: domainopenapi.UsageScenarioEvaluation,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getRequestUsageScenario(tt.req)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetReplyTokenUsage(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name             string
+		reply            *entity.Reply
+		wantInputTokens  int64
+		wantOutputTokens int64
+	}{
+		{
+			name:             "nil reply",
+			reply:            nil,
+			wantInputTokens:  0,
+			wantOutputTokens: 0,
+		},
+		{
+			name:             "nil Item",
+			reply:            &entity.Reply{},
+			wantInputTokens:  0,
+			wantOutputTokens: 0,
+		},
+		{
+			name:             "nil TokenUsage",
+			reply:            &entity.Reply{Item: &entity.ReplyItem{}},
+			wantInputTokens:  0,
+			wantOutputTokens: 0,
+		},
+		{
+			name: "normal case",
+			reply: &entity.Reply{
+				Item: &entity.ReplyItem{
+					TokenUsage: &entity.TokenUsage{
+						InputTokens:  100,
+						OutputTokens: 200,
+					},
+				},
+			},
+			wantInputTokens:  100,
+			wantOutputTokens: 200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotInput, gotOutput := getReplyTokenUsage(tt.reply)
+			assert.Equal(t, tt.wantInputTokens, gotInput)
+			assert.Equal(t, tt.wantOutputTokens, gotOutput)
+		})
+	}
+}
+
+func TestBuildTokenUsageReply(t *testing.T) {
+	t.Parallel()
+	reply := buildTokenUsageReply(50, 150)
+	assert.NotNil(t, reply)
+	assert.NotNil(t, reply.Item)
+	assert.NotNil(t, reply.Item.TokenUsage)
+	assert.Equal(t, int64(50), reply.Item.TokenUsage.InputTokens)
+	assert.Equal(t, int64(150), reply.Item.TokenUsage.OutputTokens)
+}
+
+func TestNormalizeExecuteRequest_NilRequest(t *testing.T) {
+	t.Parallel()
+	got := normalizeExecuteRequest(nil)
+	assert.Nil(t, got)
+}
+
+func TestNormalizeExecuteRequest_NoNormalizationNeeded(t *testing.T) {
+	t.Parallel()
+	req := &openapi.ExecuteRequest{
+		PromptIdentifier: &domainopenapi.PromptQuery{
+			PromptKey: ptr.Of("key"),
+		},
+	}
+	got := normalizeExecuteRequest(req)
+	assert.Equal(t, req, got)
+}
+
+func TestNormalizeExecuteRequest_DeepCopyWithNilPromptIdentifier(t *testing.T) {
+	t.Parallel()
+	req := &openapi.ExecuteRequest{
+		ReleaseLabel: ptr.Of("production"),
+	}
+	got := normalizeExecuteRequest(req)
+	assert.NotNil(t, got.PromptIdentifier)
+	assert.Equal(t, "production", got.PromptIdentifier.GetLabel())
+}
+
+func TestNormalizeExecuteRequest_LabelNotOverride(t *testing.T) {
+	t.Parallel()
+	req := &openapi.ExecuteRequest{
+		PromptIdentifier: &domainopenapi.PromptQuery{
+			PromptKey: ptr.Of("key"),
+			Label:     ptr.Of("existing_label"),
+		},
+		ReleaseLabel: ptr.Of("new_label"),
+	}
+	got := normalizeExecuteRequest(req)
+	assert.Equal(t, "existing_label", got.PromptIdentifier.GetLabel())
+}
+
+func TestNormalizeExecuteRequest_CustomToolConfig(t *testing.T) {
+	t.Parallel()
+	toolConfig := &domainopenapi.ToolCallConfig{
+		ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
+	}
+	req := &openapi.ExecuteRequest{
+		CustomToolConfig: toolConfig,
+	}
+	got := normalizeExecuteRequest(req)
+	assert.NotNil(t, got.CustomToolCallConfig)
+	assert.Equal(t, domainopenapi.ToolChoiceTypeAuto, got.CustomToolCallConfig.GetToolChoice())
+}
+
+func TestNormalizeExecuteRequest_CustomToolsAutoConfig(t *testing.T) {
+	t.Parallel()
+	req := &openapi.ExecuteRequest{
+		CustomTools: []*domainopenapi.Tool{
+			{Type: ptr.Of(domainopenapi.ToolTypeFunction)},
+		},
+	}
+	got := normalizeExecuteRequest(req)
+	assert.NotNil(t, got.CustomToolCallConfig)
+	assert.Equal(t, domainopenapi.ToolChoiceTypeAuto, got.CustomToolCallConfig.GetToolChoice())
+}
+
+func TestNormalizeExecuteRequest_CustomToolCallConfigNotOverridden(t *testing.T) {
+	t.Parallel()
+	existingConfig := &domainopenapi.ToolCallConfig{
+		ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeNone),
+	}
+	toolConfig := &domainopenapi.ToolCallConfig{
+		ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
+	}
+	req := &openapi.ExecuteRequest{
+		CustomToolCallConfig: existingConfig,
+		CustomToolConfig:     toolConfig,
+	}
+	got := normalizeExecuteRequest(req)
+	assert.Equal(t, domainopenapi.ToolChoiceTypeNone, got.CustomToolCallConfig.GetToolChoice())
 }
 
 // mockExecuteStreamingServer 用于测试的mock流式服务器
@@ -3399,9 +3691,15 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 						},
 					},
 				}
+				expectedResponseAPIConfig := &entity.ResponseAPIConfig{
+					PreviousResponseID: ptr.Of("prev-id"),
+					EnableCaching:      ptr.Of(true),
+					SessionID:          ptr.Of("session-123"),
+				}
 				mockPromptService.EXPECT().ExpandSnippets(gomock.Any(), gomock.Any()).Return(nil)
 				mockPromptService.EXPECT().ExecuteStreaming(gomock.Any(), gomock.Any()).DoAndReturn(
 					func(ctx context.Context, param service.ExecuteStreamingParam) (*entity.Reply, error) {
+						assert.Equal(t, expectedResponseAPIConfig, param.ResponseAPIConfig)
 						// 模拟发送多个流式响应 - 使用同步方式避免竞争条件
 						// 发送第一个chunk
 						param.ResultStream <- &entity.Reply{
@@ -3453,15 +3751,20 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
 							},
+						},
+						ResponseAPIConfig: &domainopenapi.ResponseAPIConfig{
+							PreviousResponseID: ptr.Of("prev-id"),
+							EnableCaching:      ptr.Of(true),
+							SessionID:          ptr.Of("session-123"),
 						},
 					},
 					stream: stream,
@@ -3554,7 +3857,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
@@ -3588,7 +3891,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(0)), // 无效的 workspace_id
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 						},
 					},
@@ -3618,7 +3921,7 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of(""), // 空的 prompt_key
 						},
 					},
@@ -3648,15 +3951,15 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role: ptr.Of(prompt.RoleUser),
-								Parts: []*openapi.ContentPart{
+								Parts: []*domainopenapi.ContentPart{
 									{
-										Type:     ptr.Of(openapi.ContentTypeImageURL),
+										Type:     ptr.Of(domainopenapi.ContentTypeImageURL),
 										ImageURL: ptr.Of("invalid-url"), // 无效的URL
 									},
 								},
@@ -3689,15 +3992,15 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role: ptr.Of(prompt.RoleUser),
-								Parts: []*openapi.ContentPart{
+								Parts: []*domainopenapi.ContentPart{
 									{
-										Type:       ptr.Of(openapi.ContentTypeBase64Data),
+										Type:       ptr.Of(domainopenapi.ContentTypeBase64Data),
 										Base64Data: ptr.Of("invalid-base64"), // 无效的base64
 									},
 								},
@@ -3740,11 +4043,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -3847,11 +4150,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -3899,11 +4202,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -4012,11 +4315,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -4154,11 +4457,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -4296,11 +4599,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -4409,11 +4712,11 @@ func TestPromptOpenAPIApplicationImpl_ExecuteStreaming(t *testing.T) {
 					ctx: ctx,
 					req: &openapi.ExecuteRequest{
 						WorkspaceID: ptr.Of(int64(123456)),
-						PromptIdentifier: &openapi.PromptQuery{
+						PromptIdentifier: &domainopenapi.PromptQuery{
 							PromptKey: ptr.Of("test_prompt"),
 							Version:   ptr.Of("1.0.0"),
 						},
-						Messages: []*openapi.Message{
+						Messages: []*domainopenapi.Message{
 							{
 								Role:    ptr.Of(prompt.RoleUser),
 								Content: ptr.Of("Hello"),
@@ -4556,9 +4859,9 @@ func TestPromptOpenAPIApplicationImpl_ListPromptBasic(t *testing.T) {
 				},
 			},
 			wantR: &openapi.ListPromptBasicResponse{
-				Data: &openapi.ListPromptBasicData{
+				Data: &domainopenapi.ListPromptBasicData{
 					Total: ptr.Of(int32(2)),
-					Prompts: []*openapi.PromptBasic{
+					Prompts: []*domainopenapi.PromptBasic{
 						{
 							ID:            ptr.Of(int64(123)),
 							WorkspaceID:   ptr.Of(int64(123456)),
@@ -4643,9 +4946,9 @@ func TestPromptOpenAPIApplicationImpl_ListPromptBasic(t *testing.T) {
 				},
 			},
 			wantR: &openapi.ListPromptBasicResponse{
-				Data: &openapi.ListPromptBasicData{
+				Data: &domainopenapi.ListPromptBasicData{
 					Total: ptr.Of(int32(1)),
-					Prompts: []*openapi.PromptBasic{
+					Prompts: []*domainopenapi.PromptBasic{
 						{
 							ID:            ptr.Of(int64(123)),
 							WorkspaceID:   ptr.Of(int64(123456)),
@@ -4720,9 +5023,9 @@ func TestPromptOpenAPIApplicationImpl_ListPromptBasic(t *testing.T) {
 				},
 			},
 			wantR: &openapi.ListPromptBasicResponse{
-				Data: &openapi.ListPromptBasicData{
+				Data: &domainopenapi.ListPromptBasicData{
 					Total: ptr.Of(int32(1)),
-					Prompts: []*openapi.PromptBasic{
+					Prompts: []*domainopenapi.PromptBasic{
 						{
 							ID:            ptr.Of(int64(123)),
 							WorkspaceID:   ptr.Of(int64(123456)),
@@ -4775,9 +5078,9 @@ func TestPromptOpenAPIApplicationImpl_ListPromptBasic(t *testing.T) {
 				},
 			},
 			wantR: &openapi.ListPromptBasicResponse{
-				Data: &openapi.ListPromptBasicData{
+				Data: &domainopenapi.ListPromptBasicData{
 					Total:   ptr.Of(int32(0)),
-					Prompts: []*openapi.PromptBasic{},
+					Prompts: []*domainopenapi.PromptBasic{},
 				},
 			},
 			wantErr: nil,
