@@ -2903,10 +2903,9 @@ type ListPromptBasicRequest struct {
 	// name/key前缀匹配
 	KeyWord *string `thrift:"key_word,4,optional" frugal:"4,optional,string" form:"key_word" json:"key_word,omitempty"`
 	// 创建人
-	Creator *string `thrift:"creator,5,optional" frugal:"5,optional,string" form:"creator" json:"creator,omitempty"`
-	// 额外查询条件
-	Extra map[string]string `thrift:"extra,6,optional" frugal:"6,optional,map<string:string>" form:"extra" json:"extra,omitempty"`
-	Base  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	Creator *string      `thrift:"creator,5,optional" frugal:"5,optional,string" form:"creator" json:"creator,omitempty"`
+	Extra   *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base    *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListPromptBasicRequest() *ListPromptBasicRequest {
@@ -2976,9 +2975,9 @@ func (p *ListPromptBasicRequest) GetCreator() (v string) {
 	return *p.Creator
 }
 
-var ListPromptBasicRequest_Extra_DEFAULT map[string]string
+var ListPromptBasicRequest_Extra_DEFAULT *extra.Extra
 
-func (p *ListPromptBasicRequest) GetExtra() (v map[string]string) {
+func (p *ListPromptBasicRequest) GetExtra() (v *extra.Extra) {
 	if p == nil {
 		return
 	}
@@ -3014,7 +3013,7 @@ func (p *ListPromptBasicRequest) SetKeyWord(val *string) {
 func (p *ListPromptBasicRequest) SetCreator(val *string) {
 	p.Creator = val
 }
-func (p *ListPromptBasicRequest) SetExtra(val map[string]string) {
+func (p *ListPromptBasicRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
 func (p *ListPromptBasicRequest) SetBase(val *base.Base) {
@@ -3027,7 +3026,7 @@ var fieldIDToName_ListPromptBasicRequest = map[int16]string{
 	3:   "page_size",
 	4:   "key_word",
 	5:   "creator",
-	6:   "extra",
+	254: "extra",
 	255: "Base",
 }
 
@@ -3117,9 +3116,9 @@ func (p *ListPromptBasicRequest) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 6:
-			if fieldTypeId == thrift.MAP {
-				if err = p.ReadField6(iprot); err != nil {
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3217,30 +3216,9 @@ func (p *ListPromptBasicRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.Creator = _field
 	return nil
 }
-func (p *ListPromptBasicRequest) ReadField6(iprot thrift.TProtocol) error {
-	_, _, size, err := iprot.ReadMapBegin()
-	if err != nil {
-		return err
-	}
-	_field := make(map[string]string, size)
-	for i := 0; i < size; i++ {
-		var _key string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_key = v
-		}
-
-		var _val string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_val = v
-		}
-
-		_field[_key] = _val
-	}
-	if err := iprot.ReadMapEnd(); err != nil {
+func (p *ListPromptBasicRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
 		return err
 	}
 	p.Extra = _field
@@ -3281,8 +3259,8 @@ func (p *ListPromptBasicRequest) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 5
 			goto WriteFieldError
 		}
-		if err = p.writeField6(oprot); err != nil {
-			fieldId = 6
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -3397,23 +3375,12 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *ListPromptBasicRequest) writeField6(oprot thrift.TProtocol) (err error) {
+func (p *ListPromptBasicRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
-		if err = oprot.WriteFieldBegin("extra", thrift.MAP, 6); err != nil {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Extra)); err != nil {
-			return err
-		}
-		for k, v := range p.Extra {
-			if err := oprot.WriteString(k); err != nil {
-				return err
-			}
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteMapEnd(); err != nil {
+		if err := p.Extra.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3422,9 +3389,9 @@ func (p *ListPromptBasicRequest) writeField6(oprot thrift.TProtocol) (err error)
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
 }
 func (p *ListPromptBasicRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
@@ -3474,7 +3441,7 @@ func (p *ListPromptBasicRequest) DeepEqual(ano *ListPromptBasicRequest) bool {
 	if !p.Field5DeepEqual(ano.Creator) {
 		return false
 	}
-	if !p.Field6DeepEqual(ano.Extra) {
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -3543,16 +3510,10 @@ func (p *ListPromptBasicRequest) Field5DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *ListPromptBasicRequest) Field6DeepEqual(src map[string]string) bool {
+func (p *ListPromptBasicRequest) Field254DeepEqual(src *extra.Extra) bool {
 
-	if len(p.Extra) != len(src) {
+	if !p.Extra.DeepEqual(src) {
 		return false
-	}
-	for k, v := range p.Extra {
-		_src := src[k]
-		if strings.Compare(v, _src) != 0 {
-			return false
-		}
 	}
 	return true
 }
@@ -3967,6 +3928,7 @@ type CreatePromptOApiRequest struct {
 	PromptDescription *string               `thrift:"prompt_description,13,optional" frugal:"13,optional,string" form:"prompt_description" json:"prompt_description,omitempty"`
 	PromptType        *prompt.PromptType    `thrift:"prompt_type,14,optional" frugal:"14,optional,string" form:"prompt_type" json:"prompt_type,omitempty"`
 	SecurityLevel     *prompt.SecurityLevel `thrift:"security_level,15,optional" frugal:"15,optional,string" form:"security_level" json:"security_level,omitempty"`
+	Extra             *extra.Extra          `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base              *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -4049,6 +4011,18 @@ func (p *CreatePromptOApiRequest) GetSecurityLevel() (v prompt.SecurityLevel) {
 	return *p.SecurityLevel
 }
 
+var CreatePromptOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *CreatePromptOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return CreatePromptOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var CreatePromptOApiRequest_Base_DEFAULT *base.Base
 
 func (p *CreatePromptOApiRequest) GetBase() (v *base.Base) {
@@ -4078,6 +4052,9 @@ func (p *CreatePromptOApiRequest) SetPromptType(val *prompt.PromptType) {
 func (p *CreatePromptOApiRequest) SetSecurityLevel(val *prompt.SecurityLevel) {
 	p.SecurityLevel = val
 }
+func (p *CreatePromptOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *CreatePromptOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -4089,6 +4066,7 @@ var fieldIDToName_CreatePromptOApiRequest = map[int16]string{
 	13:  "prompt_description",
 	14:  "prompt_type",
 	15:  "security_level",
+	254: "extra",
 	255: "Base",
 }
 
@@ -4114,6 +4092,10 @@ func (p *CreatePromptOApiRequest) IsSetPromptType() bool {
 
 func (p *CreatePromptOApiRequest) IsSetSecurityLevel() bool {
 	return p.SecurityLevel != nil
+}
+
+func (p *CreatePromptOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *CreatePromptOApiRequest) IsSetBase() bool {
@@ -4181,6 +4163,14 @@ func (p *CreatePromptOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 15:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField15(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4289,6 +4279,14 @@ func (p *CreatePromptOApiRequest) ReadField15(iprot thrift.TProtocol) error {
 	p.SecurityLevel = _field
 	return nil
 }
+func (p *CreatePromptOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *CreatePromptOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -4326,6 +4324,10 @@ func (p *CreatePromptOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField15(oprot); err != nil {
 			fieldId = 15
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -4458,6 +4460,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 15 end error: ", p), err)
 }
+func (p *CreatePromptOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *CreatePromptOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -4507,6 +4527,9 @@ func (p *CreatePromptOApiRequest) DeepEqual(ano *CreatePromptOApiRequest) bool {
 		return false
 	}
 	if !p.Field15DeepEqual(ano.SecurityLevel) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -4583,6 +4606,13 @@ func (p *CreatePromptOApiRequest) Field15DeepEqual(src *prompt.SecurityLevel) bo
 		return false
 	}
 	if strings.Compare(*p.SecurityLevel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreatePromptOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -5000,9 +5030,10 @@ func (p *CreatePromptOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type DeletePromptOApiRequest struct {
-	PromptID    *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	WorkspaceID *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
-	Base        *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID    *int64       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID *int64       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
+	Extra       *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewDeletePromptOApiRequest() *DeletePromptOApiRequest {
@@ -5036,6 +5067,18 @@ func (p *DeletePromptOApiRequest) GetWorkspaceID() (v int64) {
 	return *p.WorkspaceID
 }
 
+var DeletePromptOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *DeletePromptOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return DeletePromptOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var DeletePromptOApiRequest_Base_DEFAULT *base.Base
 
 func (p *DeletePromptOApiRequest) GetBase() (v *base.Base) {
@@ -5053,6 +5096,9 @@ func (p *DeletePromptOApiRequest) SetPromptID(val *int64) {
 func (p *DeletePromptOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
+func (p *DeletePromptOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *DeletePromptOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -5060,6 +5106,7 @@ func (p *DeletePromptOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_DeletePromptOApiRequest = map[int16]string{
 	1:   "prompt_id",
 	2:   "workspace_id",
+	254: "extra",
 	255: "Base",
 }
 
@@ -5069,6 +5116,10 @@ func (p *DeletePromptOApiRequest) IsSetPromptID() bool {
 
 func (p *DeletePromptOApiRequest) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
+}
+
+func (p *DeletePromptOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *DeletePromptOApiRequest) IsSetBase() bool {
@@ -5104,6 +5155,14 @@ func (p *DeletePromptOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5168,6 +5227,14 @@ func (p *DeletePromptOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
+func (p *DeletePromptOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *DeletePromptOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -5189,6 +5256,10 @@ func (p *DeletePromptOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -5249,6 +5320,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *DeletePromptOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *DeletePromptOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -5288,6 +5377,9 @@ func (p *DeletePromptOApiRequest) DeepEqual(ano *DeletePromptOApiRequest) bool {
 	if !p.Field2DeepEqual(ano.WorkspaceID) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -5314,6 +5406,13 @@ func (p *DeletePromptOApiRequest) Field2DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *DeletePromptOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -5654,12 +5753,13 @@ func (p *DeletePromptOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type GetPromptOApiRequest struct {
-	PromptID      *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	WorkspaceID   *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
-	WithCommit    *bool      `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
-	CommitVersion *string    `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
-	WithDraft     *bool      `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
-	Base          *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID      *int64       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID   *int64       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
+	WithCommit    *bool        `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
+	CommitVersion *string      `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
+	WithDraft     *bool        `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
+	Extra         *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base          *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewGetPromptOApiRequest() *GetPromptOApiRequest {
@@ -5729,6 +5829,18 @@ func (p *GetPromptOApiRequest) GetWithDraft() (v bool) {
 	return *p.WithDraft
 }
 
+var GetPromptOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *GetPromptOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return GetPromptOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var GetPromptOApiRequest_Base_DEFAULT *base.Base
 
 func (p *GetPromptOApiRequest) GetBase() (v *base.Base) {
@@ -5755,6 +5867,9 @@ func (p *GetPromptOApiRequest) SetCommitVersion(val *string) {
 func (p *GetPromptOApiRequest) SetWithDraft(val *bool) {
 	p.WithDraft = val
 }
+func (p *GetPromptOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *GetPromptOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -5765,6 +5880,7 @@ var fieldIDToName_GetPromptOApiRequest = map[int16]string{
 	11:  "with_commit",
 	12:  "commit_version",
 	21:  "with_draft",
+	254: "extra",
 	255: "Base",
 }
 
@@ -5786,6 +5902,10 @@ func (p *GetPromptOApiRequest) IsSetCommitVersion() bool {
 
 func (p *GetPromptOApiRequest) IsSetWithDraft() bool {
 	return p.WithDraft != nil
+}
+
+func (p *GetPromptOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *GetPromptOApiRequest) IsSetBase() bool {
@@ -5845,6 +5965,14 @@ func (p *GetPromptOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5942,6 +6070,14 @@ func (p *GetPromptOApiRequest) ReadField21(iprot thrift.TProtocol) error {
 	p.WithDraft = _field
 	return nil
 }
+func (p *GetPromptOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *GetPromptOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -5975,6 +6111,10 @@ func (p *GetPromptOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6089,6 +6229,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
+func (p *GetPromptOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *GetPromptOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -6135,6 +6293,9 @@ func (p *GetPromptOApiRequest) DeepEqual(ano *GetPromptOApiRequest) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.WithDraft) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -6199,6 +6360,13 @@ func (p *GetPromptOApiRequest) Field21DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.WithDraft != *src {
+		return false
+	}
+	return true
+}
+func (p *GetPromptOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -6611,6 +6779,7 @@ type SaveDraftOApiRequest struct {
 	PromptID    *int64              `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
 	WorkspaceID *int64              `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
 	PromptDraft *prompt.PromptDraft `thrift:"prompt_draft,11,optional" frugal:"11,optional,prompt.PromptDraft" form:"prompt_draft" json:"prompt_draft,omitempty"`
+	Extra       *extra.Extra        `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base        *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -6657,6 +6826,18 @@ func (p *SaveDraftOApiRequest) GetPromptDraft() (v *prompt.PromptDraft) {
 	return p.PromptDraft
 }
 
+var SaveDraftOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *SaveDraftOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return SaveDraftOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var SaveDraftOApiRequest_Base_DEFAULT *base.Base
 
 func (p *SaveDraftOApiRequest) GetBase() (v *base.Base) {
@@ -6677,6 +6858,9 @@ func (p *SaveDraftOApiRequest) SetWorkspaceID(val *int64) {
 func (p *SaveDraftOApiRequest) SetPromptDraft(val *prompt.PromptDraft) {
 	p.PromptDraft = val
 }
+func (p *SaveDraftOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *SaveDraftOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -6685,6 +6869,7 @@ var fieldIDToName_SaveDraftOApiRequest = map[int16]string{
 	1:   "prompt_id",
 	2:   "workspace_id",
 	11:  "prompt_draft",
+	254: "extra",
 	255: "Base",
 }
 
@@ -6698,6 +6883,10 @@ func (p *SaveDraftOApiRequest) IsSetWorkspaceID() bool {
 
 func (p *SaveDraftOApiRequest) IsSetPromptDraft() bool {
 	return p.PromptDraft != nil
+}
+
+func (p *SaveDraftOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *SaveDraftOApiRequest) IsSetBase() bool {
@@ -6741,6 +6930,14 @@ func (p *SaveDraftOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6813,6 +7010,14 @@ func (p *SaveDraftOApiRequest) ReadField11(iprot thrift.TProtocol) error {
 	p.PromptDraft = _field
 	return nil
 }
+func (p *SaveDraftOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *SaveDraftOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -6838,6 +7043,10 @@ func (p *SaveDraftOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6916,6 +7125,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *SaveDraftOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *SaveDraftOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -6958,6 +7185,9 @@ func (p *SaveDraftOApiRequest) DeepEqual(ano *SaveDraftOApiRequest) bool {
 	if !p.Field11DeepEqual(ano.PromptDraft) {
 		return false
 	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -6991,6 +7221,13 @@ func (p *SaveDraftOApiRequest) Field2DeepEqual(src *int64) bool {
 func (p *SaveDraftOApiRequest) Field11DeepEqual(src *prompt.PromptDraft) bool {
 
 	if !p.PromptDraft.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SaveDraftOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -7400,12 +7637,13 @@ func (p *SaveDraftOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListCommitOApiRequest struct {
-	PromptID         *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	WorkspaceID      *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
-	WithCommitDetail *bool      `thrift:"with_commit_detail,3,optional" frugal:"3,optional,bool" json:"with_commit_detail,omitempty" query:"with_commit_detail"`
-	PageSize         *int32     `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	PageToken        *string    `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty"`
-	Base             *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID         *int64       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID      *int64       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	WithCommitDetail *bool        `thrift:"with_commit_detail,3,optional" frugal:"3,optional,bool" json:"with_commit_detail,omitempty" query:"with_commit_detail"`
+	PageSize         *int32       `thrift:"page_size,127,optional" frugal:"127,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	PageToken        *string      `thrift:"page_token,128,optional" frugal:"128,optional,string" form:"page_token" json:"page_token,omitempty"`
+	Extra            *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base             *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListCommitOApiRequest() *ListCommitOApiRequest {
@@ -7475,6 +7713,18 @@ func (p *ListCommitOApiRequest) GetPageToken() (v string) {
 	return *p.PageToken
 }
 
+var ListCommitOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ListCommitOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ListCommitOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var ListCommitOApiRequest_Base_DEFAULT *base.Base
 
 func (p *ListCommitOApiRequest) GetBase() (v *base.Base) {
@@ -7501,6 +7751,9 @@ func (p *ListCommitOApiRequest) SetPageSize(val *int32) {
 func (p *ListCommitOApiRequest) SetPageToken(val *string) {
 	p.PageToken = val
 }
+func (p *ListCommitOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *ListCommitOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -7511,6 +7764,7 @@ var fieldIDToName_ListCommitOApiRequest = map[int16]string{
 	3:   "with_commit_detail",
 	127: "page_size",
 	128: "page_token",
+	254: "extra",
 	255: "Base",
 }
 
@@ -7532,6 +7786,10 @@ func (p *ListCommitOApiRequest) IsSetPageSize() bool {
 
 func (p *ListCommitOApiRequest) IsSetPageToken() bool {
 	return p.PageToken != nil
+}
+
+func (p *ListCommitOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *ListCommitOApiRequest) IsSetBase() bool {
@@ -7591,6 +7849,14 @@ func (p *ListCommitOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 128:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField128(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7688,6 +7954,14 @@ func (p *ListCommitOApiRequest) ReadField128(iprot thrift.TProtocol) error {
 	p.PageToken = _field
 	return nil
 }
+func (p *ListCommitOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *ListCommitOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -7721,6 +7995,10 @@ func (p *ListCommitOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField128(oprot); err != nil {
 			fieldId = 128
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -7835,6 +8113,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 128 end error: ", p), err)
 }
+func (p *ListCommitOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *ListCommitOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -7881,6 +8177,9 @@ func (p *ListCommitOApiRequest) DeepEqual(ano *ListCommitOApiRequest) bool {
 		return false
 	}
 	if !p.Field128DeepEqual(ano.PageToken) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -7945,6 +8244,13 @@ func (p *ListCommitOApiRequest) Field128DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.PageToken, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListCommitOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -8644,11 +8950,12 @@ func (p *ListCommitOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type CommitDraftOApiRequest struct {
-	PromptID          *int64     `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
-	WorkspaceID       *int64     `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
-	CommitVersion     *string    `thrift:"commit_version,11,optional" frugal:"11,optional,string" form:"commit_version" json:"commit_version,omitempty"`
-	CommitDescription *string    `thrift:"commit_description,12,optional" frugal:"12,optional,string" form:"commit_description" json:"commit_description,omitempty"`
-	Base              *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	PromptID          *int64       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
+	WorkspaceID       *int64       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" form:"workspace_id" `
+	CommitVersion     *string      `thrift:"commit_version,11,optional" frugal:"11,optional,string" form:"commit_version" json:"commit_version,omitempty"`
+	CommitDescription *string      `thrift:"commit_description,12,optional" frugal:"12,optional,string" form:"commit_description" json:"commit_description,omitempty"`
+	Extra             *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base              *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCommitDraftOApiRequest() *CommitDraftOApiRequest {
@@ -8706,6 +9013,18 @@ func (p *CommitDraftOApiRequest) GetCommitDescription() (v string) {
 	return *p.CommitDescription
 }
 
+var CommitDraftOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *CommitDraftOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return CommitDraftOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
 var CommitDraftOApiRequest_Base_DEFAULT *base.Base
 
 func (p *CommitDraftOApiRequest) GetBase() (v *base.Base) {
@@ -8729,6 +9048,9 @@ func (p *CommitDraftOApiRequest) SetCommitVersion(val *string) {
 func (p *CommitDraftOApiRequest) SetCommitDescription(val *string) {
 	p.CommitDescription = val
 }
+func (p *CommitDraftOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
 func (p *CommitDraftOApiRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -8738,6 +9060,7 @@ var fieldIDToName_CommitDraftOApiRequest = map[int16]string{
 	2:   "workspace_id",
 	11:  "commit_version",
 	12:  "commit_description",
+	254: "extra",
 	255: "Base",
 }
 
@@ -8755,6 +9078,10 @@ func (p *CommitDraftOApiRequest) IsSetCommitVersion() bool {
 
 func (p *CommitDraftOApiRequest) IsSetCommitDescription() bool {
 	return p.CommitDescription != nil
+}
+
+func (p *CommitDraftOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
 }
 
 func (p *CommitDraftOApiRequest) IsSetBase() bool {
@@ -8806,6 +9133,14 @@ func (p *CommitDraftOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 12:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField12(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8892,6 +9227,14 @@ func (p *CommitDraftOApiRequest) ReadField12(iprot thrift.TProtocol) error {
 	p.CommitDescription = _field
 	return nil
 }
+func (p *CommitDraftOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
 func (p *CommitDraftOApiRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -8921,6 +9264,10 @@ func (p *CommitDraftOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField12(oprot); err != nil {
 			fieldId = 12
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -9017,6 +9364,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
 }
+func (p *CommitDraftOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
 func (p *CommitDraftOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -9060,6 +9425,9 @@ func (p *CommitDraftOApiRequest) DeepEqual(ano *CommitDraftOApiRequest) bool {
 		return false
 	}
 	if !p.Field12DeepEqual(ano.CommitDescription) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -9112,6 +9480,13 @@ func (p *CommitDraftOApiRequest) Field12DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.CommitDescription, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CommitDraftOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
 		return false
 	}
 	return true

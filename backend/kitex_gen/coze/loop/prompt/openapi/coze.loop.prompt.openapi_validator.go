@@ -125,6 +125,11 @@ func (p *ListPromptBasicRequest) IsValid() error {
 			return fmt.Errorf("field PageSize le rule failed, current value: %v", *p.PageSize)
 		}
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -158,6 +163,11 @@ func (p *CreatePromptOApiRequest) IsValid() error {
 	if len(*p.PromptKey) < int(1) {
 		return fmt.Errorf("field PromptKey min_len rule failed, current value: %d", len(*p.PromptKey))
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -180,6 +190,11 @@ func (p *DeletePromptOApiRequest) IsValid() error {
 	if *p.PromptID <= int64(0) {
 		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -201,6 +216,11 @@ func (p *GetPromptOApiRequest) IsValid() error {
 	}
 	if *p.PromptID <= int64(0) {
 		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
@@ -235,6 +255,11 @@ func (p *SaveDraftOApiRequest) IsValid() error {
 	if err := p.PromptDraft.IsValid(); err != nil {
 		return fmt.Errorf("field PromptDraft not valid, %w", err)
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -268,6 +293,11 @@ func (p *ListCommitOApiRequest) IsValid() error {
 	if *p.PageSize <= int32(0) {
 		return fmt.Errorf("field PageSize gt rule failed, current value: %v", *p.PageSize)
 	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -295,6 +325,11 @@ func (p *CommitDraftOApiRequest) IsValid() error {
 	}
 	if len(*p.CommitVersion) < int(1) {
 		return fmt.Errorf("field CommitVersion min_len rule failed, current value: %d", len(*p.CommitVersion))
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
 	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {

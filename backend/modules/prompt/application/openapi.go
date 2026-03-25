@@ -78,6 +78,13 @@ type PromptOpenAPIApplicationImpl struct {
 	user             rpc.IUserProvider
 }
 
+func (p *PromptOpenAPIApplicationImpl) getOpenAPIUserID(ctx context.Context) string {
+	if userID, ok := p.user.GetUserIdInCtx(ctx); ok && userID != "" {
+		return userID
+	}
+	return consts.OpenAPIUserID
+}
+
 func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
 	r = openapi.NewListPromptBasicResponse()
 	if req.GetWorkspaceID() == 0 {
@@ -167,8 +174,8 @@ func (p *PromptOpenAPIApplicationImpl) CreatePromptOApi(ctx context.Context, req
 			PromptType:    entity.PromptType(req.GetPromptType()),
 			DisplayName:   req.GetPromptName(),
 			Description:   req.GetPromptDescription(),
-			CreatedBy:     consts.OpenAPIUserID,
-			UpdatedBy:     consts.OpenAPIUserID,
+			CreatedBy:     p.getOpenAPIUserID(ctx),
+			UpdatedBy:     p.getOpenAPIUserID(ctx),
 			SecurityLevel: entity.SecurityLevel(req.GetSecurityLevel()),
 		},
 	}
@@ -205,7 +212,7 @@ func (p *PromptOpenAPIApplicationImpl) DeletePromptOApi(ctx context.Context, req
 
 func (p *PromptOpenAPIApplicationImpl) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest) (r *openapi.GetPromptOApiResponse, err error) {
 	r = openapi.NewGetPromptOApiResponse()
-	userID := consts.OpenAPIUserID
+	userID := p.getOpenAPIUserID(ctx)
 
 	commitVersion := req.GetCommitVersion()
 	if req.GetWithCommit() && commitVersion == "" {
@@ -242,7 +249,7 @@ func (p *PromptOpenAPIApplicationImpl) GetPromptOApi(ctx context.Context, req *o
 
 func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest) (r *openapi.SaveDraftOApiResponse, err error) {
 	r = openapi.NewSaveDraftOApiResponse()
-	userID := consts.OpenAPIUserID
+	userID := p.getOpenAPIUserID(ctx)
 	if req.PromptDraft == nil || req.PromptDraft.DraftInfo == nil || req.PromptDraft.Detail == nil {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Draft is not specified"))
 	}
@@ -342,7 +349,7 @@ func (p *PromptOpenAPIApplicationImpl) ListCommitOApi(ctx context.Context, req *
 
 func (p *PromptOpenAPIApplicationImpl) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest) (r *openapi.CommitDraftOApiResponse, err error) {
 	r = openapi.NewCommitDraftOApiResponse()
-	userID := consts.OpenAPIUserID
+	userID := p.getOpenAPIUserID(ctx)
 
 	if _, err = semver.StrictNewVersion(req.GetCommitVersion()); err != nil {
 		return r, err
@@ -472,7 +479,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 			commitParams = append(commitParams, param)
 		} else {
 			param.WithDraft = true
-			param.UserID = consts.OpenAPIUserID
+			param.UserID = p.getOpenAPIUserID(ctx)
 			draftParams = append(draftParams, param)
 		}
 	}
