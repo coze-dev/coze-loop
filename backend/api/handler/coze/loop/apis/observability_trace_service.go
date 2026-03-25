@@ -190,3 +190,51 @@ func ListWorkspaceAnnotations(ctx context.Context, c *app.RequestContext) {
 func ListMetadata(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListMetadata)
 }
+
+// ListTraceChat .
+// @router /api/observability/v1/traces/chat/list [POST]
+func ListTraceChat(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ListTraceChatRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListTraceChatResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// ListThreadChat .
+// @router /api/observability/v1/threads/chat/list [POST]
+func ListThreadChat(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.ListThreadChatRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListThreadChatResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}
+
+// GetThreadStat .
+// @router /api/observability/v1/threads/stat [POST]
+func GetThreadStat(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req trace.GetThreadStatRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.GetThreadStatResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

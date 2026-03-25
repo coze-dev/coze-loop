@@ -102,6 +102,18 @@ func (b *fakeBuilder) BuildListSpansOApiProcessors(ctx context.Context, set span
 	return nil, nil
 }
 
+func (b *fakeBuilder) BuildTraceChatProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (b *fakeBuilder) BuildThreadChatProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
+func (b *fakeBuilder) BuildThreadStatProcessors(ctx context.Context, set span_processor.Settings) ([]span_processor.Processor, error) {
+	return nil, nil
+}
+
 func TestSpanSubscriber_AddSpan_SkipNonRunning(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)

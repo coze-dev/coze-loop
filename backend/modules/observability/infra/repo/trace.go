@@ -218,7 +218,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 	}
 	filters := req.Filters
 	if pageToken != nil {
-		filters = t.addPageTokenFilter(pageToken, req.Filters)
+		filters = t.addPageTokenFilter(pageToken, req.Filters, req.AscByStartTime)
 	}
 	tableCfg, err := t.getQueryTenantTables(ctx, req.Tenants)
 	if err != nil {
@@ -234,6 +234,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		Filters:          filters,
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
+		AscByStartTime:   req.AscByStartTime,
 		OmitColumns:      req.OmitColumns,
 		Extra:            spanStorage.StorageConfig,
 		SelectColumns:    req.SelectColumns,
@@ -368,7 +369,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page token"))
 	}
 	if pageToken != nil {
-		filter = t.addPageTokenFilter(pageToken, filter)
+		filter = t.addPageTokenFilter(pageToken, filter, false)
 	}
 	st := time.Now()
 	queryLimit := req.Limit + 1
@@ -671,8 +672,12 @@ func (t *TraceRepoImpl) getAnnoInsertTable(ctx context.Context, tenant string, t
 	return tableCfg.AnnoTable, nil
 }
 
-func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_span.FilterFields) *loop_span.FilterFields {
+func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_span.FilterFields, asc bool) *loop_span.FilterFields {
 	timeStr := strconv.FormatInt(pageToken.StartTime, 10)
+	queryType := ptr.Of(loop_span.QueryTypeEnumLt)
+	if asc {
+		queryType = ptr.Of(loop_span.QueryTypeEnumGt)
+	}
 	filterFields := &loop_span.FilterFields{
 		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumOr),
 		FilterFields: []*loop_span.FilterField{
@@ -680,7 +685,7 @@ func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_sp
 				FieldName: loop_span.SpanFieldStartTime,
 				FieldType: loop_span.FieldTypeLong,
 				Values:    []string{timeStr},
-				QueryType: ptr.Of(loop_span.QueryTypeEnumLt),
+				QueryType: queryType,
 			},
 			{
 				FieldName:  loop_span.SpanFieldStartTime,
@@ -695,7 +700,7 @@ func (t *TraceRepoImpl) addPageTokenFilter(pageToken *PageToken, filter *loop_sp
 							FieldName: loop_span.SpanFieldSpanId,
 							FieldType: loop_span.FieldTypeString,
 							Values:    []string{pageToken.SpanID},
-							QueryType: ptr.Of(loop_span.QueryTypeEnumLt),
+							QueryType: queryType,
 						},
 					},
 				},
