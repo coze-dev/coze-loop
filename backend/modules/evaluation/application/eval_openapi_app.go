@@ -802,6 +802,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context,
 		EvaluationSetID: req.GetEvaluationSetID(),
 		ItemPK:          items[0].ID,
 		FieldName:       req.GetFieldName(),
+		FieldKey:        req.GetFieldKey(),
 		TurnID:          req.TurnID,
 	})
 	if err != nil {

@@ -361,6 +361,7 @@ struct GetEvaluationSetItemFieldRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_pk (api.path='item_pk',api.js_conv='true', go.tag='json:"item_pk"'), // item 的主键ID，即 item.ID 这一字段
     5: required string field_name // 列名
+    7: optional string field_key (api.query='field_key', go.tag='json:"field_key"') // 列的唯一键，用于精确查找
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
     7: optional string field_key // 与 field name 同时指定时，仅 field key 生效
 
