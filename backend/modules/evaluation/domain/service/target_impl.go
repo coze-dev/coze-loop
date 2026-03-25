@@ -351,6 +351,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		Input:               inputData,
 		TargetType:          evalTargetDO.EvalTargetType,
 		EvalTarget:          evalTargetDO,
+		EvalSetItemID:       gptr.Of(param.ItemID),
+		EvalSetTurnID:       gptr.Of(param.TurnID),
 	})
 	if err != nil {
 		return nil, err

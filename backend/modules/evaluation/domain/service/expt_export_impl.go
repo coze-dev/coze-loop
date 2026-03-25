@@ -740,7 +740,7 @@ func (e *ExptResultExportService) getFileName(ctx context.Context, exptName stri
 
 func (e *exportCSVHelper) uploadCSVFile(ctx context.Context, fileName string, reader io.Reader) (err error) {
 	var cancel context.CancelFunc
-	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
+	ctx, cancel = context.WithTimeout(ctx, 5*60*time.Second)
 	defer cancel()
 
 	logs.CtxDebug(ctx, "start upload, fileName: %s", fileName)
