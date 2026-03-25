@@ -450,6 +450,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluation_sets0 := _evaluation0.Group("/evaluation_sets", _evaluation_sets0Mw(handler)...)
 				{
 					_evaluation_set_id0 := _evaluation_sets0.Group("/:evaluation_set_id", _evaluation_set_id0Mw(handler)...)
+					_evaluation_set_id0.POST("/import", append(_importevaluationsetoapiMw(handler), apis.ImportEvaluationSetOApi)...)
 					_evaluation_set_id0.DELETE("/items", append(_items2Mw(handler), apis.BatchDeleteEvaluationSetItemsOApi)...)
 					_items2 := _evaluation_set_id0.Group("/items", _items2Mw(handler)...)
 					{
@@ -462,6 +463,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_evaluation_set_id0.PUT("/schema", append(_updateevaluationsetschemaoapiMw(handler), apis.UpdateEvaluationSetSchemaOApi)...)
 					_evaluation_set_id0.GET("/versions", append(_listevaluationsetversionsoapiMw(handler), apis.ListEvaluationSetVersionsOApi)...)
 					_evaluation_set_id0.POST("/versions", append(_createevaluationsetversionoapiMw(handler), apis.CreateEvaluationSetVersionOApi)...)
+				}
+				{
+					_io_job := _evaluation_sets0.Group("/io_job", _io_jobMw(handler)...)
+					_io_job.GET("/:job_id", append(_getevaluationsetjoboapiMw(handler), apis.GetEvaluationSetJobOApi)...)
 				}
 				_evaluation0.POST("/evaluation_sets", append(_evaluation_sets1Mw(handler), apis.CreateEvaluationSetOApi)...)
 				_evaluation_sets1 := _evaluation0.Group("/evaluation_sets", _evaluation_sets1Mw(handler)...)
@@ -481,6 +486,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_evaluator_id2 := _evaluators1.Group("/:evaluator_id", _evaluator_id2Mw(handler)...)
 				_evaluator_id2.PATCH("/update_draft", append(_updateevaluatordraftoapiMw(handler), apis.UpdateEvaluatorDraftOApi)...)
 				_evaluators1.POST("/result", append(_reportevaluatorinvokeresultMw(handler), apis.ReportEvaluatorInvokeResult)...)
+				{
+					_builtin := _evaluators1.Group("/builtin", _builtinMw(handler)...)
+					_builtin.POST("/run", append(_runbuiltinevaluatoroapiMw(handler), apis.RunBuiltinEvaluatorOApi)...)
+				}
 				_evaluation0.POST("/experiment_templates", append(_experiment_templates0Mw(handler), apis.CreateExptTemplateOApi)...)
 				_experiment_templates0 := _evaluation0.Group("/experiment_templates", _experiment_templates0Mw(handler)...)
 				_experiment_templates0.POST("/batch_get", append(_batchgetexpttemplatesoapiMw(handler), apis.BatchGetExptTemplatesOApi)...)

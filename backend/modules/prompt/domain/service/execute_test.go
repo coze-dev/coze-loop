@@ -1450,3 +1450,441 @@ func (s *recordingSpan) Finish(ctx context.Context)                             
 func (s *recordingSpan) GetStartTime() time.Time                                        { return s.startTime }
 func (s *recordingSpan) ToHeader() (map[string]string, error)                           { return map[string]string{}, nil }
 func (s *recordingSpan) SetCallType(callType string)                                    {}
+
+func TestPromptServiceImpl_reportToolSpan_WithSignature(t *testing.T) {
+	t.Parallel()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	p := &PromptServiceImpl{}
+	prompt := &entity.Prompt{
+		SpaceID:   10,
+		PromptKey: "pk",
+		PromptCommit: &entity.PromptCommit{
+			CommitInfo: &entity.CommitInfo{Version: "v2"},
+		},
+	}
+	sig := "sig_abc"
+	replyItem := &entity.ReplyItem{
+		Message: &entity.Message{
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID:        "call_1",
+					Signature: &sig,
+					FunctionCall: &entity.FunctionCall{
+						Name:      "tool_a",
+						Arguments: ptr.Of(`{"x":1}`),
+					},
+				},
+			},
+		},
+	}
+
+	p.reportToolSpan(context.Background(), prompt, map[string]string{"call_1tool_asig_abc": "result with sig"}, replyItem)
+
+	if assert.Len(t, recorder.spans, 1) {
+		assert.Equal(t, "result with sig", recorder.spans[0].output)
+		assert.Equal(t, loopentity.Prompt{PromptKey: "pk", Version: "v2"}, recorder.spans[0].prompt)
+		assert.True(t, recorder.spans[0].finished)
+	}
+}
+
+func TestPromptServiceImpl_reorganizeContexts_WithSignature(t *testing.T) {
+	t.Parallel()
+
+	p := &PromptServiceImpl{}
+	sig := "sig_xyz"
+	reply := &entity.Reply{
+		Item: &entity.ReplyItem{
+			Message: &entity.Message{
+				Role: entity.RoleAssistant,
+				ToolCalls: []*entity.ToolCall{
+					{
+						ID:        "call_2",
+						Signature: &sig,
+						FunctionCall: &entity.FunctionCall{
+							Name:      "tool_b",
+							Arguments: ptr.Of(`{}`),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	got, err := p.reorganizeContexts(
+		[]*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("hi")}},
+		map[string]string{"call_2tool_bsig_xyz": "tool output with sig"},
+		reply,
+	)
+	assert.NoError(t, err)
+	assert.Len(t, got, 3)
+	assert.Equal(t, entity.RoleTool, got[2].Role)
+	assert.Equal(t, ptr.Of("call_2"), got[2].ToolCallID)
+	assert.Equal(t, ptr.Of("tool output with sig"), got[2].Content)
+}
+
+func TestPromptServiceImpl_Execute_WithTracing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(111), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("traced response"),
+			ToolCalls: []*entity.ToolCall{
+				{
+					ID: "tc1",
+					FunctionCall: &entity.FunctionCall{
+						Name:      "fn1",
+						Arguments: ptr.Of(`{"a":"b"}`),
+					},
+				},
+			},
+		},
+		FinishReason: "tool_calls",
+		TokenUsage: &entity.TokenUsage{
+			InputTokens:  5,
+			OutputTokens: 3,
+		},
+	}, nil)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("final"),
+		},
+		FinishReason: "stop",
+		TokenUsage: &entity.TokenUsage{
+			InputTokens:  7,
+			OutputTokens: 4,
+		},
+	}, nil)
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	reply, err := p.Execute(context.Background(), ExecuteParam{
+		Prompt: &entity.Prompt{
+			ID:        1,
+			SpaceID:   100,
+			PromptKey: "traced_prompt",
+			PromptDraft: &entity.PromptDraft{
+				PromptDetail: &entity.PromptDetail{
+					PromptTemplate: &entity.PromptTemplate{
+						TemplateType: entity.TemplateTypeNormal,
+						Messages: []*entity.Message{
+							{Role: entity.RoleSystem, Content: ptr.Of("system")},
+						},
+					},
+				},
+			},
+		},
+		Messages: []*entity.Message{
+			{Role: entity.RoleUser, Content: ptr.Of("hello")},
+		},
+		MockTools: []*entity.MockTool{
+			{Name: "fn1", MockResponse: "mock_result"},
+		},
+		SingleStep:     false,
+		DisableTracing: false,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, reply)
+	assert.Equal(t, ptr.Of("final"), reply.Item.Message.Content)
+	assert.Equal(t, int64(12), reply.Item.TokenUsage.InputTokens)
+	assert.Equal(t, int64(7), reply.Item.TokenUsage.OutputTokens)
+	assert.True(t, len(recorder.spans) >= 2)
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_WithTracing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	originalTracer := looptracer.GetTracer()
+	recorder := &recordingTracer{}
+	looptracer.InitTracer(recorder)
+	t.Cleanup(func() { looptracer.InitTracer(originalTracer) })
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(222), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		param.ResultStream <- &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+		}
+		return &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+			FinishReason: "stop",
+			TokenUsage: &entity.TokenUsage{
+				InputTokens:  8,
+				OutputTokens: 4,
+			},
+		}, nil
+	})
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	reply, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        2,
+				SpaceID:   200,
+				PromptKey: "stream_traced",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages: []*entity.Message{
+				{Role: entity.RoleUser, Content: ptr.Of("q")},
+			},
+			SingleStep:     true,
+			DisableTracing: false,
+		},
+		ResultStream: stream,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, reply)
+	assert.Equal(t, ptr.Of("streamed"), reply.Item.Message.Content)
+	assert.True(t, len(recorder.spans) >= 1)
+}
+
+func TestPromptServiceImpl_Execute_CollectToolResultsError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(333), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().Call(gomock.Any(), gomock.Any()).Return(&entity.ReplyItem{
+		Message: &entity.Message{
+			Role:    entity.RoleAssistant,
+			Content: ptr.Of("ok"),
+		},
+		TokenUsage: &entity.TokenUsage{InputTokens: 1, OutputTokens: 1},
+	}, nil)
+
+	collectErr := errorx.New("collect tool results failed")
+	mockCollector := &failingToolResultsCollector{err: collectErr}
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: mockCollector,
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	_, err := p.Execute(context.Background(), ExecuteParam{
+		Prompt: &entity.Prompt{
+			ID:        1,
+			SpaceID:   100,
+			PromptKey: "test",
+			PromptDraft: &entity.PromptDraft{
+				PromptDetail: &entity.PromptDetail{
+					PromptTemplate: &entity.PromptTemplate{
+						TemplateType: entity.TemplateTypeNormal,
+						Messages: []*entity.Message{
+							{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+						},
+					},
+				},
+			},
+		},
+		Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("hi")}},
+		SingleStep:     true,
+		DisableTracing: true,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "collect tool results failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_CollectToolResultsError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(444), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		return &entity.ReplyItem{
+			Message: &entity.Message{
+				Role:    entity.RoleAssistant,
+				Content: ptr.Of("streamed"),
+			},
+			TokenUsage: &entity.TokenUsage{InputTokens: 1, OutputTokens: 1},
+		}, nil
+	})
+
+	collectErr := errorx.New("streaming collect failed")
+	mockCollector := &failingToolResultsCollector{err: collectErr}
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: mockCollector,
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        2,
+				SpaceID:   200,
+				PromptKey: "stream_test",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("q")}},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "streaming collect failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_StreamingCallError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(555), nil)
+	mockLLM := rpcmocks.NewMockILLMProvider(ctrl)
+	mockLLM.EXPECT().StreamingCall(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param rpc.LLMStreamingCallParam) (*entity.ReplyItem, error) {
+		return nil, errorx.New("streaming call failed")
+	})
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+		llm:                  mockLLM,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        3,
+				SpaceID:   300,
+				PromptKey: "stream_err",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeNormal,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("sys")},
+							},
+						},
+					},
+				},
+			},
+			Messages:       []*entity.Message{{Role: entity.RoleUser, Content: ptr.Of("q")}},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "streaming call failed")
+}
+
+func TestPromptServiceImpl_ExecuteStreaming_FormatPromptError(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(666), nil)
+
+	p := &PromptServiceImpl{
+		formatter:            NewPromptFormatter(),
+		toolConfigProvider:   NewToolConfigProvider(),
+		toolResultsCollector: NewToolResultsCollector(),
+		idgen:                mockIDGen,
+	}
+
+	stream := make(chan *entity.Reply, 10)
+	_, err := p.ExecuteStreaming(context.Background(), ExecuteStreamingParam{
+		ExecuteParam: ExecuteParam{
+			Prompt: &entity.Prompt{
+				ID:        4,
+				SpaceID:   400,
+				PromptKey: "stream_fmt_err",
+				PromptDraft: &entity.PromptDraft{
+					PromptDetail: &entity.PromptDetail{
+						PromptTemplate: &entity.PromptTemplate{
+							TemplateType: entity.TemplateTypeGoTemplate,
+							Messages: []*entity.Message{
+								{Role: entity.RoleSystem, Content: ptr.Of("{{.Bad")},
+							},
+						},
+					},
+				},
+			},
+			SingleStep:     true,
+			DisableTracing: true,
+		},
+		ResultStream: stream,
+	})
+	assert.Error(t, err)
+}
+
+type failingToolResultsCollector struct {
+	err error
+}
+
+func (f *failingToolResultsCollector) CollectToolResults(ctx context.Context, param CollectToolResultsParam) (map[string]string, error) {
+	return nil, f.err
+}

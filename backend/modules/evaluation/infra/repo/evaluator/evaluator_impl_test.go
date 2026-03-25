@@ -548,6 +548,101 @@ func TestEvaluatorRepoImpl_BatchGetEvaluatorMetaByID(t *testing.T) {
 	}
 }
 
+func TestEvaluatorRepoImpl_GetEvaluatorMetaBySpaceIDAndName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorDAO := evaluatormocks.NewMockEvaluatorDAO(ctrl)
+	mockEvaluatorVersionDAO := evaluatormocks.NewMockEvaluatorVersionDAO(ctrl)
+	mockDBProvider := dbmocks.NewMockProvider(ctrl)
+	mockLWT := platestwritemocks.NewMockILatestWriteTracker(ctrl)
+
+	tests := []struct {
+		name           string
+		spaceID        int64
+		evaluatorName  string
+		includeDeleted bool
+		mockSetup      func()
+		want           *entity.Evaluator
+		wantErr        error
+	}{
+		{
+			name:           "success",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(&model.Evaluator{
+						ID:            1,
+						EvaluatorType: int32(entity.EvaluatorTypePrompt),
+						Name:          gptr.Of("builtin"),
+					}, nil)
+			},
+			want: &entity.Evaluator{
+				ID:            1,
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				Name:          "builtin",
+			},
+		},
+		{
+			name:           "not found",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(nil, nil)
+			},
+		},
+		{
+			name:           "dao error",
+			spaceID:        100,
+			evaluatorName:  "builtin",
+			includeDeleted: false,
+			mockSetup: func() {
+				mockEvaluatorDAO.EXPECT().
+					GetEvaluatorBySpaceIDAndName(gomock.Any(), int64(100), "builtin", false).
+					Return(nil, assert.AnError)
+			},
+			wantErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			tc.mockSetup()
+
+			repo := &EvaluatorRepoImpl{
+				evaluatorDao:        mockEvaluatorDAO,
+				evaluatorVersionDao: mockEvaluatorVersionDAO,
+				dbProvider:          mockDBProvider,
+				idgen:               mockIDGen,
+				lwt:                 mockLWT,
+			}
+
+			got, err := repo.GetEvaluatorMetaBySpaceIDAndName(context.Background(), tc.spaceID, tc.evaluatorName, tc.includeDeleted)
+			assert.Equal(t, tc.wantErr, err)
+			if err != nil {
+				return
+			}
+			if tc.want == nil {
+				assert.Nil(t, got)
+				return
+			}
+			if assert.NotNil(t, got) {
+				assert.Equal(t, tc.want.ID, got.ID)
+				assert.Equal(t, tc.want.EvaluatorType, got.EvaluatorType)
+				assert.Equal(t, tc.want.Name, got.Name)
+			}
+		})
+	}
+}
+
 func TestEvaluatorRepoImpl_BatchGetEvaluatorByVersionID(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

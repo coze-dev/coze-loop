@@ -10,6 +10,8 @@ import (
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	common_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func OpenAPIEvaluatorDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evaluator {
@@ -528,6 +530,9 @@ func OpenAPILanguageTypeDTO2DO(dto *openapiEvaluator.LanguageType) entity.Langua
 func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator, error) {
 	if dto == nil {
 		return nil, nil
+	}
+	if dto.EvaluatorType != nil && *dto.EvaluatorType == openapiEvaluator.EvaluatorTypeAgent {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("agent evaluator is not supported in evaluator openapi"))
 	}
 	evalType := OpenAPIEvaluatorTypeDTO2DO(dto.EvaluatorType)
 	res := &entity.Evaluator{

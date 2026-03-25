@@ -2,6 +2,7 @@ namespace go coze.loop.prompt.openapi
 
 include "../../../base.thrift"
 include "./domain_openapi/prompt.thrift"
+include "../extra.thrift"
 
 service PromptOpenAPIService {
     BatchGetPromptByPromptKeyResponse BatchGetPromptByPromptKey(1: BatchGetPromptByPromptKeyRequest req) (api.tag="openapi", api.post='/v1/loop/prompts/mget')
@@ -20,6 +21,7 @@ struct BatchGetPromptByPromptKeyRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
     2: optional list<prompt.PromptQuery> queries (api.body="queries")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -47,6 +49,7 @@ struct ExecuteRequest {
     28: optional string release_label (api.body="release_label") // 发布标签（兼容字段）
     29: optional prompt.ToolCallConfig custom_tool_config (api.body="custom_tool_config") // 自定义工具配置（兼容字段）
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -73,8 +76,8 @@ struct ListPromptBasicRequest {
     3: optional i32 page_size (api.body="page_size", vt.gt = "0", vt.le = "200")
     4: optional string key_word (api.body="key_word") // name/key前缀匹配
     5: optional string creator (api.body="creator") // 创建人
-    6: optional map<string, string> extra (api.body="extra") // 额外查询条件
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -95,6 +98,7 @@ struct CreatePromptOApiRequest {
     14: optional prompt.PromptType prompt_type (api.body="prompt_type")
     15: optional prompt.SecurityLevel security_level (api.body="security_level")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -110,6 +114,7 @@ struct DeletePromptOApiRequest {
     1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
     2: optional i64 workspace_id (api.query="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -128,6 +133,7 @@ struct GetPromptOApiRequest {
     12: optional string commit_version (api.query="commit_version")
     21: optional bool with_draft (api.query="with_draft")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -145,6 +151,7 @@ struct SaveDraftOApiRequest {
 
     11: optional prompt.PromptDraft prompt_draft (api.body="prompt_draft", vt.not_nil="true")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -164,6 +171,7 @@ struct ListCommitOApiRequest {
     127: optional i32 page_size (api.body="page_size", vt.not_nil="true", vt.gt="0")
     128: optional string page_token (api.body="page_token")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 
@@ -186,6 +194,7 @@ struct CommitDraftOApiRequest {
     11: optional string commit_version (api.body="commit_version", vt.not_nil="true", vt.min_size="1")
     12: optional string commit_description (api.body="commit_description")
 
+    254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
 

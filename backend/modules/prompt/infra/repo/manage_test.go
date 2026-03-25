@@ -747,6 +747,129 @@ func TestManageRepoImpl_MGetPromptBasicByPromptKey(t *testing.T) {
 	}
 }
 
+func TestManageRepoImpl_BatchGetPromptBasic(t *testing.T) {
+	type fields struct {
+		promptBasicDAO mysql.IPromptBasicDAO
+	}
+	type args struct {
+		ctx       context.Context
+		promptIDs []int64
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         map[int64]*entity.Prompt
+		wantErr      error
+	}{
+		{
+			name:         "empty prompt ids",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx:       context.Background(),
+				promptIDs: nil,
+			},
+			want: map[int64]*entity.Prompt{},
+		},
+		{
+			name: "mget prompt error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().MGet(gomock.Any(), []int64{1, 2}, gomock.Any()).Return(nil, errorx.New("db error"))
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:       context.Background(),
+				promptIDs: []int64{1, 2},
+			},
+			wantErr: errorx.New("db error"),
+		},
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().MGet(gomock.Any(), []int64{1, 2}, gomock.Any()).Return(map[int64]*model.PromptBasic{
+					1: {
+						ID:        1,
+						SpaceID:   100,
+						PromptKey: "prompt_a",
+						Name:      "Prompt A",
+					},
+					2: {
+						ID:         2,
+						SpaceID:    100,
+						PromptKey:  "prompt_b",
+						PromptType: string(entity.PromptTypeSnippet),
+					},
+				}, nil)
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:       context.Background(),
+				promptIDs: []int64{1, 2},
+			},
+			want: map[int64]*entity.Prompt{
+				1: {
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "prompt_a",
+					PromptBasic: &entity.PromptBasic{
+						DisplayName: "Prompt A",
+						PromptType:  entity.PromptTypeNormal,
+					},
+				},
+				2: {
+					ID:        2,
+					SpaceID:   100,
+					PromptKey: "prompt_b",
+					PromptBasic: &entity.PromptBasic{
+						PromptType: entity.PromptTypeSnippet,
+					},
+				},
+			},
+		},
+		{
+			name: "partial result with missing prompt",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().MGet(gomock.Any(), gomock.Any(), gomock.Any()).Return(map[int64]*model.PromptBasic{
+					1: {
+						ID:        1,
+						SpaceID:   100,
+						PromptKey: "prompt_a",
+					},
+				}, nil)
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:       context.Background(),
+				promptIDs: []int64{1, 999},
+			},
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode),
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ff := caseData.fieldsGetter(ctrl)
+			repoImpl := &ManageRepoImpl{
+				promptBasicDAO: ff.promptBasicDAO,
+			}
+
+			got, err := repoImpl.BatchGetPromptBasic(caseData.args.ctx, caseData.args.promptIDs)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+			if err == nil {
+				assert.Equal(t, caseData.want, got)
+			}
+		})
+	}
+}
+
 func TestManageRepoImpl_GetPrompt(t *testing.T) {
 	type fields struct {
 		db                db.Provider
@@ -3004,6 +3127,351 @@ func TestManageRepoImpl_CreatePrompt(t *testing.T) {
 			unittest.AssertErrorEqual(t, tt.wantErr, err)
 			if err == nil {
 				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestManageRepoImpl_DeletePrompt(t *testing.T) {
+	type fields struct {
+		promptBasicDAO      mysql.IPromptBasicDAO
+		promptRelationDAO   mysql.IPromptRelationDAO
+		promptBasicCacheDAO redis.IPromptBasicDAO
+	}
+	type args struct {
+		ctx      context.Context
+		promptID int64
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name:         "invalid prompt id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx:      context.Background(),
+				promptID: 0,
+			},
+			wantErr: errorx.New("promptID is invalid, promptID = 0"),
+		},
+		{
+			name: "get prompt error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(nil, errorx.New("get error"))
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:      context.Background(),
+				promptID: 1,
+			},
+			wantErr: errorx.New("get error"),
+		},
+		{
+			name: "prompt not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(nil, nil)
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx:      context.Background(),
+				promptID: 1,
+			},
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("prompt is not found, prompt id = 1")),
+		},
+		{
+			name: "delete relation error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(&model.PromptBasic{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "prompt_key",
+				}, nil)
+				mockBasicDAO.EXPECT().Delete(gomock.Any(), int64(1), int64(100)).Return(nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().DeleteByMainPrompt(gomock.Any(), int64(1), "", "").Return(errorx.New("relation error"))
+
+				return fields{
+					promptBasicDAO:    mockBasicDAO,
+					promptRelationDAO: mockRelationDAO,
+				}
+			},
+			args: args{
+				ctx:      context.Background(),
+				promptID: 1,
+			},
+			wantErr: errorx.New("relation error"),
+		},
+		{
+			name: "success with cache delete error ignored",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(&model.PromptBasic{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "prompt_key",
+				}, nil)
+				mockBasicDAO.EXPECT().Delete(gomock.Any(), int64(1), int64(100)).Return(nil)
+
+				mockRelationDAO := daomocks.NewMockIPromptRelationDAO(ctrl)
+				mockRelationDAO.EXPECT().DeleteByMainPrompt(gomock.Any(), int64(1), "", "").Return(nil)
+
+				mockCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
+				mockCacheDAO.EXPECT().DelByPromptKey(gomock.Any(), int64(100), "prompt_key").Return(errorx.New("cache error"))
+
+				return fields{
+					promptBasicDAO:      mockBasicDAO,
+					promptRelationDAO:   mockRelationDAO,
+					promptBasicCacheDAO: mockCacheDAO,
+				}
+			},
+			args: args{
+				ctx:      context.Background(),
+				promptID: 1,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ff := caseData.fieldsGetter(ctrl)
+			repoImpl := &ManageRepoImpl{
+				promptBasicDAO:      ff.promptBasicDAO,
+				promptRelationDAO:   ff.promptRelationDAO,
+				promptBasicCacheDAO: ff.promptBasicCacheDAO,
+			}
+
+			err := repoImpl.DeletePrompt(caseData.args.ctx, caseData.args.promptID)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+		})
+	}
+}
+
+func TestManageRepoImpl_UpdatePrompt(t *testing.T) {
+	type fields struct {
+		db                  db.Provider
+		promptBasicDAO      mysql.IPromptBasicDAO
+		promptBasicCacheDAO redis.IPromptBasicDAO
+	}
+	type args struct {
+		ctx   context.Context
+		param repo.UpdatePromptParam
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantErr      error
+	}{
+		{
+			name:         "invalid param",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			args: args{
+				ctx: context.Background(),
+				param: repo.UpdatePromptParam{
+					PromptID: 0,
+				},
+			},
+			wantErr: errorx.New("param(PromptID or PromptName) is invalid, param = {\"PromptID\":0,\"UpdatedBy\":\"\",\"PromptName\":\"\",\"PromptDescription\":\"\",\"SecurityLevel\":\"\"}"),
+		},
+		{
+			name: "get prompt error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(nil, errorx.New("get error"))
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.UpdatePromptParam{
+					PromptID:   1,
+					PromptName: "updated",
+				},
+			},
+			wantErr: errorx.New("get error"),
+		},
+		{
+			name: "prompt not found",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(nil, nil)
+				return fields{promptBasicDAO: mockBasicDAO}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.UpdatePromptParam{
+					PromptID:   1,
+					PromptName: "updated",
+				},
+			},
+			wantErr: errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("prompt not found, prompt_id=1")),
+		},
+		{
+			name: "update error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				nilDB, _ := gorm.Open(nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().NewSession(gomock.Any()).Return(nilDB)
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(&model.PromptBasic{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "prompt_key",
+				}, nil)
+				mockBasicDAO.EXPECT().Update(gomock.Any(), int64(1), gomock.Any()).Return(errorx.New("update error"))
+
+				return fields{
+					db:             mockDB,
+					promptBasicDAO: mockBasicDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.UpdatePromptParam{
+					PromptID:          1,
+					UpdatedBy:         "user",
+					PromptName:        "updated",
+					PromptDescription: "desc",
+					SecurityLevel:     entity.SecurityLevelL3,
+				},
+			},
+			wantErr: errorx.New("update error"),
+		},
+		{
+			name: "success with cache delete error ignored",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				nilDB, _ := gorm.Open(nil)
+
+				mockDB := dbmocks.NewMockProvider(ctrl)
+				mockDB.EXPECT().NewSession(gomock.Any()).Return(nilDB)
+
+				mockBasicDAO := daomocks.NewMockIPromptBasicDAO(ctrl)
+				mockBasicDAO.EXPECT().Get(gomock.Any(), int64(1)).Return(&model.PromptBasic{
+					ID:        1,
+					SpaceID:   100,
+					PromptKey: "prompt_key",
+				}, nil)
+				mockBasicDAO.EXPECT().Update(gomock.Any(), int64(1), gomock.Any()).DoAndReturn(
+					func(_ context.Context, promptID int64, updateFields map[string]interface{}, opts ...db.Option) error {
+						assert.Equal(t, int64(1), promptID)
+						assert.Equal(t, "user", updateFields["updated_by"])
+						assert.Equal(t, "updated", updateFields["name"])
+						assert.Equal(t, "desc", updateFields["description"])
+						assert.Equal(t, entity.SecurityLevelL3, updateFields["security_level"])
+						return nil
+					},
+				)
+
+				mockCacheDAO := redismocks.NewMockIPromptBasicDAO(ctrl)
+				mockCacheDAO.EXPECT().DelByPromptKey(gomock.Any(), int64(100), "prompt_key").Return(errorx.New("cache error"))
+
+				return fields{
+					db:                  mockDB,
+					promptBasicDAO:      mockBasicDAO,
+					promptBasicCacheDAO: mockCacheDAO,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: repo.UpdatePromptParam{
+					PromptID:          1,
+					UpdatedBy:         "user",
+					PromptName:        "updated",
+					PromptDescription: "desc",
+					SecurityLevel:     entity.SecurityLevelL3,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ff := caseData.fieldsGetter(ctrl)
+			repoImpl := &ManageRepoImpl{
+				db:                  ff.db,
+				promptBasicDAO:      ff.promptBasicDAO,
+				promptBasicCacheDAO: ff.promptBasicCacheDAO,
+			}
+
+			err := repoImpl.UpdatePrompt(caseData.args.ctx, caseData.args.param)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+		})
+	}
+}
+
+func TestManageRepoImpl_MGetVersionsByPromptID(t *testing.T) {
+	type fields struct {
+		promptCommitDAO mysql.IPromptCommitDAO
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		promptID     int64
+		want         []string
+		wantErr      error
+	}{
+		{
+			name:         "invalid prompt id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields { return fields{} },
+			promptID:     0,
+			wantErr:      errorx.New("promptID is invalid, promptID = 0"),
+		},
+		{
+			name: "dao error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCommitDAO := daomocks.NewMockIPromptCommitDAO(ctrl)
+				mockCommitDAO.EXPECT().MGetVersionsByPromptID(gomock.Any(), int64(1)).Return(nil, errorx.New("dao error"))
+				return fields{promptCommitDAO: mockCommitDAO}
+			},
+			promptID: 1,
+			wantErr:  errorx.New("dao error"),
+		},
+		{
+			name: "success",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockCommitDAO := daomocks.NewMockIPromptCommitDAO(ctrl)
+				mockCommitDAO.EXPECT().MGetVersionsByPromptID(gomock.Any(), int64(1)).Return([]string{"1.0.0", "1.1.0"}, nil)
+				return fields{promptCommitDAO: mockCommitDAO}
+			},
+			promptID: 1,
+			want:     []string{"1.0.0", "1.1.0"},
+		},
+	}
+
+	for _, tt := range tests {
+		caseData := tt
+		t.Run(caseData.name, func(t *testing.T) {
+			t.Parallel()
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ff := caseData.fieldsGetter(ctrl)
+			repoImpl := &ManageRepoImpl{
+				promptCommitDAO: ff.promptCommitDAO,
+			}
+
+			got, err := repoImpl.MGetVersionsByPromptID(context.Background(), caseData.promptID)
+			unittest.AssertErrorEqual(t, caseData.wantErr, err)
+			if err == nil {
+				assert.Equal(t, caseData.want, got)
 			}
 		})
 	}
