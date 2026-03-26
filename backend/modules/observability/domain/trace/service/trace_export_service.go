@@ -5,10 +5,11 @@ package service
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
-	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	"strconv"
 	"time"
+
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor"
 

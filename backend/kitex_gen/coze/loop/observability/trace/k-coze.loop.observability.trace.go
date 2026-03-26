@@ -16466,20 +16466,6 @@ func (p *MetadataItemInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField2(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -16518,20 +16504,6 @@ func (p *MetadataItemInfo) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *MetadataItemInfo) FastReadField2(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.Value = _field
-	return offset, nil
-}
-
 func (p *MetadataItemInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -16540,7 +16512,6 @@ func (p *MetadataItemInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -16550,7 +16521,6 @@ func (p *MetadataItemInfo) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -16563,28 +16533,10 @@ func (p *MetadataItemInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
-func (p *MetadataItemInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetValue() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Value)
-	}
-	return offset
-}
-
 func (p *MetadataItemInfo) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
 	l += thrift.Binary.StringLengthNocopy(p.Key)
-	return l
-}
-
-func (p *MetadataItemInfo) field2Length() int {
-	l := 0
-	if p.IsSetValue() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Value)
-	}
 	return l
 }
 
@@ -16596,14 +16548,6 @@ func (p *MetadataItemInfo) DeepCopy(s interface{}) error {
 
 	if src.Key != "" {
 		p.Key = kutils.StringDeepCopy(src.Key)
-	}
-
-	if src.Value != nil {
-		var tmp string
-		if *src.Value != "" {
-			tmp = kutils.StringDeepCopy(*src.Value)
-		}
-		p.Value = &tmp
 	}
 
 	return nil

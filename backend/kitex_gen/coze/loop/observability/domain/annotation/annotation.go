@@ -3069,9 +3069,7 @@ func (p *AnnotationEvaluator) Field3DeepEqual(src string) bool {
 
 type SimpleAnnotationInfo struct {
 	Key            string          `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
-	Value          string          `thrift:"value,2,required" frugal:"2,required,string" form:"value,required" json:"value,required" query:"value,required"`
-	AnnotationType *AnnotationType `thrift:"annotation_type,3,optional" frugal:"3,optional,string" form:"annotation_type" json:"annotation_type,omitempty" query:"annotation_type"`
-	ValueType      *ValueType      `thrift:"value_type,4,optional" frugal:"4,optional,string" form:"value_type" json:"value_type,omitempty" query:"value_type"`
+	AnnotationType *AnnotationType `thrift:"annotation_type,2,optional" frugal:"2,optional,string" form:"annotation_type" json:"annotation_type,omitempty" query:"annotation_type"`
 }
 
 func NewSimpleAnnotationInfo() *SimpleAnnotationInfo {
@@ -3088,13 +3086,6 @@ func (p *SimpleAnnotationInfo) GetKey() (v string) {
 	return
 }
 
-func (p *SimpleAnnotationInfo) GetValue() (v string) {
-	if p != nil {
-		return p.Value
-	}
-	return
-}
-
 var SimpleAnnotationInfo_AnnotationType_DEFAULT AnnotationType
 
 func (p *SimpleAnnotationInfo) GetAnnotationType() (v AnnotationType) {
@@ -3106,51 +3097,26 @@ func (p *SimpleAnnotationInfo) GetAnnotationType() (v AnnotationType) {
 	}
 	return *p.AnnotationType
 }
-
-var SimpleAnnotationInfo_ValueType_DEFAULT ValueType
-
-func (p *SimpleAnnotationInfo) GetValueType() (v ValueType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetValueType() {
-		return SimpleAnnotationInfo_ValueType_DEFAULT
-	}
-	return *p.ValueType
-}
 func (p *SimpleAnnotationInfo) SetKey(val string) {
 	p.Key = val
-}
-func (p *SimpleAnnotationInfo) SetValue(val string) {
-	p.Value = val
 }
 func (p *SimpleAnnotationInfo) SetAnnotationType(val *AnnotationType) {
 	p.AnnotationType = val
 }
-func (p *SimpleAnnotationInfo) SetValueType(val *ValueType) {
-	p.ValueType = val
-}
 
 var fieldIDToName_SimpleAnnotationInfo = map[int16]string{
 	1: "key",
-	2: "value",
-	3: "annotation_type",
-	4: "value_type",
+	2: "annotation_type",
 }
 
 func (p *SimpleAnnotationInfo) IsSetAnnotationType() bool {
 	return p.AnnotationType != nil
 }
 
-func (p *SimpleAnnotationInfo) IsSetValueType() bool {
-	return p.ValueType != nil
-}
-
 func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetKey bool = false
-	var issetValue bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -3180,23 +3146,6 @@ func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetValue = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 4:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField4(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -3215,11 +3164,6 @@ func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetKey {
 		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetValue {
-		fieldId = 2
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -3253,17 +3197,6 @@ func (p *SimpleAnnotationInfo) ReadField1(iprot thrift.TProtocol) error {
 }
 func (p *SimpleAnnotationInfo) ReadField2(iprot thrift.TProtocol) error {
 
-	var _field string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.Value = _field
-	return nil
-}
-func (p *SimpleAnnotationInfo) ReadField3(iprot thrift.TProtocol) error {
-
 	var _field *AnnotationType
 	if v, err := iprot.ReadString(); err != nil {
 		return err
@@ -3271,17 +3204,6 @@ func (p *SimpleAnnotationInfo) ReadField3(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.AnnotationType = _field
-	return nil
-}
-func (p *SimpleAnnotationInfo) ReadField4(iprot thrift.TProtocol) error {
-
-	var _field *ValueType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.ValueType = _field
 	return nil
 }
 
@@ -3297,14 +3219,6 @@ func (p *SimpleAnnotationInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
-			goto WriteFieldError
-		}
-		if err = p.writeField4(oprot); err != nil {
-			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3342,24 +3256,8 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *SimpleAnnotationInfo) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.Value); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-func (p *SimpleAnnotationInfo) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetAnnotationType() {
-		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 3); err != nil {
+		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.AnnotationType); err != nil {
@@ -3371,27 +3269,9 @@ func (p *SimpleAnnotationInfo) writeField3(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *SimpleAnnotationInfo) writeField4(oprot thrift.TProtocol) (err error) {
-	if p.IsSetValueType() {
-		if err = oprot.WriteFieldBegin("value_type", thrift.STRING, 4); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.ValueType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 
 func (p *SimpleAnnotationInfo) String() string {
@@ -3411,13 +3291,7 @@ func (p *SimpleAnnotationInfo) DeepEqual(ano *SimpleAnnotationInfo) bool {
 	if !p.Field1DeepEqual(ano.Key) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Value) {
-		return false
-	}
-	if !p.Field3DeepEqual(ano.AnnotationType) {
-		return false
-	}
-	if !p.Field4DeepEqual(ano.ValueType) {
+	if !p.Field2DeepEqual(ano.AnnotationType) {
 		return false
 	}
 	return true
@@ -3430,14 +3304,7 @@ func (p *SimpleAnnotationInfo) Field1DeepEqual(src string) bool {
 	}
 	return true
 }
-func (p *SimpleAnnotationInfo) Field2DeepEqual(src string) bool {
-
-	if strings.Compare(p.Value, src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *SimpleAnnotationInfo) Field3DeepEqual(src *AnnotationType) bool {
+func (p *SimpleAnnotationInfo) Field2DeepEqual(src *AnnotationType) bool {
 
 	if p.AnnotationType == src {
 		return true
@@ -3445,18 +3312,6 @@ func (p *SimpleAnnotationInfo) Field3DeepEqual(src *AnnotationType) bool {
 		return false
 	}
 	if strings.Compare(*p.AnnotationType, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *SimpleAnnotationInfo) Field4DeepEqual(src *ValueType) bool {
-
-	if p.ValueType == src {
-		return true
-	} else if p.ValueType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.ValueType, *src) != 0 {
 		return false
 	}
 	return true

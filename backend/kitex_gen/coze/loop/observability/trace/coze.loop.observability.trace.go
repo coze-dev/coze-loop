@@ -22101,8 +22101,7 @@ func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 }
 
 type MetadataItemInfo struct {
-	Key   string  `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
-	Value *string `thrift:"value,2,optional" frugal:"2,optional,string" form:"value" json:"value,omitempty" query:"value"`
+	Key string `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
 }
 
 func NewMetadataItemInfo() *MetadataItemInfo {
@@ -22118,32 +22117,12 @@ func (p *MetadataItemInfo) GetKey() (v string) {
 	}
 	return
 }
-
-var MetadataItemInfo_Value_DEFAULT string
-
-func (p *MetadataItemInfo) GetValue() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetValue() {
-		return MetadataItemInfo_Value_DEFAULT
-	}
-	return *p.Value
-}
 func (p *MetadataItemInfo) SetKey(val string) {
 	p.Key = val
-}
-func (p *MetadataItemInfo) SetValue(val *string) {
-	p.Value = val
 }
 
 var fieldIDToName_MetadataItemInfo = map[int16]string{
 	1: "key",
-	2: "value",
-}
-
-func (p *MetadataItemInfo) IsSetValue() bool {
-	return p.Value != nil
 }
 
 func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -22171,14 +22150,6 @@ func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetKey = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22228,17 +22199,6 @@ func (p *MetadataItemInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.Key = _field
 	return nil
 }
-func (p *MetadataItemInfo) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Value = _field
-	return nil
-}
 
 func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -22248,10 +22208,6 @@ func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -22288,24 +22244,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *MetadataItemInfo) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetValue() {
-		if err = oprot.WriteFieldBegin("value", thrift.STRING, 2); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.Value); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
 
 func (p *MetadataItemInfo) String() string {
 	if p == nil {
@@ -22324,27 +22262,12 @@ func (p *MetadataItemInfo) DeepEqual(ano *MetadataItemInfo) bool {
 	if !p.Field1DeepEqual(ano.Key) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Value) {
-		return false
-	}
 	return true
 }
 
 func (p *MetadataItemInfo) Field1DeepEqual(src string) bool {
 
 	if strings.Compare(p.Key, src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *MetadataItemInfo) Field2DeepEqual(src *string) bool {
-
-	if p.Value == src {
-		return true
-	} else if p.Value == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Value, *src) != 0 {
 		return false
 	}
 	return true

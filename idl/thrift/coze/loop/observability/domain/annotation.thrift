@@ -71,7 +71,5 @@ struct AnnotationEvaluator {
 
 struct SimpleAnnotationInfo {
     1: required string key
-    2: required string value
-    3: optional AnnotationType annotation_type
-    4: optional ValueType value_type
+    2: optional AnnotationType annotation_type
 }

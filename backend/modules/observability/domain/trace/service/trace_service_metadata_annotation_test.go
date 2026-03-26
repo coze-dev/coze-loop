@@ -55,7 +55,7 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		PlatformType: loop_span.PlatformCozeLoop,
 	}
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("dedup by key and sort by frequency desc", func(t *testing.T) {
 		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
 		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
@@ -64,13 +64,22 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 			{
 				SpanID: "span1",
 				TagsString: map[string]string{
-					"custom_tag": "value1",
+					"tag_a": "v1",
+					"tag_b": "v2",
 				},
 			},
 			{
 				SpanID: "span2",
 				TagsString: map[string]string{
-					"custom_tag": "value2",
+					"tag_a": "v3",
+					"tag_b": "v4",
+					"tag_c": "v5",
+				},
+			},
+			{
+				SpanID: "span3",
+				TagsString: map[string]string{
+					"tag_a": "v1",
 				},
 			},
 		}
@@ -85,7 +94,10 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		resp, err := svc.ListMetadata(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		assert.Len(t, resp.MetadataItemList, 2)
+		assert.Len(t, resp.MetadataItemList, 3)
+		assert.Equal(t, "tag_a", resp.MetadataItemList[0].Key)
+		assert.Equal(t, "tag_b", resp.MetadataItemList[1].Key)
+		assert.Equal(t, "tag_c", resp.MetadataItemList[2].Key)
 	})
 
 	t.Run("list spans error", func(t *testing.T) {
@@ -94,6 +106,22 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		resp, err := svc.ListMetadata(ctx, req)
 		assert.Error(t, err)
 		assert.Nil(t, resp)
+	})
+
+	t.Run("empty spans returns empty list", func(t *testing.T) {
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
+		traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+			Spans: loop_span.SpanList{},
+		}, nil)
+		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
+
+		resp, err := svc.ListMetadata(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.MetadataItemList, 0)
 	})
 }
 
@@ -126,19 +154,16 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		PlatformType:   loop_span.PlatformCozeLoop,
 	}
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("dedup by key and sort by frequency desc", func(t *testing.T) {
 		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant1"}, nil)
 
 		annotations := loop_span.AnnotationList{
-			{
-				ID:             "anno1",
-				Key:            "key1",
-				AnnotationType: loop_span.AnnotationType("test_type"),
-				Value: loop_span.AnnotationValue{
-					ValueType:   loop_span.AnnotationValueTypeString,
-					StringValue: "val1",
-				},
-			},
+			{ID: "a1", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
+			{ID: "a2", Key: "key_b", AnnotationType: loop_span.AnnotationType("test_type")},
+			{ID: "a3", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
+			{ID: "a4", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
+			{ID: "a5", Key: "key_b", AnnotationType: loop_span.AnnotationType("test_type")},
+			{ID: "a6", Key: "key_c", AnnotationType: loop_span.AnnotationType("test_type")},
 		}
 
 		traceRepoMock.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param *repo.ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error) {
@@ -149,7 +174,10 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		resp, err := svc.ListWorkspaceAnnotations(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		assert.Len(t, resp.SimpleAnnotationList, 1)
+		assert.Len(t, resp.SimpleAnnotationList, 3)
+		assert.Equal(t, "key_a", resp.SimpleAnnotationList[0].Key)
+		assert.Equal(t, "key_b", resp.SimpleAnnotationList[1].Key)
+		assert.Equal(t, "key_c", resp.SimpleAnnotationList[2].Key)
 	})
 
 	t.Run("get tenants error", func(t *testing.T) {
@@ -165,5 +193,15 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		resp, err := svc.ListWorkspaceAnnotations(ctx, req)
 		assert.Error(t, err)
 		assert.Nil(t, resp)
+	})
+
+	t.Run("empty annotations", func(t *testing.T) {
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant1"}, nil)
+		traceRepoMock.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(loop_span.AnnotationList{}, nil)
+
+		resp, err := svc.ListWorkspaceAnnotations(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 0)
 	})
 }

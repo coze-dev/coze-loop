@@ -1472,34 +1472,27 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	if err != nil {
 		return nil, err
 	}
-	result := make(map[string][]string)
-	valueSetMap := make(map[string]map[string]bool)
-
+	keyCount := make(map[string]int)
 	for _, span := range listSpansResp.Spans {
 		customTags := span.GetCustomTags()
-		for key, value := range customTags {
-			if _, exists := valueSetMap[key]; !exists {
-				valueSetMap[key] = make(map[string]bool)
-			}
-			if !valueSetMap[key][value] {
-				valueSetMap[key][value] = true
-				result[key] = append(result[key], value)
-			}
+		for key := range customTags {
+			keyCount[key]++
 		}
 	}
-	logs.CtxInfo(ctx, "Result info: %v", result)
-	keys := lo.Keys(result)
-	sort.Strings(keys)
-	items := make([]*trace.MetadataItemInfo, 0)
-	for _, key := range keys {
-		values := result[key]
-		sort.Strings(values)
-		for _, value := range values {
-			items = append(items, &trace.MetadataItemInfo{
-				Key:   key,
-				Value: gptr.Of(value),
-			})
+
+	keys := lo.Keys(keyCount)
+	sort.Slice(keys, func(i, j int) bool {
+		if keyCount[keys[i]] != keyCount[keys[j]] {
+			return keyCount[keys[i]] > keyCount[keys[j]]
 		}
+		return keys[i] < keys[j]
+	})
+
+	items := make([]*trace.MetadataItemInfo, 0, len(keys))
+	for _, key := range keys {
+		items = append(items, &trace.MetadataItemInfo{
+			Key: key,
+		})
 	}
 
 	return &ListMetadataResp{MetadataItemList: items}, nil
@@ -1534,7 +1527,7 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 		return nil, err
 	}
 	const (
-		defaultLimit           = 1000
+		defaultLimit           = 300
 		defaultDescByUpdatedAt = true
 	)
 	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
@@ -1550,41 +1543,32 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 		return nil, err
 	}
 
-	simpleList := make([]*annotation.SimpleAnnotationInfo, 0, len(annotations))
+	type annoKey struct {
+		Key            string
+		AnnotationType loop_span.AnnotationType
+	}
+	keyCount := make(map[annoKey]int)
 	for _, anno := range annotations {
 		if anno == nil {
 			continue
 		}
-		valueStr := ""
-		valueType := annotation.ValueTypeString
-		switch anno.Value.ValueType {
-		case loop_span.AnnotationValueTypeLong:
-			valueType = annotation.ValueTypeLong
-			valueStr = strconv.FormatInt(anno.Value.LongValue, 10)
-		case loop_span.AnnotationValueTypeDouble, loop_span.AnnotationValueTypeNumber:
-			if anno.Value.ValueType == loop_span.AnnotationValueTypeNumber {
-				valueType = annotation.ValueTypeNumber
-			} else {
-				valueType = annotation.ValueTypeDouble
-			}
-			valueStr = strconv.FormatFloat(anno.Value.FloatValue, 'f', -1, 64)
-		case loop_span.AnnotationValueTypeBool:
-			valueType = annotation.ValueTypeBool
-			valueStr = strconv.FormatBool(anno.Value.BoolValue)
-		case loop_span.AnnotationValueTypeCategory:
-			valueType = annotation.ValueTypeCategory
-			valueStr = anno.Value.StringValue
-		case loop_span.AnnotationValueTypeString:
-			valueType = annotation.ValueTypeString
-			valueStr = anno.Value.StringValue
-		default:
-			valueStr = ""
+		k := annoKey{Key: anno.Key, AnnotationType: anno.AnnotationType}
+		keyCount[k]++
+	}
+
+	keys := lo.Keys(keyCount)
+	sort.Slice(keys, func(i, j int) bool {
+		if keyCount[keys[i]] != keyCount[keys[j]] {
+			return keyCount[keys[i]] > keyCount[keys[j]]
 		}
+		return keys[i].Key < keys[j].Key
+	})
+
+	simpleList := make([]*annotation.SimpleAnnotationInfo, 0, len(keys))
+	for _, k := range keys {
 		simpleList = append(simpleList, &annotation.SimpleAnnotationInfo{
-			Key:            anno.Key,
-			Value:          valueStr,
-			AnnotationType: gptr.Of(annotation.AnnotationType(anno.AnnotationType)),
-			ValueType:      gptr.Of(valueType),
+			Key:            k.Key,
+			AnnotationType: gptr.Of(annotation.AnnotationType(k.AnnotationType)),
 		})
 	}
 

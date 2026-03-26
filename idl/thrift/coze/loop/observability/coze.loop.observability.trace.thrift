@@ -449,7 +449,6 @@ struct ListMetadataRequest {
 
 struct MetadataItemInfo {
     1: required string key
-    2: optional string value
 }
 struct ListMetadataResponse {
     1: required list<MetadataItemInfo> metadataItemList ,
