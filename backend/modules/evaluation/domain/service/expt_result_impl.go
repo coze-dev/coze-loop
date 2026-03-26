@@ -1870,7 +1870,7 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 		}
 
 		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.Ext != nil &&
-			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] == "" &&
+			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] != "" &&
 			id2URL != nil {
 			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURL] = id2URL[targetRecord.ID]
 		}
