@@ -125,3 +125,15 @@ struct Message {
     2: optional Content content
     3: optional map<string, string> ext
 }
+
+typedef string AgentType(ts.enum="true")
+const AgentType AgentType_Vibe = "vibe"
+
+struct AgentConfig {
+    1: optional AgentType agent_type
+}
+
+struct SkillConfig {
+    1: optional i64 skill_id (api.js_conv="true", go.tag = 'json:"skill_id"')
+    2: optional string version
+}

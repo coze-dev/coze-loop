@@ -62,6 +62,27 @@ struct CustomRPCEvaluator {
     12: optional map<string, string> ext
 }
 
+// Agent评估器Prompt配置输出规则
+struct AgentEvaluatorPromptConfigOutputRules {
+    1: optional common.Message score_prompt
+    2: optional common.Message reasoning_prompt
+    3: optional common.Message extra_output_prompt
+}
+
+// Agent评估器Prompt配置
+struct AgentEvaluatorPromptConfig {
+    1: optional list<common.Message> message_list
+    2: optional AgentEvaluatorPromptConfigOutputRules output_rules
+}
+
+// Agent评估器
+struct AgentEvaluator {
+    1: optional common.AgentConfig agent_config
+    2: optional common.ModelConfig model_config
+    3: optional list<common.SkillConfig> skill_configs
+    4: optional AgentEvaluatorPromptConfig prompt_config
+}
+
 // 评估器内容
 struct EvaluatorContent {
     1: optional bool is_receive_chat_history
@@ -72,6 +93,7 @@ struct EvaluatorContent {
     101: optional PromptEvaluator prompt_evaluator
     102: optional CodeEvaluator code_evaluator
     103: optional CustomRPCEvaluator custom_rpc_evaluator
+    104: optional AgentEvaluator agent_evaluator
 }
 
 // 评估器版本
