@@ -4,6 +4,7 @@ package observability
 
 import (
 	"github.com/apache/thrift/lib/go/thrift"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/ingestion"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
@@ -87,6 +88,32 @@ func NewObservabilityTaskServiceClient(c thrift.TClient) *ObservabilityTaskServi
 	}
 }
 
+type IngestionService interface {
+	ingestion.IngestionService
+}
+
+type IngestionServiceClient struct {
+	*ingestion.IngestionServiceClient
+}
+
+func NewIngestionServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *IngestionServiceClient {
+	return &IngestionServiceClient{
+		IngestionServiceClient: ingestion.NewIngestionServiceClientFactory(t, f),
+	}
+}
+
+func NewIngestionServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *IngestionServiceClient {
+	return &IngestionServiceClient{
+		IngestionServiceClient: ingestion.NewIngestionServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewIngestionServiceClient(c thrift.TClient) *IngestionServiceClient {
+	return &IngestionServiceClient{
+		IngestionServiceClient: ingestion.NewIngestionServiceClient(c),
+	}
+}
+
 type ObservabilityTraceServiceProcessor struct {
 	*trace.TraceServiceProcessor
 }
@@ -111,5 +138,14 @@ type ObservabilityTaskServiceProcessor struct {
 
 func NewObservabilityTaskServiceProcessor(handler ObservabilityTaskService) *ObservabilityTaskServiceProcessor {
 	self := &ObservabilityTaskServiceProcessor{task.NewTaskServiceProcessor(handler)}
+	return self
+}
+
+type IngestionServiceProcessor struct {
+	*ingestion.IngestionServiceProcessor
+}
+
+func NewIngestionServiceProcessor(handler IngestionService) *IngestionServiceProcessor {
+	self := &IngestionServiceProcessor{ingestion.NewIngestionServiceProcessor(handler)}
 	return self
 }

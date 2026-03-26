@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -104,7 +103,11 @@ func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Pr
 	if err != nil {
 		return nil, err
 	}
-	promptHandler := NewPromptHandler(promptManageService, promptDebugService, promptExecuteService, promptOpenAPIService)
+	toolManageService, err := application2.InitToolManageApplication(idgen2, db2, authClient, userClient)
+	if err != nil {
+		return nil, err
+	}
+	promptHandler := NewPromptHandler(promptManageService, promptDebugService, promptExecuteService, promptOpenAPIService, toolManageService)
 	return promptHandler, nil
 }
 
@@ -197,7 +200,7 @@ var (
 		NewLLMHandler, application3.InitManageApplication, application3.InitRuntimeApplication,
 	)
 	promptSet = wire.NewSet(
-		NewPromptHandler, application2.InitPromptManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
+		NewPromptHandler, application2.InitPromptManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication, application2.InitToolManageApplication,
 	)
 	evaluationSet = wire.NewSet(
 		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication,

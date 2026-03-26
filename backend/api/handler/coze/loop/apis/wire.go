@@ -75,6 +75,7 @@ var (
 		promptapp.InitPromptDebugApplication,
 		promptapp.InitPromptExecuteApplication,
 		promptapp.InitPromptOpenAPIApplication,
+		promptapp.InitToolManageApplication,
 	)
 	evaluationSet = wire.NewSet(
 		NewEvaluationHandler,

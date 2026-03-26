@@ -59,9 +59,11 @@ import (
 	looptraceopenapi "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/loopenapi"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotask"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/observability/lotrace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lodebug"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lomanage"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/loopenapi"
+	lotool_manage "github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/prompt/lotool_manage"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	evalapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/foundation/pkg/errno"
@@ -163,6 +165,7 @@ type PromptHandler struct {
 	debug.PromptDebugService
 	execute.PromptExecuteService
 	openapi.PromptOpenAPIService
+	tool_manage.ToolManageService
 }
 
 func NewPromptHandler(
@@ -170,16 +173,19 @@ func NewPromptHandler(
 	debugApp debug.PromptDebugService,
 	executeApp execute.PromptExecuteService,
 	openAPIApp openapi.PromptOpenAPIService,
+	toolManageApp tool_manage.ToolManageService,
 ) *PromptHandler {
 	h := &PromptHandler{
 		PromptManageService:  manageApp,
 		PromptDebugService:   debugApp,
 		PromptExecuteService: executeApp,
 		PromptOpenAPIService: openAPIApp,
+		ToolManageService:    toolManageApp,
 	}
 	bindLocalCallClient(manage.PromptManageService(h), &promptManageSvc, lomanage.NewLocalPromptManageService)
 	bindLocalCallClient(debug.PromptDebugService(h), &promptDebugSvc, lodebug.NewLocalPromptDebugService)
 	bindLocalCallClient(openapi.PromptOpenAPIService(h), &promptOpenAPISvc, loopenapi.NewLocalPromptOpenAPIService)
+	bindLocalCallClient(tool_manage.ToolManageService(h), &toolManageSvc, lotool_manage.NewLocalToolManageService)
 	return h
 }
 

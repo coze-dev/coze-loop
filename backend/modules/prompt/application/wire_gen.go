@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	conf2 "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
@@ -160,6 +161,17 @@ func InitPromptOpenAPIApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, re
 	return promptOpenAPIService, nil
 }
 
+func InitToolManageApplication(idgen2 idgen.IIDGenerator, db2 db.Provider, authClient authservice.Client, userClient userservice.Client) (tool_manage.ToolManageService, error) {
+	iToolBasicDAO := mysql.NewToolBasicDAO(db2)
+	iToolCommitDAO := mysql.NewToolCommitDAO(db2)
+	iToolRepo := repo.NewToolRepo(db2, idgen2, iToolBasicDAO, iToolCommitDAO)
+	iToolService := service.NewToolService(idgen2, iToolRepo)
+	iAuthProvider := rpc.NewAuthRPCProvider(authClient)
+	iUserProvider := rpc.NewUserRPCProvider(userClient)
+	toolManageService := NewToolManageApplication(iToolRepo, iToolService, iAuthProvider, iUserProvider)
+	return toolManageService, nil
+}
+
 // wire.go:
 
 var (
@@ -179,5 +191,8 @@ var (
 	openAPISet = wire.NewSet(
 		NewPromptOpenAPIApplication,
 		promptDomainSet,
+	)
+	toolManageSet = wire.NewSet(
+		NewToolManageApplication, service.NewToolService, repo.NewToolRepo, mysql.NewToolBasicDAO, mysql.NewToolCommitDAO, rpc.NewAuthRPCProvider, rpc.NewUserRPCProvider,
 	)
 )
