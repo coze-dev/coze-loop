@@ -255,7 +255,7 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 	}
 }
 
-func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
+func TestEvaluationSetApplicationImpl_EvaluationSetValidateMultiPartData(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -269,19 +269,18 @@ func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
 
 	spaceID := int64(2002)
 
-	baseReq := func() *eval_set.ValidateMultiPartDataRequest {
-		return &eval_set.ValidateMultiPartDataRequest{
+	baseReq := func() *eval_set.ValidateEvaluationSetMultiPartDataRequest {
+		return &eval_set.ValidateEvaluationSetMultiPartDataRequest{
 			SpaceID:     spaceID,
 			PreviewData: []string{"https://example.com/a.png"},
 		}
 	}
-
 	tests := []struct {
 		name    string
-		req     *eval_set.ValidateMultiPartDataRequest
+		req     *eval_set.ValidateEvaluationSetMultiPartDataRequest
 		setup   func()
 		wantErr int32
-		check   func(t *testing.T, resp *eval_set.ValidateMultiPartDataResponse)
+		check   func(t *testing.T, resp *eval_set.ValidateEvaluationSetMultiPartDataResponse)
 	}{
 		{"nil req", nil, func() {}, errno.CommonInvalidParamCode, nil},
 		{
@@ -299,7 +298,7 @@ func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
 				mockSvc.EXPECT().ValidateMultiPartData(gomock.Any(), spaceID, []string{"https://example.com/a.png"}, gomock.Nil()).Return(nil, nil)
 			},
-			check: func(t *testing.T, resp *eval_set.ValidateMultiPartDataResponse) {
+			check: func(t *testing.T, resp *eval_set.ValidateEvaluationSetMultiPartDataResponse) {
 				if assert.NotNil(t, resp) {
 					assert.NotNil(t, resp.BaseResp)
 					assert.Nil(t, resp.AttachmentUrlsCheckDetail)
@@ -313,7 +312,7 @@ func TestEvaluationSetApplicationImpl_ValidateMultiPartData(t *testing.T) {
 			if tc.setup != nil {
 				tc.setup()
 			}
-			resp, err := app.ValidateMultiPartData(context.Background(), tc.req)
+			resp, err := app.ValidateEvaluationSetMultiPartData(context.Background(), tc.req)
 			if tc.wantErr != 0 {
 				assert.Error(t, err)
 				if tc.wantErr > 0 {
