@@ -249,11 +249,13 @@ func NewTraceProcessorBuilder(
 		entity.SceneTraceChat: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
 			span_processor.NewChatProcessorFactory(),
 		},
 		entity.SceneThreadChat: {
 			span_processor.NewPlatformProcessorFactory(traceConfig),
 			span_processor.NewCheckProcessorFactory(),
+			span_processor.NewAttrTosProcessorFactory(fileProvider),
 			span_processor.NewChatProcessorFactory(),
 		},
 		entity.SceneThreadStat: {
