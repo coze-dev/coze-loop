@@ -893,7 +893,10 @@ func openAPITargetOutputDataDO2DTO(data *entity.EvalTargetOutputData) *openapiEv
 	if data.TimeConsumingMS != nil {
 		res.TimeConsumingMs = data.TimeConsumingMS
 	}
-	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil {
+	if len(data.Ext) > 0 {
+		res.Ext = data.Ext
+	}
+	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 {
 		return nil
 	}
 	return res

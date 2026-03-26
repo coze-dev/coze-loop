@@ -1813,6 +1813,16 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 	}
 
 	turnResultID2TargetOutput := make(map[int64]*entity.TurnTargetOutput) // turn_result_id -> version_id -> result
+	id2URI := make(map[int64]string)
+	id2URL := make(map[int64]string)
+	for _, targetRecord := range targetRecords {
+		if targetRecord == nil || targetRecord.EvalTargetOutputData == nil || targetRecord.EvalTargetOutputData.Ext == nil || targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] == "" {
+			continue
+		}
+		id2URI[targetRecord.ID] = targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI]
+	}
+	// TODO 批量将id2URI中的uri转换为url,写入id2URL
+
 	for _, targetRecord := range targetRecords {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
 		if !ok {
@@ -1833,6 +1843,12 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 					}
 				}
 			}
+		}
+
+		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.Ext != nil &&
+			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] == "" &&
+			id2URL != nil {
+			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURL] = id2URL[targetRecord.ID]
 		}
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{
