@@ -145,6 +145,11 @@ func (p *ExptSource) IsValid() error {
 			return fmt.Errorf("field Scheduler not valid, %w", err)
 		}
 	}
+	if p.Sampler != nil {
+		if err := p.Sampler.IsValid(); err != nil {
+			return fmt.Errorf("field Sampler not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *Scheduler) IsValid() error {

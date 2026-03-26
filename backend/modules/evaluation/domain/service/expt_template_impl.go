@@ -799,6 +799,9 @@ func taskToExptTemplate(task *taskdomain.Task, spaceID int64) *entity.ExptTempla
 	if task.Rule != nil && task.Rule.SpanFilters != nil {
 		exptSource.SpanFilterFields = spanFilterFieldsFromTaskRule(task.Rule.SpanFilters)
 	}
+	if task.Rule != nil && task.Rule.Sampler != nil {
+		exptSource.Sampler = exptSamplerFromTaskSampler(task.Rule.Sampler)
+	}
 	exptSource.Scheduler = taskRuleToExptScheduler(task.Rule)
 
 	baseInfo := &entity.BaseInfo{}
@@ -1068,7 +1071,7 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 }
 
 // enrichExptSourceFromPipeline 对在线实验模板，根据 source_id 和 space_id 调用 ListPipeline，
-// 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters 到 ExptSource.SpanFilterFields，
+// 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters、task.rule.sampler 到 ExptSource，
 // 提取 Pipeline.Scheduler 到 ExptSource.Scheduler
 // 仅当 ExptSource.SourceType 为 IDL SourceType.Workflow（Pipeline）时拉取 Pipeline 详情。
 func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) error {
@@ -1116,11 +1119,18 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 		if len(targets) == 0 {
 			continue
 		}
-		spanFilterFields := extractSpanFilterFieldsFromPipeline(p)
+		dataReflow := extractDataReflowFieldsFromPipeline(p)
+		var spanFilterFields *entity.SpanFilterFieldsDO
+		var sampler *entity.ExptSamplerDO
+		if dataReflow != nil {
+			spanFilterFields = dataReflow.SpanFilterFields
+			sampler = dataReflow.Sampler
+		}
 		scheduler := extractSchedulerFromPipeline(p)
 		for _, tpl := range targets {
 			if tpl.ExptSource != nil {
 				tpl.ExptSource.SpanFilterFields = spanFilterFields
+				tpl.ExptSource.Sampler = sampler
 				tpl.ExptSource.Scheduler = scheduler
 			}
 		}
@@ -1128,8 +1138,14 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 	return nil
 }
 
-// extractSpanFilterFieldsFromPipeline 从 Pipeline Flow 中 node_template_type=data_reflow 的节点提取 span_filters
-func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterFieldsDO {
+// dataReflowParsed 解析 data_reflow 节点 task 内容中的 rule.span_filters 与 rule.sampler
+type dataReflowParsed struct {
+	SpanFilterFields *entity.SpanFilterFieldsDO
+	Sampler          *entity.ExptSamplerDO
+}
+
+// extractDataReflowFieldsFromPipeline 从 Pipeline Flow 中 node_template_type=data_reflow 的节点解析 task JSON
+func extractDataReflowFieldsFromPipeline(p *entity.Pipeline) *dataReflowParsed {
 	if p == nil || p.Flow == nil || len(p.Flow.Nodes) == 0 {
 		return nil
 	}
@@ -1144,16 +1160,34 @@ func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterF
 		if !ok || taskRef == nil || taskRef.Content == "" {
 			continue
 		}
-		return parseSpanFilterFieldsFromTaskJSON(taskRef.Content)
+		return parseDataReflowTaskJSON(taskRef.Content)
 	}
 	return nil
 }
 
-// taskRuleJSON 解析 task JSON 中的 rule.span_filters 结构
-type taskRuleSpanFiltersJSON struct {
+// extractSpanFilterFieldsFromPipeline 仅返回 span_filters 部分（与 extractDataReflowFieldsFromPipeline 同源）
+func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterFieldsDO {
+	if r := extractDataReflowFieldsFromPipeline(p); r != nil {
+		return r.SpanFilterFields
+	}
+	return nil
+}
+
+// taskRuleDataReflowJSON 解析 task JSON 中的 rule（span_filters、sampler）
+type taskRuleDataReflowJSON struct {
 	Rule *struct {
 		SpanFilters *spanFiltersJSON `json:"span_filters"`
+		Sampler     *samplerJSON     `json:"sampler"`
 	} `json:"rule"`
+}
+
+type samplerJSON struct {
+	SampleRate    *float64 `json:"sample_rate"`
+	SampleSize    *int64   `json:"sample_size"`
+	IsCycle       *bool    `json:"is_cycle"`
+	CycleCount    *int64   `json:"cycle_count"`
+	CycleInterval *int64   `json:"cycle_interval"`
+	CycleTimeUnit *string  `json:"cycle_time_unit"`
 }
 
 type spanFiltersJSON struct {
@@ -1176,15 +1210,38 @@ type filterFieldJSON struct {
 	SubFilter  *filtersJSON `json:"sub_filter"`
 }
 
-func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
-	var parsed taskRuleSpanFiltersJSON
+func parseDataReflowTaskJSON(content string) *dataReflowParsed {
+	var parsed taskRuleDataReflowJSON
 	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
 		return nil
 	}
-	if parsed.Rule == nil || parsed.Rule.SpanFilters == nil {
+	if parsed.Rule == nil {
 		return nil
 	}
-	sf := parsed.Rule.SpanFilters
+	out := &dataReflowParsed{}
+	if parsed.Rule.SpanFilters != nil {
+		out.SpanFilterFields = buildSpanFilterFieldsDOFromJSON(parsed.Rule.SpanFilters)
+	}
+	if parsed.Rule.Sampler != nil {
+		out.Sampler = exptSamplerDOFromSamplerJSON(parsed.Rule.Sampler)
+	}
+	if out.SpanFilterFields == nil && out.Sampler == nil {
+		return nil
+	}
+	return out
+}
+
+func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
+	if r := parseDataReflowTaskJSON(content); r != nil {
+		return r.SpanFilterFields
+	}
+	return nil
+}
+
+func buildSpanFilterFieldsDOFromJSON(sf *spanFiltersJSON) *entity.SpanFilterFieldsDO {
+	if sf == nil {
+		return nil
+	}
 	result := &entity.SpanFilterFieldsDO{
 		PlatformType: sf.PlatformType,
 		SpanListType: sf.SpanListType,
@@ -1217,6 +1274,38 @@ func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsD
 		}
 	}
 	return result
+}
+
+func exptSamplerDOFromSamplerJSON(j *samplerJSON) *entity.ExptSamplerDO {
+	if j == nil {
+		return nil
+	}
+	return &entity.ExptSamplerDO{
+		SampleRate:    j.SampleRate,
+		SampleSize:    j.SampleSize,
+		IsCycle:       j.IsCycle,
+		CycleCount:    j.CycleCount,
+		CycleInterval: j.CycleInterval,
+		CycleTimeUnit: j.CycleTimeUnit,
+	}
+}
+
+func exptSamplerFromTaskSampler(s *taskdomain.Sampler) *entity.ExptSamplerDO {
+	if s == nil {
+		return nil
+	}
+	out := &entity.ExptSamplerDO{
+		SampleRate:    s.SampleRate,
+		SampleSize:    s.SampleSize,
+		IsCycle:       s.IsCycle,
+		CycleCount:    s.CycleCount,
+		CycleInterval: s.CycleInterval,
+	}
+	if s.CycleTimeUnit != nil {
+		u := string(*s.CycleTimeUnit)
+		out.CycleTimeUnit = &u
+	}
+	return out
 }
 
 // extractSchedulerFromPipeline 从 Pipeline 提取 Scheduler

@@ -14,6 +14,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"strings"
 )
 
@@ -6122,6 +6123,8 @@ type ExptSource struct {
 	// 不同source里的源数据结构
 	SpanFilterFields *filter.SpanFilterFields `thrift:"span_filter_fields,100,optional" frugal:"100,optional,filter.SpanFilterFields" form:"span_filter_fields" json:"span_filter_fields,omitempty" query:"span_filter_fields"`
 	Scheduler        *Scheduler               `thrift:"scheduler,101,optional" frugal:"101,optional,Scheduler" form:"scheduler" json:"scheduler,omitempty" query:"scheduler"`
+	// 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
+	Sampler *task.Sampler `thrift:"sampler,102,optional" frugal:"102,optional,task.Sampler" form:"sampler" json:"sampler,omitempty" query:"sampler"`
 }
 
 func NewExptSource() *ExptSource {
@@ -6178,6 +6181,18 @@ func (p *ExptSource) GetScheduler() (v *Scheduler) {
 	}
 	return p.Scheduler
 }
+
+var ExptSource_Sampler_DEFAULT *task.Sampler
+
+func (p *ExptSource) GetSampler() (v *task.Sampler) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSampler() {
+		return ExptSource_Sampler_DEFAULT
+	}
+	return p.Sampler
+}
 func (p *ExptSource) SetSourceType(val *SourceType) {
 	p.SourceType = val
 }
@@ -6190,12 +6205,16 @@ func (p *ExptSource) SetSpanFilterFields(val *filter.SpanFilterFields) {
 func (p *ExptSource) SetScheduler(val *Scheduler) {
 	p.Scheduler = val
 }
+func (p *ExptSource) SetSampler(val *task.Sampler) {
+	p.Sampler = val
+}
 
 var fieldIDToName_ExptSource = map[int16]string{
 	1:   "source_type",
 	2:   "source_id",
 	100: "span_filter_fields",
 	101: "scheduler",
+	102: "sampler",
 }
 
 func (p *ExptSource) IsSetSourceType() bool {
@@ -6212,6 +6231,10 @@ func (p *ExptSource) IsSetSpanFilterFields() bool {
 
 func (p *ExptSource) IsSetScheduler() bool {
 	return p.Scheduler != nil
+}
+
+func (p *ExptSource) IsSetSampler() bool {
+	return p.Sampler != nil
 }
 
 func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
@@ -6259,6 +6282,14 @@ func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
 		case 101:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6332,6 +6363,14 @@ func (p *ExptSource) ReadField101(iprot thrift.TProtocol) error {
 	p.Scheduler = _field
 	return nil
 }
+func (p *ExptSource) ReadField102(iprot thrift.TProtocol) error {
+	_field := task.NewSampler()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Sampler = _field
+	return nil
+}
 
 func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6353,6 +6392,10 @@ func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 	}
@@ -6445,6 +6488,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ExptSource) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSampler() {
+		if err = oprot.WriteFieldBegin("sampler", thrift.STRUCT, 102); err != nil {
+			goto WriteField102BeginError
+		}
+		if err := p.Sampler.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteField102EndError
+		}
+	}
+	return nil
+WriteField102BeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteField102EndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 
 func (p *ExptSource) String() string {
 	if p == nil {
@@ -6470,6 +6531,9 @@ func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
 		return false
 	}
 	if !p.Field101DeepEqual(ano.Scheduler) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.Sampler) {
 		return false
 	}
 	return true
@@ -6509,6 +6573,13 @@ func (p *ExptSource) Field100DeepEqual(src *filter.SpanFilterFields) bool {
 func (p *ExptSource) Field101DeepEqual(src *Scheduler) bool {
 
 	if !p.Scheduler.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field102DeepEqual(src *task.Sampler) bool {
+
+	if !p.Sampler.DeepEqual(src) {
 		return false
 	}
 	return true
