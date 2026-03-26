@@ -354,6 +354,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_tasks0.POST("/check_name", append(_checktasknameMw(handler), apis.CheckTaskName)...)
 				}
 				{
+					_threads := _v14.Group("/threads", _threadsMw(handler)...)
+					_threads.POST("/stat", append(_getthreadstatMw(handler), apis.GetThreadStat)...)
+					{
+						_chat := _threads.Group("/chat", _chatMw(handler)...)
+						_chat.POST("/list", append(_listthreadchatMw(handler), apis.ListThreadChat)...)
+					}
+				}
+				{
 					_trace := _v14.Group("/trace", _traceMw(handler)...)
 					_trace.POST("/extract_span_info", append(_extractspaninfoMw(handler), apis.ExtractSpanInfo)...)
 				}
@@ -369,6 +377,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
 					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
 					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
+					{
+						_chat0 := _traces.Group("/chat", _chat0Mw(handler)...)
+						_chat0.POST("/list", append(_listtracechatMw(handler), apis.ListTraceChat)...)
+					}
 				}
 			}
 		}
