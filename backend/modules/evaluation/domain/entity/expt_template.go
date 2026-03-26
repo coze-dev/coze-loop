@@ -45,6 +45,17 @@ type ExptSource struct {
 	SourceID         string
 	SpanFilterFields *SpanFilterFieldsDO // 从 Pipeline data_reflow 节点 task.rule.span_filters 提取
 	Scheduler        *ExptSchedulerDO    // 从 Pipeline.Scheduler 提取
+	Sampler          *ExptSamplerDO      // 从 Pipeline data_reflow 节点 task.rule.sampler 或 Task.Rule.Sampler 提取
+}
+
+// ExptSamplerDO 采样配置，与 observability task.Sampler / pipeline task.rule.sampler 对齐
+type ExptSamplerDO struct {
+	SampleRate     *float64 `json:"sample_rate,omitempty"`
+	SampleSize     *int64   `json:"sample_size,omitempty"`
+	IsCycle        *bool    `json:"is_cycle,omitempty"`
+	CycleCount     *int64   `json:"cycle_count,omitempty"`
+	CycleInterval  *int64   `json:"cycle_interval,omitempty"`
+	CycleTimeUnit  *string  `json:"cycle_time_unit,omitempty"`
 }
 
 // SpanFilterFieldsDO Span 过滤条件，与 filter.SpanFilterFields 结构对应

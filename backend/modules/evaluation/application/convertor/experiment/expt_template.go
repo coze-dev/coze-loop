@@ -14,6 +14,7 @@ import (
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	common_obs "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	taskpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
@@ -458,9 +459,30 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 		if template.ExptSource.Scheduler != nil {
 			exptSource.Scheduler = exptSchedulerDO2DTO(template.ExptSource.Scheduler)
 		}
+		if template.ExptSource.Sampler != nil {
+			exptSource.Sampler = exptSamplerDO2DTO(template.ExptSource.Sampler)
+		}
 		dto.SetExptSource(exptSource)
 	}
 
+	return dto
+}
+
+// exptSamplerDO2DTO 将 entity.ExptSamplerDO 转为 task.Sampler
+func exptSamplerDO2DTO(do *entity.ExptSamplerDO) *taskpkg.Sampler {
+	if do == nil {
+		return nil
+	}
+	dto := taskpkg.NewSampler()
+	dto.SampleRate = do.SampleRate
+	dto.SampleSize = do.SampleSize
+	dto.IsCycle = do.IsCycle
+	dto.CycleCount = do.CycleCount
+	dto.CycleInterval = do.CycleInterval
+	if do.CycleTimeUnit != nil {
+		u := taskpkg.TimeUnit(*do.CycleTimeUnit)
+		dto.CycleTimeUnit = &u
+	}
 	return dto
 }
 

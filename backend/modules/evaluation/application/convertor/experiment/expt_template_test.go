@@ -278,6 +278,11 @@ func TestToExptTemplateDTO_LatestTimeCronAndSource(t *testing.T) {
 				Frequency: &frequency,
 				TriggerAt: gptr.Of(int64(123)),
 			},
+			Sampler: &entity.ExptSamplerDO{
+				SampleRate:    gptr.Of(0.25),
+				IsCycle:       gptr.Of(true),
+				CycleTimeUnit: gptr.Of("hour"),
+			},
 		},
 	}
 
@@ -294,6 +299,11 @@ func TestToExptTemplateDTO_LatestTimeCronAndSource(t *testing.T) {
 			assert.Equal(t, "source-1", dto.GetExptSource().GetSourceID())
 			assert.NotNil(t, dto.GetExptSource().GetScheduler())
 			assert.NotNil(t, dto.GetExptSource().GetSpanFilterFields())
+			if assert.NotNil(t, dto.GetExptSource().GetSampler()) {
+				assert.InDelta(t, 0.25, dto.GetExptSource().GetSampler().GetSampleRate(), 1e-9)
+				assert.True(t, dto.GetExptSource().GetSampler().GetIsCycle())
+				assert.Equal(t, "hour", string(dto.GetExptSource().GetSampler().GetCycleTimeUnit()))
+			}
 		}
 	}
 

@@ -7,6 +7,7 @@ include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
 include "../../observability/domain/filter.thrift"
+include "../../observability/domain/task.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -128,6 +129,8 @@ struct ExptSource {
     // 不同source里的源数据结构
     100: optional filter.SpanFilterFields span_filter_fields
     101: optional Scheduler scheduler
+    // 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
+    102: optional task.Sampler sampler
 }
 
 typedef string Frequency

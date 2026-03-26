@@ -3334,6 +3334,9 @@ func Test_taskToExptTemplate(t *testing.T) {
 		result := taskToExptTemplate(task, 100)
 		assert.NotNil(t, result)
 		assert.NotNil(t, result.ExptSource.Scheduler)
+		assert.NotNil(t, result.ExptSource.Sampler)
+		assert.NotNil(t, result.ExptSource.Sampler.IsCycle)
+		assert.True(t, *result.ExptSource.Sampler.IsCycle)
 	})
 
 	t.Run("正常转换-带TaskConfig", func(t *testing.T) {
@@ -4106,6 +4109,22 @@ func Test_parseSpanFilterFieldsFromTaskJSON(t *testing.T) {
 	})
 }
 
+func Test_parseDataReflowTaskJSON_sampler(t *testing.T) {
+	t.Run("仅sampler", func(t *testing.T) {
+		content := `{"rule":{"sampler":{"sample_rate":0.1,"sample_size":100,"is_cycle":false}}}`
+		r := parseDataReflowTaskJSON(content)
+		assert.NotNil(t, r)
+		assert.Nil(t, r.SpanFilterFields)
+		assert.NotNil(t, r.Sampler)
+		assert.InDelta(t, 0.1, *r.Sampler.SampleRate, 1e-9)
+		assert.NotNil(t, r.Sampler.SampleSize)
+		assert.Equal(t, int64(100), *r.Sampler.SampleSize)
+		assert.NotNil(t, r.Sampler.IsCycle)
+		assert.False(t, *r.Sampler.IsCycle)
+		assert.Nil(t, parseSpanFilterFieldsFromTaskJSON(content))
+	})
+}
+
 func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -4176,6 +4195,7 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		err := mgr.enrichExptSourceFromPipeline(ctx, templates, spaceID)
 		assert.NoError(t, err)
 		assert.Nil(t, templates[0].ExptSource.SpanFilterFields)
+		assert.Nil(t, templates[0].ExptSource.Sampler)
 		assert.Nil(t, templates[0].ExptSource.Scheduler)
 	})
 
@@ -4205,6 +4225,11 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 							}
 						]
 					}
+				},
+				"sampler": {
+					"sample_rate": 0.5,
+					"is_cycle": true,
+					"cycle_time_unit": "day"
 				}
 			}
 		}`
@@ -4244,6 +4269,13 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline(t *testing.T) {
 		assert.Equal(t, "web", *template1.ExptSource.SpanFilterFields.PlatformType)
 		assert.True(t, *template1.ExptSource.Scheduler.Enabled)
 		assert.Equal(t, "daily", *template1.ExptSource.Scheduler.Frequency)
+		assert.NotNil(t, template1.ExptSource.Sampler)
+		assert.NotNil(t, template1.ExptSource.Sampler.SampleRate)
+		assert.InDelta(t, 0.5, *template1.ExptSource.Sampler.SampleRate, 1e-9)
+		assert.NotNil(t, template1.ExptSource.Sampler.IsCycle)
+		assert.True(t, *template1.ExptSource.Sampler.IsCycle)
+		assert.NotNil(t, template1.ExptSource.Sampler.CycleTimeUnit)
+		assert.Equal(t, "day", *template1.ExptSource.Sampler.CycleTimeUnit)
 	})
 
 	t.Run("pipeline没有data_reflow节点，不填充数据", func(t *testing.T) {
