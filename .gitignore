@@ -60,7 +60,6 @@ AGENTS.md
 backend/script/errorx/.env
 .cursor/
 .specify/
-specs/
 .puml
 openspec/
 skills-lock.json
