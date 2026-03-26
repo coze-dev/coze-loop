@@ -351,6 +351,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		Input:               inputData,
 		TargetType:          evalTargetDO.EvalTargetType,
 		EvalTarget:          evalTargetDO,
+		EvalSetItemID:       gptr.Of(param.ItemID),
+		EvalSetTurnID:       gptr.Of(param.TurnID),
 	})
 	if err != nil {
 		return nil, err
@@ -438,6 +440,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		Input:               inputData,
 		TargetType:          target.EvalTargetType,
 		EvalTarget:          target,
+		EvalSetItemID:       gptr.Of(param.ItemID),
+		EvalSetTurnID:       gptr.Of(param.TurnID),
 	})
 	if execErr != nil {
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.
