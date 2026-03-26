@@ -64,12 +64,16 @@ type IngestionServiceImpl struct {
 }
 
 func (i *IngestionServiceImpl) RunSync(ctx context.Context) error {
-	return i.c.RunInOne(ctx)
+	return i.c.RunInOne(ctx, func() error {
+		return nil
+	})
 }
 
 func (i *IngestionServiceImpl) RunAsync(ctx context.Context) {
 	go func() {
-		err := i.c.Run(ctx)
+		err := i.c.Run(ctx, func() error {
+			return nil
+		})
 		if err != nil {
 			panic(err)
 		}
