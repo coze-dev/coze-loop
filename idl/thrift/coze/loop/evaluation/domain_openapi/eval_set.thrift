@@ -119,14 +119,12 @@ const MultiModalStoreStrategy MultiModalStoreStrategy_Passthrough = "passthrough
 const MultiModalStoreStrategy MultiModalStoreStrategy_Store = "store"             // 转存用户的 url 到平台内
 
 struct MultiModalStoreOption {
-    1: optional MultiModalStoreStrategy multiModalStoreStrategy
-    2: optional bool skipOnDownloadFailed // 未指定时默认填充为 true
-    3: optional bool checkContentTypeConsistency // 未指定时默认填充为 true
+    1: optional MultiModalStoreStrategy multi_modal_store_strategy
 }
 
 struct FieldWriteOption {
     1: optional string fieldName         // 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key
     2: optional string fieldKey
-    3: optional common.ContentType modalityType // 手动标记的当前列，仅 image/video/audio 等多模态类型有效
-    4: optional MultiModalStoreOption multiModalStoreOpt
+    3: optional common.ContentType modality_type // 手动标记的当前列，仅 image/video/audio 等多模态类型有效
+    4: optional MultiModalStoreOption multi_modal_store_opt
 }

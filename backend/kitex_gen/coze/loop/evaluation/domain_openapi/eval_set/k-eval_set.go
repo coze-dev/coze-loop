@@ -3444,34 +3444,6 @@ func (p *MultiModalStoreOption) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 2:
-			if fieldTypeId == thrift.BOOL {
-				l, err = p.FastReadField2(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		case 3:
-			if fieldTypeId == thrift.BOOL {
-				l, err = p.FastReadField3(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -3504,34 +3476,6 @@ func (p *MultiModalStoreOption) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *MultiModalStoreOption) FastReadField2(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *bool
-	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.SkipOnDownloadFailed = _field
-	return offset, nil
-}
-
-func (p *MultiModalStoreOption) FastReadField3(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *bool
-	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.CheckContentTypeConsistency = _field
-	return offset, nil
-}
-
 func (p *MultiModalStoreOption) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -3539,8 +3483,6 @@ func (p *MultiModalStoreOption) FastWrite(buf []byte) int {
 func (p *MultiModalStoreOption) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
-		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -3551,8 +3493,6 @@ func (p *MultiModalStoreOption) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field2Length()
-		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -3567,47 +3507,11 @@ func (p *MultiModalStoreOption) fastWriteField1(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
-func (p *MultiModalStoreOption) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSkipOnDownloadFailed() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 2)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.SkipOnDownloadFailed)
-	}
-	return offset
-}
-
-func (p *MultiModalStoreOption) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetCheckContentTypeConsistency() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 3)
-		offset += thrift.Binary.WriteBool(buf[offset:], *p.CheckContentTypeConsistency)
-	}
-	return offset
-}
-
 func (p *MultiModalStoreOption) field1Length() int {
 	l := 0
 	if p.IsSetMultiModalStoreStrategy() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.MultiModalStoreStrategy)
-	}
-	return l
-}
-
-func (p *MultiModalStoreOption) field2Length() int {
-	l := 0
-	if p.IsSetSkipOnDownloadFailed() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.BoolLength()
-	}
-	return l
-}
-
-func (p *MultiModalStoreOption) field3Length() int {
-	l := 0
-	if p.IsSetCheckContentTypeConsistency() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.BoolLength()
 	}
 	return l
 }
@@ -3621,16 +3525,6 @@ func (p *MultiModalStoreOption) DeepCopy(s interface{}) error {
 	if src.MultiModalStoreStrategy != nil {
 		tmp := *src.MultiModalStoreStrategy
 		p.MultiModalStoreStrategy = &tmp
-	}
-
-	if src.SkipOnDownloadFailed != nil {
-		tmp := *src.SkipOnDownloadFailed
-		p.SkipOnDownloadFailed = &tmp
-	}
-
-	if src.CheckContentTypeConsistency != nil {
-		tmp := *src.CheckContentTypeConsistency
-		p.CheckContentTypeConsistency = &tmp
 	}
 
 	return nil
