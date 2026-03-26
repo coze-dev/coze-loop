@@ -217,6 +217,7 @@ type UploadAttachmentDetail struct {
 	OriginVideo     *Video
 	Video           *Video
 	ErrMsg          *string
+	ErrorType       *ItemErrorType
 }
 
 type FieldWriteOption struct {

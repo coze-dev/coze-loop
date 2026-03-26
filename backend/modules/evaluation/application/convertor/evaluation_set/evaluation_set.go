@@ -146,6 +146,7 @@ func UploadAttachmentDetailDO2DTO(do *entity.UploadAttachmentDetail) *app_eval_s
 		OriginVideo:     common.ConvertVideoDO2DTO(do.OriginVideo),
 		Video:           common.ConvertVideoDO2DTO(do.Video),
 		ErrMsg:          do.ErrMsg,
+		ErrorType:       gptr.Of(dataset.ItemErrorType(gptr.Indirect(do.ErrorType))),
 	}
 }
 
