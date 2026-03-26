@@ -12,134 +12,105 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const noQueryParsed = "no_query_parsed"
+
 type ChatProcessor struct{}
 
 func (c *ChatProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	for _, span := range spans {
-		if span == nil || !span.IsChatSpan() {
+		if span == nil {
 			continue
 		}
-		if span.Input == "" {
-			continue
-		}
-		processedInput := c.extractLastUserMessage(ctx, span.Input)
-		if processedInput != "" {
-			span.Input = processedInput
+		if span.IsModelSpan() {
+			span.Input = c.processModelInput(ctx, span.Input)
 		}
 	}
 	return spans, nil
 }
 
-func (c *ChatProcessor) extractLastUserMessage(ctx context.Context, input string) string {
+func (c *ChatProcessor) processModelInput(ctx context.Context, input string) string {
+	if input == "" {
+		return noQueryParsed
+	}
+
 	var inputMap map[string]interface{}
 	if err := sonic.UnmarshalString(input, &inputMap); err != nil {
 		logs.CtxDebug(ctx, "chat processor: input is not a valid JSON object")
-		return ""
+		return noQueryParsed
 	}
 
-	if messages := c.tryExtractFromStandardChat(inputMap); messages != nil {
-		return c.buildUserInput(ctx, messages)
+	if result, ok := c.tryProcessStandardChat(ctx, inputMap); ok {
+		return result
 	}
 
-	if messages := c.tryExtractFromResponsesAPI(inputMap); messages != nil {
-		return c.buildUserInput(ctx, messages)
+	if result, ok := c.tryProcessResponsesAPI(ctx, input, inputMap); ok {
+		return result
 	}
 
-	return ""
+	return noQueryParsed
 }
 
-func (c *ChatProcessor) tryExtractFromStandardChat(inputMap map[string]interface{}) []interface{} {
+func (c *ChatProcessor) tryProcessStandardChat(ctx context.Context, inputMap map[string]interface{}) (string, bool) {
 	messages, ok := inputMap["messages"].([]interface{})
 	if !ok || len(messages) == 0 {
-		return nil
+		return "", false
 	}
-	return c.filterLastUserMessage(messages)
+
+	lastMsg, ok := messages[len(messages)-1].(map[string]interface{})
+	if !ok {
+		return "", false
+	}
+	role, _ := lastMsg["role"].(string)
+	if role != "user" {
+		return "", true
+	}
+	// TODO: more compaction
+	inputMap["messages"] = []interface{}{lastMsg}
+	result, err := sonic.MarshalString(inputMap)
+	if err != nil {
+		logs.CtxWarn(ctx, "chat processor: failed to marshal input: %v", err)
+		return "", true
+	}
+	return result, true
 }
 
-func (c *ChatProcessor) tryExtractFromResponsesAPI(inputMap map[string]interface{}) []interface{} {
+func (c *ChatProcessor) tryProcessResponsesAPI(ctx context.Context, input string, inputMap map[string]interface{}) (string, bool) {
 	inputField, ok := inputMap["input"]
 	if !ok {
-		return nil
+		return "", false
 	}
 
 	switch v := inputField.(type) {
 	case string:
-		if v != "" {
-			return []interface{}{
-				map[string]interface{}{
-					"role":    "user",
-					"content": v,
-				},
-			}
-		}
+		return input, true
 	case []interface{}:
-		messages := c.convertResponsesAPIToStandard(v)
-		return c.filterLastUserMessage(messages)
+		return c.processResponsesAPIMessages(ctx, inputMap, v)
 	}
-	return nil
+	return "", false
 }
 
-func (c *ChatProcessor) convertResponsesAPIToStandard(input []interface{}) []interface{} {
-	var messages []interface{}
-	for _, item := range input {
-		itemMap, ok := item.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		itemType, _ := itemMap["type"].(string)
-		switch itemType {
-		case "message", "":
-			role, _ := itemMap["role"].(string)
-			if role == "" {
-				continue
-			}
-			content := itemMap["content"]
-			messages = append(messages, map[string]interface{}{
-				"role":    role,
-				"content": content,
-			})
-		}
-	}
-	return messages
-}
-
-func (c *ChatProcessor) filterLastUserMessage(messages []interface{}) []interface{} {
-	lastUserIndex := -1
-	for i := len(messages) - 1; i >= 0; i-- {
-		msg, ok := messages[i].(map[string]interface{})
-		if !ok {
-			continue
-		}
-		role, _ := msg["role"].(string)
-		if role == "user" {
-			lastUserIndex = i
-			break
-		}
+func (c *ChatProcessor) processResponsesAPIMessages(ctx context.Context, inputMap map[string]interface{}, items []interface{}) (string, bool) {
+	if len(items) == 0 {
+		return "", true
 	}
 
-	if lastUserIndex == -1 {
-		return nil
+	lastItem, ok := items[len(items)-1].(map[string]interface{})
+	if !ok {
+		return "", true
 	}
 
-	return []interface{}{messages[lastUserIndex]}
-}
-
-func (c *ChatProcessor) buildUserInput(ctx context.Context, messages []interface{}) string {
-	if len(messages) == 0 {
-		return ""
+	role, _ := lastItem["role"].(string)
+	if role != "user" {
+		return "", true
 	}
 
-	result := map[string]interface{}{
-		"messages": messages,
-	}
-
-	output, err := sonic.MarshalString(result)
+	inputMap["input"] = []interface{}{lastItem}
+	result, err := sonic.MarshalString(inputMap)
 	if err != nil {
-		logs.CtxWarn(ctx, "chat processor: failed to marshal user input: %v", err)
-		return ""
+		logs.CtxWarn(ctx, "chat processor: failed to marshal input: %v", err)
+		return "", true
 	}
-	return output
+	return result, true
 }
 
 type ChatProcessorFactory struct{}

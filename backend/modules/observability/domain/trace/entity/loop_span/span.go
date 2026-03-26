@@ -308,10 +308,6 @@ func (s *Span) IsToolSpan() bool {
 	return s.SpanType == SpanTypeTool
 }
 
-func (s *Span) IsChatSpan() bool {
-	return s.IsModelSpan() || s.IsToolSpan()
-}
-
 func (s *Span) getTags() []*Tag {
 	tags := make([]*Tag, 0)
 	for k, v := range s.TagsString {
