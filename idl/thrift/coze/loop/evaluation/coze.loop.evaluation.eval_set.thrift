@@ -374,7 +374,7 @@ struct GetEvaluationSetItemFieldResponse {
 }
 
 struct UploadAttachmentDetail {
-    1: optional dataset.ContentType contentType
+    1: optional dataset.ContentType content_type
     2: optional string imagex_service_id              // 图片处理服务 id
     // [20,50) 多模态信息. 根据 contentType 获取对应内容
     20: optional common.Image origin_image   // contentType=Image，原始图片
@@ -385,7 +385,7 @@ struct UploadAttachmentDetail {
     25: optional common.Video video        // contentType=Video. 上传后的视频
     // 错误信息
     101: optional dataset.ItemErrorType error_type // notice: 只返回图片相关的错误类型
-    102: optional string errMsg
+    102: optional string err_msg
 }
 
 struct ValidateEvaluationSetMultiPartDataRequest {

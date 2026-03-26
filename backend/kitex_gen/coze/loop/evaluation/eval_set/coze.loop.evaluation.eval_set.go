@@ -17661,7 +17661,7 @@ func (p *GetEvaluationSetItemFieldResponse) Field255DeepEqual(src *base.BaseResp
 }
 
 type UploadAttachmentDetail struct {
-	ContentType *dataset.ContentType `thrift:"contentType,1,optional" frugal:"1,optional,ContentType" form:"contentType" json:"contentType,omitempty" query:"contentType"`
+	ContentType *dataset.ContentType `thrift:"content_type,1,optional" frugal:"1,optional,ContentType" form:"content_type" json:"content_type,omitempty" query:"content_type"`
 	// 图片处理服务 id
 	ImagexServiceID *string `thrift:"imagex_service_id,2,optional" frugal:"2,optional,string" form:"imagex_service_id" json:"imagex_service_id,omitempty" query:"imagex_service_id"`
 	// [20,50) 多模态信息. 根据 contentType 获取对应内容
@@ -17678,7 +17678,7 @@ type UploadAttachmentDetail struct {
 	Video *common.Video `thrift:"video,25,optional" frugal:"25,optional,common.Video" form:"video" json:"video,omitempty" query:"video"`
 	// 错误信息
 	ErrorType *dataset.ItemErrorType `thrift:"error_type,101,optional" frugal:"101,optional,ItemErrorType" form:"error_type" json:"error_type,omitempty" query:"error_type"`
-	ErrMsg    *string                `thrift:"errMsg,102,optional" frugal:"102,optional,string" form:"errMsg" json:"errMsg,omitempty" query:"errMsg"`
+	ErrMsg    *string                `thrift:"err_msg,102,optional" frugal:"102,optional,string" form:"err_msg" json:"err_msg,omitempty" query:"err_msg"`
 }
 
 func NewUploadAttachmentDetail() *UploadAttachmentDetail {
@@ -17839,7 +17839,7 @@ func (p *UploadAttachmentDetail) SetErrMsg(val *string) {
 }
 
 var fieldIDToName_UploadAttachmentDetail = map[int16]string{
-	1:   "contentType",
+	1:   "content_type",
 	2:   "imagex_service_id",
 	20:  "origin_image",
 	21:  "image",
@@ -17848,7 +17848,7 @@ var fieldIDToName_UploadAttachmentDetail = map[int16]string{
 	24:  "origin_video",
 	25:  "video",
 	101: "error_type",
-	102: "errMsg",
+	102: "err_msg",
 }
 
 func (p *UploadAttachmentDetail) IsSetContentType() bool {
@@ -18179,7 +18179,7 @@ WriteStructEndError:
 
 func (p *UploadAttachmentDetail) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetContentType() {
-		if err = oprot.WriteFieldBegin("contentType", thrift.I32, 1); err != nil {
+		if err = oprot.WriteFieldBegin("content_type", thrift.I32, 1); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteI32(int32(*p.ContentType)); err != nil {
@@ -18341,7 +18341,7 @@ WriteFieldEndError:
 }
 func (p *UploadAttachmentDetail) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetErrMsg() {
-		if err = oprot.WriteFieldBegin("errMsg", thrift.STRING, 102); err != nil {
+		if err = oprot.WriteFieldBegin("err_msg", thrift.STRING, 102); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.ErrMsg); err != nil {
