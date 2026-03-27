@@ -127,7 +127,7 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 				if item.IsSetVersion() {
 					version = item.GetVersion()
 				}
-				if item.IsSetEvaluatorVersionID() {
+				if item.IsSetEvaluatorVersionID() && item.GetEvaluatorVersionID() > 0 {
 					evaluatorVersionID = item.GetEvaluatorVersionID()
 				}
 			}
