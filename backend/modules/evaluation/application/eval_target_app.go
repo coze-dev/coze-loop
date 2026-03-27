@@ -505,9 +505,6 @@ func (e EvalTargetApplicationImpl) GetSourceEvalTargetVersion(ctx context.Contex
 	if strings.TrimSpace(request.GetSourceTargetID()) == "" {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target id is nil"))
 	}
-	if strings.TrimSpace(request.GetSourceTargetVersion()) == "" {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target version is nil"))
-	}
 	// 鉴权
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
