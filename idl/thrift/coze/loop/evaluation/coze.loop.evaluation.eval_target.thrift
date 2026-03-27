@@ -328,7 +328,7 @@ service EvalTargetService {
     BatchGetSourceEvalTargetsResponse BatchGetSourceEvalTargets (1: BatchGetSourceEvalTargetsRequest request) (
         api.category="eval_target", api.post = "/api/evaluation/v1/eval_targets/batch_get_source", api.op_type = 'query', api.tag = 'volc-agentkit'
     )
-    // 获取Source评测对象版本的详情信息
+    // 获取Source评测对象版本的详情
     GetSourceEvalTargetVersionResponse GetSourceEvalTargetVersion (1: GetSourceEvalTargetVersionRequest request)(
         api.category="eval_target", api.get = "/api/evaluation/v1/eval_targets/get_source_version", api.op_type = 'query', api.tag = 'volc-agentkit'
     )
