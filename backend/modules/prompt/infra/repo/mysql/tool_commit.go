@@ -157,15 +157,15 @@ func (d *ToolCommitDAOImpl) List(ctx context.Context, param ListToolCommitParam,
 
 	if param.Cursor == nil {
 		if param.Asc {
-			tx = tx.Order(q.ToolCommit.CreatedAt.Asc())
+			tx = tx.Order(q.ToolCommit.ID.Asc())
 		} else {
-			tx = tx.Order(q.ToolCommit.CreatedAt.Desc())
+			tx = tx.Order(q.ToolCommit.ID.Desc())
 		}
 	} else {
 		if param.Asc {
-			tx = tx.Where(q.ToolCommit.CreatedAt.Gte(time.Unix(*param.Cursor, 0))).Order(q.ToolCommit.CreatedAt.Asc())
+			tx = tx.Where(q.ToolCommit.ID.Gt(*param.Cursor)).Order(q.ToolCommit.ID.Asc())
 		} else {
-			tx = tx.Where(q.ToolCommit.CreatedAt.Lte(time.Unix(*param.Cursor, 0))).Order(q.ToolCommit.CreatedAt.Desc())
+			tx = tx.Where(q.ToolCommit.ID.Lt(*param.Cursor)).Order(q.ToolCommit.ID.Desc())
 		}
 	}
 	tx = tx.Limit(param.Limit)
