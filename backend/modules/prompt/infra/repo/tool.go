@@ -350,7 +350,7 @@ func (d *ToolRepoImpl) ListToolCommit(ctx context.Context, param repo.ListToolCo
 		if po == nil {
 			continue
 		}
-		nextToken = po.CreatedAt.Unix()
+		nextToken = po.ID
 		commitInfos = append(commitInfos, &toolmgmt.CommitInfo{
 			Version:     po.Version,
 			BaseVersion: po.BaseVersion,
