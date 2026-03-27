@@ -2051,6 +2051,60 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	}
 }
 
+func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mgr := newTestExptManager(ctrl)
+	mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+	mgr.pipelineListAdapter = mockPipeline
+
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	mgr.idem.(*idemMocks.MockIdempotentService).EXPECT().Exist(ctx, gomock.Any()).AnyTimes().Return(false, nil)
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, int64(123), int64(789)).Return(&entity.Experiment{
+		ID:         123,
+		SpaceID:    789,
+		ExptType:   entity.ExptType_Offline,
+		StartAt:    gptr.Of(time.Now()),
+		SourceType: entity.SourceType_Workflow,
+		SourceID:   "42",
+	}, nil)
+
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
+		CalculateStats(ctx, int64(123), int64(789), session).
+		Return(&entity.ExptCalculateStats{SuccessItemCnt: 1}, nil)
+
+	mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().
+		GetIncompleteTurns(ctx, int64(123), int64(789), session).
+		Return([]*entity.ItemTurnID{}, nil)
+
+	mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).EXPECT().
+		UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).Return(nil)
+
+	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(ctx, gomock.Any()).Return(nil)
+
+	mockPipeline.EXPECT().PipelineNodeFinishCallback(ctx, int64(42), int64(789)).Return(nil).Times(1)
+
+	mgr.quotaRepo.(*repoMocks.MockQuotaRepo).EXPECT().
+		CreateOrUpdate(ctx, int64(789), gomock.Any(), session).Return(nil)
+
+	mgr.exptAggrResultService.(*svcMocks.MockExptAggrResultService).EXPECT().
+		PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).Return(nil)
+
+	mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().
+		EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).AnyTimes()
+
+	mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
+		{UserID: gptr.Of("test_user")},
+	}, nil)
+
+	err := mgr.CompleteExpt(ctx, 123, 789, session)
+	assert.NoError(t, err)
+}
+
 func TestExptMangerImpl_SetExptTerminating(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

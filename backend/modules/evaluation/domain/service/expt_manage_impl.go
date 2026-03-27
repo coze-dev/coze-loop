@@ -62,6 +62,7 @@ func NewExptManager(
 	templateManager IExptTemplateManager,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
+	pipelineListAdapter rpc.IPipelineListAdapter,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -88,8 +89,9 @@ func NewExptManager(
 		exptAggrResultService:       exptAggrResultService,
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		notifyRPCAdapter:      notifyRPCAdapter,
+		userProvider:          userProvider,
+		pipelineListAdapter:   pipelineListAdapter,
 	}
 }
 
@@ -118,8 +120,9 @@ type ExptMangerImpl struct {
 	benefitService              benefit.IBenefitService
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	notifyRPCAdapter      rpc.INotifyRPCAdapter
+	userProvider          rpc.IUserProvider
+	pipelineListAdapter   rpc.IPipelineListAdapter
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
