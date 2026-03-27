@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+	eval_common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	app_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
@@ -257,4 +259,196 @@ func TestCreateDatasetItemOutputDO2DTO(t *testing.T) {
 		ItemID:    &itemID,
 		IsNewItem: &isNewItem,
 	}, got)
+}
+
+func TestUploadAttachmentDetailsDO2DTOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, UploadAttachmentDetailsDO2DTOs(nil))
+
+	contentType := entity.ContentTypeImage
+	input := []*entity.UploadAttachmentDetail{{
+		ContentType: &contentType,
+	}}
+	got := UploadAttachmentDetailsDO2DTOs(input)
+	if assert.Len(t, got, 1) {
+		assert.Equal(t, dataset.ContentType_Image, *got[0].ContentType)
+	}
+}
+
+func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *entity.UploadAttachmentDetail
+		expected *app_eval_set.UploadAttachmentDetail
+	}{
+		{
+			name:     "nil input",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:  "text content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeText)},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType: gptr.Of(dataset.ContentType_Text),
+				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "image content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeImage)},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType: gptr.Of(dataset.ContentType_Image),
+				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "audio content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeAudio)},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType: gptr.Of(dataset.ContentType_Audio),
+				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "video content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeVideo)},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType: gptr.Of(dataset.ContentType_Video),
+				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "multipart content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeMultipart)},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType: gptr.Of(dataset.ContentType_MultiPart),
+				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "unknown content type",
+			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentType("unknown"))},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ErrorType: gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name:  "nil content type",
+			input: &entity.UploadAttachmentDetail{},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ErrorType: gptr.Of(dataset.ItemErrorType(0)),
+			},
+		},
+		{
+			name: "full fields",
+			input: &entity.UploadAttachmentDetail{
+				ContentType:     gptr.Of(entity.ContentTypeVideo),
+				ImagexServiceID: gptr.Of("imagex-service-id"),
+				OriginImage: &entity.Image{
+					Name:            gptr.Of("origin-image-name"),
+					URL:             gptr.Of("origin-image-url"),
+					URI:             gptr.Of("origin-image-uri"),
+					ThumbURL:        gptr.Of("origin-image-thumb"),
+					StorageProvider: gptr.Of(entity.StorageProvider_TOS),
+				},
+				Image: &entity.Image{
+					Name:            gptr.Of("image-name"),
+					URL:             gptr.Of("image-url"),
+					URI:             gptr.Of("image-uri"),
+					ThumbURL:        gptr.Of("image-thumb"),
+					StorageProvider: gptr.Of(entity.StorageProvider_VETOS),
+				},
+				OriginAudio: &entity.Audio{
+					Format:          gptr.Of("mp3"),
+					URL:             gptr.Of("origin-audio-url"),
+					Name:            gptr.Of("origin-audio-name"),
+					URI:             gptr.Of("origin-audio-uri"),
+					StorageProvider: gptr.Of(entity.StorageProvider_TOS),
+				},
+				Audio: &entity.Audio{
+					Format:          gptr.Of("wav"),
+					URL:             gptr.Of("audio-url"),
+					Name:            gptr.Of("audio-name"),
+					URI:             gptr.Of("audio-uri"),
+					StorageProvider: gptr.Of(entity.StorageProvider_VETOS),
+				},
+				OriginVideo: &entity.Video{
+					Name:            gptr.Of("origin-video-name"),
+					URL:             gptr.Of("origin-video-url"),
+					URI:             gptr.Of("origin-video-uri"),
+					ThumbURL:        gptr.Of("origin-video-thumb"),
+					StorageProvider: gptr.Of(entity.StorageProvider_TOS),
+				},
+				Video: &entity.Video{
+					Name:            gptr.Of("video-name"),
+					URL:             gptr.Of("video-url"),
+					URI:             gptr.Of("video-uri"),
+					ThumbURL:        gptr.Of("video-thumb"),
+					StorageProvider: gptr.Of(entity.StorageProvider_VETOS),
+				},
+				ErrMsg:    gptr.Of("upload failed"),
+				ErrorType: gptr.Of(entity.ItemErrorType_UploadImageFailed),
+			},
+			expected: &app_eval_set.UploadAttachmentDetail{
+				ContentType:     gptr.Of(dataset.ContentType_Video),
+				ImagexServiceID: gptr.Of("imagex-service-id"),
+				OriginImage: &eval_common.Image{
+					Name:            gptr.Of("origin-image-name"),
+					URL:             gptr.Of("origin-image-url"),
+					URI:             gptr.Of("origin-image-uri"),
+					ThumbURL:        gptr.Of("origin-image-thumb"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_TOS),
+				},
+				Image: &eval_common.Image{
+					Name:            gptr.Of("image-name"),
+					URL:             gptr.Of("image-url"),
+					URI:             gptr.Of("image-uri"),
+					ThumbURL:        gptr.Of("image-thumb"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_VETOS),
+				},
+				OriginAudio: &eval_common.Audio{
+					Format:          gptr.Of("mp3"),
+					URL:             gptr.Of("origin-audio-url"),
+					Name:            gptr.Of("origin-audio-name"),
+					URI:             gptr.Of("origin-audio-uri"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_TOS),
+				},
+				Audio: &eval_common.Audio{
+					Format:          gptr.Of("wav"),
+					URL:             gptr.Of("audio-url"),
+					Name:            gptr.Of("audio-name"),
+					URI:             gptr.Of("audio-uri"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_VETOS),
+				},
+				OriginVideo: &eval_common.Video{
+					Name:            gptr.Of("origin-video-name"),
+					URL:             gptr.Of("origin-video-url"),
+					URI:             gptr.Of("origin-video-uri"),
+					ThumbURL:        gptr.Of("origin-video-thumb"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_TOS),
+				},
+				Video: &eval_common.Video{
+					Name:            gptr.Of("video-name"),
+					URL:             gptr.Of("video-url"),
+					URI:             gptr.Of("video-uri"),
+					ThumbURL:        gptr.Of("video-thumb"),
+					StorageProvider: gptr.Of(dataset.StorageProvider_VETOS),
+				},
+				ErrMsg:    gptr.Of("upload failed"),
+				ErrorType: gptr.Of(dataset.ItemErrorType_UploadImageFailed),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, UploadAttachmentDetailDO2DTO(tt.input))
+		})
+	}
 }
