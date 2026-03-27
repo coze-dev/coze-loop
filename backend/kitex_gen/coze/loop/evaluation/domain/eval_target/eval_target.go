@@ -53,6 +53,18 @@ const (
 	EvalTargetType_CustomRPCServer EvalTargetType = 6
 	// 火山智能体Agentkit
 	EvalTargetType_VolcengineAgentAgentkit EvalTargetType = 7
+	// CozeBot在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_CozeBotOnline EvalTargetType = 11
+	// Prompt在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_CozeLoopPromptOnline EvalTargetType = 12
+	// CozeWorkflow在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_CozeWorkflowOnline EvalTargetType = 13
+	// 火山智能体在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_VolcengineAgentOnline EvalTargetType = 14
+	// 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_CustomRPCServerOnline EvalTargetType = 15
+	// 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象)
+	EvalTargetType_VolcengineAgentAgentkitOnline EvalTargetType = 16
 )
 
 func (p EvalTargetType) String() string {
@@ -71,6 +83,18 @@ func (p EvalTargetType) String() string {
 		return "CustomRPCServer"
 	case EvalTargetType_VolcengineAgentAgentkit:
 		return "VolcengineAgentAgentkit"
+	case EvalTargetType_CozeBotOnline:
+		return "CozeBotOnline"
+	case EvalTargetType_CozeLoopPromptOnline:
+		return "CozeLoopPromptOnline"
+	case EvalTargetType_CozeWorkflowOnline:
+		return "CozeWorkflowOnline"
+	case EvalTargetType_VolcengineAgentOnline:
+		return "VolcengineAgentOnline"
+	case EvalTargetType_CustomRPCServerOnline:
+		return "CustomRPCServerOnline"
+	case EvalTargetType_VolcengineAgentAgentkitOnline:
+		return "VolcengineAgentAgentkitOnline"
 	}
 	return "<UNSET>"
 }
@@ -91,6 +115,18 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_CustomRPCServer, nil
 	case "VolcengineAgentAgentkit":
 		return EvalTargetType_VolcengineAgentAgentkit, nil
+	case "CozeBotOnline":
+		return EvalTargetType_CozeBotOnline, nil
+	case "CozeLoopPromptOnline":
+		return EvalTargetType_CozeLoopPromptOnline, nil
+	case "CozeWorkflowOnline":
+		return EvalTargetType_CozeWorkflowOnline, nil
+	case "VolcengineAgentOnline":
+		return EvalTargetType_VolcengineAgentOnline, nil
+	case "CustomRPCServerOnline":
+		return EvalTargetType_CustomRPCServerOnline, nil
+	case "VolcengineAgentAgentkitOnline":
+		return EvalTargetType_VolcengineAgentAgentkitOnline, nil
 	}
 	return EvalTargetType(0), fmt.Errorf("not a valid EvalTargetType string")
 }

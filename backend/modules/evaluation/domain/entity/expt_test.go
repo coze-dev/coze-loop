@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -120,4 +121,12 @@ func TestQuotaSpaceExpt_Serialize(t *testing.T) {
 	b, err := q.Serialize()
 	assert.NoError(t, err)
 	assert.NotNil(t, b)
+}
+
+func TestCreateEvalTargetParam_IsNull(t *testing.T) {
+	assert.True(t, ((*CreateEvalTargetParam)(nil)).IsNull())
+	assert.True(t, (&CreateEvalTargetParam{}).IsNull())
+	assert.False(t, (&CreateEvalTargetParam{EvalTargetType: gptr.Of(EvalTargetTypeCozeLoopPromptOnline)}).IsNull())
+	s := "x"
+	assert.False(t, (&CreateEvalTargetParam{SourceTargetID: &s}).IsNull())
 }

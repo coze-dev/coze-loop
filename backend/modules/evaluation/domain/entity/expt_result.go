@@ -456,17 +456,24 @@ type ExptTemplateFilterFields struct {
 	EvaluatorIDs []int64
 	TargetType   []int64
 	ExptType     []int64
+	// CronActivate 对应表字段 cron_activate：仅允许 0（false）/1（true），语义与 ExptType 等多值 IN 一致
+	CronActivate []int64
 }
 
 func (e *ExptTemplateFilterFields) IsValid() bool {
 	if e == nil {
 		return true
 	}
-	for _, slice := range [][]int64{e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptType} {
+	for _, slice := range [][]int64{e.EvalSetIDs, e.TargetIDs, e.EvaluatorIDs, e.TargetType, e.ExptType, e.CronActivate} {
 		for _, item := range slice {
 			if item < 0 {
 				return false
 			}
+		}
+	}
+	for _, v := range e.CronActivate {
+		if v != 0 && v != 1 {
+			return false
 		}
 	}
 	for _, item := range e.CreatedBy {
@@ -603,6 +610,8 @@ type ExptTurnResultFilterAccelerator struct {
 	KeywordSearch     *KeywordFilter `json:"keyword_search"`
 	Page              Page           `json:"page"`
 	EvalSetSyncCkDate string
+	// IsOnlineExpt 是否在线实验，用于 QueryItemIDStates 拼接 SQL 时选择 join 的表名和条件
+	IsOnlineExpt bool `json:"is_online_expt"`
 }
 
 func (e *ExptTurnResultFilterAccelerator) HasFilters() bool {
@@ -779,6 +788,7 @@ type ExptTurnResultFilterEntity struct {
 	EvalTargetMetrics       map[string]int64   `json:"eval_target_metrics"`
 	CreatedDate             time.Time          `json:"created_date"`
 	EvaluatorScoreCorrected bool               `json:"evaluator_score_corrected"`
+	EvalSetID               int64              `json:"eval_set_id"`
 	EvalSetVersionID        int64              `json:"eval_set_version_id"`
 	CreatedAt               time.Time          `json:"created_at"`
 	UpdatedAt               time.Time          `json:"updated_at"`

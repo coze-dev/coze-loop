@@ -229,6 +229,20 @@ func parseIntList(str string) ([]int64, error) {
 	return res, nil
 }
 
+// parseCronActivateIntList 解析定时触发筛选值，仅允许 0（关）/1（开）
+func parseCronActivateIntList(str string) ([]int64, error) {
+	vals, err := parseIntList(str)
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range vals {
+		if v != 0 && v != 1 {
+			return nil, fmt.Errorf("cron_activate filter value must be 0 or 1, got %d", v)
+		}
+	}
+	return vals, nil
+}
+
 func parseStringList(str string) []string {
 	return strings.Split(str, ",")
 }
@@ -668,6 +682,15 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 				return nil, err
 			}
 			ff.ExptType = intersectIgnoreNull(ff.ExptType, types)
+		case domain_expt.FieldType_CronActivate:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			vals, err := parseCronActivateIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.CronActivate = intersectIgnoreNull(ff.CronActivate, vals)
 		default:
 			logs.CtxWarn(ctx, "ConvertFilters with unsupport condition: %v", json.Jsonify(cond))
 		}

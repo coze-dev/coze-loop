@@ -17254,9 +17254,12 @@ type CreateExperimentTemplateRequest struct {
 	// 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层）
 	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	// 调度配置（不在 ExptTemplate 结构中，保留在顶层）
-	ScheduleCron *string         `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
-	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ScheduleCron *string          `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
+	ExptSource   *expt.ExptSource `thrift:"expt_source,30,optional" frugal:"30,optional,expt.ExptSource" form:"expt_source" json:"expt_source,omitempty"`
+	// 模板运行态信息（如是否开启定时触发）；创建时可只填 cron_activate
+	ExptInfo *expt.ExptInfo  `thrift:"expt_info,23,optional" frugal:"23,optional,expt.ExptInfo" form:"expt_info" json:"expt_info,omitempty"`
+	Session  *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base     *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentTemplateRequest() *CreateExperimentTemplateRequest {
@@ -17345,6 +17348,30 @@ func (p *CreateExperimentTemplateRequest) GetScheduleCron() (v string) {
 	return *p.ScheduleCron
 }
 
+var CreateExperimentTemplateRequest_ExptSource_DEFAULT *expt.ExptSource
+
+func (p *CreateExperimentTemplateRequest) GetExptSource() (v *expt.ExptSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptSource() {
+		return CreateExperimentTemplateRequest_ExptSource_DEFAULT
+	}
+	return p.ExptSource
+}
+
+var CreateExperimentTemplateRequest_ExptInfo_DEFAULT *expt.ExptInfo
+
+func (p *CreateExperimentTemplateRequest) GetExptInfo() (v *expt.ExptInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptInfo() {
+		return CreateExperimentTemplateRequest_ExptInfo_DEFAULT
+	}
+	return p.ExptInfo
+}
+
 var CreateExperimentTemplateRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentTemplateRequest) GetSession() (v *common.Session) {
@@ -17389,6 +17416,12 @@ func (p *CreateExperimentTemplateRequest) SetDefaultEvaluatorsConcurNum(val *int
 func (p *CreateExperimentTemplateRequest) SetScheduleCron(val *string) {
 	p.ScheduleCron = val
 }
+func (p *CreateExperimentTemplateRequest) SetExptSource(val *expt.ExptSource) {
+	p.ExptSource = val
+}
+func (p *CreateExperimentTemplateRequest) SetExptInfo(val *expt.ExptInfo) {
+	p.ExptInfo = val
+}
 func (p *CreateExperimentTemplateRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -17404,6 +17437,8 @@ var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
 	20:  "create_eval_target_param",
 	21:  "default_evaluators_concur_num",
 	22:  "schedule_cron",
+	30:  "expt_source",
+	23:  "expt_info",
 	200: "session",
 	255: "Base",
 }
@@ -17430,6 +17465,14 @@ func (p *CreateExperimentTemplateRequest) IsSetDefaultEvaluatorsConcurNum() bool
 
 func (p *CreateExperimentTemplateRequest) IsSetScheduleCron() bool {
 	return p.ScheduleCron != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetExptSource() bool {
+	return p.ExptSource != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetExptInfo() bool {
+	return p.ExptInfo != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetSession() bool {
@@ -17511,6 +17554,22 @@ func (p *CreateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 22:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 30:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -17632,6 +17691,22 @@ func (p *CreateExperimentTemplateRequest) ReadField22(iprot thrift.TProtocol) er
 	p.ScheduleCron = _field
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) ReadField30(iprot thrift.TProtocol) error {
+	_field := expt.NewExptSource()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptSource = _field
+	return nil
+}
+func (p *CreateExperimentTemplateRequest) ReadField23(iprot thrift.TProtocol) error {
+	_field := expt.NewExptInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptInfo = _field
+	return nil
+}
 func (p *CreateExperimentTemplateRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -17681,6 +17756,14 @@ func (p *CreateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField30(oprot); err != nil {
+			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -17833,6 +17916,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *CreateExperimentTemplateRequest) writeField30(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptSource() {
+		if err = oprot.WriteFieldBegin("expt_source", thrift.STRUCT, 30); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptSource.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
+}
+func (p *CreateExperimentTemplateRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptInfo() {
+		if err = oprot.WriteFieldBegin("expt_info", thrift.STRUCT, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *CreateExperimentTemplateRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -17905,6 +18024,12 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 	if !p.Field22DeepEqual(ano.ScheduleCron) {
 		return false
 	}
+	if !p.Field30DeepEqual(ano.ExptSource) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.ExptInfo) {
+		return false
+	}
 	if !p.Field200DeepEqual(ano.Session) {
 		return false
 	}
@@ -17969,6 +18094,20 @@ func (p *CreateExperimentTemplateRequest) Field22DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ScheduleCron, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentTemplateRequest) Field30DeepEqual(src *expt.ExptSource) bool {
+
+	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentTemplateRequest) Field23DeepEqual(src *expt.ExptInfo) bool {
+
+	if !p.ExptInfo.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -19465,8 +19604,9 @@ type UpdateExperimentTemplateRequest struct {
 	// 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层）
 	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	// 调度配置（不在 ExptTemplate 结构中，保留在顶层）
-	ScheduleCron *string    `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
-	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ScheduleCron *string        `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
+	ExptInfo     *expt.ExptInfo `thrift:"expt_info,23,optional" frugal:"23,optional,expt.ExptInfo" form:"expt_info" json:"expt_info,omitempty"`
+	Base         *base.Base     `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateExperimentTemplateRequest() *UpdateExperimentTemplateRequest {
@@ -19562,6 +19702,18 @@ func (p *UpdateExperimentTemplateRequest) GetScheduleCron() (v string) {
 	return *p.ScheduleCron
 }
 
+var UpdateExperimentTemplateRequest_ExptInfo_DEFAULT *expt.ExptInfo
+
+func (p *UpdateExperimentTemplateRequest) GetExptInfo() (v *expt.ExptInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptInfo() {
+		return UpdateExperimentTemplateRequest_ExptInfo_DEFAULT
+	}
+	return p.ExptInfo
+}
+
 var UpdateExperimentTemplateRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateExperimentTemplateRequest) GetBase() (v *base.Base) {
@@ -19597,6 +19749,9 @@ func (p *UpdateExperimentTemplateRequest) SetDefaultEvaluatorsConcurNum(val *int
 func (p *UpdateExperimentTemplateRequest) SetScheduleCron(val *string) {
 	p.ScheduleCron = val
 }
+func (p *UpdateExperimentTemplateRequest) SetExptInfo(val *expt.ExptInfo) {
+	p.ExptInfo = val
+}
 func (p *UpdateExperimentTemplateRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -19610,6 +19765,7 @@ var fieldIDToName_UpdateExperimentTemplateRequest = map[int16]string{
 	20:  "create_eval_target_param",
 	21:  "default_evaluators_concur_num",
 	22:  "schedule_cron",
+	23:  "expt_info",
 	255: "Base",
 }
 
@@ -19635,6 +19791,10 @@ func (p *UpdateExperimentTemplateRequest) IsSetDefaultEvaluatorsConcurNum() bool
 
 func (p *UpdateExperimentTemplateRequest) IsSetScheduleCron() bool {
 	return p.ScheduleCron != nil
+}
+
+func (p *UpdateExperimentTemplateRequest) IsSetExptInfo() bool {
+	return p.ExptInfo != nil
 }
 
 func (p *UpdateExperimentTemplateRequest) IsSetBase() bool {
@@ -19722,6 +19882,14 @@ func (p *UpdateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 22:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField22(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 23:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField23(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -19851,6 +20019,14 @@ func (p *UpdateExperimentTemplateRequest) ReadField22(iprot thrift.TProtocol) er
 	p.ScheduleCron = _field
 	return nil
 }
+func (p *UpdateExperimentTemplateRequest) ReadField23(iprot thrift.TProtocol) error {
+	_field := expt.NewExptInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptInfo = _field
+	return nil
+}
 func (p *UpdateExperimentTemplateRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -19896,6 +20072,10 @@ func (p *UpdateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField22(oprot); err != nil {
 			fieldId = 22
+			goto WriteFieldError
+		}
+		if err = p.writeField23(oprot); err != nil {
+			fieldId = 23
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -20060,6 +20240,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
+func (p *UpdateExperimentTemplateRequest) writeField23(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptInfo() {
+		if err = oprot.WriteFieldBegin("expt_info", thrift.STRUCT, 23); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
+}
 func (p *UpdateExperimentTemplateRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -20115,6 +20313,9 @@ func (p *UpdateExperimentTemplateRequest) DeepEqual(ano *UpdateExperimentTemplat
 		return false
 	}
 	if !p.Field22DeepEqual(ano.ScheduleCron) {
+		return false
+	}
+	if !p.Field23DeepEqual(ano.ExptInfo) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -20185,6 +20386,13 @@ func (p *UpdateExperimentTemplateRequest) Field22DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ScheduleCron, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpdateExperimentTemplateRequest) Field23DeepEqual(src *expt.ExptInfo) bool {
+
+	if !p.ExptInfo.DeepEqual(src) {
 		return false
 	}
 	return true
