@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/samber/lo"
 	"golang.org/x/exp/maps"
 
@@ -239,11 +238,6 @@ func (app *ToolManageApplicationImpl) CommitToolDraft(ctx context.Context, reque
 	userID, ok := session.UserIDInCtx(ctx)
 	if !ok || lo.IsEmpty(userID) {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("User not found"))
-	}
-
-	_, err = semver.StrictNewVersion(request.GetCommitVersion())
-	if err != nil {
-		return r, err
 	}
 
 	if request.GetToolID() <= 0 {
