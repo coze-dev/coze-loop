@@ -10,6 +10,7 @@ include "./domain/annotation.thrift"
 include "./domain/export_dataset.thrift"
 include "./domain/task.thrift"
 include "../trajectory.thrift"
+include "./domain/annotation.thrift"
 
 struct ListSpansRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
@@ -268,6 +269,22 @@ struct ListAnnotationsResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ListWorkspaceAnnotationsRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional annotation.AnnotationType annotation_type(api.body="annotation_type")
+    4: optional common.SpanListType span_list_type (api.body="span_list_type")
+
+    255: optional base.Base Base
+}
+
+struct ListWorkspaceAnnotationsResponse {
+    1: required list<annotation.SimpleAnnotationInfo> simple_annotation_list
+
+    255: optional base.BaseResp BaseResp
+}
+
+
 struct ExportTracesToDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
     2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
@@ -307,7 +324,7 @@ struct ExportTracesToDatasetResponse {
 
 struct PreviewExportTracesToDatasetRequest {
     1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.body="workspace_id", vt.gt="0")
-    2: required list<SpanID> span_ids (api.body="span_ids", vt.min_size="1", vt.max_size="500")
+    2: required list<SpanID> span_ids (api.body="span_ids", vt.max_size="500")
     3: required dataset.DatasetCategory category (api.body="category")
     4: required DatasetConfig config (api.body="config")
     5: required i64 start_time (api.js_conv="true", go.tag='json:"start_time"', api.body="start_time")
@@ -315,6 +332,7 @@ struct PreviewExportTracesToDatasetRequest {
     7: optional common.PlatformType platform_type (api.body="platform_type")
     8: required export_dataset.ExportType export_type (api.body="export_type")                 // 导入方式，不填默认为追加
     9: optional list<export_dataset.FieldMapping> field_mappings (api.body="field_mappings", vt.min_size="1", vt.max_size="100")
+    10: optional filter.SpanFilterFields span_filters (api.body="span_filters")
 
     255: optional base.Base Base (api.none="true")
 }
@@ -421,6 +439,23 @@ struct ListTrajectoryResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ListMetadataRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional common.SpanListType span_list_type (api.body="span_list_type")
+
+    255: optional base.Base Base
+}
+
+struct MetadataItemInfo {
+    1: required string key
+}
+struct ListMetadataResponse {
+    1: required list<MetadataItemInfo> metadataItemList ,
+
+    255: optional base.BaseResp BaseResp
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
@@ -437,6 +472,7 @@ service TraceService {
     UpdateManualAnnotationResponse UpdateManualAnnotation(1: UpdateManualAnnotationRequest req) (api.put = '/api/observability/v1/annotations/:annotation_id')
     DeleteManualAnnotationResponse DeleteManualAnnotation(1: DeleteManualAnnotationRequest req) (api.delete = '/api/observability/v1/annotations/:annotation_id')
     ListAnnotationsResponse ListAnnotations(1: ListAnnotationsRequest req) (api.post = '/api/observability/v1/annotations/list')
+    ListWorkspaceAnnotationsResponse ListWorkspaceAnnotations(1: ListWorkspaceAnnotationsRequest req) (api.post = '/api/observability/v1/annotations/list_by_workspace')
     ExportTracesToDatasetResponse ExportTracesToDataset(1: ExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/export_to_dataset')
     PreviewExportTracesToDatasetResponse PreviewExportTracesToDataset(1: PreviewExportTracesToDatasetRequest Req)(api.post = '/api/observability/v1/traces/preview_export_to_dataset')
     ChangeEvaluatorScoreResponse ChangeEvaluatorScore(1: ChangeEvaluatorScoreRequest req) (api.post = '/api/observability/v1/traces/change_eval_score')
@@ -445,4 +481,5 @@ service TraceService {
     UpsertTrajectoryConfigResponse UpsertTrajectoryConfig(1: UpsertTrajectoryConfigRequest req) (api.post = '/api/observability/v1/traces/trajectory_config')
     GetTrajectoryConfigResponse GetTrajectoryConfig(1: GetTrajectoryConfigRequest req) (api.get = '/api/observability/v1/traces/trajectory_config')
     ListTrajectoryResponse ListTrajectory(1: ListTrajectoryRequest req) (api.post = '/api/observability/v1/traces/trajectory')
+    ListMetadataResponse ListMetadata(1: ListMetadataRequest req) (api.post = '/api/observability/v1/traces/metadata/list')
 }

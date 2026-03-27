@@ -71,6 +71,7 @@ func (v *TaskRepoImpl) ListTasks(ctx context.Context, param repo.ListTaskParam) 
 		ReqLimit:     param.ReqLimit,
 		ReqOffset:    param.ReqOffset,
 		OrderBy:      param.OrderBy,
+		NeedOnlyOld:  param.NeedOnlyOld,
 	})
 	if err != nil {
 		return nil, 0, err

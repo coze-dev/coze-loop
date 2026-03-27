@@ -3066,3 +3066,253 @@ func (p *AnnotationEvaluator) Field3DeepEqual(src string) bool {
 	}
 	return true
 }
+
+type SimpleAnnotationInfo struct {
+	Key            string          `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
+	AnnotationType *AnnotationType `thrift:"annotation_type,2,optional" frugal:"2,optional,string" form:"annotation_type" json:"annotation_type,omitempty" query:"annotation_type"`
+}
+
+func NewSimpleAnnotationInfo() *SimpleAnnotationInfo {
+	return &SimpleAnnotationInfo{}
+}
+
+func (p *SimpleAnnotationInfo) InitDefault() {
+}
+
+func (p *SimpleAnnotationInfo) GetKey() (v string) {
+	if p != nil {
+		return p.Key
+	}
+	return
+}
+
+var SimpleAnnotationInfo_AnnotationType_DEFAULT AnnotationType
+
+func (p *SimpleAnnotationInfo) GetAnnotationType() (v AnnotationType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnnotationType() {
+		return SimpleAnnotationInfo_AnnotationType_DEFAULT
+	}
+	return *p.AnnotationType
+}
+func (p *SimpleAnnotationInfo) SetKey(val string) {
+	p.Key = val
+}
+func (p *SimpleAnnotationInfo) SetAnnotationType(val *AnnotationType) {
+	p.AnnotationType = val
+}
+
+var fieldIDToName_SimpleAnnotationInfo = map[int16]string{
+	1: "key",
+	2: "annotation_type",
+}
+
+func (p *SimpleAnnotationInfo) IsSetAnnotationType() bool {
+	return p.AnnotationType != nil
+}
+
+func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetKey bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetKey = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetKey {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SimpleAnnotationInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SimpleAnnotationInfo[fieldId]))
+}
+
+func (p *SimpleAnnotationInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Key = _field
+	return nil
+}
+func (p *SimpleAnnotationInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *AnnotationType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AnnotationType = _field
+	return nil
+}
+
+func (p *SimpleAnnotationInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SimpleAnnotationInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SimpleAnnotationInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Key); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SimpleAnnotationInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnnotationType() {
+		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AnnotationType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SimpleAnnotationInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SimpleAnnotationInfo(%+v)", *p)
+
+}
+
+func (p *SimpleAnnotationInfo) DeepEqual(ano *SimpleAnnotationInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.AnnotationType) {
+		return false
+	}
+	return true
+}
+
+func (p *SimpleAnnotationInfo) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Key, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SimpleAnnotationInfo) Field2DeepEqual(src *AnnotationType) bool {
+
+	if p.AnnotationType == src {
+		return true
+	} else if p.AnnotationType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AnnotationType, *src) != 0 {
+		return false
+	}
+	return true
+}

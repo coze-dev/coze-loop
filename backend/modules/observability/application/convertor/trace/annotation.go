@@ -5,6 +5,7 @@ package trace
 
 import (
 	"fmt"
+	"github.com/bytedance/gg/gptr"
 	"strconv"
 	"time"
 
@@ -187,4 +188,28 @@ func AnnotationListDO2DTO(
 		}
 	}
 	return ret
+}
+
+func AnnotationListKeyConv(annos []*annodto.Annotation) {
+	for _, anno := range annos {
+		if anno == nil || anno.Type == nil {
+			continue
+		}
+		switch *anno.Type {
+		case annodto.AnnotationTypeAutoEvaluate:
+			if anno.AutoEvaluate != nil {
+				anno.Key = gptr.Of(anno.AutoEvaluate.EvaluatorName)
+			}
+		case annodto.AnnotationTypeManualFeedback:
+			if anno.ManualFeedback != nil {
+				anno.Key = gptr.Of(anno.ManualFeedback.TagKeyName)
+			}
+		case annodto.AnnotationTypeCozeFeedback:
+			continue
+		case annodto.AnnotationTypeOpenAPIFeedback:
+			continue
+		default:
+			continue
+		}
+	}
 }
