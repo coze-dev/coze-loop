@@ -30,6 +30,6 @@ func (a *PipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.Lis
 	}, nil
 }
 
-func (a *PipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, taskID, spaceID int64) error {
+func (a *PipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error {
 	return nil
 }

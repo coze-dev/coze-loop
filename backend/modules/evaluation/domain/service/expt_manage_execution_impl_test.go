@@ -2085,7 +2085,7 @@ func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t
 
 	mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(ctx, gomock.Any()).Return(nil)
 
-	mockPipeline.EXPECT().PipelineNodeFinishCallback(ctx, int64(42), int64(789)).Return(nil).Times(1)
+	mockPipeline.EXPECT().PipelineNodeFinishCallback(ctx, int64(123), int64(789)).Return(nil).Times(1)
 
 	mgr.quotaRepo.(*repoMocks.MockQuotaRepo).EXPECT().
 		CreateOrUpdate(ctx, int64(789), gomock.Any(), session).Return(nil)
