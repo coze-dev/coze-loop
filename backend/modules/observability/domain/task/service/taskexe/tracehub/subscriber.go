@@ -238,9 +238,8 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 
 	// 轨迹计算
 	if s.hasTrajectory() {
-		// todo fby
-		logs.CtxInfo(ctx, "Should do trajectory")
-		startAt := time.Now().Add(-7 * 24 * time.Hour).UnixMilli()
+		// 可能有延迟
+		startAt := time.Now().Add(-90 * 24 * time.Hour).UnixMilli()
 		endAt := time.Now().UnixMilli()
 		trajectoryMap, err := s.traceService.GetTrajectories(ctx, s.t.WorkspaceID, []string{span.TraceID}, startAt, endAt, s.t.GetPlatformType())
 		if err != nil {

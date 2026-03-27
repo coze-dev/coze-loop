@@ -298,7 +298,7 @@ type ListWorkspaceAnnotationsReq struct {
 }
 
 type ListWorkspaceAnnotationsResp struct {
-	SimpleAnnotationList []*annotation.SimpleAnnotationInfo
+	Annotations loop_span.AnnotationList
 }
 
 type ChangeEvaluatorScoreRequest struct {
@@ -1543,37 +1543,8 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 		return nil, err
 	}
 
-	type annoKey struct {
-		Key            string
-		AnnotationType loop_span.AnnotationType
-	}
-	keyCount := make(map[annoKey]int)
-	for _, anno := range annotations {
-		if anno == nil {
-			continue
-		}
-		k := annoKey{Key: anno.Key, AnnotationType: anno.AnnotationType}
-		keyCount[k]++
-	}
-
-	keys := lo.Keys(keyCount)
-	sort.Slice(keys, func(i, j int) bool {
-		if keyCount[keys[i]] != keyCount[keys[j]] {
-			return keyCount[keys[i]] > keyCount[keys[j]]
-		}
-		return keys[i].Key < keys[j].Key
-	})
-
-	simpleList := make([]*annotation.SimpleAnnotationInfo, 0, len(keys))
-	for _, k := range keys {
-		simpleList = append(simpleList, &annotation.SimpleAnnotationInfo{
-			Key:            k.Key,
-			AnnotationType: gptr.Of(annotation.AnnotationType(k.AnnotationType)),
-		})
-	}
-
 	return &ListWorkspaceAnnotationsResp{
-		SimpleAnnotationList: simpleList,
+		Annotations: annotations,
 	}, nil
 }
 

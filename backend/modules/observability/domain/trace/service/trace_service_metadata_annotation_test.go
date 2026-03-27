@@ -154,16 +154,13 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		PlatformType:   loop_span.PlatformCozeLoop,
 	}
 
-	t.Run("dedup by key and sort by frequency desc", func(t *testing.T) {
+	t.Run("returns raw annotations", func(t *testing.T) {
 		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"tenant1"}, nil)
 
 		annotations := loop_span.AnnotationList{
 			{ID: "a1", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
 			{ID: "a2", Key: "key_b", AnnotationType: loop_span.AnnotationType("test_type")},
 			{ID: "a3", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
-			{ID: "a4", Key: "key_a", AnnotationType: loop_span.AnnotationType("test_type")},
-			{ID: "a5", Key: "key_b", AnnotationType: loop_span.AnnotationType("test_type")},
-			{ID: "a6", Key: "key_c", AnnotationType: loop_span.AnnotationType("test_type")},
 		}
 
 		traceRepoMock.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, param *repo.ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error) {
@@ -174,10 +171,10 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		resp, err := svc.ListWorkspaceAnnotations(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		assert.Len(t, resp.SimpleAnnotationList, 3)
-		assert.Equal(t, "key_a", resp.SimpleAnnotationList[0].Key)
-		assert.Equal(t, "key_b", resp.SimpleAnnotationList[1].Key)
-		assert.Equal(t, "key_c", resp.SimpleAnnotationList[2].Key)
+		assert.Len(t, resp.Annotations, 3)
+		assert.Equal(t, "key_a", resp.Annotations[0].Key)
+		assert.Equal(t, "key_b", resp.Annotations[1].Key)
+		assert.Equal(t, "key_a", resp.Annotations[2].Key)
 	})
 
 	t.Run("get tenants error", func(t *testing.T) {
@@ -202,6 +199,6 @@ func TestTraceServiceImpl_ListWorkspaceAnnotations(t *testing.T) {
 		resp, err := svc.ListWorkspaceAnnotations(ctx, req)
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		assert.Len(t, resp.SimpleAnnotationList, 0)
+		assert.Len(t, resp.Annotations, 0)
 	})
 }

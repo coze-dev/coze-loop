@@ -5,6 +5,8 @@ package application
 
 import (
 	"context"
+	annodto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
+	"sort"
 	"strconv"
 	"time"
 
@@ -980,8 +982,46 @@ func (t *TraceApplication) ListWorkspaceAnnotations(ctx context.Context, req *tr
 		return nil, err
 	}
 
+	dResp := t.GetDisplayInfo(ctx, &GetDisplayInfoRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		UserIDs:      resp.Annotations.GetUserIDs(),
+		EvaluatorIDs: resp.Annotations.GetEvaluatorVersionIDs(),
+		TagKeyIDs:    resp.Annotations.GetAnnotationTagIDs(),
+	})
+	_ = dResp
+	annoWithInfo := tconv.AnnotationListDO2DTO(resp.Annotations, dResp.UserMap, dResp.EvalMap, dResp.TagMap)
+	tconv.AnnotationListKeyConv(annoWithInfo)
+	type annoKey struct {
+		Key            string
+		AnnotationType loop_span.AnnotationType
+	}
+	keyCount := make(map[annoKey]int)
+	for _, anno := range annoWithInfo {
+		if anno == nil {
+			continue
+		}
+		k := annoKey{Key: anno.GetKey(), AnnotationType: loop_span.AnnotationType(anno.GetType())}
+		keyCount[k]++
+	}
+
+	keys := lo.Keys(keyCount)
+	sort.Slice(keys, func(i, j int) bool {
+		if keyCount[keys[i]] != keyCount[keys[j]] {
+			return keyCount[keys[i]] > keyCount[keys[j]]
+		}
+		return keys[i].Key < keys[j].Key
+	})
+
+	simpleList := make([]*annodto.SimpleAnnotationInfo, 0, len(keys))
+	for _, k := range keys {
+		simpleList = append(simpleList, &annodto.SimpleAnnotationInfo{
+			Key:            k.Key,
+			AnnotationType: ptr.Of(annodto.AnnotationType(k.AnnotationType)),
+		})
+	}
+
 	return &trace.ListWorkspaceAnnotationsResponse{
-		SimpleAnnotationList: resp.SimpleAnnotationList,
+		SimpleAnnotationList: simpleList,
 	}, nil
 }
 

@@ -385,6 +385,7 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 		} else if val, ok := s.TagsByte[fieldName]; ok {
 			return val
 		}
+		return nil
 	}
 	if isSystem {
 		if val, ok := s.SystemTagsString[fieldName]; ok {
