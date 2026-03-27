@@ -627,7 +627,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	return nil
 }
 
-// notifyWorkflowPipelineOnExptFinished 评测实验进入终态时，source_type=workflow 则回调 Pipeline 节点完成；taskID 为实验 source_id（Pipeline 内 task）
+// notifyWorkflowPipelineOnExptFinished 评测实验进入终态时，source_type=workflow 则回调 Pipeline 节点完成；首参传实验 ID（ExperimentID）
 func (e *ExptMangerImpl) notifyWorkflowPipelineOnExptFinished(ctx context.Context, expt *entity.Experiment, spaceID int64, status entity.ExptStatus) {
 	if expt == nil || !entity.IsExptFinished(status) {
 		return
@@ -638,13 +638,12 @@ func (e *ExptMangerImpl) notifyWorkflowPipelineOnExptFinished(ctx context.Contex
 	if e.pipelineListAdapter == nil {
 		return
 	}
-	taskID, err := strconv.ParseInt(expt.SourceID, 10, 64)
-	if err != nil || taskID <= 0 {
-		logs.CtxWarn(ctx, "[ExptEval] skip PipelineNodeFinishCallback: invalid source_id, expt_id=%v source_id=%q err=%v", expt.ID, expt.SourceID, err)
+	if expt.ID <= 0 {
+		logs.CtxWarn(ctx, "[ExptEval] skip PipelineNodeFinishCallback: invalid expt id, expt_id=%v", expt.ID)
 		return
 	}
-	if err := e.pipelineListAdapter.PipelineNodeFinishCallback(ctx, taskID, spaceID); err != nil {
-		logs.CtxWarn(ctx, "[ExptEval] PipelineNodeFinishCallback failed, expt_id=%v task_id=%v space_id=%v err=%v", expt.ID, taskID, spaceID, err)
+	if err := e.pipelineListAdapter.PipelineNodeFinishCallback(ctx, expt.ID, spaceID); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PipelineNodeFinishCallback failed, expt_id=%v space_id=%v err=%v", expt.ID, spaceID, err)
 	}
 }
 
