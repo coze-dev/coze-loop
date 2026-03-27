@@ -13,6 +13,8 @@ import (
 //go:generate mockgen -destination=./mocks/pipeline_list_adapter.go -package=mocks . IPipelineListAdapter
 type IPipelineListAdapter interface {
 	ListPipelineFlow(ctx context.Context, req *ListPipelineFlowRequest) (*ListPipelineFlowResponse, error)
+	// PipelineNodeFinishCallback Pipeline 节点完成时回调 ml_flow（例如同步节点状态）
+	PipelineNodeFinishCallback(ctx context.Context, taskID, spaceID int64) error
 }
 
 // ListPipelineFlowRequest ListPipeline 查询请求参数

@@ -59,6 +59,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		templateManager:             svcMocks.NewMockIExptTemplateManager(ctrl),
 		notifyRPCAdapter:            mocks.NewMockINotifyRPCAdapter(ctrl),
 		userProvider:                mocks.NewMockIUserProvider(ctrl),
+		pipelineListAdapter:         nil,
 	}
 }
 
@@ -1142,6 +1143,7 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
+		nil,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

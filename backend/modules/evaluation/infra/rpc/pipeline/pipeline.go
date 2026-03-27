@@ -10,17 +10,26 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
-// NoopPipelineListAdapter 当无 ml_flow PipelineService 客户端时的空实现，返回空列表
-// 可替换为调用 ml_flow ListPipeline 的真实实现
-type NoopPipelineListAdapter struct{}
+// PipelineListAdapter 查询 ml_flow PipelineService 的适配器；当前无下游客户端时为空实现
+// （返回空列表、回调 no-op），可替换为真实 RPC 实现
+type PipelineListAdapter struct{}
 
-func NewNoopPipelineListAdapter() rpc.IPipelineListAdapter {
-	return &NoopPipelineListAdapter{}
+func NewPipelineListAdapter() *PipelineListAdapter {
+	return &PipelineListAdapter{}
 }
 
-func (n *NoopPipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.ListPipelineFlowRequest) (*rpc.ListPipelineFlowResponse, error) {
+// NewNoopPipelineListAdapter 与 NewPipelineListAdapter 等价，保留供 wire 与历史调用方使用
+func NewNoopPipelineListAdapter() rpc.IPipelineListAdapter {
+	return NewPipelineListAdapter()
+}
+
+func (a *PipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.ListPipelineFlowRequest) (*rpc.ListPipelineFlowResponse, error) {
 	return &rpc.ListPipelineFlowResponse{
 		Total: 0,
 		Items: []*entity.Pipeline{},
 	}, nil
+}
+
+func (a *PipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, taskID, spaceID int64) error {
+	return nil
 }
