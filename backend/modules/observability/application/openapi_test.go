@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	limitermocks "github.com/coze-dev/coze-loop/backend/infra/limiter/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/extra"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -2498,7 +2499,7 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 			EndTime:      endTime,
 			Limit:        10,
 			PlatformType: ptr.Of("platform"),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceOApi(context.Background(), req)
@@ -2550,7 +2551,7 @@ func TestOpenAPIApplication_SearchTraceOApi_Success(t *testing.T) {
 			EndTime:      endTime,
 			Limit:        10,
 			PlatformType: ptr.Of("platform"),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceOApi(context.Background(), req)
@@ -2576,7 +2577,7 @@ func TestOpenAPIApplication_validateSearchTraceOApiReq(t *testing.T) {
 		EndTime:      now,
 		Limit:        10,
 		PlatformType: ptr.Of("platform"),
-		Extra:        &openapi.Extra{Src: ptr.Of("test")},
+		Extra:        &extra.Extra{Src: ptr.Of("test")},
 	}
 
 	// missing trace and log id
@@ -2625,7 +2626,7 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq(t *testing.T) {
 		Limit:        50,
 		PlatformType: ptr.Of("platform"),
 		SpanIds:      []string{"span-1", "span-2"},
-		Extra:        &openapi.Extra{Src: ptr.Of("test")},
+		Extra:        &extra.Extra{Src: ptr.Of("test")},
 	}
 
 	res, err := app.buildSearchTraceOApiReq(ctx, withPlatformReq)
@@ -2751,7 +2752,7 @@ func TestOpenAPIApplication_buildSearchTraceTreeOApiReq(t *testing.T) {
 				},
 			},
 		},
-		Extra: &openapi.Extra{Src: ptr.Of("test")},
+		Extra: &extra.Extra{Src: ptr.Of("test")},
 	}
 
 	result, err := app.buildSearchTraceTreeOApiReq(context.Background(), req)
@@ -2839,7 +2840,7 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			EndTime:      &endTime,
 			Limit:        10,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
@@ -2909,7 +2910,7 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			StartTime:    &start,
 			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
@@ -2951,7 +2952,7 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			StartTime:    &start,
 			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
@@ -2999,7 +3000,7 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			StartTime:    &start,
 			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
@@ -3053,7 +3054,7 @@ func TestOpenAPIApplication_SearchTraceTreeOApi(t *testing.T) {
 			StartTime:    &start,
 			EndTime:      &end,
 			PlatformType: ptr.Of(common.PlatformType("platform")),
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.SearchTraceTreeOApi(context.Background(), req)
@@ -3120,7 +3121,7 @@ func TestOpenAPIApplication_ListSpansOApi(t *testing.T) {
 			PlatformType: ptr.Of("platform"),
 			SpanListType: ptr.Of(common.SpanListTypeRootSpan),
 			OrderBys:     []*common.OrderBy{{Field: ptr.Of("start_time")}},
-			Extra:        &openapi.Extra{Src: ptr.Of("test")},
+			Extra:        &extra.Extra{Src: ptr.Of("test")},
 		}
 
 		resp, err := app.ListSpansOApi(context.Background(), req)

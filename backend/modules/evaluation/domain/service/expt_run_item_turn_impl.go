@@ -492,7 +492,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 			return nil, err
 		}
 		res.EvaluateDatasetFields = allEvalSetFields
-		res.EvaluateTargetOutputFields = fromTarget
+		res.EvaluateTargetOutputFields = targetFields
 		for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 			for key, content := range fieldCnt {
 				res.InputFields[key] = content

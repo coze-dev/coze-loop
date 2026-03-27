@@ -75,3 +75,39 @@ func ExecuteStreaming(ctx context.Context, c *app.RequestContext) {
 func ListPromptBasic(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, promptOpenAPISvc.ListPromptBasic)
 }
+
+// CreatePromptOApi .
+// @router /v1/loop/prompts [POST]
+func CreatePromptOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.CreatePromptOApi)
+}
+
+// DeletePromptOApi .
+// @router /v1/loop/prompts/:prompt_id [DELETE]
+func DeletePromptOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.DeletePromptOApi)
+}
+
+// GetPromptOApi .
+// @router /v1/loop/prompts/:prompt_id [GET]
+func GetPromptOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.GetPromptOApi)
+}
+
+// SaveDraftOApi .
+// @router /v1/loop/prompts/:prompt_id/drafts/save [POST]
+func SaveDraftOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.SaveDraftOApi)
+}
+
+// ListCommitOApi .
+// @router /v1/loop/prompts/:prompt_id/commits/list [POST]
+func ListCommitOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.ListCommitOApi)
+}
+
+// CommitDraftOApi .
+// @router /v1/loop/prompts/:prompt_id/drafts/commit [POST]
+func CommitDraftOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, promptOpenAPISvc.CommitDraftOApi)
+}

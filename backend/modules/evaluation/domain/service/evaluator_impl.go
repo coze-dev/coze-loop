@@ -256,6 +256,77 @@ func (e *EvaluatorServiceImpl) GetBuiltinEvaluator(ctx context.Context, evaluato
 	return v, nil
 }
 
+func (e *EvaluatorServiceImpl) ResolveBuiltinEvaluatorVisibleVersionID(ctx context.Context, evaluatorID int64, evaluatorName string) (int64, error) {
+	if evaluatorID == 0 && evaluatorName == "" {
+		return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id or builtin_evaluator_name is required"))
+	}
+
+	builtinSpaceIDs := e.configer.GetBuiltinEvaluatorSpaceConf(ctx)
+	if len(builtinSpaceIDs) == 0 {
+		return 0, nil
+	}
+	spaceIDs := make([]int64, 0, len(builtinSpaceIDs))
+	spaceIDSet := make(map[int64]struct{}, len(builtinSpaceIDs))
+	for _, sid := range builtinSpaceIDs {
+		if sid == "" {
+			continue
+		}
+		v, err := strconv.ParseInt(sid, 10, 64)
+		if err != nil {
+			return 0, err
+		}
+		spaceIDs = append(spaceIDs, v)
+		spaceIDSet[v] = struct{}{}
+	}
+
+	var meta *entity.Evaluator
+	if evaluatorID > 0 {
+		metas, err := e.evaluatorRepo.BatchGetEvaluatorMetaByID(ctx, []int64{evaluatorID}, false)
+		if err != nil {
+			return 0, err
+		}
+		if len(metas) == 0 || metas[0] == nil {
+			return 0, nil
+		}
+		if _, ok := spaceIDSet[metas[0].SpaceID]; !ok {
+			return 0, nil
+		}
+		if evaluatorName != "" && metas[0].Name != evaluatorName {
+			return 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("builtin_evaluator_id and builtin_evaluator_name mismatch"))
+		}
+		meta = metas[0]
+	} else {
+		for _, sid := range spaceIDs {
+			m, err := e.evaluatorRepo.GetEvaluatorMetaBySpaceIDAndName(ctx, sid, evaluatorName, false)
+			if err != nil {
+				return 0, err
+			}
+			if m == nil {
+				continue
+			}
+			meta = m
+			break
+		}
+		if meta == nil {
+			return 0, nil
+		}
+	}
+
+	if !meta.Builtin || meta.BuiltinVisibleVersion == "" {
+		return 0, nil
+	}
+
+	pairs := [][2]interface{}{{meta.ID, meta.BuiltinVisibleVersion}}
+	versions, err := e.evaluatorRepo.BatchGetEvaluatorVersionsByEvaluatorIDAndVersions(ctx, pairs)
+	if err != nil {
+		return 0, err
+	}
+	if len(versions) == 0 || versions[0] == nil {
+		return 0, nil
+	}
+	return versions[0].GetEvaluatorVersionID(), nil
+}
+
 // BatchGetBuiltinEvaluator 批量获取预置评估器（visible版本）
 func (e *EvaluatorServiceImpl) BatchGetBuiltinEvaluator(ctx context.Context, evaluatorIDs []int64) ([]*entity.Evaluator, error) {
 	if len(evaluatorIDs) == 0 {
