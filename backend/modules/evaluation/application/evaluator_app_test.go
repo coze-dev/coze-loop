@@ -1160,24 +1160,10 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersionIDs(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("invalid workspace", func(t *testing.T) {
-		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
-		req.SetWorkspaceID(0)
-		_, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
-		assert.Error(t, err)
-	})
-
 	t.Run("success", func(t *testing.T) {
 		mockEvaluatorService.EXPECT().
 			BatchGetEvaluatorByIDAndVersion(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}}).
 			Return([]*entity.Evaluator{ev}, nil)
-		mockAuth.EXPECT().
-			Authorization(gomock.Any(), &rpc.AuthorizationParam{
-				ObjectID:      strconv.FormatInt(workspaceID, 10),
-				SpaceID:       workspaceID,
-				ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-			}).
-			Return(nil)
 
 		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
 		req.SetWorkspaceID(workspaceID)

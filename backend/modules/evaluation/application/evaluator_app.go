@@ -741,14 +741,10 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersions(ctx context.Context, re
 	}, nil
 }
 
-// BatchGetEvaluatorVersionIDs 按 evaluator_id + version 批量解析 evaluator_version_id（与请求顺序一致；未命中时 evaluator_version_id 为空或 0）
+// BatchGetEvaluatorVersionIDs 按 evaluator_id + version 批量解析 evaluator_version_id（与请求顺序一致；未命中时 evaluator_version_id 为空或 0）。内部 RPC，不做用户级鉴权。
 func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorVersionIDsRequest) (resp *evaluatorservice.BatchGetEvaluatorVersionIDsResponse, err error) {
 	if request == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
-	}
-	workspaceID := request.GetWorkspaceID()
-	if workspaceID <= 0 {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id invalid"))
 	}
 	pairsIn := request.GetEvaluatorIDVersionPairs()
 	if len(pairsIn) == 0 {
@@ -782,32 +778,6 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, 
 			continue
 		}
 		idVer2DO[evaluatorIDVersionPairKey(ev.ID, ev.GetVersion())] = ev
-	}
-
-	if len(idVer2DO) > 0 {
-		checkedSpace := make(map[int64]bool)
-		for _, ev := range dos {
-			if ev == nil {
-				continue
-			}
-			spaceID := ev.SpaceID
-			if checkedSpace[spaceID] {
-				continue
-			}
-			checkedSpace[spaceID] = true
-			if spaceID == workspaceID {
-				err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-					ObjectID:      strconv.FormatInt(spaceID, 10),
-					SpaceID:       spaceID,
-					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-				})
-			} else {
-				err = e.authBuiltinManagement(ctx, spaceID, spaceTypeBuiltin, false)
-			}
-			if err != nil {
-				return nil, err
-			}
-		}
 	}
 
 	out := make([]*evaluatordto.EvaluatorIDVersionItem, 0, len(pairsIn))
