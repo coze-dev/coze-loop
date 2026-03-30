@@ -361,11 +361,12 @@ const (
 type StorageProvider int64
 
 const (
-	StorageProvider_TOS    StorageProvider = 1
-	StorageProvider_VETOS  StorageProvider = 2
-	StorageProvider_HDFS   StorageProvider = 3
-	StorageProvider_ImageX StorageProvider = 4
-	StorageProvider_S3     StorageProvider = 5
+	StorageProvider_TOS         StorageProvider = 1
+	StorageProvider_VETOS       StorageProvider = 2
+	StorageProvider_HDFS        StorageProvider = 3
+	StorageProvider_ImageX      StorageProvider = 4
+	StorageProvider_S3          StorageProvider = 5
+	StorageProvider_ExternalUrl StorageProvider = 6
 	/* 后端内部使用 */
 	StorageProvider_Abase   StorageProvider = 100
 	StorageProvider_RDS     StorageProvider = 101
@@ -390,6 +391,8 @@ func (p StorageProvider) String() string {
 		return "RDS"
 	case StorageProvider_LocalFS:
 		return "LocalFS"
+	case StorageProvider_ExternalUrl:
+		return "ExternalUrl"
 	}
 	return "<UNSET>"
 }
@@ -412,6 +415,8 @@ func StorageProviderFromString(s string) (StorageProvider, error) {
 		return StorageProvider_RDS, nil
 	case "LocalFS":
 		return StorageProvider_LocalFS, nil
+	case "ExternalUrl":
+		return StorageProvider_ExternalUrl, nil
 	}
 	return StorageProvider(0), fmt.Errorf("not a valid StorageProvider string")
 }

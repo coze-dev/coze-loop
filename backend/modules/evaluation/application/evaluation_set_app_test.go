@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
 	domain_eval_set "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_set"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	metricsmock "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
@@ -237,6 +238,218 @@ func TestEvaluationSetApplicationImpl_ParseImportSourceFile(t *testing.T) {
 				tc.setup()
 			}
 			resp, err := app.ParseImportSourceFile(context.Background(), tc.req)
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluationSetApplicationImpl_EvaluationSetValidateMultiPartData(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+
+	app := &EvaluationSetApplicationImpl{
+		auth:                 mockAuth,
+		evaluationSetService: mockSvc,
+	}
+
+	spaceID := int64(2002)
+
+	baseReq := func() *eval_set.ValidateEvaluationSetMultiPartDataRequest {
+		return &eval_set.ValidateEvaluationSetMultiPartDataRequest{
+			SpaceID:     spaceID,
+			PreviewData: []string{"https://example.com/a.png"},
+		}
+	}
+	tests := []struct {
+		name    string
+		req     *eval_set.ValidateEvaluationSetMultiPartDataRequest
+		setup   func()
+		wantErr int32
+		check   func(t *testing.T, resp *eval_set.ValidateEvaluationSetMultiPartDataResponse)
+	}{
+		{"nil req", nil, func() {}, errno.CommonInvalidParamCode, nil},
+		{
+			name: "鉴权失败",
+			req:  baseReq(),
+			setup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "成功",
+			req:  baseReq(),
+			setup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				mockSvc.EXPECT().ValidateMultiPartData(gomock.Any(), spaceID, []string{"https://example.com/a.png"}, gomock.Nil()).Return(nil, nil)
+			},
+			check: func(t *testing.T, resp *eval_set.ValidateEvaluationSetMultiPartDataResponse) {
+				if assert.NotNil(t, resp) {
+					assert.NotNil(t, resp.BaseResp)
+					assert.Nil(t, resp.AttachmentUrlsCheckDetail)
+				}
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
+			}
+			resp, err := app.ValidateEvaluationSetMultiPartData(context.Background(), tc.req)
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+		})
+	}
+}
+
+func TestEvaluationSetApplicationImpl_UpdateEvaluationSet(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalSetSvc := servicemocks.NewMockIEvaluationSetService(ctrl)
+
+	app := &EvaluationSetApplicationImpl{
+		auth:                 mockAuth,
+		evaluationSetService: mockEvalSetSvc,
+	}
+
+	workspaceID := int64(3003)
+	evaluationSetID := int64(4004)
+	validSet := &entity.EvaluationSet{ID: evaluationSetID, SpaceID: workspaceID + 1, BaseInfo: &entity.BaseInfo{CreatedBy: &entity.UserInfo{UserID: gptr.Of("owner")}}}
+
+	baseReq := func() *eval_set.UpdateEvaluationSetRequest {
+		return &eval_set.UpdateEvaluationSetRequest{
+			WorkspaceID:     workspaceID,
+			EvaluationSetID: evaluationSetID,
+			Name:            gptr.Of("new name"),
+			Description:     gptr.Of("new desc"),
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *eval_set.UpdateEvaluationSetRequest
+		setup   func()
+		wantErr int32
+		check   func(t *testing.T, resp *eval_set.UpdateEvaluationSetResponse)
+	}{
+		{
+			name: "nil req",
+			req:  nil,
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "get evaluation set error",
+			req:  baseReq(),
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(nil, errors.New("get err"))
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: -1,
+		},
+		{
+			name: "evaluation set not found",
+			req:  baseReq(),
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(nil, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Times(0)
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "auth failed",
+			req:  baseReq(),
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "update service error",
+			req:  baseReq(),
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).Return(nil)
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.AssignableToTypeOf(&entity.UpdateEvaluationSetParam{})).Return(errors.New("update err"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success",
+			req:  baseReq(),
+			setup: func() {
+				mockEvalSetSvc.EXPECT().GetEvaluationSet(gomock.Any(), gptr.Of(workspaceID), evaluationSetID, gomock.Nil()).Return(validSet, nil)
+				mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationWithoutSPIParam{})).DoAndReturn(func(_ context.Context, p *rpc.AuthorizationWithoutSPIParam) error {
+					assert.Equal(t, strconv.FormatInt(validSet.ID, 10), p.ObjectID)
+					assert.Equal(t, workspaceID, p.SpaceID)
+					assert.Equal(t, validSet.SpaceID, p.ResourceSpaceID)
+					assert.Equal(t, validSet.BaseInfo.CreatedBy.UserID, p.OwnerID)
+					if assert.Len(t, p.ActionObjects, 1) {
+						assert.Equal(t, consts.Edit, gptr.Indirect(p.ActionObjects[0].Action))
+						assert.Equal(t, rpc.AuthEntityType_EvaluationSet, gptr.Indirect(p.ActionObjects[0].EntityType))
+					}
+					return nil
+				})
+				mockEvalSetSvc.EXPECT().UpdateEvaluationSet(gomock.Any(), gomock.AssignableToTypeOf(&entity.UpdateEvaluationSetParam{})).DoAndReturn(func(_ context.Context, p *entity.UpdateEvaluationSetParam) error {
+					assert.Equal(t, workspaceID, p.SpaceID)
+					assert.Equal(t, evaluationSetID, p.EvaluationSetID)
+					assert.Equal(t, gptr.Indirect(baseReq().Name), gptr.Indirect(p.Name))
+					assert.Equal(t, gptr.Indirect(baseReq().Description), gptr.Indirect(p.Description))
+					return nil
+				})
+			},
+			check: func(t *testing.T, resp *eval_set.UpdateEvaluationSetResponse) {
+				assert.NotNil(t, resp)
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
+			}
+			resp, err := app.UpdateEvaluationSet(context.Background(), tc.req)
 			if tc.wantErr != 0 {
 				assert.Error(t, err)
 				if tc.wantErr > 0 {

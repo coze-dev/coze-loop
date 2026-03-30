@@ -6,6 +6,7 @@ package evaluation_set
 import (
 	"testing"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
@@ -1016,4 +1017,66 @@ func TestOpenAPIDatasetIOJobOptionDTO2DO(t *testing.T) {
 	do := OpenAPIDatasetIOJobOptionDTO2DO(opt)
 	assert.NotNil(t, do)
 	assert.Equal(t, ptr(true), do.OverwriteDataset)
+}
+
+func TestConvertOpenAPISchemaKeyToDO(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, convertOpenAPISchemaKeyToDO(nil))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Integer), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKeyInteger)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Float), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKeyFloat)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Bool), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKeyBool)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_String), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKeyString)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Trajectory), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKeyTrajectory)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_String), convertOpenAPISchemaKeyToDO(gptr.Of(openapi_eval_set.SchemaKey("unknown"))))
+}
+
+func TestOpenAPIFieldWriteOptionDTO2DOs(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, OpenAPIFieldWriteOptionDTO2DOs(nil))
+	assert.Nil(t, OpenAPIFieldWriteOptionDTO2DO(nil))
+
+	fieldName := "field"
+	fieldKey := "key"
+	modality := common.ContentTypeImage
+	strategy := openapi_eval_set.MultiModalStoreStrategy("store")
+	dto := &openapi_eval_set.FieldWriteOption{
+		FieldName:    &fieldName,
+		FieldKey:     &fieldKey,
+		ModalityType: &modality,
+		MultiModalStoreOpt: &openapi_eval_set.MultiModalStoreOption{
+			MultiModalStoreStrategy: &strategy,
+		},
+	}
+
+	got := OpenAPIFieldWriteOptionDTO2DO(dto)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, &fieldName, got.FieldName)
+		assert.Equal(t, &fieldKey, got.FieldKey)
+		assert.NotNil(t, got.MultiModalStoreOpt)
+		assert.Equal(t, entity.ContentType(common.ContentTypeImage), *got.MultiModalStoreOpt.ContentType)
+		assert.Equal(t, entity.MultiModalStoreStrategyStore, *got.MultiModalStoreOpt.MultiModalStoreStrategy)
+	}
+	assert.Len(t, OpenAPIFieldWriteOptionDTO2DOs([]*openapi_eval_set.FieldWriteOption{dto}), 1)
+}
+
+func TestOpenAPIObjectAndMediaConversions(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, ConvertObjectStorageDO2DTO(nil))
+	assert.Nil(t, ConvertAudioDTO2DO(nil))
+	assert.Nil(t, ConvertVideoDTO2DO(nil))
+
+	url := "https://x"
+	uri := "tos://x"
+	name := "media"
+	thumb := "https://thumb"
+	format := "mp3"
+
+	assert.Equal(t, &common.ObjectStorage{URL: &url}, ConvertObjectStorageDO2DTO(&entity.ObjectStorage{URL: &url}))
+	assert.Equal(t, &entity.Audio{URL: &url, Name: &name, URI: &uri}, ConvertAudioDTO2DO(&common.Audio{URL: &url, Name: &name, URI: &uri}))
+	assert.Equal(t, &entity.Video{Name: &name, URL: &url, ThumbURL: &thumb, URI: &uri}, ConvertVideoDTO2DO(&common.Video{Name: &name, URL: &url, ThumbURL: &thumb, URI: &uri}))
+	assert.Equal(t, &common.Video{Name: &name, URL: &url, ThumbURL: &thumb, URI: &uri}, ConvertVideoDO2DTO(&entity.Video{Name: &name, URL: &url, ThumbURL: &thumb, URI: &uri}))
+	assert.Equal(t, &common.Audio{Format: &format, URL: &url, Name: &name, URI: &uri}, ConvertAudioDO2DTO(&entity.Audio{Format: &format, URL: &url, Name: &name, URI: &uri}))
 }

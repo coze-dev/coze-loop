@@ -81,6 +81,14 @@ func (p *DatasetIOJob) IsValid() error {
 	return nil
 }
 func (p *DatasetIOJobOption) IsValid() error {
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem := p.FieldWriteOptions[i]
+		if _elem != nil {
+			if err := _elem.IsValid(); err != nil {
+				return fmt.Errorf("field _elem not valid, %w", err)
+			}
+		}
+	}
 	return nil
 }
 func (p *DatasetIOJobProgress) IsValid() error {
