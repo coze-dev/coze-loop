@@ -104,7 +104,11 @@ func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Pr
 	if err != nil {
 		return nil, err
 	}
-	promptHandler := NewPromptHandler(promptManageService, promptDebugService, promptExecuteService, promptOpenAPIService)
+	toolManageService, err := application2.InitToolManageApplication(idgen2, db2, authClient, userClient)
+	if err != nil {
+		return nil, err
+	}
+	promptHandler := NewPromptHandler(promptManageService, promptDebugService, promptExecuteService, promptOpenAPIService, toolManageService)
 	return promptHandler, nil
 }
 

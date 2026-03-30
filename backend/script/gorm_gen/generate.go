@@ -75,6 +75,22 @@ func generateForPrompt(db *gorm.DB) {
 			})))
 	}
 
+	// tool_basic with soft delete
+	models = append(models, g.GenerateModel("tool_basic",
+		gen.FieldType("deleted_at", "soft_delete.DeletedAt"),
+		gen.FieldGORMTag("deleted_at", func(tag field.GormTag) field.GormTag {
+			return tag.Set("column:deleted_at;not null;default:0;softDelete:milli")
+		}),
+		gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
+			return tag.Set("charset=utf8mb4")
+		})))
+
+	// tool_commit without soft delete
+	models = append(models, g.GenerateModel("tool_commit",
+		gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
+			return tag.Set("charset=utf8mb4")
+		})))
+
 	g.ApplyBasic(models...)
 	g.Execute()
 }
