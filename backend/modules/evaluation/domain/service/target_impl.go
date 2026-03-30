@@ -429,7 +429,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
-	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
@@ -448,7 +448,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	}
 
 	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
-
+	outputData.Ext = ext
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
 		ID:                   invokeID,
