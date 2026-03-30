@@ -257,6 +257,27 @@ func (l *LocalEvaluatorService) BatchGetEvaluatorVersions(ctx context.Context, r
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluatorService) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionIDsRequest, callOptions ...callopt.Option) (*evaluator.BatchGetEvaluatorVersionIDsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsArgs)
+		result := out.(*evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsResult)
+		resp, err := l.impl.BatchGetEvaluatorVersionIDs(ctx, arg.Request)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsArgs{Request: request}
+	result := &evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsResult{}
+	ctx = l.injectRPCInfo(ctx, "BatchGetEvaluatorVersionIDs")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluatorService) SubmitEvaluatorVersion(ctx context.Context, request *evaluator.SubmitEvaluatorVersionRequest, callOptions ...callopt.Option) (*evaluator.SubmitEvaluatorVersionResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*evaluator.EvaluatorServiceSubmitEvaluatorVersionArgs)

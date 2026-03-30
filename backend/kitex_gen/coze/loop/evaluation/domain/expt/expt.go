@@ -6491,19 +6491,19 @@ WriteFieldEndError:
 func (p *ExptSource) writeField102(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSampler() {
 		if err = oprot.WriteFieldBegin("sampler", thrift.STRUCT, 102); err != nil {
-			goto WriteField102BeginError
+			goto WriteFieldBeginError
 		}
 		if err := p.Sampler.Write(oprot); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteField102EndError
+			goto WriteFieldEndError
 		}
 	}
 	return nil
-WriteField102BeginError:
+WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
-WriteField102EndError:
+WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
 }
 
