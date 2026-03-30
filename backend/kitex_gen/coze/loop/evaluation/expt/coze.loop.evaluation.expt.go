@@ -26054,16 +26054,18 @@ func (p *UpdateAnnotateRecordResp) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-/** 实验报告 CSV 导出列：四个一级分组，组内 list<string>。不传 export_columns：导出全部；不传某一 list：该组全选；传 []：该组不导出。item_id、status 始终导出。部分导出时不含标注列（全量导出仍含标注）。 */
+/** 实验报告 CSV 导出列：四个一级分组，组内 list<string>。不传 export_columns：导出全部（含标注列等）。传 export_columns（含空 struct）：白名单模式，仅 item_id、status 等必填列 + 各分组非空 list 中的列；某一 list 未传（unset）与传 [] 对该组均表示不导出。白名单导出不含标注列。 */
 type ExptResultExportColumnSpec struct {
 	/** 评测集字段：ColumnEvalSetField.Key */
-	EvalSetFields []string `thrift:"eval_set_fields,1,optional" frugal:"1,optional,list<string>" form:"eval_set_fields" json:"eval_set_fields,omitempty"`
+	EvalSetFields []string `thrift:"eval_set_fields,1,optional" frugal:"1,optional,list<string>" json:"eval_set_fields" form:"eval_set_fields" query:"eval_set_fields"`
 	/** 评测对象输出（非性能指标）：ColumnEvalTarget.Name，如 actual_output、trajectory、自定义输出名 */
-	EvalTargetOutputs []string `thrift:"eval_target_outputs,2,optional" frugal:"2,optional,list<string>" form:"eval_target_outputs" json:"eval_target_outputs,omitempty"`
+	EvalTargetOutputs []string `thrift:"eval_target_outputs,2,optional" frugal:"2,optional,list<string>" json:"eval_target_outputs" form:"eval_target_outputs" query:"eval_target_outputs"`
 	/** 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等） */
-	Metrics []string `thrift:"metrics,3,optional" frugal:"3,optional,list<string>" form:"metrics" json:"metrics,omitempty"`
+	Metrics []string `thrift:"metrics,3,optional" frugal:"3,optional,list<string>" json:"metrics" form:"metrics" query:"metrics"`
 	/** 评估器版本列选择：weighted_score；{evaluator_version_id}:score / :reason；亦支持 evaluator:{id}:score|reason */
-	EvaluatorVersionIds []string `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<string>" form:"evaluator_version_ids" json:"evaluator_version_ids,omitempty"`
+	EvaluatorVersionIds []string `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<string>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
+	/** 是否导出加权分数 */
+	WeightedScore *bool `thrift:"weighted_score,5,optional" frugal:"5,optional,bool" json:"weighted_score" form:"weighted_score" query:"weighted_score"`
 }
 
 func NewExptResultExportColumnSpec() *ExptResultExportColumnSpec {
@@ -26120,6 +26122,18 @@ func (p *ExptResultExportColumnSpec) GetEvaluatorVersionIds() (v []string) {
 	}
 	return p.EvaluatorVersionIds
 }
+
+var ExptResultExportColumnSpec_WeightedScore_DEFAULT bool
+
+func (p *ExptResultExportColumnSpec) GetWeightedScore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWeightedScore() {
+		return ExptResultExportColumnSpec_WeightedScore_DEFAULT
+	}
+	return *p.WeightedScore
+}
 func (p *ExptResultExportColumnSpec) SetEvalSetFields(val []string) {
 	p.EvalSetFields = val
 }
@@ -26132,12 +26146,16 @@ func (p *ExptResultExportColumnSpec) SetMetrics(val []string) {
 func (p *ExptResultExportColumnSpec) SetEvaluatorVersionIds(val []string) {
 	p.EvaluatorVersionIds = val
 }
+func (p *ExptResultExportColumnSpec) SetWeightedScore(val *bool) {
+	p.WeightedScore = val
+}
 
 var fieldIDToName_ExptResultExportColumnSpec = map[int16]string{
 	1: "eval_set_fields",
 	2: "eval_target_outputs",
 	3: "metrics",
 	4: "evaluator_version_ids",
+	5: "weighted_score",
 }
 
 func (p *ExptResultExportColumnSpec) IsSetEvalSetFields() bool {
@@ -26154,6 +26172,10 @@ func (p *ExptResultExportColumnSpec) IsSetMetrics() bool {
 
 func (p *ExptResultExportColumnSpec) IsSetEvaluatorVersionIds() bool {
 	return p.EvaluatorVersionIds != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetWeightedScore() bool {
+	return p.WeightedScore != nil
 }
 
 func (p *ExptResultExportColumnSpec) Read(iprot thrift.TProtocol) (err error) {
@@ -26201,6 +26223,14 @@ func (p *ExptResultExportColumnSpec) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -26327,6 +26357,17 @@ func (p *ExptResultExportColumnSpec) ReadField4(iprot thrift.TProtocol) error {
 	p.EvaluatorVersionIds = _field
 	return nil
 }
+func (p *ExptResultExportColumnSpec) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WeightedScore = _field
+	return nil
+}
 
 func (p *ExptResultExportColumnSpec) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -26348,6 +26389,10 @@ func (p *ExptResultExportColumnSpec) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -26472,6 +26517,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ExptResultExportColumnSpec) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWeightedScore() {
+		if err = oprot.WriteFieldBegin("weighted_score", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WeightedScore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ExptResultExportColumnSpec) String() string {
 	if p == nil {
@@ -26497,6 +26560,9 @@ func (p *ExptResultExportColumnSpec) DeepEqual(ano *ExptResultExportColumnSpec) 
 		return false
 	}
 	if !p.Field4DeepEqual(ano.EvaluatorVersionIds) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.WeightedScore) {
 		return false
 	}
 	return true
@@ -26551,6 +26617,18 @@ func (p *ExptResultExportColumnSpec) Field4DeepEqual(src []string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field5DeepEqual(src *bool) bool {
+
+	if p.WeightedScore == src {
+		return true
+	} else if p.WeightedScore == nil || src == nil {
+		return false
+	}
+	if *p.WeightedScore != *src {
+		return false
 	}
 	return true
 }

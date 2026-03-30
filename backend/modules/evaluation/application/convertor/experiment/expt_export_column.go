@@ -26,5 +26,9 @@ func ExportColumnSpecThrift2Entity(from *expt.ExptResultExportColumnSpec) *entit
 	if from.IsSetEvaluatorVersionIds() {
 		to.EvaluatorVersionIds = append([]string(nil), from.GetEvaluatorVersionIds()...)
 	}
+	if from.WeightedScore != nil {
+		v := *from.WeightedScore
+		to.WeightedScore = &v
+	}
 	return to
 }

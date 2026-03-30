@@ -113,6 +113,9 @@ func (do *CustomRPCEvaluatorVersion) GetBaseInfo() *BaseInfo {
 }
 
 func (do *CustomRPCEvaluatorVersion) ValidateInput(input *EvaluatorInputData) error {
+	if input == nil {
+		return errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("input data is nil"))
+	}
 	inputSchemaMap := make(map[string]*ArgsSchema)
 	for _, argsSchema := range do.InputSchemas {
 		inputSchemaMap[gptr.Indirect(argsSchema.Key)] = argsSchema
