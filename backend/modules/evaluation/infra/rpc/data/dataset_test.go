@@ -408,8 +408,6 @@ func TestNewDatasetRPCAdapter(t *testing.T) {
 	mockClient := mocks.NewMockClient(ctrl)
 	adapter := NewDatasetRPCAdapter(mockClient)
 	assert.NotNil(t, adapter)
-	_, ok := adapter.(rpc.IDatasetRPCAdapter)
-	assert.True(t, ok)
 }
 
 func TestCreateDataset(t *testing.T) {
