@@ -7992,10 +7992,10 @@ func (p *BatchGetEvaluatorVersionsResponse) Field255DeepEqual(src *base.BaseResp
 	return true
 }
 
-// EvaluatorID 与版本号组成的对，用于批量解析 evaluator_version_id
+// EvaluatorID 与版本号组成的对，用于 BatchGetEvaluatorVersionIDs（仅 RPC，无 HTTP 路由）
 type EvaluatorIDVersionPair struct {
-	EvaluatorID int64  `thrift:"evaluator_id,1,required" frugal:"1,required,i64" json:"evaluator_id" form:"evaluator_id,required" `
-	Version     string `thrift:"version,2,required" frugal:"2,required,string" json:"version" form:"version,required" `
+	EvaluatorID int64  `thrift:"evaluator_id,1,required" frugal:"1,required,i64" form:"evaluator_id,required" json:"evaluator_id,required" query:"evaluator_id,required"`
+	Version     string `thrift:"version,2,required" frugal:"2,required,string" form:"version,required" json:"version,required" query:"version,required"`
 }
 
 func NewEvaluatorIDVersionPair() *EvaluatorIDVersionPair {
@@ -8235,8 +8235,8 @@ func (p *EvaluatorIDVersionPair) Field2DeepEqual(src string) bool {
 }
 
 type BatchGetEvaluatorVersionIDsRequest struct {
-	WorkspaceID             int64                     `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	EvaluatorIDVersionPairs []*EvaluatorIDVersionPair `thrift:"evaluator_id_version_pairs,2,optional" frugal:"2,optional,list<EvaluatorIDVersionPair>" json:"evaluator_id_version_pairs" form:"evaluator_id_version_pairs" `
+	WorkspaceID             int64                     `thrift:"workspace_id,1,required" frugal:"1,required,i64" form:"workspace_id,required" json:"workspace_id,required" query:"workspace_id,required"`
+	EvaluatorIDVersionPairs []*EvaluatorIDVersionPair `thrift:"evaluator_id_version_pairs,2,optional" frugal:"2,optional,list<EvaluatorIDVersionPair>" form:"evaluator_id_version_pairs" json:"evaluator_id_version_pairs,omitempty" query:"evaluator_id_version_pairs"`
 	Base                    *base.Base                `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -8576,7 +8576,7 @@ func (p *BatchGetEvaluatorVersionIDsRequest) Field255DeepEqual(src *base.Base) b
 
 type BatchGetEvaluatorVersionIDsResponse struct {
 	// 与请求 evaluator_id_version_pairs 顺序一致；evaluator_version_id 为解析结果，未找到对应版本时可不填或为 0
-	IDVersionItems []*evaluator.EvaluatorIDVersionItem `thrift:"id_version_items,1,optional" frugal:"1,optional,list<evaluator.EvaluatorIDVersionItem>" json:"id_version_items" form:"id_version_items" `
+	IDVersionItems []*evaluator.EvaluatorIDVersionItem `thrift:"id_version_items,1,optional" frugal:"1,optional,list<evaluator.EvaluatorIDVersionItem>" form:"id_version_items" json:"id_version_items,omitempty" query:"id_version_items"`
 	BaseResp       *base.BaseResp                      `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }
 
@@ -25456,7 +25456,7 @@ type EvaluatorService interface {
 	GetEvaluatorVersion(ctx context.Context, request *GetEvaluatorVersionRequest) (r *GetEvaluatorVersionResponse, err error)
 
 	BatchGetEvaluatorVersions(ctx context.Context, request *BatchGetEvaluatorVersionsRequest) (r *BatchGetEvaluatorVersionsResponse, err error)
-
+	// 按 evaluator_id + version 对批量查询 evaluator_version_id（仅 RPC）
 	BatchGetEvaluatorVersionIDs(ctx context.Context, request *BatchGetEvaluatorVersionIDsRequest) (r *BatchGetEvaluatorVersionIDsResponse, err error)
 
 	SubmitEvaluatorVersion(ctx context.Context, request *SubmitEvaluatorVersionRequest) (r *SubmitEvaluatorVersionResponse, err error)

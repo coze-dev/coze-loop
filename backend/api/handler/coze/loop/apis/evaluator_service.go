@@ -244,19 +244,3 @@ func AsyncDebugEvaluator(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
-
-// BatchGetEvaluatorVersionIDs .
-// @router /api/evaluation/v1/evaluators_versions/batch_get_version_ids [POST]
-func BatchGetEvaluatorVersionIDs(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req evaluator.BatchGetEvaluatorVersionIDsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(evaluator.BatchGetEvaluatorVersionIDsResponse)
-
-	c.JSON(consts.StatusOK, resp)
-}

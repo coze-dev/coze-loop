@@ -741,6 +741,107 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersions(ctx context.Context, re
 	}, nil
 }
 
+// BatchGetEvaluatorVersionIDs 按 evaluator_id + version 批量解析 evaluator_version_id（与请求顺序一致；未命中时 evaluator_version_id 为空或 0）
+func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorVersionIDsRequest) (resp *evaluatorservice.BatchGetEvaluatorVersionIDsResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
+	}
+	workspaceID := request.GetWorkspaceID()
+	if workspaceID <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id invalid"))
+	}
+	pairsIn := request.GetEvaluatorIDVersionPairs()
+	if len(pairsIn) == 0 {
+		return &evaluatorservice.BatchGetEvaluatorVersionIDsResponse{}, nil
+	}
+
+	pairs := make([][2]interface{}, 0, len(pairsIn))
+	for _, p := range pairsIn {
+		if p == nil {
+			continue
+		}
+		eid := p.GetEvaluatorID()
+		ver := strings.TrimSpace(p.GetVersion())
+		if eid <= 0 || ver == "" {
+			continue
+		}
+		pairs = append(pairs, [2]interface{}{eid, ver})
+	}
+
+	var dos []*entity.Evaluator
+	if len(pairs) > 0 {
+		dos, err = e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	idVer2DO := make(map[string]*entity.Evaluator, len(dos))
+	for _, ev := range dos {
+		if ev == nil {
+			continue
+		}
+		idVer2DO[evaluatorIDVersionPairKey(ev.ID, ev.GetVersion())] = ev
+	}
+
+	if len(idVer2DO) > 0 {
+		checkedSpace := make(map[int64]bool)
+		for _, ev := range dos {
+			if ev == nil {
+				continue
+			}
+			spaceID := ev.SpaceID
+			if checkedSpace[spaceID] {
+				continue
+			}
+			checkedSpace[spaceID] = true
+			if spaceID == workspaceID {
+				err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(spaceID, 10),
+					SpaceID:       spaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				})
+			} else {
+				err = e.authBuiltinManagement(ctx, spaceID, spaceTypeBuiltin, false)
+			}
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	out := make([]*evaluatordto.EvaluatorIDVersionItem, 0, len(pairsIn))
+	for _, p := range pairsIn {
+		if p == nil {
+			continue
+		}
+		eid := p.GetEvaluatorID()
+		ver := strings.TrimSpace(p.GetVersion())
+		item := evaluatordto.NewEvaluatorIDVersionItem()
+		item.SetEvaluatorID(gptr.Of(eid))
+		item.SetVersion(gptr.Of(p.GetVersion()))
+		if eid <= 0 || ver == "" {
+			out = append(out, item)
+			continue
+		}
+		if ev, ok := idVer2DO[evaluatorIDVersionPairKey(eid, ver)]; ok {
+			vid := ev.GetEvaluatorVersionID()
+			if vid > 0 {
+				item.SetEvaluatorVersionID(gptr.Of(vid))
+			}
+		}
+		out = append(out, item)
+	}
+
+	return &evaluatorservice.BatchGetEvaluatorVersionIDsResponse{
+		IDVersionItems: out,
+	}, nil
+}
+
+func evaluatorIDVersionPairKey(evaluatorID int64, version string) string {
+	return strconv.FormatInt(evaluatorID, 10) + "\x00" + version
+}
+
 // SubmitEvaluatorVersion 提交 evaluator_version 版本
 func (e *EvaluatorHandlerImpl) SubmitEvaluatorVersion(ctx context.Context, request *evaluatorservice.SubmitEvaluatorVersionRequest) (resp *evaluatorservice.SubmitEvaluatorVersionResponse, err error) {
 	// 校验参数

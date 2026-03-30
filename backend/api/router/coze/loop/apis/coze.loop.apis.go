@@ -219,7 +219,6 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				{
 					_evaluators_versions := _v11.Group("/evaluators_versions", _evaluators_versionsMw(handler)...)
 					_evaluators_versions.POST("/batch_get", append(_batchgetevaluatorversionsMw(handler), apis.BatchGetEvaluatorVersions)...)
-					_evaluators_versions.POST("/batch_get_version_ids", append(_batchgetevaluatorversionidsMw(handler), apis.BatchGetEvaluatorVersionIDs)...)
 					_evaluators_versions.GET("/:evaluator_version_id", append(_evaluator_version_idMw(handler), apis.GetEvaluatorVersion)...)
 					_evaluator_version_id := _evaluators_versions.Group("/:evaluator_version_id", _evaluator_version_idMw(handler)...)
 					_evaluator_version_id.POST("/async_run", append(_asyncrunevaluatorMw(handler), apis.AsyncRunEvaluator)...)

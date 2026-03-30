@@ -164,22 +164,22 @@ struct BatchGetEvaluatorVersionsResponse {
     255: base.BaseResp BaseResp
 }
 
-// EvaluatorID 与版本号组成的对，用于批量解析 evaluator_version_id
+// EvaluatorID 与版本号组成的对，用于 BatchGetEvaluatorVersionIDs（仅 RPC，无 HTTP 路由）
 struct EvaluatorIDVersionPair {
-    1: required i64 evaluator_id (api.body='evaluator_id', api.js_conv='true', go.tag='json:"evaluator_id"')
-    2: required string version (api.body='version', go.tag='json:"version"')
+    1: required i64 evaluator_id
+    2: required string version
 }
 
 struct BatchGetEvaluatorVersionIDsRequest {
-    1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
-    2: optional list<EvaluatorIDVersionPair> evaluator_id_version_pairs (api.body='evaluator_id_version_pairs', go.tag='json:"evaluator_id_version_pairs"')
+    1: required i64 workspace_id
+    2: optional list<EvaluatorIDVersionPair> evaluator_id_version_pairs
 
     255: optional base.Base Base
 }
 
 struct BatchGetEvaluatorVersionIDsResponse {
     // 与请求 evaluator_id_version_pairs 顺序一致；evaluator_version_id 为解析结果，未找到对应版本时可不填或为 0
-    1: optional list<evaluator.EvaluatorIDVersionItem> id_version_items (api.body='id_version_items', go.tag='json:"id_version_items"')
+    1: optional list<evaluator.EvaluatorIDVersionItem> id_version_items
 
     255: base.BaseResp BaseResp
 }
@@ -570,9 +570,8 @@ service EvaluatorService {
     BatchGetEvaluatorVersionsResponse BatchGetEvaluatorVersions(1: BatchGetEvaluatorVersionsRequest request)           (
         api.post=  "/api/evaluation/v1/evaluators_versions/batch_get", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
     )      // 按版本id批量查询evaluator version
-    BatchGetEvaluatorVersionIDsResponse BatchGetEvaluatorVersionIDs(1: BatchGetEvaluatorVersionIDsRequest request)           (
-        api.post=  "/api/evaluation/v1/evaluators_versions/batch_get_version_ids", api.op_type = 'query', api.tag = 'volc-agentkit', api.category = 'evaluator'
-    )      // 按 evaluator_id + version 对批量查询 evaluator_version_id
+    // 按 evaluator_id + version 对批量查询 evaluator_version_id（仅 RPC）
+    BatchGetEvaluatorVersionIDsResponse BatchGetEvaluatorVersionIDs(1: BatchGetEvaluatorVersionIDsRequest request)
     SubmitEvaluatorVersionResponse SubmitEvaluatorVersion(1: SubmitEvaluatorVersionRequest request)     (
         api.post=   "/api/evaluation/v1/evaluators/:evaluator_id/submit_version", api.op_type = 'create', api.tag = 'volc-agentkit', api.category = 'evaluator'
     )   // 提交evaluator版本

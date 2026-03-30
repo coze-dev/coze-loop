@@ -257,6 +257,8 @@ func (l *LocalEvaluatorService) BatchGetEvaluatorVersions(ctx context.Context, r
 	return result.GetSuccess(), nil
 }
 
+// BatchGetEvaluatorVersionIDs
+// 按 evaluator_id + version 对批量查询 evaluator_version_id（仅 RPC）
 func (l *LocalEvaluatorService) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionIDsRequest, callOptions ...callopt.Option) (*evaluator.BatchGetEvaluatorVersionIDsResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsArgs)
