@@ -26062,7 +26062,7 @@ type ExptResultExportColumnSpec struct {
 	EvalTargetOutputs []string `thrift:"eval_target_outputs,2,optional" frugal:"2,optional,list<string>" json:"eval_target_outputs" form:"eval_target_outputs" query:"eval_target_outputs"`
 	/** 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等） */
 	Metrics []string `thrift:"metrics,3,optional" frugal:"3,optional,list<string>" json:"metrics" form:"metrics" query:"metrics"`
-	/** 评估器版本列选择：weighted_score；{evaluator_version_id}:score / :reason；亦支持 evaluator:{id}:score|reason */
+	/** 评估器版本 ID 列表（字符串形式十进制）；每个 ID 导出该评估器的 score 与 reason 列 */
 	EvaluatorVersionIds []string `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<string>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
 	/** 是否导出加权分数 */
 	WeightedScore *bool `thrift:"weighted_score,5,optional" frugal:"5,optional,bool" json:"weighted_score" form:"weighted_score" query:"weighted_score"`
