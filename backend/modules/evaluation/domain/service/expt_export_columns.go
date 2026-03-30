@@ -55,53 +55,35 @@ func dedupeStrings(in []string) []string {
 	return out
 }
 
-func splitReportTargetNamesByMetric(cols []*entity.ColumnEvalTarget) (nonMetric, metric map[string]struct{}) {
-	nonMetric = make(map[string]struct{})
-	metric = make(map[string]struct{})
-	for _, c := range cols {
-		if c == nil || c.Name == "" {
-			continue
-		}
-		if _, isM := exportColTargetMetricNames[c.Name]; isM {
-			metric[c.Name] = struct{}{}
-		} else {
-			nonMetric[c.Name] = struct{}{}
-		}
-	}
-	return nonMetric, metric
-}
-
-// exportSpecMeansExportAll：未带 export_columns，或四个一级 list 均未出现（{}）。
+// exportSpecMeansExportAll：请求未携带 export_columns（spec 为 nil）时导出全量列；一旦携带 spec（含空对象 {}）则按白名单，不再因「子字段全 nil」退回全量。
 func exportSpecMeansExportAll(spec *entity.ExptResultExportColumnSpec) bool {
-	if spec == nil {
-		return true
-	}
-	return spec.EvalSetFields == nil && spec.EvalTargetOutputs == nil && spec.Metrics == nil &&
-		spec.EvaluatorVersionIds == nil
+	return spec == nil
 }
 
-// mgetParamForExportSpec：eval_target_outputs 未传时无法确定自定义列，保守全量拉 Target；仅依据「评测对象输出」列名决定 TOS（性能指标不占 TOS）。
+// mgetParamForExportSpec：spec 为 nil 时全量拉 Target；否则仅按显式列名（eval_target_outputs ∪ metrics）按需拉取；子字段 nil 与 [] 均表示该维度不导出、不触发全量拉取。
 func mgetParamForExportSpec(spec *entity.ExptResultExportColumnSpec) *entity.MGetExperimentResultParam {
 	p := &entity.MGetExperimentResultParam{
 		LoadEvaluatorFullContent:  gptr.Of(false),
 		LoadEvalTargetFullContent: gptr.Of(false),
 		UseTurnListCursor:         true,
 	}
-	if spec == nil || exportSpecMeansExportAll(spec) {
+	if exportSpecMeansExportAll(spec) {
 		p.LoadEvalTargetFullContent = gptr.Of(true)
 		p.FullTrajectory = true
 		return p
 	}
-	if spec.EvalTargetOutputs == nil {
-		p.LoadEvalTargetFullContent = gptr.Of(true)
-		p.FullTrajectory = true
-		return p
+	var names []string
+	if len(spec.EvalTargetOutputs) > 0 {
+		names = append(names, spec.EvalTargetOutputs...)
 	}
-	if len(spec.EvalTargetOutputs) == 0 {
+	if len(spec.Metrics) > 0 {
+		names = append(names, spec.Metrics...)
+	}
+	names = dedupeStrings(names)
+	if len(names) == 0 {
 		p.FullTrajectory = false
 		return p
 	}
-	names := dedupeStrings(spec.EvalTargetOutputs)
 	var loadKeys []string
 	hasTraj := false
 	for _, name := range names {
@@ -126,118 +108,64 @@ func newExportColumnSelectionFromSpec(
 	report *entity.MGetExperimentReportResult,
 	exptID int64,
 ) *exportColumnSelection {
-	if spec == nil || exportSpecMeansExportAll(spec) {
+	if exportSpecMeansExportAll(spec) {
 		return &exportColumnSelection{exportAll: true}
 	}
 	keys := make(map[string]struct{})
 	keys[exportColKeyItemID] = struct{}{}
 	keys[exportColKeyStatus] = struct{}{}
 
-	// 评测集字段
-	if spec.EvalSetFields == nil {
-		for _, f := range report.ColumnEvalSetFields {
-			if f != nil && f.Key != nil {
-				keys[exportColPrefixEvalSet+ptr.From(f.Key)] = struct{}{}
-			}
-		}
-	} else {
+	// 评测集字段：仅非空列表为白名单；nil 与 [] 均不导出该组
+	if len(spec.EvalSetFields) > 0 {
 		for _, k := range dedupeStrings(spec.EvalSetFields) {
 			keys[exportColPrefixEvalSet+k] = struct{}{}
 		}
 	}
 
-	targetCols := pickEvalTargetColsForExpt(report, exptID)
-	nonMetricInReport, metricInReport := splitReportTargetNamesByMetric(targetCols)
-
-	// 评测对象输出（非性能指标）
-	if spec.EvalTargetOutputs == nil {
-		for name := range nonMetricInReport {
-			keys[exportColPrefixTarget+name] = struct{}{}
-		}
-	} else if len(spec.EvalTargetOutputs) > 0 {
+	// Target 列白名单以请求名为准；不要求报告中 OutputSchema 已声明该列名（否则 schema 与请求不一致时只会导出评测集列）。
+	// 报告中不存在的列仍导出表头，单元格按 buildColumnEvalTargetContent 从结构化字段 / OutputFields 取值，无数据则为空。
+	if len(spec.EvalTargetOutputs) > 0 {
 		for _, name := range dedupeStrings(spec.EvalTargetOutputs) {
-			if _, ok := nonMetricInReport[name]; ok {
-				keys[exportColPrefixTarget+name] = struct{}{}
-			}
-		}
-	}
-
-	// 性能指标
-	if spec.Metrics == nil {
-		for name := range metricInReport {
-			keys[exportColPrefixTarget+name] = struct{}{}
-		}
-	} else if len(spec.Metrics) > 0 {
-		for _, name := range dedupeStrings(spec.Metrics) {
-			if _, ok := metricInReport[name]; ok {
-				keys[exportColPrefixTarget+name] = struct{}{}
-			}
-		}
-	}
-
-	// 评估器版本列选择
-	if spec.EvaluatorVersionIds == nil {
-		for _, ev := range report.ColumnEvaluators {
-			if ev == nil {
+			if name == consts.ReportColumnNameEvalTargetTrajectory {
 				continue
 			}
-			keys[evaluatorColumnToken(ev.EvaluatorVersionID, "score")] = struct{}{}
-			keys[evaluatorColumnToken(ev.EvaluatorVersionID, "reason")] = struct{}{}
-		}
-		if len(report.ColumnEvaluators) > 0 {
-			keys[exportColKeyWeightedScore] = struct{}{}
-		}
-	} else if len(spec.EvaluatorVersionIds) > 0 {
-		for _, raw := range spec.EvaluatorVersionIds {
-			addEvaluatorOutputToken(keys, strings.TrimSpace(raw))
+			keys[exportColPrefixTarget+name] = struct{}{}
 		}
 	}
 
-	// 部分导出：不包含标注列（keys 中无 annotation:*，filterColumnAnnotationsForExport 得到空列表）
+	if len(spec.Metrics) > 0 {
+		for _, name := range dedupeStrings(spec.Metrics) {
+			keys[exportColPrefixTarget+name] = struct{}{}
+		}
+	}
+
+	if len(spec.EvaluatorVersionIds) > 0 {
+		for _, raw := range spec.EvaluatorVersionIds {
+			addEvaluatorVersionIDKeysForExport(keys, raw)
+		}
+	}
+
+	if spec.WeightedScore != nil && *spec.WeightedScore {
+		keys[exportColKeyWeightedScore] = struct{}{}
+	}
+
+	// 白名单导出：不包含标注列（keys 中无 annotation:*，filterColumnAnnotationsForExport 得到空列表）
 
 	return &exportColumnSelection{exportAll: false, keys: keys}
 }
 
-// addEvaluatorOutputToken 解析 evaluator_version_ids 单条 token。
-func addEvaluatorOutputToken(keys map[string]struct{}, s string) {
+// addEvaluatorVersionIDKeysForExport 将 evaluator_version_ids 单条解析为评估器版本 ID（十进制整数字符串），并同时选中该版本的分数列与原因列。
+func addEvaluatorVersionIDKeysForExport(keys map[string]struct{}, raw string) {
+	s := strings.TrimSpace(raw)
 	if s == "" {
 		return
 	}
-	if s == exportColKeyWeightedScore || strings.EqualFold(s, "weighted_score") {
-		keys[exportColKeyWeightedScore] = struct{}{}
-		return
-	}
-	if strings.HasPrefix(s, exportColPrefixEvaluator) {
-		rest := strings.TrimPrefix(s, exportColPrefixEvaluator)
-		parts := strings.Split(rest, ":")
-		if len(parts) >= 2 {
-			vid, err := strconv.ParseInt(strings.TrimSpace(parts[0]), 10, 64)
-			if err != nil {
-				return
-			}
-			part := strings.ToLower(strings.TrimSpace(parts[1]))
-			if part == "score" {
-				keys[evaluatorColumnToken(vid, "score")] = struct{}{}
-			}
-			if part == "reason" {
-				keys[evaluatorColumnToken(vid, "reason")] = struct{}{}
-			}
-		}
-		return
-	}
-	i := strings.LastIndex(s, ":")
-	if i <= 0 {
-		return
-	}
-	part := strings.ToLower(strings.TrimSpace(s[i+1:]))
-	if part != "score" && part != "reason" {
-		return
-	}
-	vid, err := strconv.ParseInt(strings.TrimSpace(s[:i]), 10, 64)
+	vid, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return
 	}
-	keys[evaluatorColumnToken(vid, part)] = struct{}{}
+	keys[evaluatorColumnToken(vid, "score")] = struct{}{}
+	keys[evaluatorColumnToken(vid, "reason")] = struct{}{}
 }
 
 func pickEvalTargetColsForExpt(report *entity.MGetExperimentReportResult, exptID int64) []*entity.ColumnEvalTarget {
@@ -390,6 +318,53 @@ func filterColumnsEvalTargetForExport(cols []*entity.ColumnEvalTarget, sel *expo
 		if sel.includeTargetColumnName(c.Name) {
 			out = append(out, c)
 		}
+	}
+	return out
+}
+
+// ensureTargetColumnsForExportWhitelist 在报告列元数据之后，为白名单请求但报告中未出现的 Target 列补一条仅含 Name 的 ColumnEvalTarget，保证 CSV 表头与行循环能覆盖用户显式请求的列名。
+func ensureTargetColumnsForExportWhitelist(
+	spec *entity.ExptResultExportColumnSpec,
+	filtered []*entity.ColumnEvalTarget,
+	sel *exportColumnSelection,
+) []*entity.ColumnEvalTarget {
+	if sel == nil || sel.exportAll || spec == nil {
+		return filtered
+	}
+	seen := make(map[string]struct{}, len(filtered)+8)
+	out := make([]*entity.ColumnEvalTarget, 0, len(filtered)+8)
+	for _, c := range filtered {
+		if c == nil || c.Name == "" {
+			continue
+		}
+		if !sel.includeTargetColumnName(c.Name) {
+			continue
+		}
+		seen[c.Name] = struct{}{}
+		out = append(out, c)
+	}
+	for _, name := range dedupeStrings(spec.EvalTargetOutputs) {
+		if name == consts.ReportColumnNameEvalTargetTrajectory {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		if !sel.includeTargetColumnName(name) {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, &entity.ColumnEvalTarget{Name: name})
+	}
+	for _, name := range dedupeStrings(spec.Metrics) {
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		if !sel.includeTargetColumnName(name) {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, &entity.ColumnEvalTarget{Name: name})
 	}
 	return out
 }

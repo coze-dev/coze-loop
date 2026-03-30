@@ -298,10 +298,11 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 					break
 				}
 			}
-			var columnsEvalTarget []*entity.ColumnEvalTarget
-			if len(result.ExptColumnsEvalTarget) > 0 {
-				columnsEvalTarget = result.ExptColumnsEvalTarget[0].Columns
-			}
+			// 必须与 newExportColumnSelectionFromSpec 使用同一套 Target 列定义（按 exptID），不能用 ExptColumnsEvalTarget[0]，
+			// 否则对比实验等场景下列顺序/实验不一致时，白名单里有 actual_output/metrics 但此处列元数据来自错误实验，filter 后只剩评测集列。
+			baseTargetCols := pickEvalTargetColsForExpt(result, exptID)
+			targetColsFiltered := filterColumnsEvalTargetForExport(baseTargetCols, sel)
+			columnsEvalTarget := ensureTargetColumnsForExportWhitelist(exportColumnSpec, targetColsFiltered, sel)
 			helper = &exportCSVHelper{
 				spaceID:               spaceID,
 				exptID:                exptID,
@@ -311,7 +312,7 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 				colEvaluators:         filterColumnEvaluatorsForExport(result.ColumnEvaluators, sel),
 				colEvalSetFields:      filterColumnEvalSetFieldsForExport(result.ColumnEvalSetFields, sel),
 				colAnnotations:        filterColumnAnnotationsForExport(colAnnotation, sel),
-				columnsEvalTarget:     filterColumnsEvalTargetForExport(columnsEvalTarget, sel),
+				columnsEvalTarget:     columnsEvalTarget,
 				exptRepo:              e.exptRepo,
 				exptTurnResultRepo:    e.exptTurnResultRepo,
 				exptPublisher:         e.exptPublisher,
@@ -643,6 +644,8 @@ func (e *exportCSVHelper) getDatasetFields(ctx context.Context, colEvalSetFields
 		}
 
 		if fieldData.Content == nil {
+			// 必须与表头「每列一条」对齐；不能 continue 少一格，否则后续 Target 等列整体错位，表现为空数据且表头与列对不上。
+			fields = append(fields, "")
 			continue
 		}
 
