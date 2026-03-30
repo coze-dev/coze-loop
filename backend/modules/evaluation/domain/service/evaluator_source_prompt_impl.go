@@ -608,6 +608,12 @@ func parseFunctionCallOutput(ctx context.Context, evaluatorVersion *entity.Promp
 
 func renderTemplate(ctx context.Context, evaluatorVersion *entity.PromptEvaluatorVersion, input *entity.EvaluatorInputData, exptSpaceID int64, disableTracing bool) error {
 	// 实现渲染模板的逻辑
+	if input == nil {
+		input = &entity.EvaluatorInputData{}
+	}
+	if input.InputFields == nil {
+		input.InputFields = make(map[string]*entity.Content)
+	}
 	variables := make([]*tracespec.PromptArgument, 0)
 	for k, v := range input.InputFields {
 		if v == nil {

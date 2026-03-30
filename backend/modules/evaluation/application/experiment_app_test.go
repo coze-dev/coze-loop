@@ -4638,7 +4638,7 @@ func TestExperimentApplication_ExportExptResult_(t *testing.T) {
 
 			// 模拟导出实验结果
 			mockExptResultExportService.EXPECT().
-				ExportCSV(gomock.Any(), validWorkspaceID, validExptID, gomock.Any()).
+				ExportCSV(gomock.Any(), validWorkspaceID, validExptID, gomock.Any(), gomock.Any()).
 				Return(validExportID, nil)
 			mockManager.EXPECT().
 				Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

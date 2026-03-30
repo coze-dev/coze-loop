@@ -140,6 +140,7 @@ func (d *EvaluationSetItemServiceImpl) GetEvaluationSetItemField(ctx context.Con
 		EvaluationSetID: param.EvaluationSetID,
 		ItemPK:          param.ItemPK,
 		FieldName:       param.FieldName,
+		FieldKey:        param.FieldKey,
 		TurnID:          param.TurnID,
 	})
 }

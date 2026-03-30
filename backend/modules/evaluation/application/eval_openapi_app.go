@@ -801,6 +801,7 @@ func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context,
 		EvaluationSetID: req.GetEvaluationSetID(),
 		ItemPK:          items[0].ID,
 		FieldName:       req.GetFieldName(),
+		FieldKey:        req.GetFieldKey(),
 		TurnID:          req.TurnID,
 	})
 	if err != nil {
@@ -1517,14 +1518,13 @@ func (e *EvalOpenAPIApplication) SubmitEvaluatorVersionOApi(ctx context.Context,
 }
 
 func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest) (r *openapi.RunEvaluatorOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), req.GetEvaluatorVersionID(), kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
-
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
 
 	// 校验评估器版本是否存在且有权限
 	// 预置评估器（Builtin）允许跨 workspace 执行：查询时不传 spaceID
@@ -1589,15 +1589,14 @@ func (e *EvalOpenAPIApplication) RunEvaluatorOApi(ctx context.Context, req *open
 }
 
 func (e *EvalOpenAPIApplication) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	var evaluatorVersionID int64
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), evaluatorVersionID, kitexutil.GetTOMethod(ctx), startTime, err)
 	}()
-
-	if req == nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
-	}
 	if req.GetWorkspaceID() == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
 	}
