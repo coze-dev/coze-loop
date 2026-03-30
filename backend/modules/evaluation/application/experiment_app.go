@@ -518,7 +518,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 	// 如果请求中已经显式设置了权重，优先使用
 	if len(req.EvaluatorScoreWeights) > 0 {
 		for k, v := range req.EvaluatorScoreWeights {
-			if v > 0 {
+			if v >= 0 {
 				evaluatorScoreWeights[k] = v
 			}
 		}
@@ -605,7 +605,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 			// 提取权重配置（如果存在且请求中未显式设置）- 用于加权分数计算
 			if it.ScoreWeight != nil {
 				weight := *it.ScoreWeight
-				if weight > 0 {
+				if weight >= 0 {
 					// 如果请求中已经显式设置了权重，则不覆盖
 					if _, exists := evaluatorScoreWeights[verID]; !exists {
 						evaluatorScoreWeights[verID] = weight

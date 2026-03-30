@@ -4923,7 +4923,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 								},
 								{
 									EvaluatorVersionID: 104,
-									ScoreWeight:        gptr.Of(0.0), // 0 权重应该被跳过
+									ScoreWeight:        gptr.Of(0.0), // 0 权重写入映射，汇总时按乘 0 忽略
 								},
 							},
 						},

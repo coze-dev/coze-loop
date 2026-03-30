@@ -180,7 +180,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 		expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
 				continue
 			}
 			if scoreWeights == nil {
@@ -1326,7 +1326,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			// 构建权重映射
 			scoreWeights := make(map[int64]float64)
 			for _, ec := range exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-				if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+				if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
 					continue
 				}
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
@@ -1638,7 +1638,7 @@ func calculateWeightedScore(
 			continue
 		}
 
-		// 获取权重
+		// 获取权重（0 合法：不参与分子/分母，等价于乘 0）
 		weight, ok := weights[evaluatorVersionID]
 		if !ok || weight <= 0 {
 			continue
@@ -2902,7 +2902,7 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 	scoreWeights := make(map[int64]float64)
 	if expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 && ec.EvaluatorVersionID > 0 {
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 			}
 		}
