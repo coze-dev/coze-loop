@@ -59,6 +59,7 @@ func TestOpenAPIEvaluatorTypeDO2DTO(t *testing.T) {
 	assert.Equal(t, openapiEvaluator.EvaluatorTypePrompt, *OpenAPIEvaluatorTypeDO2DTO(entity.EvaluatorTypePrompt))
 	assert.Equal(t, openapiEvaluator.EvaluatorTypeCode, *OpenAPIEvaluatorTypeDO2DTO(entity.EvaluatorTypeCode))
 	assert.Equal(t, openapiEvaluator.EvaluatorTypeCustomRPC, *OpenAPIEvaluatorTypeDO2DTO(entity.EvaluatorTypeCustomRPC))
+	assert.Equal(t, openapiEvaluator.EvaluatorTypeAgent, *OpenAPIEvaluatorTypeDO2DTO(entity.EvaluatorTypeAgent))
 	assert.Nil(t, OpenAPIEvaluatorTypeDO2DTO(entity.EvaluatorType(999)))
 }
 
@@ -109,6 +110,29 @@ func TestOpenAPIEvaluatorVersionDO2DTO(t *testing.T) {
 	t.Run("empty version", func(t *testing.T) {
 		do := &entity.Evaluator{
 			EvaluatorType: entity.EvaluatorTypePrompt,
+		}
+		assert.Nil(t, OpenAPIEvaluatorVersionDO2DTO(do))
+	})
+
+	t.Run("agent type", func(t *testing.T) {
+		do := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypeAgent,
+			AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+				ID:          4,
+				Version:     "v4",
+				Description: "agent desc",
+			},
+		}
+		dto := OpenAPIEvaluatorVersionDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, int64(4), *dto.ID)
+		assert.Equal(t, "v4", *dto.Version)
+		assert.Equal(t, "agent desc", *dto.Description)
+	})
+
+	t.Run("agent type empty version", func(t *testing.T) {
+		do := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypeAgent,
 		}
 		assert.Nil(t, OpenAPIEvaluatorVersionDO2DTO(do))
 	})
@@ -428,6 +452,52 @@ func TestOpenAPIEvaluatorContentDTO2DO(t *testing.T) {
 		assert.Equal(t, "svc", *do.CustomRPCEvaluatorVersion.ServiceName)
 		assert.Equal(t, "cls", *do.CustomRPCEvaluatorVersion.Cluster)
 	})
+
+	t.Run("agent type", func(t *testing.T) {
+		dto := &openapiEvaluator.EvaluatorContent{
+			InputSchemas: []*openapiCommon.ArgsSchema{{Key: gptr.Of("input1")}},
+			AgentEvaluator: &openapiEvaluator.AgentEvaluator{
+				AgentConfig: &openapiCommon.AgentConfig{
+					AgentType: gptr.Of(openapiCommon.AgentType("vibe")),
+				},
+				ModelConfig: &openapiCommon.ModelConfig{
+					ModelName: gptr.Of("gpt-4"),
+				},
+				SkillConfigs: []*openapiCommon.SkillConfig{
+					{SkillID: gptr.Of(int64(1)), Version: gptr.Of("v1")},
+				},
+				PromptConfig: &openapiEvaluator.AgentEvaluatorPromptConfig{
+					MessageList: []*openapiCommon.Message{
+						{Role: gptr.Of("user")},
+					},
+					OutputRules: &openapiEvaluator.AgentEvaluatorPromptConfigOutputRules{
+						ScorePrompt: &openapiCommon.Message{Role: gptr.Of("system")},
+					},
+				},
+			},
+		}
+		do, err := OpenAPIEvaluatorContentDTO2DO(dto, entity.EvaluatorTypeAgent)
+		assert.NoError(t, err)
+		assert.NotNil(t, do)
+		assert.NotNil(t, do.AgentEvaluatorVersion)
+		assert.Equal(t, 1, len(do.AgentEvaluatorVersion.InputSchemas))
+		assert.Equal(t, entity.AgentType_Vibe, do.AgentEvaluatorVersion.AgentConfig.AgentType)
+		assert.Equal(t, "gpt-4", do.AgentEvaluatorVersion.ModelConfig.ModelName)
+		assert.Equal(t, 1, len(do.AgentEvaluatorVersion.SkillConfigs))
+		assert.Equal(t, int64(1), *do.AgentEvaluatorVersion.SkillConfigs[0].SkillID)
+		assert.NotNil(t, do.AgentEvaluatorVersion.PromptConfig)
+		assert.Equal(t, 1, len(do.AgentEvaluatorVersion.PromptConfig.MessageList))
+		assert.NotNil(t, do.AgentEvaluatorVersion.PromptConfig.OutputRules)
+	})
+
+	t.Run("agent type nil agent evaluator", func(t *testing.T) {
+		dto := &openapiEvaluator.EvaluatorContent{}
+		do, err := OpenAPIEvaluatorContentDTO2DO(dto, entity.EvaluatorTypeAgent)
+		assert.NoError(t, err)
+		assert.NotNil(t, do)
+		assert.NotNil(t, do.AgentEvaluatorVersion)
+		assert.Nil(t, do.AgentEvaluatorVersion.AgentConfig)
+	})
 }
 
 func TestOpenAPILanguageTypeDTO2DO(t *testing.T) {
@@ -442,6 +512,16 @@ func TestOpenAPIEvaluatorDTO2DO(t *testing.T) {
 		do, err := OpenAPIEvaluatorDTO2DO(nil)
 		assert.NoError(t, err)
 		assert.Nil(t, do)
+	})
+
+	t.Run("agent evaluator accepted", func(t *testing.T) {
+		dto := &openapiEvaluator.Evaluator{
+			EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypeAgent),
+		}
+		do, err := OpenAPIEvaluatorDTO2DO(dto)
+		assert.NoError(t, err)
+		assert.NotNil(t, do)
+		assert.Equal(t, entity.EvaluatorTypeAgent, do.EvaluatorType)
 	})
 
 	t.Run("normal input", func(t *testing.T) {
@@ -468,6 +548,7 @@ func TestOpenAPIEvaluatorTypeDTO2DO(t *testing.T) {
 	assert.Equal(t, entity.EvaluatorTypePrompt, OpenAPIEvaluatorTypeDTO2DO(gptr.Of(openapiEvaluator.EvaluatorTypePrompt)))
 	assert.Equal(t, entity.EvaluatorTypeCode, OpenAPIEvaluatorTypeDTO2DO(gptr.Of(openapiEvaluator.EvaluatorTypeCode)))
 	assert.Equal(t, entity.EvaluatorTypeCustomRPC, OpenAPIEvaluatorTypeDTO2DO(gptr.Of(openapiEvaluator.EvaluatorTypeCustomRPC)))
+	assert.Equal(t, entity.EvaluatorTypeAgent, OpenAPIEvaluatorTypeDTO2DO(gptr.Of(openapiEvaluator.EvaluatorTypeAgent)))
 	assert.Equal(t, entity.EvaluatorTypePrompt, OpenAPIEvaluatorTypeDTO2DO(nil))
 	assert.Equal(t, entity.EvaluatorTypePrompt, OpenAPIEvaluatorTypeDTO2DO(gptr.Of(openapiEvaluator.EvaluatorType("999"))))
 }
@@ -513,4 +594,240 @@ func TestOpenAPIEvaluatorContentDO2DTO(t *testing.T) {
 		assert.NotNil(t, dto)
 		assert.Equal(t, "svc", dto.CustomRPCEvaluator.GetServiceName())
 	})
+
+	t.Run("agent type", func(t *testing.T) {
+		do := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypeAgent,
+			AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+				InputSchemas: []*entity.ArgsSchema{{Key: gptr.Of("input1")}},
+				AgentConfig:  &entity.AgentConfig{AgentType: entity.AgentType_Vibe},
+				ModelConfig:  &entity.ModelConfig{ModelName: "gpt-4"},
+				SkillConfigs: []*entity.SkillConfig{
+					{SkillID: gptr.Of(int64(1)), Version: gptr.Of("v1")},
+				},
+				PromptConfig: &entity.AgentEvaluatorPromptConfig{
+					MessageList: []*entity.Message{{Role: entity.RoleUser}},
+					OutputRules: &entity.AgentEvaluatorPromptConfigOutputRules{
+						ScorePrompt: &entity.Message{Role: entity.RoleSystem},
+					},
+				},
+			},
+		}
+		dto := OpenAPIEvaluatorContentDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.NotNil(t, dto.AgentEvaluator)
+		assert.NotNil(t, dto.AgentEvaluator.AgentConfig)
+		assert.Equal(t, openapiCommon.AgentType("vibe"), dto.AgentEvaluator.AgentConfig.GetAgentType())
+		assert.Equal(t, "gpt-4", dto.AgentEvaluator.ModelConfig.GetModelName())
+		assert.Equal(t, 1, len(dto.AgentEvaluator.SkillConfigs))
+		assert.Equal(t, int64(1), *dto.AgentEvaluator.SkillConfigs[0].SkillID)
+		assert.NotNil(t, dto.AgentEvaluator.PromptConfig)
+		assert.Equal(t, 1, len(dto.AgentEvaluator.PromptConfig.MessageList))
+		assert.NotNil(t, dto.AgentEvaluator.PromptConfig.OutputRules)
+		assert.NotNil(t, dto.AgentEvaluator.PromptConfig.OutputRules.ScorePrompt)
+		assert.Equal(t, 1, len(dto.InputSchemas))
+	})
+
+	t.Run("agent type nil version", func(t *testing.T) {
+		do := &entity.Evaluator{
+			EvaluatorType: entity.EvaluatorTypeAgent,
+		}
+		dto := OpenAPIEvaluatorContentDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Nil(t, dto.AgentEvaluator)
+	})
+}
+
+func TestOpenAPIAgentConfigDO2DTO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIAgentConfigDO2DTO(nil))
+	})
+
+	t.Run("normal input", func(t *testing.T) {
+		do := &entity.AgentConfig{AgentType: entity.AgentType_Vibe}
+		dto := OpenAPIAgentConfigDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, openapiCommon.AgentType("vibe"), dto.GetAgentType())
+	})
+}
+
+func TestOpenAPIAgentConfigDTO2DO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIAgentConfigDTO2DO(nil))
+	})
+
+	t.Run("normal input", func(t *testing.T) {
+		dto := &openapiCommon.AgentConfig{AgentType: gptr.Of(openapiCommon.AgentType("vibe"))}
+		do := OpenAPIAgentConfigDTO2DO(dto)
+		assert.NotNil(t, do)
+		assert.Equal(t, entity.AgentType_Vibe, do.AgentType)
+	})
+}
+
+func TestOpenAPISkillConfigsDO2DTOs(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPISkillConfigsDO2DTOs(nil))
+	})
+
+	t.Run("normal input with nil items", func(t *testing.T) {
+		dos := []*entity.SkillConfig{
+			{SkillID: gptr.Of(int64(1)), Version: gptr.Of("v1")},
+			nil,
+			{SkillID: gptr.Of(int64(2)), Version: gptr.Of("v2")},
+		}
+		dtos := OpenAPISkillConfigsDO2DTOs(dos)
+		assert.Equal(t, 2, len(dtos))
+		assert.Equal(t, int64(1), *dtos[0].SkillID)
+		assert.Equal(t, "v1", *dtos[0].Version)
+		assert.Equal(t, int64(2), *dtos[1].SkillID)
+		assert.Equal(t, "v2", *dtos[1].Version)
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		dtos := OpenAPISkillConfigsDO2DTOs([]*entity.SkillConfig{})
+		assert.NotNil(t, dtos)
+		assert.Equal(t, 0, len(dtos))
+	})
+}
+
+func TestOpenAPISkillConfigsDTO2DOs(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPISkillConfigsDTO2DOs(nil))
+	})
+
+	t.Run("normal input with nil items", func(t *testing.T) {
+		dtos := []*openapiCommon.SkillConfig{
+			{SkillID: gptr.Of(int64(10)), Version: gptr.Of("v10")},
+			nil,
+			{SkillID: gptr.Of(int64(20)), Version: gptr.Of("v20")},
+		}
+		dos := OpenAPISkillConfigsDTO2DOs(dtos)
+		assert.Equal(t, 2, len(dos))
+		assert.Equal(t, int64(10), *dos[0].SkillID)
+		assert.Equal(t, "v10", *dos[0].Version)
+		assert.Equal(t, int64(20), *dos[1].SkillID)
+		assert.Equal(t, "v20", *dos[1].Version)
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		dos := OpenAPISkillConfigsDTO2DOs([]*openapiCommon.SkillConfig{})
+		assert.NotNil(t, dos)
+		assert.Equal(t, 0, len(dos))
+	})
+}
+
+func TestOpenAPIAgentEvaluatorPromptConfigDO2DTO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIAgentEvaluatorPromptConfigDO2DTO(nil))
+	})
+
+	t.Run("without output rules", func(t *testing.T) {
+		do := &entity.AgentEvaluatorPromptConfig{
+			MessageList: []*entity.Message{{Role: entity.RoleUser}},
+		}
+		dto := OpenAPIAgentEvaluatorPromptConfigDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.Equal(t, 1, len(dto.MessageList))
+		assert.Nil(t, dto.OutputRules)
+	})
+
+	t.Run("with output rules", func(t *testing.T) {
+		do := &entity.AgentEvaluatorPromptConfig{
+			MessageList: []*entity.Message{{Role: entity.RoleUser}},
+			OutputRules: &entity.AgentEvaluatorPromptConfigOutputRules{
+				ScorePrompt:       &entity.Message{Role: entity.RoleSystem},
+				ReasoningPrompt:   &entity.Message{Role: entity.RoleAssistant},
+				ExtraOutputPrompt: &entity.Message{Role: entity.RoleUser},
+			},
+		}
+		dto := OpenAPIAgentEvaluatorPromptConfigDO2DTO(do)
+		assert.NotNil(t, dto)
+		assert.NotNil(t, dto.OutputRules)
+		assert.NotNil(t, dto.OutputRules.ScorePrompt)
+		assert.NotNil(t, dto.OutputRules.ReasoningPrompt)
+		assert.NotNil(t, dto.OutputRules.ExtraOutputPrompt)
+	})
+}
+
+func TestOpenAPIAgentEvaluatorPromptConfigDTO2DO(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, OpenAPIAgentEvaluatorPromptConfigDTO2DO(nil))
+	})
+
+	t.Run("without output rules", func(t *testing.T) {
+		dto := &openapiEvaluator.AgentEvaluatorPromptConfig{
+			MessageList: []*openapiCommon.Message{{Role: gptr.Of("user")}},
+		}
+		do := OpenAPIAgentEvaluatorPromptConfigDTO2DO(dto)
+		assert.NotNil(t, do)
+		assert.Equal(t, 1, len(do.MessageList))
+		assert.Nil(t, do.OutputRules)
+	})
+
+	t.Run("with output rules", func(t *testing.T) {
+		dto := &openapiEvaluator.AgentEvaluatorPromptConfig{
+			MessageList: []*openapiCommon.Message{{Role: gptr.Of("user")}},
+			OutputRules: &openapiEvaluator.AgentEvaluatorPromptConfigOutputRules{
+				ScorePrompt:       &openapiCommon.Message{Role: gptr.Of("system")},
+				ReasoningPrompt:   &openapiCommon.Message{Role: gptr.Of("assistant")},
+				ExtraOutputPrompt: &openapiCommon.Message{Role: gptr.Of("user")},
+			},
+		}
+		do := OpenAPIAgentEvaluatorPromptConfigDTO2DO(dto)
+		assert.NotNil(t, do)
+		assert.NotNil(t, do.OutputRules)
+		assert.NotNil(t, do.OutputRules.ScorePrompt)
+		assert.NotNil(t, do.OutputRules.ReasoningPrompt)
+		assert.NotNil(t, do.OutputRules.ExtraOutputPrompt)
+	})
+}
+
+func TestOpenAPIEvaluatorDO2DTO_AgentType(t *testing.T) {
+	do := &entity.Evaluator{
+		ID:            100,
+		Name:          "agent-eval",
+		Description:   "agent evaluator desc",
+		EvaluatorType: entity.EvaluatorTypeAgent,
+		AgentEvaluatorVersion: &entity.AgentEvaluatorVersion{
+			ID:      200,
+			Version: "v1",
+			AgentConfig: &entity.AgentConfig{
+				AgentType: entity.AgentType_Vibe,
+			},
+		},
+	}
+	dto := OpenAPIEvaluatorDO2DTO(do)
+	assert.NotNil(t, dto)
+	assert.Equal(t, int64(100), *dto.ID)
+	assert.Equal(t, "agent-eval", *dto.Name)
+	assert.Equal(t, openapiEvaluator.EvaluatorTypeAgent, *dto.EvaluatorType)
+	assert.NotNil(t, dto.CurrentVersion)
+	assert.Equal(t, int64(200), *dto.CurrentVersion.ID)
+	assert.Equal(t, "v1", *dto.CurrentVersion.Version)
+}
+
+func TestOpenAPIEvaluatorDTO2DO_AgentWithVersion(t *testing.T) {
+	dto := &openapiEvaluator.Evaluator{
+		ID:            gptr.Of(int64(100)),
+		Name:          gptr.Of("agent-eval"),
+		EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypeAgent),
+		CurrentVersion: &openapiEvaluator.EvaluatorVersion{
+			Version: gptr.Of("v1"),
+			EvaluatorContent: &openapiEvaluator.EvaluatorContent{
+				AgentEvaluator: &openapiEvaluator.AgentEvaluator{
+					AgentConfig: &openapiCommon.AgentConfig{
+						AgentType: gptr.Of(openapiCommon.AgentType("vibe")),
+					},
+				},
+			},
+		},
+	}
+	do, err := OpenAPIEvaluatorDTO2DO(dto)
+	assert.NoError(t, err)
+	assert.NotNil(t, do)
+	assert.Equal(t, int64(100), do.ID)
+	assert.Equal(t, entity.EvaluatorTypeAgent, do.EvaluatorType)
+	assert.NotNil(t, do.AgentEvaluatorVersion)
+	assert.Equal(t, entity.AgentType_Vibe, do.AgentEvaluatorVersion.AgentConfig.AgentType)
+	assert.Equal(t, "v1", do.GetVersion())
 }

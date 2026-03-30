@@ -223,6 +223,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"RunBuiltinEvaluatorOApi": kitex.NewMethodInfo(
+		runBuiltinEvaluatorOApiHandler,
+		newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs,
+		newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"CorrectEvaluatorRecordOApi": kitex.NewMethodInfo(
 		correctEvaluatorRecordOApiHandler,
 		newEvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs,
@@ -896,6 +903,25 @@ func newEvaluationOpenAPIServiceRunEvaluatorOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceRunEvaluatorOApiResult()
 }
 
+func runBuiltinEvaluatorOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).RunBuiltinEvaluatorOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult()
+}
+
 func correctEvaluatorRecordOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiArgs)
 	realResult := result.(*openapi.EvaluationOpenAPIServiceCorrectEvaluatorRecordOApiResult)
@@ -1393,6 +1419,16 @@ func (p *kClient) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluato
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceRunEvaluatorOApiResult
 	if err = p.c.Call(ctx, "RunEvaluatorOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceRunBuiltinEvaluatorOApiResult
+	if err = p.c.Call(ctx, "RunBuiltinEvaluatorOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

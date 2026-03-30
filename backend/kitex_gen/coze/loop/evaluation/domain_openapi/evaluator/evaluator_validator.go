@@ -48,6 +48,50 @@ func (p *CustomRPCEvaluator) IsValid() error {
 	}
 	return nil
 }
+func (p *AgentEvaluatorPromptConfigOutputRules) IsValid() error {
+	if p.ScorePrompt != nil {
+		if err := p.ScorePrompt.IsValid(); err != nil {
+			return fmt.Errorf("field ScorePrompt not valid, %w", err)
+		}
+	}
+	if p.ReasoningPrompt != nil {
+		if err := p.ReasoningPrompt.IsValid(); err != nil {
+			return fmt.Errorf("field ReasoningPrompt not valid, %w", err)
+		}
+	}
+	if p.ExtraOutputPrompt != nil {
+		if err := p.ExtraOutputPrompt.IsValid(); err != nil {
+			return fmt.Errorf("field ExtraOutputPrompt not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AgentEvaluatorPromptConfig) IsValid() error {
+	if p.OutputRules != nil {
+		if err := p.OutputRules.IsValid(); err != nil {
+			return fmt.Errorf("field OutputRules not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AgentEvaluator) IsValid() error {
+	if p.AgentConfig != nil {
+		if err := p.AgentConfig.IsValid(); err != nil {
+			return fmt.Errorf("field AgentConfig not valid, %w", err)
+		}
+	}
+	if p.ModelConfig != nil {
+		if err := p.ModelConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ModelConfig not valid, %w", err)
+		}
+	}
+	if p.PromptConfig != nil {
+		if err := p.PromptConfig.IsValid(); err != nil {
+			return fmt.Errorf("field PromptConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *EvaluatorContent) IsValid() error {
 	if p.PromptEvaluator != nil {
 		if err := p.PromptEvaluator.IsValid(); err != nil {
@@ -62,6 +106,11 @@ func (p *EvaluatorContent) IsValid() error {
 	if p.CustomRPCEvaluator != nil {
 		if err := p.CustomRPCEvaluator.IsValid(); err != nil {
 			return fmt.Errorf("field CustomRPCEvaluator not valid, %w", err)
+		}
+	}
+	if p.AgentEvaluator != nil {
+		if err := p.AgentEvaluator.IsValid(); err != nil {
+			return fmt.Errorf("field AgentEvaluator not valid, %w", err)
 		}
 	}
 	return nil

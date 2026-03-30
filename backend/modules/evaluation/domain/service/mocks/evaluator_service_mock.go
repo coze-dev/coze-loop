@@ -312,6 +312,21 @@ func (mr *MockEvaluatorServiceMockRecorder) ReportEvaluatorInvokeResult(ctx, par
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReportEvaluatorInvokeResult", reflect.TypeOf((*MockEvaluatorService)(nil).ReportEvaluatorInvokeResult), ctx, param)
 }
 
+// ResolveBuiltinEvaluatorVisibleVersionID mocks base method.
+func (m *MockEvaluatorService) ResolveBuiltinEvaluatorVisibleVersionID(ctx context.Context, evaluatorID int64, evaluatorName string) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolveBuiltinEvaluatorVisibleVersionID", ctx, evaluatorID, evaluatorName)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolveBuiltinEvaluatorVisibleVersionID indicates an expected call of ResolveBuiltinEvaluatorVisibleVersionID.
+func (mr *MockEvaluatorServiceMockRecorder) ResolveBuiltinEvaluatorVisibleVersionID(ctx, evaluatorID, evaluatorName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolveBuiltinEvaluatorVisibleVersionID", reflect.TypeOf((*MockEvaluatorService)(nil).ResolveBuiltinEvaluatorVisibleVersionID), ctx, evaluatorID, evaluatorName)
+}
+
 // RunEvaluator mocks base method.
 func (m *MockEvaluatorService) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()

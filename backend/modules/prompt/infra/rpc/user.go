@@ -6,6 +6,7 @@ package rpc
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/rpc"
@@ -38,4 +39,8 @@ func (u *UserRPCAdapter) MGetUserInfo(ctx context.Context, userIDs []string) (us
 		return nil, nil
 	}
 	return convertor.BatchUserDTO2DO(resp.GetUserInfos()), nil
+}
+
+func (u *UserRPCAdapter) GetUserIdInCtx(ctx context.Context) (string, bool) {
+	return session.UserIDInCtx(ctx)
 }
