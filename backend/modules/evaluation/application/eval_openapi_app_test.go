@@ -2621,7 +2621,14 @@ func TestEvalOpenAPIApplication_CreateEvaluatorOApi(t *testing.T) {
 			req: &openapi.CreateEvaluatorOApiRequest{
 				WorkspaceID: gptr.Of(int64(1)),
 				Evaluator: &openapiEvaluator.Evaluator{
-					Name: gptr.Of("test evaluator"),
+					Name:          gptr.Of("test evaluator"),
+					EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypePrompt),
+					CurrentVersion: &openapiEvaluator.EvaluatorVersion{
+						Version: gptr.Of("v1"),
+						EvaluatorContent: &openapiEvaluator.EvaluatorContent{
+							IsReceiveChatHistory: gptr.Of(false),
+						},
+					},
 				},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {
@@ -2635,7 +2642,14 @@ func TestEvalOpenAPIApplication_CreateEvaluatorOApi(t *testing.T) {
 			req: &openapi.CreateEvaluatorOApiRequest{
 				WorkspaceID: gptr.Of(int64(1)),
 				Evaluator: &openapiEvaluator.Evaluator{
-					Name: gptr.Of("test evaluator"),
+					Name:          gptr.Of("test evaluator"),
+					EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypePrompt),
+					CurrentVersion: &openapiEvaluator.EvaluatorVersion{
+						Version: gptr.Of("v1"),
+						EvaluatorContent: &openapiEvaluator.EvaluatorContent{
+							IsReceiveChatHistory: gptr.Of(false),
+						},
+					},
 				},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, evaluatorSvc *servicemocks.MockEvaluatorService) {

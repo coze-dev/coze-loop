@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makePromptEvaluatorVersion() *PromptEvaluatorVersion {
@@ -1279,6 +1280,18 @@ func TestEvaluator_SetEvaluatorVersion(t *testing.T) {
 			},
 			verify: func(t *testing.T, e *Evaluator) {
 				// Should not panic, just do nothing
+			},
+		},
+		{
+			name: "nil version no panic",
+			evaluator: &Evaluator{
+				EvaluatorType:          EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &PromptEvaluatorVersion{Version: "keep"},
+			},
+			version: nil,
+			verify: func(t *testing.T, e *Evaluator) {
+				require.NotNil(t, e.PromptEvaluatorVersion)
+				assert.Equal(t, "keep", e.PromptEvaluatorVersion.Version)
 			},
 		},
 	}

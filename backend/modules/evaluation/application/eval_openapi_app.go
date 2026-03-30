@@ -1325,10 +1325,16 @@ func (e *EvalOpenAPIApplication) UpdateEvaluatorDraftOApi(ctx context.Context, r
 		return nil, err
 	}
 
+	if req.EvaluatorContent == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
 	evalType := evaluator_convertor.OpenAPIEvaluatorTypeDTO2DO(req.EvaluatorType)
 	verDO, err := evaluator_convertor.OpenAPIEvaluatorContentDTO2DO(req.EvaluatorContent, evalType)
 	if err != nil {
 		return nil, err
+	}
+	if verDO == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
 	}
 
 	evaluator.EvaluatorType = evalType

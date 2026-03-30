@@ -514,14 +514,39 @@ func TestOpenAPIEvaluatorDTO2DO(t *testing.T) {
 		assert.Nil(t, do)
 	})
 
-	t.Run("agent evaluator accepted", func(t *testing.T) {
+	t.Run("缺少 evaluator_type 返回错误", func(t *testing.T) {
+		dto := &openapiEvaluator.Evaluator{
+			CurrentVersion: &openapiEvaluator.EvaluatorVersion{
+				Version: gptr.Of("v1"),
+				EvaluatorContent: &openapiEvaluator.EvaluatorContent{
+					IsReceiveChatHistory: gptr.Of(false),
+				},
+			},
+		}
+		do, err := OpenAPIEvaluatorDTO2DO(dto)
+		assert.Error(t, err)
+		assert.Nil(t, do)
+	})
+
+	t.Run("缺少 current_version 返回错误", func(t *testing.T) {
 		dto := &openapiEvaluator.Evaluator{
 			EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypeAgent),
 		}
 		do, err := OpenAPIEvaluatorDTO2DO(dto)
-		assert.NoError(t, err)
-		assert.NotNil(t, do)
-		assert.Equal(t, entity.EvaluatorTypeAgent, do.EvaluatorType)
+		assert.Error(t, err)
+		assert.Nil(t, do)
+	})
+
+	t.Run("current_version 缺少 evaluator_content 返回错误", func(t *testing.T) {
+		dto := &openapiEvaluator.Evaluator{
+			EvaluatorType: gptr.Of(openapiEvaluator.EvaluatorTypePrompt),
+			CurrentVersion: &openapiEvaluator.EvaluatorVersion{
+				Version: gptr.Of("v1"),
+			},
+		}
+		do, err := OpenAPIEvaluatorDTO2DO(dto)
+		assert.Error(t, err)
+		assert.Nil(t, do)
 	})
 
 	t.Run("normal input", func(t *testing.T) {
