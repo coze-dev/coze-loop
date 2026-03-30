@@ -620,6 +620,17 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
 	}
+	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.Ext) > 0 {
+		if param.OutputData == nil {
+			param.OutputData = &entity.EvalTargetOutputData{}
+		}
+		if param.OutputData.Ext == nil {
+			param.OutputData.Ext = make(map[string]string)
+		}
+		for k, v := range record.EvalTargetOutputData.Ext {
+			param.OutputData.Ext[k] = v
+		}
+	}
 
 	record.EvalTargetOutputData = param.OutputData
 	record.Status = gptr.Of(param.Status)
