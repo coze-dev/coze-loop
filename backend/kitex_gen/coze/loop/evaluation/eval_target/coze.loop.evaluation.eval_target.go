@@ -14300,7 +14300,7 @@ type EvalTargetService interface {
 	ListSourceEvalTargetVersions(ctx context.Context, request *ListSourceEvalTargetVersionsRequest) (r *ListSourceEvalTargetVersionsResponse, err error)
 
 	BatchGetSourceEvalTargets(ctx context.Context, request *BatchGetSourceEvalTargetsRequest) (r *BatchGetSourceEvalTargetsResponse, err error)
-	// 获取Source评测对象版本的详情信息
+	// 获取Source评测对象版本的详情
 	GetSourceEvalTargetVersion(ctx context.Context, request *GetSourceEvalTargetVersionRequest) (r *GetSourceEvalTargetVersionResponse, err error)
 	// 搜索自定义评测对象
 	SearchCustomEvalTarget(ctx context.Context, req *SearchCustomEvalTargetRequest) (r *SearchCustomEvalTargetResponse, err error)

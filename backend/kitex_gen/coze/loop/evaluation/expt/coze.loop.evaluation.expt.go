@@ -57,7 +57,7 @@ type CreateExperimentRequest struct {
 	// 试运行行数
 	TrialRunItemCount *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	// 关联的智能评测会话ID
-	ThreadID *int64          `thrift:"thread_id,60,optional" frugal:"60,optional,i64" json:"thread_id" form:"thread_id" query:"thread_id"`
+	ThreadID *string         `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	Session  *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base     *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -364,9 +364,9 @@ func (p *CreateExperimentRequest) GetTrialRunItemCount() (v int64) {
 	return *p.TrialRunItemCount
 }
 
-var CreateExperimentRequest_ThreadID_DEFAULT int64
+var CreateExperimentRequest_ThreadID_DEFAULT string
 
-func (p *CreateExperimentRequest) GetThreadID() (v int64) {
+func (p *CreateExperimentRequest) GetThreadID() (v string) {
 	if p == nil {
 		return
 	}
@@ -474,7 +474,7 @@ func (p *CreateExperimentRequest) SetItemRetryNum(val *int32) {
 func (p *CreateExperimentRequest) SetTrialRunItemCount(val *int64) {
 	p.TrialRunItemCount = val
 }
-func (p *CreateExperimentRequest) SetThreadID(val *int64) {
+func (p *CreateExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
 }
 func (p *CreateExperimentRequest) SetSession(val *common.Session) {
@@ -844,7 +844,7 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 60:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField60(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -1226,8 +1226,8 @@ func (p *CreateExperimentRequest) ReadField46(iprot thrift.TProtocol) error {
 }
 func (p *CreateExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -1873,10 +1873,10 @@ WriteFieldEndError:
 }
 func (p *CreateExperimentRequest) writeField60(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
-		if err = oprot.WriteFieldBegin("thread_id", thrift.I64, 60); err != nil {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 60); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ThreadID); err != nil {
+		if err := oprot.WriteString(*p.ThreadID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2311,14 +2311,14 @@ func (p *CreateExperimentRequest) Field46DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *CreateExperimentRequest) Field60DeepEqual(src *int64) bool {
+func (p *CreateExperimentRequest) Field60DeepEqual(src *string) bool {
 
 	if p.ThreadID == src {
 		return true
 	} else if p.ThreadID == nil || src == nil {
 		return false
 	}
-	if *p.ThreadID != *src {
+	if strings.Compare(*p.ThreadID, *src) != 0 {
 		return false
 	}
 	return true
@@ -2608,7 +2608,7 @@ type SubmitExperimentRequest struct {
 	// 试运行行数
 	TrialRunItemCount *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	// 智能评测相关
-	ThreadID *int64            `thrift:"thread_id,60,optional" frugal:"60,optional,i64" json:"thread_id" form:"thread_id" query:"thread_id"`
+	ThreadID *string           `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	Ext      map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session  *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base     *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2904,9 +2904,9 @@ func (p *SubmitExperimentRequest) GetTrialRunItemCount() (v int64) {
 	return *p.TrialRunItemCount
 }
 
-var SubmitExperimentRequest_ThreadID_DEFAULT int64
+var SubmitExperimentRequest_ThreadID_DEFAULT string
 
-func (p *SubmitExperimentRequest) GetThreadID() (v int64) {
+func (p *SubmitExperimentRequest) GetThreadID() (v string) {
 	if p == nil {
 		return
 	}
@@ -3023,7 +3023,7 @@ func (p *SubmitExperimentRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentRequest) SetTrialRunItemCount(val *int64) {
 	p.TrialRunItemCount = val
 }
-func (p *SubmitExperimentRequest) SetThreadID(val *int64) {
+func (p *SubmitExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
 }
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
@@ -3388,7 +3388,7 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 60:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField60(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -3749,8 +3749,8 @@ func (p *SubmitExperimentRequest) ReadField46(iprot thrift.TProtocol) error {
 }
 func (p *SubmitExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -4396,10 +4396,10 @@ WriteFieldEndError:
 }
 func (p *SubmitExperimentRequest) writeField60(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
-		if err = oprot.WriteFieldBegin("thread_id", thrift.I64, 60); err != nil {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 60); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ThreadID); err != nil {
+		if err := oprot.WriteString(*p.ThreadID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -4850,14 +4850,14 @@ func (p *SubmitExperimentRequest) Field46DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *SubmitExperimentRequest) Field60DeepEqual(src *int64) bool {
+func (p *SubmitExperimentRequest) Field60DeepEqual(src *string) bool {
 
 	if p.ThreadID == src {
 		return true
 	} else if p.ThreadID == nil || src == nil {
 		return false
 	}
-	if *p.ThreadID != *src {
+	if strings.Compare(*p.ThreadID, *src) != 0 {
 		return false
 	}
 	return true

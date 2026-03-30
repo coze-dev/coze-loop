@@ -59,9 +59,6 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		updatedBy = *template.BaseInfo.UpdatedBy.UserID
 	}
 
-	// TODO dsf ddl执行后放开
-	println(visibility)
-
 	po := &model.ExptTemplate{
 		ID:               id,
 		SpaceID:          spaceID,
@@ -75,8 +72,7 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		TargetType:       int64(targetType),
 		TargetVersionID:  targetVersionID,
 		ExptType:         int32(exptType),
-		// // TODO dsf ddl执行后放开
-		// Visibility:       int32(visibility),
+		Visibility:       int32(visibility),
 	}
 
 	if template.TemplateConf != nil {

@@ -53,7 +53,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.ExptType = field.NewInt32(tableName, "expt_type")
 	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
 	_experiment.Visibility = field.NewInt32(tableName, "visibility")
-	_experiment.ThreadID = field.NewInt64(tableName, "thread_id")
+	_experiment.ThreadID = field.NewString(tableName, "thread_id")
 	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
 
 	_experiment.fillFieldMap()
@@ -92,7 +92,7 @@ type experiment struct {
 	ExptType          field.Int32  // 实验类型，offline:1,online:2...
 	MaxAliveTime      field.Int64  // 最大存活时间
 	Visibility        field.Int32  // 可见性，默认0-可见，1-隐藏
-	ThreadID          field.Int64  // 智能生成会话ID
+	ThreadID          field.String // 智能生成会话ID
 	TrialRunItemCount field.Int64  // 试运行行数
 
 	fieldMap map[string]field.Expr
@@ -136,7 +136,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.ExptType = field.NewInt32(table, "expt_type")
 	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
 	e.Visibility = field.NewInt32(table, "visibility")
-	e.ThreadID = field.NewInt64(table, "thread_id")
+	e.ThreadID = field.NewString(table, "thread_id")
 	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
 
 	e.fillFieldMap()

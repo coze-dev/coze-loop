@@ -78,7 +78,7 @@ struct Experiment {
     62: optional bool enable_weighted_score
 
     // 智能评测相关
-    63: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
+    63: optional string thread_id// 关联的智能评测会话ID
 }
 
 // 实验模板基础信息

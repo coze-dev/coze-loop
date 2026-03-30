@@ -149,7 +149,7 @@ type Experiment struct {
 	ExptTemplateMeta *ExptTemplateMeta // 关联的实验模板基础信息（仅在查询时按需填充，包含模板 ID）
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
-	ThreadID   int64      // 关联的智能评测会话ID
+	ThreadID   *string    // 关联的智能评测会话ID
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

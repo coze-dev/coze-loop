@@ -40,7 +40,7 @@ struct CreateExperimentRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
 
-    60: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
+    60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
     200: optional common.Session session
 
@@ -84,7 +84,7 @@ struct SubmitExperimentRequest {
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
 
     // 智能评测相关
-    60: optional i64 thread_id  (api.js_conv='true', go.tag='json:"thread_id"') // 关联的智能评测会话ID
+    60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
     100: optional map<string, string> ext (api.body = 'ext')
 

@@ -683,7 +683,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		do.Visibility = *req.Visibility
 	}
 	if req.ThreadID != nil {
-		do.ThreadID = *req.ThreadID
+		do.ThreadID = req.ThreadID
 	}
 
 	// 如果提供了模板 ID，设置 ExptTemplateMeta

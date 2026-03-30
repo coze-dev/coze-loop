@@ -409,7 +409,7 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 60:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField60(buf[offset:])
 				offset += l
 				if err != nil {
@@ -875,8 +875,8 @@ func (p *CreateExperimentRequest) FastReadField46(buf []byte) (int, error) {
 func (p *CreateExperimentRequest) FastReadField60(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -929,7 +929,6 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField43(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
-		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -943,6 +942,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
 		offset += p.fastWriteField42(buf[offset:], w)
+		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -1241,8 +1241,8 @@ func (p *CreateExperimentRequest) fastWriteField46(buf []byte, w thrift.NocopyWr
 func (p *CreateExperimentRequest) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetThreadID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 60)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ThreadID)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 60)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ThreadID)
 	}
 	return offset
 }
@@ -1504,7 +1504,7 @@ func (p *CreateExperimentRequest) field60Length() int {
 	l := 0
 	if p.IsSetThreadID() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.ThreadID)
 	}
 	return l
 }
@@ -1709,7 +1709,10 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 	}
 
 	if src.ThreadID != nil {
-		tmp := *src.ThreadID
+		var tmp string
+		if *src.ThreadID != "" {
+			tmp = kutils.StringDeepCopy(*src.ThreadID)
+		}
 		p.ThreadID = &tmp
 	}
 
@@ -2260,7 +2263,7 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 60:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField60(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2708,8 +2711,8 @@ func (p *SubmitExperimentRequest) FastReadField46(buf []byte) (int, error) {
 func (p *SubmitExperimentRequest) FastReadField60(buf []byte) (int, error) {
 	offset := 0
 
-	var _field *int64
-	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
@@ -2794,7 +2797,6 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField42(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
 		offset += p.fastWriteField46(buf[offset:], w)
-		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
@@ -2807,6 +2809,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField32(buf[offset:], w)
 		offset += p.fastWriteField33(buf[offset:], w)
 		offset += p.fastWriteField40(buf[offset:], w)
+		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -3089,8 +3092,8 @@ func (p *SubmitExperimentRequest) fastWriteField46(buf []byte, w thrift.NocopyWr
 func (p *SubmitExperimentRequest) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetThreadID() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 60)
-		offset += thrift.Binary.WriteI64(buf[offset:], *p.ThreadID)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 60)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ThreadID)
 	}
 	return offset
 }
@@ -3358,7 +3361,7 @@ func (p *SubmitExperimentRequest) field60Length() int {
 	l := 0
 	if p.IsSetThreadID() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.I64Length()
+		l += thrift.Binary.StringLengthNocopy(*p.ThreadID)
 	}
 	return l
 }
@@ -3565,7 +3568,10 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 	}
 
 	if src.ThreadID != nil {
-		tmp := *src.ThreadID
+		var tmp string
+		if *src.ThreadID != "" {
+			tmp = kutils.StringDeepCopy(*src.ThreadID)
+		}
 		p.ThreadID = &tmp
 	}
 

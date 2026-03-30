@@ -358,8 +358,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.Visibility == entity.Visibility_Hidden {
 		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 	}
-	if experiment.ThreadID > 0 {
-		res.ThreadID = gptr.Of(experiment.ThreadID)
+	if experiment.ThreadID != nil {
+		res.ThreadID = experiment.ThreadID
 	}
 
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递

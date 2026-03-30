@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `expt_type`           int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验类型，offline:1,online:2...',
     `max_alive_time`      bigint unsigned                                                         DEFAULT NULL COMMENT '最大存活时间',
     `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
-    `thread_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '智能生成会话ID',
+    `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID',
     `trial_run_item_count`      bigint unsigned                                                         DEFAULT NULL COMMENT '试运行行数',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),

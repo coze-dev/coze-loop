@@ -1008,7 +1008,7 @@ type Experiment struct {
 	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
 	// 智能评测相关
-	ThreadID *int64 `thrift:"thread_id,63,optional" frugal:"63,optional,i64" json:"thread_id" form:"thread_id" query:"thread_id"`
+	ThreadID *string `thrift:"thread_id,63,optional" frugal:"63,optional,string" form:"thread_id" json:"thread_id,omitempty" query:"thread_id"`
 }
 
 func NewExperiment() *Experiment {
@@ -1402,9 +1402,9 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	return *p.EnableWeightedScore
 }
 
-var Experiment_ThreadID_DEFAULT int64
+var Experiment_ThreadID_DEFAULT string
 
-func (p *Experiment) GetThreadID() (v int64) {
+func (p *Experiment) GetThreadID() (v string) {
 	if p == nil {
 		return
 	}
@@ -1509,7 +1509,7 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
-func (p *Experiment) SetThreadID(val *int64) {
+func (p *Experiment) SetThreadID(val *string) {
 	p.ThreadID = val
 }
 
@@ -1956,7 +1956,7 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 63:
-			if fieldTypeId == thrift.I64 {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField63(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2373,8 +2373,8 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 }
 func (p *Experiment) ReadField63(iprot thrift.TProtocol) error {
 
-	var _field *int64
-	if v, err := iprot.ReadI64(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
@@ -3149,10 +3149,10 @@ WriteFieldEndError:
 }
 func (p *Experiment) writeField63(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
-		if err = oprot.WriteFieldBegin("thread_id", thrift.I64, 63); err != nil {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 63); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteI64(*p.ThreadID); err != nil {
+		if err := oprot.WriteString(*p.ThreadID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3630,14 +3630,14 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 	}
 	return true
 }
-func (p *Experiment) Field63DeepEqual(src *int64) bool {
+func (p *Experiment) Field63DeepEqual(src *string) bool {
 
 	if p.ThreadID == src {
 		return true
 	} else if p.ThreadID == nil || src == nil {
 		return false
 	}
-	if *p.ThreadID != *src {
+	if strings.Compare(*p.ThreadID, *src) != 0 {
 		return false
 	}
 	return true
