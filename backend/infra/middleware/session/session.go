@@ -8,6 +8,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"os"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -18,10 +19,21 @@ import (
 const (
 	SessionKey     = "session_key"
 	SessionExpires = 7 * 24 * time.Hour
+
+	defaultHMACSecret = "openloop-session-hmac-key"
+	envSessionHMACKey = "COZE_LOOP_SESSION_HMAC_KEY"
 )
 
-// 用于签名的密钥（在实际应用中应从配置中读取或使用环境变量）
-var hmacSecret = []byte("openloop-session-hmac-key")
+// Signing key: prefer `COZE_LOOP_SESSION_HMAC_KEY` from environment; fall back to the default.
+var hmacSecret []byte
+
+func init() {
+	if v := os.Getenv(envSessionHMACKey); v != "" {
+		hmacSecret = []byte(v)
+	} else {
+		hmacSecret = []byte(defaultHMACSecret)
+	}
+}
 
 type Session struct {
 	UserID string
