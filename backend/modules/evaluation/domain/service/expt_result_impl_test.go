@@ -6211,8 +6211,8 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 					},
 				},
 				2: {
-					ID:                 2,
-					EvaluatorVersionID: 2,
+					ID:                  2,
+					EvaluatorVersionID:  2,
 					EvaluatorOutputData: nil,
 				},
 			},

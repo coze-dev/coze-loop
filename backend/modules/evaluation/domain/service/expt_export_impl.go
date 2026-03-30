@@ -304,21 +304,21 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			targetColsFiltered := filterColumnsEvalTargetForExport(baseTargetCols, sel)
 			columnsEvalTarget := ensureTargetColumnsForExportWhitelist(exportColumnSpec, targetColsFiltered, sel)
 			helper = &exportCSVHelper{
-				spaceID:               spaceID,
-				exptID:                exptID,
-				withLogID:             withLogID,
-				colSelection:          sel,
-				reportEvaluatorCount:  len(result.ColumnEvaluators),
-				colEvaluators:         filterColumnEvaluatorsForExport(result.ColumnEvaluators, sel),
-				colEvalSetFields:      filterColumnEvalSetFieldsForExport(result.ColumnEvalSetFields, sel),
-				colAnnotations:        filterColumnAnnotationsForExport(colAnnotation, sel),
-				columnsEvalTarget:     columnsEvalTarget,
-				exptRepo:              e.exptRepo,
-				exptTurnResultRepo:    e.exptTurnResultRepo,
-				exptPublisher:         e.exptPublisher,
-				exptResultService:     e.exptResultService,
-				fileClient:            e.fileClient,
-				evalSetItemSvc:        e.evalSetItemSvc,
+				spaceID:              spaceID,
+				exptID:               exptID,
+				withLogID:            withLogID,
+				colSelection:         sel,
+				reportEvaluatorCount: len(result.ColumnEvaluators),
+				colEvaluators:        filterColumnEvaluatorsForExport(result.ColumnEvaluators, sel),
+				colEvalSetFields:     filterColumnEvalSetFieldsForExport(result.ColumnEvalSetFields, sel),
+				colAnnotations:       filterColumnAnnotationsForExport(colAnnotation, sel),
+				columnsEvalTarget:    columnsEvalTarget,
+				exptRepo:             e.exptRepo,
+				exptTurnResultRepo:   e.exptTurnResultRepo,
+				exptPublisher:        e.exptPublisher,
+				exptResultService:    e.exptResultService,
+				fileClient:           e.fileClient,
+				evalSetItemSvc:       e.evalSetItemSvc,
 			}
 			columns, err := helper.buildColumns(ctx)
 			if err != nil {

@@ -26,10 +26,10 @@ func TestExportSpecMeansExportAll(t *testing.T) {
 // 导出列 spec 经 MQ（JSON）与 cloneExptExportColumnSpec 往返时，空切片必须仍为 []，不能因 omitempty 丢失后与 null 混用。
 func TestExptResultExportColumnSpec_JSONRoundtripEmptySlices(t *testing.T) {
 	in := &entity.ExptResultExportColumnSpec{
-		EvalSetFields:         []string{},
-		EvalTargetOutputs:     []string{"x"},
-		Metrics:               []string{},
-		EvaluatorVersionIds:   []string{},
+		EvalSetFields:       []string{},
+		EvalTargetOutputs:   []string{"x"},
+		Metrics:             []string{},
+		EvaluatorVersionIds: []string{},
 	}
 	b, err := json.Marshal(in)
 	require.NoError(t, err)
@@ -95,9 +95,9 @@ func TestNewExportColumnSelectionFromSpec_evalTargetWhitelist(t *testing.T) {
 		ColumnEvaluators: []*entity.ColumnEvaluator{},
 	}
 	spec := &entity.ExptResultExportColumnSpec{
-		EvalSetFields:        []string{},
-		EvalTargetOutputs:    []string{},
-		Metrics: []string{consts.ReportColumnNameEvalTargetTotalLatency},
+		EvalSetFields:       []string{},
+		EvalTargetOutputs:   []string{},
+		Metrics:             []string{consts.ReportColumnNameEvalTargetTotalLatency},
 		EvaluatorVersionIds: []string{},
 	}
 	sel := newExportColumnSelectionFromSpec(spec, report, 10)
@@ -351,10 +351,10 @@ func TestExportColumnSelection_mgetExperimentResultParam_specificKeys(t *testing
 	sel := &exportColumnSelection{
 		exportAll: false,
 		keys: map[string]struct{}{
-			exportColPrefixTarget + consts.ReportColumnNameEvalTargetActualOutput:  {},
-			exportColPrefixTarget + consts.ReportColumnNameEvalTargetTrajectory:    {},
-			exportColPrefixTarget + consts.ReportColumnNameEvalTargetTotalLatency:  {},
-			exportColPrefixTarget + consts.ReportColumnNameEvalTargetInputTokens:   {},
+			exportColPrefixTarget + consts.ReportColumnNameEvalTargetActualOutput: {},
+			exportColPrefixTarget + consts.ReportColumnNameEvalTargetTrajectory:   {},
+			exportColPrefixTarget + consts.ReportColumnNameEvalTargetTotalLatency: {},
+			exportColPrefixTarget + consts.ReportColumnNameEvalTargetInputTokens:  {},
 		},
 	}
 	p := sel.mgetExperimentResultParam(5, 15)
@@ -431,7 +431,7 @@ func TestExportColumnSelection_evalTargetOutputFieldKeysForLoad(t *testing.T) {
 			sel: &exportColumnSelection{keys: map[string]struct{}{
 				exportColPrefixTarget + consts.ReportColumnNameEvalTargetActualOutput: {},
 				exportColPrefixTarget + consts.ReportColumnNameEvalTargetTotalLatency: {},
-				exportColPrefixEvalSet + "field1":                                    {},
+				exportColPrefixEvalSet + "field1":                                     {},
 				exportColKeyWeightedScore:                                             {},
 			}},
 			wantNil: false,
@@ -728,7 +728,7 @@ func TestEnsureTargetColumnsForExportWhitelist(t *testing.T) {
 			},
 			sel: &exportColumnSelection{keys: map[string]struct{}{
 				exportColPrefixTarget + consts.ReportColumnNameEvalTargetActualOutput: {},
-				exportColPrefixTarget + "custom_col":                                 {},
+				exportColPrefixTarget + "custom_col":                                  {},
 				exportColPrefixTarget + consts.ReportColumnNameEvalTargetTotalLatency: {},
 			}},
 			wantLen: 3,
@@ -753,7 +753,7 @@ func TestEnsureTargetColumnsForExportWhitelist(t *testing.T) {
 			filtered: []*entity.ColumnEvalTarget{},
 			sel: &exportColumnSelection{keys: map[string]struct{}{
 				exportColPrefixTarget + consts.ReportColumnNameEvalTargetTrajectory: {},
-				exportColPrefixTarget + "real": {},
+				exportColPrefixTarget + "real":                                      {},
 			}},
 			wantLen: 2,
 		},

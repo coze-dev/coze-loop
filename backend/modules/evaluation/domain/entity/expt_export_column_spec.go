@@ -10,9 +10,9 @@ package entity
 // WeightedScore 为 true 时导出加权总分列。
 type ExptResultExportColumnSpec struct {
 	// 四个切片不可使用 json omitempty：[] 必须能经 JSON 与 nil 区分；nil 与 [] 在白名单模式下对该组等价（均不导出）。
-	EvalSetFields       []string `json:"eval_set_fields"`
-	EvalTargetOutputs   []string `json:"eval_target_outputs"`
-	Metrics             []string `json:"metrics"`
+	EvalSetFields     []string `json:"eval_set_fields"`
+	EvalTargetOutputs []string `json:"eval_target_outputs"`
+	Metrics           []string `json:"metrics"`
 	// 每项为评估器版本 ID（十进制字符串）；列出的每个版本同时导出分数与原因列。
 	EvaluatorVersionIds []string `json:"evaluator_version_ids"`
 	// WeightedScore 仅在为 true 时生效；nil/false 表示不因此单独增加加权分列。
