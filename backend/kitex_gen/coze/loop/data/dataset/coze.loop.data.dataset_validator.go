@@ -653,6 +653,14 @@ func (p *BatchCreateDatasetItemsRequest) IsValid() error {
 			}
 		}
 	}
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem1 := p.FieldWriteOptions[i]
+		if _elem1 != nil {
+			if err := _elem1.IsValid(); err != nil {
+				return fmt.Errorf("field _elem1 not valid, %w", err)
+			}
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -694,6 +702,14 @@ func (p *UpdateDatasetItemRequest) IsValid() error {
 		if _elem1 != nil {
 			if err := _elem1.IsValid(); err != nil {
 				return fmt.Errorf("field _elem1 not valid, %w", err)
+			}
+		}
+	}
+	for i := 0; i < len(p.FieldWriteOptions); i++ {
+		_elem2 := p.FieldWriteOptions[i]
+		if _elem2 != nil {
+			if err := _elem2.IsValid(); err != nil {
+				return fmt.Errorf("field _elem2 not valid, %w", err)
 			}
 		}
 	}

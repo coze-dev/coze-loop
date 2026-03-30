@@ -31,7 +31,8 @@ const (
 
 type DatasetIOJobOption struct {
 	// 覆盖数据集
-	OverwriteDataset *bool `json:"overwrite_dataset,omitempty"`
+	OverwriteDataset  *bool               `json:"overwrite_dataset,omitempty"`
+	FieldWriteOptions []*FieldWriteOption `json:"field_write_options,omitempty"`
 }
 
 type DatasetIOJobProgress struct {
