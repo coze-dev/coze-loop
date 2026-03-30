@@ -124,11 +124,9 @@ func newExportColumnSelectionFromSpec(
 
 	// Target 列白名单以请求名为准；不要求报告中 OutputSchema 已声明该列名（否则 schema 与请求不一致时只会导出评测集列）。
 	// 报告中不存在的列仍导出表头，单元格按 buildColumnEvalTargetContent 从结构化字段 / OutputFields 取值，无数据则为空。
+	// trajectory 与 mgetParamForExportSpec 中 FullTrajectory / LoadEvalTargetOutputFieldKeys 对齐，用户显式勾选时须导出该列。
 	if len(spec.EvalTargetOutputs) > 0 {
 		for _, name := range dedupeStrings(spec.EvalTargetOutputs) {
-			if name == consts.ReportColumnNameEvalTargetTrajectory {
-				continue
-			}
 			keys[exportColPrefixTarget+name] = struct{}{}
 		}
 	}
@@ -344,9 +342,6 @@ func ensureTargetColumnsForExportWhitelist(
 		out = append(out, c)
 	}
 	for _, name := range dedupeStrings(spec.EvalTargetOutputs) {
-		if name == consts.ReportColumnNameEvalTargetTrajectory {
-			continue
-		}
 		if _, ok := seen[name]; ok {
 			continue
 		}

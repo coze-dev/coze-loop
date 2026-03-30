@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	dbMocks "github.com/coze-dev/coze-loop/backend/infra/db/mocks"
@@ -1322,4 +1323,581 @@ func Test_formatMultiPartData(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func Test_getColumnNameEvaluator(t *testing.T) {
+	tests := []struct {
+		name          string
+		evaluatorName string
+		version       string
+		want          string
+	}{
+		{
+			name:          "basic",
+			evaluatorName: "accuracy",
+			version:       "v1",
+			want:          "accuracy<v1>",
+		},
+		{
+			name:          "empty_name_and_version",
+			evaluatorName: "",
+			version:       "",
+			want:          "<>",
+		},
+		{
+			name:          "special_characters",
+			evaluatorName: "eval-name_123",
+			version:       "v2.0",
+			want:          "eval-name_123<v2.0>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getColumnNameEvaluator(tt.evaluatorName, tt.version)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_getColumnNameEvaluatorReason(t *testing.T) {
+	tests := []struct {
+		name          string
+		evaluatorName string
+		version       string
+		want          string
+	}{
+		{
+			name:          "basic",
+			evaluatorName: "accuracy",
+			version:       "v1",
+			want:          "accuracy<v1>_reason",
+		},
+		{
+			name:          "empty_name_and_version",
+			evaluatorName: "",
+			version:       "",
+			want:          "<>_reason",
+		},
+		{
+			name:          "special_characters",
+			evaluatorName: "eval-name_123",
+			version:       "v2.0",
+			want:          "eval-name_123<v2.0>_reason",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getColumnNameEvaluatorReason(tt.evaluatorName, tt.version)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_wantWeightedScoreColumn(t *testing.T) {
+	tests := []struct {
+		name                 string
+		reportEvaluatorCount int
+		colSelection         *exportColumnSelection
+		want                 bool
+	}{
+		{
+			name:                 "no_evaluators",
+			reportEvaluatorCount: 0,
+			colSelection:         nil,
+			want:                 false,
+		},
+		{
+			name:                 "nil_selection_with_evaluators",
+			reportEvaluatorCount: 2,
+			colSelection:         nil,
+			want:                 true,
+		},
+		{
+			name:                 "export_all",
+			reportEvaluatorCount: 1,
+			colSelection:         &exportColumnSelection{exportAll: true},
+			want:                 true,
+		},
+		{
+			name:                 "whitelist_with_weighted_score",
+			reportEvaluatorCount: 1,
+			colSelection: &exportColumnSelection{
+				exportAll: false,
+				keys:      map[string]struct{}{exportColKeyWeightedScore: {}},
+			},
+			want: true,
+		},
+		{
+			name:                 "whitelist_without_weighted_score",
+			reportEvaluatorCount: 1,
+			colSelection: &exportColumnSelection{
+				exportAll: false,
+				keys:      map[string]struct{}{"other_key": {}},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &exportCSVHelper{
+				reportEvaluatorCount: tt.reportEvaluatorCount,
+				colSelection:         tt.colSelection,
+			}
+			got := h.wantWeightedScoreColumn()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_getEvaluatorScore(t *testing.T) {
+	tests := []struct {
+		name   string
+		record *entity.EvaluatorRecord
+		want   string
+	}{
+		{
+			name:   "nil_record",
+			record: nil,
+			want:   "",
+		},
+		{
+			name: "nil_output_data",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: nil,
+			},
+			want: "",
+		},
+		{
+			name: "nil_result",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: nil,
+				},
+			},
+			want: "",
+		},
+		{
+			name: "nil_score",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: nil,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "normal_score",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: ptr.Of(float64(88.5)),
+					},
+				},
+			},
+			want: "88.50",
+		},
+		{
+			name: "correction_score_overrides",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Score: ptr.Of(float64(70)),
+						Correction: &entity.Correction{
+							Score: ptr.Of(float64(95.12)),
+						},
+					},
+				},
+			},
+			want: "95.12",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getEvaluatorScore(tt.record)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_getEvaluatorReason(t *testing.T) {
+	tests := []struct {
+		name   string
+		record *entity.EvaluatorRecord
+		want   string
+	}{
+		{
+			name:   "nil_record",
+			record: nil,
+			want:   "",
+		},
+		{
+			name: "nil_output_data",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: nil,
+			},
+			want: "",
+		},
+		{
+			name: "nil_result",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: nil,
+				},
+			},
+			want: "",
+		},
+		{
+			name: "normal_reasoning",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "good answer",
+					},
+				},
+			},
+			want: "good answer",
+		},
+		{
+			name: "correction_explain_overrides",
+			record: &entity.EvaluatorRecord{
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "original reason",
+						Correction: &entity.Correction{
+							Explain: "corrected reason",
+						},
+					},
+				},
+			},
+			want: "corrected reason",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getEvaluatorReason(tt.record)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_getAnnotationData_tagValues(t *testing.T) {
+	tests := []struct {
+		name             string
+		record           *entity.AnnotateRecord
+		columnAnnotation *entity.ColumnAnnotation
+		want             string
+	}{
+		{
+			name: "boolean_with_matching_tag_value",
+			record: &entity.AnnotateRecord{
+				AnnotateData: &entity.AnnotateData{
+					TagContentType: entity.TagContentTypeBoolean,
+				},
+				TagValueID: 10,
+			},
+			columnAnnotation: &entity.ColumnAnnotation{
+				TagContentType: entity.TagContentTypeBoolean,
+				TagValues: []*entity.TagValue{
+					{TagValueId: 10, TagValueName: "true"},
+					{TagValueId: 11, TagValueName: "false"},
+				},
+			},
+			want: "true",
+		},
+		{
+			name: "boolean_no_matching_tag_value",
+			record: &entity.AnnotateRecord{
+				AnnotateData: &entity.AnnotateData{
+					TagContentType: entity.TagContentTypeBoolean,
+				},
+				TagValueID: 99,
+			},
+			columnAnnotation: &entity.ColumnAnnotation{
+				TagContentType: entity.TagContentTypeBoolean,
+				TagValues: []*entity.TagValue{
+					{TagValueId: 10, TagValueName: "true"},
+					{TagValueId: 11, TagValueName: "false"},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "categorical_with_matching_tag_value",
+			record: &entity.AnnotateRecord{
+				AnnotateData: &entity.AnnotateData{
+					TagContentType: entity.TagContentTypeCategorical,
+				},
+				TagValueID: 20,
+			},
+			columnAnnotation: &entity.ColumnAnnotation{
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues: []*entity.TagValue{
+					{TagValueId: 20, TagValueName: "CategoryA"},
+					{TagValueId: 21, TagValueName: "CategoryB"},
+				},
+			},
+			want: "CategoryA",
+		},
+		{
+			name: "categorical_no_matching_tag_value",
+			record: &entity.AnnotateRecord{
+				AnnotateData: &entity.AnnotateData{
+					TagContentType: entity.TagContentTypeCategorical,
+				},
+				TagValueID: 999,
+			},
+			columnAnnotation: &entity.ColumnAnnotation{
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues: []*entity.TagValue{
+					{TagValueId: 20, TagValueName: "CategoryA"},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "categorical_with_nil_tag_value_entry",
+			record: &entity.AnnotateRecord{
+				AnnotateData: &entity.AnnotateData{
+					TagContentType: entity.TagContentTypeCategorical,
+				},
+				TagValueID: 30,
+			},
+			columnAnnotation: &entity.ColumnAnnotation{
+				TagContentType: entity.TagContentTypeCategorical,
+				TagValues: []*entity.TagValue{
+					nil,
+					{TagValueId: 30, TagValueName: "ValidCategory"},
+				},
+			},
+			want: "ValidCategory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getAnnotationData(tt.record, tt.columnAnnotation)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_cloneExptExportColumnSpec(t *testing.T) {
+	t.Run("nil_input", func(t *testing.T) {
+		got := cloneExptExportColumnSpec(nil)
+		assert.Nil(t, got)
+	})
+
+	t.Run("normal_input_with_all_fields", func(t *testing.T) {
+		weighted := true
+		src := &entity.ExptResultExportColumnSpec{
+			EvalSetFields:       []string{"field1", "field2"},
+			EvalTargetOutputs:   []string{"output1"},
+			Metrics:             []string{"metric1", "metric2"},
+			EvaluatorVersionIds: []string{"100", "200"},
+			WeightedScore:       &weighted,
+		}
+		got := cloneExptExportColumnSpec(src)
+		require.NotNil(t, got)
+		assert.Equal(t, src.EvalSetFields, got.EvalSetFields)
+		assert.Equal(t, src.EvalTargetOutputs, got.EvalTargetOutputs)
+		assert.Equal(t, src.Metrics, got.Metrics)
+		assert.Equal(t, src.EvaluatorVersionIds, got.EvaluatorVersionIds)
+		require.NotNil(t, got.WeightedScore)
+		assert.True(t, *got.WeightedScore)
+	})
+
+	t.Run("deep_copy_modification_does_not_affect_clone", func(t *testing.T) {
+		src := &entity.ExptResultExportColumnSpec{
+			EvalSetFields:       []string{"a", "b"},
+			EvalTargetOutputs:   []string{"x"},
+			Metrics:             []string{"m1"},
+			EvaluatorVersionIds: []string{"1"},
+		}
+		got := cloneExptExportColumnSpec(src)
+		require.NotNil(t, got)
+
+		src.EvalSetFields[0] = "modified"
+		src.EvalTargetOutputs = append(src.EvalTargetOutputs, "y")
+		src.Metrics[0] = "m_changed"
+
+		assert.Equal(t, "a", got.EvalSetFields[0])
+		assert.Len(t, got.EvalTargetOutputs, 1)
+		assert.Equal(t, "m1", got.Metrics[0])
+	})
+}
+
+func Test_formatMultiPartData_nilObjects(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    *entity.Content
+		expected string
+	}{
+		{
+			name: "nil_image_object",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeImage),
+						Image:       nil,
+					},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "nil_audio_object",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeAudio),
+						Audio:       nil,
+					},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "nil_video_object",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeVideo),
+						Video:       nil,
+					},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "mixed_nil_and_valid",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentTypeMultipart),
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeImage),
+						Image:       nil,
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeText),
+						Text:        ptr.Of("text data"),
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeVideo),
+						Video:       nil,
+					},
+				},
+			},
+			expected: "text data\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatMultiPartData(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_buildColumns_withWhitelistSelection(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("only_score_column_for_evaluator", func(t *testing.T) {
+		sel := &exportColumnSelection{
+			exportAll: false,
+			keys: map[string]struct{}{
+				evaluatorColumnToken(1, "score"): {},
+			},
+		}
+		h := &exportCSVHelper{
+			reportEvaluatorCount: 1,
+			colSelection:         sel,
+			colEvaluators: []*entity.ColumnEvaluator{
+				{EvaluatorVersionID: 1, Name: ptr.Of("eval1"), Version: ptr.Of("v1")},
+			},
+		}
+		columns, err := h.buildColumns(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, columns, "eval1<v1>")
+		assert.NotContains(t, columns, "eval1<v1>_reason")
+	})
+
+	t.Run("only_reason_column_for_evaluator", func(t *testing.T) {
+		sel := &exportColumnSelection{
+			exportAll: false,
+			keys: map[string]struct{}{
+				evaluatorColumnToken(2, "reason"): {},
+			},
+		}
+		h := &exportCSVHelper{
+			reportEvaluatorCount: 1,
+			colSelection:         sel,
+			colEvaluators: []*entity.ColumnEvaluator{
+				{EvaluatorVersionID: 2, Name: ptr.Of("eval2"), Version: ptr.Of("v1")},
+			},
+		}
+		columns, err := h.buildColumns(ctx)
+		require.NoError(t, err)
+		assert.NotContains(t, columns, "eval2<v1>")
+		assert.Contains(t, columns, "eval2<v1>_reason")
+	})
+
+	t.Run("both_score_and_reason_for_evaluator", func(t *testing.T) {
+		sel := &exportColumnSelection{
+			exportAll: false,
+			keys: map[string]struct{}{
+				evaluatorColumnToken(3, "score"):  {},
+				evaluatorColumnToken(3, "reason"): {},
+			},
+		}
+		h := &exportCSVHelper{
+			reportEvaluatorCount: 1,
+			colSelection:         sel,
+			colEvaluators: []*entity.ColumnEvaluator{
+				{EvaluatorVersionID: 3, Name: ptr.Of("eval3"), Version: ptr.Of("v2")},
+			},
+		}
+		columns, err := h.buildColumns(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, columns, "eval3<v2>")
+		assert.Contains(t, columns, "eval3<v2>_reason")
+	})
+
+	t.Run("export_all_includes_both", func(t *testing.T) {
+		h := &exportCSVHelper{
+			reportEvaluatorCount: 1,
+			colSelection:         &exportColumnSelection{exportAll: true},
+			colEvaluators: []*entity.ColumnEvaluator{
+				{EvaluatorVersionID: 4, Name: ptr.Of("eval4"), Version: ptr.Of("v1")},
+			},
+		}
+		columns, err := h.buildColumns(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, columns, "eval4<v1>")
+		assert.Contains(t, columns, "eval4<v1>_reason")
+	})
+
+	t.Run("nil_selection_includes_both", func(t *testing.T) {
+		h := &exportCSVHelper{
+			reportEvaluatorCount: 1,
+			colSelection:         nil,
+			colEvaluators: []*entity.ColumnEvaluator{
+				{EvaluatorVersionID: 5, Name: ptr.Of("eval5"), Version: ptr.Of("v3")},
+			},
+		}
+		columns, err := h.buildColumns(ctx)
+		require.NoError(t, err)
+		assert.Contains(t, columns, "eval5<v3>")
+		assert.Contains(t, columns, "eval5<v3>_reason")
+	})
 }

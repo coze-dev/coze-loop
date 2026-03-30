@@ -5940,3 +5940,438 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		assert.NoError(t, err) // 应该返回 nil，不报错
 	})
 }
+
+func TestNewTurnEvaluatorResultRefs(t *testing.T) {
+	tests := []struct {
+		name             string
+		id               int64
+		exptID           int64
+		turnResultID     int64
+		spaceID          int64
+		evaluatorResults *entity.EvaluatorResults
+		wantLen          int
+	}{
+		{
+			name:             "nil evaluatorResults",
+			id:               1,
+			exptID:           10,
+			turnResultID:     100,
+			spaceID:          1000,
+			evaluatorResults: nil,
+			wantLen:          0,
+		},
+		{
+			name:             "empty map",
+			id:               1,
+			exptID:           10,
+			turnResultID:     100,
+			spaceID:          1000,
+			evaluatorResults: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{}},
+			wantLen:          0,
+		},
+		{
+			name:         "normal with 2 entries",
+			id:           1,
+			exptID:       10,
+			turnResultID: 100,
+			spaceID:      1000,
+			evaluatorResults: &entity.EvaluatorResults{
+				EvalVerIDToResID: map[int64]int64{
+					201: 301,
+					202: 302,
+				},
+			},
+			wantLen: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			refs := NewTurnEvaluatorResultRefs(tt.id, tt.exptID, tt.turnResultID, tt.spaceID, tt.evaluatorResults)
+			if tt.evaluatorResults == nil {
+				assert.Nil(t, refs)
+				return
+			}
+			assert.Len(t, refs, tt.wantLen)
+			for _, ref := range refs {
+				assert.Equal(t, tt.id, ref.ID)
+				assert.Equal(t, tt.exptID, ref.ExptID)
+				assert.Equal(t, tt.spaceID, ref.SpaceID)
+				assert.Equal(t, tt.turnResultID, ref.ExptTurnResultID)
+				expectedResID := tt.evaluatorResults.EvalVerIDToResID[ref.EvaluatorVersionID]
+				assert.Equal(t, expectedResID, ref.EvaluatorResultID)
+			}
+		})
+	}
+}
+
+func TestResolveLoadEvaluatorFullContent(t *testing.T) {
+	tests := []struct {
+		name   string
+		param  *entity.MGetExperimentResultParam
+		expect bool
+	}{
+		{
+			name: "explicit true",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvaluatorFullContent: gptr.Of(true),
+				ExportFullContent:        false,
+			},
+			expect: true,
+		},
+		{
+			name: "explicit false",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvaluatorFullContent: gptr.Of(false),
+				ExportFullContent:        true,
+			},
+			expect: false,
+		},
+		{
+			name: "nil falls back to ExportFullContent true",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvaluatorFullContent: nil,
+				ExportFullContent:        true,
+			},
+			expect: true,
+		},
+		{
+			name: "nil falls back to ExportFullContent false",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvaluatorFullContent: nil,
+				ExportFullContent:        false,
+			},
+			expect: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveLoadEvaluatorFullContent(tt.param)
+			assert.Equal(t, tt.expect, got)
+		})
+	}
+}
+
+func TestResolveLoadEvalTargetFullContent(t *testing.T) {
+	tests := []struct {
+		name   string
+		param  *entity.MGetExperimentResultParam
+		expect bool
+	}{
+		{
+			name: "LoadEvalTargetOutputFieldKeys non-empty returns false",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvalTargetOutputFieldKeys: []string{"field1"},
+				LoadEvalTargetFullContent:     gptr.Of(true),
+				ExportFullContent:             true,
+			},
+			expect: false,
+		},
+		{
+			name: "explicit true",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvalTargetFullContent: gptr.Of(true),
+				ExportFullContent:         false,
+			},
+			expect: true,
+		},
+		{
+			name: "explicit false",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvalTargetFullContent: gptr.Of(false),
+				ExportFullContent:         true,
+			},
+			expect: false,
+		},
+		{
+			name: "nil falls back to ExportFullContent true",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvalTargetFullContent: nil,
+				ExportFullContent:         true,
+			},
+			expect: true,
+		},
+		{
+			name: "nil falls back to ExportFullContent false",
+			param: &entity.MGetExperimentResultParam{
+				LoadEvalTargetFullContent: nil,
+				ExportFullContent:         false,
+			},
+			expect: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveLoadEvalTargetFullContent(tt.param)
+			assert.Equal(t, tt.expect, got)
+		})
+	}
+}
+
+func TestCalculateWeightedScore_TableDriven(t *testing.T) {
+	tests := []struct {
+		name    string
+		records map[int64]*entity.EvaluatorRecord
+		weights map[int64]float64
+		want    *float64
+	}{
+		{
+			name:    "empty records",
+			records: map[int64]*entity.EvaluatorRecord{},
+			weights: map[int64]float64{1: 0.5},
+			want:    nil,
+		},
+		{
+			name:    "nil records",
+			records: nil,
+			weights: map[int64]float64{1: 0.5},
+			want:    nil,
+		},
+		{
+			name: "no weights - simple average",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.6),
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.7),
+		},
+		{
+			name: "with weights",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.6),
+						},
+					},
+				},
+			},
+			weights: map[int64]float64{1: 0.6, 2: 0.4},
+			want:    gptr.Of(utils.RoundScoreToTwoDecimals((0.8*0.6 + 0.6*0.4) / (0.6 + 0.4))),
+		},
+		{
+			name: "with correction scores",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.5),
+							Correction: &entity.Correction{
+								Score: gptr.Of(0.9),
+							},
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.9),
+		},
+		{
+			name: "all nil scores",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: nil,
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: nil,
+				},
+			},
+			weights: nil,
+			want:    nil,
+		},
+		{
+			name: "mixed nil and valid scores - no weights",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: nil,
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.8),
+		},
+		{
+			name: "weight <= 0 skipped",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.2),
+						},
+					},
+				},
+			},
+			weights: map[int64]float64{1: 1.0, 2: -0.5},
+			want:    gptr.Of(0.8),
+		},
+		{
+			name: "nil record in map skipped",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: nil,
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.6),
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.6),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calculateWeightedScore(tt.records, tt.weights)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
+}
+
+func TestGenerateTurnKey_Basic(t *testing.T) {
+	got := GenerateTurnKey(100, 200, 300, 400)
+	assert.Equal(t, "100_200_300_400", got)
+}
+
+func TestParseTurnKey_TableDriven(t *testing.T) {
+	tests := []struct {
+		name    string
+		turnKey string
+		want    *TurnKeyComponents
+		wantErr bool
+	}{
+		{
+			name:    "valid",
+			turnKey: "100_200_300_400",
+			want: &TurnKeyComponents{
+				SpaceID: 100,
+				ExptID:  200,
+				ItemID:  300,
+				TurnID:  400,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "invalid format - too few parts",
+			turnKey: "100_200_300",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - too many parts",
+			turnKey: "100_200_300_400_500",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - spaceID",
+			turnKey: "abc_200_300_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - exptID",
+			turnKey: "100_abc_300_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - itemID",
+			turnKey: "100_200_abc_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - turnID",
+			turnKey: "100_200_300_abc",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTurnKey(tt.turnKey)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
