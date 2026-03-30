@@ -186,9 +186,42 @@ type ParseImportSourceFileResult struct {
 	FieldSchemas             []*FieldSchema
 	Conflicts                []*ConflictField
 	FilesWithAmbiguousColumn []string
+	UntypedURLFields         []string
+	PrecheckDataByField      map[string][]string
 }
 
 type FieldMapping struct {
 	Source string
 	Target string
+}
+
+type MultiModalStoreStrategy string
+
+const (
+	MultiModalStoreStrategyPassthrough MultiModalStoreStrategy = "passthrough"
+	MultiModalStoreStrategyStore       MultiModalStoreStrategy = "store"
+)
+
+type MultiModalStoreOption struct {
+	MultiModalStoreStrategy *MultiModalStoreStrategy
+	ContentType             *ContentType
+}
+
+type UploadAttachmentDetail struct {
+	ContentType     *ContentType
+	ImagexServiceID *string
+	OriginImage     *Image
+	Image           *Image
+	OriginAudio     *Audio
+	Audio           *Audio
+	OriginVideo     *Video
+	Video           *Video
+	ErrMsg          *string
+	ErrorType       *ItemErrorType
+}
+
+type FieldWriteOption struct {
+	FieldName          *string
+	FieldKey           *string
+	MultiModalStoreOpt *MultiModalStoreOption
 }

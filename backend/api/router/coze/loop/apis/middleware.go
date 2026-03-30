@@ -2079,3 +2079,28 @@ func _runbuiltinevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _multi_part_dataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _validatemultipartdataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _multi_part_data0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _validatemultipartdata0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _validateevaluationsetmultipartdataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
