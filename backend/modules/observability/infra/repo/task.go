@@ -125,6 +125,10 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error {
 	TaskPo := convertor.TaskDO2PO(do)
 
+	if do.TaskType == entity.TaskTypeAutoDataReflow && do.TaskConfig.DataReflowConfig == nil {
+		logs.CtxInfo(ctx, "Task update config is nil, task:%v", do)
+	}
+
 	// 先执行数据库操作
 	err := v.TaskDao.UpdateTask(ctx, TaskPo)
 	if err != nil {
