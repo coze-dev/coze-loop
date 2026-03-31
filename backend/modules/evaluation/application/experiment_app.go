@@ -46,6 +46,7 @@ type IExperimentApplication interface {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
+	service.ExptLifecycleEventHandler
 }
 
 type experimentApplication struct {
@@ -63,6 +64,7 @@ type experimentApplication struct {
 	service.IExptResultExportService
 	userInfoService userinfo.UserInfoService
 	service.IExptInsightAnalysisService
+	service.ExptLifecycleEventHandler
 
 	evalTargetService        service.IEvalTargetService
 	evaluationSetItemService service.EvaluationSetItemService
@@ -94,6 +96,7 @@ func NewExperimentApplication(
 	evaluatorService service.EvaluatorService,
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
+	lifecycleEventHandler service.ExptLifecycleEventHandler,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -111,6 +114,7 @@ func NewExperimentApplication(
 		tagRPCAdapter:               tagRPCAdapter,
 		IExptResultExportService:    exptResultExportService,
 		IExptInsightAnalysisService: exptInsightAnalysisService,
+		ExptLifecycleEventHandler:   lifecycleEventHandler,
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,

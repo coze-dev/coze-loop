@@ -1637,16 +1637,17 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1752,16 +1753,17 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1827,16 +1829,17 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 
 				// No aggregate calculation event should be published
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1901,16 +1904,17 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -1980,16 +1984,17 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},

@@ -5,7 +5,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/samber/lo"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -303,11 +303,60 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 
 	switch runMode {
 	case entity.EvaluationModeSubmit:
-		if err = e.sendExptNotify(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "[Run] SendExptNotify failed, expt_id: %v, error: %v", exptID, err)
+		if err := e.sendNotifyCard(ctx, expt); err != nil {
+			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
 		}
 	}
 	return nil
+}
+
+func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
+	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
+	if err != nil {
+		return err
+	}
+	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
+		logs.CtxWarn(ctx, "expt %s notify card without target email", expt.ID)
+		return nil
+	}
+	cardID, param := buildExptNotifyParam(expt)
+	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
+}
+
+func buildExptNotifyParam(expt *entity.Experiment) (cardID string, param map[string]string) {
+	param = map[string]string{
+		"expt_name": expt.Name,
+		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
+		"expt_id":   strconv.FormatInt(expt.ID, 10),
+	}
+	if expt.StartAt != nil {
+		param["start_time"] = expt.StartAt.Format(time.DateTime)
+	} else {
+		param["start_time"] = "-"
+	}
+	if expt.EndAt != nil {
+		param["end_time"] = expt.EndAt.Format(time.DateTime)
+	} else {
+		param["end_time"] = "-"
+	}
+	switch expt.Status {
+	case entity.ExptStatus_Success:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess
+	case entity.ExptStatus_Failed:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
+	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
+	case entity.ExptStatus_Pending:
+		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
+		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
+	default:
+		return "", nil
+	}
+
+	return consts.ExptEventNotifyCardID, param
 }
 
 func (e *ExptMangerImpl) RetryItems(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, itemIDs []int64, session *entity.Session, ext map[string]string) error {
@@ -593,10 +642,10 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 		}
 	}
 
+	fromStatus := got.Status
 	got.Status = status
 	got.EndAt = exptDo.EndAt
-	// 增加PostHook,后续放到MQ里
-	err = e.afterCompleteExpt(ctx, got)
+	err = e.sendExptCompleteEvent(ctx, got, fromStatus)
 	if err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
 	}
@@ -607,59 +656,26 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	return nil
 }
 
-func (e *ExptMangerImpl) afterCompleteExpt(ctx context.Context, expt *entity.Experiment) error {
+func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, fromStatus entity.ExptStatus) error {
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}
 
-	return e.sendExptNotify(ctx, expt)
-}
-
-func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experiment) error {
-	logs.CtxInfo(ctx, "sendExptNotify, expt: %v", expt)
-
-	param := map[string]string{
-		"expt_name": expt.Name,
-		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
-		"expt_id":   strconv.FormatInt(expt.ID, 10),
+	event := &entity.ExptLifecycleEvent{
+		ExptID:     expt.ID,
+		SpaceID:    expt.SpaceID,
+		FromStatus: fromStatus,
+		ToStatus:   expt.Status,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
 	}
-	if expt.StartAt != nil {
-		param["start_time"] = expt.StartAt.Format(time.DateTime)
-	} else {
-		param["start_time"] = "-"
-	}
-	if expt.EndAt != nil {
-		param["end_time"] = expt.EndAt.Format(time.DateTime)
-	} else {
-		param["end_time"] = "-"
-	}
-	switch expt.Status {
-	case entity.ExptStatus_Success:
-		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
-		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess
-	case entity.ExptStatus_Failed:
-		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleFailed
-		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorFailed
-	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
-		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-	case entity.ExptStatus_Pending:
-		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
-		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
-	default:
-		return errors.New("invalid sendExptNotify status")
+	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
+		return e.publisher.PublishExptLifecycleEvent(ctx, event, nil)
+	}); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
 	}
 
-	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
-	if err != nil {
-		return err
-	}
-
-	if len(userInfos) != 1 || userInfos[0] == nil {
-		return nil
-	}
-	cardID := consts.ExptEventNotifyCardID
-	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
+	return nil
 }
 
 func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, session *entity.Session) error {

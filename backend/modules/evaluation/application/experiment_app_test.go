@@ -2568,6 +2568,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // evaluatorService
 				nil, // templateManager
 				nil, // fileProvider
+				nil, // lifecycleEventHandler
 			)
 
 			// 执行测试
@@ -2811,15 +2812,16 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // evaluationSetItemService
 				nil, // annotateService
 				nil, // tagRPCAdapter
-				nil, // exptResultExportService
-				nil, // exptInsightAnalysisService
-				nil, // evaluatorService
-				nil, // templateManager
-				nil, // fileProvider
-			)
+			nil, // exptResultExportService
+			nil, // exptInsightAnalysisService
+			nil, // evaluatorService
+			nil, // templateManager
+			nil, // fileProvider
+			nil, // lifecycleEventHandler
+		)
 
-			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
-			ctx := session.WithCtxUser(context.Background(), &session.User{
+		// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
+		ctx := session.WithCtxUser(context.Background(), &session.User{
 				ID: strconv.FormatInt(validUserID, 10),
 			})
 
@@ -2918,6 +2920,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3018,9 +3021,10 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				nil,                 // exptInsightAnalysisService
 				nil,                 // evaluatorService
 				mockTemplateManager, // templateManager
-				nil,                 // fileProvider
-			)
-			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+		)
+		resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -3061,9 +3065,10 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
-		)
-		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
+		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
+	)
+	_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
 	})
 
@@ -3130,9 +3135,10 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
-		)
-		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
+		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
+	)
+	resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "new_name", resp.GetExperimentTemplate().GetMeta().GetName())
 	})
@@ -3167,9 +3173,10 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
-		)
-		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
+		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
+	)
+	_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
 	})
 
@@ -3233,9 +3240,10 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-			nil,                 // fileProvider
-		)
-		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
+		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
+	)
+	resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "meta_name", resp.GetMeta().GetName())
 	})
@@ -3283,6 +3291,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3354,6 +3363,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3396,6 +3406,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3423,6 +3434,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3452,6 +3464,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3484,6 +3497,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖

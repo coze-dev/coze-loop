@@ -52,6 +52,12 @@ expt_export_csv_event_rmq:
   topic: 'expt_export_csv_event'
   consumer_group: 'expt_export_csv_event_cg'
   producer_group: 'expt_export_csv_event_pg'
+expt_lifecycle_event_rmq:
+  addr: 'cozeloop-namesrv:9876'
+  topic: 'expt_lifecycle_event'
+  consumer_group: 'expt_lifecycle_event_cg'
+  producer_group: 'expt_lifecycle_event_pg'
+  consume_timeout: 1m
 
 # ClickHouse table configuration
 clickhouse_table_config:
