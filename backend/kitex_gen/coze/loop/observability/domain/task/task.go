@@ -2343,6 +2343,7 @@ type EvaluationExperimentConfig struct {
 	ItemConcurrencyCount *int32  `thrift:"item_concurrency_count,1,optional" frugal:"1,optional,i32" json:"item_concurrency_count" form:"item_concurrency_count" query:"item_concurrency_count"`
 	ItemMaxRetryCount    *int32  `thrift:"item_max_retry_count,2,optional" frugal:"2,optional,i32" json:"item_max_retry_count" form:"item_max_retry_count" query:"item_max_retry_count"`
 	SourceTargetID       *string `thrift:"source_target_id,3,optional" frugal:"3,optional,string" json:"source_target_id" form:"source_target_id" query:"source_target_id"`
+	ExptTemplateID       *int64  `thrift:"expt_template_id,4,optional" frugal:"4,optional,i64" json:"expt_template_id" form:"expt_template_id" query:"expt_template_id"`
 }
 
 func NewEvaluationExperimentConfig() *EvaluationExperimentConfig {
@@ -2387,6 +2388,18 @@ func (p *EvaluationExperimentConfig) GetSourceTargetID() (v string) {
 	}
 	return *p.SourceTargetID
 }
+
+var EvaluationExperimentConfig_ExptTemplateID_DEFAULT int64
+
+func (p *EvaluationExperimentConfig) GetExptTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplateID() {
+		return EvaluationExperimentConfig_ExptTemplateID_DEFAULT
+	}
+	return *p.ExptTemplateID
+}
 func (p *EvaluationExperimentConfig) SetItemConcurrencyCount(val *int32) {
 	p.ItemConcurrencyCount = val
 }
@@ -2396,11 +2409,15 @@ func (p *EvaluationExperimentConfig) SetItemMaxRetryCount(val *int32) {
 func (p *EvaluationExperimentConfig) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
+func (p *EvaluationExperimentConfig) SetExptTemplateID(val *int64) {
+	p.ExptTemplateID = val
+}
 
 var fieldIDToName_EvaluationExperimentConfig = map[int16]string{
 	1: "item_concurrency_count",
 	2: "item_max_retry_count",
 	3: "source_target_id",
+	4: "expt_template_id",
 }
 
 func (p *EvaluationExperimentConfig) IsSetItemConcurrencyCount() bool {
@@ -2413,6 +2430,10 @@ func (p *EvaluationExperimentConfig) IsSetItemMaxRetryCount() bool {
 
 func (p *EvaluationExperimentConfig) IsSetSourceTargetID() bool {
 	return p.SourceTargetID != nil
+}
+
+func (p *EvaluationExperimentConfig) IsSetExptTemplateID() bool {
+	return p.ExptTemplateID != nil
 }
 
 func (p *EvaluationExperimentConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2452,6 +2473,14 @@ func (p *EvaluationExperimentConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2519,6 +2548,17 @@ func (p *EvaluationExperimentConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.SourceTargetID = _field
 	return nil
 }
+func (p *EvaluationExperimentConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return nil
+}
 
 func (p *EvaluationExperimentConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2536,6 +2576,10 @@ func (p *EvaluationExperimentConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -2610,6 +2654,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *EvaluationExperimentConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplateID() {
+		if err = oprot.WriteFieldBegin("expt_template_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *EvaluationExperimentConfig) String() string {
 	if p == nil {
@@ -2632,6 +2694,9 @@ func (p *EvaluationExperimentConfig) DeepEqual(ano *EvaluationExperimentConfig) 
 		return false
 	}
 	if !p.Field3DeepEqual(ano.SourceTargetID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ExptTemplateID) {
 		return false
 	}
 	return true
@@ -2669,6 +2734,18 @@ func (p *EvaluationExperimentConfig) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SourceTargetID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationExperimentConfig) Field4DeepEqual(src *int64) bool {
+
+	if p.ExptTemplateID == src {
+		return true
+	} else if p.ExptTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.ExptTemplateID != *src {
 		return false
 	}
 	return true

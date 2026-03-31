@@ -1697,6 +1697,20 @@ func (p *EvaluationExperimentConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -1757,6 +1771,20 @@ func (p *EvaluationExperimentConfig) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *EvaluationExperimentConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return offset, nil
+}
+
 func (p *EvaluationExperimentConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -1766,6 +1794,7 @@ func (p *EvaluationExperimentConfig) FastWriteNocopy(buf []byte, w thrift.Nocopy
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -1778,6 +1807,7 @@ func (p *EvaluationExperimentConfig) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1810,6 +1840,15 @@ func (p *EvaluationExperimentConfig) fastWriteField3(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *EvaluationExperimentConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExptTemplateID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 4)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.ExptTemplateID)
+	}
+	return offset
+}
+
 func (p *EvaluationExperimentConfig) field1Length() int {
 	l := 0
 	if p.IsSetItemConcurrencyCount() {
@@ -1837,6 +1876,15 @@ func (p *EvaluationExperimentConfig) field3Length() int {
 	return l
 }
 
+func (p *EvaluationExperimentConfig) field4Length() int {
+	l := 0
+	if p.IsSetExptTemplateID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *EvaluationExperimentConfig) DeepCopy(s interface{}) error {
 	src, ok := s.(*EvaluationExperimentConfig)
 	if !ok {
@@ -1859,6 +1907,11 @@ func (p *EvaluationExperimentConfig) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.SourceTargetID)
 		}
 		p.SourceTargetID = &tmp
+	}
+
+	if src.ExptTemplateID != nil {
+		tmp := *src.ExptTemplateID
+		p.ExptTemplateID = &tmp
 	}
 
 	return nil
