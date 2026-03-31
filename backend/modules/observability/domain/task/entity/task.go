@@ -110,8 +110,8 @@ type Sampler struct {
 	CycleTimeUnit TimeUnit `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
-	AutoEvaluateConfigs        []*AutoEvaluateConfig       `json:"auto_evaluate_configs"`
-	DataReflowConfig           []*DataReflowConfig         `json:"data_reflow_config,omitempty"`
+	AutoEvaluateConfigs        []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
+	DataReflowConfig           []*DataReflowConfig
 	EvaluationExperimentConfig *EvaluationExperimentConfig `json:"evaluation_experiment_config,omitempty"`
 }
 type AutoEvaluateConfig struct {
