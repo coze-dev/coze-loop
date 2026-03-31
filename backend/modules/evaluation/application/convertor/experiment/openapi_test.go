@@ -1271,16 +1271,56 @@ func TestOpenAPIColumnEvaluatorsDO2DTOs(t *testing.T) {
 
 	from := []*entity.ColumnEvaluator{
 		{
-			EvaluatorID:   1,
-			Name:          gptr.Of("e1"),
-			EvaluatorType: entity.EvaluatorTypePrompt,
+			EvaluatorVersionID: 11,
+			EvaluatorID:        101,
+			EvaluatorType:      entity.EvaluatorTypePrompt,
+			Name:               gptr.Of("prompt-eval"),
+			Version:            gptr.Of("v1"),
+			Description:        gptr.Of("d1"),
+		},
+		{
+			EvaluatorVersionID: 12,
+			EvaluatorID:        102,
+			EvaluatorType:      entity.EvaluatorTypeCode,
+			Name:               gptr.Of("code-eval"),
+			Version:            gptr.Of("v2"),
+			Description:        gptr.Of("d2"),
+		},
+		{
+			EvaluatorVersionID: 13,
+			EvaluatorID:        103,
+			EvaluatorType:      entity.EvaluatorTypeCustomRPC,
+			Name:               gptr.Of("rpc-eval"),
+			Version:            gptr.Of("v3"),
+			Description:        gptr.Of("d3"),
+		},
+		{
+			EvaluatorVersionID: 14,
+			EvaluatorID:        104,
+			EvaluatorType:      entity.EvaluatorTypeAgent,
+			Name:               gptr.Of("agent-eval"),
+			Version:            gptr.Of("v4"),
+			Description:        gptr.Of("d4"),
 		},
 		nil,
 	}
 	got := OpenAPIColumnEvaluatorsDO2DTOs(from)
-	if assert.Len(t, got, 1) {
-		assert.Equal(t, int64(1), *got[0].EvaluatorID)
-		assert.Equal(t, openapiEvaluator.EvaluatorTypePrompt, *got[0].EvaluatorType)
+	if assert.Len(t, got, 4) {
+		assert.Equal(t, int64(11), got[0].GetEvaluatorVersionID())
+		assert.Equal(t, int64(101), got[0].GetEvaluatorID())
+		assert.Equal(t, openapiEvaluator.EvaluatorTypePrompt, gptr.Indirect(got[0].EvaluatorType))
+
+		assert.Equal(t, int64(12), got[1].GetEvaluatorVersionID())
+		assert.Equal(t, int64(102), got[1].GetEvaluatorID())
+		assert.Equal(t, openapiEvaluator.EvaluatorTypeCode, gptr.Indirect(got[1].EvaluatorType))
+
+		assert.Equal(t, int64(13), got[2].GetEvaluatorVersionID())
+		assert.Equal(t, int64(103), got[2].GetEvaluatorID())
+		assert.Equal(t, openapiEvaluator.EvaluatorTypeCustomRPC, gptr.Indirect(got[2].EvaluatorType))
+
+		assert.Equal(t, int64(14), got[3].GetEvaluatorVersionID())
+		assert.Equal(t, int64(104), got[3].GetEvaluatorID())
+		assert.Equal(t, openapiEvaluator.EvaluatorTypeAgent, gptr.Indirect(got[3].EvaluatorType))
 	}
 
 	assert.Nil(t, OpenAPIColumnEvaluatorsDO2DTOs([]*entity.ColumnEvaluator{nil}))

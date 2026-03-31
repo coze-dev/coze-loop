@@ -103,7 +103,7 @@ func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Pr
 	if err != nil {
 		return nil, err
 	}
-	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, meter, configFactory, limiterFactory, llmClient, authClient, fileClient)
+	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, meter, configFactory, limiterFactory, llmClient, authClient, fileClient, userClient)
 	if err != nil {
 		return nil, err
 	}

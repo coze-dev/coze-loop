@@ -115,6 +115,9 @@ Procedure:
 6. Start customizing your Coze Loop project.
    Refer to the examples in the `examples/` directory. Modify `values.yaml` to override the default settings. After making changes, rerun `make helm-up` for the changes to take effect.
 
+> [!WARNING]
+> If you want to deploy Coze Loop in a public network environment, it is recommended to assess security risks before you begin, and take corresponding protection measures. Possible security risks include account registration functions, Coze Server listening address configurations, SSRF (Server - Side Request Forgery), and some horizontal privilege escalations in APIs.  For more details, refer to [Quickstart](https://github.com/coze-dev/coze-loop/wiki/2.-Quickstart#security-risks-in-public-networks).
+
 ## Use the Coze Loop open source version
 
 * [Prompt development and debugging](https://loop.coze.cn/open/docs/cozeloop/create-prompt): Coze Loop provides a complete prompt development workflow.

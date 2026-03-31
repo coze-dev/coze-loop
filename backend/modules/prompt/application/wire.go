@@ -30,6 +30,7 @@ import (
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql"
+	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/mysql/hooks"
 	rediscache "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/repo/redis"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/rpc"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -38,11 +39,15 @@ import (
 var (
 	promptDomainSet = wire.NewSet(
 		service.NewPromptFormatter,
+		service.NewToolConfigProvider,
+		service.NewToolResultsCollector,
 		service.NewPromptService,
 		repo.NewManageRepo,
 		repo.NewLabelRepo,
 		repo.NewDebugLogRepo,
 		repo.NewDebugContextRepo,
+		hooks.NewEmptyPromptCommitHook,
+		hooks.NewEmptyPromptUserDraftHook,
 		mysql.NewPromptBasicDAO,
 		mysql.NewPromptCommitDAO,
 		mysql.NewPromptUserDraftDAO,
@@ -146,6 +151,7 @@ func InitPromptOpenAPIApplication(
 	llmClient llmruntimeservice.Client,
 	authClient authservice.Client,
 	fileClient fileservice.Client,
+	userClient userservice.Client,
 ) (openapi.PromptOpenAPIService, error) {
 	wire.Build(openAPISet)
 	return nil, nil
