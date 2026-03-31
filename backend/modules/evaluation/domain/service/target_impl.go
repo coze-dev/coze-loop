@@ -585,6 +585,10 @@ func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID, reco
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 
+func (e *EvalTargetServiceImpl) GetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	return e.evalTargetRepo.GetEvalTargetRecordByRunItemTurn(ctx, spaceID, runID, itemID, turnID)
+}
+
 func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	if spaceID == 0 || len(recordIDs) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
