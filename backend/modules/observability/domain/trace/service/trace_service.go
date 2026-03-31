@@ -1478,6 +1478,10 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		for key := range customTags {
 			keyCount[key]++
 		}
+		systemTags := span.GetSystemTags()
+		for key := range systemTags {
+			keyCount[key]++
+		}
 	}
 
 	keys := lo.Keys(keyCount)

@@ -5,6 +5,7 @@ package task
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 )
@@ -27,5 +28,6 @@ func NewNoopTaskHookProvider() IWorkflowProvider {
 }
 
 func (n *NoopTaskHookProvider) WorkflowCallback(ctx context.Context, event *WorkflowCallbackParam) error {
+	logs.CtxInfo(ctx, "workflow callback called noop!")
 	return nil
 }

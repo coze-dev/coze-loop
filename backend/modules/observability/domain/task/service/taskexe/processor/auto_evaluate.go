@@ -57,6 +57,7 @@ func NewAutoEvaluateProcessor(
 	workflowProvider taskhook.IWorkflowProvider,
 ) *AutoEvaluateProcessor {
 	if workflowProvider == nil {
+		logs.Info("Auto Evaluate workflowProvider is nil")
 		workflowProvider = taskhook.NewNoopTaskHookProvider()
 	}
 	return &AutoEvaluateProcessor{
