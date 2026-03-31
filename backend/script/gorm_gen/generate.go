@@ -56,6 +56,7 @@ func generateForPrompt(db *gorm.DB) {
 	for _, table := range []string{
 		"prompt_basic", "prompt_user_draft", "prompt_debug_log", "prompt_debug_context",
 		"prompt_label", "prompt_commit_label_mapping",
+		"tool_basic",
 	} {
 		models = append(models, g.GenerateModel(table,
 			// 添加软删除字段
@@ -68,7 +69,7 @@ func generateForPrompt(db *gorm.DB) {
 			})))
 	}
 
-	for _, table := range []string{"prompt_commit", "prompt_relation"} {
+	for _, table := range []string{"prompt_commit", "prompt_relation", "tool_commit"} {
 		models = append(models, g.GenerateModel(table,
 			gen.FieldGORMTag("*", func(tag field.GormTag) field.GormTag {
 				return tag.Set("charset=utf8mb4")

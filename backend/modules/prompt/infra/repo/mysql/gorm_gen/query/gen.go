@@ -26,6 +26,8 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		PromptLabel:              newPromptLabel(db, opts...),
 		PromptRelation:           newPromptRelation(db, opts...),
 		PromptUserDraft:          newPromptUserDraft(db, opts...),
+		ToolBasic:                newToolBasic(db, opts...),
+		ToolCommit:               newToolCommit(db, opts...),
 	}
 }
 
@@ -40,6 +42,8 @@ type Query struct {
 	PromptLabel              promptLabel
 	PromptRelation           promptRelation
 	PromptUserDraft          promptUserDraft
+	ToolBasic                toolBasic
+	ToolCommit               toolCommit
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -55,6 +59,8 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		PromptLabel:              q.PromptLabel.clone(db),
 		PromptRelation:           q.PromptRelation.clone(db),
 		PromptUserDraft:          q.PromptUserDraft.clone(db),
+		ToolBasic:                q.ToolBasic.clone(db),
+		ToolCommit:               q.ToolCommit.clone(db),
 	}
 }
 
@@ -77,6 +83,8 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		PromptLabel:              q.PromptLabel.replaceDB(db),
 		PromptRelation:           q.PromptRelation.replaceDB(db),
 		PromptUserDraft:          q.PromptUserDraft.replaceDB(db),
+		ToolBasic:                q.ToolBasic.replaceDB(db),
+		ToolCommit:               q.ToolCommit.replaceDB(db),
 	}
 }
 
@@ -89,6 +97,8 @@ type queryCtx struct {
 	PromptLabel              *promptLabelDo
 	PromptRelation           *promptRelationDo
 	PromptUserDraft          *promptUserDraftDo
+	ToolBasic                *toolBasicDo
+	ToolCommit               *toolCommitDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -101,6 +111,8 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		PromptLabel:              q.PromptLabel.WithContext(ctx),
 		PromptRelation:           q.PromptRelation.WithContext(ctx),
 		PromptUserDraft:          q.PromptUserDraft.WithContext(ctx),
+		ToolBasic:                q.ToolBasic.WithContext(ctx),
+		ToolCommit:               q.ToolCommit.WithContext(ctx),
 	}
 }
 

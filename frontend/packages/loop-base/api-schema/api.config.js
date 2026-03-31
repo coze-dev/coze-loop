@@ -13,6 +13,7 @@ const config = [
     entries: {
       promptDebug: './prompt/coze.loop.prompt.debug.thrift',
       promptManage: './prompt/coze.loop.prompt.manage.thrift',
+      toolManage: './prompt/coze.loop.prompt.tool_manage.thrift',
       observabilityTrace:
         './observability/coze.loop.observability.trace.thrift',
       observabilityTask: './observability/coze.loop.observability.task.thrift',
