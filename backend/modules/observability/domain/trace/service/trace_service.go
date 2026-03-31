@@ -2628,13 +2628,15 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 	}
 
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:     tenants,
-		Filters:     filters,
-		StartAt:     req.StartTime,
-		EndAt:       req.EndTime,
-		PageToken:   req.PageToken,
-		Limit:       pageSize,
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:            tenants,
+		Filters:            filters,
+		StartAt:            req.StartTime,
+		EndAt:              req.EndTime,
+		PageToken:          req.PageToken,
+		Limit:              pageSize,
+		DescByStartTime:    true,
+		NotQueryAnnotation: true,
 	})
 	if err != nil {
 		return nil, err
@@ -2699,13 +2701,15 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 	}
 
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:     tenants,
-		Filters:     filters,
-		StartAt:     req.StartTime,
-		EndAt:       req.EndTime,
-		PageToken:   req.PageToken,
-		Limit:       pageSize,
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:            tenants,
+		Filters:            filters,
+		StartAt:            req.StartTime,
+		EndAt:              req.EndTime,
+		PageToken:          req.PageToken,
+		Limit:              pageSize,
+		DescByStartTime:    true,
+		NotQueryAnnotation: true,
 	})
 	if err != nil {
 		return nil, err
