@@ -101,3 +101,9 @@ func (p *Message) IsValid() error {
 	}
 	return nil
 }
+func (p *AgentConfig) IsValid() error {
+	return nil
+}
+func (p *SkillConfig) IsValid() error {
+	return nil
+}

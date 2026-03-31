@@ -36,6 +36,7 @@ struct CreateEvaluationSetWithImportRequest {
     6: optional dataset_job.SourceType source_type (vt.defined_only = "true")
     7: required dataset_job.DatasetIOEndpoint source
     8: optional list<dataset_job.FieldMapping> fieldMappings (vt.min_size = "1", vt.elem.skip = "false")
+    9: optional dataset_job.DatasetIOJobOption option
 
     200: optional common.Session session (api.none = 'true')
     255: optional base.Base Base
@@ -58,8 +59,10 @@ struct ParseImportSourceFileRequest {
 struct ParseImportSourceFileResponse {
     1: optional i64 bytes (api.js_conv="true", go.tag='json:"bytes"')       // 文件大小，单位为 byte
     10: optional list<eval_set.FieldSchema> field_schemas,        // 数据集字段约束
-    3: optional list<ConflictField> conflicts         // 冲突详情。key: 列名，val：冲突详情
+    3: optional list<ConflictField> conflicts            // 冲突详情。key: 列名，val：冲突详情
     4: optional list<string> files_with_ambiguous_column // 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况
+    5: optional list<string> untyped_url_fields              // 无类型标记的 URL 列名列表（内容为文件中的列名）
+    6: optional map<string, list<string>> precheck_data_by_field // 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容
 
     /*base*/
     255: optional base.BaseResp baseResp
@@ -230,8 +233,9 @@ struct BatchCreateEvaluationSetItemsRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: optional list<eval_set.EvaluationSetItem> items (vt.min_size='1',vt.max_size='100'),
 
-    10: optional bool skip_invalid_items, // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据                                                    // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
+    10: optional bool skip_invalid_items // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据                                                    // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     11: optional bool allow_partial_add  // 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
+    12: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -250,6 +254,8 @@ struct UpdateEvaluationSetItemRequest {
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional list<eval_set.Turn> turns,  // 每轮对话
+
+    10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -356,6 +362,7 @@ struct GetEvaluationSetItemFieldRequest {
     3: required i64 item_pk (api.path='item_pk',api.js_conv='true', go.tag='json:"item_pk"'), // item 的主键ID，即 item.ID 这一字段
     5: required string field_name // 列名
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
+    7: optional string field_key // 与 field name 同时指定时，仅 field key 生效
 
     255: optional base.Base Base
 }
@@ -364,6 +371,35 @@ struct GetEvaluationSetItemFieldResponse {
     1: optional eval_set.FieldData field_data
 
     255: optional base.BaseResp BaseResp
+}
+
+struct UploadAttachmentDetail {
+    1: optional dataset.ContentType content_type
+    2: optional string imagex_service_id              // 图片处理服务 id
+    // [20,50) 多模态信息. 根据 contentType 获取对应内容
+    20: optional common.Image origin_image   // contentType=Image，原始图片
+    21: optional common.Image image         // contentType=Image，上传后的图片
+    22: optional common.Audio origin_audio   // contentType=Audio，原始音频
+    23: optional common.Audio audio        // contentType=Audio. 上传后的音频
+    24: optional common.Video origin_video   // contentType=Video，原始视频
+    25: optional common.Video video        // contentType=Video. 上传后的视频
+    // 错误信息
+    101: optional dataset.ItemErrorType error_type // notice: 只返回图片相关的错误类型
+    102: optional string err_msg
+}
+
+struct ValidateEvaluationSetMultiPartDataRequest {
+    1: required i64 space_id (agw.js_conv = "str", vt.gt = "0")
+    2: optional list<string> preview_data (vt.min_size = "1") // 可以是包含特定格式的多模态数据或单一的 url 链接
+    3: optional dataset.MultiModalStoreOption store_option (vt.not_nil = "true") // 目前仅模态类型在当前接口有效
+
+    /*base*/
+    255: optional base.Base base
+}
+
+struct ValidateEvaluationSetMultiPartDataResponse {
+    1: optional list<UploadAttachmentDetail> attachment_urls_check_detail // 根据校验结果中是否包含错误，判断数据是否合法
+    255: optional base.BaseResp baseResp
 }
 
 service EvaluationSetService {
@@ -430,6 +466,9 @@ service EvaluationSetService {
     )
     GetEvaluationSetItemFieldResponse GetEvaluationSetItemField(1: GetEvaluationSetItemFieldRequest req) (
         api.category="evaluation_set", api.get = "/api/evaluation/v1/evaluation_sets/:evaluation_set_id/items/:item_pk/field", api.op_type = 'query', api.tag = 'volc-agentkit,open'
+    )
+    ValidateEvaluationSetMultiPartDataResponse ValidateEvaluationSetMultiPartData(1: ValidateEvaluationSetMultiPartDataRequest req) (
+        api.category="evaluation_set", api.post = "/api/evaluation/v1/evaluation_sets/multi_part_data/validate", api.op_type = 'query', api.tag = 'volc-agentkit,open'
     )
 }
 

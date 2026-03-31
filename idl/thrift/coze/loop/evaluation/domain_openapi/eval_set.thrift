@@ -113,3 +113,18 @@ struct DatasetItemOutput {
     3: optional i64 item_id (api.js_conv="true", go.tag = 'json:"item_id"')
     4: optional bool is_new_item                   // 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。
 }
+
+typedef string MultiModalStoreStrategy(ts.enum="true")
+const MultiModalStoreStrategy MultiModalStoreStrategy_Passthrough = "passthrough" // 保留用户的外链
+const MultiModalStoreStrategy MultiModalStoreStrategy_Store = "store"             // 转存用户的 url 到平台内
+
+struct MultiModalStoreOption {
+    1: optional MultiModalStoreStrategy multi_modal_store_strategy
+}
+
+struct FieldWriteOption {
+    1: optional string fieldName         // 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key
+    2: optional string fieldKey
+    3: optional common.ContentType modality_type // 手动标记的当前列，仅 image/video/audio 等多模态类型有效
+    4: optional MultiModalStoreOption multi_modal_store_opt
+}

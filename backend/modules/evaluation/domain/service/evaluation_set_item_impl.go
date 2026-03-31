@@ -56,8 +56,8 @@ func (d *EvaluationSetItemServiceImpl) BatchUpdateEvaluationSetItems(ctx context
 	})
 }
 
-func (d *EvaluationSetItemServiceImpl) UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error) {
-	return d.datasetRPCAdapter.UpdateDatasetItem(ctx, spaceID, evaluationSetID, itemID, turns)
+func (d *EvaluationSetItemServiceImpl) UpdateEvaluationSetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error) {
+	return d.datasetRPCAdapter.UpdateDatasetItem(ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions)
 }
 
 func (d *EvaluationSetItemServiceImpl) BatchDeleteEvaluationSetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error) {
@@ -140,6 +140,7 @@ func (d *EvaluationSetItemServiceImpl) GetEvaluationSetItemField(ctx context.Con
 		EvaluationSetID: param.EvaluationSetID,
 		ItemPK:          param.ItemPK,
 		FieldName:       param.FieldName,
+		FieldKey:        param.FieldKey,
 		TurnID:          param.TurnID,
 	})
 }
