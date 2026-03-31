@@ -408,6 +408,55 @@ func TestToolManageApplicationImpl_ListTool(t *testing.T) {
 			request: &toolmanage.ListToolRequest{WorkspaceID: ptr.Of(int64(100)), PageNum: ptr.Of(int32(1)), PageSize: ptr.Of(int32(10))},
 			wantErr: nil,
 		},
+		{
+			name: "mget user info error",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().ListTool(gomock.Any(), gomock.Any()).Return(&repo.ListToolResult{
+					Total: 1,
+					Tools: []*toolmgmt.Tool{
+						{
+							ID:      1,
+							SpaceID: 100,
+							ToolBasic: &toolmgmt.ToolBasic{
+								Name:      "test_tool",
+								CreatedBy: "user1",
+							},
+						},
+					},
+				}, nil)
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return(nil, errorx.New("user rpc error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo, userRPCProvider: mockUser}
+			},
+			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolRequest{WorkspaceID: ptr.Of(int64(100)), PageNum: ptr.Of(int32(1)), PageSize: ptr.Of(int32(10))},
+			wantErr: errorx.New("user rpc error"),
+		},
+		{
+			name: "success with nil tool and nil basic in list",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionWorkspaceListLoopPrompt).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().ListTool(gomock.Any(), gomock.Any()).Return(&repo.ListToolResult{
+					Total: 2,
+					Tools: []*toolmgmt.Tool{
+						nil,
+						{ID: 2, SpaceID: 100, ToolBasic: nil},
+						{ID: 3, SpaceID: 100, ToolBasic: &toolmgmt.ToolBasic{CreatedBy: ""}},
+					},
+				}, nil)
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil)
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo, userRPCProvider: mockUser}
+			},
+			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolRequest{WorkspaceID: ptr.Of(int64(100)), PageNum: ptr.Of(int32(1)), PageSize: ptr.Of(int32(10))},
+			wantErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -468,6 +517,19 @@ func TestToolManageApplicationImpl_SaveToolDetail(t *testing.T) {
 			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
 			request: &toolmanage.SaveToolDetailRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100)), ToolDetail: &tool.ToolDetail{Content: ptr.Of("c")}},
 			wantErr: errorx.New("auth error"),
+		},
+		{
+			name: "get tool error",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptEdit).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(nil, errorx.New("get tool error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo}
+			},
+			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.SaveToolDetailRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100)), ToolDetail: &tool.ToolDetail{Content: ptr.Of("c")}},
+			wantErr: errorx.New("get tool error"),
 		},
 		{
 			name: "tool not found",
@@ -600,6 +662,19 @@ func TestToolManageApplicationImpl_CommitToolDraft(t *testing.T) {
 			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
 			request: &toolmanage.CommitToolDraftRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100)), CommitVersion: ptr.Of("1.0.0")},
 			wantErr: errorx.New("auth error"),
+		},
+		{
+			name: "get tool error in commit",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptEdit).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(nil, errorx.New("get tool error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo}
+			},
+			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.CommitToolDraftRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100)), CommitVersion: ptr.Of("1.0.0")},
+			wantErr: errorx.New("get tool error"),
 		},
 		{
 			name: "tool not found",
@@ -753,6 +828,114 @@ func TestToolManageApplicationImpl_ListToolCommit(t *testing.T) {
 			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
 			request: &toolmanage.ListToolCommitRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100))},
 			wantErr: errorx.NewByCode(prompterr.ResourceNotFoundCode),
+		},
+		{
+			name: "get tool error in list commit",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(nil, errorx.New("get tool error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo}
+			},
+			ctx:     session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolCommitRequest{ToolID: ptr.Of(int64(1)), WorkspaceID: ptr.Of(int64(100))},
+			wantErr: errorx.New("get tool error"),
+		},
+		{
+			name: "list tool commit repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(&toolmgmt.Tool{ID: 1, SpaceID: 100}, nil)
+				mockRepo.EXPECT().ListToolCommit(gomock.Any(), gomock.Any()).Return(nil, errorx.New("list commit error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo}
+			},
+			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolCommitRequest{
+				ToolID:      ptr.Of(int64(1)),
+				WorkspaceID: ptr.Of(int64(100)),
+				PageSize:    ptr.Of(int32(10)),
+			},
+			wantErr: errorx.New("list commit error"),
+		},
+		{
+			name: "nil commit info in list skipped",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(&toolmgmt.Tool{ID: 1, SpaceID: 100}, nil)
+				mockRepo.EXPECT().ListToolCommit(gomock.Any(), gomock.Any()).Return(&repo.ListToolCommitResult{
+					CommitInfos: []*toolmgmt.CommitInfo{
+						nil,
+						{Version: "1.0.0", CommittedBy: "user1"},
+					},
+				}, nil)
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil)
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo, userRPCProvider: mockUser}
+			},
+			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolCommitRequest{
+				ToolID:      ptr.Of(int64(1)),
+				WorkspaceID: ptr.Of(int64(100)),
+				PageSize:    ptr.Of(int32(10)),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "with commit detail mapping",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(&toolmgmt.Tool{ID: 1, SpaceID: 100}, nil)
+				mockRepo.EXPECT().ListToolCommit(gomock.Any(), gomock.Any()).Return(&repo.ListToolCommitResult{
+					CommitInfos: []*toolmgmt.CommitInfo{
+						{Version: "1.0.0", CommittedBy: "user1"},
+					},
+					CommitDetails: map[string]*toolmgmt.ToolDetail{
+						"1.0.0": {Content: "content v1"},
+					},
+				}, nil)
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil)
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo, userRPCProvider: mockUser}
+			},
+			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolCommitRequest{
+				ToolID:           ptr.Of(int64(1)),
+				WorkspaceID:      ptr.Of(int64(100)),
+				PageSize:         ptr.Of(int32(10)),
+				WithCommitDetail: ptr.Of(true),
+			},
+			wantErr: nil,
+		},
+		{
+			name: "mget user info error in list commit",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().GetTool(gomock.Any(), gomock.Any()).Return(&toolmgmt.Tool{ID: 1, SpaceID: 100}, nil)
+				mockRepo.EXPECT().ListToolCommit(gomock.Any(), gomock.Any()).Return(&repo.ListToolCommitResult{
+					CommitInfos: []*toolmgmt.CommitInfo{
+						{Version: "1.0.0", CommittedBy: "user1"},
+					},
+				}, nil)
+				mockUser := mocks.NewMockIUserProvider(ctrl)
+				mockUser.EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return(nil, errorx.New("user rpc error"))
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo, userRPCProvider: mockUser}
+			},
+			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.ListToolCommitRequest{
+				ToolID:      ptr.Of(int64(1)),
+				WorkspaceID: ptr.Of(int64(100)),
+				PageSize:    ptr.Of(int32(10)),
+			},
+			wantErr: errorx.New("user rpc error"),
 		},
 		{
 			name: "invalid page token",
@@ -933,6 +1116,36 @@ func TestToolManageApplicationImpl_BatchGetTools(t *testing.T) {
 			},
 			wantErr: nil,
 		},
+		{
+			name: "success with nil result and nil tool filtered",
+			fieldsGetter: func(ctrl *gomock.Controller) toolManageFields {
+				mockAuth := mocks.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckSpacePermission(gomock.Any(), int64(100), consts.ActionLoopPromptRead).Return(nil)
+				mockRepo := repomocks.NewMockIToolRepo(ctrl)
+				mockRepo.EXPECT().BatchGetTools(gomock.Any(), gomock.Any()).Return([]*repo.BatchGetToolsResult{
+					nil,
+					{
+						Query: repo.BatchGetToolsQuery{ToolID: 2, Version: "1.0.0"},
+						Tool:  nil,
+					},
+					{
+						Query: repo.BatchGetToolsQuery{ToolID: 3, Version: "2.0.0"},
+						Tool: &toolmgmt.Tool{
+							ID:        3,
+							SpaceID:   100,
+							ToolBasic: &toolmgmt.ToolBasic{Name: "tool3"},
+						},
+					},
+				}, nil)
+				return toolManageFields{authRPCProvider: mockAuth, toolRepo: mockRepo}
+			},
+			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user1"}),
+			request: &toolmanage.BatchGetToolsRequest{
+				WorkspaceID: ptr.Of(int64(100)),
+				Queries:     []*toolmanage.ToolQuery{{ToolID: ptr.Of(int64(3)), Version: ptr.Of("2.0.0")}},
+			},
+			wantErr: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -950,6 +1163,18 @@ func TestToolManageApplicationImpl_BatchGetTools(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewToolManageApplication(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repomocks.NewMockIToolRepo(ctrl)
+	mockAuth := mocks.NewMockIAuthProvider(ctrl)
+	mockUser := mocks.NewMockIUserProvider(ctrl)
+	svc := NewToolManageApplication(mockRepo, mockAuth, mockUser)
+	assert.NotNil(t, svc)
 }
 
 func TestToolManageApplicationImpl_listToolOrderBy(t *testing.T) {
