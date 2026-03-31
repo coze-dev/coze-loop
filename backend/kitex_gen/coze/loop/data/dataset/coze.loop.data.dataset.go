@@ -13942,8 +13942,9 @@ type BatchCreateDatasetItemsRequest struct {
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
 	SkipInvalidItems *bool `thrift:"skip_invalid_items,10,optional" frugal:"10,optional,bool" form:"skip_invalid_items" json:"skip_invalid_items,omitempty" query:"skip_invalid_items"`
 	// 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-	AllowPartialAdd *bool      `thrift:"allow_partial_add,11,optional" frugal:"11,optional,bool" form:"allow_partial_add" json:"allow_partial_add,omitempty" query:"allow_partial_add"`
-	Base            *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	AllowPartialAdd   *bool                       `thrift:"allow_partial_add,11,optional" frugal:"11,optional,bool" form:"allow_partial_add" json:"allow_partial_add,omitempty" query:"allow_partial_add"`
+	FieldWriteOptions []*dataset.FieldWriteOption `thrift:"field_write_options,12,optional" frugal:"12,optional,list<dataset.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
+	Base              *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewBatchCreateDatasetItemsRequest() *BatchCreateDatasetItemsRequest {
@@ -14008,6 +14009,18 @@ func (p *BatchCreateDatasetItemsRequest) GetAllowPartialAdd() (v bool) {
 	return *p.AllowPartialAdd
 }
 
+var BatchCreateDatasetItemsRequest_FieldWriteOptions_DEFAULT []*dataset.FieldWriteOption
+
+func (p *BatchCreateDatasetItemsRequest) GetFieldWriteOptions() (v []*dataset.FieldWriteOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldWriteOptions() {
+		return BatchCreateDatasetItemsRequest_FieldWriteOptions_DEFAULT
+	}
+	return p.FieldWriteOptions
+}
+
 var BatchCreateDatasetItemsRequest_Base_DEFAULT *base.Base
 
 func (p *BatchCreateDatasetItemsRequest) GetBase() (v *base.Base) {
@@ -14034,6 +14047,9 @@ func (p *BatchCreateDatasetItemsRequest) SetSkipInvalidItems(val *bool) {
 func (p *BatchCreateDatasetItemsRequest) SetAllowPartialAdd(val *bool) {
 	p.AllowPartialAdd = val
 }
+func (p *BatchCreateDatasetItemsRequest) SetFieldWriteOptions(val []*dataset.FieldWriteOption) {
+	p.FieldWriteOptions = val
+}
 func (p *BatchCreateDatasetItemsRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -14044,6 +14060,7 @@ var fieldIDToName_BatchCreateDatasetItemsRequest = map[int16]string{
 	3:   "items",
 	10:  "skip_invalid_items",
 	11:  "allow_partial_add",
+	12:  "field_write_options",
 	255: "Base",
 }
 
@@ -14061,6 +14078,10 @@ func (p *BatchCreateDatasetItemsRequest) IsSetSkipInvalidItems() bool {
 
 func (p *BatchCreateDatasetItemsRequest) IsSetAllowPartialAdd() bool {
 	return p.AllowPartialAdd != nil
+}
+
+func (p *BatchCreateDatasetItemsRequest) IsSetFieldWriteOptions() bool {
+	return p.FieldWriteOptions != nil
 }
 
 func (p *BatchCreateDatasetItemsRequest) IsSetBase() bool {
@@ -14122,6 +14143,14 @@ func (p *BatchCreateDatasetItemsRequest) Read(iprot thrift.TProtocol) (err error
 		case 11:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -14237,6 +14266,29 @@ func (p *BatchCreateDatasetItemsRequest) ReadField11(iprot thrift.TProtocol) err
 	p.AllowPartialAdd = _field
 	return nil
 }
+func (p *BatchCreateDatasetItemsRequest) ReadField12(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldWriteOption, 0, size)
+	values := make([]dataset.FieldWriteOption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldWriteOptions = _field
+	return nil
+}
 func (p *BatchCreateDatasetItemsRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -14270,6 +14322,10 @@ func (p *BatchCreateDatasetItemsRequest) Write(oprot thrift.TProtocol) (err erro
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -14390,6 +14446,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *BatchCreateDatasetItemsRequest) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldWriteOptions() {
+		if err = oprot.WriteFieldBegin("field_write_options", thrift.LIST, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldWriteOptions)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldWriteOptions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *BatchCreateDatasetItemsRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -14436,6 +14518,9 @@ func (p *BatchCreateDatasetItemsRequest) DeepEqual(ano *BatchCreateDatasetItemsR
 		return false
 	}
 	if !p.Field11DeepEqual(ano.AllowPartialAdd) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.FieldWriteOptions) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -14497,6 +14582,19 @@ func (p *BatchCreateDatasetItemsRequest) Field11DeepEqual(src *bool) bool {
 	}
 	if *p.AllowPartialAdd != *src {
 		return false
+	}
+	return true
+}
+func (p *BatchCreateDatasetItemsRequest) Field12DeepEqual(src []*dataset.FieldWriteOption) bool {
+
+	if len(p.FieldWriteOptions) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldWriteOptions {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
@@ -14893,8 +14991,9 @@ type UpdateDatasetItemRequest struct {
 	// 单轮数据内容，当数据集为单轮时，写入此处的值
 	Data []*dataset.FieldData `thrift:"data,4,optional" frugal:"4,optional,list<dataset.FieldData>" form:"data" json:"data,omitempty" query:"data"`
 	// 多轮对话数据内容，当数据集为多轮对话时，写入此处的值
-	RepeatedData []*dataset.ItemData `thrift:"repeated_data,5,optional" frugal:"5,optional,list<dataset.ItemData>" form:"repeated_data" json:"repeated_data,omitempty" query:"repeated_data"`
-	Base         *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	RepeatedData      []*dataset.ItemData         `thrift:"repeated_data,5,optional" frugal:"5,optional,list<dataset.ItemData>" form:"repeated_data" json:"repeated_data,omitempty" query:"repeated_data"`
+	FieldWriteOptions []*dataset.FieldWriteOption `thrift:"field_write_options,10,optional" frugal:"10,optional,list<dataset.FieldWriteOption>" form:"field_write_options" json:"field_write_options,omitempty" query:"field_write_options"`
+	Base              *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewUpdateDatasetItemRequest() *UpdateDatasetItemRequest {
@@ -14954,6 +15053,18 @@ func (p *UpdateDatasetItemRequest) GetRepeatedData() (v []*dataset.ItemData) {
 	return p.RepeatedData
 }
 
+var UpdateDatasetItemRequest_FieldWriteOptions_DEFAULT []*dataset.FieldWriteOption
+
+func (p *UpdateDatasetItemRequest) GetFieldWriteOptions() (v []*dataset.FieldWriteOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldWriteOptions() {
+		return UpdateDatasetItemRequest_FieldWriteOptions_DEFAULT
+	}
+	return p.FieldWriteOptions
+}
+
 var UpdateDatasetItemRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateDatasetItemRequest) GetBase() (v *base.Base) {
@@ -14980,6 +15091,9 @@ func (p *UpdateDatasetItemRequest) SetData(val []*dataset.FieldData) {
 func (p *UpdateDatasetItemRequest) SetRepeatedData(val []*dataset.ItemData) {
 	p.RepeatedData = val
 }
+func (p *UpdateDatasetItemRequest) SetFieldWriteOptions(val []*dataset.FieldWriteOption) {
+	p.FieldWriteOptions = val
+}
 func (p *UpdateDatasetItemRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -14990,6 +15104,7 @@ var fieldIDToName_UpdateDatasetItemRequest = map[int16]string{
 	3:   "item_id",
 	4:   "data",
 	5:   "repeated_data",
+	10:  "field_write_options",
 	255: "Base",
 }
 
@@ -15003,6 +15118,10 @@ func (p *UpdateDatasetItemRequest) IsSetData() bool {
 
 func (p *UpdateDatasetItemRequest) IsSetRepeatedData() bool {
 	return p.RepeatedData != nil
+}
+
+func (p *UpdateDatasetItemRequest) IsSetFieldWriteOptions() bool {
+	return p.FieldWriteOptions != nil
 }
 
 func (p *UpdateDatasetItemRequest) IsSetBase() bool {
@@ -15066,6 +15185,14 @@ func (p *UpdateDatasetItemRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -15198,6 +15325,29 @@ func (p *UpdateDatasetItemRequest) ReadField5(iprot thrift.TProtocol) error {
 	p.RepeatedData = _field
 	return nil
 }
+func (p *UpdateDatasetItemRequest) ReadField10(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*dataset.FieldWriteOption, 0, size)
+	values := make([]dataset.FieldWriteOption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldWriteOptions = _field
+	return nil
+}
 func (p *UpdateDatasetItemRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -15231,6 +15381,10 @@ func (p *UpdateDatasetItemRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -15357,6 +15511,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *UpdateDatasetItemRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldWriteOptions() {
+		if err = oprot.WriteFieldBegin("field_write_options", thrift.LIST, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.FieldWriteOptions)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldWriteOptions {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *UpdateDatasetItemRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -15403,6 +15583,9 @@ func (p *UpdateDatasetItemRequest) DeepEqual(ano *UpdateDatasetItemRequest) bool
 		return false
 	}
 	if !p.Field5DeepEqual(ano.RepeatedData) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.FieldWriteOptions) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -15456,6 +15639,19 @@ func (p *UpdateDatasetItemRequest) Field5DeepEqual(src []*dataset.ItemData) bool
 		return false
 	}
 	for i, v := range p.RepeatedData {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *UpdateDatasetItemRequest) Field10DeepEqual(src []*dataset.FieldWriteOption) bool {
+
+	if len(p.FieldWriteOptions) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldWriteOptions {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false

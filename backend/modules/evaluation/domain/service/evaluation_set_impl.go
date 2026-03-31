@@ -60,6 +60,7 @@ func (d *EvaluationSetServiceImpl) CreateEvaluationSetWithImport(ctx context.Con
 		Source:             param.Source,
 		FieldMappings:      param.FieldMappings,
 		Session:            param.Session,
+		Option:             param.Option,
 	})
 }
 
@@ -68,6 +69,10 @@ func (d *EvaluationSetServiceImpl) ParseImportSourceFile(ctx context.Context, pa
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode)
 	}
 	return d.datasetRPCAdapter.ParseImportSourceFile(ctx, param)
+}
+
+func (d *EvaluationSetServiceImpl) ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
+	return d.datasetRPCAdapter.ValidateMultiPartData(ctx, spaceID, previewData, storeOption)
 }
 
 func (d *EvaluationSetServiceImpl) UpdateEvaluationSet(ctx context.Context, param *entity.UpdateEvaluationSetParam) (err error) {

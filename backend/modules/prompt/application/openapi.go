@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/asaskevich/govalidator"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/codes"
 	"github.com/cloudwego/kitex/pkg/remote/trans/nphttp2/status"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/looptracer"
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
+	domainopenapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/domain_openapi/prompt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/application/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/component/conf"
@@ -30,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
+	promptmetrics "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/consts"
 	prompterr "github.com/coze-dev/coze-loop/backend/modules/prompt/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -47,7 +51,12 @@ func NewPromptOpenAPIApplication(
 	auth rpc.IAuthProvider,
 	factory limiter.IRateLimiterFactory,
 	collector collector.ICollectorProvider,
+	meter metrics.Meter,
+	user rpc.IUserProvider,
 ) (openapi.PromptOpenAPIService, error) {
+	// Initialize PaaS metrics (global instance)
+	promptmetrics.NewPromptPaasMetrics(meter)
+
 	return &PromptOpenAPIApplicationImpl{
 		promptService:    promptService,
 		promptManageRepo: promptManageRepo,
@@ -55,6 +64,7 @@ func NewPromptOpenAPIApplication(
 		auth:             auth,
 		rateLimiter:      factory.NewRateLimiter(),
 		collector:        collector,
+		user:             user,
 	}, nil
 }
 
@@ -65,6 +75,14 @@ type PromptOpenAPIApplicationImpl struct {
 	auth             rpc.IAuthProvider
 	rateLimiter      limiter.IRateLimiter
 	collector        collector.ICollectorProvider
+	user             rpc.IUserProvider
+}
+
+func (p *PromptOpenAPIApplicationImpl) getOpenAPIUserID(ctx context.Context) string {
+	if userID, ok := p.user.GetUserIdInCtx(ctx); ok && userID != "" {
+		return userID
+	}
+	return consts.OpenAPIUserID
 }
 
 func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest) (r *openapi.ListPromptBasicResponse, err error) {
@@ -113,9 +131,9 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	}
 
 	// 构建响应
-	r.Data = openapi.NewListPromptBasicData()
+	r.Data = domainopenapi.NewListPromptBasicData()
 	r.Data.Total = ptr.Of(int32(result.Total))
-	r.Data.Prompts = make([]*openapi.PromptBasic, 0, len(result.PromptDOs))
+	r.Data.Prompts = make([]*domainopenapi.PromptBasic, 0, len(result.PromptDOs))
 	for _, promptDO := range result.PromptDOs {
 		promptBasic := convertor.OpenAPIPromptBasicDO2DTO(promptDO)
 		if promptBasic != nil {
@@ -126,7 +144,244 @@ func (p *PromptOpenAPIApplicationImpl) ListPromptBasic(ctx context.Context, req 
 	return r, nil
 }
 
+func (p *PromptOpenAPIApplicationImpl) CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest) (r *openapi.CreatePromptOApiResponse, err error) {
+	r = openapi.NewCreatePromptOApiResponse()
+	if req.GetWorkspaceID() == 0 {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
+	}
+	if req.GetPromptKey() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
+	}
+	if req.GetPromptName() == "" {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_name参数为空"}))
+	}
+
+	if err = p.auth.CheckSpacePermissionForOpenAPI(ctx, req.GetWorkspaceID(), consts.ActionWorkspaceCreateLoopPrompt); err != nil {
+		return r, err
+	}
+
+	if req.PromptType == nil {
+		req.PromptType = ptr.Of(domainopenapi.PromptType(domainopenapi.PromptTypeNormal))
+	}
+	if req.SecurityLevel == nil {
+		req.SecurityLevel = ptr.Of(domainopenapi.SecurityLevel(domainopenapi.SecurityLevelL3))
+	}
+
+	promptDO := &entity.Prompt{
+		SpaceID:   req.GetWorkspaceID(),
+		PromptKey: req.GetPromptKey(),
+		PromptBasic: &entity.PromptBasic{
+			PromptType:    entity.PromptType(req.GetPromptType()),
+			DisplayName:   req.GetPromptName(),
+			Description:   req.GetPromptDescription(),
+			CreatedBy:     p.getOpenAPIUserID(ctx),
+			UpdatedBy:     p.getOpenAPIUserID(ctx),
+			SecurityLevel: entity.SecurityLevel(req.GetSecurityLevel()),
+		},
+	}
+
+	promptID, err := p.promptService.CreatePrompt(ctx, promptDO)
+	if err != nil {
+		return r, err
+	}
+	r.PromptID = ptr.Of(promptID)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest) (r *openapi.DeletePromptOApiResponse, err error) {
+	r = openapi.NewDeletePromptOApiResponse()
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+	if promptDO.PromptBasic != nil && promptDO.PromptBasic.PromptType == entity.PromptTypeSnippet {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Snippet prompt can not be deleted"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	err = p.promptManageRepo.DeletePrompt(ctx, req.GetPromptID())
+	return r, err
+}
+
+func (p *PromptOpenAPIApplicationImpl) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest) (r *openapi.GetPromptOApiResponse, err error) {
+	r = openapi.NewGetPromptOApiResponse()
+	userID := p.getOpenAPIUserID(ctx)
+
+	commitVersion := req.GetCommitVersion()
+	if req.GetWithCommit() && commitVersion == "" {
+		promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+		if err != nil {
+			return r, err
+		}
+		if promptDO.PromptBasic != nil {
+			commitVersion = promptDO.PromptBasic.LatestVersion
+		}
+	}
+
+	promptDO, err := p.promptService.GetPrompt(ctx, service.GetPromptParam{
+		PromptID:      req.GetPromptID(),
+		WithCommit:    commitVersion != "",
+		CommitVersion: commitVersion,
+		WithDraft:     req.GetWithDraft(),
+		UserID:        userID,
+	})
+	if err != nil {
+		return r, err
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptRead); err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	r.Prompt = convertor.OpenAPIPromptManageDO2DTO(promptDO)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest) (r *openapi.SaveDraftOApiResponse, err error) {
+	r = openapi.NewSaveDraftOApiResponse()
+	userID := p.getOpenAPIUserID(ctx)
+	if req.PromptDraft == nil || req.PromptDraft.DraftInfo == nil || req.PromptDraft.Detail == nil {
+		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg("Draft is not specified"))
+	}
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	savingPromptDO := &entity.Prompt{
+		ID:      req.GetPromptID(),
+		SpaceID: promptDO.SpaceID,
+		PromptDraft: &entity.PromptDraft{
+			DraftInfo: func() *entity.DraftInfo {
+				draftInfo := convertor.OpenAPIDraftInfoDTO2DO(req.PromptDraft.DraftInfo)
+				if draftInfo == nil {
+					draftInfo = &entity.DraftInfo{}
+				}
+				draftInfo.UserID = userID
+				return draftInfo
+			}(),
+			PromptDetail: convertor.OpenAPIPromptDetailDTO2DO(req.PromptDraft.Detail),
+		},
+	}
+
+	draftInfoDO, err := p.promptService.SaveDraft(ctx, savingPromptDO)
+	if err != nil {
+		return r, err
+	}
+	r.DraftInfo = convertor.OpenAPIDraftInfoDO2DTO(draftInfoDO)
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest) (r *openapi.ListCommitOApiResponse, err error) {
+	r = openapi.NewListCommitOApiResponse()
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{PromptID: req.GetPromptID()})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptRead); err != nil {
+		return r, err
+	}
+
+	var pageTokenPtr *int64
+	if req.PageToken != nil {
+		pageToken, err := strconv.ParseInt(req.GetPageToken(), 10, 64)
+		if err != nil {
+			return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("Page token is invalid, page token = %s", req.GetPageToken())))
+		}
+		pageTokenPtr = ptr.Of(pageToken)
+	}
+
+	listCommitResult, err := p.promptManageRepo.ListCommitInfo(ctx, repo.ListCommitInfoParam{
+		PromptID:  req.GetPromptID(),
+		PageSize:  int(req.GetPageSize()),
+		PageToken: pageTokenPtr,
+		Asc:       false,
+	})
+	if err != nil {
+		return r, err
+	}
+	if listCommitResult == nil {
+		return r, nil
+	}
+
+	if listCommitResult.NextPageToken > 0 {
+		r.NextPageToken = ptr.Of(strconv.FormatInt(listCommitResult.NextPageToken, 10))
+		r.HasMore = ptr.Of(true)
+	}
+	r.PromptCommitInfos = convertor.OpenAPIBatchCommitInfoDO2DTO(listCommitResult.CommitInfoDOs)
+
+	if req.GetWithCommitDetail() {
+		promptCommitDetailMap := make(map[string]*domainopenapi.PromptDetail)
+		for _, commitDO := range listCommitResult.CommitDOs {
+			if commitDO == nil || commitDO.CommitInfo == nil || commitDO.CommitInfo.Version == "" {
+				continue
+			}
+			promptCommitDetailMap[commitDO.CommitInfo.Version] = convertor.OpenAPIPromptDetailDO2DTO(commitDO.PromptDetail)
+		}
+		r.PromptCommitDetailMapping = promptCommitDetailMap
+	}
+
+	return r, nil
+}
+
+func (p *PromptOpenAPIApplicationImpl) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest) (r *openapi.CommitDraftOApiResponse, err error) {
+	r = openapi.NewCommitDraftOApiResponse()
+	userID := p.getOpenAPIUserID(ctx)
+
+	if _, err = semver.StrictNewVersion(req.GetCommitVersion()); err != nil {
+		return r, err
+	}
+
+	promptDO, err := p.promptManageRepo.GetPrompt(ctx, repo.GetPromptParam{
+		PromptID:  req.GetPromptID(),
+		UserID:    userID,
+		WithDraft: true,
+	})
+	if err != nil {
+		return r, err
+	}
+	if req.GetWorkspaceID() > 0 && req.GetWorkspaceID() != promptDO.SpaceID {
+		return r, errorx.NewByCode(prompterr.ResourceNotFoundCode, errorx.WithExtraMsg("WorkspaceID not match"))
+	}
+
+	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, promptDO.SpaceID, []int64{req.GetPromptID()}, consts.ActionLoopPromptEdit); err != nil {
+		return r, err
+	}
+
+	err = p.promptManageRepo.CommitDraft(ctx, repo.CommitDraftParam{
+		PromptID:          req.GetPromptID(),
+		UserID:            userID,
+		CommitVersion:     req.GetCommitVersion(),
+		CommitDescription: req.GetCommitDescription(),
+	})
+	return r, err
+}
+
 func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest) (r *openapi.BatchGetPromptByPromptKeyResponse, err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
 	r = openapi.NewBatchGetPromptByPromptKeyResponse()
 	if req.GetWorkspaceID() == 0 {
 		return r, errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "workspace_id参数为空"}))
@@ -135,6 +390,9 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 		if err != nil {
 			logs.CtxError(ctx, "openapi get prompts failed, err=%v", err)
 		}
+		promptmetrics.WithPaasStatus(ctx, err)
+		promptmetrics.WithPaasMethod(ctx, "BatchGetPromptByPromptKey")
+		promptmetrics.EmitPaasMetric(ctx)
 	}()
 
 	// 限流检查
@@ -165,9 +423,6 @@ func (p *PromptOpenAPIApplicationImpl) BatchGetPromptByPromptKey(ctx context.Con
 
 // fetchPromptResults 构建返回结果
 func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, req *openapi.BatchGetPromptByPromptKeyRequest, promptKeyIDMap map[string]int64) (*openapi.BatchGetPromptByPromptKeyResponse, error) {
-	// 准备查询参数
-	var mgetParams []repo.GetPromptParam
-
 	// 构建统一的查询参数
 	var queryParams []service.PromptQueryParam
 	for _, q := range req.Queries {
@@ -178,12 +433,13 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		if !exists {
 			continue // 如果找不到对应的 prompt ID，跳过该查询
 		}
-		queryParams = append(queryParams, service.PromptQueryParam{
+		queryParam := service.PromptQueryParam{
 			PromptID:  promptID,
 			PromptKey: q.GetPromptKey(),
 			Version:   q.GetVersion(),
 			Label:     q.GetLabel(),
-		})
+		}
+		queryParams = append(queryParams, queryParam)
 	}
 
 	// 使用统一的方法解析版本信息
@@ -191,6 +447,10 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 	if err != nil {
 		return nil, err
 	}
+
+	// 准备查询参数
+	var commitParams []repo.GetPromptParam
+	var draftParams []repo.GetPromptParam
 	for _, query := range req.Queries {
 		if query == nil {
 			continue
@@ -209,45 +469,74 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 		}
 		commitVersion := promptKeyCommitVersionMap[queryParam]
 
-		mgetParams = append(mgetParams, repo.GetPromptParam{
-			PromptID:      promptKeyIDMap[query.GetPromptKey()],
-			WithCommit:    true,
-			CommitVersion: commitVersion,
-		})
+		// 根据 commitVersion 类型构建参数
+		param := repo.GetPromptParam{
+			PromptID: promptKeyIDMap[query.GetPromptKey()],
+		}
+		if commitVersion != consts.PromptPersonalDraftVersion {
+			param.WithCommit = true
+			param.CommitVersion = commitVersion
+			commitParams = append(commitParams, param)
+		} else {
+			param.WithDraft = true
+			param.UserID = p.getOpenAPIUserID(ctx)
+			draftParams = append(draftParams, param)
+		}
 	}
 
 	// 获取prompt详细信息
-	prompts, err := p.promptManageRepo.MGetPrompt(ctx, mgetParams, repo.WithPromptCacheEnable())
-	if err != nil {
-		if bizErr, ok := errorx.FromStatusError(err); ok && bizErr.Code() == prompterr.PromptVersionNotExistCode {
-			extra := bizErr.Extra()
-			for promptKey, promptID := range promptKeyIDMap {
-				if extra["prompt_id"] == strconv.FormatInt(promptID, 10) {
-					extra["prompt_key"] = promptKey
-					break
+	prompts := make(map[repo.GetPromptParam]*entity.Prompt)
+	if len(commitParams) > 0 {
+		commitPromptMap, err := p.promptManageRepo.MGetPrompt(ctx, commitParams, repo.WithPromptCacheEnable())
+		if err != nil {
+			if bizErr, ok := errorx.FromStatusError(err); ok && bizErr.Code() == prompterr.PromptVersionNotExistCode {
+				extra := bizErr.Extra()
+				for promptKey, promptID := range promptKeyIDMap {
+					if extra["prompt_id"] == strconv.FormatInt(promptID, 10) {
+						extra["prompt_key"] = promptKey
+						break
+					}
 				}
+				bizErr.WithExtra(extra)
 			}
-			bizErr.WithExtra(extra)
+			return nil, err
 		}
-		return nil, err
+		for queryParam, prompt := range commitPromptMap {
+			prompts[queryParam] = prompt
+		}
+	}
+	if len(draftParams) > 0 {
+		draftPromptMap, err := p.promptManageRepo.MGetPrompt(ctx, draftParams)
+		if err != nil {
+			return nil, err
+		}
+		for queryParam, prompt := range draftPromptMap {
+			prompts[queryParam] = prompt
+		}
 	}
 
 	// 展开片段内容（若有），构建版本映射
 	promptMap := make(map[service.PromptKeyVersionPair]*entity.Prompt)
-	for _, prompt := range maps.Values(prompts) {
-		err = p.promptService.ExpandSnippets(ctx, prompt)
-		if err != nil {
+	for queryParam, prompt := range prompts {
+		if prompt == nil {
+			continue
+		}
+		if err := p.promptService.ExpandSnippets(ctx, prompt); err != nil {
 			return nil, err
+		}
+		version := queryParam.CommitVersion
+		if queryParam.WithDraft {
+			version = consts.PromptPersonalDraftVersion
 		}
 		promptMap[service.PromptKeyVersionPair{
 			PromptKey: prompt.PromptKey,
-			Version:   prompt.GetVersion(),
+			Version:   version,
 		}] = prompt
 	}
 
 	// 构建响应
 	r := openapi.NewBatchGetPromptByPromptKeyResponse()
-	r.Data = openapi.NewPromptResultData()
+	r.Data = domainopenapi.NewPromptResultData()
 
 	for _, q := range req.Queries {
 		if q == nil {
@@ -274,7 +563,7 @@ func (p *PromptOpenAPIApplicationImpl) fetchPromptResults(ctx context.Context, r
 				errorx.WithExtra(map[string]string{"prompt_key": q.GetPromptKey(), "version": q.GetVersion()}))
 		}
 
-		r.Data.Items = append(r.Data.Items, &openapi.PromptResult_{
+		r.Data.Items = append(r.Data.Items, &domainopenapi.PromptResult_{
 			Query:  q,
 			Prompt: promptDTO,
 		})
@@ -310,6 +599,8 @@ func (p *PromptOpenAPIApplicationImpl) promptHubAllowBySpace(ctx context.Context
 }
 
 func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi.ExecuteRequest) (r *openapi.ExecuteResponse, err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
+	req = normalizeExecuteRequest(req)
 	var promptDO *entity.Prompt
 	var reply *entity.Reply
 	startTime := time.Now()
@@ -328,20 +619,23 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 		if promptDO != nil {
 			version = promptDO.GetVersion()
 		}
-		if reply != nil && reply.Item != nil {
-			intputTokens = reply.Item.TokenUsage.InputTokens
-			outputTokens = reply.Item.TokenUsage.OutputTokens
-		}
+		intputTokens, outputTokens = getReplyTokenUsage(reply)
+		p.emitExecuteMetrics(ctx, req, promptDO, reply, err, "Execute")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
-			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
-			Version:      version,
-			Stream:       false,
-			InputTokens:  intputTokens,
-			OutputTokens: outputTokens,
-			StartedAt:    startTime,
-			EndedAt:      time.Now(),
-			StatusCode:   errCode,
+			SpaceID:       req.GetWorkspaceID(),
+			PromptKey:     getRequestPromptKey(req),
+			Version:       version,
+			Method:        "Execute",
+			Stream:        false,
+			HasMessage:    len(req.Messages) > 0,
+			HasContexts:   len(req.Messages) > 1,
+			AccountMode:   getRequestAccountMode(req),
+			UsageScenario: getRequestUsageScenario(req),
+			InputTokens:   intputTokens,
+			OutputTokens:  outputTokens,
+			StartedAt:     startTime,
+			EndedAt:       time.Now(),
+			StatusCode:    errCode,
 		})
 	}()
 	r = openapi.NewExecuteResponse()
@@ -369,7 +663,7 @@ func (p *PromptOpenAPIApplicationImpl) Execute(ctx context.Context, req *openapi
 	}
 	// 构建返回结果
 	if reply != nil && reply.Item != nil {
-		r.Data = &openapi.ExecuteData{
+		r.Data = &domainopenapi.ExecuteData{
 			Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
 			FinishReason: &reply.Item.FinishReason,
 			Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
@@ -397,6 +691,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 		return promptDO, nil, err
 	}
 
+	// 应用自定义覆盖参数（深拷贝以避免缓存污染）
+	promptDO, err = p.applyCustomOverrides(promptDO, req)
+	if err != nil {
+		return promptDO, nil, err
+	}
+
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
@@ -404,11 +704,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 
 	// 执行prompt
 	reply, err = p.promptService.Execute(ctx, service.ExecuteParam{
-		Prompt:       promptDO,
-		Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-		VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-		SingleStep:   true,                 // PTaaS不支持非单步模式
-		Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+		Prompt:            promptDO,
+		Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+		VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+		ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+		SingleStep:        true,                 // PTaaS不支持非单步模式
+		Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 	})
 	if err != nil {
 		return promptDO, nil, err
@@ -425,6 +726,8 @@ func (p *PromptOpenAPIApplicationImpl) doExecute(ctx context.Context, req *opena
 }
 
 func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, stream openapi.PromptOpenAPIService_ExecuteStreamingServer) (err error) {
+	ctx = promptmetrics.NewPaasMetricsCtx(ctx)
+	req = normalizeExecuteRequest(req)
 	var promptDO *entity.Prompt
 	var aggregatedReply *entity.Reply
 	startTime := time.Now()
@@ -443,20 +746,23 @@ func (p *PromptOpenAPIApplicationImpl) ExecuteStreaming(ctx context.Context, req
 		if promptDO != nil {
 			version = promptDO.GetVersion()
 		}
-		if aggregatedReply != nil && aggregatedReply.Item != nil {
-			intputTokens = aggregatedReply.Item.TokenUsage.InputTokens
-			outputTokens = aggregatedReply.Item.TokenUsage.OutputTokens
-		}
+		intputTokens, outputTokens = getReplyTokenUsage(aggregatedReply)
+		p.emitExecuteMetrics(ctx, req, promptDO, aggregatedReply, err, "StreamingExecute")
 		p.collector.CollectPTaaSEvent(ctx, &collector.ExecuteLog{
-			SpaceID:      req.GetWorkspaceID(),
-			PromptKey:    req.GetPromptIdentifier().GetPromptKey(),
-			Version:      version,
-			Stream:       false,
-			InputTokens:  intputTokens,
-			OutputTokens: outputTokens,
-			StartedAt:    startTime,
-			EndedAt:      time.Now(),
-			StatusCode:   errCode,
+			SpaceID:       req.GetWorkspaceID(),
+			PromptKey:     getRequestPromptKey(req),
+			Version:       version,
+			Method:        "StreamingExecute",
+			Stream:        true,
+			HasMessage:    len(req.Messages) > 0,
+			HasContexts:   len(req.Messages) > 1,
+			AccountMode:   getRequestAccountMode(req),
+			UsageScenario: getRequestUsageScenario(req),
+			InputTokens:   intputTokens,
+			OutputTokens:  outputTokens,
+			StartedAt:     startTime,
+			EndedAt:       time.Now(),
+			StatusCode:    errCode,
 		})
 	}()
 	err = validateExecuteRequest(req)
@@ -498,6 +804,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		return promptDO, nil, err
 	}
 
+	// 应用自定义覆盖参数（深拷贝以避免缓存污染）
+	promptDO, err = p.applyCustomOverrides(promptDO, req)
+	if err != nil {
+		return promptDO, nil, err
+	}
+
 	// 执行权限检查
 	if err = p.auth.MCheckPromptPermissionForOpenAPI(ctx, req.GetWorkspaceID(), []int64{promptDO.ID}, consts.ActionLoopPromptExecute); err != nil {
 		return promptDO, nil, err
@@ -505,6 +817,8 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 	// 执行prompt流式调用
 	resultStream := make(chan *entity.Reply)
+	receivedFirstToken := false
+	var latestInputTokens, latestOutputTokens int64
 	type replyResult struct {
 		Reply *entity.Reply
 		Err   error
@@ -529,11 +843,12 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 
 		localAggregatedReply, executeErr = p.promptService.ExecuteStreaming(ctx, service.ExecuteStreamingParam{
 			ExecuteParam: service.ExecuteParam{
-				Prompt:       promptDO,
-				Messages:     convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
-				VariableVals: convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
-				SingleStep:   true,                 // PTaaS不支持非单步模式
-				Scenario:     entity.ScenarioPTaaS, // PTaaS场景
+				Prompt:            promptDO,
+				Messages:          convertor.OpenAPIBatchMessageDTO2DO(req.Messages),
+				VariableVals:      convertor.OpenAPIBatchVariableValDTO2DO(req.VariableVals),
+				ResponseAPIConfig: convertor.OpenAPIResponseAPIConfigDTO2DO(req.ResponseAPIConfig),
+				SingleStep:        true,                 // PTaaS不支持非单步模式
+				Scenario:          entity.ScenarioPTaaS, // PTaaS场景
 			},
 			ResultStream: resultStream,
 		})
@@ -546,6 +861,13 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 		if reply == nil || reply.Item == nil {
 			continue
 		}
+		chunkInputTokens, chunkOutputTokens := getReplyTokenUsage(reply)
+		latestInputTokens = chunkInputTokens
+		latestOutputTokens = chunkOutputTokens
+		if !receivedFirstToken {
+			receivedFirstToken = true
+			promptmetrics.WithPaasFirstTokenTime(ctx)
+		}
 		// Convert base64 files to download URLs
 		if reply.Item.Message != nil {
 			if err := p.promptService.MConvertBase64DataURLToFileURL(ctx, []*entity.Message{reply.Item.Message}, req.GetWorkspaceID()); err != nil {
@@ -554,7 +876,7 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			}
 		}
 		chunk := &openapi.ExecuteStreamingResponse{
-			Data: &openapi.ExecuteStreamingData{
+			Data: &domainopenapi.ExecuteStreamingData{
 				Message:      convertor.OpenAPIMessageDO2DTO(reply.Item.Message),
 				FinishReason: ptr.Of(reply.Item.FinishReason),
 				Usage:        convertor.OpenAPITokenUsageDO2DTO(reply.Item.TokenUsage),
@@ -565,9 +887,11 @@ func (p *PromptOpenAPIApplicationImpl) doExecuteStreaming(ctx context.Context, r
 			if st, ok := status.FromError(err); (ok && st.Code() == codes.Canceled) || errors.Is(err, context.Canceled) {
 				err = nil
 				logs.CtxWarn(ctx, "execute streaming canceled")
+				return promptDO, buildTokenUsageReply(latestInputTokens, latestOutputTokens), err
 			} else if errors.Is(err, context.DeadlineExceeded) {
 				err = nil
 				logs.CtxWarn(ctx, "execute streaming ctx deadline exceeded")
+				return promptDO, buildTokenUsageReply(latestInputTokens, latestOutputTokens), err
 			} else {
 				logs.CtxError(ctx, "send chunk failed, err=%v", err)
 			}
@@ -616,7 +940,7 @@ func (p *PromptOpenAPIApplicationImpl) ptaasAllowByPromptKey(ctx context.Context
 }
 
 // getPromptByPromptKey 根据prompt_key获取prompt
-func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context, spaceID int64, promptIdentifier *openapi.PromptQuery) (prompt *entity.Prompt, err error) {
+func (p *PromptOpenAPIApplicationImpl) getPromptByPromptKey(ctx context.Context, spaceID int64, promptIdentifier *domainopenapi.PromptQuery) (prompt *entity.Prompt, err error) {
 	if promptIdentifier == nil {
 		return nil, errors.New("prompt identifier is nil")
 	}
@@ -739,6 +1063,146 @@ func (p *PromptOpenAPIApplicationImpl) finishPromptExecutorSpan(ctx context.Cont
 	span.Finish(ctx)
 }
 
+func normalizeExecuteRequest(req *openapi.ExecuteRequest) *openapi.ExecuteRequest {
+	if req == nil {
+		return req
+	}
+	needNormalize := req.GetReleaseLabel() != "" || req.CustomToolConfig != nil || (len(req.CustomTools) > 0 && req.CustomToolCallConfig == nil)
+	if !needNormalize {
+		return req
+	}
+
+	normalizedReq := openapi.NewExecuteRequest()
+	if err := normalizedReq.DeepCopy(req); err != nil {
+		// deep copy 失败时回退到原始请求，避免影响主流程
+		return req
+	}
+
+	if normalizedReq.GetReleaseLabel() != "" {
+		if normalizedReq.PromptIdentifier == nil {
+			normalizedReq.PromptIdentifier = domainopenapi.NewPromptQuery()
+		}
+		if normalizedReq.PromptIdentifier.GetLabel() == "" {
+			normalizedReq.PromptIdentifier.Label = ptr.Of(normalizedReq.GetReleaseLabel())
+		}
+	}
+
+	if normalizedReq.CustomToolCallConfig == nil {
+		if normalizedReq.CustomToolConfig != nil {
+			// custom_tool_config 兼容字段优先级低于 custom_tool_call_config
+			normalizedReq.CustomToolCallConfig = normalizedReq.CustomToolConfig
+		} else if len(normalizedReq.CustomTools) > 0 {
+			normalizedReq.CustomToolCallConfig = &domainopenapi.ToolCallConfig{
+				ToolChoice: ptr.Of(domainopenapi.ToolChoiceTypeAuto),
+			}
+		}
+	}
+
+	return normalizedReq
+}
+
+func getRequestPromptKey(req *openapi.ExecuteRequest) string {
+	if req == nil || req.GetPromptIdentifier() == nil {
+		return ""
+	}
+	return req.GetPromptIdentifier().GetPromptKey()
+}
+
+func getRequestAccountMode(req *openapi.ExecuteRequest) domainopenapi.AccountMode {
+	if req == nil || req.AccountMode == nil {
+		return domainopenapi.AccountModeSharedAccount
+	}
+	return req.GetAccountMode()
+}
+
+func getRequestUsageScenario(req *openapi.ExecuteRequest) domainopenapi.UsageScenario {
+	if req == nil || req.UsageScenario == nil {
+		return domainopenapi.UsageScenarioPromptAsAService
+	}
+	return req.GetUsageScenario()
+}
+
+func getReplyTokenUsage(reply *entity.Reply) (inputTokens int64, outputTokens int64) {
+	if reply == nil || reply.Item == nil || reply.Item.TokenUsage == nil {
+		return 0, 0
+	}
+	return reply.Item.TokenUsage.InputTokens, reply.Item.TokenUsage.OutputTokens
+}
+
+func buildTokenUsageReply(inputTokens int64, outputTokens int64) *entity.Reply {
+	return &entity.Reply{
+		Item: &entity.ReplyItem{
+			TokenUsage: &entity.TokenUsage{
+				InputTokens:  inputTokens,
+				OutputTokens: outputTokens,
+			},
+		},
+	}
+}
+
+func (p *PromptOpenAPIApplicationImpl) emitExecuteMetrics(
+	ctx context.Context,
+	req *openapi.ExecuteRequest,
+	promptDO *entity.Prompt,
+	reply *entity.Reply,
+	err error,
+	method string,
+) {
+	if req == nil {
+		return
+	}
+
+	promptmetrics.WithPaasSpace(ctx, req.GetWorkspaceID())
+	promptmetrics.WithPaasStatus(ctx, err)
+	promptmetrics.WithPaasMethod(ctx, method)
+
+	if req.GetPromptIdentifier() != nil && req.GetPromptIdentifier().GetPromptKey() != "" {
+		promptmetrics.WithPaasPromptKey(ctx, req.GetPromptIdentifier().GetPromptKey())
+	}
+	promptmetrics.WithPaaSAccountMode(ctx, getRequestAccountMode(req))
+	promptmetrics.WithPaasUsageScenario(ctx, getRequestUsageScenario(req))
+
+	// OpenAPI 使用 messages 承载上下文与当前提问，兼容 legacy tags 语义
+	hasMessage := len(req.Messages) > 0
+	hasContexts := len(req.Messages) > 1
+	promptmetrics.WithHasMessage(ctx, hasMessage)
+	promptmetrics.WithHasContexts(ctx, hasContexts)
+
+	if promptDO != nil {
+		promptmetrics.WithPaasPromptKey(ctx, promptDO.PromptKey)
+		promptmetrics.WithPaasVersion(ctx, promptDO.GetVersion())
+		promptmetrics.WithPaasSpace(ctx, promptDO.SpaceID)
+		if promptDO.PromptBasic != nil {
+			promptmetrics.WithPaasPromptType(ctx, promptTypeToMetricValue(promptDO.PromptBasic.PromptType))
+		}
+		if promptDO.PromptCommit != nil && promptDO.PromptCommit.PromptDetail != nil {
+			detail := promptDO.PromptCommit.PromptDetail
+			if detail.ModelConfig != nil {
+				if detail.ModelConfig.MaxTokens != nil {
+					promptmetrics.WithPaasMaxToken(ctx, *detail.ModelConfig.MaxTokens)
+				}
+				promptmetrics.WithPaaSModel(ctx, strconv.FormatInt(detail.ModelConfig.ModelID, 10))
+			}
+		}
+	}
+
+	if reply != nil && reply.Item != nil && reply.Item.TokenUsage != nil {
+		promptmetrics.WithPaasTokenConsumption(ctx, reply.Item.TokenUsage.InputTokens, reply.Item.TokenUsage.OutputTokens)
+	}
+	promptmetrics.EmitPaasMetric(ctx)
+}
+
+func promptTypeToMetricValue(promptType entity.PromptType) int64 {
+	switch promptType {
+	case entity.PromptTypeNormal:
+		return 1
+	case entity.PromptTypeSnippet:
+		return 2
+	default:
+		return 0
+	}
+}
+
 func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 	err := req.IsValid()
 	if err != nil {
@@ -750,14 +1214,14 @@ func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 	if req.GetPromptIdentifier() == nil || req.GetPromptIdentifier().GetPromptKey() == "" {
 		return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "prompt_key参数为空"}))
 	}
-	validateParts := func(parts []*openapi.ContentPart) error {
+	validateParts := func(parts []*domainopenapi.ContentPart) error {
 		for _, part := range parts {
 			switch part.GetType() {
-			case openapi.ContentTypeImageURL:
+			case domainopenapi.ContentTypeImageURL:
 				if !govalidator.IsURL(part.GetImageURL()) {
 					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": fmt.Sprintf("%s不是有效的URL", part.GetImageURL())}))
 				}
-			case openapi.ContentTypeBase64Data:
+			case domainopenapi.ContentTypeBase64Data:
 				if _, err = dataurl.DecodeString(part.GetBase64Data()); err != nil {
 					return errorx.NewByCode(prompterr.CommonInvalidParamCode, errorx.WithExtra(map[string]string{"invalid_param": "存在无效的base64数据，数据格式应该符合data:[<mediatype>][;base64],<data>"}))
 				}
@@ -777,5 +1241,83 @@ func validateExecuteRequest(req *openapi.ExecuteRequest) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// applyCustomOverrides 应用自定义覆盖参数到prompt（深拷贝避免缓存污染）
+func (p *PromptOpenAPIApplicationImpl) applyCustomOverrides(promptDO *entity.Prompt, req *openapi.ExecuteRequest) (*entity.Prompt, error) {
+	if promptDO == nil || req == nil {
+		return promptDO, nil
+	}
+
+	// 检查是否需要应用任何自定义覆盖
+	needsOverride := req.CustomTools != nil || req.CustomToolCallConfig != nil || req.CustomToolConfig != nil || req.CustomModelConfig != nil
+	if !needsOverride {
+		return promptDO, nil
+	}
+
+	// 确保PromptCommit存在
+	if promptDO.PromptCommit == nil {
+		return promptDO, nil
+	}
+
+	// 确保PromptDetail存在
+	if promptDO.PromptCommit.PromptDetail == nil {
+		return promptDO, nil
+	}
+
+	// 深拷贝以避免缓存污染
+	clonedPrompt := promptDO.Clone()
+	if clonedPrompt == nil {
+		return nil, errors.New("failed to clone prompt")
+	}
+
+	// 覆盖自定义工具
+	if req.CustomTools != nil {
+		customTools := convertor.OpenAPIBatchToolDTO2DO(req.CustomTools)
+		clonedPrompt.PromptCommit.PromptDetail.Tools = customTools
+	}
+
+	// 覆盖自定义工具调用配置
+	customToolCallConfigDTO := req.CustomToolCallConfig
+	if customToolCallConfigDTO == nil {
+		// custom_tool_config 兼容字段优先级低于 custom_tool_call_config
+		customToolCallConfigDTO = req.CustomToolConfig
+	}
+	if customToolCallConfigDTO != nil {
+		customToolCallConfig := convertor.OpenAPIToolCallConfigDTO2DO(customToolCallConfigDTO)
+		clonedPrompt.PromptCommit.PromptDetail.ToolCallConfig = customToolCallConfig
+	} else if len(req.CustomTools) > 0 {
+		// 与 legacy Execute 行为保持一致：仅传 custom_tools 时，默认 auto
+		clonedPrompt.PromptCommit.PromptDetail.ToolCallConfig = &entity.ToolCallConfig{
+			ToolChoice: entity.ToolChoiceTypeAuto,
+		}
+	}
+
+	// 覆盖自定义模型配置（带验证）
+	if req.CustomModelConfig != nil {
+		err := p.validateAndApplyCustomModelConfig(clonedPrompt, req.CustomModelConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return clonedPrompt, nil
+}
+
+// validateAndApplyCustomModelConfig 验证并应用自定义模型配置（全量覆盖）
+func (p *PromptOpenAPIApplicationImpl) validateAndApplyCustomModelConfig(promptDO *entity.Prompt, customModelConfig *domainopenapi.ModelConfig) error {
+	if customModelConfig == nil {
+		return nil
+	}
+
+	// 如果没有提供ModelID，当作用户没传自定义模型配置，直接返回
+	if !customModelConfig.IsSetModelID() || customModelConfig.GetModelID() == 0 {
+		return nil
+	}
+
+	// 全量替换模型配置
+	customModelConfigDO := convertor.OpenAPIModelConfigDTO2DO(customModelConfig)
+	promptDO.PromptCommit.PromptDetail.ModelConfig = customModelConfigDO
 	return nil
 }

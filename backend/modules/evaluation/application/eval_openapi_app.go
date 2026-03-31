@@ -563,11 +563,12 @@ func (e *EvalOpenAPIApplication) BatchCreateEvaluationSetItemsOApi(ctx context.C
 	}
 	// 调用domain服务
 	_, errors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
-		SpaceID:          req.GetWorkspaceID(),
-		EvaluationSetID:  req.GetEvaluationSetID(),
-		Items:            evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
-		SkipInvalidItems: req.IsSkipInvalidItems,
-		AllowPartialAdd:  req.IsAllowPartialAdd,
+		SpaceID:           req.GetWorkspaceID(),
+		EvaluationSetID:   req.GetEvaluationSetID(),
+		Items:             evaluation_set.OpenAPIItemDTO2DOs(req.GetEvaluationSetID(), req.Items),
+		SkipInvalidItems:  req.IsSkipInvalidItems,
+		AllowPartialAdd:   req.IsAllowPartialAdd,
+		FieldWriteOptions: evaluation_set.OpenAPIFieldWriteOptionDTO2DOs(req.FieldWriteOptions),
 	})
 	if err != nil {
 		return nil, err

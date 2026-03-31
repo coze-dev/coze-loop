@@ -16,6 +16,7 @@ type IDatasetRPCAdapter interface {
 	ImportDataset(ctx context.Context, param *ImportDatasetParam) (jobID int64, err error)
 	GetDatasetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error)
+	ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error)
 	UpdateDataset(ctx context.Context, spaceID, evaluationSetID int64, name, desc *string) (err error)
 	DeleteDataset(ctx context.Context, spaceID, evaluationSetID int64) (err error)
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
@@ -31,7 +32,7 @@ type IDatasetRPCAdapter interface {
 
 	BatchCreateDatasetItems(ctx context.Context, param *BatchCreateDatasetItemsParam) (idMap map[int64]int64, errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
 	BatchUpdateDatasetItems(ctx context.Context, param *BatchUpdateDatasetItemsParam) (errorGroup []*entity.ItemErrorGroup, itemOutputs []*entity.DatasetItemOutput, err error)
-	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn) (err error)
+	UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) (err error)
 	BatchDeleteDatasetItems(ctx context.Context, spaceID, evaluationSetID int64, itemIDs []int64) (err error)
 	ListDatasetItems(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
 	ListDatasetItemsByVersion(ctx context.Context, param *ListDatasetItemsParam) (items []*entity.EvaluationSetItem, total, filterTotal *int64, nextPageToken *string, err error)
@@ -49,6 +50,7 @@ type GetDatasetItemFieldParam struct {
 	ItemPK int64
 	// 列名
 	FieldName string
+	FieldKey  *string
 	// 当 item 为多轮时，必须提供
 	TurnID *int64
 }
@@ -73,6 +75,7 @@ type CreateDatasetWithImportParam struct {
 	Source        *entity.DatasetIOEndpoint
 	FieldMappings []*entity.FieldMapping
 	Session       *entity.Session
+	Option        *entity.DatasetIOJobOption
 }
 
 type ImportDatasetParam struct {
@@ -121,6 +124,8 @@ type BatchCreateDatasetItemsParam struct {
 	SkipInvalidItems *bool
 	// 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
 	AllowPartialAdd *bool
+
+	FieldWriteOptions []*entity.FieldWriteOption
 }
 
 type BatchUpdateDatasetItemsParam struct {

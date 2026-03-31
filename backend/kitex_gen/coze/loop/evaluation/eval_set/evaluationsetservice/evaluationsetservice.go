@@ -146,6 +146,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ValidateEvaluationSetMultiPartData": kitex.NewMethodInfo(
+		validateEvaluationSetMultiPartDataHandler,
+		newEvaluationSetServiceValidateEvaluationSetMultiPartDataArgs,
+		newEvaluationSetServiceValidateEvaluationSetMultiPartDataResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -540,6 +547,25 @@ func newEvaluationSetServiceGetEvaluationSetItemFieldResult() interface{} {
 	return eval_set.NewEvaluationSetServiceGetEvaluationSetItemFieldResult()
 }
 
+func validateEvaluationSetMultiPartDataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs)
+	realResult := result.(*eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataResult)
+	success, err := handler.(eval_set.EvaluationSetService).ValidateEvaluationSetMultiPartData(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationSetServiceValidateEvaluationSetMultiPartDataArgs() interface{} {
+	return eval_set.NewEvaluationSetServiceValidateEvaluationSetMultiPartDataArgs()
+}
+
+func newEvaluationSetServiceValidateEvaluationSetMultiPartDataResult() interface{} {
+	return eval_set.NewEvaluationSetServiceValidateEvaluationSetMultiPartDataResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -737,6 +763,16 @@ func (p *kClient) GetEvaluationSetItemField(ctx context.Context, req *eval_set.G
 	_args.Req = req
 	var _result eval_set.EvaluationSetServiceGetEvaluationSetItemFieldResult
 	if err = p.c.Call(ctx, "GetEvaluationSetItemField", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ValidateEvaluationSetMultiPartData(ctx context.Context, req *eval_set.ValidateEvaluationSetMultiPartDataRequest) (r *eval_set.ValidateEvaluationSetMultiPartDataResponse, err error) {
+	var _args eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataArgs
+	_args.Req = req
+	var _result eval_set.EvaluationSetServiceValidateEvaluationSetMultiPartDataResult
+	if err = p.c.Call(ctx, "ValidateEvaluationSetMultiPartData", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
