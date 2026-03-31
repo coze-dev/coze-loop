@@ -199,6 +199,7 @@ type EvaluationConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
 	ItemRetryNum  *int
+	Ext           map[string]string
 }
 
 type Connector struct {
