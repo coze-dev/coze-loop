@@ -34,6 +34,7 @@ type ListSpansParam struct {
 	EndAt              int64 // ms
 	Limit              int32
 	DescByStartTime    bool
+	AscByStartTime     bool
 	PageToken          string
 	NotQueryAnnotation bool
 	OmitColumns        []string // omit specific columns

@@ -23,6 +23,7 @@ type QueryParam struct {
 	Filters          *loop_span.FilterFields
 	Limit            int32
 	OrderByStartTime bool
+	AscByStartTime   bool
 	SelectColumns    []string
 	OmitColumns      []string // omit specific columns
 	Extra            map[string]string

@@ -2635,7 +2635,7 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		EndAt:              req.EndTime,
 		PageToken:          req.PageToken,
 		Limit:              pageSize,
-		DescByStartTime:    true,
+		AscByStartTime:     true,
 		NotQueryAnnotation: true,
 	})
 	if err != nil {
@@ -2708,7 +2708,7 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		EndAt:              req.EndTime,
 		PageToken:          req.PageToken,
 		Limit:              pageSize,
-		DescByStartTime:    true,
+		AscByStartTime:     true,
 		NotQueryAnnotation: true,
 	})
 	if err != nil {

@@ -234,6 +234,7 @@ func (t *TraceRepoImpl) ListSpans(ctx context.Context, req *repo.ListSpansParam)
 		Filters:          filters,
 		Limit:            req.Limit + 1,
 		OrderByStartTime: req.DescByStartTime,
+		AscByStartTime:   req.AscByStartTime,
 		OmitColumns:      req.OmitColumns,
 		Extra:            spanStorage.StorageConfig,
 		SelectColumns:    req.SelectColumns,
