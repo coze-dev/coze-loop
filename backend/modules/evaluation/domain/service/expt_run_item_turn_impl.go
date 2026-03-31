@@ -194,7 +194,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 						EvaluationSetID: turn.EvalSetID,
 						ItemPK:          turn.ItemID,
 						FieldName:       field.Name,
-						FieldKey:        field.Key,
+						FieldKey:        gptr.Of(field.Key),
 						TurnID:          gptr.Of(turn.ID),
 					}
 					logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
@@ -567,14 +567,17 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 	if len(fcs) > 0 && fields != nil && evalSetTurn != nil {
 		for _, field := range evalSetTurn.FieldDataList {
 			if field.Content != nil && field.Content.IsContentOmitted() {
-				fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+				param := &entity.GetEvaluationSetItemFieldParam{
 					SpaceID:         spaceID,
 					EvaluationSetID: evalSetTurn.EvalSetID,
 					ItemPK:          evalSetTurn.ItemID,
 					FieldName:       field.Name,
-					FieldKey:        field.Key,
 					TurnID:          gptr.Of(evalSetTurn.ID),
-				})
+				}
+				if field.Key != "" {
+					param.FieldKey = gptr.Of(field.Key)
+				}
+				fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, param)
 				if err != nil {
 					return nil, err
 				}
@@ -596,7 +599,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 				EvaluationSetID: evalSetTurn.EvalSetID,
 				ItemPK:          evalSetTurn.ItemID,
 				FieldName:       fc.FromField,
-				FieldKey:        fc.FromField,
+				FieldKey:        gptr.Of(fc.FromField),
 				TurnID:          gptr.Of(evalSetTurn.ID),
 			}
 			logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
@@ -679,14 +682,14 @@ func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context,
 			continue
 		}
 		if content.IsContentOmitted() {
-			req := &entity.GetEvaluationSetItemFieldParam{
-				SpaceID:         spaceID,
-				EvaluationSetID: evalSetTurn.EvalSetID,
-				ItemPK:          evalSetTurn.ItemID,
-				FieldName:       field.Name,
-				FieldKey:        field.Key,
-				TurnID:          gptr.Of(evalSetTurn.ID),
-			}
+		req := &entity.GetEvaluationSetItemFieldParam{
+			SpaceID:         spaceID,
+			EvaluationSetID: evalSetTurn.EvalSetID,
+			ItemPK:          evalSetTurn.ItemID,
+			FieldName:       field.Name,
+			FieldKey:        gptr.Of(field.Key),
+			TurnID:          gptr.Of(evalSetTurn.ID),
+		}
 			logs.CtxInfo(ctx, "found omitted content turn in getAllEvalSetFields, turn_info: %v", json.Jsonify(req))
 			fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
 			if err != nil {

@@ -797,14 +797,17 @@ func (e *EvalOpenAPIApplication) GetEvaluationItemFieldOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("item not found"))
 	}
 	// 调用domain服务
-	fieldData, err := e.evaluationSetItemService.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+	param := &entity.GetEvaluationSetItemFieldParam{
 		SpaceID:         req.GetWorkspaceID(),
 		EvaluationSetID: req.GetEvaluationSetID(),
 		ItemPK:          items[0].ID,
 		FieldName:       req.GetFieldName(),
-		FieldKey:        req.GetFieldKey(),
 		TurnID:          req.TurnID,
-	})
+	}
+	if k := req.GetFieldKey(); k != "" {
+		param.FieldKey = gptr.Of(k)
+	}
+	fieldData, err := e.evaluationSetItemService.GetEvaluationSetItemField(ctx, param)
 	if err != nil {
 		return nil, err
 	}
