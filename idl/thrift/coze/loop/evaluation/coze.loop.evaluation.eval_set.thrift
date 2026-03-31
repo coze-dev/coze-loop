@@ -253,7 +253,7 @@ struct UpdateEvaluationSetItemRequest {
     1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"'),
     2: required i64 evaluation_set_id (api.path='evaluation_set_id',api.js_conv='true', go.tag='json:"evaluation_set_id"'),
     3: required i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
-    5: optional list<eval_set.Turn> turns,  // 每轮对话
+    5: optional list<eval_set.Turn> turns,   // 每轮对话
 
     10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
