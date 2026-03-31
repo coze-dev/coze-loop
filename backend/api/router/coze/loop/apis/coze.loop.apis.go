@@ -427,11 +427,11 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_tools.GET("/:tool_id", append(_tool_idMw(handler), apis.GetToolDetail)...)
 				_tool_id := _tools.Group("/:tool_id", _tool_idMw(handler)...)
 				{
-					_commits0 := _tool_id.Group("/commits", _commits0Mw(handler)...)
+					_commits0 := _tool_id.Group("/commits", _toolcommits0Mw(handler)...)
 					_commits0.POST("/list", append(_listtoolcommitMw(handler), apis.ListToolCommit)...)
 				}
 				{
-					_drafts0 := _tool_id.Group("/drafts", _drafts0Mw(handler)...)
+					_drafts0 := _tool_id.Group("/drafts", _tooldrafts0Mw(handler)...)
 					_drafts0.POST("/commit", append(_committooldraftMw(handler), apis.CommitToolDraft)...)
 					_drafts0.POST("/save", append(_savetooldetailMw(handler), apis.SaveToolDetail)...)
 				}

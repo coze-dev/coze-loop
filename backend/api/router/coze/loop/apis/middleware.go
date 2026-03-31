@@ -2130,7 +2130,7 @@ func _gettooldetailMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _commits0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+func _toolcommits0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
@@ -2140,7 +2140,7 @@ func _listtoolcommitMw(handler *apis.APIHandler) []app.HandlerFunc {
 	return nil
 }
 
-func _drafts0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+func _tooldrafts0Mw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
