@@ -294,7 +294,6 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeText)},
 			expected: &app_eval_set.UploadAttachmentDetail{
 				ContentType: gptr.Of(dataset.ContentType_Text),
-				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
 			},
 		},
 		{
@@ -302,7 +301,6 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeImage)},
 			expected: &app_eval_set.UploadAttachmentDetail{
 				ContentType: gptr.Of(dataset.ContentType_Image),
-				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
 			},
 		},
 		{
@@ -310,7 +308,6 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeAudio)},
 			expected: &app_eval_set.UploadAttachmentDetail{
 				ContentType: gptr.Of(dataset.ContentType_Audio),
-				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
 			},
 		},
 		{
@@ -318,7 +315,6 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeVideo)},
 			expected: &app_eval_set.UploadAttachmentDetail{
 				ContentType: gptr.Of(dataset.ContentType_Video),
-				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
 			},
 		},
 		{
@@ -326,22 +322,17 @@ func TestUploadAttachmentDetailDO2DTO(t *testing.T) {
 			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentTypeMultipart)},
 			expected: &app_eval_set.UploadAttachmentDetail{
 				ContentType: gptr.Of(dataset.ContentType_MultiPart),
-				ErrorType:   gptr.Of(dataset.ItemErrorType(0)),
 			},
 		},
 		{
-			name:  "unknown content type",
-			input: &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentType("unknown"))},
-			expected: &app_eval_set.UploadAttachmentDetail{
-				ErrorType: gptr.Of(dataset.ItemErrorType(0)),
-			},
+			name:     "unknown content type",
+			input:    &entity.UploadAttachmentDetail{ContentType: gptr.Of(entity.ContentType("unknown"))},
+			expected: &app_eval_set.UploadAttachmentDetail{},
 		},
 		{
-			name:  "nil content type",
-			input: &entity.UploadAttachmentDetail{},
-			expected: &app_eval_set.UploadAttachmentDetail{
-				ErrorType: gptr.Of(dataset.ItemErrorType(0)),
-			},
+			name:     "nil content type",
+			input:    &entity.UploadAttachmentDetail{},
+			expected: &app_eval_set.UploadAttachmentDetail{},
 		},
 		{
 			name: "full fields",
