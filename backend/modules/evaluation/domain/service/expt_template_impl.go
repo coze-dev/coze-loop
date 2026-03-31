@@ -411,6 +411,11 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	// 如果 TemplateConf 为空，保持原有值
 	if updatedTemplate.TemplateConf == nil {
 		updatedTemplate.TemplateConf = existingTemplate.TemplateConf
+	} else if existingTemplate.TemplateConf != nil && existingTemplate.TemplateConf.ExptSource != nil {
+		// 增量更新请求未带 expt_source 时，避免整份 template_conf 覆盖导致 DB 中 expt_source 丢失
+		if updatedTemplate.TemplateConf.ExptSource == nil {
+			updatedTemplate.TemplateConf.ExptSource = existingTemplate.TemplateConf.ExptSource
+		}
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重

@@ -660,6 +660,165 @@ func TestExptTemplateManagerImpl_Update_WithCreateEvalTarget(t *testing.T) {
 	assert.Equal(t, int64(40), got.GetTargetVersionID())
 }
 
+// TestExptTemplateManagerImpl_Update_PreservesExptSourceInTemplateConf 增量更新只改 template_conf 部分字段时须保留原有 expt_source
+func TestExptTemplateManagerImpl_Update_PreservesExptSourceInTemplateConf(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockEvalSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
+	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
+	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:                mockRepo,
+		evaluatorService:            mockEvalSvc,
+		evalTargetService:           mockTargetSvc,
+		evaluationSetService:        mockEvalSetSvc,
+		evaluationSetVersionService: mockEvalSetVerSvc,
+		lwt:                         mockLWT,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	session := &entity.Session{UserID: "u1"}
+
+	existing := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "tpl",
+			Desc:        "d",
+			ExptType:    entity.ExptType_Offline,
+		},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:               10,
+			EvalSetVersionID:        11,
+			TargetID:                20,
+			TargetVersionID:         21,
+			TargetType:              entity.EvalTargetTypeLoopPrompt,
+			EvaluatorVersionIds:     []int64{101},
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{{EvaluatorID: 1, Version: "v1", EvaluatorVersionID: 101}},
+		},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ItemConcurNum: gptr.Of(3),
+			ExptSource: &entity.ExptSource{
+				SourceType: entity.SourceType_Workflow,
+				SourceID:   "42",
+			},
+		},
+	}
+
+	newItemConcur := 4
+	param := &entity.UpdateExptTemplateParam{
+		TemplateID: templateID,
+		SpaceID:    spaceID,
+		EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+			{EvaluatorID: 1, Version: "v1", EvaluatorVersionID: 101},
+		},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ItemConcurNum: &newItemConcur,
+		},
+	}
+
+	mockRepo.EXPECT().
+		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
+		Return(existing, nil)
+
+	mockRepo.EXPECT().
+		UpdateWithRefs(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, tpl *entity.ExptTemplate, _ []*entity.ExptTemplateEvaluatorRef) error {
+			assert.NotNil(t, tpl.TemplateConf)
+			assert.NotNil(t, tpl.TemplateConf.ExptSource)
+			assert.Equal(t, entity.SourceType_Workflow, tpl.TemplateConf.ExptSource.SourceType)
+			assert.Equal(t, "42", tpl.TemplateConf.ExptSource.SourceID)
+			assert.Equal(t, newItemConcur, gptr.Indirect(tpl.TemplateConf.ItemConcurNum))
+			return nil
+		})
+
+	updatedFromDB := &entity.ExptTemplate{
+		Meta: existing.Meta,
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:               10,
+			EvalSetVersionID:        11,
+			TargetID:                20,
+			TargetVersionID:         21,
+			TargetType:              entity.EvalTargetTypeLoopPrompt,
+			EvaluatorVersionIds:     []int64{101},
+			EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{{EvaluatorID: 1, Version: "v1", EvaluatorVersionID: 101}},
+		},
+		EvaluatorVersionRef: []*entity.ExptTemplateEvaluatorVersionRef{{EvaluatorID: 1, EvaluatorVersionID: 101}},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ItemConcurNum: &newItemConcur,
+			ExptSource: &entity.ExptSource{
+				SourceType: entity.SourceType_Workflow,
+				SourceID:   "42",
+			},
+		},
+	}
+	mockRepo.EXPECT().
+		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
+		Return(updatedFromDB, nil)
+
+	mockTargetSvc.EXPECT().
+		BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).
+		DoAndReturn(func(_ context.Context, _ int64, versionIDs []int64, _ bool) ([]*entity.EvalTarget, error) {
+			targets := make([]*entity.EvalTarget, 0)
+			for _, vid := range versionIDs {
+				if vid == 21 {
+					targets = append(targets, &entity.EvalTarget{
+						EvalTargetVersion: &entity.EvalTargetVersion{ID: 21},
+					})
+				}
+			}
+			return targets, nil
+		})
+	mockEvalSetVerSvc.EXPECT().
+		BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).
+		DoAndReturn(func(_ context.Context, _ *int64, versionIDs []int64, _ *bool) ([]*entity.BatchGetEvaluationSetVersionsResult, error) {
+			results := make([]*entity.BatchGetEvaluationSetVersionsResult, 0)
+			for _, vid := range versionIDs {
+				if vid == 11 {
+					results = append(results, &entity.BatchGetEvaluationSetVersionsResult{
+						Version: &entity.EvaluationSetVersion{ID: 11},
+						EvaluationSet: &entity.EvaluationSet{
+							ID:                   10,
+							EvaluationSetVersion: &entity.EvaluationSetVersion{ID: 11},
+						},
+					})
+				}
+			}
+			return results, nil
+		})
+	mockEvalSetSvc.EXPECT().
+		BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).
+		Return(nil, nil).
+		AnyTimes()
+	mockEvalSvc.EXPECT().
+		BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).
+		DoAndReturn(func(_ context.Context, _ *int64, versionIDs []int64, _ bool) ([]*entity.Evaluator, error) {
+			evaluators := make([]*entity.Evaluator, 0)
+			for _, vid := range versionIDs {
+				if vid == 101 {
+					pev := &entity.PromptEvaluatorVersion{}
+					pev.SetID(101)
+					evaluators = append(evaluators, &entity.Evaluator{
+						PromptEvaluatorVersion: pev,
+					})
+				}
+			}
+			return evaluators, nil
+		})
+
+	got, err := mgr.Update(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, "42", got.TemplateConf.ExptSource.SourceID)
+}
+
 func TestExptTemplateManagerImpl_List_FillTuples(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
