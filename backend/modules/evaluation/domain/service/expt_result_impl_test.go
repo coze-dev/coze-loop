@@ -1645,6 +1645,18 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 						Status: int32(entity.TurnRunState_Success),
 					}}, nil)
 
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1,
+							EvaluatorVersionID: 1,
+							EvaluatorOutputData: &entity.EvaluatorOutputData{
+								EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.5)},
+							},
+						},
+					}, nil)
+
 				// idgen mock
 				mockIdgen.EXPECT().
 					GenMultiIDs(gomock.Any(), 1).
@@ -2035,15 +2047,15 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 
 			svc := tt.setup(ctrl)
 
-			// RecordItemRunLogs 内部会通过 ExperimentRepo.GetByID 加载实验配置，用于判断是否启用加权分数。
-			// 旧单测未初始化 ExperimentRepo，导致新增逻辑下出现 nil pointer。
-			// 这里为所有用例统一注入一个 mock ExperimentRepo，并让 GetByID 返回 nil 实验，跳过加权逻辑。
-			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-			svc.ExperimentRepo = mockExperimentRepo
-			mockExperimentRepo.EXPECT().
-				GetByID(gomock.Any(), tt.exptID, tt.spaceID).
-				Return((*entity.Experiment)(nil), nil).
-				AnyTimes()
+			// 未在 setup 中注入 ExperimentRepo 的用例：补默认 mock（GetByID 返回 nil，行级分按等权计算）。
+			if svc.ExperimentRepo == nil {
+				mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+				svc.ExperimentRepo = mockExperimentRepo
+				mockExperimentRepo.EXPECT().
+					GetByID(gomock.Any(), tt.exptID, tt.spaceID).
+					Return((*entity.Experiment)(nil), nil).
+					AnyTimes()
+			}
 
 			_, err := svc.RecordItemRunLogs(context.Background(), tt.exptID, tt.exptRunID, tt.itemID, tt.spaceID)
 			if (err != nil) != tt.wantErr {
@@ -4988,7 +5000,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("未启用加权分数，不构建权重映射", func(t *testing.T) {
+	t.Run("未启用配置权重时仍按等权计算行级分", func(t *testing.T) {
 		mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
 		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 		mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
@@ -5040,7 +5052,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 				{ID: 1, TurnID: 1, Status: int32(entity.TurnRunState_Success)},
 			}, nil)
 
-		// Mock GetByID - 返回未启用加权分数的实验配置
+		// Mock GetByID - EnableScoreWeight 为 false，行级分按等权
 		mockExperimentRepo.EXPECT().
 			GetByID(ctx, exptID, spaceID).
 			Return(&entity.Experiment{
@@ -5048,8 +5060,20 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
 						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: false, // 未启用加权分数
+							EnableScoreWeight: false,
 						},
+					},
+				},
+			}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, []int64{1}, false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID:                 1,
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.88)},
 					},
 				},
 			}, nil)
@@ -5802,7 +5826,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 		assert.Equal(t, existingScore, *builder.ExptTurnResultFilters[0].EvaluatorWeightedScore)
 	})
 
-	t.Run("未启用加权分数，不重新计算", func(t *testing.T) {
+	t.Run("未启用配置权重时按等权补算", func(t *testing.T) {
 		builder := &PayloadBuilder{
 			SpaceID:        100,
 			BaselineExptID: 1,
@@ -5824,7 +5848,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
 								EvaluatorsConf: &entity.EvaluatorsConf{
-									EnableScoreWeight: false, // 未启用
+									EnableScoreWeight: false,
 								},
 							},
 						},
@@ -5848,8 +5872,9 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
-		// 未启用加权分数，应该保持为 nil
-		assert.Nil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore)
+		if assert.NotNil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore) {
+			assert.InDelta(t, 0.8, *builder.ExptTurnResultFilters[0].EvaluatorWeightedScore, 0.01)
+		}
 	})
 }
 
@@ -5992,13 +6017,15 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		assert.NoError(t, err) // 应该返回 nil，不报错
 	})
 
-	t.Run("未启用加权分数，返回 nil", func(t *testing.T) {
+	t.Run("未启用配置权重时等权重算并更新", func(t *testing.T) {
 		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 		mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 
 		service := ExptResultServiceImpl{
-			ExptTurnResultRepo: mockExptTurnResultRepo,
-			ExperimentRepo:     mockExperimentRepo,
+			ExptTurnResultRepo:     mockExptTurnResultRepo,
+			ExperimentRepo:         mockExperimentRepo,
+			evaluatorRecordService: mockEvaluatorRecordService,
 		}
 
 		mockExptTurnResultRepo.EXPECT().
@@ -6012,14 +6039,33 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
 						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: false, // 未启用
+							EnableScoreWeight: false,
 						},
 					},
 				},
 			}, nil)
 
+		mockExptTurnResultRepo.EXPECT().
+			BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{10}).
+			Return([]*entity.ExptTurnEvaluatorResultRef{{EvaluatorResultID: 55}}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, []int64{55}, false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.77)},
+					},
+				},
+			}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).
+			Return(nil)
+
 		err := service.RecalculateWeightedScore(ctx, spaceID, exptID, itemID, turnID)
-		assert.NoError(t, err) // 应该返回 nil，不报错
+		assert.NoError(t, err)
 	})
 
 	t.Run("无评估器引用，返回 nil", func(t *testing.T) {

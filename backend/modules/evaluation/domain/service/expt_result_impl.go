@@ -170,27 +170,21 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	logs.CtxInfo(ctx, "[ExptEval] expt item result with recording run_log, expt_id=%v, expt_run_id=%v, item_id=%v, cnt_op: %v", exptID, exptRunID, itemID, json.Jsonify(statsCntOp))
 
-	// 加载实验配置，判断是否启用加权分数，并从 EvaluatorConf.ScoreWeight 构建权重映射
-	var (
-		enableWeightedScore bool
-		scoreWeights        map[int64]float64
-	)
+	// 加载实验配置：仅在 EnableScoreWeight 为 true 时从 EvaluatorConf 构建权重；否则 scoreWeights 为空，calculateWeightedScore 按等权计算。
+	var scoreWeights map[int64]float64
 	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
 	if err == nil && expt != nil &&
 		expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
-				continue
-			}
-			if scoreWeights == nil {
-				scoreWeights = make(map[int64]float64)
-			}
-			scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-		}
-		// 与 RecalculateWeightedScore、fillExptTurnResultFilters 对齐：只要启用加权即计算行级分。
-		// 未配置正权重时 scoreWeights 为空，calculateWeightedScore 按等权平均处理。
-		enableWeightedScore = true
+        for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+            if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+                continue
+            }
+            if scoreWeights == nil {
+                scoreWeights = make(map[int64]float64)
+            }
+            scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
+        }
 	}
 
 	var (
@@ -212,8 +206,8 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
 
-		// 计算并回写当前轮次的加权分数
-		if enableWeightedScore && rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
+		// 计算并回写当前轮次的汇总得分（EnableScoreWeight 为 false 或未配置正权重时为等权平均）
+		if rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
 			evaluatorResultIDs := make([]int64, 0, len(rl.EvaluatorResultIds.EvalVerIDToResID))
 			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
 				evaluatorResultIDs = append(evaluatorResultIDs, resID)
@@ -1322,7 +1316,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			exptTurnResultFilter.EvaluatorScoreCorrected = evaluatorScoreCorrected
 		}
-		// 填充加权得分
+		// 填充加权得分（行级未落库时按配置重算；EnableScoreWeight 为 false 时 scoreWeights 为空，走等权）
 		weightedScore := exptTurnResult.WeightedScore
 		// 如果 WeightedScore 为 nil，但实验启用了加权分数，则重新计算
 		if weightedScore == nil && exptResultBuilder.exptDO != nil &&
@@ -1332,7 +1326,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			// 构建权重映射
 			scoreWeights := make(map[int64]float64)
 			for _, ec := range exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-				if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
+                if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
 					continue
 				}
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
@@ -1345,11 +1339,29 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 				for evaluatorVersionID, record := range evaluatorVersionID2Result {
 					if record != nil {
 						evaluatorRecords[evaluatorVersionID] = record
+		if weightedScore == nil && len(evaluatorVersionID2Result) > 0 {
+			var scoreWeights map[int64]float64
+			exptDO := exptResultBuilder.exptDO
+			if exptDO != nil && exptDO.EvalConf != nil && exptDO.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+				exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+				for _, ec := range exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+						continue
 					}
+					if scoreWeights == nil {
+						scoreWeights = make(map[int64]float64)
+					}
+					scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 				}
-				if len(evaluatorRecords) > 0 {
-					weightedScore = calculateWeightedScore(evaluatorRecords, scoreWeights)
+			}
+			evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
+			for evaluatorVersionID, record := range evaluatorVersionID2Result {
+				if record != nil {
+					evaluatorRecords[evaluatorVersionID] = record
 				}
+			}
+			if len(evaluatorRecords) > 0 {
+				weightedScore = calculateWeightedScore(evaluatorRecords, scoreWeights)
 			}
 		}
 		exptTurnResultFilter.EvaluatorWeightedScore = weightedScore
@@ -2884,13 +2896,6 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		return nil
 	}
 
-	// 检查实验是否启用了加权得分
-	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.EvaluatorsConf == nil ||
-		!expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		// 如果未启用加权得分，不需要重新计算
-		return nil
-	}
-
 	// 获取该轮次的所有评估器记录
 	turnEvaluatorRefs, err := e.ExptTurnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{turnResult.ID})
 	if err != nil {
@@ -2926,17 +2931,21 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		}
 	}
 
-	// 构建权重映射
-	scoreWeights := make(map[int64]float64)
-	if expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
+	// 构建权重映射：仅当 EnableScoreWeight 为 true 时使用配置权重，否则等权
+	var scoreWeights map[int64]float64
+	if expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 && ec.EvaluatorVersionID > 0 {
-				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-			}
+            if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
+                if scoreWeights == nil {
+                    scoreWeights = make(map[int64]float64)
+                }
+                scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
+            }
 		}
 	}
 
-	// 重新计算加权得分
 	weightedScore := calculateWeightedScore(version2Record, scoreWeights)
 
 	// 更新 expt_turn_result 的 weighted_score
