@@ -4,8 +4,6 @@
 package convertor
 
 import (
-	"reflect"
-
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/repo/mysql/gorm_gen/model"
@@ -202,7 +200,7 @@ func TaskRunsPO2DO(taskRun []*model.ObservabilityTaskRun) []*entity.TaskRun {
 
 // ToJSONString 通用函数，将对象转换为 JSON 字符串指针
 func ToJSONString(obj interface{}) string {
-	if obj == nil || (reflect.ValueOf(obj).Kind() == reflect.Ptr && reflect.ValueOf(obj).IsNil()) {
+	if obj == nil {
 		return ""
 	}
 	jsonData, err := sonic.Marshal(obj)
