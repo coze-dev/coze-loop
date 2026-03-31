@@ -19172,6 +19172,20 @@ func (p *ExptResultExportColumnSpec) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -19300,6 +19314,30 @@ func (p *ExptResultExportColumnSpec) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptResultExportColumnSpec) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.TagKeyIds = _field
+	return offset, nil
+}
+
 func (p *ExptResultExportColumnSpec) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -19312,6 +19350,7 @@ func (p *ExptResultExportColumnSpec) FastWriteNocopy(buf []byte, w thrift.Nocopy
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -19325,6 +19364,7 @@ func (p *ExptResultExportColumnSpec) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -19403,6 +19443,22 @@ func (p *ExptResultExportColumnSpec) fastWriteField5(buf []byte, w thrift.Nocopy
 	return offset
 }
 
+func (p *ExptResultExportColumnSpec) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTagKeyIds() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.TagKeyIds {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+	}
+	return offset
+}
+
 func (p *ExptResultExportColumnSpec) field1Length() int {
 	l := 0
 	if p.IsSetEvalSetFields() {
@@ -19464,6 +19520,19 @@ func (p *ExptResultExportColumnSpec) field5Length() int {
 	return l
 }
 
+func (p *ExptResultExportColumnSpec) field6Length() int {
+	l := 0
+	if p.IsSetTagKeyIds() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.TagKeyIds {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *ExptResultExportColumnSpec) DeepCopy(s interface{}) error {
 	src, ok := s.(*ExptResultExportColumnSpec)
 	if !ok {
@@ -19517,6 +19586,17 @@ func (p *ExptResultExportColumnSpec) DeepCopy(s interface{}) error {
 	if src.WeightedScore != nil {
 		tmp := *src.WeightedScore
 		p.WeightedScore = &tmp
+	}
+
+	if src.TagKeyIds != nil {
+		p.TagKeyIds = make([]string, 0, len(src.TagKeyIds))
+		for _, elem := range src.TagKeyIds {
+			var _elem string
+			if elem != "" {
+				_elem = kutils.StringDeepCopy(elem)
+			}
+			p.TagKeyIds = append(p.TagKeyIds, _elem)
+		}
 	}
 
 	return nil

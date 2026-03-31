@@ -564,7 +564,7 @@ struct UpdateAnnotateRecordResp {
     255: base.BaseResp BaseResp
 }
 
-/** 实验报告 CSV 导出列：四个一级分组，组内 list<string>。不传 export_columns：导出全部（含标注列等）。传 export_columns（含空 struct）：白名单模式，仅 item_id、status 等必填列 + 各分组非空 list 中的列；某一 list 未传（unset）与传 [] 对该组均表示不导出。白名单导出不含标注列。 */
+/** 实验报告 CSV 导出列：多个一级分组，组内 list<string>。不传 export_columns：导出全部（含标注列等）。传 export_columns（含空 struct）：白名单模式，仅 item_id、status 等必填列 + 各分组非空 list 中的列；某一 list 未传（unset）与传 [] 对该组均表示不导出。人工标注列需在 tag_key_ids 中显式列出 TagKeyID（十进制字符串）才会在白名单导出中出现。 */
 struct ExptResultExportColumnSpec {
     /** 评测集字段：ColumnEvalSetField.Key */
     1: optional list<string> eval_set_fields (go.tag = 'json:"eval_set_fields"')
@@ -576,6 +576,8 @@ struct ExptResultExportColumnSpec {
     4: optional list<string> evaluator_version_ids (go.tag = 'json:"evaluator_version_ids"')
     /** 是否导出加权分数 */
     5: optional bool weighted_score (go.tag = 'json:"weighted_score"')
+    /** 人工标注：每项为标注 TagKeyID（十进制字符串），与 ColumnAnnotation.TagKeyID 对应，导出该标注列 */
+    6: optional list<string> tag_key_ids (go.tag = 'json:"tag_key_ids"')
 }
 
 struct ExportExptResultRequest {

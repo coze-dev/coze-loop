@@ -147,7 +147,15 @@ func newExportColumnSelectionFromSpec(
 		keys[exportColKeyWeightedScore] = struct{}{}
 	}
 
-	// 白名单导出：不包含标注列（keys 中无 annotation:*，filterColumnAnnotationsForExport 得到空列表）
+	// 人工标注：非空 tag_key_ids 为白名单；每项为 TagKeyID 十进制字符串，与 includeAnnotationTag / exportColPrefixAnnotation 一致
+	if len(spec.TagKeyIds) > 0 {
+		for _, raw := range dedupeStrings(spec.TagKeyIds) {
+			if raw == "" {
+				continue
+			}
+			keys[exportColPrefixAnnotation+raw] = struct{}{}
+		}
+	}
 
 	return &exportColumnSelection{exportAll: false, keys: keys}
 }

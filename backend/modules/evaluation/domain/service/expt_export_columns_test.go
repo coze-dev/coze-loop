@@ -26,10 +26,11 @@ func TestExportSpecMeansExportAll(t *testing.T) {
 // 导出列 spec 经 MQ（JSON）与 cloneExptExportColumnSpec 往返时，空切片必须仍为 []，不能因 omitempty 丢失后与 null 混用。
 func TestExptResultExportColumnSpec_JSONRoundtripEmptySlices(t *testing.T) {
 	in := &entity.ExptResultExportColumnSpec{
-		EvalSetFields:       []string{},
-		EvalTargetOutputs:   []string{"x"},
-		Metrics:             []string{},
-		EvaluatorVersionIds: []string{},
+		EvalSetFields:         []string{},
+		EvalTargetOutputs:     []string{"x"},
+		Metrics:               []string{},
+		EvaluatorVersionIds:   []string{},
+		TagKeyIds: []string{},
 	}
 	b, err := json.Marshal(in)
 	require.NoError(t, err)
@@ -44,6 +45,8 @@ func TestExptResultExportColumnSpec_JSONRoundtripEmptySlices(t *testing.T) {
 	assert.Empty(t, outStd.Metrics)
 	require.NotNil(t, outStd.EvaluatorVersionIds)
 	assert.Empty(t, outStd.EvaluatorVersionIds)
+	require.NotNil(t, outStd.TagKeyIds)
+	assert.Empty(t, outStd.TagKeyIds)
 
 	var outSonic entity.ExptResultExportColumnSpec
 	require.NoError(t, sonic.Unmarshal(b, &outSonic))
@@ -287,6 +290,17 @@ func TestMgetParamForExportSpec_onlyMetricsThatAreInExportColTargetMetricNames(t
 	assert.False(t, *p.LoadEvalTargetFullContent)
 	assert.Empty(t, p.LoadEvalTargetOutputFieldKeys)
 	assert.False(t, p.FullTrajectory)
+}
+
+func TestNewExportColumnSelectionFromSpec_tagKeyIds(t *testing.T) {
+	sel := newExportColumnSelectionFromSpec(&entity.ExptResultExportColumnSpec{
+		TagKeyIds: []string{"10", " 20 "},
+	}, &entity.MGetExperimentReportResult{}, 1)
+	require.False(t, sel.exportAll)
+	_, ok10 := sel.keys[exportColPrefixAnnotation+"10"]
+	_, ok20 := sel.keys[exportColPrefixAnnotation+"20"]
+	assert.True(t, ok10)
+	assert.True(t, ok20)
 }
 
 func TestNewExportColumnSelectionFromSpec_withEvaluatorVersionIDs(t *testing.T) {

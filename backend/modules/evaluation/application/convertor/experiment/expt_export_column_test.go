@@ -101,11 +101,12 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 		{
 			name: "deep copy slices not shared",
 			from: &expt.ExptResultExportColumnSpec{
-				EvalSetFields:       []string{"a", "b"},
-				EvalTargetOutputs:   []string{"c"},
-				Metrics:             []string{"d"},
-				EvaluatorVersionIds: []string{"1"},
-				WeightedScore:       gptr.Of(true),
+				EvalSetFields:         []string{"a", "b"},
+				EvalTargetOutputs:     []string{"c"},
+				Metrics:               []string{"d"},
+				EvaluatorVersionIds:   []string{"1"},
+				TagKeyIds: []string{"42", "43"},
+				WeightedScore:         gptr.Of(true),
 			},
 			run: func(t *testing.T, from *expt.ExptResultExportColumnSpec) {
 				got := ExportColumnSpecThrift2Entity(from)
@@ -114,12 +115,14 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 				from.EvalTargetOutputs[0] = "CHANGED"
 				from.Metrics[0] = "CHANGED"
 				from.EvaluatorVersionIds[0] = "CHANGED"
+				from.TagKeyIds[0] = "CHANGED"
 				*from.WeightedScore = false
 
 				assert.Equal(t, "a", got.EvalSetFields[0])
 				assert.Equal(t, "c", got.EvalTargetOutputs[0])
 				assert.Equal(t, "d", got.Metrics[0])
 				assert.Equal(t, "1", got.EvaluatorVersionIds[0])
+				assert.Equal(t, []string{"42", "43"}, got.TagKeyIds)
 				assert.True(t, *got.WeightedScore)
 			},
 		},
@@ -128,8 +131,9 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 			from: &expt.ExptResultExportColumnSpec{
 				EvalSetFields:       []string{},
 				EvalTargetOutputs:   []string{},
-				Metrics:             []string{},
-				EvaluatorVersionIds: []string{},
+				Metrics:               []string{},
+				EvaluatorVersionIds:   []string{},
+				TagKeyIds:             []string{},
 			},
 			run: func(t *testing.T, from *expt.ExptResultExportColumnSpec) {
 				got := ExportColumnSpecThrift2Entity(from)
@@ -138,6 +142,7 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 				assert.Nil(t, got.EvalTargetOutputs)
 				assert.Nil(t, got.Metrics)
 				assert.Nil(t, got.EvaluatorVersionIds)
+				assert.Nil(t, got.TagKeyIds)
 				assert.Nil(t, got.WeightedScore)
 			},
 		},
@@ -153,6 +158,7 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 				assert.Nil(t, got.EvalTargetOutputs)
 				assert.Nil(t, got.Metrics)
 				assert.Nil(t, got.EvaluatorVersionIds)
+				assert.Nil(t, got.TagKeyIds)
 			},
 		},
 	}

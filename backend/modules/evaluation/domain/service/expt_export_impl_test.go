@@ -1697,11 +1697,12 @@ func Test_cloneExptExportColumnSpec(t *testing.T) {
 	t.Run("normal_input_with_all_fields", func(t *testing.T) {
 		weighted := true
 		src := &entity.ExptResultExportColumnSpec{
-			EvalSetFields:       []string{"field1", "field2"},
-			EvalTargetOutputs:   []string{"output1"},
-			Metrics:             []string{"metric1", "metric2"},
-			EvaluatorVersionIds: []string{"100", "200"},
-			WeightedScore:       &weighted,
+			EvalSetFields:         []string{"field1", "field2"},
+			EvalTargetOutputs:     []string{"output1"},
+			Metrics:               []string{"metric1", "metric2"},
+			EvaluatorVersionIds:   []string{"100", "200"},
+			TagKeyIds: []string{"9"},
+			WeightedScore:         &weighted,
 		}
 		got := cloneExptExportColumnSpec(src)
 		require.NotNil(t, got)
@@ -1709,6 +1710,7 @@ func Test_cloneExptExportColumnSpec(t *testing.T) {
 		assert.Equal(t, src.EvalTargetOutputs, got.EvalTargetOutputs)
 		assert.Equal(t, src.Metrics, got.Metrics)
 		assert.Equal(t, src.EvaluatorVersionIds, got.EvaluatorVersionIds)
+		assert.Equal(t, src.TagKeyIds, got.TagKeyIds)
 		require.NotNil(t, got.WeightedScore)
 		assert.True(t, *got.WeightedScore)
 	})
