@@ -426,6 +426,34 @@ func TestExptFilterConvertor_ConvertFilters_FieldTypes_173_261(t *testing.T) {
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []int64{100, 200}, got.Includes.ExptTemplateIDs)
+		// 含模板 ID 筛选时不应默认 expt_type=Offline，否则在线实验无法按模板筛选
+		assert.Nil(t, got.Includes.ExptType)
+	})
+
+	t.Run("ExperimentTemplateID与ExptTypeOnline同时筛选", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2",
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExperimentTemplateID,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "100",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{int64(domain_expt.ExptType_Online)}, got.Includes.ExptType)
+		assert.ElementsMatch(t, []int64{100}, got.Includes.ExptTemplateIDs)
 	})
 
 	t.Run("ExperimentTemplateID字段值为空，跳过", func(t *testing.T) {
