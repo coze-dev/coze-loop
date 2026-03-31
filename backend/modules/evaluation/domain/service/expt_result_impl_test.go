@@ -5087,6 +5087,125 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 		_, err := service.RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID)
 		assert.NoError(t, err)
 	})
+
+	t.Run("启用加权但 EvaluatorConf 无有效 ScoreWeight 时仍计算等权平均", func(t *testing.T) {
+		mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+		mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+		mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+		mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+		mockIdgen := idgenMocks.NewMockIIDGenerator(ctrl)
+		mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+
+		service := ExptResultServiceImpl{
+			ExptItemResultRepo:     mockExptItemResultRepo,
+			ExptTurnResultRepo:     mockExptTurnResultRepo,
+			ExptStatsRepo:          mockExptStatsRepo,
+			evaluatorRecordService: mockEvaluatorRecordService,
+			publisher:              mockPublisher,
+			idgen:                  mockIdgen,
+			ExperimentRepo:         mockExperimentRepo,
+		}
+
+		mockExptItemResultRepo.EXPECT().
+			GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID).
+			Return(&entity.ExptItemResultRunLog{
+				Status:      1,
+				ResultState: int32(entity.ExptItemResultStateLogged),
+			}, nil)
+
+		mockExptItemResultRepo.EXPECT().
+			BatchGet(ctx, spaceID, exptID, []int64{itemID}).
+			Return([]*entity.ExptItemResult{
+				{ID: 1, ItemID: itemID, Status: entity.ItemRunState_Processing},
+			}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			GetItemTurnRunLogs(ctx, exptID, exptRunID, itemID, spaceID).
+			Return([]*entity.ExptTurnResultRunLog{
+				{
+					TurnID:             1,
+					Status:             entity.TurnRunState_Success,
+					EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{101: 1, 102: 2}},
+				},
+			}, nil)
+
+		mockExptItemResultRepo.EXPECT().
+			GetItemTurnResults(ctx, spaceID, exptID, itemID).
+			Return([]*entity.ExptTurnResult{
+				{ID: 1, TurnID: 1, Status: int32(entity.TurnRunState_Success)},
+			}, nil)
+
+		// EnableScoreWeight 为 true，但无正权重（仅 nil/0），与库中不一致或在线场景仍应写行级分
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, exptID, spaceID).
+			Return(&entity.Experiment{
+				ID: exptID,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{EvaluatorVersionID: 101, ScoreWeight: nil},
+								{EvaluatorVersionID: 102, ScoreWeight: gptr.Of(0.0)},
+							},
+						},
+					},
+				},
+			}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, gomock.InAnyOrder([]int64{1, 2}), false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID:                 1,
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.6)},
+					},
+				},
+				{
+					ID:                 2,
+					EvaluatorVersionID: 102,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)},
+					},
+				},
+			}, nil)
+
+		mockIdgen.EXPECT().
+			GenMultiIDs(ctx, 2).
+			Return([]int64{1, 2}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			CreateTurnEvaluatorRefs(ctx, gomock.Any()).
+			Return(nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			SaveTurnResults(ctx, gomock.Any()).
+			DoAndReturn(func(_ context.Context, results []*entity.ExptTurnResult) error {
+				assert.Len(t, results, 1)
+				assert.NotNil(t, results[0].WeightedScore)
+				// 等权平均 (0.6+0.8)/2 = 0.7
+				assert.InDelta(t, 0.7, *results[0].WeightedScore, 0.001)
+				return nil
+			})
+
+		mockExptItemResultRepo.EXPECT().
+			UpdateItemsResult(ctx, spaceID, exptID, []int64{itemID}, gomock.Any()).
+			Return(nil)
+
+		mockExptItemResultRepo.EXPECT().
+			UpdateItemRunLog(ctx, exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID).
+			Return(nil)
+
+		mockExptStatsRepo.EXPECT().
+			ArithOperateCount(ctx, exptID, spaceID, gomock.Any()).
+			Return(nil)
+
+		_, err := service.RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID)
+		assert.NoError(t, err)
+	})
 }
 
 // TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore 测试 RecordItemRunLogs 中计算加权分数的逻辑（216-242行）

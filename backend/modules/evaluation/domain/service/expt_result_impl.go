@@ -188,9 +188,9 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 			}
 			scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 		}
-		if len(scoreWeights) > 0 {
-			enableWeightedScore = true
-		}
+		// 与 RecalculateWeightedScore、fillExptTurnResultFilters 对齐：只要启用加权即计算行级分。
+		// 未配置正权重时 scoreWeights 为空，calculateWeightedScore 按等权平均处理。
+		enableWeightedScore = true
 	}
 
 	var (
