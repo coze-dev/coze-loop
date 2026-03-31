@@ -57,6 +57,7 @@ func (e *BackFillConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt
 		logs.CtxError(ctx, "BackFill msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
+	ctx = context.WithoutCancel(ctx)
 	logs.CtxInfo(ctx, "BackFill msg %+v,msgID=%s", event, ext.MsgID)
 	return e.handler.BackFill(ctx, event)
 }

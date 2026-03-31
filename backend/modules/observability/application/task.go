@@ -364,8 +364,6 @@ func (t *TaskApplication) BackFill(ctx context.Context, event *entity.BackFillEv
 		// 结构校验失败，不处理
 		return nil
 	}
-	ddl, _ := ctx.Deadline()
-	logs.CtxInfo(ctx, "ctx will be end by %v", ddl.String())
 	return t.tracehubSvc.BackFill(ctx, event)
 }
 
