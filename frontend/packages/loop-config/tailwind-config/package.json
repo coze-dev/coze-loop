@@ -11,9 +11,9 @@
     "test:cov": "exit 0"
   },
   "dependencies": {
-    "@cozeloop/tailwind-plugin": "workspace:*",
     "@coze-arch/tailwind-config": "workspace:*",
-    "@microsoft/rush-lib": "~5.147.1",
+    "@cozeloop/tailwind-plugin": "workspace:*",
+    "@microsoft/rush-lib": "5.172.1",
     "tailwindcss": "~3.3.3"
   },
   "devDependencies": {
@@ -24,4 +24,3 @@
     "typescript": "~5.8.2"
   }
 }
-

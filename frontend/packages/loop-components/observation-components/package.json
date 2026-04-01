@@ -7,8 +7,8 @@
   "maintainers": [],
   "exports": {
     ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts"
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
     },
     "./zh-CN": {
       "import": "./src/i18n/resource/zh-CN.json"
@@ -81,7 +81,6 @@
     "@cozeloop/tailwind-config": "workspace:*",
     "@cozeloop/tailwind-plugin": "workspace:*",
     "@douyinfe/semi-rspack-plugin": "2.90.10",
-    "@microsoft/rush-lib": "~5.147.1",
     "@rsbuild/core": "~1.1.0",
     "@rsbuild/plugin-less": "~1.1.0",
     "@rsbuild/plugin-node-polyfill": "~0.3.0",
