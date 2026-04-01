@@ -974,6 +974,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 		ItemRetryNum:           req.ItemRetryNum,
+		Ext:                    req.GetExt(),
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)

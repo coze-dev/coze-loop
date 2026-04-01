@@ -406,6 +406,8 @@ struct SubmitExperimentOApiRequest {
 
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
 
+    100: optional map<string, string> ext (api.body = 'ext')    
+
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
