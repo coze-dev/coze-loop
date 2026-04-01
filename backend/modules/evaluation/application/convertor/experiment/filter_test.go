@@ -748,7 +748,12 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []int64{1, 2}, got.Includes.TargetType)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+			int64(entity.EvalTargetTypeLoopPrompt),
+			int64(entity.EvalTargetTypeCozeLoopPromptOnline),
+		}, got.Includes.TargetType)
 	})
 
 	t.Run("ConvertFilters方法，SourceTarget字段，单个ID查不到目标时返回-1", func(t *testing.T) {
@@ -1034,7 +1039,12 @@ func TestExptFilterConvertor_ConvertFilters_FieldTypes_110_140(t *testing.T) {
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []int64{1, 2}, got.Includes.TargetType)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+			int64(entity.EvalTargetTypeLoopPrompt),
+			int64(entity.EvalTargetTypeCozeLoopPromptOnline),
+		}, got.Includes.TargetType)
 	})
 
 	t.Run("TargetType字段值为空，跳过", func(t *testing.T) {
@@ -1172,6 +1182,91 @@ func TestExptFilterConvertor_ConvertFilters_SourceTarget_155_166(t *testing.T) {
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.Error(t, err)
 		assert.Nil(t, got)
+	})
+}
+
+func TestExptFilterConvertor_ConvertFilters_TargetTypeExpandsBaseAndOnline(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	conv := NewExptFilterConvertor(mockEvalTargetSvc)
+
+	t.Run("出现TargetType条件时CozeBot扩充为基础与Online", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1", // CozeBot 基础类型
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
+	})
+
+	t.Run("TargetType与ExptType组合时仍按TargetType扩充", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2", // Online
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
+	})
+
+	t.Run("仅ExptType为Offline且含TargetType时同样扩充基础与Online", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1", // Offline
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
 	})
 }
 

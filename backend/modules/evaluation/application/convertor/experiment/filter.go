@@ -132,6 +132,22 @@ func exptTypeScopeHasOnlineOffline(incExptType []int64) (hasOnline, hasOffline b
 		gslice.Contains(incExptType, int64(domain_expt.ExptType_Offline))
 }
 
+// filtersHasTargetTypeCondition 查询条件中是否出现 TargetType 字段（任意操作符）；出现则对 target_type 补充基础类型与对应 Online 类型以匹配库存。
+func filtersHasTargetTypeCondition(filters *domain_expt.Filters) bool {
+	if filters == nil {
+		return false
+	}
+	for _, cond := range filters.GetFilterConditions() {
+		if cond == nil || cond.GetField() == nil {
+			continue
+		}
+		if cond.GetField().GetFieldType() == domain_expt.FieldType_TargetType {
+			return true
+		}
+	}
+	return false
+}
+
 func mapTargetTypeInt64sForExptStorage(ids []int64, hasOnline, hasOffline bool) []int64 {
 	if len(ids) == 0 {
 		return nil
@@ -372,11 +388,12 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 		}
 	}
 
-	// 在线实验场景下，库存 EvalTargetType 为仅记录型（*Online）；筛选时将用户传入的基础类型映射为对应 online 类型（或离线与在线并存时同时包含）
-	hOn, hOff := exptTypeScopeHasOnlineOffline(efo.Includes.ExptType)
-	efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, hOn, hOff)
-	if efo.Excludes != nil {
-		efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, hOn, hOff)
+	// 筛选条件中出现 target_type 时，将用户传入的基础类型扩充为「基础类型 + 对应 Online 仅记录型」，与库存一致，无需再依赖 ExptType 推断
+	if filtersHasTargetTypeCondition(filters) {
+		efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, true, true)
+		if efo.Excludes != nil {
+			efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, true, true)
+		}
 	}
 
 	return efo, nil
@@ -899,11 +916,12 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 		}
 	}
 
-	// 在线实验模板在库中为仅记录型 EvalTargetType；筛选时将用户传入的基础类型映射为 online 类型
-	thOn, thOff := exptTypeScopeHasOnlineOffline(efo.Includes.ExptType)
-	efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, thOn, thOff)
-	if efo.Excludes != nil {
-		efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, thOn, thOff)
+	// 筛选条件中出现 target_type 时，将基础类型扩充为「基础 + 对应 Online」
+	if filtersHasTargetTypeCondition(filters) {
+		efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, true, true)
+		if efo.Excludes != nil {
+			efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, true, true)
+		}
 	}
 
 	return efo, nil
