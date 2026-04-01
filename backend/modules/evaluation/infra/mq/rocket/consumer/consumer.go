@@ -19,16 +19,16 @@ func NewConsumerWorkers(
 	exptApp application.IExperimentApplication,
 ) ([]mq.IConsumerWorker, error) {
 	return []mq.IConsumerWorker{
-		newExptSchedulerEventConsumer(newExptSchedulerConsumer(exptApp), loader),
-		newExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
-		newExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
-		newExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
-		newExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
-		newExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
+		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
+		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
+		NewExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
+		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
+		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
+		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
 	}, nil
 }
 
-func newExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptSchedulerEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptSchedulerEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
@@ -40,7 +40,7 @@ type ExptTurnResultFilterEventConsumer struct {
 	conf.IConfigLoader
 }
 
-func newExptTurnResultFilterEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptTurnResultFilterEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptTurnResultFilterEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
@@ -76,7 +76,7 @@ func (e *ExptSchedulerEventConsumer) GetConsumerCfg(ctx context.Context, loader 
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }
 
-func newExptRecordEvalEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptRecordEvalEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptRecordEvalEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
@@ -96,7 +96,7 @@ func (e *ExptRecordEvalEventConsumer) ConsumerCfg(ctx context.Context) (*mq.Cons
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }
 
-func newExptAggrCalculateEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptAggrCalculateEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptAggrCalculateEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
@@ -116,7 +116,7 @@ func (e *ExptAggrCalculateEventConsumer) ConsumerCfg(ctx context.Context) (*mq.C
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }
 
-func newExptExportEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptExportEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptExportEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
@@ -136,7 +136,7 @@ func (e *ExptExportEventConsumer) ConsumerCfg(ctx context.Context) (*mq.Consumer
 	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }
 
-func newExptLifecycleEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
+func NewExptLifecycleEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
 	return &ExptLifecycleEventConsumer{
 		IConsumerHandler: handler,
 		IConfigLoader:    loader,
