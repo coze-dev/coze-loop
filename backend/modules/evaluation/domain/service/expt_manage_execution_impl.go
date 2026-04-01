@@ -670,7 +670,7 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 		SourceType: expt.SourceType,
 	}
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
-		return e.publisher.PublishExptLifecycleEvent(ctx, event, nil)
+		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
 	}); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
 	}
