@@ -90,11 +90,15 @@ func EvalTargetDO2DTO(targetDO *do.EvalTarget) (targetDTO *dto.EvalTarget) {
 		return nil
 	}
 
+	dtoEvalType := dto.EvalTargetType(targetDO.EvalTargetType)
+	if base, ok := targetDO.EvalTargetType.RecordOnlyTypeToBaseType(); ok {
+		dtoEvalType = dto.EvalTargetType(base)
+	}
 	targetDTO = &dto.EvalTarget{
 		ID:             &targetDO.ID,
 		WorkspaceID:    &targetDO.SpaceID,
 		SourceTargetID: &targetDO.SourceTargetID,
-		EvalTargetType: gptr.Of(dto.EvalTargetType(targetDO.EvalTargetType)),
+		EvalTargetType: gptr.Of(dtoEvalType),
 	}
 	if targetDO.EvalTargetVersion != nil {
 		// 填充version上的类型

@@ -102,6 +102,26 @@ func (p EvalTargetType) RecordOnlyTypeToBaseType() (EvalTargetType, bool) {
 	}
 }
 
+// BaseTypeToRecordOnlyType 基础类型映射到在线实验/模板在库中存储的仅记录型（与 RecordOnlyTypeToBaseType 互逆）
+func (p EvalTargetType) BaseTypeToRecordOnlyType() (EvalTargetType, bool) {
+	switch p {
+	case EvalTargetTypeCozeBot:
+		return EvalTargetTypeCozeBotOnline, true
+	case EvalTargetTypeLoopPrompt:
+		return EvalTargetTypeCozeLoopPromptOnline, true
+	case EvalTargetTypeCozeWorkflow:
+		return EvalTargetTypeCozeWorkflowOnline, true
+	case EvalTargetTypeVolcengineAgent:
+		return EvalTargetTypeVolcengineAgentOnline, true
+	case EvalTargetTypeCustomRPCServer:
+		return EvalTargetTypeCustomRPCServerOnline, true
+	case EvalTargetTypeVolcengineAgentAgentkit:
+		return EvalTargetTypeVolcengineAgentAgentkitOnline, true
+	default:
+		return 0, false
+	}
+}
+
 func (p EvalTargetType) String() string {
 	switch p {
 	case EvalTargetTypeCozeBot:

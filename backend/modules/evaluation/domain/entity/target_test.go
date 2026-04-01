@@ -312,6 +312,31 @@ func TestEvalTargetType_RecordOnlyTypeToBaseType(t *testing.T) {
 	}
 }
 
+func TestEvalTargetType_BaseTypeToRecordOnlyType(t *testing.T) {
+	tests := []struct {
+		name         string
+		targetType   EvalTargetType
+		expectedType EvalTargetType
+		expectedOk   bool
+	}{
+		{name: "CozeBot to CozeBotOnline", targetType: EvalTargetTypeCozeBot, expectedType: EvalTargetTypeCozeBotOnline, expectedOk: true},
+		{name: "LoopPrompt to CozeLoopPromptOnline", targetType: EvalTargetTypeLoopPrompt, expectedType: EvalTargetTypeCozeLoopPromptOnline, expectedOk: true},
+		{name: "CozeWorkflow to CozeWorkflowOnline", targetType: EvalTargetTypeCozeWorkflow, expectedType: EvalTargetTypeCozeWorkflowOnline, expectedOk: true},
+		{name: "VolcengineAgent to VolcengineAgentOnline", targetType: EvalTargetTypeVolcengineAgent, expectedType: EvalTargetTypeVolcengineAgentOnline, expectedOk: true},
+		{name: "CustomRPCServer to CustomRPCServerOnline", targetType: EvalTargetTypeCustomRPCServer, expectedType: EvalTargetTypeCustomRPCServerOnline, expectedOk: true},
+		{name: "VolcengineAgentAgentkit to Online", targetType: EvalTargetTypeVolcengineAgentAgentkit, expectedType: EvalTargetTypeVolcengineAgentAgentkitOnline, expectedOk: true},
+		{name: "LoopTrace no mapping", targetType: EvalTargetTypeLoopTrace, expectedType: 0, expectedOk: false},
+		{name: "CozeBotOnline not base", targetType: EvalTargetTypeCozeBotOnline, expectedType: 0, expectedOk: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			onlineT, ok := tt.targetType.BaseTypeToRecordOnlyType()
+			assert.Equal(t, tt.expectedType, onlineT)
+			assert.Equal(t, tt.expectedOk, ok)
+		})
+	}
+}
+
 func TestEvalTargetVersion_RuntimeParamDemo_Integration(t *testing.T) {
 	// Test RuntimeParamDemo field integration with other EvalTargetVersion fields
 	version := &EvalTargetVersion{

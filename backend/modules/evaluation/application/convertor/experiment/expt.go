@@ -388,8 +388,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 	}
 
-	// 关联的实验模板（仅在查询时按需填充基础信息）
-	if experiment.ExptTemplateMeta != nil {
+	// 关联的实验模板（仅在查询时按需填充基础信息）；在线实验不对外返回模板信息
+	if experiment.ExptType != entity.ExptType_Online && experiment.ExptTemplateMeta != nil {
 		res.ExptTemplateMeta = &domain_expt.ExptTemplateMeta{
 			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
 			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
