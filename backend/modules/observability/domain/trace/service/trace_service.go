@@ -137,10 +137,13 @@ type SearchTraceOApiReq struct {
 	PlatformType          loop_span.PlatformType
 	WithDetail            bool
 	Filters               *loop_span.FilterFields
+	PageToken             string
 }
 
 type SearchTraceOApiResp struct {
-	Spans loop_span.SpanList
+	Spans         loop_span.SpanList
+	NextPageToken string
+	HasMore       bool
 }
 
 type ListSpansOApiReq struct {
@@ -994,7 +997,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if !req.WithDetail {
 		limit = 10000
 	}
-	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+	traceResult, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:     tenants,
 		LogID:       req.LogID,
@@ -1010,6 +1013,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if err != nil {
 		return nil, err
 	}
+	spans := traceResult.Spans
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:     req.WorkspaceID,
 		PlatformType:    req.PlatformType,
@@ -1107,7 +1111,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		omitColumns = []string{"input", "output"}
 	}
 
-	spans, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
+	traceResult, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:            req.Tenants,
 		TraceID:            req.TraceID,
@@ -1119,10 +1123,12 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		NotQueryAnnotation: false,
 		Filters:            req.Filters,
 		OmitColumns:        omitColumns,
+		PageToken:          req.PageToken,
 	})
 	if err != nil {
 		return nil, err
 	}
+	spans := traceResult.Spans
 	processors, err := r.buildHelper.BuildSearchTraceOApiProcessors(ctx, span_processor.Settings{
 		WorkspaceId:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
@@ -1145,7 +1151,9 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 	}
 	spans.SortByStartTime(false)
 	return &SearchTraceOApiResp{
-		Spans: spans,
+		Spans:         spans,
+		NextPageToken: traceResult.PageToken,
+		HasMore:       traceResult.HasMore,
 	}, nil
 }
 
@@ -1326,12 +1334,13 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				Filters: loop_span.GetModelSpansFilter(),
 			}
 			st := time.Now()
-			spans, err := r.traceRepo.GetTrace(ctx, qReq)
+			traceResult, err := r.traceRepo.GetTrace(ctx, qReq)
 			r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 			if err != nil {
 				logs.CtxError(ctx, "Fail to get trace %v, %v", *qReq, err)
 				return err
 			}
+			spans := traceResult.Spans
 			processors, err := r.buildHelper.BuildAdvanceInfoProcessors(ctx, span_processor.Settings{
 				WorkspaceId:           req.WorkspaceID,
 				ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,

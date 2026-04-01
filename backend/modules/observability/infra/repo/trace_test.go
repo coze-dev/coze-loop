@@ -383,8 +383,8 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields
 		args         args
-		want         loop_span.SpanList
-		wantErr      bool
+		want    *repo.GetTraceResult
+		wantErr bool
 	}{
 		{
 			name: "get trace successfully",
@@ -432,7 +432,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					Tenants: []string{"test"},
 				},
 			},
-			want: loop_span.SpanList{
+			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
 				{
 					TraceID:          "span1",
 					SpanID:           "span1",
@@ -457,7 +457,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			},
+			}},
 		},
 		{
 			name: "get trace with annotations successfully",
@@ -503,7 +503,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					NotQueryAnnotation: false,
 				},
 			},
-			want: loop_span.SpanList{
+			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
 				{
 					SpanID: "span1",
 					Annotations: []*loop_span.Annotation{
@@ -524,7 +524,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			},
+			}},
 		},
 		{
 			name: "get trace failed due to config error",
@@ -584,7 +584,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SpanIDs: []string{"span1"},
 				},
 			},
-			want: loop_span.SpanList{
+			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
 				{
 					TraceID:          "span1",
 					SpanID:           "span1",
@@ -597,7 +597,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			},
+			}},
 		},
 		{
 			name: "get trace failed due to blank id",
