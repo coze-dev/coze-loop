@@ -19,16 +19,16 @@ _____________________________________
 
 Environment requirements:
 
-* Node.js 18+ (lts/iron recommended)
+* Node.js 24+ (lts/krypton recommended)
 * pnpm 10.27.0
 * Rush 5.172.1
 
-### 1. Install Node.js 18+
+### 1. Install Node.js 24+
 
 ``` bash
-nvm install lts/iron
-nvm alias default lts/iron # set default Node version
-nvm use lts/iron
+nvm install lts/krypton
+nvm alias default lts/krypton # set default Node version
+nvm use lts/krypton
 ```
 
 ### 2. Checkout repository and change to frontend dir

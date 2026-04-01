@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Tailwind config",
   "author": "wangziqiang.carl@bytedance.com",
+  "type": "module",
   "main": "./src/index.ts",
   "scripts": {
     "build": "exit 0",
@@ -20,7 +21,7 @@
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
-    "@types/node": "^18",
+    "@types/node": "^24",
     "typescript": "~5.8.2"
   }
 }

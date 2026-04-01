@@ -22,6 +22,6 @@
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
-    "@types/node": "^18"
+    "@types/node": "^24"
   }
 }

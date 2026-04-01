@@ -16,7 +16,6 @@
     "@storybook/blocks": ["~8.4.2"],
     "@storybook/react": ["~8.4.2"],
     "@swc/helpers": ["0.5.3"],
-    "@types/node": ["18.18.9"],
     "@visactor/vchart": ["1.13.8", "1.11.3"],
     "ahooks": ["^3.8.0"],
     "axios": ["^1.7.1"],

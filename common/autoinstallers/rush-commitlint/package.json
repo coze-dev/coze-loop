@@ -16,6 +16,6 @@
     "cz-customizable": "^7.2.1"
   },
   "devDependencies": {
-    "@types/node": "^18.11.9"
+    "@types/node": "^24"
   }
 }
