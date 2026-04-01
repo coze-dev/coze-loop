@@ -14,7 +14,7 @@ export default defineConfig({
     pluginSass({
       sassLoaderOptions: {
         sassOptions: {
-          silenceDeprecations: ['mixed-decls', 'import', 'function-units'],
+          silenceDeprecations: ['import', 'function-units'],
         },
       },
     }),
