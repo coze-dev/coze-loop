@@ -9,7 +9,9 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
+	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage/toolmanageservice"
 )
 
@@ -49,4 +51,20 @@ func CommitToolDraft(ctx context.Context, c *app.RequestContext) {
 // @router /api/prompt/v1/tools/:tool_id/commits/list [POST]
 func ListToolCommit(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, toolManageSvc.ListToolCommit)
+}
+
+// BatchGetTools .
+// @router /api/prompt/v1/tools/mget [POST]
+func BatchGetTools(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req tool_manage.BatchGetToolsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(tool_manage.BatchGetToolsResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }
