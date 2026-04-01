@@ -24,6 +24,7 @@ type GetTraceParam struct {
 	SelectColumns      []string // select specific columns, default select all columns
 	Filters            *loop_span.FilterFields
 	PageToken          string
+	DescByStartTime    bool
 }
 
 type GetTraceResult struct {

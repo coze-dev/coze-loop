@@ -1124,6 +1124,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		Filters:            req.Filters,
 		OmitColumns:        omitColumns,
 		PageToken:          req.PageToken,
+		DescByStartTime:    true,
 	})
 	if err != nil {
 		return nil, err

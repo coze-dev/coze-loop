@@ -379,7 +379,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
 		Filters:          filter,
 		Limit:            req.Limit + 1,
-		OrderByStartTime: true,
+		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
 		SelectColumns:    req.SelectColumns,
 		Extra:            spanStorage.StorageConfig,
