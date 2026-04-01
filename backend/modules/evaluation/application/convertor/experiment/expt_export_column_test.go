@@ -101,12 +101,12 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 		{
 			name: "deep copy slices not shared",
 			from: &expt.ExptResultExportColumnSpec{
-				EvalSetFields:         []string{"a", "b"},
-				EvalTargetOutputs:     []string{"c"},
-				Metrics:               []string{"d"},
-				EvaluatorVersionIds:   []string{"1"},
-				TagKeyIds: []string{"42", "43"},
-				WeightedScore:         gptr.Of(true),
+				EvalSetFields:       []string{"a", "b"},
+				EvalTargetOutputs:   []string{"c"},
+				Metrics:             []string{"d"},
+				EvaluatorVersionIds: []string{"1"},
+				TagKeyIds:           []string{"42", "43"},
+				WeightedScore:       gptr.Of(true),
 			},
 			run: func(t *testing.T, from *expt.ExptResultExportColumnSpec) {
 				got := ExportColumnSpecThrift2Entity(from)
@@ -131,9 +131,9 @@ func TestExportColumnSpecThrift2Entity(t *testing.T) {
 			from: &expt.ExptResultExportColumnSpec{
 				EvalSetFields:       []string{},
 				EvalTargetOutputs:   []string{},
-				Metrics:               []string{},
-				EvaluatorVersionIds:   []string{},
-				TagKeyIds:             []string{},
+				Metrics:             []string{},
+				EvaluatorVersionIds: []string{},
+				TagKeyIds:           []string{},
 			},
 			run: func(t *testing.T, from *expt.ExptResultExportColumnSpec) {
 				got := ExportColumnSpecThrift2Entity(from)

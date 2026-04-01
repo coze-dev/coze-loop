@@ -6393,11 +6393,11 @@ func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
 
 	t.Run("online desc true filter nil", func(t *testing.T) {
 		param := &entity.MGetExperimentResultParam{
-			SpaceID:          7,
-			BaseExptID:       &baseExptID,
-			TurnListCursor:   cursor,
-			Page:             page,
-			Filters:          nil,
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: cursor,
+			Page:           page,
+			Filters:        nil,
 		}
 		exptOnline := &entity.Experiment{ExptType: entity.ExptType_Online}
 		mockTurn.EXPECT().

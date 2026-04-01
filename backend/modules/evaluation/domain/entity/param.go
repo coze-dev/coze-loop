@@ -70,16 +70,16 @@ type BatchGetEvaluationSetItemsParam struct {
 }
 
 type GetEvaluationSetItemFieldParam struct {
-    SpaceID         int64
-    EvaluationSetID int64
-    // item 的主键ID，即 item.ID 这一字段
-    ItemPK int64
-    // 列名
-    FieldName string
-    // 列的唯一键，用于精确查找
-    FieldKey  *string
-    // 当 item 为多轮时，必须提供
-    TurnID *int64
+	SpaceID         int64
+	EvaluationSetID int64
+	// item 的主键ID，即 item.ID 这一字段
+	ItemPK int64
+	// 列名
+	FieldName string
+	// 列的唯一键，用于精确查找
+	FieldKey *string
+	// 当 item 为多轮时，必须提供
+	TurnID *int64
 }
 
 type BatchCreateEvaluationSetItemsParam struct {

@@ -26,11 +26,11 @@ func TestExportSpecMeansExportAll(t *testing.T) {
 // 导出列 spec 经 MQ（JSON）与 cloneExptExportColumnSpec 往返时，空切片必须仍为 []，不能因 omitempty 丢失后与 null 混用。
 func TestExptResultExportColumnSpec_JSONRoundtripEmptySlices(t *testing.T) {
 	in := &entity.ExptResultExportColumnSpec{
-		EvalSetFields:         []string{},
-		EvalTargetOutputs:     []string{"x"},
-		Metrics:               []string{},
-		EvaluatorVersionIds:   []string{},
-		TagKeyIds: []string{},
+		EvalSetFields:       []string{},
+		EvalTargetOutputs:   []string{"x"},
+		Metrics:             []string{},
+		EvaluatorVersionIds: []string{},
+		TagKeyIds:           []string{},
 	}
 	b, err := json.Marshal(in)
 	require.NoError(t, err)
