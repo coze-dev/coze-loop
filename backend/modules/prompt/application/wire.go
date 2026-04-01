@@ -24,6 +24,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	toolmanage "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/prompt/infra/collector"
 	promptconf "github.com/coze-dev/coze-loop/backend/modules/prompt/infra/conf"
@@ -82,6 +83,17 @@ var (
 	openAPISet = wire.NewSet(
 		NewPromptOpenAPIApplication,
 		promptDomainSet,
+	)
+	toolDomainSet = wire.NewSet(
+		repo.NewToolRepo,
+		mysql.NewToolBasicDAO,
+		mysql.NewToolCommitDAO,
+		rpc.NewAuthRPCProvider,
+		rpc.NewUserRPCProvider,
+	)
+	toolManageSet = wire.NewSet(
+		NewToolManageApplication,
+		toolDomainSet,
 	)
 )
 
@@ -142,5 +154,16 @@ func InitPromptOpenAPIApplication(
 	userClient userservice.Client,
 ) (openapi.PromptOpenAPIService, error) {
 	wire.Build(openAPISet)
+	return nil, nil
+}
+
+func InitToolManageApplication(
+	idgen idgen.IIDGenerator,
+	db db.Provider,
+	redisCli redis.Cmdable,
+	authClient authservice.Client,
+	userClient userservice.Client,
+) (toolmanage.ToolManageService, error) {
+	wire.Build(toolManageSet)
 	return nil, nil
 }
