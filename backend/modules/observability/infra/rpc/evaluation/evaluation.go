@@ -5,6 +5,7 @@ package evaluation
 
 import (
 	"context"
+	"github.com/bytedance/gg/gptr"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -49,10 +50,10 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 		SourceType:            param.SourceType,
 		SourceID:              param.SourceID,
 		Session:               param.Session,
-
-		ExptTemplateID: param.ExptTemplateID,
-		ItemConcurNum:  param.ItemConcurNum,
-		ItemRetryNum:   param.ItemRetryNum,
+		EnableWeightedScore:   gptr.Of(true),
+		ExptTemplateID:        param.ExptTemplateID,
+		ItemConcurNum:         param.ItemConcurNum,
+		ItemRetryNum:          param.ItemRetryNum,
 	})
 	if err != nil {
 		logs.CtxError(ctx, "SubmitExperiment failed, err: %v", err)
