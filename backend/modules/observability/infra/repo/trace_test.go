@@ -383,8 +383,8 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 		name         string
 		fieldsGetter func(ctrl *gomock.Controller) fields
 		args         args
-		want    *repo.GetTraceResult
-		wantErr bool
+		want         *repo.GetTraceResult
+		wantErr      bool
 	}{
 		{
 			name: "get trace successfully",

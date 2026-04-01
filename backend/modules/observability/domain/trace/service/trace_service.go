@@ -1135,7 +1135,7 @@ func (r *TraceServiceImpl) SearchTraceOApi(ctx context.Context, req *SearchTrace
 		QueryStartTime:        req.StartTime,
 		QueryEndTime:          req.EndTime,
 		PlatformType:          req.PlatformType,
-		SpanDoubleCheck:       len(req.SpanIDs) > 0 || (req.Filters != nil && len(req.Filters.FilterFields) > 0),
+		SpanDoubleCheck:       true,
 		QueryTenants:          req.Tenants,
 		QueryTraceID:          req.TraceID,
 		QueryLogID:            req.LogID,
