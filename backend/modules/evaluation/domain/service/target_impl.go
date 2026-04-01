@@ -636,7 +636,11 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	// }
 
 	recordTrajectory := func() error {
-		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, record.BaseInfo.CreatedAt)
+		var sms *int64
+		if record.BaseInfo != nil {
+			sms = record.BaseInfo.CreatedAt
+		}
+		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, sms)
 		if err != nil {
 			return errorx.Wrapf(err, "ExtractTrajectory fail, space_id: %v, trace_id: %v", param.SpaceID, record.TraceID)
 		}
