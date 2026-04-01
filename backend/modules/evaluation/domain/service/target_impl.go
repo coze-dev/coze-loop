@@ -280,7 +280,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 
 		if execErr == nil && evalTargetDO.EvalTargetType.SupptTrajectory() {
 			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
-			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), nil)
+			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), gptr.Of(startTime.UnixMilli()))
 			if err != nil {
 				logs.CtxError(ctx, "ExtractTrajectory fail, space_id: %v, target_id: %v, target_version_id: %v, trace_id: %v, err: %v",
 					spaceID, targetID, targetVersionID, span.GetTraceID(), err)
@@ -636,7 +636,7 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 	// }
 
 	recordTrajectory := func() error {
-		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, nil)
+		trajectory, err := e.ExtractTrajectory(ctx, param.SpaceID, record.TraceID, record.BaseInfo.CreatedAt)
 		if err != nil {
 			return errorx.Wrapf(err, "ExtractTrajectory fail, space_id: %v, trace_id: %v", param.SpaceID, record.TraceID)
 		}
