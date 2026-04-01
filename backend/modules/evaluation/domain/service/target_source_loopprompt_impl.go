@@ -369,7 +369,7 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceInfo(ctx context.Context, 
 	sourcePromptMap := make(map[string]*rpc.LoopPrompt)
 	promptQueries := make([]*rpc.MGetPromptQuery, 0)
 	for _, do := range dos {
-		if do.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
+		if do.EvalTargetType.ToOperatorBaseType() != entity.EvalTargetTypeLoopPrompt {
 			continue
 		}
 		id, err := strconv.ParseInt(do.SourceTargetID, 10, 64)
@@ -393,7 +393,7 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceInfo(ctx context.Context, 
 		sourcePromptMap[fmt.Sprintf("%v", p.ID)] = p
 	}
 	for _, do := range dos {
-		if do.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
+		if do.EvalTargetType.ToOperatorBaseType() != entity.EvalTargetTypeLoopPrompt {
 			continue
 		}
 		if p, ok := sourcePromptMap[fmt.Sprintf("%v", do.SourceTargetID)]; ok {
@@ -415,7 +415,7 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 	sourcePromptMap := make(map[string]*rpc.LoopPrompt)
 	promptQueries := make([]*rpc.MGetPromptQuery, 0)
 	for _, do := range dos {
-		if do.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
+		if do.EvalTargetType.ToOperatorBaseType() != entity.EvalTargetTypeLoopPrompt {
 			continue
 		}
 		if do.EvalTargetVersion == nil || do.EvalTargetVersion.Prompt == nil {
@@ -455,7 +455,7 @@ func (t *PromptSourceEvalTargetServiceImpl) PackSourceVersionInfo(ctx context.Co
 	}
 
 	for _, do := range dos {
-		if do.EvalTargetType != entity.EvalTargetTypeLoopPrompt {
+		if do.EvalTargetType.ToOperatorBaseType() != entity.EvalTargetTypeLoopPrompt {
 			continue
 		}
 		if do.EvalTargetVersion == nil || do.EvalTargetVersion.Prompt == nil {

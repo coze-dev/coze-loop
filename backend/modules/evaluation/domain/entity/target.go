@@ -102,6 +102,14 @@ func (p EvalTargetType) RecordOnlyTypeToBaseType() (EvalTargetType, bool) {
 	}
 }
 
+// ToOperatorBaseType 拼装源信息（PackSource*）及与 typedOperators 对齐分支时使用：仅记录型映射为对应基础类型，否则原样返回。
+func (p EvalTargetType) ToOperatorBaseType() EvalTargetType {
+	if b, ok := p.RecordOnlyTypeToBaseType(); ok {
+		return b
+	}
+	return p
+}
+
 // BaseTypeToRecordOnlyType 基础类型映射到在线实验/模板在库中存储的仅记录型（与 RecordOnlyTypeToBaseType 互逆）
 func (p EvalTargetType) BaseTypeToRecordOnlyType() (EvalTargetType, bool) {
 	switch p {

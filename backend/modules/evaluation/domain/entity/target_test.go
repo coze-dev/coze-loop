@@ -312,6 +312,12 @@ func TestEvalTargetType_RecordOnlyTypeToBaseType(t *testing.T) {
 	}
 }
 
+func TestEvalTargetType_ToOperatorBaseType(t *testing.T) {
+	assert.Equal(t, EvalTargetTypeLoopPrompt, EvalTargetTypeCozeLoopPromptOnline.ToOperatorBaseType())
+	assert.Equal(t, EvalTargetTypeCozeBot, EvalTargetTypeCozeBotOnline.ToOperatorBaseType())
+	assert.Equal(t, EvalTargetTypeCozeBot, EvalTargetTypeCozeBot.ToOperatorBaseType())
+}
+
 func TestEvalTargetType_BaseTypeToRecordOnlyType(t *testing.T) {
 	tests := []struct {
 		name         string

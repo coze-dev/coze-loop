@@ -938,6 +938,24 @@ func TestOpenAPIEvalTargetDO2DTO(t *testing.T) {
 		}
 	}
 
+	promptOnlineDO := &entity.EvalTarget{
+		ID:             3,
+		EvalTargetType: entity.EvalTargetTypeCozeLoopPromptOnline,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID: 30,
+			Prompt: &entity.LoopPrompt{
+				PromptID:     300,
+				Version:      "v3",
+				Name:         "prompt-3",
+				PromptKey:    "key-3",
+				SubmitStatus: entity.SubmitStatus_Submitted,
+				Description:  "desc-3",
+			},
+		},
+	}
+	gotPromptOnline := OpenAPIEvalTargetDO2DTO(promptOnlineDO)
+	assert.Equal(t, gotPrompt, gotPromptOnline)
+
 	// Case 4: input with CustomRPCServer type
 	rpcTargetDO := &entity.EvalTarget{
 		ID:             4,
