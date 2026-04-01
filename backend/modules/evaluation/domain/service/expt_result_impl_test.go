@@ -14,6 +14,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	idgenMocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -6374,4 +6375,79 @@ func TestParseTurnKey_TableDriven(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestExptResultServiceImpl_exportListTurnResultByCursor 覆盖导出场景按游标拉取 turn（UseTurnListCursor）路径。
+func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTurn := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	svc := ExptResultServiceImpl{ExptTurnResultRepo: mockTurn}
+
+	baseExptID := int64(10)
+	cursor := &entity.ExptTurnResultListCursor{ItemID: 1, TurnID: 2}
+	nextCur := &entity.ExptTurnResultListCursor{ItemID: 3, TurnID: 4}
+	page := entity.NewPage(1, 25)
+
+	t.Run("online desc true filter nil", func(t *testing.T) {
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:          7,
+			BaseExptID:       &baseExptID,
+			TurnListCursor:   cursor,
+			Page:             page,
+			Filters:          nil,
+		}
+		exptOnline := &entity.Experiment{ExptType: entity.ExptType_Online}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), (*entity.ExptTurnResultFilter)(nil), cursor, 25, true).
+			Return([]*entity.ExptTurnResult{{ItemID: 100}}, int64(99), nextCur, nil)
+
+		turns, itemMap, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOnline)
+		assert.NoError(t, err)
+		assert.Nil(t, itemMap)
+		assert.Equal(t, int64(99), total)
+		assert.Equal(t, nextCur, next)
+		require.Len(t, turns, 1)
+		assert.Equal(t, int64(100), turns[0].ItemID)
+	})
+
+	t.Run("offline desc false with filter from Filters map", func(t *testing.T) {
+		fl := &entity.ExptTurnResultFilter{}
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: nil,
+			Page:           page,
+			Filters: map[int64]*entity.ExptTurnResultFilter{
+				baseExptID: fl,
+			},
+		}
+		exptOffline := &entity.Experiment{ExptType: entity.ExptType_Offline}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), fl, (*entity.ExptTurnResultListCursor)(nil), 25, false).
+			Return([]*entity.ExptTurnResult{}, int64(0), nil, nil)
+
+		turns, _, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOffline)
+		assert.NoError(t, err)
+		assert.Empty(t, turns)
+		assert.Equal(t, int64(0), total)
+		assert.Nil(t, next)
+	})
+
+	t.Run("dao error", func(t *testing.T) {
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: cursor,
+			Page:           page,
+		}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), nil, errors.New("cursor query fail"))
+
+		_, _, _, _, err := svc.exportListTurnResultByCursor(ctx, param, &entity.Experiment{ExptType: entity.ExptType_Online})
+		assert.Error(t, err)
+	})
 }

@@ -861,6 +861,18 @@ func TestPickEvalTargetColsForExpt(t *testing.T) {
 			wantNil: true,
 		},
 		{
+			name: "matching exptID returns that experiment columns",
+			report: &entity.MGetExperimentReportResult{
+				ExptColumnsEvalTarget: []*entity.ExptColumnEvalTarget{
+					{ExptID: 10, Columns: []*entity.ColumnEvalTarget{{Name: "wrong"}}},
+					{ExptID: 20, Columns: []*entity.ColumnEvalTarget{{Name: "hit_a"}, {Name: "hit_b"}}},
+				},
+			},
+			exptID:  20,
+			wantNil: false,
+			wantLen: 2,
+		},
+		{
 			name: "no matching exptID falls back to first",
 			report: &entity.MGetExperimentReportResult{
 				ExptColumnsEvalTarget: []*entity.ExptColumnEvalTarget{
@@ -892,4 +904,50 @@ func TestPickEvalTargetColsForExpt(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewExportColumnSelectionFromSpec_evalSetFieldsOnly(t *testing.T) {
+	sel := newExportColumnSelectionFromSpec(&entity.ExptResultExportColumnSpec{
+		EvalSetFields: []string{"col_a", "col_b"},
+	}, &entity.MGetExperimentReportResult{}, 1)
+	require.False(t, sel.exportAll)
+	_, okA := sel.keys[exportColPrefixEvalSet+"col_a"]
+	_, okB := sel.keys[exportColPrefixEvalSet+"col_b"]
+	assert.True(t, okA)
+	assert.True(t, okB)
+}
+
+func TestExportColumnSelection_evalTargetOutputFieldKeysForLoad_skipsEmptyNameAndDedupes(t *testing.T) {
+	sel := &exportColumnSelection{
+		exportAll: false,
+		keys: map[string]struct{}{
+			exportColPrefixTarget + consts.ReportColumnNameEvalTargetActualOutput: {},
+			exportColPrefixTarget + "": {}, // 键为 "target:"，TrimPrefix 后 name 为空，应跳过
+		},
+	}
+	got := sel.evalTargetOutputFieldKeysForLoad()
+	assert.Equal(t, []string{consts.ReportColumnNameEvalTargetActualOutput}, got)
+}
+
+func TestEnsureTargetColumnsForExportWhitelist_nilSelection(t *testing.T) {
+	filtered := []*entity.ColumnEvalTarget{{Name: "keep"}}
+	spec := &entity.ExptResultExportColumnSpec{EvalTargetOutputs: []string{"extra"}}
+	got := ensureTargetColumnsForExportWhitelist(spec, filtered, nil)
+	assert.Equal(t, filtered, got)
+}
+
+func TestFilterColumnEvaluatorsForExport_reasonOnly(t *testing.T) {
+	evs := []*entity.ColumnEvaluator{
+		{EvaluatorVersionID: 1},
+		{EvaluatorVersionID: 2},
+	}
+	sel := &exportColumnSelection{
+		exportAll: false,
+		keys: map[string]struct{}{
+			evaluatorColumnToken(2, "reason"): {},
+		},
+	}
+	got := filterColumnEvaluatorsForExport(evs, sel)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(2), got[0].EvaluatorVersionID)
 }
