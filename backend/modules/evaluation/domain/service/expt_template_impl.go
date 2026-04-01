@@ -693,6 +693,8 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 			return nil, 0, errorx.Wrapf(err, "mget expt tuple for task templates fail")
 		}
 		for idx := range taskExptTuples {
+			taskTemplates[idx].EvalSet = taskExptTuples[idx].EvalSet
+			taskTemplates[idx].Target = taskExptTuples[idx].Target
 			taskTemplates[idx].Evaluators = taskExptTuples[idx].Evaluators
 		}
 	}
