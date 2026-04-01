@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -861,6 +862,48 @@ func TestEvaluatorServiceImpl_ListEvaluator(t *testing.T) {
 			assert.Equal(t, tc.expectedTotal, total)
 		})
 	}
+}
+
+// TestEvaluatorServiceImpl_ListEvaluator_WithVersion_skipsOrphanBatchVersion 覆盖 BatchGet 返回的版本中父评估器不在 List 结果中时的 continue 分支（导出/列元数据场景下防御脏数据）。
+func TestEvaluatorServiceImpl_ListEvaluator_WithVersion_skipsOrphanBatchVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	s := &EvaluatorServiceImpl{evaluatorRepo: mockRepo}
+	ctx := context.Background()
+
+	mockRepo.EXPECT().ListEvaluator(gomock.Any(), gomock.Any()).Return(
+		&repo.ListEvaluatorResponse{
+			Evaluators: []*entity.Evaluator{
+				{ID: 101, Name: "Meta", SpaceID: 1, EvaluatorType: entity.EvaluatorTypePrompt, Description: "D"},
+			},
+			TotalCount: 1,
+		}, nil)
+	mockRepo.EXPECT().BatchGetEvaluatorVersionsByEvaluatorIDs(gomock.Any(), []int64{101}, false).Return(
+		[]*entity.Evaluator{
+			{
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					EvaluatorID: 101, Version: "v1",
+				},
+			},
+			{
+				EvaluatorType: entity.EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+					EvaluatorID: 999, Version: "orphan",
+				},
+			},
+		}, nil)
+
+	list, total, err := s.ListEvaluator(ctx, &entity.ListEvaluatorRequest{SpaceID: 1, WithVersion: true})
+	assert.NoError(t, err)
+	assert.Equal(t, int64(2), total)
+	require.Len(t, list, 2)
+	assert.Equal(t, int64(101), list[0].ID)
+	assert.Equal(t, "Meta", list[0].Name)
+	assert.Equal(t, int64(999), list[1].PromptEvaluatorVersion.EvaluatorID)
+	assert.Empty(t, list[1].Name)
 }
 
 // TestEvaluatorServiceImpl_BatchGetEvaluator 使用 gomock 对 BatchGetEvaluator 方法进行单元测试

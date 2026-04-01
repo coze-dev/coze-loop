@@ -271,6 +271,18 @@ func (r *ExptTurnResultRepoImpl) ListTurnResult(ctx context.Context, spaceID, ex
 	return exptTurnResults, total, nil
 }
 
+func (r *ExptTurnResultRepoImpl) ListTurnResultWithCursor(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, cursor *entity.ExptTurnResultListCursor, limit int, desc bool) ([]*entity.ExptTurnResult, int64, *entity.ExptTurnResultListCursor, error) {
+	pos, total, next, err := r.exptTurnResultDAO.ListTurnResultByCursor(ctx, spaceID, exptID, filter, cursor, limit, desc)
+	if err != nil {
+		return nil, 0, nil, errorx.Wrapf(err, "ListTurnResultWithCursor fail, spaceID: %v, exptID: %v", spaceID, exptID)
+	}
+	out := make([]*entity.ExptTurnResult, 0, len(pos))
+	for _, po := range pos {
+		out = append(out, convert.NewExptTurnResultConvertor().PO2DO(po, nil))
+	}
+	return out, total, next, nil
+}
+
 // nolint: byted_s_too_many_lines_in_func
 func (r *ExptTurnResultRepoImpl) ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool) ([]*entity.ExptTurnResult, int64, error) {
 	exptTurnResultPOs, total, err := r.exptTurnResultDAO.ListTurnResultByItemIDs(ctx, spaceID, exptID, itemIDs, page, desc)

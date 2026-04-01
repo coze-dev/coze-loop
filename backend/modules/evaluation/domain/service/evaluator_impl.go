@@ -497,6 +497,27 @@ func (e *EvaluatorServiceImpl) validateCreateEvaluatorRequest(ctx context.Contex
 			return errorx.NewByCode(errno.EvaluatorNameExistCode)
 		}
 	}
+	if _, ok := entity.EvaluatorTypeSet[evaluator.EvaluatorType]; !ok {
+		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid evaluator type"))
+	}
+	switch evaluator.EvaluatorType {
+	case entity.EvaluatorTypePrompt:
+		if evaluator.PromptEvaluatorVersion == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("prompt evaluator version is required"))
+		}
+	case entity.EvaluatorTypeCode:
+		if evaluator.CodeEvaluatorVersion == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("code evaluator version is required"))
+		}
+	case entity.EvaluatorTypeCustomRPC:
+		if evaluator.CustomRPCEvaluatorVersion == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("custom rpc evaluator version is required"))
+		}
+	case entity.EvaluatorTypeAgent:
+		if evaluator.AgentEvaluatorVersion == nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("agent evaluator version is required"))
+		}
+	}
 	return nil
 }
 

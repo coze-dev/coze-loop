@@ -692,7 +692,15 @@ func (p *UpdateAnnotateRecordResp) IsValid() error {
 	}
 	return nil
 }
+func (p *ExptResultExportColumnSpec) IsValid() error {
+	return nil
+}
 func (p *ExportExptResultRequest) IsValid() error {
+	if p.ExportColumns != nil {
+		if err := p.ExportColumns.IsValid(); err != nil {
+			return fmt.Errorf("field ExportColumns not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)

@@ -489,6 +489,9 @@ func (e *Evaluator) SetSpaceID(spaceID int64) {
 }
 
 func (e *Evaluator) SetEvaluatorVersion(version *Evaluator) {
+	if version == nil {
+		return
+	}
 	switch e.EvaluatorType {
 	case EvaluatorTypePrompt:
 		e.PromptEvaluatorVersion = version.PromptEvaluatorVersion
