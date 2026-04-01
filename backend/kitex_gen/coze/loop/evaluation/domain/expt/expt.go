@@ -993,8 +993,9 @@ type Experiment struct {
 	EvaluatorIDVersionList []*evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_list,51,optional" frugal:"51,optional,list<evaluator.EvaluatorIDVersionItem>" form:"evaluator_id_version_list" json:"evaluator_id_version_list,omitempty" query:"evaluator_id_version_list"`
 	ExptTemplateMeta       *ExptTemplateMeta                   `thrift:"expt_template_meta,60,optional" frugal:"60,optional,ExptTemplateMeta" form:"expt_template_meta" json:"expt_template_meta,omitempty" query:"expt_template_meta"`
 	// 评估器得分加权配置
-	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
-	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	ScoreWeightConfig   *ExptScoreWeight  `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
+	EnableWeightedScore *bool             `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewExperiment() *Experiment {
@@ -1375,6 +1376,18 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	}
 	return *p.EnableWeightedScore
 }
+
+var Experiment_Ext_DEFAULT map[string]string
+
+func (p *Experiment) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return Experiment_Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1468,39 +1481,43 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
+func (p *Experiment) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
-	1:  "id",
-	2:  "name",
-	3:  "desc",
-	4:  "creator_by",
-	5:  "status",
-	6:  "status_message",
-	7:  "start_time",
-	8:  "end_time",
-	9:  "item_concur_num",
-	21: "eval_set_version_id",
-	22: "target_version_id",
-	23: "evaluator_version_ids",
-	24: "eval_set",
-	25: "eval_target",
-	26: "evaluators",
-	27: "eval_set_id",
-	28: "target_id",
-	29: "base_info",
-	30: "expt_stats",
-	31: "target_field_mapping",
-	32: "evaluator_field_mapping",
-	33: "target_runtime_param",
-	40: "expt_type",
-	41: "max_alive_time",
-	42: "source_type",
-	43: "source_id",
-	45: "item_retry_num",
-	51: "evaluator_id_version_list",
-	60: "expt_template_meta",
-	61: "score_weight_config",
-	62: "enable_weighted_score",
+	1:   "id",
+	2:   "name",
+	3:   "desc",
+	4:   "creator_by",
+	5:   "status",
+	6:   "status_message",
+	7:   "start_time",
+	8:   "end_time",
+	9:   "item_concur_num",
+	21:  "eval_set_version_id",
+	22:  "target_version_id",
+	23:  "evaluator_version_ids",
+	24:  "eval_set",
+	25:  "eval_target",
+	26:  "evaluators",
+	27:  "eval_set_id",
+	28:  "target_id",
+	29:  "base_info",
+	30:  "expt_stats",
+	31:  "target_field_mapping",
+	32:  "evaluator_field_mapping",
+	33:  "target_runtime_param",
+	40:  "expt_type",
+	41:  "max_alive_time",
+	42:  "source_type",
+	43:  "source_id",
+	45:  "item_retry_num",
+	51:  "evaluator_id_version_list",
+	60:  "expt_template_meta",
+	61:  "score_weight_config",
+	62:  "enable_weighted_score",
+	100: "ext",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1625,6 +1642,10 @@ func (p *Experiment) IsSetScoreWeightConfig() bool {
 
 func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1888,6 +1909,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 62:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField62(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2290,6 +2319,35 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
+func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2419,6 +2477,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField62(oprot); err != nil {
 			fieldId = 62
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 	}
@@ -3029,6 +3091,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
 }
+func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3135,6 +3226,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field62DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -3473,6 +3567,19 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 	}
 	if *p.EnableWeightedScore != *src {
 		return false
+	}
+	return true
+}
+func (p *Experiment) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

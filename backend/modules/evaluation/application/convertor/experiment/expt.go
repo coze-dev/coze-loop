@@ -374,6 +374,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		} else {
 			res.ItemRetryNum = gptr.Of(int32(0))
 		}
+		res.Ext = experiment.EvalConf.Ext
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）

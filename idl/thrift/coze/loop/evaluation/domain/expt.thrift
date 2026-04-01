@@ -70,6 +70,8 @@ struct Experiment {
     // 评估器得分加权配置
     61: optional ExptScoreWeight score_weight_config
     62: optional bool enable_weighted_score
+
+    100: optional map<string, string> ext
 }
 
 // 实验模板基础信息
