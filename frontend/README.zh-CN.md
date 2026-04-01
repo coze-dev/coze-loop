@@ -20,8 +20,8 @@ _____________________________________
 环境要求:
 
 * Node.js 18+ (推荐 lts/iron 版本)
-* pnpm 8.15.8
-* Rush 5.147.1
+* pnpm 10.27.0
+* Rush 5.172.1
 
 ### 1. 安装 Node.js 18+
 
@@ -44,7 +44,7 @@ cd frontend
 ### 3. 安装全局依赖
 
 ```bash
-npm i -g pnpm@8.15.8 @microsoft/rush@5.147.1
+npm i -g pnpm@10.27.0 @microsoft/rush@5.172.1
 ```
 
 ### 4. 安装/更新项目依赖

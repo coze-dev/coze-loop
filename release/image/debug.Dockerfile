@@ -28,8 +28,8 @@ RUN apk add --no-cache bash
 
 # 2. Install pnpm and Rush
 RUN corepack enable && \
-    corepack prepare pnpm@8.15.8 --activate && \
-    npm install -g @microsoft/rush@5.147.1
+    corepack prepare pnpm@10.27.0 --activate && \
+    npm install -g @microsoft/rush@5.172.1
 
 WORKDIR /coze-loop
 
