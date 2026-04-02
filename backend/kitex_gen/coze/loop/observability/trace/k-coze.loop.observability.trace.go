@@ -15692,6 +15692,20 @@ func (p *ListTraceChatRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -15845,6 +15859,20 @@ func (p *ListTraceChatRequest) FastReadField8(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListTraceChatRequest) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithoutDetail = _field
+	return offset, nil
+}
+
 func (p *ListTraceChatRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -15868,6 +15896,7 @@ func (p *ListTraceChatRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
@@ -15889,6 +15918,7 @@ func (p *ListTraceChatRequest) BLength() int {
 		l += p.field6Length()
 		l += p.field7Length()
 		l += p.field8Length()
+		l += p.field9Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -15959,6 +15989,15 @@ func (p *ListTraceChatRequest) fastWriteField8(buf []byte, w thrift.NocopyWriter
 	if p.IsSetFilters() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
 		offset += p.Filters.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ListTraceChatRequest) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithoutDetail() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 9)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithoutDetail)
 	}
 	return offset
 }
@@ -16040,6 +16079,15 @@ func (p *ListTraceChatRequest) field8Length() int {
 	return l
 }
 
+func (p *ListTraceChatRequest) field9Length() int {
+	l := 0
+	if p.IsSetWithoutDetail() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListTraceChatRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -16097,6 +16145,11 @@ func (p *ListTraceChatRequest) DeepCopy(s interface{}) error {
 		}
 	}
 	p.Filters = _filters
+
+	if src.WithoutDetail != nil {
+		tmp := *src.WithoutDetail
+		p.WithoutDetail = &tmp
+	}
 
 	var _base *base.Base
 	if src.Base != nil {

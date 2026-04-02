@@ -21000,9 +21000,14 @@ func (p *ListTraceChatRequest) GetFilters() (v *filter.FilterFields) {
 	return p.Filters
 }
 
+var ListTraceChatRequest_WithoutDetail_DEFAULT bool
+
 func (p *ListTraceChatRequest) GetWithoutDetail() (v bool) {
-	if p == nil || p.WithoutDetail == nil {
-		return false
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithoutDetail() {
+		return ListTraceChatRequest_WithoutDetail_DEFAULT
 	}
 	return *p.WithoutDetail
 }
@@ -21322,6 +21327,7 @@ func (p *ListTraceChatRequest) ReadField8(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *ListTraceChatRequest) ReadField9(iprot thrift.TProtocol) error {
+
 	var _field *bool
 	if v, err := iprot.ReadBool(); err != nil {
 		return err
@@ -21619,6 +21625,9 @@ func (p *ListTraceChatRequest) DeepEqual(ano *ListTraceChatRequest) bool {
 	if !p.Field8DeepEqual(ano.Filters) {
 		return false
 	}
+	if !p.Field9DeepEqual(ano.WithoutDetail) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
@@ -21702,6 +21711,18 @@ func (p *ListTraceChatRequest) Field7DeepEqual(src *common.PlatformType) bool {
 func (p *ListTraceChatRequest) Field8DeepEqual(src *filter.FilterFields) bool {
 
 	if !p.Filters.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListTraceChatRequest) Field9DeepEqual(src *bool) bool {
+
+	if p.WithoutDetail == src {
+		return true
+	} else if p.WithoutDetail == nil || src == nil {
+		return false
+	}
+	if *p.WithoutDetail != *src {
 		return false
 	}
 	return true
