@@ -371,6 +371,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		filter = t.addPageTokenFilter(pageToken, filter)
 	}
 	st := time.Now()
+	queryLimit := req.Limit + 1
 	spans, err := spanDao.Get(ctx, &dao.QueryParam{
 		QueryType:        dao.QueryTypeGetTrace,
 		Tables:           tableCfg.SpanTables,
@@ -378,7 +379,7 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
 		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
 		Filters:          filter,
-		Limit:            req.Limit + 1,
+		Limit:            queryLimit,
 		OrderByStartTime: req.DescByStartTime,
 		OmitColumns:      req.OmitColumns,
 		SelectColumns:    req.SelectColumns,
@@ -411,9 +412,9 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
 	result := &repo.GetTraceResult{
-		Spans:   spanDOList,
-		HasMore: len(spans) > int(req.Limit),
+		Spans: spanDOList,
 	}
+	result.HasMore = len(spans) > int(req.Limit)
 	if result.HasMore {
 		result.Spans = result.Spans[:len(result.Spans)-1]
 	}

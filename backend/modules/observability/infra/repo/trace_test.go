@@ -430,6 +430,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 				req: &repo.GetTraceParam{
 					TraceID: "123",
 					Tenants: []string{"test"},
+					Limit:   1000,
 				},
 			},
 			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
@@ -457,7 +458,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			}},
+			}, PageToken: "eyJTdGFydFRpbWUiOjAsIlNwYW5JRCI6InNwYW4yIn0="},
 		},
 		{
 			name: "get trace with annotations successfully",
@@ -501,6 +502,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					LogID:              "123",
 					Tenants:            []string{"test"},
 					NotQueryAnnotation: false,
+					Limit:              1000,
 				},
 			},
 			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
@@ -524,7 +526,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			}},
+			}, PageToken: "eyJTdGFydFRpbWUiOjAsIlNwYW5JRCI6InNwYW4xIn0="},
 		},
 		{
 			name: "get trace failed due to config error",
@@ -582,6 +584,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					TraceID: "123",
 					Tenants: []string{"test"},
 					SpanIDs: []string{"span1"},
+					Limit:   1000,
 				},
 			},
 			want: &repo.GetTraceResult{Spans: loop_span.SpanList{
@@ -597,7 +600,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 					SystemTagsLong:   map[string]int64{},
 					SystemTagsDouble: map[string]float64{},
 				},
-			}},
+			}, PageToken: "eyJTdGFydFRpbWUiOjAsIlNwYW5JRCI6InNwYW4xIn0="},
 		},
 		{
 			name: "get trace failed due to blank id",

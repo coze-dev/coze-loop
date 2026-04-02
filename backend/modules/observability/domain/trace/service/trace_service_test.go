@@ -2798,6 +2798,7 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					NotQueryAnnotation: false,
 					Filters:            nil,
 					OmitColumns:        []string{"input", "output"},
+					DescByStartTime:    true,
 				}).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
