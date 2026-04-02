@@ -2674,7 +2674,7 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		}
 	}
 
-	messages := r.buildChatMessages(ctx, spans)
+	messages := r.buildChatMessages(ctx, spans, req.WithoutDetail)
 
 	return &ListTraceChatResponse{
 		Messages:      messages,
@@ -2747,7 +2747,7 @@ func (r *TraceServiceImpl) ListThreadChat(ctx context.Context, req *ListThreadCh
 		}
 	}
 
-	messages := r.buildChatMessages(ctx, spans)
+	messages := r.buildChatMessages(ctx, spans, false)
 
 	return &ListThreadChatResponse{
 		Messages:      messages,
@@ -2806,10 +2806,16 @@ func (r *TraceServiceImpl) GetThreadStat(ctx context.Context, req *GetThreadStat
 	return r.buildThreadStat(ctx, req.ThreadID, spans), nil
 }
 
-func (r *TraceServiceImpl) buildChatMessages(ctx context.Context, spans loop_span.SpanList) []*entity.ChatMessage {
+func (r *TraceServiceImpl) buildChatMessages(ctx context.Context, spans loop_span.SpanList, withoutDetail bool) []*entity.ChatMessage {
 	messages := make([]*entity.ChatMessage, 0, len(spans)*2)
 	for _, span := range spans {
 		if span == nil {
+			continue
+		}
+		if withoutDetail {
+			messages = append(messages, &entity.ChatMessage{
+				Span: span,
+			})
 			continue
 		}
 		if span.IsModelSpan() {
