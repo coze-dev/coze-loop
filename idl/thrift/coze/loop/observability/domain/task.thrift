@@ -80,8 +80,8 @@ struct EvaluationExperimentConfig {
     4: optional i64 expt_template_id (go.tag='json:"expt_template_id"')
 }
 struct SourceInfo {
-    1: optional string name
-    2: optional string version
+    1: optional list<string> name
+    2: optional list<string> version
 }
 // TaskConfig
 struct TaskConfig {

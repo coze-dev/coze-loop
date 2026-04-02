@@ -128,8 +128,8 @@ type EvaluationExperimentConfig struct {
 	ExptTemplateID       *int64  `json:"expt_template_id,omitempty"`
 }
 type SourceInfo struct {
-	Name    *string `json:"name,omitempty"`
-	Version *string `json:"version,omitempty"`
+	Name    []string `json:"name,omitempty"`
+	Version []string `json:"version,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束
