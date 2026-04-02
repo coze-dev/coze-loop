@@ -90,11 +90,6 @@ func (p *TaskConfig) IsValid() error {
 			return fmt.Errorf("field EvaluationExperimentConfig not valid, %w", err)
 		}
 	}
-	if p.SourceInfo != nil {
-		if err := p.SourceInfo.IsValid(); err != nil {
-			return fmt.Errorf("field SourceInfo not valid, %w", err)
-		}
-	}
 	return nil
 }
 func (p *DataReflowConfig) IsValid() error {

@@ -129,7 +129,7 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 		AutoEvaluateConfigs:        autoEvaluateConfigs,
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
-		SourceInfo:                 SourceInfoDO2DTO(v.SourceInfo),
+		SourceInfo:                 SourceInfoListDO2DTO(v.SourceInfo),
 	}
 }
 
@@ -167,24 +167,38 @@ func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *tas
 	}
 }
 
-func SourceInfoDO2DTO(v *entity.SourceInfo) *task.SourceInfo {
-	if v == nil {
+func SourceInfoListDO2DTO(vs []*entity.SourceInfo) []*task.SourceInfo {
+	if len(vs) == 0 {
 		return nil
 	}
-	return &task.SourceInfo{
-		Name:    v.Name,
-		Version: v.Version,
+	result := make([]*task.SourceInfo, 0, len(vs))
+	for _, v := range vs {
+		if v == nil {
+			continue
+		}
+		result = append(result, &task.SourceInfo{
+			Name:    v.Name,
+			Version: v.Version,
+		})
 	}
+	return result
 }
 
-func SourceInfoDTO2DO(v *task.SourceInfo) *entity.SourceInfo {
-	if v == nil {
+func SourceInfoListDTO2DO(vs []*task.SourceInfo) []*entity.SourceInfo {
+	if len(vs) == 0 {
 		return nil
 	}
-	return &entity.SourceInfo{
-		Name:    v.Name,
-		Version: v.Version,
+	result := make([]*entity.SourceInfo, 0, len(vs))
+	for _, v := range vs {
+		if v == nil {
+			continue
+		}
+		result = append(result, &entity.SourceInfo{
+			Name:    v.Name,
+			Version: v.Version,
+		})
 	}
+	return result
 }
 
 func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
@@ -513,7 +527,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 		AutoEvaluateConfigs:        autoEvaluateConfigs,
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
-		SourceInfo:                 SourceInfoDTO2DO(taskConfig.SourceInfo),
+		SourceInfo:                 SourceInfoListDTO2DO(taskConfig.SourceInfo),
 	}
 }
 

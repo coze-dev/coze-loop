@@ -1935,7 +1935,7 @@ func (p *SourceInfo) FastRead(buf []byte) (int, error) {
 		}
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField1(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1949,7 +1949,7 @@ func (p *SourceInfo) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 2:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
@@ -1983,22 +1983,12 @@ SkipFieldError:
 func (p *SourceInfo) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
-	}
-	_field := make([]string, 0, size)
-	for i := 0; i < size; i++ {
-		var _elem string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
+	} else {
+		offset += l
+		_field = &v
 	}
 	p.Name = _field
 	return offset, nil
@@ -2007,22 +1997,12 @@ func (p *SourceInfo) FastReadField1(buf []byte) (int, error) {
 func (p *SourceInfo) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
-	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
-	offset += l
-	if err != nil {
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
-	}
-	_field := make([]string, 0, size)
-	for i := 0; i < size; i++ {
-		var _elem string
-		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-			return offset, err
-		} else {
-			offset += l
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
+	} else {
+		offset += l
+		_field = &v
 	}
 	p.Version = _field
 	return offset, nil
@@ -2055,15 +2035,8 @@ func (p *SourceInfo) BLength() int {
 func (p *SourceInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetName() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.Name {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
 	}
 	return offset
 }
@@ -2071,15 +2044,8 @@ func (p *SourceInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 func (p *SourceInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetVersion() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
-		listBeginOffset := offset
-		offset += thrift.Binary.ListBeginLength()
-		var length int
-		for _, v := range p.Version {
-			length++
-			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
-		}
-		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Version)
 	}
 	return offset
 }
@@ -2088,11 +2054,7 @@ func (p *SourceInfo) field1Length() int {
 	l := 0
 	if p.IsSetName() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.Name {
-			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
-		}
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
 	}
 	return l
 }
@@ -2101,11 +2063,7 @@ func (p *SourceInfo) field2Length() int {
 	l := 0
 	if p.IsSetVersion() {
 		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.ListBeginLength()
-		for _, v := range p.Version {
-			_ = v
-			l += thrift.Binary.StringLengthNocopy(v)
-		}
+		l += thrift.Binary.StringLengthNocopy(*p.Version)
 	}
 	return l
 }
@@ -2117,25 +2075,19 @@ func (p *SourceInfo) DeepCopy(s interface{}) error {
 	}
 
 	if src.Name != nil {
-		p.Name = make([]string, 0, len(src.Name))
-		for _, elem := range src.Name {
-			var _elem string
-			if elem != "" {
-				_elem = kutils.StringDeepCopy(elem)
-			}
-			p.Name = append(p.Name, _elem)
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
 		}
+		p.Name = &tmp
 	}
 
 	if src.Version != nil {
-		p.Version = make([]string, 0, len(src.Version))
-		for _, elem := range src.Version {
-			var _elem string
-			if elem != "" {
-				_elem = kutils.StringDeepCopy(elem)
-			}
-			p.Version = append(p.Version, _elem)
+		var tmp string
+		if *src.Version != "" {
+			tmp = kutils.StringDeepCopy(*src.Version)
 		}
+		p.Version = &tmp
 	}
 
 	return nil
@@ -2201,7 +2153,7 @@ func (p *TaskConfig) FastRead(buf []byte) (int, error) {
 				}
 			}
 		case 4:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				l, err = p.FastReadField4(buf[offset:])
 				offset += l
 				if err != nil {
@@ -2296,11 +2248,24 @@ func (p *TaskConfig) FastReadField3(buf []byte) (int, error) {
 
 func (p *TaskConfig) FastReadField4(buf []byte) (int, error) {
 	offset := 0
-	_field := NewSourceInfo()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
 		return offset, err
-	} else {
-		offset += l
+	}
+	_field := make([]*SourceInfo, 0, size)
+	values := make([]SourceInfo, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
 	}
 	p.SourceInfo = _field
 	return offset, nil
@@ -2378,8 +2343,15 @@ func (p *TaskConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 func (p *TaskConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSourceInfo() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
-		offset += p.SourceInfo.FastWriteNocopy(buf[offset:], w)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 4)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.SourceInfo {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -2423,7 +2395,11 @@ func (p *TaskConfig) field4Length() int {
 	l := 0
 	if p.IsSetSourceInfo() {
 		l += thrift.Binary.FieldBeginLength()
-		l += p.SourceInfo.BLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.SourceInfo {
+			_ = v
+			l += v.BLength()
+		}
 	}
 	return l
 }
@@ -2473,14 +2449,20 @@ func (p *TaskConfig) DeepCopy(s interface{}) error {
 	}
 	p.EvaluationExperimentConfig = _evaluationExperimentConfig
 
-	var _sourceInfo *SourceInfo
 	if src.SourceInfo != nil {
-		_sourceInfo = &SourceInfo{}
-		if err := _sourceInfo.DeepCopy(src.SourceInfo); err != nil {
-			return err
+		p.SourceInfo = make([]*SourceInfo, 0, len(src.SourceInfo))
+		for _, elem := range src.SourceInfo {
+			var _elem *SourceInfo
+			if elem != nil {
+				_elem = &SourceInfo{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.SourceInfo = append(p.SourceInfo, _elem)
 		}
 	}
-	p.SourceInfo = _sourceInfo
 
 	return nil
 }

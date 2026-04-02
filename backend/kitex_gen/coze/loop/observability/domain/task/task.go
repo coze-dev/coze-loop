@@ -2752,8 +2752,8 @@ func (p *EvaluationExperimentConfig) Field4DeepEqual(src *int64) bool {
 }
 
 type SourceInfo struct {
-	Name    []string `thrift:"name,1,optional" frugal:"1,optional,list<string>" form:"name" json:"name,omitempty" query:"name"`
-	Version []string `thrift:"version,2,optional" frugal:"2,optional,list<string>" form:"version" json:"version,omitempty" query:"version"`
+	Name    *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
 }
 
 func NewSourceInfo() *SourceInfo {
@@ -2763,33 +2763,33 @@ func NewSourceInfo() *SourceInfo {
 func (p *SourceInfo) InitDefault() {
 }
 
-var SourceInfo_Name_DEFAULT []string
+var SourceInfo_Name_DEFAULT string
 
-func (p *SourceInfo) GetName() (v []string) {
+func (p *SourceInfo) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
 		return SourceInfo_Name_DEFAULT
 	}
-	return p.Name
+	return *p.Name
 }
 
-var SourceInfo_Version_DEFAULT []string
+var SourceInfo_Version_DEFAULT string
 
-func (p *SourceInfo) GetVersion() (v []string) {
+func (p *SourceInfo) GetVersion() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetVersion() {
 		return SourceInfo_Version_DEFAULT
 	}
-	return p.Version
+	return *p.Version
 }
-func (p *SourceInfo) SetName(val []string) {
+func (p *SourceInfo) SetName(val *string) {
 	p.Name = val
 }
-func (p *SourceInfo) SetVersion(val []string) {
+func (p *SourceInfo) SetVersion(val *string) {
 	p.Version = val
 }
 
@@ -2825,7 +2825,7 @@ func (p *SourceInfo) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2833,7 +2833,7 @@ func (p *SourceInfo) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 2:
-			if fieldTypeId == thrift.LIST {
+			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -2870,47 +2870,23 @@ ReadStructEndError:
 }
 
 func (p *SourceInfo) ReadField1(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]string, 0, size)
-	for i := 0; i < size; i++ {
 
-		var _elem string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
+	} else {
+		_field = &v
 	}
 	p.Name = _field
 	return nil
 }
 func (p *SourceInfo) ReadField2(iprot thrift.TProtocol) error {
-	_, size, err := iprot.ReadListBegin()
-	if err != nil {
-		return err
-	}
-	_field := make([]string, 0, size)
-	for i := 0; i < size; i++ {
 
-		var _elem string
-		if v, err := iprot.ReadString(); err != nil {
-			return err
-		} else {
-			_elem = v
-		}
-
-		_field = append(_field, _elem)
-	}
-	if err := iprot.ReadListEnd(); err != nil {
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
 		return err
+	} else {
+		_field = &v
 	}
 	p.Version = _field
 	return nil
@@ -2950,18 +2926,10 @@ WriteStructEndError:
 
 func (p *SourceInfo) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
-		if err = oprot.WriteFieldBegin("name", thrift.LIST, 1); err != nil {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.Name)); err != nil {
-			return err
-		}
-		for _, v := range p.Name {
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
+		if err := oprot.WriteString(*p.Name); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -2976,18 +2944,10 @@ WriteFieldEndError:
 }
 func (p *SourceInfo) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetVersion() {
-		if err = oprot.WriteFieldBegin("version", thrift.LIST, 2); err != nil {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteListBegin(thrift.STRING, len(p.Version)); err != nil {
-			return err
-		}
-		for _, v := range p.Version {
-			if err := oprot.WriteString(v); err != nil {
-				return err
-			}
-		}
-		if err := oprot.WriteListEnd(); err != nil {
+		if err := oprot.WriteString(*p.Version); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3024,29 +2984,27 @@ func (p *SourceInfo) DeepEqual(ano *SourceInfo) bool {
 	return true
 }
 
-func (p *SourceInfo) Field1DeepEqual(src []string) bool {
+func (p *SourceInfo) Field1DeepEqual(src *string) bool {
 
-	if len(p.Name) != len(src) {
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
 		return false
 	}
-	for i, v := range p.Name {
-		_src := src[i]
-		if strings.Compare(v, _src) != 0 {
-			return false
-		}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
 	}
 	return true
 }
-func (p *SourceInfo) Field2DeepEqual(src []string) bool {
+func (p *SourceInfo) Field2DeepEqual(src *string) bool {
 
-	if len(p.Version) != len(src) {
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
 		return false
 	}
-	for i, v := range p.Version {
-		_src := src[i]
-		if strings.Compare(v, _src) != 0 {
-			return false
-		}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
 	}
 	return true
 }
@@ -3060,7 +3018,7 @@ type TaskConfig struct {
 	// 评测实验配置 task 维度
 	EvaluationExperimentConfig *EvaluationExperimentConfig `thrift:"evaluation_experiment_config,3,optional" frugal:"3,optional,EvaluationExperimentConfig" form:"evaluation_experiment_config" json:"evaluation_experiment_config,omitempty" query:"evaluation_experiment_config"`
 	// 数据源信息
-	SourceInfo *SourceInfo `thrift:"source_info,4,optional" frugal:"4,optional,SourceInfo" form:"source_info" json:"source_info,omitempty" query:"source_info"`
+	SourceInfo []*SourceInfo `thrift:"source_info,4,optional" frugal:"4,optional,list<SourceInfo>" form:"source_info" json:"source_info,omitempty" query:"source_info"`
 }
 
 func NewTaskConfig() *TaskConfig {
@@ -3106,9 +3064,9 @@ func (p *TaskConfig) GetEvaluationExperimentConfig() (v *EvaluationExperimentCon
 	return p.EvaluationExperimentConfig
 }
 
-var TaskConfig_SourceInfo_DEFAULT *SourceInfo
+var TaskConfig_SourceInfo_DEFAULT []*SourceInfo
 
-func (p *TaskConfig) GetSourceInfo() (v *SourceInfo) {
+func (p *TaskConfig) GetSourceInfo() (v []*SourceInfo) {
 	if p == nil {
 		return
 	}
@@ -3126,7 +3084,7 @@ func (p *TaskConfig) SetDataReflowConfig(val []*DataReflowConfig) {
 func (p *TaskConfig) SetEvaluationExperimentConfig(val *EvaluationExperimentConfig) {
 	p.EvaluationExperimentConfig = val
 }
-func (p *TaskConfig) SetSourceInfo(val *SourceInfo) {
+func (p *TaskConfig) SetSourceInfo(val []*SourceInfo) {
 	p.SourceInfo = val
 }
 
@@ -3196,7 +3154,7 @@ func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
 				goto SkipFieldError
 			}
 		case 4:
-			if fieldTypeId == thrift.STRUCT {
+			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -3287,8 +3245,23 @@ func (p *TaskConfig) ReadField3(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *TaskConfig) ReadField4(iprot thrift.TProtocol) error {
-	_field := NewSourceInfo()
-	if err := _field.Read(iprot); err != nil {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*SourceInfo, 0, size)
+	values := make([]SourceInfo, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
 	p.SourceInfo = _field
@@ -3407,10 +3380,18 @@ WriteFieldEndError:
 }
 func (p *TaskConfig) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSourceInfo() {
-		if err = oprot.WriteFieldBegin("source_info", thrift.STRUCT, 4); err != nil {
+		if err = oprot.WriteFieldBegin("source_info", thrift.LIST, 4); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := p.SourceInfo.Write(oprot); err != nil {
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.SourceInfo)); err != nil {
+			return err
+		}
+		for _, v := range p.SourceInfo {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3486,10 +3467,16 @@ func (p *TaskConfig) Field3DeepEqual(src *EvaluationExperimentConfig) bool {
 	}
 	return true
 }
-func (p *TaskConfig) Field4DeepEqual(src *SourceInfo) bool {
+func (p *TaskConfig) Field4DeepEqual(src []*SourceInfo) bool {
 
-	if !p.SourceInfo.DeepEqual(src) {
+	if len(p.SourceInfo) != len(src) {
 		return false
+	}
+	for i, v := range p.SourceInfo {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
 	}
 	return true
 }
