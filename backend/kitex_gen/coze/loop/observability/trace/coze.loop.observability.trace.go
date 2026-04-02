@@ -20895,15 +20895,16 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ListTraceChatRequest struct {
-	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	TraceID      string               `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id" form:"trace_id,required" `
-	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
-	EndTime      *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
-	PageSize     *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
-	PageToken    *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
-	PlatformType *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
-	Filters      *filter.FilterFields `thrift:"filters,8,optional" frugal:"8,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
-	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID   int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	TraceID       string               `thrift:"trace_id,2,required" frugal:"2,required,string" json:"trace_id" form:"trace_id,required" `
+	StartTime     *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time,omitempty" form:"start_time" `
+	EndTime       *int64               `thrift:"end_time,4,optional" frugal:"4,optional,i64" json:"end_time,omitempty" form:"end_time" `
+	PageSize      *int32               `thrift:"page_size,5,optional" frugal:"5,optional,i32" json:"page_size,omitempty" form:"page_size" `
+	PageToken     *string              `thrift:"page_token,6,optional" frugal:"6,optional,string" json:"page_token,omitempty" form:"page_token" `
+	PlatformType  *common.PlatformType `thrift:"platform_type,7,optional" frugal:"7,optional,string" json:"platform_type,omitempty" form:"platform_type" `
+	Filters       *filter.FilterFields `thrift:"filters,8,optional" frugal:"8,optional,filter.FilterFields" form:"filters" json:"filters,omitempty"`
+	WithoutDetail *bool                `thrift:"without_detail,9,optional" frugal:"9,optional,bool" json:"without_detail,omitempty" form:"without_detail" `
+	Base          *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListTraceChatRequest() *ListTraceChatRequest {
@@ -20999,6 +21000,13 @@ func (p *ListTraceChatRequest) GetFilters() (v *filter.FilterFields) {
 	return p.Filters
 }
 
+func (p *ListTraceChatRequest) GetWithoutDetail() (v bool) {
+	if p == nil || p.WithoutDetail == nil {
+		return false
+	}
+	return *p.WithoutDetail
+}
+
 var ListTraceChatRequest_Base_DEFAULT *base.Base
 
 func (p *ListTraceChatRequest) GetBase() (v *base.Base) {
@@ -21034,6 +21042,9 @@ func (p *ListTraceChatRequest) SetPlatformType(val *common.PlatformType) {
 func (p *ListTraceChatRequest) SetFilters(val *filter.FilterFields) {
 	p.Filters = val
 }
+func (p *ListTraceChatRequest) SetWithoutDetail(val *bool) {
+	p.WithoutDetail = val
+}
 func (p *ListTraceChatRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -21047,6 +21058,7 @@ var fieldIDToName_ListTraceChatRequest = map[int16]string{
 	6:   "page_token",
 	7:   "platform_type",
 	8:   "filters",
+	9:   "without_detail",
 	255: "Base",
 }
 
@@ -21072,6 +21084,10 @@ func (p *ListTraceChatRequest) IsSetPlatformType() bool {
 
 func (p *ListTraceChatRequest) IsSetFilters() bool {
 	return p.Filters != nil
+}
+
+func (p *ListTraceChatRequest) IsSetWithoutDetail() bool {
+	return p.WithoutDetail != nil
 }
 
 func (p *ListTraceChatRequest) IsSetBase() bool {

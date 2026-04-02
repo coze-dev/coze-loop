@@ -58,6 +58,7 @@ const (
 	SpanFieldKeyPreviousResponseID   = "previous_response_id"
 	SpanFieldKeyResponseID           = "response_id"
 	SpanFieldThreadId                = "thread_id"
+	SpanFieldError                   = "error"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"

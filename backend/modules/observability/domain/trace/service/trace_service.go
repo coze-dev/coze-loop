@@ -45,8 +45,9 @@ import (
 )
 
 const (
-	defaultChatPageSize int32 = 50
-	maxChatPageSize     int32 = 100
+	defaultChatPageSize          int32 = 50
+	maxChatPageSize              int32 = 100
+	maxChatPageSizeWithoutDetail int32 = 5000
 )
 
 type ListSpansReq struct {
@@ -388,14 +389,15 @@ type ListTrajectoryResponse struct {
 }
 
 type ListTraceChatRequest struct {
-	PlatformType loop_span.PlatformType
-	WorkspaceID  int64
-	TraceID      string
-	StartTime    int64
-	EndTime      int64
-	PageSize     int32
-	PageToken    string
-	Filters      *loop_span.FilterFields
+	PlatformType  loop_span.PlatformType
+	WorkspaceID   int64
+	TraceID       string
+	StartTime     int64
+	EndTime       int64
+	PageSize      int32
+	PageToken     string
+	Filters       *loop_span.FilterFields
+	WithoutDetail bool
 }
 
 type ListTraceChatResponse struct {
@@ -2600,8 +2602,12 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		return nil, err
 	}
 
+	maxPageSize := maxChatPageSize
+	if req.WithoutDetail {
+		maxPageSize = maxChatPageSizeWithoutDetail
+	}
 	pageSize := defaultChatPageSize
-	if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
+	if req.PageSize > 0 && req.PageSize <= maxPageSize {
 		pageSize = req.PageSize
 	}
 
@@ -2627,6 +2633,11 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		FilterFields: filterFields,
 	}
 
+	var omitColumns []string
+	if req.WithoutDetail {
+		omitColumns = []string{"input", "output"}
+	}
+
 	listResp, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:            tenants,
@@ -2637,6 +2648,7 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		Limit:              pageSize,
 		AscByStartTime:     true,
 		NotQueryAnnotation: true,
+		OmitColumns:        omitColumns,
 	})
 	if err != nil {
 		return nil, err
@@ -2812,6 +2824,13 @@ func (r *TraceServiceImpl) buildChatMessages(ctx context.Context, spans loop_spa
 					Role: entity.ChatRoleAssistant,
 					Span: span,
 				})
+			} else if span.StatusCode != 0 {
+				if _, ok := span.TagsString[loop_span.SpanFieldError]; ok {
+					messages = append(messages, &entity.ChatMessage{
+						Role: entity.ChatRoleAssistant,
+						Span: span,
+					})
+				}
 			}
 		} else if span.IsToolSpan() {
 			messages = append(messages, &entity.ChatMessage{

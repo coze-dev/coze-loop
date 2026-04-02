@@ -430,6 +430,7 @@ struct ListTraceChatRequest {
     6: optional string page_token (go.tag='json:"page_token,omitempty"', api.body="page_token")
     7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
     8: optional filter.FilterFields filters (api.body="filters")
+    9: optional bool without_detail (go.tag='json:"without_detail,omitempty"', api.body="without_detail")
 
     255: optional base.Base Base
 }

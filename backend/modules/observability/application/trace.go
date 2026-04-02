@@ -1182,14 +1182,15 @@ func (t *TraceApplication) ListTraceChat(ctx context.Context, req *trace.ListTra
 	}
 
 	sResp, err := t.traceService.ListTraceChat(ctx, &service.ListTraceChatRequest{
-		PlatformType: platformType,
-		WorkspaceID:  req.GetWorkspaceID(),
-		TraceID:      req.GetTraceID(),
-		StartTime:    startTime,
-		EndTime:      endTime,
-		PageSize:     req.GetPageSize(),
-		PageToken:    req.GetPageToken(),
-		Filters:      tconv.FilterFieldsDTO2DO(req.Filters),
+		PlatformType:  platformType,
+		WorkspaceID:   req.GetWorkspaceID(),
+		TraceID:       req.GetTraceID(),
+		StartTime:     startTime,
+		EndTime:       endTime,
+		PageSize:      req.GetPageSize(),
+		PageToken:     req.GetPageToken(),
+		Filters:       tconv.FilterFieldsDTO2DO(req.Filters),
+		WithoutDetail: req.GetWithoutDetail(),
 	})
 	if err != nil {
 		return nil, err
