@@ -31,16 +31,12 @@ func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.Obs
 	}
 	evalTargetType := eval_target_d.EvalTargetType_Trace
 	switch string(task.SpanFilter.PlatformType) {
-	case common.PlatformTypeInnerCozeBot:
-	case common.PlatformTypeCozeBot:
+	case common.PlatformTypeInnerCozeBot, common.PlatformTypeCozeBot:
 		evalTargetType = eval_target_d.EvalTargetType_CozeBotOnline
-
-	case common.PlatformTypeInnerPrompt:
-	case common.PlatformTypePrompt:
+	case common.PlatformTypeInnerPrompt, common.PlatformTypePrompt:
 		evalTargetType = eval_target_d.EvalTargetType_CozeLoopPromptOnline
 
-	case common.PlatformTypeInnerCozeloop:
-	case common.PlatformTypeCozeloop:
+	case common.PlatformTypeInnerCozeloop, common.PlatformTypeCozeloop:
 		evalTargetType = eval_target_d.EvalTargetType_CustomRPCServerOnline
 
 	case common.PlatformTypeWorkflow:
