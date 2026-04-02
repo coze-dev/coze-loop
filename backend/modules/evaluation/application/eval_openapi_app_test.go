@@ -5534,7 +5534,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorVersionID: 9,
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(errors.New("pub failed"))
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(errors.New("pub failed"))
 			},
 			wantErr: -1,
 		},
@@ -5564,7 +5564,7 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					assert.GreaterOrEqual(t, param.OutputData.TimeConsumingMS, int64(0))
 					return nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(nil)
 			},
 		},
 	}
