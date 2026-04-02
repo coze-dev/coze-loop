@@ -2110,7 +2110,7 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	}
 
 	if actx.Event != nil {
-		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, nil, func(event *entity.ExptItemEvalEvent) {
+		if err := e.publisher.PublishExptRecordEvalEvent(ctx, actx.Event, gptr.Of(time.Second*3), func(event *entity.ExptItemEvalEvent) {
 			event.AsyncEvaluatorReportTrigger = true
 		}); err != nil {
 			return nil, err
