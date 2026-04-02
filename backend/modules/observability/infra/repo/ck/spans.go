@@ -22,6 +22,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -248,9 +249,15 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 		Where("start_time >= ?", param.queryParam.StartTime).
 		Where("start_time <= ?", param.queryParam.EndTime)
 	if param.queryParam.OrderByStartTime {
-		sqlQuery = sqlQuery.Order("start_time DESC, span_id DESC")
+		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "start_time"}, Desc: true},
+			{Column: clause.Column{Name: "span_id"}, Desc: true},
+		}})
 	} else if param.queryParam.AscByStartTime {
-		sqlQuery = sqlQuery.Order("start_time ASC, span_id ASC")
+		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "start_time"}, Desc: false},
+			{Column: clause.Column{Name: "span_id"}, Desc: false},
+		}})
 	}
 	sqlQuery = sqlQuery.Limit(int(param.queryParam.Limit))
 	return sqlQuery, nil
