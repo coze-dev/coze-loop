@@ -105,14 +105,8 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	do.TurnID = po.TurnID
 	do.Status = entity.EvaluatorRunStatus(po.Status)
 
-	if po.InputData != nil {
-		inputData := &entity.EvaluatorInputData{}
-		err := json.Unmarshal(*po.InputData, inputData)
-		if err != nil {
-			return nil, err
-		}
-		do.EvaluatorInputData = inputData
-	}
+	// 不在此反序列化 InputData：批量/结果列表路径不需要，且大 JSON 会显著抬高内存。
+	// 单条 Get 需完整输入或 TOS 回补时，请调用 PopulateEvaluatorInputDataFromPO。
 
 	if po.OutputData != nil {
 		outputData := &entity.EvaluatorOutputData{}
@@ -142,4 +136,18 @@ func ConvertEvaluatorRecordPO2DO(po *model.EvaluatorRecord) (*entity.EvaluatorRe
 	}
 
 	return do, nil
+}
+
+// PopulateEvaluatorInputDataFromPO 将 PO.InputData 反序列化到 DO.EvaluatorInputData。
+// 仅单条查询（如 GetEvaluatorRecord）在 LoadEvaluatorRecordData 之前调用；批量 ConvertEvaluatorRecordPO2DO 不解析以省内存。
+func PopulateEvaluatorInputDataFromPO(po *model.EvaluatorRecord, do *entity.EvaluatorRecord) error {
+	if po == nil || do == nil || po.InputData == nil {
+		return nil
+	}
+	inputData := &entity.EvaluatorInputData{}
+	if err := json.Unmarshal(*po.InputData, inputData); err != nil {
+		return err
+	}
+	do.EvaluatorInputData = inputData
+	return nil
 }

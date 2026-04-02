@@ -65,6 +65,9 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 	if err != nil {
 		return nil, err
 	}
+	if err := convertor.PopulateEvaluatorInputDataFromPO(po, evaluatorRecord); err != nil {
+		return nil, err
+	}
 	if r.recordDataStorage != nil {
 		if err := r.recordDataStorage.LoadEvaluatorRecordData(ctx, evaluatorRecord); err != nil {
 			return nil, err
@@ -99,8 +102,8 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 			if err != nil {
 				return nil, err
 			}
-			// BatchGet 用于列表/批量场景，返回 MySQL 中已裁剪的 evaluator_input_data 预览，不加载 TOS 完整内容
-			// 完整内容需通过 GetEvaluatorRecord 单条查询获取
+			// BatchGet 用于列表/批量场景：不反序列化 InputData（见 ConvertEvaluatorRecordPO2DO），不加载 TOS 输入大字段。
+			// 单条完整输入见 GetEvaluatorRecord（含 PopulateEvaluatorInputDataFromPO + LoadEvaluatorRecordData）。
 			evaluatorRecords = append(evaluatorRecords, evaluatorRecord)
 		}
 	}
