@@ -81,10 +81,18 @@ func (p *EffectiveTime) IsValid() error {
 func (p *EvaluationExperimentConfig) IsValid() error {
 	return nil
 }
+func (p *SourceInfo) IsValid() error {
+	return nil
+}
 func (p *TaskConfig) IsValid() error {
 	if p.EvaluationExperimentConfig != nil {
 		if err := p.EvaluationExperimentConfig.IsValid(); err != nil {
 			return fmt.Errorf("field EvaluationExperimentConfig not valid, %w", err)
+		}
+	}
+	if p.SourceInfo != nil {
+		if err := p.SourceInfo.IsValid(); err != nil {
+			return fmt.Errorf("field SourceInfo not valid, %w", err)
 		}
 	}
 	return nil

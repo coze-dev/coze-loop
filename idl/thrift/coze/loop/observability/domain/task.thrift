@@ -79,11 +79,16 @@ struct EvaluationExperimentConfig {
     3: optional string source_target_id (go.tag='json:"source_target_id"')
     4: optional i64 expt_template_id (go.tag='json:"expt_template_id"')
 }
+struct SourceInfo {
+    1: optional string name
+    2: optional string version
+}
 // TaskConfig
 struct TaskConfig {
     1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息 evaluator 维度
     2: optional list<DataReflowConfig> data_reflow_config                    // 配置的数据回流的数据集信息
     3: optional EvaluationExperimentConfig evaluation_experiment_config      // 评测实验配置 task 维度
+    4: optional SourceInfo source_info                                       // 数据源信息
 }
 
 struct DataReflowConfig {

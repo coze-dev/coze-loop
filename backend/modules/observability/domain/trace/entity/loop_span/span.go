@@ -631,7 +631,7 @@ func (s *Span) extractByJsonpath(ctx context.Context, key string, jsonpath strin
 		data = conv.ToString(tag)
 	} else if strings.HasPrefix(key, "Metadata.") {
 		key = strings.TrimPrefix(key, "Metadata.")
-		metadata := s.GetFieldValue(key, false, true)
+		metadata := s.GetFieldValue(key, true, false)
 		checkKey := key
 		if checkKey == SpanFieldStartTime || checkKey == SpanFieldDuration || checkKey == SpanFieldLogicDeleteDate ||
 			slices.Contains(TimeTagSlice, checkKey) {

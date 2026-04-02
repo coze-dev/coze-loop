@@ -129,6 +129,7 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 		AutoEvaluateConfigs:        autoEvaluateConfigs,
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
+		SourceInfo:                 SourceInfoDO2DTO(v.SourceInfo),
 	}
 }
 
@@ -163,6 +164,26 @@ func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *tas
 		ItemMaxRetryCount:    v.ItemMaxRetryCount,
 		SourceTargetID:       v.SourceTargetID,
 		ExptTemplateID:       v.ExptTemplateID,
+	}
+}
+
+func SourceInfoDO2DTO(v *entity.SourceInfo) *task.SourceInfo {
+	if v == nil {
+		return nil
+	}
+	return &task.SourceInfo{
+		Name:    v.Name,
+		Version: v.Version,
+	}
+}
+
+func SourceInfoDTO2DO(v *task.SourceInfo) *entity.SourceInfo {
+	if v == nil {
+		return nil
+	}
+	return &entity.SourceInfo{
+		Name:    v.Name,
+		Version: v.Version,
 	}
 }
 
@@ -492,6 +513,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 		AutoEvaluateConfigs:        autoEvaluateConfigs,
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
+		SourceInfo:                 SourceInfoDTO2DO(taskConfig.SourceInfo),
 	}
 }
 

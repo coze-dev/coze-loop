@@ -113,6 +113,7 @@ type TaskConfig struct {
 	AutoEvaluateConfigs        []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
 	DataReflowConfig           []*DataReflowConfig
 	EvaluationExperimentConfig *EvaluationExperimentConfig `json:"evaluation_experiment_config,omitempty"`
+	SourceInfo                 *SourceInfo                 `json:"source_info,omitempty"`
 }
 type AutoEvaluateConfig struct {
 	EvaluatorVersionID int64                   `json:"evaluator_version_id"`
@@ -125,6 +126,10 @@ type EvaluationExperimentConfig struct {
 	ItemMaxRetryCount    *int32  `json:"item_max_retry_count,omitempty"`
 	SourceTargetID       *string `json:"source_target_id,omitempty"`
 	ExptTemplateID       *int64  `json:"expt_template_id,omitempty"`
+}
+type SourceInfo struct {
+	Name    *string `json:"name,omitempty"`
+	Version *string `json:"version,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束

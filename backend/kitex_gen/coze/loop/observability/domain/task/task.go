@@ -2751,6 +2751,264 @@ func (p *EvaluationExperimentConfig) Field4DeepEqual(src *int64) bool {
 	return true
 }
 
+type SourceInfo struct {
+	Name    *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+}
+
+func NewSourceInfo() *SourceInfo {
+	return &SourceInfo{}
+}
+
+func (p *SourceInfo) InitDefault() {
+}
+
+var SourceInfo_Name_DEFAULT string
+
+func (p *SourceInfo) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return SourceInfo_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var SourceInfo_Version_DEFAULT string
+
+func (p *SourceInfo) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return SourceInfo_Version_DEFAULT
+	}
+	return *p.Version
+}
+func (p *SourceInfo) SetName(val *string) {
+	p.Name = val
+}
+func (p *SourceInfo) SetVersion(val *string) {
+	p.Version = val
+}
+
+var fieldIDToName_SourceInfo = map[int16]string{
+	1: "name",
+	2: "version",
+}
+
+func (p *SourceInfo) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *SourceInfo) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *SourceInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SourceInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SourceInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *SourceInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+
+func (p *SourceInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SourceInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SourceInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SourceInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SourceInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SourceInfo(%+v)", *p)
+
+}
+
+func (p *SourceInfo) DeepEqual(ano *SourceInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	return true
+}
+
+func (p *SourceInfo) Field1DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SourceInfo) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 // TaskConfig
 type TaskConfig struct {
 	// 配置的评测规则信息 evaluator 维度
@@ -2759,6 +3017,8 @@ type TaskConfig struct {
 	DataReflowConfig []*DataReflowConfig `thrift:"data_reflow_config,2,optional" frugal:"2,optional,list<DataReflowConfig>" form:"data_reflow_config" json:"data_reflow_config,omitempty" query:"data_reflow_config"`
 	// 评测实验配置 task 维度
 	EvaluationExperimentConfig *EvaluationExperimentConfig `thrift:"evaluation_experiment_config,3,optional" frugal:"3,optional,EvaluationExperimentConfig" form:"evaluation_experiment_config" json:"evaluation_experiment_config,omitempty" query:"evaluation_experiment_config"`
+	// 数据源信息
+	SourceInfo *SourceInfo `thrift:"source_info,4,optional" frugal:"4,optional,SourceInfo" form:"source_info" json:"source_info,omitempty" query:"source_info"`
 }
 
 func NewTaskConfig() *TaskConfig {
@@ -2803,6 +3063,18 @@ func (p *TaskConfig) GetEvaluationExperimentConfig() (v *EvaluationExperimentCon
 	}
 	return p.EvaluationExperimentConfig
 }
+
+var TaskConfig_SourceInfo_DEFAULT *SourceInfo
+
+func (p *TaskConfig) GetSourceInfo() (v *SourceInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceInfo() {
+		return TaskConfig_SourceInfo_DEFAULT
+	}
+	return p.SourceInfo
+}
 func (p *TaskConfig) SetAutoEvaluateConfigs(val []*AutoEvaluateConfig) {
 	p.AutoEvaluateConfigs = val
 }
@@ -2812,11 +3084,15 @@ func (p *TaskConfig) SetDataReflowConfig(val []*DataReflowConfig) {
 func (p *TaskConfig) SetEvaluationExperimentConfig(val *EvaluationExperimentConfig) {
 	p.EvaluationExperimentConfig = val
 }
+func (p *TaskConfig) SetSourceInfo(val *SourceInfo) {
+	p.SourceInfo = val
+}
 
 var fieldIDToName_TaskConfig = map[int16]string{
 	1: "auto_evaluate_configs",
 	2: "data_reflow_config",
 	3: "evaluation_experiment_config",
+	4: "source_info",
 }
 
 func (p *TaskConfig) IsSetAutoEvaluateConfigs() bool {
@@ -2829,6 +3105,10 @@ func (p *TaskConfig) IsSetDataReflowConfig() bool {
 
 func (p *TaskConfig) IsSetEvaluationExperimentConfig() bool {
 	return p.EvaluationExperimentConfig != nil
+}
+
+func (p *TaskConfig) IsSetSourceInfo() bool {
+	return p.SourceInfo != nil
 }
 
 func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2868,6 +3148,14 @@ func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField4(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2956,6 +3244,14 @@ func (p *TaskConfig) ReadField3(iprot thrift.TProtocol) error {
 	p.EvaluationExperimentConfig = _field
 	return nil
 }
+func (p *TaskConfig) ReadField4(iprot thrift.TProtocol) error {
+	_field := NewSourceInfo()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SourceInfo = _field
+	return nil
+}
 
 func (p *TaskConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2973,6 +3269,10 @@ func (p *TaskConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
 			goto WriteFieldError
 		}
 	}
@@ -3063,6 +3363,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *TaskConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceInfo() {
+		if err = oprot.WriteFieldBegin("source_info", thrift.STRUCT, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SourceInfo.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
 
 func (p *TaskConfig) String() string {
 	if p == nil {
@@ -3085,6 +3403,9 @@ func (p *TaskConfig) DeepEqual(ano *TaskConfig) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.EvaluationExperimentConfig) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.SourceInfo) {
 		return false
 	}
 	return true
@@ -3119,6 +3440,13 @@ func (p *TaskConfig) Field2DeepEqual(src []*DataReflowConfig) bool {
 func (p *TaskConfig) Field3DeepEqual(src *EvaluationExperimentConfig) bool {
 
 	if !p.EvaluationExperimentConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TaskConfig) Field4DeepEqual(src *SourceInfo) bool {
+
+	if !p.SourceInfo.DeepEqual(src) {
 		return false
 	}
 	return true
