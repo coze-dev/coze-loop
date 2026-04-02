@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
-	"github.com/cloudwego/kitex/client/callopt"
+	callopt "github.com/cloudwego/kitex/client/callopt"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -164,6 +164,23 @@ func TestPromptRPCAdapter_MGetPrompt(t *testing.T) {
 		res, err := adapter.MGetPrompt(ctx, 1, []*rpc.MGetPromptQuery{{PromptID: 1, Version: gptr.Of("v1")}})
 		assert.NoError(t, err)
 		assert.Len(t, res, 1)
+	})
+
+	t.Run("with_commit_false_when_no_version", func(t *testing.T) {
+		mockManage.EXPECT().BatchGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *manage.BatchGetPromptRequest, _ ...callopt.Option) (*manage.BatchGetPromptResponse, error) {
+				assert.Len(t, req.Queries, 1)
+				q := req.Queries[0]
+				assert.True(t, q.IsSetWithCommit())
+				assert.False(t, q.GetWithCommit())
+				assert.False(t, q.IsSetCommitVersion())
+				return &manage.BatchGetPromptResponse{
+					BaseResp: &base.BaseResp{StatusCode: 0},
+					Results:  []*manage.PromptResult_{},
+				}, nil
+			})
+		_, err := adapter.MGetPrompt(ctx, 1, []*rpc.MGetPromptQuery{{PromptID: 1}})
+		assert.NoError(t, err)
 	})
 
 	t.Run("rpc_error", func(t *testing.T) {

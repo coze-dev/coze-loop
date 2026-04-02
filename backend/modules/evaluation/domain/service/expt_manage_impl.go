@@ -613,7 +613,17 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
 	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
-		req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
+		et := gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		srcVer := ""
+		if req.CreateEvalTargetParam.SourceTargetVersion != nil {
+			srcVer = strings.TrimSpace(*req.CreateEvalTargetParam.SourceTargetVersion)
+		}
+		// PromptOnline：允许仅传 source_target_id，版本由 Prompt 侧解析为最新提交；其它在线类型仍用占位默认版本
+		if et != entity.EvalTargetTypeCozeLoopPromptOnline || srcVer != "" {
+			if req.CreateEvalTargetParam.SourceTargetVersion == nil || srcVer == "" {
+				req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
+			}
+		}
 	}
 
 	var versionedTargetID *entity.VersionedTargetID
