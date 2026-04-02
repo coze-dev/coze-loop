@@ -384,6 +384,24 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 	return result
 }
 
+// patchTemplateEvalTargetTypeFromTriple 出参前用三元组上的 TargetType 补齐 Target/Version 的 EvalTargetType，
+// 避免仅 DB 列有 target_type 时 DTO 走不到对应 EvalTargetContent 分支。
+func patchTemplateEvalTargetTypeFromTriple(template *entity.ExptTemplate) {
+	if template == nil || template.TripleConfig == nil || template.Target == nil {
+		return
+	}
+	if template.Target.EvalTargetType == 0 && template.TripleConfig.TargetType != 0 {
+		template.Target.EvalTargetType = template.TripleConfig.TargetType
+	}
+	if template.Target.EvalTargetVersion != nil && template.Target.EvalTargetVersion.EvalTargetType == 0 {
+		if template.Target.EvalTargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.Target.EvalTargetType
+		} else if template.TripleConfig.TargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.TripleConfig.TargetType
+		}
+	}
+}
+
 // ToExptTemplateDTO 转换实验模板实体为DTO
 func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate {
 	if template == nil {
@@ -399,6 +417,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
 	if dto.TripleConfig != nil {
+		patchTemplateEvalTargetTypeFromTriple(template)
 		dto.TripleConfig.EvalTarget = target.EvalTargetDO2DTO(template.Target)
 		if template.Meta != nil && template.Meta.ExptType != entity.ExptType_Online {
 			dto.TripleConfig.EvalSet = evaluation_set.EvaluationSetDO2DTO(template.EvalSet)

@@ -90,10 +90,8 @@ func EvalTargetDO2DTO(targetDO *do.EvalTarget) (targetDTO *dto.EvalTarget) {
 		return nil
 	}
 
-	dtoEvalType := dto.EvalTargetType(targetDO.EvalTargetType)
-	if base, ok := targetDO.EvalTargetType.RecordOnlyTypeToBaseType(); ok {
-		dtoEvalType = dto.EvalTargetType(base)
-	}
+	// 仅记录型（*Online）与基础类型对外统一为基础枚举，便于前端与完整内容构建一致
+	dtoEvalType := dto.EvalTargetType(targetDO.EvalTargetType.ToOperatorBaseType())
 	targetDTO = &dto.EvalTarget{
 		ID:             &targetDO.ID,
 		WorkspaceID:    &targetDO.SpaceID,
@@ -124,10 +122,7 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		SourceTargetVersion: &targetVersionDO.SourceTargetVersion,
 	}
 	// 仅记录型（*Online）与对应基础类型共用同一套 DTO 构建逻辑
-	verType := targetVersionDO.EvalTargetType
-	if base, ok := verType.RecordOnlyTypeToBaseType(); ok {
-		verType = base
-	}
+	verType := targetVersionDO.EvalTargetType.ToOperatorBaseType()
 	switch verType {
 	case do.EvalTargetTypeCozeBot:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
