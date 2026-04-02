@@ -30,7 +30,7 @@ func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.Obs
 		SourceTargetID: sourceTargetID,
 	}
 	evalTargetType := eval_target_d.EvalTargetType_Trace
-	switch task.SpanFilter.PlatformType {
+	switch string(task.SpanFilter.PlatformType) {
 	case common.PlatformTypeInnerCozeBot:
 	case common.PlatformTypeCozeBot:
 		evalTargetType = eval_target_d.EvalTargetType_CozeBotOnline
