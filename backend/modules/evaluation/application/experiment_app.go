@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -466,6 +467,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}
 
 	// 构建 CreateExperimentRequest，resolveEvaluatorVersionIDs 流程已在 CreateExperiment 中完成
+	triggerType := domain_expt.Manual
+	if req.IsSetTriggerType() && strings.TrimSpace(req.GetTriggerType()) != "" {
+		triggerType = domain_expt.ExptTriggerType(strings.TrimSpace(req.GetTriggerType()))
+	}
 	createReq := &expt.CreateExperimentRequest{
 		WorkspaceID:            req.GetWorkspaceID(),
 		EvalSetVersionID:       req.EvalSetVersionID,
@@ -490,6 +495,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
 		ItemRetryNum: req.ItemRetryNum,
+		TriggerType:  gptr.Of(triggerType),
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -875,7 +881,7 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	resp, err := e.manager.Get(contexts.WithCtxWriteDB(ctx), req.GetExptID(), req.GetWorkspaceID(), session)
+	resp, err := e.manager.GetDetail(contexts.WithCtxWriteDB(ctx), req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}

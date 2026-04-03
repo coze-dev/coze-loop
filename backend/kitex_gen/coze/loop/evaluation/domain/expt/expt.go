@@ -1040,6 +1040,7 @@ type Experiment struct {
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
 	// 触发方式
 	TriggerType *ExptTriggerType `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	ExptSource  *ExptSource      `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
 }
 
 func NewExperiment() *Experiment {
@@ -1432,6 +1433,18 @@ func (p *Experiment) GetTriggerType() (v ExptTriggerType) {
 	}
 	return *p.TriggerType
 }
+
+var Experiment_ExptSource_DEFAULT *ExptSource
+
+func (p *Experiment) GetExptSource() (v *ExptSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptSource() {
+		return Experiment_ExptSource_DEFAULT
+	}
+	return p.ExptSource
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1528,6 +1541,9 @@ func (p *Experiment) SetEnableWeightedScore(val *bool) {
 func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
 	p.TriggerType = val
 }
+func (p *Experiment) SetExptSource(val *ExptSource) {
+	p.ExptSource = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:  "id",
@@ -1562,6 +1578,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	61: "score_weight_config",
 	62: "enable_weighted_score",
 	70: "trigger_type",
+	71: "expt_source",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1690,6 +1707,10 @@ func (p *Experiment) IsSetEnableWeightedScore() bool {
 
 func (p *Experiment) IsSetTriggerType() bool {
 	return p.TriggerType != nil
+}
+
+func (p *Experiment) IsSetExptSource() bool {
+	return p.ExptSource != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1961,6 +1982,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 70:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField70(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 71:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField71(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2374,6 +2403,14 @@ func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
 	p.TriggerType = _field
 	return nil
 }
+func (p *Experiment) ReadField71(iprot thrift.TProtocol) error {
+	_field := NewExptSource()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptSource = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2507,6 +2544,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField70(oprot); err != nil {
 			fieldId = 70
+			goto WriteFieldError
+		}
+		if err = p.writeField71(oprot); err != nil {
+			fieldId = 71
 			goto WriteFieldError
 		}
 	}
@@ -3135,6 +3176,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
 }
+func (p *Experiment) writeField71(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptSource() {
+		if err = oprot.WriteFieldBegin("expt_source", thrift.STRUCT, 71); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptSource.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3244,6 +3303,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field70DeepEqual(ano.TriggerType) {
+		return false
+	}
+	if !p.Field71DeepEqual(ano.ExptSource) {
 		return false
 	}
 	return true
@@ -3593,6 +3655,13 @@ func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
 		return false
 	}
 	if strings.Compare(*p.TriggerType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field71DeepEqual(src *ExptSource) bool {
+
+	if !p.ExptSource.DeepEqual(src) {
 		return false
 	}
 	return true

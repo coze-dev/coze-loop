@@ -467,24 +467,32 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	}
 
 	// 填充 ExptSource
-	if template.ExptSource != nil {
-		exptSource := &domain_expt.ExptSource{
-			SourceType: gptr.Of(domain_expt.SourceType(template.ExptSource.SourceType)),
-			SourceID:   gptr.Of(template.ExptSource.SourceID),
-		}
-		if template.ExptSource.SpanFilterFields != nil {
-			exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(template.ExptSource.SpanFilterFields)
-		}
-		if template.ExptSource.Scheduler != nil {
-			exptSource.Scheduler = exptSchedulerDO2DTO(template.ExptSource.Scheduler)
-		}
-		if template.ExptSource.Sampler != nil {
-			exptSource.Sampler = exptSamplerDO2DTO(template.ExptSource.Sampler)
-		}
-		dto.SetExptSource(exptSource)
+	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
+		dto.SetExptSource(es)
 	}
 
 	return dto
+}
+
+// ExptSourceDO2DTO 将 entity.ExptSource 转为领域 DTO（实验模板与 Experiment 查询共用）
+func ExptSourceDO2DTO(src *entity.ExptSource) *domain_expt.ExptSource {
+	if src == nil {
+		return nil
+	}
+	exptSource := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType(src.SourceType)),
+		SourceID:   gptr.Of(src.SourceID),
+	}
+	if src.SpanFilterFields != nil {
+		exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(src.SpanFilterFields)
+	}
+	if src.Scheduler != nil {
+		exptSource.Scheduler = exptSchedulerDO2DTO(src.Scheduler)
+	}
+	if src.Sampler != nil {
+		exptSource.Sampler = exptSamplerDO2DTO(src.Sampler)
+	}
+	return exptSource
 }
 
 // exptSamplerDO2DTO 将 entity.ExptSamplerDO 转为 task.Sampler

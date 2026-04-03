@@ -367,6 +367,12 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			}
 			sourceIDs := parseStringList(cond.GetValue())
 			ff.SourceID = intersectIgnoreNull(ff.SourceID, sourceIDs)
+		case domain_expt.FieldType_TriggerType:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			vals := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			ff.TriggerType = intersectIgnoreNull(ff.TriggerType, vals)
 		case domain_expt.FieldType_ExperimentTemplateID:
 			if len(cond.GetValue()) == 0 {
 				continue
@@ -445,6 +451,19 @@ func parseCronActivateIntList(str string) ([]int64, error) {
 
 func parseStringList(str string) []string {
 	return strings.Split(str, ",")
+}
+
+// parseCommaSeparatedTrimmedStrings 解析逗号分隔字符串，去掉空白与空项（用于 trigger_type 等枚举类筛选）
+func parseCommaSeparatedTrimmedStrings(str string) []string {
+	split := strings.Split(str, ",")
+	res := make([]string, 0, len(split))
+	for _, s := range split {
+		t := strings.TrimSpace(s)
+		if t != "" {
+			res = append(res, t)
+		}
+	}
+	return res
 }
 
 func parseOperator(operatorType domain_expt.FilterOperatorType) (string, error) {

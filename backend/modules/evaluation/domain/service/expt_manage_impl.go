@@ -212,7 +212,92 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		return nil, err
 	}
 
+	// 查询接口：填充 ExptSource（含 Workflow 时从 Pipeline 拉取 span_filter / scheduler / sampler）
+	if err := e.fillExperimentExptSourceForQuery(ctx, expts, spaceID); err != nil {
+		return nil, err
+	}
+
 	return expts, nil
+}
+
+// fillExperimentExptSourceForQuery 为查询结果构造 ExptSource，并在 SourceType=Workflow 时从 Pipeline 填充 span_filter_fields、scheduler、sampler（与实验模板 enrichExptSourceFromPipeline 一致）
+func (e *ExptMangerImpl) fillExperimentExptSourceForQuery(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	for _, ex := range expts {
+		if ex == nil {
+			continue
+		}
+		ex.ExptSource = &entity.ExptSource{
+			SourceType: ex.SourceType,
+			SourceID:   ex.SourceID,
+		}
+	}
+	return e.enrichExperimentExptSourceFromPipeline(ctx, expts, spaceID)
+}
+
+// enrichExperimentExptSourceFromPipeline 当 ExptSource.SourceType 为 Workflow 时，根据 source_id 拉取 Pipeline Flow 并填充 SpanFilterFields、Scheduler、Sampler
+func (e *ExptMangerImpl) enrichExperimentExptSourceFromPipeline(ctx context.Context, experiments []*entity.Experiment, spaceID int64) error {
+	if e.pipelineListAdapter == nil {
+		return nil
+	}
+	pipelineIDs := make([]int64, 0)
+	experimentByPipelineID := make(map[int64][]*entity.Experiment)
+	for _, ex := range experiments {
+		if ex == nil || ex.ExptSource == nil {
+			continue
+		}
+		if ex.ExptSource.SourceType != entity.SourceType_Workflow || ex.ExptSource.SourceID == "" {
+			continue
+		}
+		pid, err := strconv.ParseInt(ex.ExptSource.SourceID, 10, 64)
+		if err != nil || pid <= 0 {
+			continue
+		}
+		pipelineIDs = append(pipelineIDs, pid)
+		experimentByPipelineID[pid] = append(experimentByPipelineID[pid], ex)
+	}
+	if len(pipelineIDs) == 0 {
+		return nil
+	}
+	pipelineIDs = gslice.Uniq(pipelineIDs)
+
+	resp, err := e.pipelineListAdapter.ListPipelineFlow(ctx, &rpc.ListPipelineFlowRequest{
+		SpaceID:    gptr.Of(spaceID),
+		IDList:     pipelineIDs,
+		WithDetail: true,
+	})
+	if err != nil {
+		return err
+	}
+	if resp == nil || len(resp.Items) == 0 {
+		return nil
+	}
+
+	for _, p := range resp.Items {
+		if p == nil || p.ID == nil {
+			continue
+		}
+		pid := *p.ID
+		targets := experimentByPipelineID[pid]
+		if len(targets) == 0 {
+			continue
+		}
+		dataReflow := extractDataReflowFieldsFromPipeline(p)
+		var spanFilterFields *entity.SpanFilterFieldsDO
+		var sampler *entity.ExptSamplerDO
+		if dataReflow != nil {
+			spanFilterFields = dataReflow.SpanFilterFields
+			sampler = dataReflow.Sampler
+		}
+		scheduler := extractSchedulerFromPipeline(p)
+		for _, ex := range targets {
+			if ex.ExptSource != nil {
+				ex.ExptSource.SpanFilterFields = spanFilterFields
+				ex.ExptSource.Sampler = sampler
+				ex.ExptSource.Scheduler = scheduler
+			}
+		}
+	}
+	return nil
 }
 
 // fillExptTemplates 为实验列表按需补充关联模板的基础信息（名称、描述等）
@@ -692,6 +777,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		})
 	}
 
+	triggerType := req.TriggerType
+	if triggerType == "" {
+		triggerType = "manual"
+	}
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -708,6 +797,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		MaxAliveTime:        req.MaxAliveTime,
 		SourceType:          req.SourceType,
 		SourceID:            req.SourceID,
+		TriggerType:         triggerType,
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,

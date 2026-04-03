@@ -139,6 +139,10 @@ type Experiment struct {
 	MaxAliveTime int64
 	SourceType   SourceType
 	SourceID     string
+	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule
+	TriggerType string
+	// ExptSource 查询时填充：与一级字段 source_type/source_id 一致；Workflow 时由 Pipeline 补充 span_filter / scheduler / sampler
+	ExptSource *ExptSource
 
 	Stats           *ExptStats
 	AggregateResult *ExptAggregateResult

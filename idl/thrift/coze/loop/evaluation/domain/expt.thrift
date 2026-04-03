@@ -81,6 +81,7 @@ struct Experiment {
 
     // 触发方式
     70: optional ExptTriggerType trigger_type
+    71: optional ExptSource expt_source
 }
 
 // 实验模板基础信息
