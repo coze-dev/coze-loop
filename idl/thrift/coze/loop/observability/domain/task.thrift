@@ -88,7 +88,8 @@ struct TaskConfig {
     1: optional list<AutoEvaluateConfig> auto_evaluate_configs               // 配置的评测规则信息 evaluator 维度
     2: optional list<DataReflowConfig> data_reflow_config                    // 配置的数据回流的数据集信息
     3: optional EvaluationExperimentConfig evaluation_experiment_config      // 评测实验配置 task 维度
-    4: optional list<SourceInfo> source_info                                       // 数据源信息
+    4: optional list<SourceInfo> source_info                                 // 数据源信息
+    5: optional bool is_workflow_scheduled                                   // 工作流周期性任务
 }
 
 struct DataReflowConfig {

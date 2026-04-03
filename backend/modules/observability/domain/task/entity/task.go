@@ -114,6 +114,7 @@ type TaskConfig struct {
 	DataReflowConfig           []*DataReflowConfig
 	EvaluationExperimentConfig *EvaluationExperimentConfig `json:"evaluation_experiment_config,omitempty"`
 	SourceInfo                 []*SourceInfo               `json:"source_info,omitempty"`
+	IsWorkflowScheduled        *bool                       `json:"is_workflow_scheduled,omitempty"`
 }
 type AutoEvaluateConfig struct {
 	EvaluatorVersionID int64                   `json:"evaluator_version_id"`

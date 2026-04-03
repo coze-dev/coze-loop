@@ -130,6 +130,7 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
 		SourceInfo:                 SourceInfoListDO2DTO(v.SourceInfo),
+		IsWorkflowScheduled:        v.IsWorkflowScheduled,
 	}
 }
 
@@ -528,6 +529,7 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 		DataReflowConfig:           dataReflowConfigs,
 		EvaluationExperimentConfig: evaluationExperimentConfig,
 		SourceInfo:                 SourceInfoListDTO2DO(taskConfig.SourceInfo),
+		IsWorkflowScheduled:        taskConfig.IsWorkflowScheduled,
 	}
 }
 
