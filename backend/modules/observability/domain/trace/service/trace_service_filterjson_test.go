@@ -145,7 +145,7 @@ func TestTraceServiceImpl_GetTrace_QueryFilterJSON(t *testing.T) {
 	}
 
 	tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType, gomock.Any()).Return([]string{"t1"}, nil).AnyTimes()
-	repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{}, nil)
+	repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{}}, nil)
 	metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any())
 
 	rI, err := service.NewTraceServiceImpl(repoMock, nil, nil, nil, metricsMock, buildHelperMock, tenantProviderMock, nil, nil, nil)
