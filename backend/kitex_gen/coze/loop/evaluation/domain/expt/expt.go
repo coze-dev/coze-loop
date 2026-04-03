@@ -19,6 +19,12 @@ import (
 )
 
 const (
+	Manual = "manual"
+
+	OpenAPI = "openapi"
+
+	Schedule = "schedule"
+
 	FrequencyEveryday = "every_day"
 
 	FrequencyMonday = "monday"
@@ -540,6 +546,7 @@ const (
 	FieldType_EvaluatorWeightedScore FieldType = 71
 	FieldType_UpdatedBy              FieldType = 72
 	FieldType_CronActivate           FieldType = 73
+	FieldType_TriggerType            FieldType = 74
 )
 
 func (p FieldType) String() string {
@@ -614,6 +621,8 @@ func (p FieldType) String() string {
 		return "UpdatedBy"
 	case FieldType_CronActivate:
 		return "CronActivate"
+	case FieldType_TriggerType:
+		return "TriggerType"
 	}
 	return "<UNSET>"
 }
@@ -690,6 +699,8 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_UpdatedBy, nil
 	case "CronActivate":
 		return FieldType_CronActivate, nil
+	case "TriggerType":
+		return FieldType_TriggerType, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }
@@ -976,6 +987,8 @@ func (p *DataType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type ExptTriggerType = string
+
 type Frequency = string
 
 type ExptResultExportType = string
@@ -1025,6 +1038,8 @@ type Experiment struct {
 	// 评估器得分加权配置
 	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	// 触发方式
+	TriggerType *ExptTriggerType `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 }
 
 func NewExperiment() *Experiment {
@@ -1405,6 +1420,18 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	}
 	return *p.EnableWeightedScore
 }
+
+var Experiment_TriggerType_DEFAULT ExptTriggerType
+
+func (p *Experiment) GetTriggerType() (v ExptTriggerType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerType() {
+		return Experiment_TriggerType_DEFAULT
+	}
+	return *p.TriggerType
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1498,6 +1525,9 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
+func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
+	p.TriggerType = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:  "id",
@@ -1531,6 +1561,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	60: "expt_template_meta",
 	61: "score_weight_config",
 	62: "enable_weighted_score",
+	70: "trigger_type",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1655,6 +1686,10 @@ func (p *Experiment) IsSetScoreWeightConfig() bool {
 
 func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetTriggerType() bool {
+	return p.TriggerType != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -1918,6 +1953,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 62:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField62(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 70:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField70(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2320,6 +2363,17 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
+func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
+
+	var _field *ExptTriggerType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerType = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2449,6 +2503,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField62(oprot); err != nil {
 			fieldId = 62
+			goto WriteFieldError
+		}
+		if err = p.writeField70(oprot); err != nil {
+			fieldId = 70
 			goto WriteFieldError
 		}
 	}
@@ -3059,6 +3117,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
 }
+func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerType() {
+		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 70); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TriggerType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3165,6 +3241,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field62DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field70DeepEqual(ano.TriggerType) {
 		return false
 	}
 	return true
@@ -3502,6 +3581,18 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableWeightedScore != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
+
+	if p.TriggerType == src {
+		return true
+	} else if p.TriggerType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TriggerType, *src) != 0 {
 		return false
 	}
 	return true
