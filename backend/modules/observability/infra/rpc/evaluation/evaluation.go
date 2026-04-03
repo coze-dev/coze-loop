@@ -10,8 +10,10 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 
+	evDomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/experimentservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
@@ -32,7 +34,7 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 		return 0, 0, errorx.NewByCode(obErrorx.CommonInvalidParamCode, errorx.WithExtraMsg("workspace ID is nil"))
 	}
 	logs.CtxInfo(ctx, "SubmitExperiment, param: %+v", param)
-	resp, err := e.client.SubmitExperiment(ctx, &expt.SubmitExperimentRequest{
+	req := &expt.SubmitExperimentRequest{
 		WorkspaceID:           param.WorkspaceID,
 		EvalSetVersionID:      param.EvalSetVersionID,
 		TargetVersionID:       param.TargetVersionID,
@@ -54,7 +56,11 @@ func (e *EvaluationProvider) SubmitExperiment(ctx context.Context, param *rpc.Su
 		ExptTemplateID:        param.ExptTemplateID,
 		ItemConcurNum:         param.ItemConcurNum,
 		ItemRetryNum:          param.ItemRetryNum,
-	})
+	}
+	if param.IsWorkflowScheduled != nil && *param.IsWorkflowScheduled {
+		req.TriggerType = gptr.Of(evDomain.Schedule)
+	}
+	resp, err := e.client.SubmitExperiment(ctx, req)
 	if err != nil {
 		logs.CtxError(ctx, "SubmitExperiment failed, err: %v", err)
 		return 0, 0, errorx.NewByCode(obErrorx.CommonRPCErrorCode, errorx.WithExtraMsg("SubmitExperiment failed"))

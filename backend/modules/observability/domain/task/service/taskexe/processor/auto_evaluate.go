@@ -387,6 +387,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		SourceType:            gptr.Of(expt.SourceType_AutoTask),
 		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
 		Session:               sessionInfo,
+		IsWorkflowScheduled:   currentTask.TaskConfig.IsWorkflowScheduled,
 	}
 	if currentTask.TaskConfig.EvaluationExperimentConfig != nil {
 		submitExperimentReq.ItemRetryNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemMaxRetryCount

@@ -42,6 +42,7 @@ type SubmitExperimentReq struct {
 	SourceID              *string
 	Session               *common.Session
 	ExptTemplateID        *int64
+	IsWorkflowScheduled   *bool
 }
 type InvokeExperimentReq struct {
 	WorkspaceID     int64
