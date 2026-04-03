@@ -84,6 +84,7 @@ type Dataset struct {
 	UserID                *string
 	// 数据集属性
 	Visibility dataset.DatasetVisibility
+	WorkFlowID int64
 }
 
 type DatasetVersion struct {
@@ -128,6 +129,7 @@ func NewDataset(id, spaceID int64, name string, category DatasetCategory,
 	session *common.Session,
 	evaluationBizCategory *EvaluationBizCategory,
 	isNewWorkflowTask bool,
+	workflowID int64,
 ) *Dataset {
 	var userID *string
 	if session != nil {
