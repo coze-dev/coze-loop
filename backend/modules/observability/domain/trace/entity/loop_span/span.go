@@ -96,6 +96,25 @@ const (
 	TTL365d TTL = "365d"
 )
 
+func GetDurationByTTL(ttl TTL) time.Duration {
+	switch ttl {
+	case TTL3d:
+		return time.Hour * 24 * 3
+	case TTL7d:
+		return time.Hour * 24 * 7
+	case TTL30d:
+		return time.Hour * 24 * 30
+	case TTL90d:
+		return time.Hour * 24 * 90
+	case TTL180d:
+		return time.Hour * 24 * 180
+	case TTL365d:
+		return time.Hour * 24 * 365
+	default:
+		return time.Hour * 24 * 3
+	}
+}
+
 var TimeTagSlice = []string{
 	SpanFieldStartTimeFirstResp,
 	SpanFieldLatencyFirstResp,
@@ -124,6 +143,9 @@ type Span struct {
 	Input          string `json:"input"`
 	Output         string `json:"output"`
 	ObjectStorage  string `json:"object_storage"`
+
+	InputObject  map[string]interface{} `json:"input_object"`
+	OutputObject map[string]interface{} `json:"output_object"`
 
 	SystemTagsString map[string]string  `json:"system_tags_string"`
 	SystemTagsLong   map[string]int64   `json:"system_tags_long"`
@@ -980,4 +1002,154 @@ func SizeofSpans(spans SpanList) int {
 
 func SizeOfString(s string) int {
 	return len(s)
+}
+
+func CopySpans(spans []*Span) []*Span {
+	result := make([]*Span, 0, len(spans))
+	for _, s := range spans {
+		result = append(result, CopySpan(s))
+	}
+	return result
+}
+
+func CopySpan(s *Span) *Span {
+	if s == nil {
+		return nil
+	}
+	return &Span{
+		StartTime:      s.StartTime,
+		SpanID:         s.SpanID,
+		ParentID:       s.ParentID,
+		TraceID:        s.TraceID,
+		DurationMicros: s.DurationMicros,
+		CallType:       s.CallType,
+		PSM:            s.PSM,
+		LogID:          s.LogID,
+		WorkspaceID:    s.WorkspaceID,
+		SpanName:       s.SpanName,
+		SpanType:       s.SpanType,
+		Method:         s.Method,
+		StatusCode:     s.StatusCode,
+		Input:          s.Input,
+		Output:         s.Output,
+		ObjectStorage:  s.ObjectStorage,
+
+		SystemTagsString: copyMapStringString(s.SystemTagsString),
+		SystemTagsLong:   copyMapStringInt64(s.SystemTagsLong),
+		SystemTagsDouble: copyMapStringFloat64(s.SystemTagsDouble),
+
+		TagsString: copyMapStringString(s.TagsString),
+		TagsLong:   copyMapStringInt64(s.TagsLong),
+		TagsDouble: copyMapStringFloat64(s.TagsDouble),
+
+		TagsBool: copyMapStringBool(s.TagsBool),
+		TagsByte: copyMapStringString(s.TagsByte),
+
+		AttrTos:         copyAttrTos(s.AttrTos),
+		LogicDeleteTime: s.LogicDeleteTime,
+		Annotations:     copyAnnotationList(s.Annotations),
+		Encryption:      s.Encryption,
+	}
+}
+
+func copyAttrTos(src *AttrTos) *AttrTos {
+	if src == nil {
+		return nil
+	}
+	return &AttrTos{
+		InputDataURL:   src.InputDataURL,
+		OutputDataURL:  src.OutputDataURL,
+		MultimodalData: copyMapStringString(src.MultimodalData),
+	}
+}
+
+func copyAnnotationList(src AnnotationList) AnnotationList {
+	if src == nil {
+		return nil
+	}
+	dst := make(AnnotationList, len(src))
+	for i, a := range src {
+		dst[i] = copyAnnotation(a)
+	}
+	return dst
+}
+
+func copyAnnotation(src *Annotation) *Annotation {
+	if src == nil {
+		return nil
+	}
+	var annotationIndex []string
+	if src.AnnotationIndex != nil {
+		annotationIndex = make([]string, len(src.AnnotationIndex))
+		copy(annotationIndex, src.AnnotationIndex)
+	}
+	var corrections []AnnotationCorrection
+	if src.Corrections != nil {
+		corrections = make([]AnnotationCorrection, len(src.Corrections))
+		copy(corrections, src.Corrections)
+	}
+	return &Annotation{
+		ID:              src.ID,
+		SpanID:          src.SpanID,
+		TraceID:         src.TraceID,
+		StartTime:       src.StartTime,
+		WorkspaceID:     src.WorkspaceID,
+		AnnotationType:  src.AnnotationType,
+		AnnotationIndex: annotationIndex,
+		Key:             src.Key,
+		Value:           src.Value,
+		Reasoning:       src.Reasoning,
+		Corrections:     corrections,
+		Metadata:        src.Metadata,
+		Status:          src.Status,
+		CreatedAt:       src.CreatedAt,
+		CreatedBy:       src.CreatedBy,
+		UpdatedAt:       src.UpdatedAt,
+		UpdatedBy:       src.UpdatedBy,
+		IsDeleted:       src.IsDeleted,
+	}
+}
+
+func copyMapStringString(src map[string]string) map[string]string {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func copyMapStringInt64(src map[string]int64) map[string]int64 {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]int64, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func copyMapStringFloat64(src map[string]float64) map[string]float64 {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]float64, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
+func copyMapStringBool(src map[string]bool) map[string]bool {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]bool, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }

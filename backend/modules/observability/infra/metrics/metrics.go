@@ -51,6 +51,9 @@ func traceQueryTagNames() []string {
 var (
 	traceMetricsOnce      sync.Once
 	singletonTraceMetrics metrics2.ITraceMetrics
+
+	consumeMetricOnce      sync.Once
+	singletonConsumeMetric metrics.Metric
 )
 
 func NewTraceMetricsImpl(meter metrics.Meter) metrics2.ITraceMetrics {
@@ -134,4 +137,36 @@ func (t *TraceMetricsImpl) EmitSendMetric(start time.Time, isError bool) {
 		},
 		metrics.Counter(1, metrics.WithSuffix(metricSendSuffix+throughputSuffix)),
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(metricSendSuffix+latencySuffix)))
+}
+
+const (
+	consumeMetricName = "trace_consume"
+
+	ConsumeTagNode   = "node"
+	ConsumeTagIsErr  = "is_err"
+	ConsumeTagPSM    = "psm"
+	ConsumeTagTenant = "tenant"
+
+	ConsumeSuffixThroughput = "throughput"
+	ConsumeSuffixLatency    = "latency"
+	ConsumeSuffixSpans      = "spans"
+)
+
+func NewConsumeMetric(meter metrics.Meter) metrics.Metric {
+	consumeMetricOnce.Do(func() {
+		if meter == nil {
+			return
+		}
+		m, err := meter.NewMetric(
+			consumeMetricName,
+			[]metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer},
+			[]string{ConsumeTagNode, ConsumeTagIsErr, ConsumeTagPSM, ConsumeTagTenant},
+		)
+		if err != nil {
+			logs.Error("Failed to create consume metric: %v", err)
+			return
+		}
+		singletonConsumeMetric = m
+	})
+	return singletonConsumeMetric
 }
