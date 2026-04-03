@@ -46,6 +46,7 @@ func (e *CorrectionConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 }
 
 func (e *CorrectionConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "correction_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.CorrectionEvent)

@@ -52,6 +52,7 @@ func (e *TaskConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, err
 }
 
 func (e *TaskConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "task_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.RawSpan)

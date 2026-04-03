@@ -51,6 +51,7 @@ func (e *SpanWithAnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.Consu
 }
 
 func (e *SpanWithAnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "span_with_annotation_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.SpanEvent)
