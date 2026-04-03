@@ -269,6 +269,7 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 			next := g.nextConsumers(n.ID())[0]
 			nextElapsed := g.wrapNextWithStopwatch(&next)
 			wrappedNext := g.wrapAsObserveConsumer(next, receiverSeed+"/"+n.componentID.String(), nextElapsed)
+			wrappedNext = g.wrapWithInjectConsumer(wrappedNext)
 			err = n.buildComponent(ctx, set.ReceiverBuilder, wrappedNext)
 		case *processorNode:
 			next := g.nextConsumers(n.ID())[0]
@@ -329,6 +330,14 @@ func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, n
 		return base
 	}
 	return consumer.NewObserveConsumer(name, c, nextElapsed, g.consumeMetric)
+}
+
+func (g *Graph) wrapWithInjectConsumer(base consumer.BaseConsumer) consumer.BaseConsumer {
+	c, ok := base.(consumer.Consumer)
+	if !ok {
+		return base
+	}
+	return consumer.NewInjectConsumer(c)
 }
 
 func (g *Graph) nextConsumers(nodeID int64) []consumer.BaseConsumer {
