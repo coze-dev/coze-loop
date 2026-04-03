@@ -4,6 +4,7 @@
 package entity
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
@@ -400,8 +402,10 @@ func TestExptTurnRunResult_AbortWithEvaluatorResults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			trr := &ExptTurnRunResult{EvaluatorResults: tt.evaluatorRes}
+			ctx := ctxcache.Init(context.Background())
+			event := &ExptItemEvalEvent{}
 
-			got := trr.AbortWithEvaluatorResults()
+			got := trr.AbortWithEvaluatorResults(ctx, event)
 			assert.Equal(t, tt.expectedAbort, got)
 			assert.Equal(t, tt.expectedAsync, trr.AsyncAbort)
 		})
