@@ -633,6 +633,9 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 	} else {
 		param["end_time"] = "-"
 	}
+	if expt.SourceType == entity.SourceType_IntelligentGen {
+		param["thread_id"] = gptr.Indirect(expt.ThreadID)
+	}
 	switch expt.Status {
 	case entity.ExptStatus_Success:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
