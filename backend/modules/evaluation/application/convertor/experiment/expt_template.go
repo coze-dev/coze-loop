@@ -123,7 +123,7 @@ func buildEvaluatorScoreWeights(items []*entity.EvaluatorIDVersionItem) map[stri
 	}
 	scoreWeights := make(map[string]float64)
 	for _, item := range items {
-		if item == nil || item.EvaluatorID <= 0 || item.Version == "" || item.ScoreWeight <= 0 {
+		if item == nil || item.EvaluatorID <= 0 || item.Version == "" || item.ScoreWeight < 0 {
 			continue
 		}
 		key := fmt.Sprintf("%d#%s", item.EvaluatorID, item.Version)
@@ -216,7 +216,7 @@ func applyScoreWeightsToEvaluatorConfs(
 			continue
 		}
 		key := fmt.Sprintf("%d#%s", ec.EvaluatorID, ec.Version)
-		if w, ok := evaluatorScoreWeights[key]; ok && w > 0 {
+		if w, ok := evaluatorScoreWeights[key]; ok && w >= 0 {
 			ec.ScoreWeight = gptr.Of(w)
 		}
 	}
@@ -474,18 +474,22 @@ func buildTemplateTripleConfigDTO(template *entity.ExptTemplate) *domain_expt.Ex
 	}
 }
 
-// getScoreWeightFromTemplateConf 从 TemplateConf.EvaluatorConf 中根据 evaluator_version_id 获取权重
-func getScoreWeightFromTemplateConf(template *entity.ExptTemplate, evalVerID int64) float64 {
+// getScoreWeightFromTemplateConf 从 TemplateConf.EvaluatorConf 中根据 evaluator_version_id 获取权重（含 0；未配置则 ok=false）。
+func getScoreWeightFromTemplateConf(template *entity.ExptTemplate, evalVerID int64) (weight float64, ok bool) {
 	if template == nil || template.TemplateConf == nil ||
 		template.TemplateConf.ConnectorConf.EvaluatorsConf == nil {
-		return 0
+		return 0, false
 	}
 	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-		if ec != nil && ec.EvaluatorVersionID == evalVerID && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
-			return *ec.ScoreWeight
+		if ec == nil || ec.EvaluatorVersionID != evalVerID || ec.ScoreWeight == nil {
+			continue
 		}
+		if *ec.ScoreWeight < 0 {
+			continue
+		}
+		return *ec.ScoreWeight, true
 	}
-	return 0
+	return 0, false
 }
 
 // 拆分子函数：根据模板信息构建 EvaluatorIDVersionItems DTO 列表
@@ -527,10 +531,10 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 				item.Version = gptr.Of(entityItem.Version)
 			}
 			item.EvaluatorVersionID = gptr.Of(entityItem.EvaluatorVersionID)
-			// 权重：优先 entityItem，否则从 TemplateConf.EvaluatorConf 回填
+			// 权重：优先 entityItem 正数，否则用 TemplateConf（含 0）
 			if entityItem.ScoreWeight > 0 {
 				item.ScoreWeight = gptr.Of(entityItem.ScoreWeight)
-			} else if w := getScoreWeightFromTemplateConf(template, entityItem.EvaluatorVersionID); w > 0 {
+			} else if w, hasW := getScoreWeightFromTemplateConf(template, entityItem.EvaluatorVersionID); hasW {
 				item.ScoreWeight = gptr.Of(w)
 			}
 			// 透传 RunConfig：根据 evaluator_version_id 在 TemplateConf 中查找
@@ -585,7 +589,7 @@ func appendEvaluatorIDVersionItemsFromEvaluators(
 			}
 		}
 		if item.ScoreWeight == nil {
-			if w := getScoreWeightFromTemplateConf(template, evaluatorVersionID); w > 0 {
+			if w, hasW := getScoreWeightFromTemplateConf(template, evaluatorVersionID); hasW {
 				item.ScoreWeight = gptr.Of(w)
 			}
 		}
@@ -623,7 +627,7 @@ func appendEvaluatorIDVersionItemsFromVersionRef(
 			}
 		}
 		if item.ScoreWeight == nil {
-			if w := getScoreWeightFromTemplateConf(template, ref.EvaluatorVersionID); w > 0 {
+			if w, hasW := getScoreWeightFromTemplateConf(template, ref.EvaluatorVersionID); hasW {
 				item.ScoreWeight = gptr.Of(w)
 			}
 		}
@@ -754,7 +758,7 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 		template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 		evaluatorScoreWeights = make(map[int64]float64)
 		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
-			if item == nil || item.EvaluatorVersionID <= 0 || item.ScoreWeight <= 0 {
+			if item == nil || item.EvaluatorVersionID <= 0 || item.ScoreWeight < 0 {
 				continue
 			}
 			evaluatorScoreWeights[item.EvaluatorVersionID] = item.ScoreWeight
@@ -844,7 +848,7 @@ func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]
 
 	var evaluatorScoreWeights map[int64]float64
 	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
 			continue
 		}
 		if evaluatorScoreWeights == nil {
@@ -909,7 +913,7 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 					item.SetEvaluatorVersionID(gptr.Of(evaluatorConf.EvaluatorVersionID))
 				}
 				// 如果 EvaluatorConf 中有 ScoreWeight，也填充到 item 中
-				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight > 0 {
+				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight >= 0 {
 					item.SetScoreWeight(gptr.Of(*evaluatorConf.ScoreWeight))
 				}
 				// 透传 RunConfig：将 entity.EvaluatorRunConfig 转为 DTO

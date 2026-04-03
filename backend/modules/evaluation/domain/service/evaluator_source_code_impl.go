@@ -1,5 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
-// SPDX-License-Identifier: Apache-2.0	return errorx.NewByCode(errno.RequiredFunctionNotFoundCode, errorx.WithExtraMsg("代码中必须定义 exec_evaluation 或 execEvaluation 函数。JavaScript 函数定义格式：function execEvaluation(turn, userInput, modelOutput, modelConfig, evaluatorConfig) { ... } 或 function exec_evaluation(turn, user_input, model_output, model_config, evaluator_config) { ... }"))
+// SPDX-License-Identifier: Apache-2.0
+
 package service
 
 import (
@@ -283,6 +284,9 @@ func (c *EvaluatorSourceCodeServiceImpl) validateEvaluator(evaluator *entity.Eva
 
 // prepareAndExecuteCode 准备并执行代码
 func (c *EvaluatorSourceCodeServiceImpl) prepareAndExecuteCode(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, startTime time.Time) (string, *entity.ExecutionResult, error) {
+	if input == nil {
+		return "", nil, errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("input data is nil"))
+	}
 	codeVersion := evaluator.CodeEvaluatorVersion
 
 	// 1. 获取代码构建器

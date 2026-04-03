@@ -793,6 +793,23 @@ func (mr *MockIExptTurnResultRepoMockRecorder) ListTurnResultByItemIDs(ctx, spac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResultByItemIDs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).ListTurnResultByItemIDs), ctx, spaceID, exptID, itemIDs, page, desc)
 }
 
+// ListTurnResultWithCursor mocks base method.
+func (m *MockIExptTurnResultRepo) ListTurnResultWithCursor(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, cursor *entity.ExptTurnResultListCursor, limit int, desc bool) ([]*entity.ExptTurnResult, int64, *entity.ExptTurnResultListCursor, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTurnResultWithCursor", ctx, spaceID, exptID, filter, cursor, limit, desc)
+	ret0, _ := ret[0].([]*entity.ExptTurnResult)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(*entity.ExptTurnResultListCursor)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ListTurnResultWithCursor indicates an expected call of ListTurnResultWithCursor.
+func (mr *MockIExptTurnResultRepoMockRecorder) ListTurnResultWithCursor(ctx, spaceID, exptID, filter, cursor, limit, desc any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResultWithCursor", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).ListTurnResultWithCursor), ctx, spaceID, exptID, filter, cursor, limit, desc)
+}
+
 // MGetItemTurnRunLogs mocks base method.
 func (m *MockIExptTurnResultRepo) MGetItemTurnRunLogs(ctx context.Context, exptID, exptRunID int64, itemIDs []int64, spaceID int64) ([]*entity.ExptTurnResultRunLog, error) {
 	m.ctrl.T.Helper()

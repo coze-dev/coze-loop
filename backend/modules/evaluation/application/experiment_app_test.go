@@ -416,14 +416,14 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_ScoreWeight(t *testin
 		assert.Equal(t, 0.8, weights[101])
 	})
 
-	t.Run("权重为0或负数，不设置", func(t *testing.T) {
+	t.Run("权重为0时写入映射，加权汇总时忽略", func(t *testing.T) {
 		req := &exptpb.CreateExperimentRequest{
 			EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
 				{
 					EvaluatorID:        gptr.Of(int64(1)),
 					Version:            gptr.Of("v1"),
 					EvaluatorVersionID: gptr.Of(int64(101)),
-					ScoreWeight:        gptr.Of(0.0), // 权重为0，不应该设置
+					ScoreWeight:        gptr.Of(0.0),
 				},
 			},
 		}
@@ -443,7 +443,36 @@ func Test_experimentApplication_resolveEvaluatorVersionIDs_ScoreWeight(t *testin
 
 		_, _, weights, err := app.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
 		assert.NoError(t, err)
-		// 权重为0，不应该设置
+		assert.Equal(t, 0.0, weights[101])
+	})
+
+	t.Run("权重为负数不写入", func(t *testing.T) {
+		req := &exptpb.CreateExperimentRequest{
+			EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+				{
+					EvaluatorID:        gptr.Of(int64(1)),
+					Version:            gptr.Of("v1"),
+					EvaluatorVersionID: gptr.Of(int64(101)),
+					ScoreWeight:        gptr.Of(-0.1),
+				},
+			},
+		}
+
+		evaluator1 := &entity.Evaluator{
+			ID: 1,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				EvaluatorID: 1,
+				ID:          101,
+			},
+			EvaluatorType: entity.EvaluatorTypePrompt,
+		}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorByIDAndVersion(ctx, gomock.Any()).
+			Return([]*entity.Evaluator{evaluator1}, nil)
+
+		_, _, weights, err := app.resolveEvaluatorVersionIDsFromCreateReq(ctx, req)
+		assert.NoError(t, err)
 		_, exists := weights[101]
 		assert.False(t, exists)
 	})
@@ -4638,7 +4667,7 @@ func TestExperimentApplication_ExportExptResult_(t *testing.T) {
 
 			// 模拟导出实验结果
 			mockExptResultExportService.EXPECT().
-				ExportCSV(gomock.Any(), validWorkspaceID, validExptID, gomock.Any()).
+				ExportCSV(gomock.Any(), validWorkspaceID, validExptID, gomock.Any(), gomock.Any()).
 				Return(validExportID, nil)
 			mockManager.EXPECT().
 				Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

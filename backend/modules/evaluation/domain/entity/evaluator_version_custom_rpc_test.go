@@ -26,6 +26,14 @@ func TestCustomRPCEvaluatorVersion_ValidateInput(t *testing.T) {
 		description string
 	}{
 		{
+			name:        "失败 - input 为 nil",
+			evaluator:   &CustomRPCEvaluatorVersion{InputSchemas: []*ArgsSchema{}},
+			input:       nil,
+			wantErr:     true,
+			errCode:     errno.InvalidInputDataCode,
+			description: "nil input 应返回错误而非 panic",
+		},
+		{
 			name: "成功 - 有效输入",
 			evaluator: &CustomRPCEvaluatorVersion{
 				InputSchemas: []*ArgsSchema{

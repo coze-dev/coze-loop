@@ -111,6 +111,9 @@ func (do *PromptEvaluatorVersion) GetModelConfig() *ModelConfig {
 
 // ValidateInput 验证输入数据
 func (do *PromptEvaluatorVersion) ValidateInput(input *EvaluatorInputData) error {
+	if input == nil {
+		return errorx.NewByCode(errno.InvalidInputDataCode, errorx.WithExtraMsg("input data is nil"))
+	}
 	// 实现验证逻辑，
 	inputSchemaMap := make(map[string]*ArgsSchema)
 	for _, argsSchema := range do.InputSchemas {

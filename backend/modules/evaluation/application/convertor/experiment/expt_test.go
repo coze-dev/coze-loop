@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
@@ -375,9 +376,10 @@ func TestBuildEvaluatorScoreWeights(t *testing.T) {
 	}
 	weights := buildEvaluatorScoreWeights(items)
 	if assert.NotNil(t, weights) {
-		assert.Len(t, weights, 2)
+		assert.Len(t, weights, 3)
 		assert.Equal(t, 0.5, weights["1#v1"])
 		assert.Equal(t, 0.8, weights["2#v2"])
+		assert.Equal(t, 0.0, weights["4#v4"])
 	}
 
 	// 空或全部无效时返回 nil
@@ -1968,7 +1970,7 @@ func TestBuildTemplateScoreWeightConfigDTO_FromTripleConfig(t *testing.T) {
 					},
 					{
 						EvaluatorVersionID: 103,
-						ScoreWeight:        0, // 无效，应该跳过
+						ScoreWeight:        0, // 合法：参与加权汇总时权重为 0
 					},
 					nil, // nil项，应该跳过
 				},
@@ -1979,7 +1981,7 @@ func TestBuildTemplateScoreWeightConfigDTO_FromTripleConfig(t *testing.T) {
 		assert.True(t, *result.EnableWeightedScore)
 		assert.Equal(t, 0.6, result.EvaluatorScoreWeights[101])
 		assert.Equal(t, 0.4, result.EvaluatorScoreWeights[102])
-		assert.NotContains(t, result.EvaluatorScoreWeights, int64(103))
+		assert.Equal(t, 0.0, result.EvaluatorScoreWeights[103])
 		assert.NotContains(t, result.EvaluatorScoreWeights, int64(0))
 	})
 
@@ -2144,7 +2146,7 @@ func TestEvalConfConvert_ConvertToEntity_SetScoreWeight(t *testing.T) {
 		}
 	})
 
-	t.Run("权重为0或负数，不设置ScoreWeight", func(t *testing.T) {
+	t.Run("权重为0，设置ScoreWeight为0", func(t *testing.T) {
 		cer := &expt.CreateExperimentRequest{
 			EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
 				domain_expt.NewEvaluatorFieldMapping(),
@@ -2152,17 +2154,36 @@ func TestEvalConfConvert_ConvertToEntity_SetScoreWeight(t *testing.T) {
 		}
 		cer.EvaluatorFieldMapping[0].SetEvaluatorVersionID(101)
 		cer.EvaluatorScoreWeights = map[int64]float64{
-			101: 0.0, // 权重为0，不应该设置
+			101: 0.0,
 		}
 
 		result, err := converter.ConvertToEntity(cer, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		if result.ConnectorConf.EvaluatorsConf != nil && len(result.ConnectorConf.EvaluatorsConf.EvaluatorConf) > 0 {
-			conf := result.ConnectorConf.EvaluatorsConf.EvaluatorConf[0]
-			// 权重为0，不应该设置 ScoreWeight
-			assert.Nil(t, conf.ScoreWeight)
+		require.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+		require.Len(t, result.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1)
+		conf := result.ConnectorConf.EvaluatorsConf.EvaluatorConf[0]
+		require.NotNil(t, conf.ScoreWeight)
+		assert.Equal(t, 0.0, *conf.ScoreWeight)
+	})
+
+	t.Run("权重为负数，不设置ScoreWeight", func(t *testing.T) {
+		cer := &expt.CreateExperimentRequest{
+			EvaluatorFieldMapping: []*domain_expt.EvaluatorFieldMapping{
+				domain_expt.NewEvaluatorFieldMapping(),
+			},
 		}
+		cer.EvaluatorFieldMapping[0].SetEvaluatorVersionID(101)
+		cer.EvaluatorScoreWeights = map[int64]float64{
+			101: -0.1,
+		}
+
+		result, err := converter.ConvertToEntity(cer, nil)
+		assert.NoError(t, err)
+		assert.NotNil(t, result)
+		require.NotNil(t, result.ConnectorConf.EvaluatorsConf)
+		require.Len(t, result.ConnectorConf.EvaluatorsConf.EvaluatorConf, 1)
+		assert.Nil(t, result.ConnectorConf.EvaluatorsConf.EvaluatorConf[0].ScoreWeight)
 	})
 
 	t.Run("EvaluatorConf为nil，跳过", func(t *testing.T) {

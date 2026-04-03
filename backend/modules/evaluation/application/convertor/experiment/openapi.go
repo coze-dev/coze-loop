@@ -1392,7 +1392,7 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 				if ec.RunConf != nil {
 					runConfByVersionID[ec.EvaluatorVersionID] = ec.RunConf
 				}
-				if ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+				if ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
 					scoreWeightByVersionID[ec.EvaluatorVersionID] = *ec.ScoreWeight
 				}
 				if ec.Version != "" {
@@ -1490,7 +1490,7 @@ func buildOpenAPIExptScoreWeightFromTemplate(template *entity.ExptTemplate) *ope
 		template.TripleConfig != nil && len(template.TripleConfig.EvaluatorIDVersionItems) > 0 {
 		evaluatorScoreWeights = make(map[int64]float64)
 		for _, item := range template.TripleConfig.EvaluatorIDVersionItems {
-			if item == nil || item.EvaluatorVersionID <= 0 || item.ScoreWeight <= 0 {
+			if item == nil || item.EvaluatorVersionID <= 0 || item.ScoreWeight < 0 {
 				continue
 			}
 			evaluatorScoreWeights[item.EvaluatorVersionID] = item.ScoreWeight
@@ -1544,8 +1544,8 @@ func OpenAPITemplateToSubmitExperimentRequest(template *entity.ExptTemplate, nam
 				}
 			}
 			// scoreWeight
-			if (!item.IsSetScoreWeight() || item.GetScoreWeight() <= 0) && scoreWeightByVersionID != nil {
-				if w := scoreWeightByVersionID[verID]; w > 0 {
+			if !item.IsSetScoreWeight() && scoreWeightByVersionID != nil {
+				if w, ok := scoreWeightByVersionID[verID]; ok {
 					item.SetScoreWeight(gptr.Of(w))
 				}
 			}
@@ -1574,8 +1574,8 @@ func OpenAPITemplateToSubmitExperimentRequest(template *entity.ExptTemplate, nam
 					item.SetVersion(gptr.Of(v))
 				}
 			}
-			if (!item.IsSetScoreWeight() || item.GetScoreWeight() <= 0) && scoreWeightByVersionID != nil {
-				if w := scoreWeightByVersionID[verID]; w > 0 {
+			if !item.IsSetScoreWeight() && scoreWeightByVersionID != nil {
+				if w, ok := scoreWeightByVersionID[verID]; ok {
 					item.SetScoreWeight(gptr.Of(w))
 				}
 			}
@@ -1610,7 +1610,7 @@ func buildOpenAPITemplateConfMaps(template *entity.ExptTemplate) (
 			}
 			runConfByVersionID[ec.EvaluatorVersionID] = ec.RunConf
 		}
-		if ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+		if ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
 			if scoreWeightByVersionID == nil {
 				scoreWeightByVersionID = make(map[int64]float64)
 			}

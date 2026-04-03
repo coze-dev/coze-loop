@@ -421,6 +421,21 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_prompt_id0 := _prompts.Group("/:prompt_id", _prompt_id0Mw(handler)...)
 					_prompt_id0.POST("/clone", append(_clonepromptMw(handler), apis.ClonePrompt)...)
 				}
+				_v15.POST("/tools", append(_toolsMw(handler), apis.CreateTool)...)
+				_tools := _v15.Group("/tools", _toolsMw(handler)...)
+				_tools.POST("/list", append(_listtoolMw(handler), apis.ListTool)...)
+				_tools.POST("/mget", append(_batchgettoolsMw(handler), apis.BatchGetTools)...)
+				_tools.GET("/:tool_id", append(_tool_idMw(handler), apis.GetToolDetail)...)
+				_tool_id := _tools.Group("/:tool_id", _tool_idMw(handler)...)
+				{
+					_commits0 := _tool_id.Group("/commits", _commits0Mw(handler)...)
+					_commits0.POST("/list", append(_listtoolcommitMw(handler), apis.ListToolCommit)...)
+				}
+				{
+					_drafts0 := _tool_id.Group("/drafts", _drafts0Mw(handler)...)
+					_drafts0.POST("/commit", append(_committooldraftMw(handler), apis.CommitToolDraft)...)
+					_drafts0.POST("/save", append(_savetooldetailMw(handler), apis.SaveToolDetail)...)
+				}
 			}
 		}
 	}
@@ -435,13 +450,13 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 			_prompts0.DELETE("/:prompt_id", append(_prompt_id1Mw(handler), apis.DeletePromptOApi)...)
 			_prompt_id1 := _prompts0.Group("/:prompt_id", _prompt_id1Mw(handler)...)
 			{
-				_commits0 := _prompt_id1.Group("/commits", _commits0Mw(handler)...)
-				_commits0.POST("/list", append(_listcommitoapiMw(handler), apis.ListCommitOApi)...)
+				_commits1 := _prompt_id1.Group("/commits", _commits1Mw(handler)...)
+				_commits1.POST("/list", append(_listcommitoapiMw(handler), apis.ListCommitOApi)...)
 			}
 			{
-				_drafts0 := _prompt_id1.Group("/drafts", _drafts0Mw(handler)...)
-				_drafts0.POST("/commit", append(_commitdraftoapiMw(handler), apis.CommitDraftOApi)...)
-				_drafts0.POST("/save", append(_savedraftoapiMw(handler), apis.SaveDraftOApi)...)
+				_drafts1 := _prompt_id1.Group("/drafts", _drafts1Mw(handler)...)
+				_drafts1.POST("/commit", append(_commitdraftoapiMw(handler), apis.CommitDraftOApi)...)
+				_drafts1.POST("/save", append(_savedraftoapiMw(handler), apis.SaveDraftOApi)...)
 			}
 			_prompts0.GET("/:prompt_id", append(_getpromptoapiMw(handler), apis.GetPromptOApi)...)
 			{

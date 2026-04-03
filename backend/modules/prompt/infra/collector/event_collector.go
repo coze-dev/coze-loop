@@ -14,6 +14,7 @@ import (
 type ICollectorProvider interface {
 	CollectPromptHubEvent(ctx context.Context, spaceID int64, prompts []*entity.Prompt)
 	CollectPTaaSEvent(ctx context.Context, executeLog *ExecuteLog)
+	CollectSkillEvent(ctx context.Context, eventLog *SkillEventLog)
 }
 
 type ExecuteLog struct {
@@ -33,6 +34,18 @@ type ExecuteLog struct {
 	StatusCode    int32     `json:"status_code,omitempty"`
 }
 
+type SkillInfo struct {
+	SkillID  string `json:"skill_id"`
+	SkillKey string `json:"skill_key"`
+	Version  string `json:"version"`
+}
+
+type SkillEventLog struct {
+	SpaceID    int64        `json:"space_id,omitempty"`
+	PSM        string       `json:"psm,omitempty"`
+	SkillInfos []*SkillInfo `json:"skill_infos,omitempty"`
+}
+
 type EventCollectorProviderImpl struct{}
 
 func NewEventCollectorProvider() ICollectorProvider {
@@ -43,4 +56,7 @@ func (c *EventCollectorProviderImpl) CollectPromptHubEvent(ctx context.Context, 
 }
 
 func (c *EventCollectorProviderImpl) CollectPTaaSEvent(ctx context.Context, executeLog *ExecuteLog) {
+}
+
+func (c *EventCollectorProviderImpl) CollectSkillEvent(ctx context.Context, eventLog *SkillEventLog) {
 }
