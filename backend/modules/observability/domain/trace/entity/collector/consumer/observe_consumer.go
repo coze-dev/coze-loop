@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/metrics"
+	obmetrics "github.com/coze-dev/coze-loop/backend/modules/observability/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -44,15 +45,20 @@ func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 	isErr := err != nil
 	if t.metric != nil {
 		logs.CtxInfo(ctx, "ObserveConsumer[%s] ConsumeTraces, self_duration=%s, is_err=%s, spans_count=%d", t.name, selfDuration, boolToStr(isErr), tds.SpansCount())
-		t.metric.Emit(
-			[]metrics.T{
-				{Name: "node", Value: t.name},
-				{Name: "is_err", Value: boolToStr(isErr)},
-			},
-			metrics.Counter(1, metrics.WithSuffix("throughput")),
-			metrics.Timer(selfDuration.Microseconds(), metrics.WithSuffix("latency")),
-			metrics.Counter(int64(tds.SpansCount()), metrics.WithSuffix("spans")),
-		)
+		psmCounts := tds.SpansCountByPSM()
+		for psm, count := range psmCounts {
+			t.metric.Emit(
+				[]metrics.T{
+					{Name: obmetrics.ConsumeTagNode, Value: t.name},
+					{Name: obmetrics.ConsumeTagIsErr, Value: boolToStr(isErr)},
+					{Name: obmetrics.ConsumeTagPSM, Value: psm},
+					{Name: obmetrics.ConsumeTagTenant, Value: tds.Tenant},
+				},
+				metrics.Counter(1, metrics.WithSuffix(obmetrics.ConsumeSuffixThroughput)),
+				metrics.Timer(selfDuration.Microseconds(), metrics.WithSuffix(obmetrics.ConsumeSuffixLatency)),
+				metrics.Counter(int64(count), metrics.WithSuffix(obmetrics.ConsumeSuffixSpans)),
+			)
+		}
 	}
 
 	if err != nil {

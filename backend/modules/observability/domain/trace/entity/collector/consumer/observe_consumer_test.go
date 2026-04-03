@@ -11,6 +11,8 @@ import (
 	"go.uber.org/mock/gomock"
 
 	metricsmocks "github.com/coze-dev/coze-loop/backend/infra/metrics/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
 func TestObserveConsumer_ConsumeTraces_Success(t *testing.T) {
@@ -18,7 +20,6 @@ func TestObserveConsumer_ConsumeTraces_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockMetric := metricsmocks.NewMockMetric(ctrl)
-	mockMetric.EXPECT().Emit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	inner := &mockConsumer{}
 	timed := NewObserveConsumer("test_node", inner, nil, mockMetric)
@@ -32,7 +33,6 @@ func TestObserveConsumer_ConsumeTraces_Error(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockMetric := metricsmocks.NewMockMetric(ctrl)
-	mockMetric.EXPECT().Emit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	expectedErr := errors.New("consume failed")
 	inner := &errConsumer{err: expectedErr}
@@ -55,7 +55,6 @@ func TestObserveConsumer_SubtractsNextElapsed(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockMetric := metricsmocks.NewMockMetric(ctrl)
-	mockMetric.EXPECT().Emit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(1)
 
 	nextElapsed := &atomic.Int64{}
 	sleepDuration := 50 * time.Millisecond
@@ -69,6 +68,32 @@ func TestObserveConsumer_SubtractsNextElapsed(t *testing.T) {
 	timed := NewObserveConsumer("test_node", inner, nextElapsed, mockMetric)
 
 	err := timed.ConsumeTraces(context.Background(), Traces{})
+	assert.NoError(t, err)
+}
+
+func TestObserveConsumer_GroupByPSM(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockMetric(ctrl)
+	mockMetric.EXPECT().Emit(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(2)
+
+	inner := &mockConsumer{}
+	timed := NewObserveConsumer("test_node", inner, nil, mockMetric)
+
+	traces := Traces{
+		Tenant: "test_tenant",
+		TraceData: []*entity.TraceData{
+			{
+				SpanList: loop_span.SpanList{
+					{PSM: "svc-a"},
+					{PSM: "svc-a"},
+					{PSM: "svc-b"},
+				},
+			},
+		},
+	}
+	err := timed.ConsumeTraces(context.Background(), traces)
 	assert.NoError(t, err)
 }
 

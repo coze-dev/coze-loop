@@ -139,7 +139,18 @@ func (t *TraceMetricsImpl) EmitSendMetric(start time.Time, isError bool) {
 		metrics.Timer(time.Since(start).Microseconds(), metrics.WithSuffix(metricSendSuffix+latencySuffix)))
 }
 
-const consumeMetricName = "trace_consume"
+const (
+	consumeMetricName = "trace_consume"
+
+	ConsumeTagNode   = "node"
+	ConsumeTagIsErr  = "is_err"
+	ConsumeTagPSM    = "psm"
+	ConsumeTagTenant = "tenant"
+
+	ConsumeSuffixThroughput = "throughput"
+	ConsumeSuffixLatency    = "latency"
+	ConsumeSuffixSpans      = "spans"
+)
 
 func NewConsumeMetric(meter metrics.Meter) metrics.Metric {
 	consumeMetricOnce.Do(func() {
@@ -149,7 +160,7 @@ func NewConsumeMetric(meter metrics.Meter) metrics.Metric {
 		m, err := meter.NewMetric(
 			consumeMetricName,
 			[]metrics.MetricType{metrics.MetricTypeCounter, metrics.MetricTypeTimer},
-			[]string{"node", "is_err"},
+			[]string{ConsumeTagNode, ConsumeTagIsErr, ConsumeTagPSM, ConsumeTagTenant},
 		)
 		if err != nil {
 			logs.Error("Failed to create consume metric: %v", err)
