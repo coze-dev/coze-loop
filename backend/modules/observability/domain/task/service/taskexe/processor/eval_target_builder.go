@@ -29,6 +29,9 @@ func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.Obs
 		EvalTargetType: lo.ToPtr(eval_target_d.EvalTargetType_Trace),
 		SourceTargetID: sourceTargetID,
 	}
+	if task.SpanFilter == nil {
+		return ret
+	}
 	evalTargetType := eval_target_d.EvalTargetType_Trace
 	switch string(task.SpanFilter.PlatformType) {
 	case common.PlatformTypeInnerCozeBot, common.PlatformTypeCozeBot:
