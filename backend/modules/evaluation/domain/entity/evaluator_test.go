@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func makePromptEvaluatorVersion() *PromptEvaluatorVersion {
@@ -1281,6 +1282,18 @@ func TestEvaluator_SetEvaluatorVersion(t *testing.T) {
 				// Should not panic, just do nothing
 			},
 		},
+		{
+			name: "nil version no panic",
+			evaluator: &Evaluator{
+				EvaluatorType:          EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &PromptEvaluatorVersion{Version: "keep"},
+			},
+			version: nil,
+			verify: func(t *testing.T, e *Evaluator) {
+				require.NotNil(t, e.PromptEvaluatorVersion)
+				assert.Equal(t, "keep", e.PromptEvaluatorVersion.Version)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1689,6 +1702,9 @@ func TestPromptEvaluatorVersion_ValidateInput(t *testing.T) {
 	ver.InputSchemas[0].SupportContentTypes = []ContentType{ContentTypeText}
 	ver.InputSchemas[0].JsonSchema = gptr.Of("{invalid json}")
 	err = ver.ValidateInput(input)
+	assert.Error(t, err)
+
+	err = ver.ValidateInput(nil)
 	assert.Error(t, err)
 }
 

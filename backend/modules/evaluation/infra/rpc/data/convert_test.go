@@ -1367,3 +1367,179 @@ func TestConvert2ThriftDatasetIOJobOption(t *testing.T) {
 	assert.NotNil(t, thriftOpt)
 	assert.Equal(t, gptr.Of(true), thriftOpt.OverwriteDataset)
 }
+
+func TestConvert2DatasetMultiModalStoreOption(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	assert.Nil(t, convert2DatasetMultiModalStoreOption(ctx, nil))
+
+	strategy := entity.MultiModalStoreStrategyStore
+	tests := []struct {
+		name        string
+		contentType *entity.ContentType
+		expected    *dataset.ContentType
+	}{
+		{"text", gptr.Of(entity.ContentTypeText), gptr.Of(dataset.ContentType_Text)},
+		{"image", gptr.Of(entity.ContentTypeImage), gptr.Of(dataset.ContentType_Image)},
+		{"audio", gptr.Of(entity.ContentTypeAudio), gptr.Of(dataset.ContentType_Audio)},
+		{"video", gptr.Of(entity.ContentTypeVideo), gptr.Of(dataset.ContentType_Video)},
+		{"multipart", gptr.Of(entity.ContentTypeMultipart), gptr.Of(dataset.ContentType_MultiPart)},
+		{"unknown", gptr.Of(entity.ContentType("unknown")), nil},
+		{"nil", nil, nil},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := convert2DatasetMultiModalStoreOption(ctx, &entity.MultiModalStoreOption{
+				MultiModalStoreStrategy: &strategy,
+				ContentType:             tt.contentType,
+			})
+			if assert.NotNil(t, got) {
+				assert.NotNil(t, got.MultiModalStoreStrategy)
+				assert.Equal(t, dataset.MultiModalStoreStrategyStore, *got.MultiModalStoreStrategy)
+				assert.Equal(t, tt.expected, got.ContentType)
+			}
+		})
+	}
+}
+
+func TestConvert2DatasetFieldWriteOptionAndOptions(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	assert.Nil(t, convert2DatasetFieldWriteOption(ctx, nil))
+	assert.Nil(t, convert2DatasetFieldWriteOptions(ctx, nil))
+	assert.Nil(t, convert2DatasetFieldWriteOptions(ctx, []*entity.FieldWriteOption{}))
+
+	fieldName := "field"
+	fieldKey := "key"
+	strategy := entity.MultiModalStoreStrategyPassthrough
+	contentType := entity.ContentTypeImage
+	opt := &entity.FieldWriteOption{
+		FieldName: &fieldName,
+		FieldKey:  &fieldKey,
+		MultiModalStoreOpt: &entity.MultiModalStoreOption{
+			MultiModalStoreStrategy: &strategy,
+			ContentType:             &contentType,
+		},
+	}
+
+	got := convert2DatasetFieldWriteOption(ctx, opt)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, &fieldName, got.FieldName)
+		assert.Equal(t, &fieldKey, got.FieldKey)
+		assert.NotNil(t, got.MultiModalStoreOpt)
+		assert.Equal(t, dataset.MultiModalStoreStrategyPassthrough, *got.MultiModalStoreOpt.MultiModalStoreStrategy)
+		assert.Equal(t, dataset.ContentType_Image, *got.MultiModalStoreOpt.ContentType)
+	}
+	assert.Len(t, convert2DatasetFieldWriteOptions(ctx, []*entity.FieldWriteOption{opt}), 1)
+}
+
+func TestConvert2ThriftDatasetIOHelpers(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	assert.Nil(t, convert2ThriftDatasetIOFile(ctx, nil))
+	assert.Nil(t, convert2ThriftProviderAuth(ctx, nil))
+	assert.Nil(t, convert2ThriftFieldMappings(ctx, nil))
+	assert.Nil(t, convert2ThriftFieldMappings(ctx, []*entity.FieldMapping{}))
+	assert.Nil(t, convert2ThriftDatasetIOJobOption(ctx, nil))
+
+	providerAccountID := int64(9)
+	format := entity.FileFormat(1)
+	compress := entity.FileFormat(2)
+	file := &entity.DatasetIOFile{
+		Provider:         entity.StorageProvider(3),
+		Path:             "s3://bucket/file.csv",
+		Format:           &format,
+		CompressFormat:   &compress,
+		Files:            []string{"a", "b"},
+		OriginalFileName: gptr.Of("file.csv"),
+		DownloadURL:      gptr.Of("https://x"),
+		ProviderID:       gptr.Of("pid"),
+		ProviderAuth:     &entity.ProviderAuth{ProviderAccountID: &providerAccountID},
+	}
+	gotFile := convert2ThriftDatasetIOFile(ctx, file)
+	if assert.NotNil(t, gotFile) {
+		assert.Equal(t, "s3://bucket/file.csv", gotFile.Path)
+		assert.Equal(t, []string{"a", "b"}, gotFile.Files)
+		assert.NotNil(t, gotFile.ProviderAuth)
+	}
+
+	mappings := convert2ThriftFieldMappings(ctx, []*entity.FieldMapping{{Source: "s", Target: "t"}})
+	assert.Equal(t, []*dataset_job.FieldMapping{{Source: "s", Target: "t"}}, mappings)
+
+	overwrite := true
+	jobOpt := convert2ThriftDatasetIOJobOption(ctx, &entity.DatasetIOJobOption{
+		OverwriteDataset: &overwrite,
+		FieldWriteOptions: []*entity.FieldWriteOption{{
+			FieldName: gptr.Of("field"),
+		}},
+	})
+	if assert.NotNil(t, jobOpt) {
+		assert.Equal(t, &overwrite, jobOpt.OverwriteDataset)
+		assert.Len(t, jobOpt.FieldWriteOptions, 1)
+	}
+}
+
+func TestConvertObjectStorageHelpers(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	provider := dataset.StorageProvider(7)
+	imageName := "image.PNG"
+	audioName := "sound.MP3"
+	videoName := "clip.MP4"
+	unknownName := "doc.txt"
+
+	assert.Nil(t, convertObjectStorageToImage(ctx, nil))
+	assert.Nil(t, convertObjectStorageToAudio(ctx, nil))
+	assert.Nil(t, convertObjectStorageToVideo(ctx, nil))
+	assert.Nil(t, convertStorageProvider(nil))
+	assert.Nil(t, getAudioFormat(nil))
+	assert.False(t, isImageAttachment(nil))
+	assert.False(t, isAudioAttachment(nil))
+	assert.False(t, isVideoAttachment(nil))
+
+	attachments := []*dataset.ObjectStorage{
+		{Name: &unknownName},
+		{Name: &imageName, URL: gptr.Of("img"), Provider: &provider},
+		{Name: &audioName, URL: gptr.Of("aud"), Provider: &provider},
+		{Name: &videoName, URL: gptr.Of("vid"), Provider: &provider},
+	}
+
+	img := convertObjectStorageToImage(ctx, attachments)
+	if assert.NotNil(t, img) {
+		assert.Equal(t, gptr.Of("img"), img.URL)
+	}
+	audio := convertObjectStorageToAudio(ctx, attachments)
+	if assert.NotNil(t, audio) {
+		assert.Equal(t, "MP3", *audio.Format)
+	}
+	video := convertObjectStorageToVideo(ctx, attachments)
+	if assert.NotNil(t, video) {
+		assert.Equal(t, gptr.Of("vid"), video.URL)
+	}
+	assert.True(t, isImageAttachment(&dataset.ObjectStorage{Name: &imageName}))
+	assert.True(t, isAudioAttachment(&dataset.ObjectStorage{Name: &audioName}))
+	assert.True(t, isVideoAttachment(&dataset.ObjectStorage{Name: &videoName}))
+	assert.False(t, isImageAttachment(&dataset.ObjectStorage{Name: &unknownName}))
+	assert.NotNil(t, convertStorageProvider(&provider))
+}
+
+func TestToSchemaKey_AllBranches(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, toSchemaKey(nil))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_String), toSchemaKey(gptr.Of(dataset.SchemaKey_String)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Integer), toSchemaKey(gptr.Of(dataset.SchemaKey_Integer)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Float), toSchemaKey(gptr.Of(dataset.SchemaKey_Float)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Bool), toSchemaKey(gptr.Of(dataset.SchemaKey_Bool)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Message), toSchemaKey(gptr.Of(dataset.SchemaKey_Message)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_SingleChoice), toSchemaKey(gptr.Of(dataset.SchemaKey_SingleChoice)))
+	assert.Equal(t, gptr.Of(entity.SchemaKey_Trajectory), toSchemaKey(gptr.Of(dataset.SchemaKey_Trajectory)))
+	assert.Nil(t, toSchemaKey(gptr.Of(dataset.SchemaKey(999))))
+}

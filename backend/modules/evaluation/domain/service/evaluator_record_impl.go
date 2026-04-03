@@ -206,7 +206,7 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	scoreWeights := make(map[int64]float64)
 	if expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 && ec.EvaluatorVersionID > 0 {
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 			}
 		}

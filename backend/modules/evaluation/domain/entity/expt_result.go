@@ -339,6 +339,15 @@ func (e *EvaluatorResults) Serialize() ([]byte, error) {
 	return bytes, nil
 }
 
+// ExptTurnResultListCursor 与 ListTurnResult 联合排序（item_idx + turn_idx + item_id + turn_id）一致的游标。
+// TurnIdx 为 COALESCE(turn_idx, -1) 的比较值，-1 表示库中 turn_idx 为 NULL。
+type ExptTurnResultListCursor struct {
+	ItemIdx int32
+	TurnIdx int32
+	ItemID  int64
+	TurnID  int64
+}
+
 type MGetExperimentResultParam struct {
 	SpaceID            int64
 	ExptIDs            []int64
@@ -346,7 +355,11 @@ type MGetExperimentResultParam struct {
 	Filters            map[int64]*ExptTurnResultFilter
 	FilterAccelerators map[int64]*ExptTurnResultFilterAccelerator
 	UseAccelerator     bool
-	Page               Page
+	// UseTurnListCursor 为 true 时（如 CSV 导出），按 TurnListCursor + Page.Limit 拉取 turn，忽略 Page 页码；勿与 UseAccelerator 同时使用。
+	UseTurnListCursor bool
+	// TurnListCursor 本批起始位置，首屏传 nil。
+	TurnListCursor *ExptTurnResultListCursor
+	Page           Page
 	// FullTrajectory 表示在构建 eval_target_result 时是否需要包含轨迹（trajectory）相关信息
 	FullTrajectory bool
 	// ExportFullContent 表示导出场景下需要从 TOS 加载完整字段内容（RDS 中大对象会被剪裁）
@@ -355,6 +368,8 @@ type MGetExperimentResultParam struct {
 	LoadEvaluatorFullContent *bool
 	// LoadEvalTargetFullContent 为 true 时从 TOS 加载 EvalTarget output 大对象；nil 时沿用 ExportFullContent
 	LoadEvalTargetFullContent *bool
+	// LoadEvalTargetOutputFieldKeys 非空时，仅对指定 output 字段从 TOS 拉取完整内容（优先级高于 LoadEvalTargetFullContent 全量加载）
+	LoadEvalTargetOutputFieldKeys []string
 }
 
 type MGetExperimentReportResult struct {
@@ -365,6 +380,8 @@ type MGetExperimentReportResult struct {
 	ItemResults           []*ItemResult
 	ExptColumnsEvalTarget []*ExptColumnEvalTarget
 	Total                 int64
+	// NextTurnListCursor 下一批起始游标；本批不足 Limit 或无更多数据时为 nil。
+	NextTurnListCursor *ExptTurnResultListCursor
 }
 
 type ExptTurnResultRunLog struct {

@@ -33,7 +33,7 @@ func (m *MockReader) Read(p []byte) (n int, err error) {
 	}
 	n = copy(p, m.content[m.pos:])
 	m.pos += n
-	return
+	return n, err
 }
 
 func (m *MockReader) Close() error {

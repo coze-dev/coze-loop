@@ -18,6 +18,12 @@ type Client interface {
 	Execute(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...callopt.Option) (r *openapi.ExecuteResponse, err error)
 	ExecuteStreaming(ctx context.Context, req *openapi.ExecuteRequest, callOptions ...streamcall.Option) (stream PromptOpenAPIService_ExecuteStreamingClient, err error)
 	ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest, callOptions ...callopt.Option) (r *openapi.ListPromptBasicResponse, err error)
+	CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest, callOptions ...callopt.Option) (r *openapi.CreatePromptOApiResponse, err error)
+	DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest, callOptions ...callopt.Option) (r *openapi.DeletePromptOApiResponse, err error)
+	GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest, callOptions ...callopt.Option) (r *openapi.GetPromptOApiResponse, err error)
+	SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest, callOptions ...callopt.Option) (r *openapi.SaveDraftOApiResponse, err error)
+	ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest, callOptions ...callopt.Option) (r *openapi.ListCommitOApiResponse, err error)
+	CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest, callOptions ...callopt.Option) (r *openapi.CommitDraftOApiResponse, err error)
 }
 
 type PromptOpenAPIService_ExecuteStreamingClient streaming.ServerStreamingClient[openapi.ExecuteStreamingResponse]
@@ -71,4 +77,34 @@ func (p *kPromptOpenAPIServiceClient) ExecuteStreaming(ctx context.Context, req 
 func (p *kPromptOpenAPIServiceClient) ListPromptBasic(ctx context.Context, req *openapi.ListPromptBasicRequest, callOptions ...callopt.Option) (r *openapi.ListPromptBasicResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListPromptBasic(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) CreatePromptOApi(ctx context.Context, req *openapi.CreatePromptOApiRequest, callOptions ...callopt.Option) (r *openapi.CreatePromptOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CreatePromptOApi(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) DeletePromptOApi(ctx context.Context, req *openapi.DeletePromptOApiRequest, callOptions ...callopt.Option) (r *openapi.DeletePromptOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.DeletePromptOApi(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) GetPromptOApi(ctx context.Context, req *openapi.GetPromptOApiRequest, callOptions ...callopt.Option) (r *openapi.GetPromptOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetPromptOApi(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) SaveDraftOApi(ctx context.Context, req *openapi.SaveDraftOApiRequest, callOptions ...callopt.Option) (r *openapi.SaveDraftOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SaveDraftOApi(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) ListCommitOApi(ctx context.Context, req *openapi.ListCommitOApiRequest, callOptions ...callopt.Option) (r *openapi.ListCommitOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListCommitOApi(ctx, req)
+}
+
+func (p *kPromptOpenAPIServiceClient) CommitDraftOApi(ctx context.Context, req *openapi.CommitDraftOApiRequest, callOptions ...callopt.Option) (r *openapi.CommitDraftOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CommitDraftOApi(ctx, req)
 }

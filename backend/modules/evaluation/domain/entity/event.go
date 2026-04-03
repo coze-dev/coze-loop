@@ -191,6 +191,8 @@ type ExportCSVEvent struct {
 	Session     *Session
 	ExportScene ExportScene
 	CreatedAt   int64
+	// ExportColumns 与 ExportExptResultRequest.export_columns 一致；nil 表示全量列；非 nil 为白名单（子字段 nil/[] 均不导出该组）
+	ExportColumns *ExptResultExportColumnSpec `json:"export_columns,omitempty"`
 }
 
 type ExportScene int

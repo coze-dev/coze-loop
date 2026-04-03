@@ -4,6 +4,7 @@
 package convertor
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -11,6 +12,7 @@ import (
 
 	evaluatordo "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/gorm_gen/model"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/js_conv"
@@ -102,12 +104,14 @@ func ConvertEvaluatorPO2DO(po *model.Evaluator) *evaluatordo.Evaluator {
 }
 
 func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVersion, error) {
-	if do == nil ||
-		(do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
+	if do == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator is nil"))
+	}
+	if (do.EvaluatorType == evaluatordo.EvaluatorTypePrompt && do.PromptEvaluatorVersion == nil) ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypeCode && do.CodeEvaluatorVersion == nil) ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypeCustomRPC && do.CustomRPCEvaluatorVersion == nil) ||
 		(do.EvaluatorType == evaluatordo.EvaluatorTypeAgent && do.AgentEvaluatorVersion == nil) {
-		return nil, nil
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator version content is required for the given evaluator type"))
 	}
 
 	po := &model.EvaluatorVersion{
@@ -210,6 +214,8 @@ func ConvertEvaluatorVersionDO2PO(do *evaluatordo.Evaluator) (*model.EvaluatorVe
 		po.Metainfo = ptr.Of(metaInfoByte)
 		po.ReceiveChatHistory = nil
 		po.ID = do.AgentEvaluatorVersion.ID
+	default:
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("unsupported evaluator type: %d", do.EvaluatorType)))
 	}
 	return po, nil
 }

@@ -156,6 +156,7 @@ func (e *EvaluationSetApplicationImpl) CreateEvaluationSetWithImport(ctx context
 		Source:              evaluation_set.DatasetIOEndpointDTO2DO(req.Source),
 		FieldMappings:       evaluation_set.FieldMappingsDTO2DOs(req.FieldMappings),
 		Session:             session,
+		Option:              evaluation_set.DatasetIOJobOptionDTO2DO(req.Option),
 	})
 	if err != nil {
 		return nil, err
@@ -201,9 +202,35 @@ func (e *EvaluationSetApplicationImpl) ParseImportSourceFile(ctx context.Context
 		resp.FieldSchemas = evaluation_set.FieldSchemaDO2DTOs(result.FieldSchemas)
 		resp.Conflicts = evaluation_set.ConflictFieldDO2DTOs(result.Conflicts)
 		resp.FilesWithAmbiguousColumn = result.FilesWithAmbiguousColumn
+		resp.UntypedURLFields = result.UntypedURLFields
+		resp.PrecheckDataByField = result.PrecheckDataByField
 	}
 
 	return resp, nil
+}
+
+func (e *EvaluationSetApplicationImpl) ValidateEvaluationSetMultiPartData(ctx context.Context, req *eval_set.ValidateEvaluationSetMultiPartDataRequest) (r *eval_set.ValidateEvaluationSetMultiPartDataResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.SpaceID, 10),
+		SpaceID:       req.SpaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("createLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	details, err := e.evaluationSetService.ValidateMultiPartData(ctx, req.SpaceID, req.GetPreviewData(), evaluation_set.MultiModalStoreOptionDTO2DO(req.GetStoreOption()))
+	if err != nil {
+		return nil, err
+	}
+
+	return &eval_set.ValidateEvaluationSetMultiPartDataResponse{
+		BaseResp:                  base.NewBaseResp(),
+		AttachmentUrlsCheckDetail: evaluation_set.UploadAttachmentDetailsDO2DTOs(details),
+	}, nil
 }
 
 func (e *EvaluationSetApplicationImpl) UpdateEvaluationSet(ctx context.Context, req *eval_set.UpdateEvaluationSetRequest) (resp *eval_set.UpdateEvaluationSetResponse, err error) {
@@ -388,11 +415,12 @@ func (e *EvaluationSetApplicationImpl) BatchCreateEvaluationSetItems(ctx context
 	}
 	// domain调用
 	idMap, errors, itemOutputs, err := e.evaluationSetItemService.BatchCreateEvaluationSetItems(ctx, &entity.BatchCreateEvaluationSetItemsParam{
-		SpaceID:          req.WorkspaceID,
-		EvaluationSetID:  req.EvaluationSetID,
-		Items:            evaluation_set.ItemDTO2DOs(req.Items),
-		SkipInvalidItems: req.SkipInvalidItems,
-		AllowPartialAdd:  req.AllowPartialAdd,
+		SpaceID:           req.WorkspaceID,
+		EvaluationSetID:   req.EvaluationSetID,
+		Items:             evaluation_set.ItemDTO2DOs(req.Items),
+		SkipInvalidItems:  req.SkipInvalidItems,
+		AllowPartialAdd:   req.AllowPartialAdd,
+		FieldWriteOptions: evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions),
 	})
 	if err != nil {
 		return nil, err
@@ -434,7 +462,7 @@ func (e *EvaluationSetApplicationImpl) UpdateEvaluationSetItem(ctx context.Conte
 		return nil, err
 	}
 	// domain调用
-	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns))
+	err = e.evaluationSetItemService.UpdateEvaluationSetItem(ctx, req.WorkspaceID, req.EvaluationSetID, req.ItemID, evaluation_set.TurnDTO2DOs(req.GetEvaluationSetID(), req.GetItemID(), req.Turns), evaluation_set.FieldWriteOptionDTO2DOs(req.FieldWriteOptions))
 	if err != nil {
 		return nil, err
 	}
@@ -827,6 +855,7 @@ func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Con
 		EvaluationSetID: req.EvaluationSetID,
 		ItemPK:          req.GetItemPk(),
 		FieldName:       req.GetFieldName(),
+		FieldKey:        gptr.Of(req.GetFieldKey()),
 		TurnID:          req.TurnID,
 	})
 	if err != nil {

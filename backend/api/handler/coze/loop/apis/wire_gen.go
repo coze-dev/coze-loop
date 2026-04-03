@@ -92,6 +92,10 @@ func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Pr
 	if err != nil {
 		return nil, err
 	}
+	toolManageService, err := application2.InitToolManageApplication(idgen2, db2, redisCli, authClient, userClient)
+	if err != nil {
+		return nil, err
+	}
 	promptDebugService, err := application2.InitPromptDebugApplication(idgen2, db2, redisCli, meter, configFactory, llmClient, authClient, fileClient, benefitSvc)
 	if err != nil {
 		return nil, err
@@ -100,11 +104,11 @@ func InitPromptHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Pr
 	if err != nil {
 		return nil, err
 	}
-	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, meter, configFactory, limiterFactory, llmClient, authClient, fileClient)
+	promptOpenAPIService, err := application2.InitPromptOpenAPIApplication(idgen2, db2, redisCli, meter, configFactory, limiterFactory, llmClient, authClient, fileClient, userClient)
 	if err != nil {
 		return nil, err
 	}
-	promptHandler := NewPromptHandler(promptManageService, promptDebugService, promptExecuteService, promptOpenAPIService)
+	promptHandler := NewPromptHandler(promptManageService, toolManageService, promptDebugService, promptExecuteService, promptOpenAPIService)
 	return promptHandler, nil
 }
 
@@ -197,7 +201,7 @@ var (
 		NewLLMHandler, application3.InitManageApplication, application3.InitRuntimeApplication,
 	)
 	promptSet = wire.NewSet(
-		NewPromptHandler, application2.InitPromptManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
+		NewPromptHandler, application2.InitPromptManageApplication, application2.InitToolManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
 	)
 	evaluationSet = wire.NewSet(
 		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication,

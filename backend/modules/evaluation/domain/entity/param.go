@@ -26,6 +26,7 @@ type CreateEvaluationSetWithImportParam struct {
 	Source              *DatasetIOEndpoint
 	FieldMappings       []*FieldMapping
 	Session             *Session
+	Option              *DatasetIOJobOption
 }
 
 type UpdateEvaluationSetParam struct {
@@ -75,6 +76,8 @@ type GetEvaluationSetItemFieldParam struct {
 	ItemPK int64
 	// 列名
 	FieldName string
+	// 列的唯一键，用于精确查找
+	FieldKey *string
 	// 当 item 为多轮时，必须提供
 	TurnID *int64
 }
@@ -86,7 +89,8 @@ type BatchCreateEvaluationSetItemsParam struct {
 	// items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
 	SkipInvalidItems *bool
 	// 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
-	AllowPartialAdd *bool
+	AllowPartialAdd   *bool
+	FieldWriteOptions []*FieldWriteOption
 }
 
 type BatchUpdateEvaluationSetItemsParam struct {
