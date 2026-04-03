@@ -18,6 +18,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/collector"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/span_context_extractor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -68,32 +69,35 @@ func NewOpenAPIApplication(
 	metrics metrics.ITraceMetrics,
 	collector collector.ICollectorProvider,
 	timeRange time_range.ITimeRangeProvider,
+	spanContextExtractor span_context_extractor.ISpanContextExtractor,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
-		traceService: traceService,
-		auth:         auth,
-		benefit:      benefit,
-		tenant:       tenant,
-		workspace:    workspace,
-		rateLimiter:  rateLimiter.NewRateLimiter(),
-		traceConfig:  traceConfig,
-		metrics:      metrics,
-		collector:    collector,
-		timeRange:    timeRange,
+		traceService:         traceService,
+		auth:                 auth,
+		benefit:              benefit,
+		tenant:               tenant,
+		workspace:            workspace,
+		rateLimiter:          rateLimiter.NewRateLimiter(),
+		traceConfig:          traceConfig,
+		metrics:              metrics,
+		collector:            collector,
+		timeRange:            timeRange,
+		spanContextExtractor: spanContextExtractor,
 	}, nil
 }
 
 type OpenAPIApplication struct {
-	traceService service.ITraceService
-	auth         rpc.IAuthProvider
-	benefit      benefit.IBenefitService
-	tenant       tenant.ITenantProvider
-	workspace    workspace.IWorkSpaceProvider
-	rateLimiter  limiter.IRateLimiter
-	traceConfig  config.ITraceConfig
-	metrics      metrics.ITraceMetrics
-	collector    collector.ICollectorProvider
-	timeRange    time_range.ITimeRangeProvider
+	traceService         service.ITraceService
+	auth                 rpc.IAuthProvider
+	benefit              benefit.IBenefitService
+	tenant               tenant.ITenantProvider
+	workspace            workspace.IWorkSpaceProvider
+	rateLimiter          limiter.IRateLimiter
+	traceConfig          config.ITraceConfig
+	metrics              metrics.ITraceMetrics
+	collector            collector.ICollectorProvider
+	timeRange            time_range.ITimeRangeProvider
+	spanContextExtractor span_context_extractor.ISpanContextExtractor
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -114,7 +118,11 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 			return nil, err
 		}
 		// unpack source
-		sourceMap := o.unpackSource(ctx, spanMap[workspaceId])
+		spans := tconv.SpanListDTO2DO(spanMap[workspaceId])
+		for i := range spans {
+			spans[i].CallType = o.spanContextExtractor.GetCallType(ctx, spans[i])
+		}
+		sourceMap := o.unpackSource(ctx, spans)
 		for source := range sourceMap {
 			// check benefit
 			benefitRes, err := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
@@ -133,18 +141,12 @@ func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.Inge
 					WhichIsEnough:    -1,
 				}
 			}
-			if !benefitRes.IsEnough {
+			if !benefitRes.IsEnough || !benefitRes.AccountAvailable {
 				hasErr = true
 				continue
-			} else if !benefitRes.AccountAvailable {
-				return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode)
 			}
 			// ingest
-			spans := tconv.SpanListDTO2DO(sourceMap[source])
-			for i := range spans {
-				spans[i].CallType = "Custom"
-			}
-			tenantSpanMap := o.unpackTenant(ctx, spans)
+			tenantSpanMap := o.unpackTenant(ctx, sourceMap[source])
 			for ingestTenant := range tenantSpanMap {
 				if err = o.validateIngestTracesReqByTenant(ctx, ingestTenant, req); err != nil {
 					return nil, err
@@ -188,46 +190,18 @@ func (o *OpenAPIApplication) unpackSpace(ctx context.Context, spans []*span.Inpu
 	return spansMap
 }
 
-func (o *OpenAPIApplication) unpackSource(ctx context.Context, spans []*span.InputSpan) map[int64][]*span.InputSpan {
-	if spans == nil {
-		return nil
-	}
-	spansMap := make(map[int64][]*span.InputSpan)
-	for i := range spans {
-		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
-			Tags:       spans[i].TagsString,
-			SystemTags: spans[i].SystemTagsString,
-		})
-		if err != nil {
-			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
-			continue
-		}
-		if spansMap[result.Source] == nil {
-			spansMap[result.Source] = make([]*span.InputSpan, 0)
-		}
-		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
-	}
-	return spansMap
-}
-
-func (o *OpenAPIApplication) unpackOtelSource(ctx context.Context, spans []*loop_span.Span) map[int64][]*loop_span.Span {
+func (o *OpenAPIApplication) unpackSource(ctx context.Context, spans []*loop_span.Span) map[int64][]*loop_span.Span {
 	if spans == nil {
 		return nil
 	}
 	spansMap := make(map[int64][]*loop_span.Span)
 	for i := range spans {
-		result, err := o.benefit.GetTraceBenefitSource(ctx, &benefit.GetTraceBenefitSourceParams{
-			Tags:       spans[i].TagsString,
-			SystemTags: spans[i].SystemTagsString,
-		})
-		if err != nil {
-			logs.CtxError(ctx, "Fail to get benefit source, %v", err)
-			continue
+		source := o.spanContextExtractor.GetBenefitSource(ctx, spans[i].CallType)
+
+		if spansMap[source] == nil {
+			spansMap[source] = make([]*loop_span.Span, 0)
 		}
-		if spansMap[result.Source] == nil {
-			spansMap[result.Source] = make([]*loop_span.Span, 0)
-		}
-		spansMap[result.Source] = append(spansMap[result.Source], spans[i])
+		spansMap[source] = append(spansMap[source], spans[i])
 	}
 	return spansMap
 }
@@ -307,7 +281,10 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 		connectorUid := session.UserIDInCtxOrEmpty(ctx)
 
 		spans := tconv.OtelSpans2LoopSpans(otel.OtelSpansConvertToSendSpans(ctx, workspaceId, otelSpans))
-		sourceSpanMap := o.unpackOtelSource(ctx, spans)
+		for i := range spans {
+			spans[i].CallType = o.spanContextExtractor.GetCallType(ctx, spans[i])
+		}
+		sourceSpanMap := o.unpackSource(ctx, spans)
 		for source := range sourceSpanMap {
 			benefitRes, e := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 				Source:       source,

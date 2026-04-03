@@ -3,8 +3,11 @@
 
 package consts
 
+type ctxKey string
+
 const (
-	CtxKeyLogID = "K_LOGID"
+	CtxKeyLogID         = "K_LOGID"
+	CtxKeyFlowMethodKey = ctxKey("X_FLOW_METHOD")
 
 	CookieLanguageKey = "i18next"
 	LocaleZhCN        = "zh-CN"
