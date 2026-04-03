@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -43,6 +44,7 @@ type AutoEvaluateProcessor struct {
 	taskRepo              repo.ITaskRepo
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
+	workflowProvider      taskhook.IWorkflowProvider
 }
 
 func NewAutoEvaluateProcessor(
@@ -52,7 +54,12 @@ func NewAutoEvaluateProcessor(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
+	workflowProvider taskhook.IWorkflowProvider,
 ) *AutoEvaluateProcessor {
+	if workflowProvider == nil {
+		logs.Info("Auto Evaluate workflowProvider is nil")
+		workflowProvider = taskhook.NewNoopTaskHookProvider()
+	}
 	return &AutoEvaluateProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
@@ -60,6 +67,7 @@ func NewAutoEvaluateProcessor(
 		taskRepo:              taskRepo,
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
+		workflowProvider:      workflowProvider,
 	}
 }
 
@@ -268,6 +276,15 @@ func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskex
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
+
+		if err := p.workflowProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+			Task:    param.Task,
+			TaskRun: param.TaskRun,
+		}); err != nil {
+			logs.CtxError(ctx, "workflowProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
+			return err
+		}
+
 		if err := p.taskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(param.Task.WorkspaceID, 10), param.Task.ID); err != nil {
 			logs.CtxError(ctx, "RemoveNonFinalTask failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
@@ -344,7 +361,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		category,
 		schema,
 		sessionInfo,
-		ptr.Of(entity.BizCategoryFromOnlineTrace),
+		ptr.Of(entity.BizCategoryFromOnlineTrace), false, 0,
 	))
 	if err != nil {
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
@@ -370,6 +387,12 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		SourceType:            gptr.Of(expt.SourceType_AutoTask),
 		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
 		Session:               sessionInfo,
+		IsWorkflowScheduled:   currentTask.TaskConfig.IsWorkflowScheduled,
+	}
+	if currentTask.TaskConfig.EvaluationExperimentConfig != nil {
+		submitExperimentReq.ItemRetryNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemMaxRetryCount
+		submitExperimentReq.ItemConcurNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemConcurrencyCount
+		submitExperimentReq.ExptTemplateID = currentTask.TaskConfig.EvaluationExperimentConfig.ExptTemplateID
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)

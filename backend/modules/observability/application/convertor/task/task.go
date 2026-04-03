@@ -78,6 +78,10 @@ func TaskDO2DTO(ctx context.Context, v *entity.ObservabilityTask, userMap map[st
 		taskInfo.TaskSource = gptr.Of(*v.TaskSource)
 	}
 
+	if v.WorkflowID != 0 {
+		taskInfo.WorkflowID = ptr.Of(v.WorkflowID)
+	}
+
 	return taskInfo
 }
 
@@ -117,9 +121,16 @@ func TaskConfigDO2DTO(v *entity.TaskConfig) *task.TaskConfig {
 			dataReflowConfigs = append(dataReflowConfigs, DataReflowConfigDO2DTO(config))
 		}
 	}
+	var evaluationExperimentConfig *task.EvaluationExperimentConfig
+	if v.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = EvaluationExperimentConfigDO2DTO(v.EvaluationExperimentConfig)
+	}
 	return &task.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
+		SourceInfo:                 SourceInfoListDO2DTO(v.SourceInfo),
+		IsWorkflowScheduled:        v.IsWorkflowScheduled,
 	}
 }
 
@@ -145,6 +156,52 @@ func AutoEvaluateConfigDO2DTO(v *entity.AutoEvaluateConfig) *task.AutoEvaluateCo
 	}
 }
 
+func EvaluationExperimentConfigDO2DTO(v *entity.EvaluationExperimentConfig) *task.EvaluationExperimentConfig {
+	if v == nil {
+		return nil
+	}
+	return &task.EvaluationExperimentConfig{
+		ItemConcurrencyCount: v.ItemConcurrencyCount,
+		ItemMaxRetryCount:    v.ItemMaxRetryCount,
+		SourceTargetID:       v.SourceTargetID,
+		ExptTemplateID:       v.ExptTemplateID,
+	}
+}
+
+func SourceInfoListDO2DTO(vs []*entity.SourceInfo) []*task.SourceInfo {
+	if len(vs) == 0 {
+		return nil
+	}
+	result := make([]*task.SourceInfo, 0, len(vs))
+	for _, v := range vs {
+		if v == nil {
+			continue
+		}
+		result = append(result, &task.SourceInfo{
+			Name:    v.Name,
+			Version: v.Version,
+		})
+	}
+	return result
+}
+
+func SourceInfoListDTO2DO(vs []*task.SourceInfo) []*entity.SourceInfo {
+	if len(vs) == 0 {
+		return nil
+	}
+	result := make([]*entity.SourceInfo, 0, len(vs))
+	for _, v := range vs {
+		if v == nil {
+			continue
+		}
+		result = append(result, &entity.SourceInfo{
+			Name:    v.Name,
+			Version: v.Version,
+		})
+	}
+	return result
+}
+
 func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 	if v == nil {
 		return nil
@@ -156,10 +213,11 @@ func DataReflowConfigDO2DTO(v *entity.DataReflowConfig) *task.DataReflowConfig {
 		}
 	}
 	return &task.DataReflowConfig{
-		DatasetID:     v.DatasetID,
-		DatasetName:   v.DatasetName,
-		DatasetSchema: ptr.Of(v.DatasetSchema),
-		FieldMappings: fieldMappings,
+		DatasetID:       v.DatasetID,
+		DatasetName:     v.DatasetName,
+		DatasetSchema:   ptr.Of(v.DatasetSchema),
+		FieldMappings:   fieldMappings,
+		DatasetCategory: v.DatasetCategory,
 	}
 }
 
@@ -341,6 +399,7 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 		CreatedBy:             createdBy,
 		UpdatedBy:             updatedBy,
 		BackfillEffectiveTime: EffectiveTimeDTO2DO(taskDTO.GetRule().GetBackfillEffectiveTime()),
+		WorkflowID:            gptr.Indirect(taskDTO.WorkflowID),
 	}
 
 	if taskDTO.TaskSource != nil {
@@ -351,8 +410,9 @@ func TaskDTO2DO(taskDTO *task.Task) *entity.ObservabilityTask {
 }
 
 func SpanFilterDTO2DO(spanFilterFields *filter.SpanFilterFields) *entity.SpanFilterFields {
+	// avoid npe
 	if spanFilterFields == nil {
-		return nil
+		return new(entity.SpanFilterFields)
 	}
 	return &entity.SpanFilterFields{
 		PlatformType: loop_span.PlatformType(*spanFilterFields.PlatformType),
@@ -448,15 +508,28 @@ func TaskConfigDTO2DO(taskConfig *task.TaskConfig) *entity.TaskConfig {
 			}
 		}
 		dataReflowConfigs = append(dataReflowConfigs, &entity.DataReflowConfig{
-			DatasetID:     dataReflowConfig.DatasetID,
-			DatasetName:   dataReflowConfig.DatasetName,
-			DatasetSchema: *dataReflowConfig.DatasetSchema,
-			FieldMappings: fieldMappings,
+			DatasetID:       dataReflowConfig.DatasetID,
+			DatasetName:     dataReflowConfig.DatasetName,
+			DatasetSchema:   *dataReflowConfig.DatasetSchema,
+			FieldMappings:   fieldMappings,
+			DatasetCategory: dataReflowConfig.DatasetCategory,
 		})
 	}
+	var evaluationExperimentConfig *entity.EvaluationExperimentConfig
+	if taskConfig.EvaluationExperimentConfig != nil {
+		evaluationExperimentConfig = &entity.EvaluationExperimentConfig{
+			ItemConcurrencyCount: taskConfig.EvaluationExperimentConfig.ItemConcurrencyCount,
+			ItemMaxRetryCount:    taskConfig.EvaluationExperimentConfig.ItemMaxRetryCount,
+			SourceTargetID:       taskConfig.EvaluationExperimentConfig.SourceTargetID,
+			ExptTemplateID:       taskConfig.EvaluationExperimentConfig.ExptTemplateID,
+		}
+	}
 	return &entity.TaskConfig{
-		AutoEvaluateConfigs: autoEvaluateConfigs,
-		DataReflowConfig:    dataReflowConfigs,
+		AutoEvaluateConfigs:        autoEvaluateConfigs,
+		DataReflowConfig:           dataReflowConfigs,
+		EvaluationExperimentConfig: evaluationExperimentConfig,
+		SourceInfo:                 SourceInfoListDTO2DO(taskConfig.SourceInfo),
+		IsWorkflowScheduled:        taskConfig.IsWorkflowScheduled,
 	}
 }
 

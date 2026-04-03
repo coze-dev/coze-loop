@@ -82,6 +82,16 @@ type ListAnnotationsParam struct {
 	EndAt           int64 // ms
 }
 
+type ListWorkspaceAnnotationsParam struct {
+	WorkSpaceID     string
+	Tenants         []string
+	AnnotationType  string
+	DescByUpdatedAt bool
+	StartAt         int64 // ms
+	EndAt           int64 // ms
+	Limit           int64
+}
+
 type InsertAnnotationParam struct {
 	WorkSpaceID    string
 	Tenant         string
@@ -115,6 +125,7 @@ type ITraceRepo interface {
 	GetPreSpanIDs(context.Context, *GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error)
 	GetTrace(context.Context, *GetTraceParam) (*GetTraceResult, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
+	ListWorkspaceAnnotations(context.Context, *ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error
 	UpsertTrajectoryConfig(context.Context, *UpsertTrajectoryConfigParam) error

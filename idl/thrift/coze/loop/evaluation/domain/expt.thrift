@@ -32,6 +32,12 @@ enum SourceType {
     AutoTask = 2
 }
 
+
+typedef string ExptTriggerType
+const ExptTriggerType Manual = "manual"
+const ExptTriggerType OpenAPI = "openapi"
+const ExptTriggerType Schedule = "schedule"
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
@@ -70,6 +76,8 @@ struct Experiment {
     // 评估器得分加权配置
     61: optional ExptScoreWeight score_weight_config
     62: optional bool enable_weighted_score
+
+    70: optional ExptTriggerType trigger_type
 }
 
 // 实验模板基础信息
@@ -403,6 +411,8 @@ enum FieldType {
     ExperimentTemplateID = 70
     EvaluatorWeightedScore = 71
     UpdatedBy = 72
+    CronActivate = 73
+    TriggerType = 74
 }
 
 // 字段过滤器

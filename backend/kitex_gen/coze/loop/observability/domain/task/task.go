@@ -5,6 +5,7 @@ package task
 import (
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
+	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
@@ -83,6 +84,8 @@ type Task struct {
 	BackfillTaskDetail *RunDetail `thrift:"backfill_task_detail,10,optional" frugal:"10,optional,RunDetail" form:"backfill_task_detail" json:"backfill_task_detail,omitempty" query:"backfill_task_detail"`
 	// 创建来源
 	TaskSource *TaskSource `thrift:"task_source,11,optional" frugal:"11,optional,string" form:"task_source" json:"task_source,omitempty" query:"task_source"`
+	// 对应工作流 ID
+	WorkflowID *int64 `thrift:"workflow_id,12,optional" frugal:"12,optional,i64" json:"workflow_id" form:"workflow_id" query:"workflow_id"`
 	// 基础信息
 	BaseInfo *common.BaseInfo `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
@@ -216,6 +219,18 @@ func (p *Task) GetTaskSource() (v TaskSource) {
 	return *p.TaskSource
 }
 
+var Task_WorkflowID_DEFAULT int64
+
+func (p *Task) GetWorkflowID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkflowID() {
+		return Task_WorkflowID_DEFAULT
+	}
+	return *p.WorkflowID
+}
+
 var Task_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Task) GetBaseInfo() (v *common.BaseInfo) {
@@ -260,6 +275,9 @@ func (p *Task) SetBackfillTaskDetail(val *RunDetail) {
 func (p *Task) SetTaskSource(val *TaskSource) {
 	p.TaskSource = val
 }
+func (p *Task) SetWorkflowID(val *int64) {
+	p.WorkflowID = val
+}
 func (p *Task) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -276,6 +294,7 @@ var fieldIDToName_Task = map[int16]string{
 	9:   "task_detail",
 	10:  "backfill_task_detail",
 	11:  "task_source",
+	12:  "workflow_id",
 	100: "base_info",
 }
 
@@ -313,6 +332,10 @@ func (p *Task) IsSetBackfillTaskDetail() bool {
 
 func (p *Task) IsSetTaskSource() bool {
 	return p.TaskSource != nil
+}
+
+func (p *Task) IsSetWorkflowID() bool {
+	return p.WorkflowID != nil
 }
 
 func (p *Task) IsSetBaseInfo() bool {
@@ -424,6 +447,14 @@ func (p *Task) Read(iprot thrift.TProtocol) (err error) {
 		case 11:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField11(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 12:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField12(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -586,6 +617,17 @@ func (p *Task) ReadField11(iprot thrift.TProtocol) error {
 	p.TaskSource = _field
 	return nil
 }
+func (p *Task) ReadField12(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkflowID = _field
+	return nil
+}
 func (p *Task) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -643,6 +685,10 @@ func (p *Task) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField11(oprot); err != nil {
 			fieldId = 11
+			goto WriteFieldError
+		}
+		if err = p.writeField12(oprot); err != nil {
+			fieldId = 12
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -861,6 +907,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
+func (p *Task) writeField12(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkflowID() {
+		if err = oprot.WriteFieldBegin("workflow_id", thrift.I64, 12); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkflowID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 12 end error: ", p), err)
+}
 func (p *Task) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -925,6 +989,9 @@ func (p *Task) DeepEqual(ano *Task) bool {
 		return false
 	}
 	if !p.Field11DeepEqual(ano.TaskSource) {
+		return false
+	}
+	if !p.Field12DeepEqual(ano.WorkflowID) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -1031,6 +1098,18 @@ func (p *Task) Field11DeepEqual(src *TaskSource) bool {
 		return false
 	}
 	if strings.Compare(*p.TaskSource, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Task) Field12DeepEqual(src *int64) bool {
+
+	if p.WorkflowID == src {
+		return true
+	} else if p.WorkflowID == nil || src == nil {
+		return false
+	}
+	if *p.WorkflowID != *src {
 		return false
 	}
 	return true
@@ -2260,12 +2339,688 @@ func (p *EffectiveTime) Field2DeepEqual(src *int64) bool {
 	return true
 }
 
+type EvaluationExperimentConfig struct {
+	ItemConcurrencyCount *int32  `thrift:"item_concurrency_count,1,optional" frugal:"1,optional,i32" json:"item_concurrency_count" form:"item_concurrency_count" query:"item_concurrency_count"`
+	ItemMaxRetryCount    *int32  `thrift:"item_max_retry_count,2,optional" frugal:"2,optional,i32" json:"item_max_retry_count" form:"item_max_retry_count" query:"item_max_retry_count"`
+	SourceTargetID       *string `thrift:"source_target_id,3,optional" frugal:"3,optional,string" json:"source_target_id" form:"source_target_id" query:"source_target_id"`
+	ExptTemplateID       *int64  `thrift:"expt_template_id,4,optional" frugal:"4,optional,i64" json:"expt_template_id" form:"expt_template_id" query:"expt_template_id"`
+}
+
+func NewEvaluationExperimentConfig() *EvaluationExperimentConfig {
+	return &EvaluationExperimentConfig{}
+}
+
+func (p *EvaluationExperimentConfig) InitDefault() {
+}
+
+var EvaluationExperimentConfig_ItemConcurrencyCount_DEFAULT int32
+
+func (p *EvaluationExperimentConfig) GetItemConcurrencyCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemConcurrencyCount() {
+		return EvaluationExperimentConfig_ItemConcurrencyCount_DEFAULT
+	}
+	return *p.ItemConcurrencyCount
+}
+
+var EvaluationExperimentConfig_ItemMaxRetryCount_DEFAULT int32
+
+func (p *EvaluationExperimentConfig) GetItemMaxRetryCount() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemMaxRetryCount() {
+		return EvaluationExperimentConfig_ItemMaxRetryCount_DEFAULT
+	}
+	return *p.ItemMaxRetryCount
+}
+
+var EvaluationExperimentConfig_SourceTargetID_DEFAULT string
+
+func (p *EvaluationExperimentConfig) GetSourceTargetID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceTargetID() {
+		return EvaluationExperimentConfig_SourceTargetID_DEFAULT
+	}
+	return *p.SourceTargetID
+}
+
+var EvaluationExperimentConfig_ExptTemplateID_DEFAULT int64
+
+func (p *EvaluationExperimentConfig) GetExptTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplateID() {
+		return EvaluationExperimentConfig_ExptTemplateID_DEFAULT
+	}
+	return *p.ExptTemplateID
+}
+func (p *EvaluationExperimentConfig) SetItemConcurrencyCount(val *int32) {
+	p.ItemConcurrencyCount = val
+}
+func (p *EvaluationExperimentConfig) SetItemMaxRetryCount(val *int32) {
+	p.ItemMaxRetryCount = val
+}
+func (p *EvaluationExperimentConfig) SetSourceTargetID(val *string) {
+	p.SourceTargetID = val
+}
+func (p *EvaluationExperimentConfig) SetExptTemplateID(val *int64) {
+	p.ExptTemplateID = val
+}
+
+var fieldIDToName_EvaluationExperimentConfig = map[int16]string{
+	1: "item_concurrency_count",
+	2: "item_max_retry_count",
+	3: "source_target_id",
+	4: "expt_template_id",
+}
+
+func (p *EvaluationExperimentConfig) IsSetItemConcurrencyCount() bool {
+	return p.ItemConcurrencyCount != nil
+}
+
+func (p *EvaluationExperimentConfig) IsSetItemMaxRetryCount() bool {
+	return p.ItemMaxRetryCount != nil
+}
+
+func (p *EvaluationExperimentConfig) IsSetSourceTargetID() bool {
+	return p.SourceTargetID != nil
+}
+
+func (p *EvaluationExperimentConfig) IsSetExptTemplateID() bool {
+	return p.ExptTemplateID != nil
+}
+
+func (p *EvaluationExperimentConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationExperimentConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationExperimentConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemConcurrencyCount = _field
+	return nil
+}
+func (p *EvaluationExperimentConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemMaxRetryCount = _field
+	return nil
+}
+func (p *EvaluationExperimentConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceTargetID = _field
+	return nil
+}
+func (p *EvaluationExperimentConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return nil
+}
+
+func (p *EvaluationExperimentConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("EvaluationExperimentConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationExperimentConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemConcurrencyCount() {
+		if err = oprot.WriteFieldBegin("item_concurrency_count", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemConcurrencyCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *EvaluationExperimentConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemMaxRetryCount() {
+		if err = oprot.WriteFieldBegin("item_max_retry_count", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.ItemMaxRetryCount); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *EvaluationExperimentConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceTargetID() {
+		if err = oprot.WriteFieldBegin("source_target_id", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SourceTargetID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *EvaluationExperimentConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplateID() {
+		if err = oprot.WriteFieldBegin("expt_template_id", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+
+func (p *EvaluationExperimentConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationExperimentConfig(%+v)", *p)
+
+}
+
+func (p *EvaluationExperimentConfig) DeepEqual(ano *EvaluationExperimentConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.ItemConcurrencyCount) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ItemMaxRetryCount) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SourceTargetID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ExptTemplateID) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationExperimentConfig) Field1DeepEqual(src *int32) bool {
+
+	if p.ItemConcurrencyCount == src {
+		return true
+	} else if p.ItemConcurrencyCount == nil || src == nil {
+		return false
+	}
+	if *p.ItemConcurrencyCount != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluationExperimentConfig) Field2DeepEqual(src *int32) bool {
+
+	if p.ItemMaxRetryCount == src {
+		return true
+	} else if p.ItemMaxRetryCount == nil || src == nil {
+		return false
+	}
+	if *p.ItemMaxRetryCount != *src {
+		return false
+	}
+	return true
+}
+func (p *EvaluationExperimentConfig) Field3DeepEqual(src *string) bool {
+
+	if p.SourceTargetID == src {
+		return true
+	} else if p.SourceTargetID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SourceTargetID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *EvaluationExperimentConfig) Field4DeepEqual(src *int64) bool {
+
+	if p.ExptTemplateID == src {
+		return true
+	} else if p.ExptTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.ExptTemplateID != *src {
+		return false
+	}
+	return true
+}
+
+type SourceInfo struct {
+	Name    *string `thrift:"name,1,optional" frugal:"1,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+}
+
+func NewSourceInfo() *SourceInfo {
+	return &SourceInfo{}
+}
+
+func (p *SourceInfo) InitDefault() {
+}
+
+var SourceInfo_Name_DEFAULT string
+
+func (p *SourceInfo) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return SourceInfo_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var SourceInfo_Version_DEFAULT string
+
+func (p *SourceInfo) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return SourceInfo_Version_DEFAULT
+	}
+	return *p.Version
+}
+func (p *SourceInfo) SetName(val *string) {
+	p.Name = val
+}
+func (p *SourceInfo) SetVersion(val *string) {
+	p.Version = val
+}
+
+var fieldIDToName_SourceInfo = map[int16]string{
+	1: "name",
+	2: "version",
+}
+
+func (p *SourceInfo) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *SourceInfo) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *SourceInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SourceInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SourceInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *SourceInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+
+func (p *SourceInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SourceInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SourceInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SourceInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SourceInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SourceInfo(%+v)", *p)
+
+}
+
+func (p *SourceInfo) DeepEqual(ano *SourceInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	return true
+}
+
+func (p *SourceInfo) Field1DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SourceInfo) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+
 // TaskConfig
 type TaskConfig struct {
-	// 配置的评测规则信息
+	// 配置的评测规则信息 evaluator 维度
 	AutoEvaluateConfigs []*AutoEvaluateConfig `thrift:"auto_evaluate_configs,1,optional" frugal:"1,optional,list<AutoEvaluateConfig>" form:"auto_evaluate_configs" json:"auto_evaluate_configs,omitempty" query:"auto_evaluate_configs"`
 	// 配置的数据回流的数据集信息
 	DataReflowConfig []*DataReflowConfig `thrift:"data_reflow_config,2,optional" frugal:"2,optional,list<DataReflowConfig>" form:"data_reflow_config" json:"data_reflow_config,omitempty" query:"data_reflow_config"`
+	// 评测实验配置 task 维度
+	EvaluationExperimentConfig *EvaluationExperimentConfig `thrift:"evaluation_experiment_config,3,optional" frugal:"3,optional,EvaluationExperimentConfig" form:"evaluation_experiment_config" json:"evaluation_experiment_config,omitempty" query:"evaluation_experiment_config"`
+	// 数据源信息
+	SourceInfo []*SourceInfo `thrift:"source_info,4,optional" frugal:"4,optional,list<SourceInfo>" form:"source_info" json:"source_info,omitempty" query:"source_info"`
+	// 工作流周期性任务
+	IsWorkflowScheduled *bool `thrift:"is_workflow_scheduled,5,optional" frugal:"5,optional,bool" form:"is_workflow_scheduled" json:"is_workflow_scheduled,omitempty" query:"is_workflow_scheduled"`
 }
 
 func NewTaskConfig() *TaskConfig {
@@ -2298,16 +3053,64 @@ func (p *TaskConfig) GetDataReflowConfig() (v []*DataReflowConfig) {
 	}
 	return p.DataReflowConfig
 }
+
+var TaskConfig_EvaluationExperimentConfig_DEFAULT *EvaluationExperimentConfig
+
+func (p *TaskConfig) GetEvaluationExperimentConfig() (v *EvaluationExperimentConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluationExperimentConfig() {
+		return TaskConfig_EvaluationExperimentConfig_DEFAULT
+	}
+	return p.EvaluationExperimentConfig
+}
+
+var TaskConfig_SourceInfo_DEFAULT []*SourceInfo
+
+func (p *TaskConfig) GetSourceInfo() (v []*SourceInfo) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceInfo() {
+		return TaskConfig_SourceInfo_DEFAULT
+	}
+	return p.SourceInfo
+}
+
+var TaskConfig_IsWorkflowScheduled_DEFAULT bool
+
+func (p *TaskConfig) GetIsWorkflowScheduled() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsWorkflowScheduled() {
+		return TaskConfig_IsWorkflowScheduled_DEFAULT
+	}
+	return *p.IsWorkflowScheduled
+}
 func (p *TaskConfig) SetAutoEvaluateConfigs(val []*AutoEvaluateConfig) {
 	p.AutoEvaluateConfigs = val
 }
 func (p *TaskConfig) SetDataReflowConfig(val []*DataReflowConfig) {
 	p.DataReflowConfig = val
 }
+func (p *TaskConfig) SetEvaluationExperimentConfig(val *EvaluationExperimentConfig) {
+	p.EvaluationExperimentConfig = val
+}
+func (p *TaskConfig) SetSourceInfo(val []*SourceInfo) {
+	p.SourceInfo = val
+}
+func (p *TaskConfig) SetIsWorkflowScheduled(val *bool) {
+	p.IsWorkflowScheduled = val
+}
 
 var fieldIDToName_TaskConfig = map[int16]string{
 	1: "auto_evaluate_configs",
 	2: "data_reflow_config",
+	3: "evaluation_experiment_config",
+	4: "source_info",
+	5: "is_workflow_scheduled",
 }
 
 func (p *TaskConfig) IsSetAutoEvaluateConfigs() bool {
@@ -2316,6 +3119,18 @@ func (p *TaskConfig) IsSetAutoEvaluateConfigs() bool {
 
 func (p *TaskConfig) IsSetDataReflowConfig() bool {
 	return p.DataReflowConfig != nil
+}
+
+func (p *TaskConfig) IsSetEvaluationExperimentConfig() bool {
+	return p.EvaluationExperimentConfig != nil
+}
+
+func (p *TaskConfig) IsSetSourceInfo() bool {
+	return p.SourceInfo != nil
+}
+
+func (p *TaskConfig) IsSetIsWorkflowScheduled() bool {
+	return p.IsWorkflowScheduled != nil
 }
 
 func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2347,6 +3162,30 @@ func (p *TaskConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2427,6 +3266,48 @@ func (p *TaskConfig) ReadField2(iprot thrift.TProtocol) error {
 	p.DataReflowConfig = _field
 	return nil
 }
+func (p *TaskConfig) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewEvaluationExperimentConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.EvaluationExperimentConfig = _field
+	return nil
+}
+func (p *TaskConfig) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*SourceInfo, 0, size)
+	values := make([]SourceInfo, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.SourceInfo = _field
+	return nil
+}
+func (p *TaskConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsWorkflowScheduled = _field
+	return nil
+}
 
 func (p *TaskConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2440,6 +3321,18 @@ func (p *TaskConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2512,6 +3405,68 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *TaskConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluationExperimentConfig() {
+		if err = oprot.WriteFieldBegin("evaluation_experiment_config", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.EvaluationExperimentConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *TaskConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceInfo() {
+		if err = oprot.WriteFieldBegin("source_info", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.SourceInfo)); err != nil {
+			return err
+		}
+		for _, v := range p.SourceInfo {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *TaskConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsWorkflowScheduled() {
+		if err = oprot.WriteFieldBegin("is_workflow_scheduled", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsWorkflowScheduled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *TaskConfig) String() string {
 	if p == nil {
@@ -2531,6 +3486,15 @@ func (p *TaskConfig) DeepEqual(ano *TaskConfig) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.DataReflowConfig) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.EvaluationExperimentConfig) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.SourceInfo) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.IsWorkflowScheduled) {
 		return false
 	}
 	return true
@@ -2562,6 +3526,38 @@ func (p *TaskConfig) Field2DeepEqual(src []*DataReflowConfig) bool {
 	}
 	return true
 }
+func (p *TaskConfig) Field3DeepEqual(src *EvaluationExperimentConfig) bool {
+
+	if !p.EvaluationExperimentConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *TaskConfig) Field4DeepEqual(src []*SourceInfo) bool {
+
+	if len(p.SourceInfo) != len(src) {
+		return false
+	}
+	for i, v := range p.SourceInfo {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *TaskConfig) Field5DeepEqual(src *bool) bool {
+
+	if p.IsWorkflowScheduled == src {
+		return true
+	} else if p.IsWorkflowScheduled == nil || src == nil {
+		return false
+	}
+	if *p.IsWorkflowScheduled != *src {
+		return false
+	}
+	return true
+}
 
 type DataReflowConfig struct {
 	// 数据集id，新增数据集时可为空
@@ -2571,6 +3567,8 @@ type DataReflowConfig struct {
 	// 数据集列数据schema
 	DatasetSchema *dataset.DatasetSchema  `thrift:"dataset_schema,3,optional" frugal:"3,optional,dataset.DatasetSchema" form:"dataset_schema" json:"dataset_schema,omitempty" query:"dataset_schema"`
 	FieldMappings []*dataset.FieldMapping `thrift:"field_mappings,4,optional" frugal:"4,optional,list<dataset.FieldMapping>" form:"field_mappings" json:"field_mappings,omitempty" query:"field_mappings"`
+	// 数据集类型
+	DatasetCategory *dataset0.DatasetCategory `thrift:"dataset_category,5,optional" frugal:"5,optional,DatasetCategory" form:"dataset_category" json:"dataset_category,omitempty" query:"dataset_category"`
 }
 
 func NewDataReflowConfig() *DataReflowConfig {
@@ -2627,6 +3625,18 @@ func (p *DataReflowConfig) GetFieldMappings() (v []*dataset.FieldMapping) {
 	}
 	return p.FieldMappings
 }
+
+var DataReflowConfig_DatasetCategory_DEFAULT dataset0.DatasetCategory
+
+func (p *DataReflowConfig) GetDatasetCategory() (v dataset0.DatasetCategory) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDatasetCategory() {
+		return DataReflowConfig_DatasetCategory_DEFAULT
+	}
+	return *p.DatasetCategory
+}
 func (p *DataReflowConfig) SetDatasetID(val *int64) {
 	p.DatasetID = val
 }
@@ -2639,12 +3649,16 @@ func (p *DataReflowConfig) SetDatasetSchema(val *dataset.DatasetSchema) {
 func (p *DataReflowConfig) SetFieldMappings(val []*dataset.FieldMapping) {
 	p.FieldMappings = val
 }
+func (p *DataReflowConfig) SetDatasetCategory(val *dataset0.DatasetCategory) {
+	p.DatasetCategory = val
+}
 
 var fieldIDToName_DataReflowConfig = map[int16]string{
 	1: "dataset_id",
 	2: "dataset_name",
 	3: "dataset_schema",
 	4: "field_mappings",
+	5: "dataset_category",
 }
 
 func (p *DataReflowConfig) IsSetDatasetID() bool {
@@ -2661,6 +3675,10 @@ func (p *DataReflowConfig) IsSetDatasetSchema() bool {
 
 func (p *DataReflowConfig) IsSetFieldMappings() bool {
 	return p.FieldMappings != nil
+}
+
+func (p *DataReflowConfig) IsSetDatasetCategory() bool {
+	return p.DatasetCategory != nil
 }
 
 func (p *DataReflowConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -2708,6 +3726,14 @@ func (p *DataReflowConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.LIST {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2795,6 +3821,18 @@ func (p *DataReflowConfig) ReadField4(iprot thrift.TProtocol) error {
 	p.FieldMappings = _field
 	return nil
 }
+func (p *DataReflowConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *dataset0.DatasetCategory
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := dataset0.DatasetCategory(v)
+		_field = &tmp
+	}
+	p.DatasetCategory = _field
+	return nil
+}
 
 func (p *DataReflowConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2816,6 +3854,10 @@ func (p *DataReflowConfig) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -2916,6 +3958,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *DataReflowConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDatasetCategory() {
+		if err = oprot.WriteFieldBegin("dataset_category", thrift.I32, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.DatasetCategory)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *DataReflowConfig) String() string {
 	if p == nil {
@@ -2941,6 +4001,9 @@ func (p *DataReflowConfig) DeepEqual(ano *DataReflowConfig) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.FieldMappings) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.DatasetCategory) {
 		return false
 	}
 	return true
@@ -2987,6 +4050,18 @@ func (p *DataReflowConfig) Field4DeepEqual(src []*dataset.FieldMapping) bool {
 		if !v.DeepEqual(_src) {
 			return false
 		}
+	}
+	return true
+}
+func (p *DataReflowConfig) Field5DeepEqual(src *dataset0.DatasetCategory) bool {
+
+	if p.DatasetCategory == src {
+		return true
+	} else if p.DatasetCategory == nil || src == nil {
+		return false
+	}
+	if *p.DatasetCategory != *src {
+		return false
 	}
 	return true
 }

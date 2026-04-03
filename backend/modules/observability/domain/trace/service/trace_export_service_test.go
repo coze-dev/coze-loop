@@ -202,6 +202,91 @@ func TestTraceExportServiceImpl_ExportTracesToDataset(t *testing.T) {
 			want:    &ExportTracesToDatasetResponse{},
 			wantErr: true,
 		},
+		{
+			name: "export traces to dataset with multimodal video",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantMock := tenantmocks.NewMockITenantProvider(ctrl)
+				datasetProviderMock := rpcmocks.NewMockIDatasetProvider(ctrl)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				traceProducerMock := mqmocks.NewMockITraceProducer(ctrl)
+				annotationProducerMock := mqmocks.NewMockIAnnotationProducer(ctrl)
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				adaptor := NewDatasetServiceAdaptor()
+				adaptor.Register(entity.DatasetCategory_General, datasetProviderMock)
+
+				tenantMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), loop_span.PlatformCozeLoop).Return([]string{"tenant1"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							TraceID:     "trace-video",
+							SpanID:      "span-video",
+							WorkspaceID: "123",
+							Input:       `[{"type": "video_url", "video_url": {"url": "http://example.com/video.mp4", "name": "test_video.mp4"}}]`,
+						},
+					},
+				}, nil)
+				datasetProviderMock.EXPECT().CreateDataset(gomock.Any(), gomock.Any()).Return(int64(101), nil)
+				datasetProviderMock.EXPECT().GetDataset(gomock.Any(), int64(123), int64(101), entity.DatasetCategory_General).Return(&entity.Dataset{
+					ID:              101,
+					Name:            "test-video-dataset",
+					DatasetCategory: entity.DatasetCategory_General,
+					DatasetVersion: entity.DatasetVersion{
+						DatasetSchema: entity.DatasetSchema{
+							FieldSchemas: []entity.FieldSchema{
+								{Name: "input", Key: ptr.Of("input"), ContentType: entity.ContentType_MultiPart},
+							},
+						},
+					},
+				}, nil)
+				datasetProviderMock.EXPECT().AddDatasetItems(gomock.Any(), int64(101), entity.DatasetCategory_General, gomock.Any()).DoAndReturn(func(ctx context.Context, datasetID int64, category entity.DatasetCategory, items []*entity.DatasetItem) ([]*entity.DatasetItem, []entity.ItemErrorGroup, error) {
+					// 可以在这里加断言，验证 items 里的数据对不对
+					for _, item := range items {
+						for k, field := range item.FieldData {
+							t.Logf("Field key: %v, Field Content: %+v", k, field.Content)
+						}
+					}
+					return items, []entity.ItemErrorGroup{}, nil
+				})
+
+				return fields{
+					traceRepo:             repoMock,
+					traceConfig:           confMock,
+					traceProducer:         traceProducerMock,
+					annotationProducer:    annotationProducerMock,
+					metrics:               metricsMock,
+					tenantProvider:        tenantMock,
+					DatasetServiceAdaptor: adaptor,
+					buildHelper:           buildHelper,
+					traceService:          &stubTraceService{},
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ExportTracesToDatasetRequest{
+					WorkspaceID:  123,
+					SpanIds:      []SpanID{{TraceID: "trace-video", SpanID: "span-video"}},
+					Category:     entity.DatasetCategory_General,
+					Config:       DatasetConfig{IsNewDataset: true, DatasetName: ptr.Of("test-video-dataset"), DatasetSchema: entity.DatasetSchema{FieldSchemas: []entity.FieldSchema{{Name: "input", ContentType: entity.ContentType_MultiPart}}}},
+					StartTime:    time.Now().Unix() - 3600,
+					EndTime:      time.Now().Unix(),
+					PlatformType: loop_span.PlatformCozeLoop,
+					ExportType:   ExportType_Append,
+					FieldMappings: []entity.FieldMapping{
+						{TraceFieldKey: "input", FieldSchema: entity.FieldSchema{Name: "input", ContentType: entity.ContentType_MultiPart}},
+					},
+				},
+			},
+			want: &ExportTracesToDatasetResponse{
+				SuccessCount: 0,
+				DatasetID:    101,
+				DatasetName:  "test-video-dataset",
+				Errors:       []entity.ItemErrorGroup{{Type: 1, Summary: "invalid multi part", ErrorCount: 1}},
+			},
+			wantErr: false,
+		},
 	}
 
 	for _, tt := range tests {

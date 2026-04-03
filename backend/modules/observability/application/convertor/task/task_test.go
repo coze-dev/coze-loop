@@ -165,6 +165,10 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 				},
 			},
 		},
+		EvaluationExperimentConfig: &kitTask.EvaluationExperimentConfig{
+			ItemConcurrencyCount: gptr.Of(int32(3)),
+			ItemMaxRetryCount:    gptr.Of(int32(4)),
+		},
 		DataReflowConfig: []*kitTask.DataReflowConfig{
 			{
 				DatasetID:   gptr.Of(int64(10)),
@@ -185,6 +189,10 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 
 	cfg := TaskConfigDTO2DO(dto)
 	if assert.NotNil(t, cfg) && assert.Len(t, cfg.AutoEvaluateConfigs, 1) {
+		if assert.NotNil(t, cfg.EvaluationExperimentConfig) {
+			assert.Equal(t, int32(3), ptr.From(cfg.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int32(4), ptr.From(cfg.EvaluationExperimentConfig.ItemMaxRetryCount))
+		}
 		mappings := cfg.AutoEvaluateConfigs[0].FieldMappings
 		if assert.Len(t, mappings, 3) {
 			assert.Equal(t, "result", ptr.From(mappings[0].EvalSetName))
@@ -198,6 +206,24 @@ func TestTaskConfigDTO2DO(t *testing.T) {
 		assert.Equal(t, int64(10), ptr.From(reflow.DatasetID))
 		assert.Equal(t, "dataset", ptr.From(reflow.DatasetName))
 		assert.Equal(t, "trace.field", reflow.FieldMappings[0].TraceFieldKey)
+	}
+}
+
+func TestTaskConfigDO2DTO_EvaluationExperimentConfig(t *testing.T) {
+	t.Parallel()
+
+	do := &entity.TaskConfig{
+		EvaluationExperimentConfig: &entity.EvaluationExperimentConfig{
+			ItemConcurrencyCount: gptr.Of(int32(5)),
+			ItemMaxRetryCount:    gptr.Of(int32(6)),
+		},
+	}
+	dto := TaskConfigDO2DTO(do)
+	if assert.NotNil(t, dto) {
+		if assert.NotNil(t, dto.EvaluationExperimentConfig) {
+			assert.Equal(t, int32(5), ptr.From(dto.EvaluationExperimentConfig.ItemConcurrencyCount))
+			assert.Equal(t, int32(6), ptr.From(dto.EvaluationExperimentConfig.ItemMaxRetryCount))
+		}
 	}
 }
 
