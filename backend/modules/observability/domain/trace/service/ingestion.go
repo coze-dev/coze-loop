@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -84,10 +85,12 @@ func (i *IngestionServiceImpl) RunAsync(ctx context.Context) {
 func NewIngestionServiceImpl(
 	traceConfig conf.IConfigLoader,
 	collectorFactory IngestionCollectorFactory,
+	consumeMetric metrics.Metric,
 ) (IngestionService, error) {
 	c, err := collector.New(collector.Settings{
 		Factories:      collectorFactory.GetCollectorFactory,
 		ConfigProvider: collector.NewConfigProvider(traceConfig),
+		ConsumeMetric:  consumeMetric,
 	})
 	if err != nil {
 		return nil, err

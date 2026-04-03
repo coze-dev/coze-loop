@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -171,7 +170,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, storageProvider, ckDb, db2, mqFactory, persistentCmdable, idgen2)
+	iTraceIngestionApplication, err := application6.InitTraceIngestionApplication(configFactory, storageProvider, ckDb, db2, mqFactory, persistentCmdable, idgen2, meter)
 	if err != nil {
 		return nil, err
 	}

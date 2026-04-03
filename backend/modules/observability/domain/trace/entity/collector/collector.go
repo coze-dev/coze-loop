@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/component"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -109,6 +110,7 @@ func (cfg *Config) Validate() error {
 type Settings struct {
 	Factories      func() (Factories, error)
 	ConfigProvider ConfigProvider
+	ConsumeMetric  metrics.Metric
 }
 
 type Collector struct {
@@ -183,6 +185,7 @@ func (col *Collector) setupConfigurationComponentsWithHook(ctx context.Context, 
 			ProcessorBuilder: processor.NewBuilder(cfg.Processors, factories.Processors),
 			ExporterBuilder:  exporter.NewBuilder(cfg.Exporters, factories.Exporters),
 			PipelineConfig:   tenantCfg,
+			ConsumeMetric:    col.set.ConsumeMetric,
 		})
 		if err != nil {
 			return err
