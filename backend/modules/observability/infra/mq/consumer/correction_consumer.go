@@ -4,7 +4,6 @@ package consumer
 
 import (
 	"context"
-	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -12,6 +11,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
