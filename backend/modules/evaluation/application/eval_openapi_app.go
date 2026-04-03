@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -974,6 +975,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 		ItemRetryNum:           req.ItemRetryNum,
+		TriggerType:            gptr.Of(domain_expt.OpenAPI),
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
@@ -1928,15 +1930,16 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateMetaOApi(ctx context.Context,
 		return nil, err
 	}
 
+	metaOut := &experiment.ExptTemplateMeta{
+		ID:          gptr.Of(do.Meta.ID),
+		WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
+		Name:        gptr.Of(do.Meta.Name),
+		Description: gptr.Of(do.Meta.Desc),
+		ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
+	}
 	return &openapi.UpdateExptTemplateMetaOApiResponse{
 		Data: &openapi.UpdateExptTemplateMetaOpenAPIData{
-			Meta: &experiment.ExptTemplateMeta{
-				ID:          gptr.Of(do.Meta.ID),
-				WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
-				Name:        gptr.Of(do.Meta.Name),
-				Description: gptr.Of(do.Meta.Desc),
-				ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
-			},
+			Meta: metaOut,
 		},
 	}, nil
 }

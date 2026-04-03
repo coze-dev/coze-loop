@@ -2079,7 +2079,6 @@ func _runbuiltinevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
-
 func _multi_part_dataMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -2166,6 +2165,11 @@ func _commits1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _drafts1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchgetevaluatorversionidsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

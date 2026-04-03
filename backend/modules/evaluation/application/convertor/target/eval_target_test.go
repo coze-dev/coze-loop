@@ -518,3 +518,40 @@ func TestCustomEvalTargetConversions(t *testing.T) {
 	assert.Nil(t, CustomEvalTargetDTO2DO(nil))
 	assert.Nil(t, CustomEvalTargetDO2DTO(nil))
 }
+
+func TestEvalTargetDO2DTO_OnlineTypeSameDTOAsBase(t *testing.T) {
+	t.Parallel()
+
+	online := &do.EvalTarget{
+		ID:               1,
+		SpaceID:          2,
+		SourceTargetID:   "src",
+		EvalTargetType:   do.EvalTargetTypeCozeBotOnline,
+		EvalTargetVersion: &do.EvalTargetVersion{
+			ID:                  10,
+			SpaceID:             2,
+			TargetID:            1,
+			SourceTargetVersion: "v",
+			EvalTargetType:      do.EvalTargetTypeCozeBotOnline,
+			CozeBot: &do.CozeBot{
+				BotID: 999,
+			},
+		},
+	}
+	base := &do.EvalTarget{
+		ID:               online.ID,
+		SpaceID:          online.SpaceID,
+		SourceTargetID:   online.SourceTargetID,
+		EvalTargetType:   do.EvalTargetTypeCozeBot,
+		EvalTargetVersion: &do.EvalTargetVersion{
+			ID:                  online.EvalTargetVersion.ID,
+			SpaceID:             online.EvalTargetVersion.SpaceID,
+			TargetID:            online.EvalTargetVersion.TargetID,
+			SourceTargetVersion: online.EvalTargetVersion.SourceTargetVersion,
+			EvalTargetType:      do.EvalTargetTypeCozeBot,
+			CozeBot:             online.EvalTargetVersion.CozeBot,
+		},
+	}
+
+	assert.Equal(t, EvalTargetDO2DTO(base), EvalTargetDO2DTO(online))
+}

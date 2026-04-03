@@ -62,6 +62,7 @@ func NewExptManager(
 	templateManager IExptTemplateManager,
 	notifyRPCAdapter rpc.INotifyRPCAdapter,
 	userProvider rpc.IUserProvider,
+	pipelineListAdapter rpc.IPipelineListAdapter,
 ) IExptManager {
 	return &ExptMangerImpl{
 		// tupleSvc:       tupleSvc,
@@ -88,8 +89,9 @@ func NewExptManager(
 		exptAggrResultService:       exptAggrResultService,
 		templateRepo:                templateRepo,
 		templateManager:             templateManager,
-		notifyRPCAdapter:            notifyRPCAdapter,
-		userProvider:                userProvider,
+		notifyRPCAdapter:      notifyRPCAdapter,
+		userProvider:          userProvider,
+		pipelineListAdapter:   pipelineListAdapter,
 	}
 }
 
@@ -118,8 +120,9 @@ type ExptMangerImpl struct {
 	benefitService              benefit.IBenefitService
 	templateRepo                repo.IExptTemplateRepo
 	templateManager             IExptTemplateManager
-	notifyRPCAdapter            rpc.INotifyRPCAdapter
-	userProvider                rpc.IUserProvider
+	notifyRPCAdapter      rpc.INotifyRPCAdapter
+	userProvider          rpc.IUserProvider
+	pipelineListAdapter   rpc.IPipelineListAdapter
 }
 
 func (e *ExptMangerImpl) MGetDetail(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error) {
@@ -209,7 +212,92 @@ func (e *ExptMangerImpl) packExperimentResult(ctx context.Context, expts []*enti
 		return nil, err
 	}
 
+	// 查询接口：填充 ExptSource（含 Workflow 时从 Pipeline 拉取 span_filter / scheduler / sampler）
+	if err := e.fillExperimentExptSourceForQuery(ctx, expts, spaceID); err != nil {
+		return nil, err
+	}
+
 	return expts, nil
+}
+
+// fillExperimentExptSourceForQuery 为查询结果构造 ExptSource，并在 SourceType=Workflow 时从 Pipeline 填充 span_filter_fields、scheduler、sampler（与实验模板 enrichExptSourceFromPipeline 一致）
+func (e *ExptMangerImpl) fillExperimentExptSourceForQuery(ctx context.Context, expts []*entity.Experiment, spaceID int64) error {
+	for _, ex := range expts {
+		if ex == nil {
+			continue
+		}
+		ex.ExptSource = &entity.ExptSource{
+			SourceType: ex.SourceType,
+			SourceID:   ex.SourceID,
+		}
+	}
+	return e.enrichExperimentExptSourceFromPipeline(ctx, expts, spaceID)
+}
+
+// enrichExperimentExptSourceFromPipeline 当 ExptSource.SourceType 为 Workflow 时，根据 source_id 拉取 Pipeline Flow 并填充 SpanFilterFields、Scheduler、Sampler
+func (e *ExptMangerImpl) enrichExperimentExptSourceFromPipeline(ctx context.Context, experiments []*entity.Experiment, spaceID int64) error {
+	if e.pipelineListAdapter == nil {
+		return nil
+	}
+	pipelineIDs := make([]int64, 0)
+	experimentByPipelineID := make(map[int64][]*entity.Experiment)
+	for _, ex := range experiments {
+		if ex == nil || ex.ExptSource == nil {
+			continue
+		}
+		if ex.ExptSource.SourceType != entity.SourceType_Workflow || ex.ExptSource.SourceID == "" {
+			continue
+		}
+		pid, err := strconv.ParseInt(ex.ExptSource.SourceID, 10, 64)
+		if err != nil || pid <= 0 {
+			continue
+		}
+		pipelineIDs = append(pipelineIDs, pid)
+		experimentByPipelineID[pid] = append(experimentByPipelineID[pid], ex)
+	}
+	if len(pipelineIDs) == 0 {
+		return nil
+	}
+	pipelineIDs = gslice.Uniq(pipelineIDs)
+
+	resp, err := e.pipelineListAdapter.ListPipelineFlow(ctx, &rpc.ListPipelineFlowRequest{
+		SpaceID:    gptr.Of(spaceID),
+		IDList:     pipelineIDs,
+		WithDetail: true,
+	})
+	if err != nil {
+		return err
+	}
+	if resp == nil || len(resp.Items) == 0 {
+		return nil
+	}
+
+	for _, p := range resp.Items {
+		if p == nil || p.ID == nil {
+			continue
+		}
+		pid := *p.ID
+		targets := experimentByPipelineID[pid]
+		if len(targets) == 0 {
+			continue
+		}
+		dataReflow := extractDataReflowFieldsFromPipeline(p)
+		var spanFilterFields *entity.SpanFilterFieldsDO
+		var sampler *entity.ExptSamplerDO
+		if dataReflow != nil {
+			spanFilterFields = dataReflow.SpanFilterFields
+			sampler = dataReflow.Sampler
+		}
+		scheduler := extractSchedulerFromPipeline(p)
+		for _, ex := range targets {
+			if ex.ExptSource != nil {
+				ex.ExptSource.SpanFilterFields = spanFilterFields
+				ex.ExptSource.Sampler = sampler
+				ex.ExptSource.Scheduler = scheduler
+			}
+		}
+	}
+	return nil
 }
 
 // fillExptTemplates 为实验列表按需补充关联模板的基础信息（名称、描述等）
@@ -302,7 +390,7 @@ func (e *ExptMangerImpl) MDelete(ctx context.Context, exptIDs []int64, spaceID i
 		if expt == nil || expt.ExptTemplateMeta == nil || expt.ExptTemplateMeta.ID <= 0 || e.templateManager == nil {
 			continue
 		}
-		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, expt.ID, expt.Status, -1); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, expt.ID, expt.Status, -1, nil); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in MDelete, template_id: %v, expt_id: %v, err: %v",
 				expt.ExptTemplateMeta.ID, expt.ID, err)
@@ -318,6 +406,29 @@ func (e *ExptMangerImpl) makeExptMutexLockKey(exptID int64) string {
 
 func (e *ExptMangerImpl) makeExptCompletingLockKey(exptID, exptRunID int64) string {
 	return fmt.Sprintf("expt_completing_mutex_lock:%d:%d", exptID, exptRunID)
+}
+
+// makeOnlineExptDaemonLockKey 在线实验 MQ daemon 生命周期心跳锁，singleflight 防止重复发送
+func (e *ExptMangerImpl) makeOnlineExptDaemonLockKey(exptID, runID int64) string {
+	return fmt.Sprintf("expt_online_daemon_lock:%d:%d", exptID, runID)
+}
+
+// computeDaemonLockMaxHold 按实验 DDL 计算心跳锁最大持有时间：deadline = StartAt + MaxAliveTime，maxHold = 剩余到 deadline 的时间
+func (e *ExptMangerImpl) computeDaemonLockMaxHold(expt *entity.Experiment) time.Duration {
+	if expt == nil || expt.StartAt == nil || expt.MaxAliveTime <= 0 {
+		return time.Minute
+	}
+	deadline := expt.StartAt.Add(time.Duration(expt.MaxAliveTime) * time.Millisecond)
+	maxHold := time.Until(deadline)
+	if maxHold <= 0 {
+		return time.Minute
+	}
+	return maxHold
+}
+
+// makeOnlineExptDataLockKey 在线实验数据锁，数据驱动，协调 Invoke 追加与 schedule 检查
+func (e *ExptMangerImpl) makeOnlineExptDataLockKey(exptID, runID int64) string {
+	return fmt.Sprintf("expt_online_data_lock:%d:%d", exptID, runID)
 }
 
 func (e *ExptMangerImpl) getTupleByExpt(ctx context.Context, expt *entity.Experiment, spaceID int64, session *entity.Session, opts ...entity.GetExptTupleOptionFn) (*entity.ExptTuple, error) {
@@ -587,7 +698,17 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
 	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
-		req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
+		et := gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		srcVer := ""
+		if req.CreateEvalTargetParam.SourceTargetVersion != nil {
+			srcVer = strings.TrimSpace(*req.CreateEvalTargetParam.SourceTargetVersion)
+		}
+		// PromptOnline：允许仅传 source_target_id，版本由 Prompt 侧解析为最新提交；其它在线类型仍用占位默认版本
+		if et != entity.EvalTargetTypeCozeLoopPromptOnline || srcVer != "" {
+			if req.CreateEvalTargetParam.SourceTargetVersion == nil || srcVer == "" {
+				req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
+			}
+		}
 	}
 
 	var versionedTargetID *entity.VersionedTargetID
@@ -656,6 +777,10 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		})
 	}
 
+	triggerType := req.TriggerType
+	if triggerType == "" {
+		triggerType = "manual"
+	}
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -672,6 +797,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		MaxAliveTime:        req.MaxAliveTime,
 		SourceType:          req.SourceType,
 		SourceID:            req.SourceID,
+		TriggerType:         triggerType,
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
@@ -861,7 +987,7 @@ func (e *ExptMangerImpl) Delete(ctx context.Context, exptID, spaceID int64, sess
 
 	// 如果实验关联了模板，更新模板的 ExptInfo（删除实验，数量 -1）
 	if expt != nil && expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, spaceID, exptID, expt.Status, -1, nil); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed in Delete, template_id: %v, expt_id: %v, err: %v",
 				expt.ExptTemplateMeta.ID, exptID, err)

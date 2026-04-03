@@ -1129,6 +1129,65 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
 	}
 }
 
+func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersionIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+	}
+
+	workspaceID := int64(100)
+	ev := &entity.Evaluator{
+		ID:            1,
+		SpaceID:       workspaceID,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          999,
+			EvaluatorID: 1,
+			Version:     "1.0.0",
+		},
+	}
+
+	t.Run("nil request", func(t *testing.T) {
+		_, err := app.BatchGetEvaluatorVersionIDs(context.Background(), nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorByIDAndVersion(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}}).
+			Return([]*entity.Evaluator{ev}, nil)
+
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		pair := evaluatorservice.NewEvaluatorIDVersionPair()
+		pair.SetEvaluatorID(1)
+		pair.SetVersion("1.0.0")
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{pair})
+
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Len(t, resp.GetIDVersionItems(), 1)
+		assert.Equal(t, int64(999), resp.GetIDVersionItems()[0].GetEvaluatorVersionID())
+	})
+
+	t.Run("empty pairs", func(t *testing.T) {
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{})
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Empty(t, resp.GetIDVersionItems())
+	})
+}
+
 func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

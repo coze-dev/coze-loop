@@ -4,6 +4,8 @@
 package experiment
 
 import (
+	"strings"
+
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
@@ -127,7 +129,7 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 				if item.IsSetVersion() {
 					version = item.GetVersion()
 				}
-				if item.IsSetEvaluatorVersionID() {
+				if item.IsSetEvaluatorVersionID() && item.GetEvaluatorVersionID() > 0 {
 					evaluatorVersionID = item.GetEvaluatorVersionID()
 				}
 			}
@@ -355,6 +357,10 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		TargetRuntimeParam:     trtp,
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
+	if experiment.TriggerType != "" {
+		tt := domain_expt.ExptTriggerType(experiment.TriggerType)
+		res.TriggerType = &tt
+	}
 
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
 
@@ -388,8 +394,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 	}
 
-	// 关联的实验模板（仅在查询时按需填充基础信息）
-	if experiment.ExptTemplateMeta != nil {
+	// 关联的实验模板（仅在查询时按需填充基础信息）；在线实验不对外返回模板信息
+	if experiment.ExptType != entity.ExptType_Online && experiment.ExptTemplateMeta != nil {
 		res.ExptTemplateMeta = &domain_expt.ExptTemplateMeta{
 			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
 			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
@@ -407,6 +413,18 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	for _, evaluatorDO := range experiment.Evaluators {
 		res.Evaluators = append(res.Evaluators, evaluator.ConvertEvaluatorDO2DTO(evaluatorDO))
 	}
+
+	// expt_source：查询路径下由 manager 填充（Workflow 时含 span_filter_fields / scheduler / sampler）；否则用一级 source 字段构造
+	if es := ExptSourceDO2DTO(experiment.ExptSource); es != nil {
+		res.SetExptSource(es)
+	} else {
+		st := domain_expt.SourceType(experiment.SourceType)
+		res.SetExptSource(&domain_expt.ExptSource{
+			SourceType: &st,
+			SourceID:   gptr.Of(experiment.SourceID),
+		})
+	}
+
 	return res
 }
 
@@ -499,6 +517,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 
 	if cer.IsSetExptTemplateID() {
 		param.ExptTemplateID = cer.GetExptTemplateID()
+	}
+	if cer.IsSetTriggerType() {
+		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	return param, nil
 }

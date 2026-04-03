@@ -22,33 +22,37 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name         string
-		tagType      int32
-		filterOption *entity.EvaluatorFilterOption
-		expectedErr  bool
-		description  string
+		name                string
+		tagType             int32
+		filterOption        *entity.EvaluatorFilterOption
+		expectedErr         bool
+		description         string
+		expectedPluckCalls  int // GetSourceIDsByFilterConditions 多次单表 DISTINCT 查询次数（mock 空结果，不触发 Name 排序 Find）
 	}{
 		{
-			name:         "nil filter option",
-			tagType:      1,
-			filterOption: nil,
-			expectedErr:  false,
-			description:  "当筛选选项为nil时，应该返回空列表",
+			name:               "nil filter option",
+			tagType:            1,
+			filterOption:       nil,
+			expectedErr:        false,
+			description:        "当筛选选项为nil时，应该返回空列表",
+			expectedPluckCalls: 1,
 		},
 		{
-			name:         "empty filter option",
-			tagType:      1,
-			filterOption: &entity.EvaluatorFilterOption{},
-			expectedErr:  false,
-			description:  "当筛选选项为空时，应该返回空列表",
+			name:               "empty filter option",
+			tagType:            1,
+			filterOption:       &entity.EvaluatorFilterOption{},
+			expectedErr:        false,
+			description:        "当筛选选项为空时，应该返回空列表",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "search keyword only",
 			tagType: 1,
 			filterOption: entity.NewEvaluatorFilterOption().
 				WithSearchKeyword("AI"),
-			expectedErr: false,
-			description: "只有搜索关键词时，应该正确构建查询",
+			expectedErr:        false,
+			description:        "只有搜索关键词时，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "single equal condition",
@@ -63,8 +67,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"LLM",
 						)),
 				),
-			expectedErr: false,
-			description: "单个等于条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "单个等于条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "multiple AND conditions",
@@ -84,8 +89,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Text,Image",
 						)),
 				),
-			expectedErr: false,
-			description: "多个AND条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "多个AND条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "multiple OR conditions",
@@ -105,8 +111,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Code",
 						)),
 				),
-			expectedErr: false,
-			description: "多个OR条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "多个OR条件，应该正确构建查询",
+			expectedPluckCalls: 2,
 		},
 		{
 			name:    "like condition",
@@ -121,8 +128,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Quality",
 						)),
 				),
-			expectedErr: false,
-			description: "LIKE条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "LIKE条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "in condition",
@@ -137,8 +145,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Text,Image,Video",
 						)),
 				),
-			expectedErr: false,
-			description: "IN条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "IN条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "not in condition",
@@ -153,8 +162,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Audio,Video",
 						)),
 				),
-			expectedErr: false,
-			description: "NOT_IN条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "NOT_IN条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "is null condition",
@@ -169,8 +179,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"",
 						)),
 				),
-			expectedErr: false,
-			description: "IS_NULL条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "IS_NULL条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "is not null condition",
@@ -185,8 +196,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"",
 						)),
 				),
-			expectedErr: false,
-			description: "IS_NOT_NULL条件，应该正确构建查询",
+			expectedErr:        false,
+			description:        "IS_NOT_NULL条件，应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "complex combination",
@@ -212,8 +224,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 							"Quality",
 						)),
 				),
-			expectedErr: false,
-			description: "复杂组合条件（搜索关键词+多个AND条件），应该正确构建查询",
+			expectedErr:        false,
+			description:        "复杂组合条件（搜索关键词+多个AND条件），应该正确构建查询",
+			expectedPluckCalls: 1,
 		},
 		{
 			name:    "nested sub filters (AND with OR and AND groups)",
@@ -256,8 +269,9 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 
 				return (&entity.EvaluatorFilterOption{}).WithFilters(top)
 			}(),
-			expectedErr: false,
-			description: "嵌套子过滤组应正确展开并构造 SQL",
+			expectedErr:        false,
+			description:        "嵌套子过滤组应正确展开并构造 SQL",
+			expectedPluckCalls: 1,
 		},
 	}
 
@@ -287,48 +301,13 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 			// 创建mock provider
 			mockProvider := dbmock.NewMockProvider(ctrl)
 
-			// GetSourceIDsByFilterConditions 即使 filterOption 为 nil，也会创建一个空的 EvaluatorFilterOption 并继续执行查询
-			// 所以所有测试用例都需要 mock NewSession 和数据库查询
-			mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+			// GetSourceIDsByFilterConditions 走多次单表查询路径，每次查询都会 NewSession
+			mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).AnyTimes()
 
-			// 判断是否有 SearchKeyword 和 Filters
-			hasSearchKeyword := tt.filterOption != nil && tt.filterOption.SearchKeyword != nil && *tt.filterOption.SearchKeyword != ""
-			hasFilters := tt.filterOption != nil && tt.filterOption.Filters != nil
-
-			// Mock COUNT 查询（放宽匹配，兼容 JOIN、别名与列限定）
-			// 所有查询都会包含 LEFT JOIN t_name（用于排序）
-			// 如果有 SearchKeyword，COUNT 查询也会包含 t_name.tag_value LIKE
-			countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-			if hasSearchKeyword {
-				mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*WHERE .*t_name\\.tag_value.*LIKE.*").WillReturnRows(countRows)
-			} else {
-				mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*").WillReturnRows(countRows)
-			}
-
-			// Mock SELECT 查询（放宽匹配，兼容 DISTINCT、JOIN、ORDER BY 等）
-			// 所有查询都会包含 LEFT JOIN t_name（用于排序）和 ORDER BY t_name.tag_value
-			selectRows := sqlmock.NewRows([]string{"source_id"})
-
-			if hasSearchKeyword && hasFilters {
-				// 既有 SearchKeyword 又有 Filters 时，SQL 包含：
-				// - LEFT JOIN t_name
-				// - JOIN t_1, JOIN t_2 等（自连接，来自 Filters 的 AND 条件）
-				// - WHERE t_name.tag_value LIKE ? (来自 SearchKeyword，使用 t_name 别名)
-				// - 可能还有其他 WHERE 条件（来自 Filters 的 OR 条件）
-				// - ORDER BY
-				// 注意：WHERE 条件可能包含括号，且使用参数化查询（?），需要更宽松的匹配
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
-			} else if hasSearchKeyword {
-				// 只有 SearchKeyword 时，SQL 包含 WHERE t_name.tag_value LIKE ? (使用 t_name 别名)
-				// 注意：WHERE 条件可能包含括号，且还有其他基础 WHERE 条件（tag_type, deleted_at），使用参数化查询
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
-			} else if hasFilters {
-				// 只有 Filters 时，SQL 可能包含 JOIN 其他表（自连接）和 WHERE 条件
-				// 需要匹配可能包含的 JOIN 自连接
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
-			} else {
-				// 无 SearchKeyword 和 Filters 时，SQL 只包含基础查询和 LEFT JOIN t_name
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
+			// 无 JOIN：多次 SELECT DISTINCT source_id 或按条件查；结果为空时不会触发按 Name 排序的 Find
+			pluckEmpty := sqlmock.NewRows([]string{"source_id"})
+			for i := 0; i < tt.expectedPluckCalls; i++ {
+				mock.ExpectQuery("SELECT DISTINCT .+ FROM `evaluator_tag`").WillReturnRows(pluckEmpty)
 			}
 
 			// 创建DAO实例
@@ -526,7 +505,7 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
 	}
 
 	mockProvider := dbmock.NewMockProvider(ctrl)
-	mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).Times(1)
+	mockProvider.EXPECT().NewSession(gomock.Any(), gomock.Any()).Return(gormDB).AnyTimes()
 
 	// 构造筛选：AND(Category=LLM, BusinessScenario=安全风控) + SearchKeyword("AI")
 	filters := entity.NewEvaluatorFilters().
@@ -543,19 +522,10 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
 		))
 	option := entity.NewEvaluatorFilterOption().WithSearchKeyword("AI").WithFilters(filters)
 
-	// 断言 COUNT：包含 LEFT JOIN t_name、JOIN t_1 / t_2，且基表为 evaluator_tag
-	// COUNT 查询的 WHERE 子句也使用 t_name.tag_value LIKE
-	countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-	mock.ExpectQuery(
-		"SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*",
-	).WillReturnRows(countRows)
-
-	// 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
-	// SearchKeyword 现在使用 t_name 别名进行 LIKE 查询，避免与主表条件冲突
-	selectRows := sqlmock.NewRows([]string{"source_id"})
-	mock.ExpectQuery(
-		"SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*",
-	).WillReturnRows(selectRows)
+	pluckEmpty := sqlmock.NewRows([]string{"source_id"})
+	for i := 0; i < 1; i++ {
+		mock.ExpectQuery("SELECT DISTINCT .+ FROM `evaluator_tag`").WillReturnRows(pluckEmpty)
+	}
 
 	dao := &EvaluatorTagDAOImpl{provider: mockProvider}
 	_, _, err = dao.GetSourceIDsByFilterConditions(context.Background(), 1, option, 12, 1, "zh-CN")

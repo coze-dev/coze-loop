@@ -33,6 +33,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
@@ -87,6 +88,7 @@ var (
 		evaluationapp.InitEvaluationSetApplication,
 		evaluationapp.InitEvalTargetApplication,
 		evaluationapp.InitEvalOpenAPIApplication,
+		provideTaskClient,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler,
@@ -104,6 +106,11 @@ var (
 		obapp.InitMetricApplication,
 	)
 )
+
+// provideTaskClient converts a function factory to taskservice.Client
+func provideTaskClient(factory func() taskservice.Client) taskservice.Client {
+	return factory()
+}
 
 func InitFoundationHandler(
 	idgen idgen.IIDGenerator,
@@ -177,6 +184,7 @@ func InitEvaluationHandler(
 	batchObjectStorage fileserver.BatchObjectStorage,
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	tracerFactory func() observabilitytraceservice.Client,
+	taskClientFactory func() taskservice.Client,
 ) (*EvaluationHandler, error) {
 	wire.Build(
 		evaluationSet,

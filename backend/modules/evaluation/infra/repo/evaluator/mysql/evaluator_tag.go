@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 
@@ -150,108 +151,340 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 	return query.Delete(&model.EvaluatorTag{}).Error
 }
 
-// GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
+// sourceIDInChunkSize 单次 IN 查询中 source_id 个数上限，避免包体过大
+const sourceIDInChunkSize = 1000
+
+// GetSourceIDsByFilterConditions 根据筛选条件查询 source_id 列表，支持 AND/OR 与分页。
+// 实现上避免自连接/JOIN：拆成多次单表查询 + 内存集合运算，兼容不支持复杂 JOIN 的存储引擎。
 func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
 	if filterOption == nil {
-		// 视为无筛选条件：统计并分页全部该 tagType 的 source_id（按 Name 排序）
 		filterOption = &entity.EvaluatorFilterOption{}
 	}
 
-	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	hasFilters := filterOption.Filters != nil && !evaluatorFiltersEmpty(filterOption.Filters)
+	hasSearch := filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != ""
 
-	// 基础查询条件
-	query := dbsession.WithContext(ctx).Table("evaluator_tag").
-		Select("evaluator_tag.source_id").
-		Where("evaluator_tag.tag_type = ?", tagType).
-		Where("evaluator_tag.deleted_at IS NULL")
-	if langType != "" {
-		query = query.Where("evaluator_tag.lang_type = ?", langType)
+	var ids []int64
+	var err error
+	if hasFilters {
+		ids, err = dao.evalFiltersToSourceIDs(ctx, tagType, langType, filterOption.Filters, opts...)
+	} else if hasSearch {
+		// 仅有 Name 关键词搜索：直接按 Name LIKE 查 source_id，避免先全表 DISTINCT
+		ids, err = dao.sourceIDsForNameLike(ctx, tagType, langType, *filterOption.SearchKeyword, nil, opts...)
+		hasSearch = false
+	} else {
+		ids, err = dao.allDistinctSourceIDs(ctx, tagType, langType, opts...)
 	}
-
-	// 为了按 Name 的 tag_value 排序，左连接一份 Name 标签记录
-	// 仅用于排序，不改变筛选逻辑
-	nameJoinSQL := "LEFT JOIN evaluator_tag AS t_name ON t_name.source_id = evaluator_tag.source_id AND t_name.tag_type = ? AND t_name.tag_key = ? AND t_name.deleted_at IS NULL"
-	nameJoinArgs := []interface{}{tagType, "Name"}
-	if langType != "" {
-		nameJoinSQL += " AND t_name.lang_type = ?"
-		nameJoinArgs = append(nameJoinArgs, langType)
-	}
-	query = query.Joins(nameJoinSQL, nameJoinArgs...)
-
-	// 处理搜索关键词（只在 Name 标签范围内 LIKE 匹配）
-	// 使用已 JOIN 的 t_name 别名，避免与后续筛选条件中的其他 tag_key 冲突
-	if filterOption.SearchKeyword != nil && *filterOption.SearchKeyword != "" {
-		keyword := "%" + *filterOption.SearchKeyword + "%"
-		query = query.Where("t_name.tag_value LIKE ?", keyword)
-	}
-
-	// 处理筛选条件（自连接实现 AND，WHERE 实现 OR）
-	if filterOption.Filters != nil {
-		joinSQLs, joinArgs, whereSQL, whereArgs, err := dao.buildSelfJoinAndWhere(filterOption.Filters, tagType, langType)
-		if err != nil {
-			return nil, 0, err
-		}
-		for i, js := range joinSQLs {
-			query = query.Joins(js, joinArgs[i]...)
-		}
-		if whereSQL != "" {
-			query = query.Where(whereSQL, whereArgs...)
-		}
-	}
-
-	// 先查询总数
-	var total int64
-	countQuery := query.Session(&gorm.Session{})
-	// 打印 COUNT SQL（完整）
-	countSQL := countQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		var tmp int64
-		return tx.Distinct("evaluator_tag.source_id").Count(&tmp)
-	})
-	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] COUNT SQL: %s", countSQL)
-	if err := countQuery.Distinct("evaluator_tag.source_id").Count(&total).Error; err != nil {
+	if err != nil {
 		return nil, 0, err
 	}
 
-	// 为 SELECT 构造一个不带分页副作用的基准查询
-	selectBaseQuery := query.Session(&gorm.Session{})
+	if hasSearch {
+		ids, err = dao.sourceIDsForNameLike(ctx, tagType, langType, *filterOption.SearchKeyword, ids, opts...)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
 
-	// 分页参数（延后到最外层查询中再应用，避免影响 DISTINCT 子查询）
+	total := int64(len(ids))
+	if total == 0 {
+		return []int64{}, 0, nil
+	}
+
+	ids, err = dao.sortSourceIDsByNameTag(ctx, tagType, langType, ids, opts...)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] matched source_id count=%d (no JOIN path)", total)
+
 	var limit, offset int
 	if pageSize > 0 && pageNum > 0 {
 		limit = int(pageSize)
 		offset = int((pageNum - 1) * pageSize)
-	}
-
-	// 为了兼容 MySQL 在 DISTINCT 场景下对 ORDER BY 的限制（排序字段必须出现在 SELECT 列表中），
-	// 这里构造一个子查询：内部 SELECT DISTINCT source_id, t_name.tag_value，外层再按 tag_value 排序并做分页。
-	subQuery := selectBaseQuery.
-		Select("DISTINCT evaluator_tag.source_id, t_name.tag_value")
-
-	outerQuery := dbsession.WithContext(ctx).
-		Table("(?) AS src", subQuery).
-		Order("ISNULL(src.tag_value), src.tag_value ASC")
-	if limit > 0 {
-		outerQuery = outerQuery.Limit(limit).Offset(offset)
-	}
-
-	// 执行查询（按 Name 标签值排序；无 Name 的排在后面）
-	var sourceIDs []int64
-	// 打印 SELECT SQL（完整）
-	selectSQL := outerQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
-		var tmp []int64
-		return tx.Pluck("src.source_id", &tmp)
-	})
-	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] SELECT SQL: %s", selectSQL)
-	err := outerQuery.
-		Pluck("src.source_id", &sourceIDs).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+		if offset >= len(ids) {
 			return []int64{}, total, nil
 		}
-		return nil, 0, err
+		end := offset + limit
+		if end > len(ids) {
+			end = len(ids)
+		}
+		return ids[offset:end], total, nil
 	}
 
-	return sourceIDs, total, nil
+	return ids, total, nil
+}
+
+func evaluatorFiltersEmpty(f *entity.EvaluatorFilters) bool {
+	if f == nil {
+		return true
+	}
+	return len(f.FilterConditions) == 0 && len(f.SubFilters) == 0
+}
+
+func (dao *EvaluatorTagDAOImpl) allDistinctSourceIDs(ctx context.Context, tagType int32, langType string, opts ...db.Option) ([]int64, error) {
+	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	q := dbsession.WithContext(ctx).
+		Table(model.TableNameEvaluatorTag).
+		Distinct("source_id").
+		Where("tag_type = ? AND deleted_at IS NULL", tagType)
+	if langType != "" {
+		q = q.Where("lang_type = ?", langType)
+	}
+	var ids []int64
+	if err := q.Pluck("source_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// evalFiltersToSourceIDs 递归求满足 Filters 的 source_id（无 JOIN）
+func (dao *EvaluatorTagDAOImpl) evalFiltersToSourceIDs(ctx context.Context, tagType int32, langType string, filters *entity.EvaluatorFilters, opts ...db.Option) ([]int64, error) {
+	if filters == nil || evaluatorFiltersEmpty(filters) {
+		return dao.allDistinctSourceIDs(ctx, tagType, langType, opts...)
+	}
+
+	isOr := filters.LogicOp != nil && *filters.LogicOp == entity.FilterLogicOp_Or
+	if isOr {
+		set := make(map[int64]struct{})
+		for _, c := range filters.FilterConditions {
+			if c == nil {
+				continue
+			}
+			part, err := dao.querySourceIDsForCondition(ctx, tagType, langType, c, nil, opts...)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range part {
+				set[id] = struct{}{}
+			}
+		}
+		for _, sub := range filters.SubFilters {
+			part, err := dao.evalFiltersToSourceIDs(ctx, tagType, langType, sub, opts...)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range part {
+				set[id] = struct{}{}
+			}
+		}
+		return mapKeysToSlice(set), nil
+	}
+
+	var s []int64
+	for _, c := range filters.FilterConditions {
+		if c == nil {
+			continue
+		}
+		var part []int64
+		var err error
+		if s == nil {
+			part, err = dao.querySourceIDsForCondition(ctx, tagType, langType, c, nil, opts...)
+		} else {
+			part, err = dao.querySourceIDsForCondition(ctx, tagType, langType, c, s, opts...)
+		}
+		if err != nil {
+			return nil, err
+		}
+		s = part
+		if len(s) == 0 {
+			return s, nil
+		}
+	}
+	for _, sub := range filters.SubFilters {
+		subIDs, err := dao.evalFiltersToSourceIDs(ctx, tagType, langType, sub, opts...)
+		if err != nil {
+			return nil, err
+		}
+		if s == nil {
+			s = subIDs
+		} else {
+			s = intersectInt64Slice(s, subIDs)
+		}
+		if len(s) == 0 {
+			return s, nil
+		}
+	}
+	if s == nil {
+		return dao.allDistinctSourceIDs(ctx, tagType, langType, opts...)
+	}
+	return s, nil
+}
+
+func mapKeysToSlice(m map[int64]struct{}) []int64 {
+	out := make([]int64, 0, len(m))
+	for id := range m {
+		out = append(out, id)
+	}
+	return out
+}
+
+func intersectInt64Slice(a, b []int64) []int64 {
+	if len(a) == 0 || len(b) == 0 {
+		return nil
+	}
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	m := make(map[int64]struct{}, len(a))
+	for _, id := range a {
+		m[id] = struct{}{}
+	}
+	out := make([]int64, 0)
+	for _, id := range b {
+		if _, ok := m[id]; ok {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func chunkInt64Slice(ids []int64, chunk int) [][]int64 {
+	if chunk <= 0 {
+		chunk = sourceIDInChunkSize
+	}
+	var out [][]int64
+	for i := 0; i < len(ids); i += chunk {
+		j := i + chunk
+		if j > len(ids) {
+			j = len(ids)
+		}
+		out = append(out, ids[i:j])
+	}
+	return out
+}
+
+func (dao *EvaluatorTagDAOImpl) querySourceIDsForCondition(ctx context.Context, tagType int32, langType string, condition *entity.EvaluatorFilterCondition, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	if condition == nil {
+		return nil, nil
+	}
+	if restrictTo != nil {
+		if len(restrictTo) == 0 {
+			return nil, nil
+		}
+	}
+	if restrictTo == nil || len(restrictTo) <= sourceIDInChunkSize {
+		return dao.querySourceIDsForConditionOnce(ctx, tagType, langType, condition, restrictTo, opts...)
+	}
+	set := make(map[int64]struct{})
+	for _, ch := range chunkInt64Slice(restrictTo, sourceIDInChunkSize) {
+		part, err := dao.querySourceIDsForConditionOnce(ctx, tagType, langType, condition, ch, opts...)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range part {
+			set[id] = struct{}{}
+		}
+	}
+	return mapKeysToSlice(set), nil
+}
+
+func (dao *EvaluatorTagDAOImpl) querySourceIDsForConditionOnce(ctx context.Context, tagType int32, langType string, condition *entity.EvaluatorFilterCondition, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	q := dbsession.WithContext(ctx).
+		Table(model.TableNameEvaluatorTag).
+		Distinct("source_id").
+		Where("tag_type = ? AND deleted_at IS NULL", tagType)
+	if langType != "" {
+		q = q.Where("lang_type = ?", langType)
+	}
+	condSQL, condArgs, err := dao.buildSingleCondition(condition)
+	if err != nil {
+		return nil, err
+	}
+	if condSQL != "" {
+		q = q.Where(condSQL, condArgs...)
+	}
+	if restrictTo != nil {
+		q = q.Where("source_id IN ?", restrictTo)
+	}
+	var ids []int64
+	if err := q.Pluck("source_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLike(ctx context.Context, tagType int32, langType string, keyword string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	kw := "%" + keyword + "%"
+	if restrictTo != nil {
+		if len(restrictTo) == 0 {
+			return nil, nil
+		}
+	}
+	if restrictTo == nil || len(restrictTo) <= sourceIDInChunkSize {
+		return dao.sourceIDsForNameLikeOnce(ctx, tagType, langType, kw, restrictTo, opts...)
+	}
+	set := make(map[int64]struct{})
+	for _, ch := range chunkInt64Slice(restrictTo, sourceIDInChunkSize) {
+		part, err := dao.sourceIDsForNameLikeOnce(ctx, tagType, langType, kw, ch, opts...)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range part {
+			set[id] = struct{}{}
+		}
+	}
+	return mapKeysToSlice(set), nil
+}
+
+func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLikeOnce(ctx context.Context, tagType int32, langType string, keywordPattern string, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	q := dbsession.WithContext(ctx).
+		Table(model.TableNameEvaluatorTag).
+		Distinct("source_id").
+		Where("tag_type = ? AND tag_key = ? AND tag_value LIKE ? AND deleted_at IS NULL", tagType, "Name", keywordPattern)
+	if langType != "" {
+		q = q.Where("lang_type = ?", langType)
+	}
+	if restrictTo != nil {
+		q = q.Where("source_id IN ?", restrictTo)
+	}
+	var ids []int64
+	if err := q.Pluck("source_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// sortSourceIDsByNameTag 按 Name 标签值升序排序；无 Name 行的 source 排在后面（与原 LEFT JOIN 语义一致）
+func (dao *EvaluatorTagDAOImpl) sortSourceIDsByNameTag(ctx context.Context, tagType int32, langType string, ids []int64, opts ...db.Option) ([]int64, error) {
+	if len(ids) <= 1 {
+		return ids, nil
+	}
+	nameOf := make(map[int64]string, len(ids))
+	for _, ch := range chunkInt64Slice(ids, sourceIDInChunkSize) {
+		dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+		q := dbsession.WithContext(ctx).
+			Table(model.TableNameEvaluatorTag).
+			Select("source_id", "tag_value").
+			Where("source_id IN ? AND tag_type = ? AND tag_key = ? AND deleted_at IS NULL", ch, tagType, "Name")
+		if langType != "" {
+			q = q.Where("lang_type = ?", langType)
+		}
+		var rows []model.EvaluatorTag
+		if err := q.Find(&rows).Error; err != nil {
+			return nil, err
+		}
+		for _, r := range rows {
+			if prev, ok := nameOf[r.SourceID]; !ok || r.TagValue < prev {
+				nameOf[r.SourceID] = r.TagValue
+			}
+		}
+	}
+	out := append([]int64(nil), ids...)
+	sort.Slice(out, func(i, j int) bool {
+		ni, oki := nameOf[out[i]]
+		nj, okj := nameOf[out[j]]
+		if oki != okj {
+			return oki
+		}
+		if !oki {
+			return false
+		}
+		return ni < nj
+	})
+	return out, nil
 }
 
 // buildFilterConditions 构建筛选条件的SQL和参数
@@ -358,171 +591,6 @@ func (dao *EvaluatorTagDAOImpl) buildSingleCondition(condition *entity.Evaluator
 	default:
 		return "", nil, fmt.Errorf("unsupported operator type: %v", operator)
 	}
-}
-
-// buildSelfJoinAndWhere 基于自连接实现 AND，基于 WHERE 实现 OR
-// 返回：
-// - joinSQLs/joinArgs: 需要追加到 query.Joins 的 JOIN 片段（按顺序）
-// - whereSQL/whereArgs: 需要追加到 query.Where 的 WHERE 片段
-func (dao *EvaluatorTagDAOImpl) buildSelfJoinAndWhere(filters *entity.EvaluatorFilters, tagType int32, langType string) ([]string, [][]interface{}, string, []interface{}, error) {
-	var joinSQLs []string
-	var joinArgs [][]interface{}
-	var whereParts []string
-	var whereArgs []interface{}
-
-	// 生成唯一别名
-	aliasCounter := 0
-	nextAlias := func() string {
-		aliasCounter++
-		return fmt.Sprintf("t_%d", aliasCounter)
-	}
-
-	var build func(f *entity.EvaluatorFilters, parentIsAnd bool) (string, []interface{}, error)
-	build = func(f *entity.EvaluatorFilters, parentIsAnd bool) (string, []interface{}, error) {
-		if f == nil {
-			return "", nil, nil
-		}
-
-		isOr := f.LogicOp != nil && *f.LogicOp == entity.FilterLogicOp_Or
-
-		// 当前层的原子条件
-		var parts []string
-		var args []interface{}
-
-		if isOr {
-			// OR: 不做自连接，直接在 WHERE 中拼接到 base（evaluator_tag）别名上
-			for _, c := range f.FilterConditions {
-				if c == nil {
-					continue
-				}
-				sqlFrag, sqlArgs, err := dao.buildSingleConditionWithAlias("evaluator_tag", c)
-				if err != nil {
-					return "", nil, err
-				}
-				if sqlFrag != "" {
-					parts = append(parts, "("+sqlFrag+")")
-					args = append(args, sqlArgs...)
-				}
-			}
-			// 子条件
-			for _, sub := range f.SubFilters {
-				subSQL, subArgs, err := build(sub, false)
-				if err != nil {
-					return "", nil, err
-				}
-				if subSQL != "" {
-					parts = append(parts, "("+subSQL+")")
-					args = append(args, subArgs...)
-				}
-			}
-
-			if len(parts) > 0 {
-				return strings.Join(parts, " OR "), args, nil
-			}
-			return "", nil, nil
-		}
-
-		// AND: 自连接。每个原子条件产生一个 JOIN。
-		for _, c := range f.FilterConditions {
-			if c == nil {
-				continue
-			}
-			alias := nextAlias()
-			onFrag, onArgs, err := dao.buildJoinPredicate(alias, c)
-			if err != nil {
-				return "", nil, err
-			}
-			join := fmt.Sprintf("JOIN evaluator_tag AS %s ON %s.source_id = evaluator_tag.source_id AND %s.tag_type = ? AND %s.deleted_at IS NULL", alias, alias, alias, alias)
-			jArgs := []interface{}{tagType}
-			if langType != "" {
-				join += fmt.Sprintf(" AND %s.lang_type = ?", alias)
-				jArgs = append(jArgs, langType)
-			}
-			if onFrag != "" {
-				join += " AND " + onFrag
-				jArgs = append(jArgs, onArgs...)
-			}
-			joinSQLs = append(joinSQLs, join)
-			joinArgs = append(joinArgs, jArgs)
-		}
-
-		// 子条件：如果子条件是 OR，会返回 where 片段；如果子条件是 AND，会追加更多 JOIN
-		for _, sub := range f.SubFilters {
-			subSQL, subArgs, err := build(sub, true)
-			if err != nil {
-				return "", nil, err
-			}
-			if subSQL != "" { // OR 分支产生的 where 片段
-				parts = append(parts, "("+subSQL+")")
-				args = append(args, subArgs...)
-			}
-		}
-
-		if len(parts) > 0 {
-			// AND 层对 where 片段用 AND 连接
-			return strings.Join(parts, " AND "), args, nil
-		}
-		return "", nil, nil
-	}
-
-	whereSQL, whereArgsLocal, err := build(filters, false)
-	if err != nil {
-		return nil, nil, "", nil, err
-	}
-	if whereSQL != "" {
-		whereParts = append(whereParts, whereSQL)
-		whereArgs = append(whereArgs, whereArgsLocal...)
-	}
-
-	finalWhere := strings.Join(whereParts, " AND ")
-	return joinSQLs, joinArgs, finalWhere, whereArgs, nil
-}
-
-// buildSingleConditionWithAlias 生成基于指定别名的条件子句
-func (dao *EvaluatorTagDAOImpl) buildSingleConditionWithAlias(alias string, condition *entity.EvaluatorFilterCondition) (string, []interface{}, error) {
-	if condition == nil {
-		return "", nil, nil
-	}
-	tagKey := string(condition.TagKey)
-	operator := condition.Operator
-	value := condition.Value
-
-	switch operator {
-	case entity.EvaluatorFilterOperatorType_Equal:
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value = ?", alias, alias), []interface{}{tagKey, value}, nil
-	case entity.EvaluatorFilterOperatorType_NotEqual:
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value != ?", alias, alias), []interface{}{tagKey, value}, nil
-	case entity.EvaluatorFilterOperatorType_In:
-		values := strings.Split(value, ",")
-		if len(values) == 0 {
-			return "", nil, fmt.Errorf("IN operator requires non-empty values")
-		}
-		placeholders := strings.Repeat("?,", len(values))
-		placeholders = placeholders[:len(placeholders)-1]
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IN (%s)", alias, alias, placeholders), append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
-	case entity.EvaluatorFilterOperatorType_NotIn:
-		values := strings.Split(value, ",")
-		if len(values) == 0 {
-			return "", nil, fmt.Errorf("NOT_IN operator requires non-empty values")
-		}
-		placeholders := strings.Repeat("?,", len(values))
-		placeholders = placeholders[:len(placeholders)-1]
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value NOT IN (%s)", alias, alias, placeholders), append([]interface{}{tagKey}, convertToInterfaceSlice(values)...), nil
-	case entity.EvaluatorFilterOperatorType_Like:
-		likeValue := "%" + value + "%"
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value LIKE ?", alias, alias), []interface{}{tagKey, likeValue}, nil
-	case entity.EvaluatorFilterOperatorType_IsNull:
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IS NULL", alias, alias), []interface{}{tagKey}, nil
-	case entity.EvaluatorFilterOperatorType_IsNotNull:
-		return fmt.Sprintf("%s.tag_key = ? AND %s.tag_value IS NOT NULL", alias, alias), []interface{}{tagKey}, nil
-	default:
-		return "", nil, fmt.Errorf("unsupported operator type: %v", operator)
-	}
-}
-
-// buildJoinPredicate AND 场景下的 JOIN 条件（别名版）
-func (dao *EvaluatorTagDAOImpl) buildJoinPredicate(alias string, condition *entity.EvaluatorFilterCondition) (string, []interface{}, error) {
-	return dao.buildSingleConditionWithAlias(alias, condition)
 }
 
 // convertToInterfaceSlice 将字符串切片转换为interface{}切片

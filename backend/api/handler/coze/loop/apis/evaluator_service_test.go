@@ -71,6 +71,10 @@ func (m *mockEvaluatorClient) BatchGetEvaluatorVersions(ctx context.Context, req
 	return &evaluator.BatchGetEvaluatorVersionsResponse{}, nil
 }
 
+func (m *mockEvaluatorClient) BatchGetEvaluatorVersionIDs(ctx context.Context, req *evaluator.BatchGetEvaluatorVersionIDsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorVersionIDsResponse, err error) {
+	return &evaluator.BatchGetEvaluatorVersionIDsResponse{}, nil
+}
+
 func (m *mockEvaluatorClient) SubmitEvaluatorVersion(ctx context.Context, req *evaluator.SubmitEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.SubmitEvaluatorVersionResponse, err error) {
 	return &evaluator.SubmitEvaluatorVersionResponse{}, nil
 }

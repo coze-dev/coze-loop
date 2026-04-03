@@ -232,6 +232,11 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 				return db.Where(fmt.Sprintf("%ssource_type %s (?)", exptPrefix, scopeComparator), ffields.SourceType)
 			})
 		}
+		if ffields != nil && len(ffields.TriggerType) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%strigger_type %s (?)", exptPrefix, scopeComparator), ffields.TriggerType)
+			})
+		}
 
 		return conds
 	}
