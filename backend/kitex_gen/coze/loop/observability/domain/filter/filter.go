@@ -59,6 +59,8 @@ const (
 	TaskFieldNameTaskID = "task_id"
 
 	TaskFieldNameWorkflowID = "workflow_id"
+
+	TaskFieldNameUpdatedBy = "updated_by"
 )
 
 type QueryType = string
