@@ -35,7 +35,7 @@ enum SourceType {
     Workflow = 3
 }
 
-typedef string ExptTriggerType
+typedef string ExptTriggerType (ts.enum="true")
 const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
@@ -142,7 +142,7 @@ struct ExptSource {
     102: optional task.Sampler sampler
 }
 
-typedef string Frequency
+typedef string Frequency (ts.enum="true")
 const Frequency FrequencyEveryday = "every_day"
 const Frequency FrequencyMonday = "monday"
 const Frequency FrequencyTuesday = "tuesday"
