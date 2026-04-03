@@ -4,7 +4,8 @@
 package consts
 
 const (
-	CtxKeyLogID = "K_LOGID"
+	CtxKeyLogID         = "K_LOGID"
+	CtxKeyFlowMethodKey = "X_FLOW_METHOD"
 
 	CookieLanguageKey = "i18next"
 	LocaleZhCN        = "zh-CN"

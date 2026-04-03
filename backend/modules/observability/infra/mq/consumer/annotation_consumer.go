@@ -5,6 +5,7 @@ package consumer
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -46,7 +47,7 @@ func (e *AnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 }
 
 func (e *AnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
-	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "annotation_consumer")
+	ctx = context.WithValue(ctx, consts.CtxKeyFlowMethodKey, "annotation_consumer")
 	event := new(entity.AnnotationEvent)
 	if err := json.Unmarshal(ext.Body, event); err != nil {
 		logs.CtxError(ctx, "annotation msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)

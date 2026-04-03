@@ -5,6 +5,7 @@ package consumer
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -47,7 +48,7 @@ func (e *AutoTaskCallbackConsumer) ConsumerCfg(ctx context.Context) (*mq.Consume
 }
 
 func (e *AutoTaskCallbackConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
-	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "autotask_callback_consumer")
+	ctx = context.WithValue(ctx, consts.CtxKeyFlowMethodKey, "autotask_callback_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.AutoEvalEvent)

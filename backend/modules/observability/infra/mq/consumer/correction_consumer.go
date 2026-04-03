@@ -4,6 +4,7 @@ package consumer
 
 import (
 	"context"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
@@ -46,7 +47,7 @@ func (e *CorrectionConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfi
 }
 
 func (e *CorrectionConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
-	ctx = context.WithValue(ctx, "X_FLOW_METHOD", "correction_consumer")
+	ctx = context.WithValue(ctx, consts.CtxKeyFlowMethodKey, "correction_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.CorrectionEvent)
