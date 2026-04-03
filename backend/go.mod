@@ -96,7 +96,10 @@ require (
 	gorm.io/plugin/soft_delete v1.2.1
 )
 
-require github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+require (
+	code.byted.org/flowdevops/cozeloop-gen-commercial v0.0.0-20260403155858-4e8b7b2ff5f8 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
+)
 
 require (
 	github.com/brianvoe/gofakeit/v6 v6.28.0
