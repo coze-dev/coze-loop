@@ -6107,7 +6107,6 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 	})
 }
 
-<<<<<<< HEAD
 func TestNewTurnEvaluatorResultRefs(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -6357,7 +6356,117 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 							Score: gptr.Of(0.5),
 							Correction: &entity.Correction{
 								Score: gptr.Of(0.9),
-=======
+							},
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.9),
+		},
+		{
+			name: "all nil scores",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: nil,
+						},
+					},
+				},
+				2: {
+					ID:                  2,
+					EvaluatorVersionID:  2,
+					EvaluatorOutputData: nil,
+				},
+			},
+			weights: nil,
+			want:    nil,
+		},
+		{
+			name: "mixed nil and valid scores - no weights",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: nil,
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.8),
+		},
+		{
+			name: "weight <= 0 skipped",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: {
+					ID:                 1,
+					EvaluatorVersionID: 1,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.8),
+						},
+					},
+				},
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.2),
+						},
+					},
+				},
+			},
+			weights: map[int64]float64{1: 1.0, 2: -0.5},
+			want:    gptr.Of(0.8),
+		},
+		{
+			name: "nil record in map skipped",
+			records: map[int64]*entity.EvaluatorRecord{
+				1: nil,
+				2: {
+					ID:                 2,
+					EvaluatorVersionID: 2,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{
+							Score: gptr.Of(0.6),
+						},
+					},
+				},
+			},
+			weights: nil,
+			want:    gptr.Of(0.6),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calculateWeightedScore(tt.records, tt.weights)
+			if tt.want == nil {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
+}
+
 func TestExptResultBuilder_getTurnEvaluatorResult(t *testing.T) {
 	ctx := context.Background()
 
@@ -6756,267 +6865,11 @@ func TestExptResultServiceImpl_compareActualOutput(t *testing.T) {
 										"actual_output": {Text: ptr.Of("hello")},
 									},
 								},
->>>>>>> e11c624f0 (add ut)
 							},
 						},
 					},
 				},
 			},
-<<<<<<< HEAD
-			weights: nil,
-			want:    gptr.Of(0.9),
-		},
-		{
-			name: "all nil scores",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
-					ID:                 1,
-					EvaluatorVersionID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: nil,
-						},
-					},
-				},
-				2: {
-					ID:                  2,
-					EvaluatorVersionID:  2,
-					EvaluatorOutputData: nil,
-				},
-			},
-			weights: nil,
-			want:    nil,
-		},
-		{
-			name: "mixed nil and valid scores - no weights",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
-					ID:                 1,
-					EvaluatorVersionID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
-				},
-				2: {
-					ID:                 2,
-					EvaluatorVersionID: 2,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: nil,
-						},
-					},
-				},
-			},
-			weights: nil,
-			want:    gptr.Of(0.8),
-		},
-		{
-			name: "weight <= 0 skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: {
-					ID:                 1,
-					EvaluatorVersionID: 1,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.8),
-						},
-					},
-				},
-				2: {
-					ID:                 2,
-					EvaluatorVersionID: 2,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.2),
-						},
-					},
-				},
-			},
-			weights: map[int64]float64{1: 1.0, 2: -0.5},
-			want:    gptr.Of(0.8),
-		},
-		{
-			name: "nil record in map skipped",
-			records: map[int64]*entity.EvaluatorRecord{
-				1: nil,
-				2: {
-					ID:                 2,
-					EvaluatorVersionID: 2,
-					EvaluatorOutputData: &entity.EvaluatorOutputData{
-						EvaluatorResult: &entity.EvaluatorResult{
-							Score: gptr.Of(0.6),
-						},
-					},
-				},
-			},
-			weights: nil,
-			want:    gptr.Of(0.6),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := calculateWeightedScore(tt.records, tt.weights)
-			if tt.want == nil {
-				assert.Nil(t, got)
-			} else {
-				assert.NotNil(t, got)
-				assert.Equal(t, *tt.want, *got)
-			}
-		})
-	}
-}
-
-func TestGenerateTurnKey_Basic(t *testing.T) {
-	got := GenerateTurnKey(100, 200, 300, 400)
-	assert.Equal(t, "100_200_300_400", got)
-}
-
-func TestParseTurnKey_TableDriven(t *testing.T) {
-	tests := []struct {
-		name    string
-		turnKey string
-		want    *TurnKeyComponents
-		wantErr bool
-	}{
-		{
-			name:    "valid",
-			turnKey: "100_200_300_400",
-			want: &TurnKeyComponents{
-				SpaceID: 100,
-				ExptID:  200,
-				ItemID:  300,
-				TurnID:  400,
-			},
-			wantErr: false,
-		},
-		{
-			name:    "invalid format - too few parts",
-			turnKey: "100_200_300",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid format - too many parts",
-			turnKey: "100_200_300_400_500",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid number - spaceID",
-			turnKey: "abc_200_300_400",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid number - exptID",
-			turnKey: "100_abc_300_400",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid number - itemID",
-			turnKey: "100_200_abc_400",
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid number - turnID",
-			turnKey: "100_200_300_abc",
-			want:    nil,
-			wantErr: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := ParseTurnKey(tt.turnKey)
-			if tt.wantErr {
-				assert.Error(t, err)
-				assert.Nil(t, got)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
-// TestExptResultServiceImpl_exportListTurnResultByCursor 覆盖导出场景按游标拉取 turn（UseTurnListCursor）路径。
-func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
-	ctx := context.Background()
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockTurn := repoMocks.NewMockIExptTurnResultRepo(ctrl)
-	svc := ExptResultServiceImpl{ExptTurnResultRepo: mockTurn}
-
-	baseExptID := int64(10)
-	cursor := &entity.ExptTurnResultListCursor{ItemID: 1, TurnID: 2}
-	nextCur := &entity.ExptTurnResultListCursor{ItemID: 3, TurnID: 4}
-	page := entity.NewPage(1, 25)
-
-	t.Run("online desc true filter nil", func(t *testing.T) {
-		param := &entity.MGetExperimentResultParam{
-			SpaceID:        7,
-			BaseExptID:     &baseExptID,
-			TurnListCursor: cursor,
-			Page:           page,
-			Filters:        nil,
-		}
-		exptOnline := &entity.Experiment{ExptType: entity.ExptType_Online}
-		mockTurn.EXPECT().
-			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), (*entity.ExptTurnResultFilter)(nil), cursor, 25, true).
-			Return([]*entity.ExptTurnResult{{ItemID: 100}}, int64(99), nextCur, nil)
-
-		turns, itemMap, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOnline)
-		assert.NoError(t, err)
-		assert.Nil(t, itemMap)
-		assert.Equal(t, int64(99), total)
-		assert.Equal(t, nextCur, next)
-		require.Len(t, turns, 1)
-		assert.Equal(t, int64(100), turns[0].ItemID)
-	})
-
-	t.Run("offline desc false with filter from Filters map", func(t *testing.T) {
-		fl := &entity.ExptTurnResultFilter{}
-		param := &entity.MGetExperimentResultParam{
-			SpaceID:        7,
-			BaseExptID:     &baseExptID,
-			TurnListCursor: nil,
-			Page:           page,
-			Filters: map[int64]*entity.ExptTurnResultFilter{
-				baseExptID: fl,
-			},
-		}
-		exptOffline := &entity.Experiment{ExptType: entity.ExptType_Offline}
-		mockTurn.EXPECT().
-			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), fl, (*entity.ExptTurnResultListCursor)(nil), 25, false).
-			Return([]*entity.ExptTurnResult{}, int64(0), nil, nil)
-
-		turns, _, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOffline)
-		assert.NoError(t, err)
-		assert.Empty(t, turns)
-		assert.Equal(t, int64(0), total)
-		assert.Nil(t, next)
-	})
-
-	t.Run("dao error", func(t *testing.T) {
-		param := &entity.MGetExperimentResultParam{
-			SpaceID:        7,
-			BaseExptID:     &baseExptID,
-			TurnListCursor: cursor,
-			Page:           page,
-		}
-		mockTurn.EXPECT().
-			ListTurnResultWithCursor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-			Return(nil, int64(0), nil, errors.New("cursor query fail"))
-
-		_, _, _, _, err := svc.exportListTurnResultByCursor(ctx, param, &entity.Experiment{ExptType: entity.ExptType_Online})
-		assert.Error(t, err)
-=======
 		}
 		got := svc.compareActualOutput(filter, turnResult, "key1")
 		assert.False(t, got)
@@ -7487,6 +7340,155 @@ func TestExptResultServiceImpl_compareTurnResultFilter(t *testing.T) {
 		assert.True(t, diffExist)
 		assert.True(t, evalDiff)
 		assert.False(t, actualDiff)
->>>>>>> e11c624f0 (add ut)
+	})
+}
+
+func TestGenerateTurnKey_Basic(t *testing.T) {
+	got := GenerateTurnKey(100, 200, 300, 400)
+	assert.Equal(t, "100_200_300_400", got)
+}
+
+func TestParseTurnKey_TableDriven(t *testing.T) {
+	tests := []struct {
+		name    string
+		turnKey string
+		want    *TurnKeyComponents
+		wantErr bool
+	}{
+		{
+			name:    "valid",
+			turnKey: "100_200_300_400",
+			want: &TurnKeyComponents{
+				SpaceID: 100,
+				ExptID:  200,
+				ItemID:  300,
+				TurnID:  400,
+			},
+			wantErr: false,
+		},
+		{
+			name:    "invalid format - too few parts",
+			turnKey: "100_200_300",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid format - too many parts",
+			turnKey: "100_200_300_400_500",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - spaceID",
+			turnKey: "abc_200_300_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - exptID",
+			turnKey: "100_abc_300_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - itemID",
+			turnKey: "100_200_abc_400",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid number - turnID",
+			turnKey: "100_200_300_abc",
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseTurnKey(tt.turnKey)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, got)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+// TestExptResultServiceImpl_exportListTurnResultByCursor 覆盖导出场景按游标拉取 turn（UseTurnListCursor）路径。
+func TestExptResultServiceImpl_exportListTurnResultByCursor(t *testing.T) {
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTurn := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	svc := ExptResultServiceImpl{ExptTurnResultRepo: mockTurn}
+
+	baseExptID := int64(10)
+	cursor := &entity.ExptTurnResultListCursor{ItemID: 1, TurnID: 2}
+	nextCur := &entity.ExptTurnResultListCursor{ItemID: 3, TurnID: 4}
+	page := entity.NewPage(1, 25)
+
+	t.Run("online desc true filter nil", func(t *testing.T) {
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: cursor,
+			Page:           page,
+			Filters:        nil,
+		}
+		exptOnline := &entity.Experiment{ExptType: entity.ExptType_Online}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), (*entity.ExptTurnResultFilter)(nil), cursor, 25, true).
+			Return([]*entity.ExptTurnResult{{ItemID: 100}}, int64(99), nextCur, nil)
+
+		turns, itemMap, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOnline)
+		assert.NoError(t, err)
+		assert.Nil(t, itemMap)
+		assert.Equal(t, int64(99), total)
+		assert.Equal(t, nextCur, next)
+		require.Len(t, turns, 1)
+		assert.Equal(t, int64(100), turns[0].ItemID)
+	})
+
+	t.Run("offline desc false with filter from Filters map", func(t *testing.T) {
+		fl := &entity.ExptTurnResultFilter{}
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: nil,
+			Page:           page,
+			Filters: map[int64]*entity.ExptTurnResultFilter{
+				baseExptID: fl,
+			},
+		}
+		exptOffline := &entity.Experiment{ExptType: entity.ExptType_Offline}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), int64(7), int64(10), fl, (*entity.ExptTurnResultListCursor)(nil), 25, false).
+			Return([]*entity.ExptTurnResult{}, int64(0), nil, nil)
+
+		turns, _, total, next, err := svc.exportListTurnResultByCursor(ctx, param, exptOffline)
+		assert.NoError(t, err)
+		assert.Empty(t, turns)
+		assert.Equal(t, int64(0), total)
+		assert.Nil(t, next)
+	})
+
+	t.Run("dao error", func(t *testing.T) {
+		param := &entity.MGetExperimentResultParam{
+			SpaceID:        7,
+			BaseExptID:     &baseExptID,
+			TurnListCursor: cursor,
+			Page:           page,
+		}
+		mockTurn.EXPECT().
+			ListTurnResultWithCursor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), nil, errors.New("cursor query fail"))
+
+		_, _, _, _, err := svc.exportListTurnResultByCursor(ctx, param, &entity.Experiment{ExptType: entity.ExptType_Online})
+		assert.Error(t, err)
 	})
 }

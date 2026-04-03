@@ -628,8 +628,12 @@ func TestBuildScoreWeightsFromTemplateConf_EdgeCases(t *testing.T) {
 func TestGetScoreWeightFromTemplateConf_EdgeCases(t *testing.T) {
 	t.Parallel()
 
-	assert.Zero(t, getScoreWeightFromTemplateConf(nil, 1))
-	assert.Zero(t, getScoreWeightFromTemplateConf(&entity.ExptTemplate{}, 1))
+	w, ok := getScoreWeightFromTemplateConf(nil, 1)
+	assert.False(t, ok)
+	assert.Zero(t, w)
+	w, ok = getScoreWeightFromTemplateConf(&entity.ExptTemplate{}, 1)
+	assert.False(t, ok)
+	assert.Zero(t, w)
 
 	template := &entity.ExptTemplate{
 		TemplateConf: &entity.ExptTemplateConfiguration{
@@ -642,9 +646,15 @@ func TestGetScoreWeightFromTemplateConf_EdgeCases(t *testing.T) {
 			},
 		},
 	}
-	assert.Zero(t, getScoreWeightFromTemplateConf(template, 1))
-	assert.Equal(t, 0.5, getScoreWeightFromTemplateConf(template, 2))
-	assert.Zero(t, getScoreWeightFromTemplateConf(template, 3))
+	w, ok = getScoreWeightFromTemplateConf(template, 1)
+	assert.True(t, ok)
+	assert.Zero(t, w)
+	w, ok = getScoreWeightFromTemplateConf(template, 2)
+	assert.True(t, ok)
+	assert.Equal(t, 0.5, w)
+	w, ok = getScoreWeightFromTemplateConf(template, 3)
+	assert.False(t, ok)
+	assert.Zero(t, w)
 }
 
 func TestBuildTemplateScoreWeightConfigDTO_EdgeCases(t *testing.T) {

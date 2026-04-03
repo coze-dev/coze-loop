@@ -1318,27 +1318,6 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		}
 		// 填充加权得分（行级未落库时按配置重算；EnableScoreWeight 为 false 时 scoreWeights 为空，走等权）
 		weightedScore := exptTurnResult.WeightedScore
-		// 如果 WeightedScore 为 nil，但实验启用了加权分数，则重新计算
-		if weightedScore == nil && exptResultBuilder.exptDO != nil &&
-			exptResultBuilder.exptDO.EvalConf != nil &&
-			exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-			exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-			// 构建权重映射
-			scoreWeights := make(map[int64]float64)
-			for _, ec := range exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-                if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
-					continue
-				}
-				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-			}
-			// 如果有评估器结果，则计算加权分数
-			// 如果没有权重配置，calculateWeightedScore 会按所有评估器权重都为1进行计算（简单平均）
-			if len(evaluatorVersionID2Result) > 0 {
-				// 将 map[int64]*entity.EvaluatorRecord 转换为 calculateWeightedScore 需要的格式
-				evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
-				for evaluatorVersionID, record := range evaluatorVersionID2Result {
-					if record != nil {
-						evaluatorRecords[evaluatorVersionID] = record
 		if weightedScore == nil && len(evaluatorVersionID2Result) > 0 {
 			var scoreWeights map[int64]float64
 			exptDO := exptResultBuilder.exptDO
