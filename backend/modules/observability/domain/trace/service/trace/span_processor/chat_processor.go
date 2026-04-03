@@ -30,7 +30,7 @@ func (c *ChatProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 
 func (c *ChatProcessor) processModelInput(ctx context.Context, input string) string {
 	if input == "" {
-		return noQueryParsed
+		return ""
 	}
 
 	var inputMap map[string]interface{}

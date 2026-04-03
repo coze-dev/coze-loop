@@ -2602,13 +2602,14 @@ func (r *TraceServiceImpl) ListTraceChat(ctx context.Context, req *ListTraceChat
 		return nil, err
 	}
 
-	maxPageSize := maxChatPageSize
+	var pageSize int32
 	if req.WithoutDetail {
-		maxPageSize = maxChatPageSizeWithoutDetail
-	}
-	pageSize := defaultChatPageSize
-	if req.PageSize > 0 && req.PageSize <= maxPageSize {
-		pageSize = req.PageSize
+		pageSize = maxChatPageSizeWithoutDetail
+	} else {
+		pageSize = defaultChatPageSize
+		if req.PageSize > 0 && req.PageSize <= maxChatPageSize {
+			pageSize = req.PageSize
+		}
 	}
 
 	filterFields := []*loop_span.FilterField{
