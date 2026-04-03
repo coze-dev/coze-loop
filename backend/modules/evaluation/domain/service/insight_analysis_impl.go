@@ -115,7 +115,7 @@ func (e ExptInsightAnalysisServiceImpl) GenAnalysisReport(ctx context.Context, s
 
 	fileName := fmt.Sprintf("insight_analysis_%d_%d.csv", spaceID, recordID)
 	exptResultFilePath = fileName
-	err = e.exptResultExportService.DoExportCSV(ctx, spaceID, exptID, fileName, true)
+	err = e.exptResultExportService.DoExportCSV(ctx, spaceID, exptID, fileName, true, nil)
 	if err != nil {
 		return err
 	}

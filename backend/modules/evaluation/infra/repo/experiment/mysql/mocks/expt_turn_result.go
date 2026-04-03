@@ -201,6 +201,28 @@ func (mr *MockExptTurnResultDAOMockRecorder) ListTurnResult(ctx, spaceID, exptID
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResult", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ListTurnResult), varargs...)
 }
 
+// ListTurnResultByCursor mocks base method.
+func (m *MockExptTurnResultDAO) ListTurnResultByCursor(ctx context.Context, spaceID, exptID int64, filter *entity.ExptTurnResultFilter, cursor *entity.ExptTurnResultListCursor, limit int, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, *entity.ExptTurnResultListCursor, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, spaceID, exptID, filter, cursor, limit, desc}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ListTurnResultByCursor", varargs...)
+	ret0, _ := ret[0].([]*model.ExptTurnResult)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(*entity.ExptTurnResultListCursor)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
+}
+
+// ListTurnResultByCursor indicates an expected call of ListTurnResultByCursor.
+func (mr *MockExptTurnResultDAOMockRecorder) ListTurnResultByCursor(ctx, spaceID, exptID, filter, cursor, limit, desc any, opts ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, spaceID, exptID, filter, cursor, limit, desc}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTurnResultByCursor", reflect.TypeOf((*MockExptTurnResultDAO)(nil).ListTurnResultByCursor), varargs...)
+}
+
 // ListTurnResultByItemIDs mocks base method.
 func (m *MockExptTurnResultDAO) ListTurnResultByItemIDs(ctx context.Context, spaceID, exptID int64, itemIDs []int64, page entity.Page, desc bool, opts ...db.Option) ([]*model.ExptTurnResult, int64, error) {
 	m.ctrl.T.Helper()

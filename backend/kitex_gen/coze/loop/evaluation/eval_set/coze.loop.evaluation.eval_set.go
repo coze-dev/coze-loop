@@ -16823,8 +16823,8 @@ type GetEvaluationSetItemFieldRequest struct {
 	FieldName string `thrift:"field_name,5,required" frugal:"5,required,string" form:"field_name,required" json:"field_name,required" query:"field_name,required"`
 	// 当 item 为多轮时，必须提供
 	TurnID *int64 `thrift:"turn_id,6,optional" frugal:"6,optional,i64" json:"turn_id" form:"turn_id" query:"turn_id"`
-	// 与 field name 同时指定时，仅 field key 生效
-	FieldKey *string    `thrift:"field_key,7,optional" frugal:"7,optional,string" form:"field_key" json:"field_key,omitempty" query:"field_key"`
+	// 列的唯一键，用于精确查找；与 field_name 同时指定时，仅 field_key 生效
+	FieldKey *string    `thrift:"field_key,7,optional" frugal:"7,optional,string" json:"field_key" query:"field_key" `
 	Base     *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 

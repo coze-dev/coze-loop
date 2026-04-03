@@ -78,6 +78,9 @@ struct SearchTraceOApiRequest {
     6: required i32 limit (api.body="limit")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional list<string> span_ids (api.body="span_ids")
+    10: optional filter.FilterFields filters (api.body="filters")
+    11: optional i32 page_size (api.body="page_size")
+    12: optional string page_token (api.body="page_token")
     100: optional bool need_original_tags (api.body='need_original_tags')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
@@ -95,6 +98,8 @@ struct SearchTraceOApiResponse {
 struct SearchTraceOApiData {
     1: required list<span.OutputSpan> spans
     2: optional coze.loop.observability.trace.TraceAdvanceInfo traces_advance_info
+    3: optional string next_page_token
+    4: optional bool has_more
 }
 
 struct SearchTraceTreeOApiRequest {

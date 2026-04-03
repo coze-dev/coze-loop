@@ -25,6 +25,13 @@ func TestAgentEvaluatorVersion_ValidateInput(t *testing.T) {
 		assertion func(t *testing.T, err error)
 	}{
 		{
+			name:     "nil input",
+			version:  &AgentEvaluatorVersion{InputSchemas: []*ArgsSchema{}},
+			input:    nil,
+			wantErr:  true,
+			wantCode: errno.InvalidInputDataCode,
+		},
+		{
 			name: "ignore fields not in schema",
 			version: &AgentEvaluatorVersion{
 				InputSchemas: []*ArgsSchema{

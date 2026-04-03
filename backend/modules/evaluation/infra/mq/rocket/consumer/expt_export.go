@@ -59,7 +59,7 @@ func (e *ExptExportConsumer) handleEvent(ctx context.Context, event *entity.Expo
 			return nil
 		}
 	default:
-		err = e.exptResultExportService.HandleExportEvent(ctx, event.SpaceID, event.ExperimentID, event.ExportID)
+		err = e.exptResultExportService.HandleExportEvent(ctx, event)
 		if err != nil {
 			// 不进行重试
 			logs.CtxError(ctx, "ExptExportConsumer DoExportCSV fail, expt_id:%v, err: %v", event.ExperimentID, err)
