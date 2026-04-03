@@ -254,7 +254,10 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 			{Column: clause.Column{Name: "span_id"}, Desc: true},
 		}})
 	} else if param.queryParam.AscByStartTime {
-		sqlQuery = sqlQuery.Order("start_time ASC, span_id ASC")
+		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "start_time"}, Desc: false},
+			{Column: clause.Column{Name: "span_id"}, Desc: false},
+		}})
 	}
 	sqlQuery = sqlQuery.Limit(int(param.queryParam.Limit))
 	return sqlQuery, nil
