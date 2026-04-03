@@ -75,10 +75,10 @@ func (mr *MockITraceRepoMockRecorder) GetPreSpanIDs(arg0, arg1 any) *gomock.Call
 }
 
 // GetTrace mocks base method.
-func (m *MockITraceRepo) GetTrace(arg0 context.Context, arg1 *repo.GetTraceParam) (loop_span.SpanList, error) {
+func (m *MockITraceRepo) GetTrace(arg0 context.Context, arg1 *repo.GetTraceParam) (*repo.GetTraceResult, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTrace", arg0, arg1)
-	ret0, _ := ret[0].(loop_span.SpanList)
+	ret0, _ := ret[0].(*repo.GetTraceResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -5846,6 +5846,20 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastRead(buf []byte) (int, er
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -5973,6 +5987,31 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField5(buf []byte) (i
 	return offset, nil
 }
 
+func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*eval_set.FieldWriteOption, 0, size)
+	values := make([]eval_set.FieldWriteOption, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.FieldWriteOptions = _field
+	return offset, nil
+}
+
 func (p *BatchCreateEvaluationSetItemsOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -6009,6 +6048,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) FastWriteNocopy(buf []byte, w
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -6024,6 +6064,7 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -6079,6 +6120,22 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField5(buf []byte, w
 	if p.IsSetIsAllowPartialAdd() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsAllowPartialAdd)
+	}
+	return offset
+}
+
+func (p *BatchCreateEvaluationSetItemsOApiRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFieldWriteOptions() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 6)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.FieldWriteOptions {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
 	}
 	return offset
 }
@@ -6150,6 +6207,19 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) field5Length() int {
 	return l
 }
 
+func (p *BatchCreateEvaluationSetItemsOApiRequest) field6Length() int {
+	l := 0
+	if p.IsSetFieldWriteOptions() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.FieldWriteOptions {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
 func (p *BatchCreateEvaluationSetItemsOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -6207,6 +6277,21 @@ func (p *BatchCreateEvaluationSetItemsOApiRequest) DeepCopy(s interface{}) error
 	if src.IsAllowPartialAdd != nil {
 		tmp := *src.IsAllowPartialAdd
 		p.IsAllowPartialAdd = &tmp
+	}
+
+	if src.FieldWriteOptions != nil {
+		p.FieldWriteOptions = make([]*eval_set.FieldWriteOption, 0, len(src.FieldWriteOptions))
+		for _, elem := range src.FieldWriteOptions {
+			var _elem *eval_set.FieldWriteOption
+			if elem != nil {
+				_elem = &eval_set.FieldWriteOption{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.FieldWriteOptions = append(p.FieldWriteOptions, _elem)
+		}
 	}
 
 	var _extra *extra.Extra
@@ -9115,6 +9200,20 @@ func (p *GetEvaluationItemFieldOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 6:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField6(buf[offset:])
@@ -9245,6 +9344,20 @@ func (p *GetEvaluationItemFieldOApiRequest) FastReadField5(buf []byte) (int, err
 	return offset, nil
 }
 
+func (p *GetEvaluationItemFieldOApiRequest) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.FieldKey = _field
+	return offset, nil
+}
+
 func (p *GetEvaluationItemFieldOApiRequest) FastReadField6(buf []byte) (int, error) {
 	offset := 0
 
@@ -9296,6 +9409,7 @@ func (p *GetEvaluationItemFieldOApiRequest) FastWriteNocopy(buf []byte, w thrift
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -9311,6 +9425,7 @@ func (p *GetEvaluationItemFieldOApiRequest) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field7Length()
 		l += p.field6Length()
 		l += p.field254Length()
 		l += p.field255Length()
@@ -9360,6 +9475,15 @@ func (p *GetEvaluationItemFieldOApiRequest) fastWriteField5(buf []byte, w thrift
 	if p.IsSetFieldName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.FieldName)
+	}
+	return offset
+}
+
+func (p *GetEvaluationItemFieldOApiRequest) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFieldKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.FieldKey)
 	}
 	return offset
 }
@@ -9436,6 +9560,15 @@ func (p *GetEvaluationItemFieldOApiRequest) field5Length() int {
 	return l
 }
 
+func (p *GetEvaluationItemFieldOApiRequest) field7Length() int {
+	l := 0
+	if p.IsSetFieldKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.FieldKey)
+	}
+	return l
+}
+
 func (p *GetEvaluationItemFieldOApiRequest) field6Length() int {
 	l := 0
 	if p.IsSetTurnID() {
@@ -9495,6 +9628,14 @@ func (p *GetEvaluationItemFieldOApiRequest) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.FieldName)
 		}
 		p.FieldName = &tmp
+	}
+
+	if src.FieldKey != nil {
+		var tmp string
+		if *src.FieldKey != "" {
+			tmp = kutils.StringDeepCopy(*src.FieldKey)
+		}
+		p.FieldKey = &tmp
 	}
 
 	if src.TurnID != nil {

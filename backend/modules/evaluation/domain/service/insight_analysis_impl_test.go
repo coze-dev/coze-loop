@@ -675,7 +675,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_SuccessPath(t *testing
 	}, nil)
 	// export CSV
 	fileName := "insight_analysis_1_3.csv"
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	// sign download
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("http://example.com/f", nil, nil)
 	// expt info
@@ -798,7 +798,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_DoExportCSVError_Faile
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
 	fileName := "insight_analysis_1_3.csv"
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(errors.New("export error"))
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(errors.New("export error"))
 	// should update as Failed in defer
 	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
@@ -823,7 +823,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_UpdateRecordError_Retu
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
 	fileName := "insight_analysis_1_3.csv"
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("http://example.com/f", nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -943,7 +943,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_SignDownloadReqError(t
 	fileName := "insight_analysis_1_3.csv"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("", nil, errors.New("sign err"))
 	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, rec *entity.ExptInsightAnalysisRecord, _ ...db.Option) error {
@@ -968,7 +968,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_GetExptByIDError(t *te
 	fileName := "insight_analysis_1_3.csv"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return("http://example.com/f", nil, nil)
 	mocks.exptRepo.EXPECT().GetByID(gomock.Any(), exptID, spaceID).Return(nil, errors.New("expt err"))
 	mocks.repo.EXPECT().UpdateAnalysisRecord(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -995,7 +995,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_GetEvalTargetVersionEr
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1025,7 +1025,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_TargetMissingSourceID(
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1055,7 +1055,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_TargetSourceIDParseErr
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1085,7 +1085,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_TargetVersionMissing(t
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1115,7 +1115,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_GetEvaluatorsError(t *
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1146,7 +1146,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_CallTraceAgentError_Up
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)
@@ -1179,7 +1179,7 @@ func TestExptInsightAnalysisServiceImpl_GenAnalysisReport_PublishEventError_Upda
 	url := "http://example.com/f"
 
 	mocks.repo.EXPECT().GetAnalysisRecordByID(gomock.Any(), spaceID, exptID, recordID).Return(&entity.ExptInsightAnalysisRecord{ID: recordID, SpaceID: spaceID, ExptID: exptID}, nil)
-	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true).Return(nil)
+	mocks.exptResultExportService.EXPECT().DoExportCSV(gomock.Any(), spaceID, exptID, fileName, true, gomock.Any()).Return(nil)
 	mocks.fileClient.EXPECT().SignDownloadReq(gomock.Any(), fileName, gomock.Any()).Return(url, nil, nil)
 	now := time.Now()
 	end := now.Add(time.Hour)

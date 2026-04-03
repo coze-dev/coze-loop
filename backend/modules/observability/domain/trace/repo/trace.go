@@ -23,6 +23,14 @@ type GetTraceParam struct {
 	OmitColumns        []string // omit specific columns
 	SelectColumns      []string // select specific columns, default select all columns
 	Filters            *loop_span.FilterFields
+	PageToken          string
+	DescByStartTime    bool
+}
+
+type GetTraceResult struct {
+	Spans     loop_span.SpanList
+	PageToken string
+	HasMore   bool
 }
 
 type ListSpansParam struct {
@@ -105,7 +113,7 @@ type ITraceRepo interface {
 	ListSpans(context.Context, *ListSpansParam) (*ListSpansResult, error)
 	ListSpansRepeat(context.Context, *ListSpansParam) (*ListSpansResult, error)
 	GetPreSpanIDs(context.Context, *GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error)
-	GetTrace(context.Context, *GetTraceParam) (loop_span.SpanList, error)
+	GetTrace(context.Context, *GetTraceParam) (*GetTraceResult, error)
 	ListAnnotations(context.Context, *ListAnnotationsParam) (loop_span.AnnotationList, error)
 	GetAnnotation(context.Context, *GetAnnotationParam) (*loop_span.Annotation, error)
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error

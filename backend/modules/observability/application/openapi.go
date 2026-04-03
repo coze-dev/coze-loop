@@ -613,6 +613,8 @@ func (o *OpenAPIApplication) SearchTraceOApi(ctx context.Context, req *openapi.S
 					Output: outTokens,
 				},
 			},
+			NextPageToken: &sResp.NextPageToken,
+			HasMore:       &sResp.HasMore,
 		},
 	}, nil
 }
@@ -624,6 +626,8 @@ func (o *OpenAPIApplication) validateSearchTraceOApiReq(ctx context.Context, req
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("at least need trace_id or log_id"))
 	} else if req.Limit > MaxListSpansLimit || req.Limit < 0 {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid limit"))
+	} else if pageSize := req.GetPageSize(); pageSize < 0 || pageSize > MaxOApiListSpansLimit {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page_size"))
 	}
 
 	return nil
@@ -668,10 +672,23 @@ func (o *OpenAPIApplication) buildSearchTraceOApiReq(ctx context.Context, req *o
 		PlatformType:          platformType,
 		WithDetail:            true,
 		SpanIDs:               req.SpanIds,
+		PageToken:             req.GetPageToken(),
+	}
+	if req.PageSize != nil {
+		ret.Limit = *req.PageSize
+	}
+	if ret.Limit == 0 {
+		ret.Limit = 10
 	}
 	if len(ret.Tenants) == 0 {
 		logs.CtxError(ctx, "fail to get platform tenants")
 		return nil, errorx.WrapByCode(errors.New("fail to get platform tenants"), obErrorx.CommercialCommonInternalErrorCodeCode)
+	}
+	if req.Filters != nil {
+		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
 	}
 
 	return ret, nil

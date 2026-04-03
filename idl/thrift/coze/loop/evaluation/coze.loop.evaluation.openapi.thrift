@@ -188,6 +188,7 @@ struct BatchCreateEvaluationSetItemsOApiRequest {
     3: optional list<eval_set.EvaluationSetItem> items (api.body="items", vt.min_size='1',vt.max_size='100')
     4: optional bool is_skip_invalid_items (api.body="is_skip_invalid_items")// items 中存在非法数据时，默认所有数据写入失败；设置 skipInvalidItems=true 则会跳过无效数据，写入有效数据
     5: optional bool is_allow_partial_add (api.body="is_allow_partial_add")// 批量写入 items 如果超出数据集容量限制，默认所有数据写入失败；设置 partialAdd=true 会写入不超出容量限制的前 N 条
+    6: optional list<eval_set.FieldWriteOption> field_write_options
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -276,6 +277,7 @@ struct GetEvaluationItemFieldOApiRequest {
     3: optional i64 version_id (api.js_conv="true", go.tag='json:"version_id"'),
     4: optional i64 item_id (api.path='item_id',api.js_conv='true', go.tag='json:"item_id"'),
     5: optional string field_name // 列名
+    7: optional string field_key (api.js_conv='true', go.tag='json:"field_key"') // 列的唯一键，用于精确查找
     6: optional i64 turn_id (api.js_conv='true', go.tag='json:"turn_id"') // 当 item 为多轮时，必须提供
 
     254: optional extra.Extra extra (agw.source="not_body_struct")

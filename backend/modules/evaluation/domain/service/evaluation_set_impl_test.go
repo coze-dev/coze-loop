@@ -647,6 +647,7 @@ func TestCreateEvaluationSetWithImport(t *testing.T) {
 				SourceType:          gptr.Of(sourceType),
 				Source:              source,
 				FieldMappings:       fieldMappings,
+				Option:              &entity.DatasetIOJobOption{},
 			},
 			expectedID:  101,
 			expectedJob: 202,
@@ -660,6 +661,7 @@ func TestCreateEvaluationSetWithImport(t *testing.T) {
 					SourceType:         gptr.Of(sourceType),
 					Source:             source,
 					FieldMappings:      fieldMappings,
+					Option:             &entity.DatasetIOJobOption{},
 				}).Return(int64(101), int64(202), nil)
 			},
 		},

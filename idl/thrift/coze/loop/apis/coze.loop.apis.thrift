@@ -13,6 +13,7 @@ include "../evaluation/coze.loop.evaluation.expt.thrift"
 include "../evaluation/coze.loop.evaluation.openapi.thrift"
 include "../data/coze.loop.data.dataset.thrift"
 include "../prompt/coze.loop.prompt.manage.thrift"
+include "../prompt/coze.loop.prompt.tool_manage.thrift"
 include "../prompt/coze.loop.prompt.debug.thrift"
 include "../prompt/coze.loop.prompt.execute.thrift"
 include "../prompt/coze.loop.prompt.openapi.thrift"
@@ -34,6 +35,7 @@ service DatasetService extends coze.loop.data.dataset.DatasetService{}
 service TagService extends coze.loop.data.tag.TagService{}
 
 service PromptManageService extends coze.loop.prompt.manage.PromptManageService{}
+service ToolManageService extends coze.loop.prompt.tool_manage.ToolManageService{}
 service PromptDebugService extends coze.loop.prompt.debug.PromptDebugService{}
 service PromptExecuteService extends coze.loop.prompt.execute.PromptExecuteService{}
 service PromptOpenAPIService extends coze.loop.prompt.openapi.PromptOpenAPIService{}

@@ -187,13 +187,14 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		switch etec.Expt.Target.EvalTargetType {
 		case entity.EvalTargetTypeCustomRPCServer:
 			fields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
-			for name, content := range fields {
-				if content.IsContentOmitted() {
+			for _, field := range turn.FieldDataList {
+				if field.Content != nil && field.Content.IsContentOmitted() {
 					req := &entity.GetEvaluationSetItemFieldParam{
 						SpaceID:         spaceID,
 						EvaluationSetID: turn.EvalSetID,
 						ItemPK:          turn.ItemID,
-						FieldName:       name,
+						FieldName:       field.Name,
+						FieldKey:        gptr.Of(field.Key),
 						TurnID:          gptr.Of(turn.ID),
 					}
 					logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
@@ -201,7 +202,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 					if err != nil {
 						return nil, err
 					}
-					fields[name] = fd.Content
+					fields[field.Name] = fd.Content
 				}
 			}
 			return fields, nil
@@ -564,20 +565,24 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 
 	// 评测集大对象：在按 FieldConf 处理前，先加载所有被裁剪字段的完整内容，避免 JSON Path 提取时使用剪裁后的数据
 	if len(fcs) > 0 && fields != nil && evalSetTurn != nil {
-		for fieldName, content := range fields {
-			if content != nil && content.IsContentOmitted() {
-				fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, &entity.GetEvaluationSetItemFieldParam{
+		for _, field := range evalSetTurn.FieldDataList {
+			if field.Content != nil && field.Content.IsContentOmitted() {
+				param := &entity.GetEvaluationSetItemFieldParam{
 					SpaceID:         spaceID,
 					EvaluationSetID: evalSetTurn.EvalSetID,
 					ItemPK:          evalSetTurn.ItemID,
-					FieldName:       fieldName,
+					FieldName:       field.Name,
 					TurnID:          gptr.Of(evalSetTurn.ID),
-				})
+				}
+				if field.Key != "" {
+					param.FieldKey = gptr.Of(field.Key)
+				}
+				fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, param)
 				if err != nil {
 					return nil, err
 				}
 				if fd != nil && fd.Content != nil {
-					fields[fieldName] = fd.Content
+					fields[field.Name] = fd.Content
 				}
 			}
 		}
@@ -594,6 +599,7 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvalSetFields(ctx context.Context, 
 				EvaluationSetID: evalSetTurn.EvalSetID,
 				ItemPK:          evalSetTurn.ItemID,
 				FieldName:       fc.FromField,
+				FieldKey:        gptr.Of(fc.FromField),
 				TurnID:          gptr.Of(evalSetTurn.ID),
 			}
 			logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
@@ -681,6 +687,7 @@ func (e *DefaultExptTurnEvaluationImpl) getAllEvalSetFields(ctx context.Context,
 				EvaluationSetID: evalSetTurn.EvalSetID,
 				ItemPK:          evalSetTurn.ItemID,
 				FieldName:       field.Name,
+				FieldKey:        gptr.Of(field.Key),
 				TurnID:          gptr.Of(evalSetTurn.ID),
 			}
 			logs.CtxInfo(ctx, "found omitted content turn in getAllEvalSetFields, turn_info: %v", json.Jsonify(req))

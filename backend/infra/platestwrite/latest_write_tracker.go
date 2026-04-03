@@ -135,6 +135,8 @@ const (
 	ResourceTypeReleaseTask              ResourceType = "release_task"
 	ResourceTypeReleaseSubtask           ResourceType = "release_subtask"
 	ResourceTypeReleaseTaskResource      ResourceType = "release_task_resource"
+	ResourceTypeToolBasic                ResourceType = "tool_basic"
+	ResourceTypeToolCommit               ResourceType = "tool_commit"
 
 	ResourceTypeExperiment    ResourceType = "experiment"
 	ResourceTypeEvalSet       ResourceType = "eval_set"

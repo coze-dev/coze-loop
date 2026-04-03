@@ -11,6 +11,8 @@ import (
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	common_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func OpenAPIEvaluatorDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evaluator {
@@ -562,6 +564,16 @@ func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator,
 	if dto == nil {
 		return nil, nil
 	}
+	// OpenAPI 创建评估器须显式传类型与版本详情，避免默认 Prompt + 空内容导致下游 nil 解引用
+	if dto.EvaluatorType == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_type is required"))
+	}
+	if dto.CurrentVersion == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current_version is required"))
+	}
+	if dto.CurrentVersion.EvaluatorContent == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
 	evalType := OpenAPIEvaluatorTypeDTO2DO(dto.EvaluatorType)
 	res := &entity.Evaluator{
 		ID:            dto.GetID(),
@@ -570,15 +582,16 @@ func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator,
 		Description:   dto.GetDescription(),
 		EvaluatorType: evalType,
 	}
-	if dto.CurrentVersion != nil {
-		verDO, err := OpenAPIEvaluatorContentDTO2DO(dto.CurrentVersion.EvaluatorContent, evalType)
-		if err != nil {
-			return nil, err
-		}
-		res.SetEvaluatorVersion(verDO)
-		res.SetVersion(dto.CurrentVersion.GetVersion())
-		res.SetEvaluatorVersionDescription(dto.CurrentVersion.GetDescription())
+	verDO, err := OpenAPIEvaluatorContentDTO2DO(dto.CurrentVersion.EvaluatorContent, evalType)
+	if err != nil {
+		return nil, err
 	}
+	if verDO == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
+	res.SetEvaluatorVersion(verDO)
+	res.SetVersion(dto.CurrentVersion.GetVersion())
+	res.SetEvaluatorVersionDescription(dto.CurrentVersion.GetDescription())
 	return res, nil
 }
 
