@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/samber/lo"
 )
 
@@ -50,6 +51,7 @@ func (b *EvalTargetBuilderImpl) Build(ctx context.Context, task *task_entity.Obs
 		evalTargetType = eval_target_d.EvalTargetType_VolcengineAgentOnline
 
 	}
+	logs.CtxInfo(ctx, "Evaluation target type: %s", evalTargetType)
 	ret.EvalTargetType = lo.ToPtr(evalTargetType)
 	return ret
 }
