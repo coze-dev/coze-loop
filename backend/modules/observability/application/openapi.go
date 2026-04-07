@@ -276,7 +276,7 @@ func (o *OpenAPIApplication) OtelIngestTraces(ctx context.Context, req *openapi.
 			return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 		}
 		if e = o.auth.CheckIngestPermission(ctx, workspaceId); e != nil {
-			return nil, e
+			return nil, errorx.NewByCode(obErrorx.AccountNotAvailableErrorCode, errorx.WithExtraMsg("check permission failed"))
 		}
 		connectorUid := session.UserIDInCtxOrEmpty(ctx)
 
