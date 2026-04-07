@@ -9,6 +9,7 @@ type SpanStatsEntry struct {
 	PSM           string
 	InCount       int
 	FilteredCount map[string]int
+	OutCount      map[string]int
 }
 
 func (e *SpanStatsEntry) TotalFiltered() int {
@@ -21,6 +22,18 @@ func (e *SpanStatsEntry) TotalFiltered() int {
 
 func (e *SpanStatsEntry) GetFiltered(node string) int {
 	return e.FilteredCount[node]
+}
+
+func (e *SpanStatsEntry) TotalOutCount() int {
+	total := 0
+	for _, c := range e.OutCount {
+		total += c
+	}
+	return total
+}
+
+func (e *SpanStatsEntry) GetOutCount(pipeline string) int {
+	return e.OutCount[pipeline]
 }
 
 type SpanStats struct {
@@ -60,6 +73,7 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 					Tenant:        tds.Tenant,
 					PSM:           span.PSM,
 					FilteredCount: make(map[string]int),
+					OutCount:      make(map[string]int),
 				}
 				stats.entries[key] = entry
 			}
@@ -80,10 +94,30 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count i
 			Tenant:        tenant,
 			PSM:           psm,
 			FilteredCount: make(map[string]int),
+			OutCount:      make(map[string]int),
 		}
 		stats.entries[key] = entry
 	}
 	entry.FilteredCount[pipeline] += count
+}
+
+func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count int) {
+	stats := getSpanStats(ctx)
+	if stats == nil {
+		return
+	}
+	key := statsKey(tenant, psm)
+	entry, ok := stats.entries[key]
+	if !ok {
+		entry = &SpanStatsEntry{
+			Tenant:        tenant,
+			PSM:           psm,
+			FilteredCount: make(map[string]int),
+			OutCount:      make(map[string]int),
+		}
+		stats.entries[key] = entry
+	}
+	entry.OutCount[pipeline] += count
 }
 
 func GetSpanStatsEntries(ctx context.Context) []*SpanStatsEntry {
