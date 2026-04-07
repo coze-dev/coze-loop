@@ -281,6 +281,7 @@ struct BatchCreateDatasetItemsRequest {
     3: optional list<dataset.DatasetItem> items (vt.min_size = "1", vt.max_size = "100", vt.elem.skip = "false")
     10: optional bool skip_invalid_items                                                     // items 中存在无效数据时，默认不会写入任何数据；设置 skipInvalidItems=true 会跳过无效数据，写入有效数据
     11: optional bool allow_partial_add                                                      // 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条
+    12: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }
@@ -299,6 +300,8 @@ struct UpdateDatasetItemRequest {
     3: required i64 item_id (api.js_conv="true", go.tag='json:"item_id"', api.path = "item_id", vt.gt = "0")
     4: optional list<dataset.FieldData> data     (vt.elem.skip = "false")                                      // 单轮数据内容，当数据集为单轮时，写入此处的值
     5: optional list<dataset.ItemData> repeated_data      (vt.elem.skip = "false")                                 // 多轮对话数据内容，当数据集为多轮对话时，写入此处的值
+
+    10: optional list<dataset.FieldWriteOption> field_write_options (vt.elem.skip = "false")
 
     255: optional base.Base Base
 }

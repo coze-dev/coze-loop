@@ -41,6 +41,7 @@ type Client interface {
 	BatchGetEvaluatorVersionsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorVersionsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchGetEvaluatorVersionsOApiResponse, err error)
 	SubmitEvaluatorVersionOApi(ctx context.Context, req *openapi.SubmitEvaluatorVersionOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitEvaluatorVersionOApiResponse, err error)
 	RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest, callOptions ...callopt.Option) (r *openapi.RunEvaluatorOApiResponse, err error)
+	RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest, callOptions ...callopt.Option) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error)
 	CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.CorrectEvaluatorRecordOApiResponse, err error)
 	BatchGetEvaluatorRecordsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorRecordsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchGetEvaluatorRecordsOApiResponse, err error)
 	CreateExptTemplateOApi(ctx context.Context, req *openapi.CreateExptTemplateOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateExptTemplateOApiResponse, err error)
@@ -230,6 +231,11 @@ func (p *kEvaluationOpenAPIServiceClient) SubmitEvaluatorVersionOApi(ctx context
 func (p *kEvaluationOpenAPIServiceClient) RunEvaluatorOApi(ctx context.Context, req *openapi.RunEvaluatorOApiRequest, callOptions ...callopt.Option) (r *openapi.RunEvaluatorOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.RunEvaluatorOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) RunBuiltinEvaluatorOApi(ctx context.Context, req *openapi.RunBuiltinEvaluatorOApiRequest, callOptions ...callopt.Option) (r *openapi.RunBuiltinEvaluatorOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RunBuiltinEvaluatorOApi(ctx, req)
 }
 
 func (p *kEvaluationOpenAPIServiceClient) CorrectEvaluatorRecordOApi(ctx context.Context, req *openapi.CorrectEvaluatorRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.CorrectEvaluatorRecordOApiResponse, err error) {

@@ -362,12 +362,12 @@ func (h *TraceHubServiceImpl) flushSpans(ctx context.Context, spans []*loop_span
 	err, shouldFinish = h.processSpansForBackfill(ctx, sampledSpans, sub)
 	if err != nil {
 		logs.CtxError(ctx, "process spans failed, task_id=%d, err=%v", sub.t.ID, err)
-		return
+		return err, shouldFinish
 	}
 
 	logs.CtxInfo(ctx, "successfully processed %d spans (sampled from %d), task_id=%d",
 		len(sampledSpans), len(spans), sub.t.ID)
-	return
+	return err, shouldFinish
 }
 
 // applySampling applies sampling logic
@@ -419,11 +419,11 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		if err != nil {
 			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
 				sub.t.ID, i, err)
-			return
+			return err, shouldFinish
 		}
 
 		if shouldFinish {
-			return
+			return err, shouldFinish
 		}
 
 		// ml_flow rate-limited: 50/5s

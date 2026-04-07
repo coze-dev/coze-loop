@@ -314,7 +314,7 @@ func (t *TraceRepoImpl) ListSpansRepeat(ctx context.Context, req *repo.ListSpans
 	}, nil
 }
 
-func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (loop_span.SpanList, error) {
+func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (*repo.GetTraceResult, error) {
 	spanStorage := t.storageProvider.GetTraceStorage(ctx, req.WorkSpaceID, req.Tenants)
 	spanDao := t.spanDaos[spanStorage.StorageName]
 	if spanDao == nil {
@@ -363,18 +363,27 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 	filter.FilterFields = append(filter.FilterFields, &loop_span.FilterField{
 		SubFilter: req.Filters,
 	})
+	pageToken, err := parsePageToken(req.PageToken)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page token"))
+	}
+	if pageToken != nil {
+		filter = t.addPageTokenFilter(pageToken, filter)
+	}
 	st := time.Now()
+	queryLimit := req.Limit + 1
 	spans, err := spanDao.Get(ctx, &dao.QueryParam{
-		QueryType:     dao.QueryTypeGetTrace,
-		Tables:        tableCfg.SpanTables,
-		AnnoTableMap:  tableCfg.AnnoTableMap,
-		StartTime:     time_util.MillSec2MicroSec(req.StartAt),
-		EndTime:       time_util.MillSec2MicroSec(req.EndAt),
-		Filters:       filter,
-		Limit:         req.Limit,
-		OmitColumns:   req.OmitColumns,
-		SelectColumns: req.SelectColumns,
-		Extra:         spanStorage.StorageConfig,
+		QueryType:        dao.QueryTypeGetTrace,
+		Tables:           tableCfg.SpanTables,
+		AnnoTableMap:     tableCfg.AnnoTableMap,
+		StartTime:        time_util.MillSec2MicroSec(req.StartAt),
+		EndTime:          time_util.MillSec2MicroSec(req.EndAt),
+		Filters:          filter,
+		Limit:            queryLimit,
+		OrderByStartTime: req.DescByStartTime,
+		OmitColumns:      req.OmitColumns,
+		SelectColumns:    req.SelectColumns,
+		Extra:            spanStorage.StorageConfig,
 	})
 	if err != nil {
 		return nil, err
@@ -402,7 +411,24 @@ func (t *TraceRepoImpl) GetTrace(ctx context.Context, req *repo.GetTraceParam) (
 		annoDOList := converter.AnnotationListPO2DO(annotations)
 		spanDOList.SetAnnotations(annoDOList.Uniq())
 	}
-	return spanDOList.Uniq(), nil
+	result := &repo.GetTraceResult{
+		Spans: spanDOList,
+	}
+	result.HasMore = len(spans) > int(req.Limit)
+	if result.HasMore {
+		result.Spans = result.Spans[:len(result.Spans)-1]
+	}
+	if len(result.Spans) > 0 {
+		lastSpan := result.Spans[len(result.Spans)-1]
+		pt := &PageToken{
+			StartTime: lastSpan.StartTime,
+			SpanID:    lastSpan.SpanID,
+		}
+		ptBytes, _ := json.Marshal(pt)
+		result.PageToken = base64.StdEncoding.EncodeToString(ptBytes)
+	}
+	result.Spans = result.Spans.Uniq()
+	return result, nil
 }
 
 func (t *TraceRepoImpl) ListAnnotations(ctx context.Context, param *repo.ListAnnotationsParam) (loop_span.AnnotationList, error) {

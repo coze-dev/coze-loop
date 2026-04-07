@@ -22,6 +22,7 @@ func TestStorageProvider_String(t *testing.T) {
 		{StorageProvider_Abase, "Abase"},
 		{StorageProvider_RDS, "RDS"},
 		{StorageProvider_LocalFS, "LocalFS"},
+		{StorageProvider_ExternalUrl, "ExternalUrl"},
 		{StorageProvider(999), "<UNSET>"}, // 未知值
 	}
 
@@ -46,6 +47,7 @@ func TestStorageProviderFromString(t *testing.T) {
 		{"Abase", StorageProvider_Abase, true},
 		{"RDS", StorageProvider_RDS, true},
 		{"LocalFS", StorageProvider_LocalFS, true},
+		{"ExternalUrl", StorageProvider_ExternalUrl, true},
 		{"unknown", StorageProvider(0), false},
 		{"", StorageProvider(0), false},
 	}

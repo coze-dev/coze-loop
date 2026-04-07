@@ -8,6 +8,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/execute"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/openapi"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/tool_manage"
 )
 
 type PromptManageService interface {
@@ -33,6 +34,32 @@ func NewPromptManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TPro
 func NewPromptManageServiceClient(c thrift.TClient) *PromptManageServiceClient {
 	return &PromptManageServiceClient{
 		PromptManageServiceClient: manage.NewPromptManageServiceClient(c),
+	}
+}
+
+type ToolManageService interface {
+	tool_manage.ToolManageService
+}
+
+type ToolManageServiceClient struct {
+	*tool_manage.ToolManageServiceClient
+}
+
+func NewToolManageServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientFactory(t, f),
+	}
+}
+
+func NewToolManageServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClientProtocol(t, iprot, oprot),
+	}
+}
+
+func NewToolManageServiceClient(c thrift.TClient) *ToolManageServiceClient {
+	return &ToolManageServiceClient{
+		ToolManageServiceClient: tool_manage.NewToolManageServiceClient(c),
 	}
 }
 
@@ -120,6 +147,15 @@ type PromptManageServiceProcessor struct {
 
 func NewPromptManageServiceProcessor(handler PromptManageService) *PromptManageServiceProcessor {
 	self := &PromptManageServiceProcessor{manage.NewPromptManageServiceProcessor(handler)}
+	return self
+}
+
+type ToolManageServiceProcessor struct {
+	*tool_manage.ToolManageServiceProcessor
+}
+
+func NewToolManageServiceProcessor(handler ToolManageService) *ToolManageServiceProcessor {
+	self := &ToolManageServiceProcessor{tool_manage.NewToolManageServiceProcessor(handler)}
 	return self
 }
 

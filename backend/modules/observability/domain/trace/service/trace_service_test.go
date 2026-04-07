@@ -105,10 +105,10 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 			name: "get traces advance info successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{{
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{{
 					TraceID: "123",
 					SpanID:  "234",
-				}}, nil)
+				}}}, nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
 				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
@@ -150,11 +150,11 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 			name: "get traces advance info successfully with processor",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{{
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{{
 					TraceID:     "123",
 					SpanID:      "234",
 					WorkspaceID: "123",
-				}}, nil)
+				}}}, nil)
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock,
 					map[entity.ProcessorScene][]span_processor.Factory{
@@ -2461,12 +2461,12 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 			name: "get trace successfully",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{
 					{
 						TraceID: "123",
 						SpanID:  "234",
 					},
-				}, nil)
+				}}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
@@ -2503,13 +2503,13 @@ func TestTraceServiceImpl_GetTrace(t *testing.T) {
 			name: "get trace successfully with processor",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(loop_span.SpanList{
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{
 					{
 						TraceID:     "123",
 						SpanID:      "234",
 						WorkspaceID: "123",
 					},
-				}, nil)
+				}}, nil)
 				confMock := confmocks.NewMockITraceConfig(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
@@ -2798,13 +2798,14 @@ func TestTraceServiceImpl_SearchTraceOApi(t *testing.T) {
 					NotQueryAnnotation: false,
 					Filters:            nil,
 					OmitColumns:        []string{"input", "output"},
-				}).Return(loop_span.SpanList{
+					DescByStartTime:    true,
+				}).Return(&repo.GetTraceResult{Spans: loop_span.SpanList{
 					{
 						TraceID:   "trace-123",
 						SpanID:    "span-456",
 						StartTime: 1640995200000000,
 					},
-				}, nil)
+				}}, nil)
 
 				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
 				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})

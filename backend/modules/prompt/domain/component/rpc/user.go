@@ -19,4 +19,5 @@ type UserInfo struct {
 //go:generate mockgen -destination=mocks/user_provider.go -package=mocks . IUserProvider
 type IUserProvider interface {
 	MGetUserInfo(ctx context.Context, userIDs []string) (userInfos []*UserInfo, err error)
+	GetUserIdInCtx(ctx context.Context) (string, bool)
 }

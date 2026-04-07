@@ -263,11 +263,11 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		}
 	})
 
-	t.Run("ScoreWeight为0或nil时不启用EnableScoreWeight", func(t *testing.T) {
+	t.Run("ScoreWeight为0时仍启用EnableScoreWeight", func(t *testing.T) {
 		zeroWeight := 0.0
-		paramWithoutScoreWeight := &entity.CreateExptParam{
+		paramZeroWeight := &entity.CreateExptParam{
 			WorkspaceID:         1,
-			Name:                "expt_without_score_weight",
+			Name:                "expt_zero_score_weight",
 			EvalSetID:           2,
 			EvalSetVersionID:    3,
 			EvaluatorVersionIds: []int64{10},
@@ -284,11 +284,40 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 				},
 			},
 		}
-		expt, err := mgr.CreateExpt(ctx, paramWithoutScoreWeight, session)
+		expt, err := mgr.CreateExpt(ctx, paramZeroWeight, session)
+		if err == nil && expt != nil && expt.EvalConf != nil &&
+			expt.EvalConf.ConnectorConf.EvaluatorsConf != nil {
+			if !expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+				t.Errorf("CreateExpt() EnableScoreWeight should be true when ScoreWeight is explicitly 0")
+			}
+		}
+	})
+
+	t.Run("ScoreWeight为nil时不启用EnableScoreWeight", func(t *testing.T) {
+		paramNilWeight := &entity.CreateExptParam{
+			WorkspaceID:         1,
+			Name:                "expt_nil_score_weight",
+			EvalSetID:           2,
+			EvalSetVersionID:    3,
+			EvaluatorVersionIds: []int64{10},
+			ExptConf: &entity.EvaluationConfiguration{
+				ConnectorConf: entity.Connector{
+					EvaluatorsConf: &entity.EvaluatorsConf{
+						EvaluatorConf: []*entity.EvaluatorConf{
+							{
+								EvaluatorVersionID: 10,
+								ScoreWeight:        nil,
+							},
+						},
+					},
+				},
+			},
+		}
+		expt, err := mgr.CreateExpt(ctx, paramNilWeight, session)
 		if err == nil && expt != nil && expt.EvalConf != nil &&
 			expt.EvalConf.ConnectorConf.EvaluatorsConf != nil {
 			if expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight <= 0")
+				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight is nil")
 			}
 		}
 	})

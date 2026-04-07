@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
@@ -1265,6 +1266,71 @@ func TestExptTurnResultRepoImpl_ListTurnResult(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptTurnResultRepoImpl_ListTurnResultWithCursor(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockExptTurnResultDAO := mysqlMocks.NewMockExptTurnResultDAO(ctrl)
+	mockExptTurnEvaluatorResultRefDAO := mysqlMocks.NewMockIExptTurnEvaluatorResultRefDAO(ctrl)
+
+	repo := &ExptTurnResultRepoImpl{
+		exptTurnResultDAO:             mockExptTurnResultDAO,
+		exptTurnEvaluatorResultRefDAO: mockExptTurnEvaluatorResultRefDAO,
+	}
+
+	inCursor := &entity.ExptTurnResultListCursor{ItemIdx: 1, TurnIdx: 0, ItemID: 10, TurnID: 20}
+	outCursor := &entity.ExptTurnResultListCursor{ItemIdx: 1, TurnIdx: 0, ItemID: 11, TurnID: 21}
+
+	mockExptTurnResultDAO.EXPECT().
+		ListTurnResultByCursor(
+			gomock.Any(),
+			int64(100),
+			int64(200),
+			(*entity.ExptTurnResultFilter)(nil),
+			inCursor,
+			50,
+			true,
+		).
+		Return([]*model.ExptTurnResult{
+			{
+				ID:        1,
+				SpaceID:   100,
+				ExptID:    200,
+				ItemID:    10,
+				TurnID:    20,
+				Status:    int32(entity.TurnRunState_Success),
+				TraceID:   1,
+				LogID:     "log-export",
+				CreatedAt: time.Now(),
+				UpdatedAt: time.Now(),
+			},
+		}, int64(1000), outCursor, nil)
+
+	got, total, next, err := repo.ListTurnResultWithCursor(
+		context.Background(),
+		100,
+		200,
+		nil,
+		inCursor,
+		50,
+		true,
+	)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(1000), total)
+	assert.Equal(t, outCursor, next)
+	require.Len(t, got, 1)
+	assert.Equal(t, int64(10), got[0].ItemID)
+	assert.Equal(t, int64(20), got[0].TurnID)
+	assert.Equal(t, "log-export", got[0].LogID)
+
+	mockExptTurnResultDAO.EXPECT().
+		ListTurnResultByCursor(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, int64(0), nil, errors.New("db err"))
+
+	_, _, _, err = repo.ListTurnResultWithCursor(context.Background(), 1, 1, nil, nil, 10, false)
+	assert.Error(t, err)
 }
 
 func TestExptTurnResultRepoImpl_BatchGetTurnEvaluatorResultRef(t *testing.T) {

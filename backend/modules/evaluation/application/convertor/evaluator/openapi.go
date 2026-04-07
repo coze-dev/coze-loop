@@ -7,9 +7,12 @@ import (
 	"strings"
 
 	"github.com/bytedance/gg/gptr"
+	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvaluator "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/evaluator"
 	common_convertor "github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )
 
 func OpenAPIEvaluatorDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evaluator {
@@ -55,6 +58,8 @@ func OpenAPIEvaluatorTypeDO2DTO(doType entity.EvaluatorType) *openapiEvaluator.E
 		openapiType = openapiEvaluator.EvaluatorTypeCode
 	case entity.EvaluatorTypeCustomRPC:
 		openapiType = openapiEvaluator.EvaluatorTypeCustomRPC
+	case entity.EvaluatorTypeAgent:
+		openapiType = openapiEvaluator.EvaluatorTypeAgent
 	default:
 		return nil
 	}
@@ -91,6 +96,13 @@ func OpenAPIEvaluatorVersionDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evalu
 			version = do.CustomRPCEvaluatorVersion.Version
 			description = do.CustomRPCEvaluatorVersion.Description
 			baseInfo = do.CustomRPCEvaluatorVersion.BaseInfo
+		}
+	case entity.EvaluatorTypeAgent:
+		if do.AgentEvaluatorVersion != nil {
+			id = do.AgentEvaluatorVersion.ID
+			version = do.AgentEvaluatorVersion.Version
+			description = do.AgentEvaluatorVersion.Description
+			baseInfo = do.AgentEvaluatorVersion.BaseInfo
 		}
 	}
 
@@ -161,6 +173,17 @@ func OpenAPIEvaluatorContentDO2DTO(do *entity.Evaluator) *openapiEvaluator.Evalu
 				Timeout:               v.Timeout,
 				RateLimit:             common_convertor.OpenAPIRateLimitDO2DTO(v.RateLimit),
 				Ext:                   v.Ext,
+			}
+		}
+	case entity.EvaluatorTypeAgent:
+		if v := do.AgentEvaluatorVersion; v != nil {
+			dto.InputSchemas = common_convertor.OpenAPIArgsSchemaDO2DTOs(v.InputSchemas)
+			dto.OutputSchemas = common_convertor.OpenAPIArgsSchemaDO2DTOs(v.OutputSchemas)
+			dto.AgentEvaluator = &openapiEvaluator.AgentEvaluator{
+				AgentConfig:  OpenAPIAgentConfigDO2DTO(v.AgentConfig),
+				ModelConfig:  common_convertor.OpenAPIModelConfigDO2DTO(v.ModelConfig),
+				SkillConfigs: OpenAPISkillConfigsDO2DTOs(v.SkillConfigs),
+				PromptConfig: OpenAPIAgentEvaluatorPromptConfigDO2DTO(v.PromptConfig),
 			}
 		}
 	}
@@ -507,6 +530,18 @@ func OpenAPIEvaluatorContentDTO2DO(dto *openapiEvaluator.EvaluatorContent, evalT
 				res.CustomRPCEvaluatorVersion.RateLimit = rateLimit
 			}
 		}
+	case entity.EvaluatorTypeAgent:
+		res.AgentEvaluatorVersion = &entity.AgentEvaluatorVersion{
+			InputSchemas:  common_convertor.OpenAPIArgsSchemaDTO2DOs(dto.InputSchemas),
+			OutputSchemas: common_convertor.OpenAPIArgsSchemaDTO2DOs(dto.OutputSchemas),
+		}
+		if dto.AgentEvaluator != nil {
+			a := dto.AgentEvaluator
+			res.AgentEvaluatorVersion.AgentConfig = OpenAPIAgentConfigDTO2DO(a.AgentConfig)
+			res.AgentEvaluatorVersion.ModelConfig = common_convertor.OpenAPIModelConfigDTO2DO(a.ModelConfig)
+			res.AgentEvaluatorVersion.SkillConfigs = OpenAPISkillConfigsDTO2DOs(a.SkillConfigs)
+			res.AgentEvaluatorVersion.PromptConfig = OpenAPIAgentEvaluatorPromptConfigDTO2DO(a.PromptConfig)
+		}
 	}
 	return res, nil
 }
@@ -529,6 +564,16 @@ func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator,
 	if dto == nil {
 		return nil, nil
 	}
+	// OpenAPI 创建评估器须显式传类型与版本详情，避免默认 Prompt + 空内容导致下游 nil 解引用
+	if dto.EvaluatorType == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_type is required"))
+	}
+	if dto.CurrentVersion == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("current_version is required"))
+	}
+	if dto.CurrentVersion.EvaluatorContent == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
 	evalType := OpenAPIEvaluatorTypeDTO2DO(dto.EvaluatorType)
 	res := &entity.Evaluator{
 		ID:            dto.GetID(),
@@ -537,15 +582,16 @@ func OpenAPIEvaluatorDTO2DO(dto *openapiEvaluator.Evaluator) (*entity.Evaluator,
 		Description:   dto.GetDescription(),
 		EvaluatorType: evalType,
 	}
-	if dto.CurrentVersion != nil {
-		verDO, err := OpenAPIEvaluatorContentDTO2DO(dto.CurrentVersion.EvaluatorContent, evalType)
-		if err != nil {
-			return nil, err
-		}
-		res.SetEvaluatorVersion(verDO)
-		res.SetVersion(dto.CurrentVersion.GetVersion())
-		res.SetEvaluatorVersionDescription(dto.CurrentVersion.GetDescription())
+	verDO, err := OpenAPIEvaluatorContentDTO2DO(dto.CurrentVersion.EvaluatorContent, evalType)
+	if err != nil {
+		return nil, err
 	}
+	if verDO == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("evaluator_content is required"))
+	}
+	res.SetEvaluatorVersion(verDO)
+	res.SetVersion(dto.CurrentVersion.GetVersion())
+	res.SetEvaluatorVersionDescription(dto.CurrentVersion.GetDescription())
 	return res, nil
 }
 
@@ -560,7 +606,93 @@ func OpenAPIEvaluatorTypeDTO2DO(dto *openapiEvaluator.EvaluatorType) entity.Eval
 		return entity.EvaluatorTypeCode
 	case openapiEvaluator.EvaluatorTypeCustomRPC:
 		return entity.EvaluatorTypeCustomRPC
+	case openapiEvaluator.EvaluatorTypeAgent:
+		return entity.EvaluatorTypeAgent
 	default:
 		return entity.EvaluatorTypePrompt
 	}
+}
+
+func OpenAPIAgentConfigDO2DTO(do *entity.AgentConfig) *openapiCommon.AgentConfig {
+	if do == nil {
+		return nil
+	}
+	return &openapiCommon.AgentConfig{
+		AgentType: gptr.Of(openapiCommon.AgentType(do.AgentType)),
+	}
+}
+
+func OpenAPIAgentConfigDTO2DO(dto *openapiCommon.AgentConfig) *entity.AgentConfig {
+	if dto == nil {
+		return nil
+	}
+	return &entity.AgentConfig{
+		AgentType: entity.AgentType(dto.GetAgentType()),
+	}
+}
+
+func OpenAPISkillConfigsDO2DTOs(dos []*entity.SkillConfig) []*openapiCommon.SkillConfig {
+	if dos == nil {
+		return nil
+	}
+	dtos := make([]*openapiCommon.SkillConfig, 0, len(dos))
+	for _, do := range dos {
+		if do != nil {
+			dtos = append(dtos, &openapiCommon.SkillConfig{
+				SkillID: do.SkillID,
+				Version: do.Version,
+			})
+		}
+	}
+	return dtos
+}
+
+func OpenAPISkillConfigsDTO2DOs(dtos []*openapiCommon.SkillConfig) []*entity.SkillConfig {
+	if dtos == nil {
+		return nil
+	}
+	dos := make([]*entity.SkillConfig, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto != nil {
+			dos = append(dos, &entity.SkillConfig{
+				SkillID: dto.SkillID,
+				Version: dto.Version,
+			})
+		}
+	}
+	return dos
+}
+
+func OpenAPIAgentEvaluatorPromptConfigDO2DTO(do *entity.AgentEvaluatorPromptConfig) *openapiEvaluator.AgentEvaluatorPromptConfig {
+	if do == nil {
+		return nil
+	}
+	dto := &openapiEvaluator.AgentEvaluatorPromptConfig{
+		MessageList: common_convertor.OpenAPIMessageDO2DTOs(do.MessageList),
+	}
+	if do.OutputRules != nil {
+		dto.OutputRules = &openapiEvaluator.AgentEvaluatorPromptConfigOutputRules{
+			ScorePrompt:       common_convertor.OpenAPIMessageDO2DTO(do.OutputRules.ScorePrompt),
+			ReasoningPrompt:   common_convertor.OpenAPIMessageDO2DTO(do.OutputRules.ReasoningPrompt),
+			ExtraOutputPrompt: common_convertor.OpenAPIMessageDO2DTO(do.OutputRules.ExtraOutputPrompt),
+		}
+	}
+	return dto
+}
+
+func OpenAPIAgentEvaluatorPromptConfigDTO2DO(dto *openapiEvaluator.AgentEvaluatorPromptConfig) *entity.AgentEvaluatorPromptConfig {
+	if dto == nil {
+		return nil
+	}
+	do := &entity.AgentEvaluatorPromptConfig{
+		MessageList: common_convertor.OpenAPIMessageDTO2DOs(dto.MessageList),
+	}
+	if dto.OutputRules != nil {
+		do.OutputRules = &entity.AgentEvaluatorPromptConfigOutputRules{
+			ScorePrompt:       common_convertor.OpenAPIMessageDTO2DO(dto.OutputRules.GetScorePrompt()),
+			ReasoningPrompt:   common_convertor.OpenAPIMessageDTO2DO(dto.OutputRules.GetReasoningPrompt()),
+			ExtraOutputPrompt: common_convertor.OpenAPIMessageDTO2DO(dto.OutputRules.GetExtraOutputPrompt()),
+		}
+	}
+	return do
 }

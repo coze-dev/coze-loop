@@ -141,6 +141,7 @@ var otelModelSpanTypeMap = map[string]string{
 	"TOOL":      tracespec.VToolSpanType,
 	"LLM":       tracespec.VModelSpanType,
 	"RETRIEVER": tracespec.VRetrieverSpanType,
+	"AGENT":     "agent",
 }
 
 // inner process key
