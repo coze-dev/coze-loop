@@ -549,11 +549,11 @@ func (e *DefaultExptTurnEvaluationImpl) buildFieldsFromSource(ctx context.Contex
 		result[fc.FieldName] = content
 	}
 	// 确保 actual_output 始终传入评估器（target 正常输出字段，评测必需）
-	if c := sourceFields[consts.EvalTargetOutputFieldKeyActualOutput]; c != nil {
-		if _, has := result[consts.EvalTargetOutputFieldKeyActualOutput]; !has {
-			result[consts.EvalTargetOutputFieldKeyActualOutput] = c
-		}
-	}
+	//if c := sourceFields[consts.EvalTargetOutputFieldKeyActualOutput]; c != nil {
+	//	if _, has := result[consts.EvalTargetOutputFieldKeyActualOutput]; !has {
+	//		result[consts.EvalTargetOutputFieldKeyActualOutput] = c
+	//	}
+	//}
 	return result, nil
 }
 
