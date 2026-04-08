@@ -1265,6 +1265,9 @@ func (e *EvaluatorHandlerImpl) CheckEvaluatorName(ctx context.Context, request *
 }
 
 func (e *EvaluatorHandlerImpl) checkURIs(ctx context.Context, inputFields map[string]*evaluatorcommon.Content) error {
+	if !e.configer.CheckURIEnabled(ctx) {
+		return nil
+	}
 	for _, field := range inputFields {
 		switch gptr.Indirect(field.ContentType) {
 		case evaluatorcommon.ContentTypeMultiPart:
