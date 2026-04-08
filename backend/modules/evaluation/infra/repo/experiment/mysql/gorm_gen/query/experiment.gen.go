@@ -52,6 +52,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.SourceID = field.NewString(tableName, "source_id")
 	_experiment.ExptType = field.NewInt32(tableName, "expt_type")
 	_experiment.MaxAliveTime = field.NewInt64(tableName, "max_alive_time")
+	_experiment.TriggerType = field.NewString(tableName, "trigger_type")
 
 	_experiment.fillFieldMap()
 
@@ -88,6 +89,7 @@ type experiment struct {
 	SourceID         field.String // 实验来源id
 	ExptType         field.Int32  // 实验类型，offline:1,online:2...
 	MaxAliveTime     field.Int64  // 最大存活时间
+	TriggerType      field.String // 实验触发方式：manual/openapi/schedule
 
 	fieldMap map[string]field.Expr
 }
@@ -129,6 +131,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.SourceID = field.NewString(table, "source_id")
 	e.ExptType = field.NewInt32(table, "expt_type")
 	e.MaxAliveTime = field.NewInt64(table, "max_alive_time")
+	e.TriggerType = field.NewString(table, "trigger_type")
 
 	e.fillFieldMap()
 
@@ -155,7 +158,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 25)
+	e.fieldMap = make(map[string]field.Expr, 26)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -181,6 +184,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["source_id"] = e.SourceID
 	e.fieldMap["expt_type"] = e.ExptType
 	e.fieldMap["max_alive_time"] = e.MaxAliveTime
+	e.fieldMap["trigger_type"] = e.TriggerType
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {

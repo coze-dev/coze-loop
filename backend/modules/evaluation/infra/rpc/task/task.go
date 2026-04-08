@@ -8,8 +8,8 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
-	taskapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	taskapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"

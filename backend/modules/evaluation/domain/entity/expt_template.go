@@ -45,6 +45,17 @@ type ExptSource struct {
 	SourceID         string
 	SpanFilterFields *SpanFilterFieldsDO // 从 Pipeline data_reflow 节点 task.rule.span_filters 提取
 	Scheduler        *ExptSchedulerDO    // 从 Pipeline.Scheduler 提取
+	Sampler          *ExptSamplerDO      // 从 Pipeline data_reflow 节点 task.rule.sampler 或 Task.Rule.Sampler 提取
+}
+
+// ExptSamplerDO 采样配置，与 observability task.Sampler / pipeline task.rule.sampler 对齐
+type ExptSamplerDO struct {
+	SampleRate    *float64 `json:"sample_rate,omitempty"`
+	SampleSize    *int64   `json:"sample_size,omitempty"`
+	IsCycle       *bool    `json:"is_cycle,omitempty"`
+	CycleCount    *int64   `json:"cycle_count,omitempty"`
+	CycleInterval *int64   `json:"cycle_interval,omitempty"`
+	CycleTimeUnit *string  `json:"cycle_time_unit,omitempty"`
 }
 
 // SpanFilterFieldsDO Span 过滤条件，与 filter.SpanFilterFields 结构对应
@@ -172,16 +183,16 @@ func (e *ExptTemplateEvaluatorVersionRef) String() string {
 // 包含评估器列表、字段映射、加权配置、默认并发及调度等
 // 该配置会序列化为JSON存储在数据库的template_conf字段中
 type ExptTemplateConfiguration struct {
-    // 字段映射 & 运行时参数（使用与EvaluationConfiguration类似的结构）
-    ConnectorConf Connector
-    ItemConcurNum *int
+	// 字段映射 & 运行时参数（使用与EvaluationConfiguration类似的结构）
+	ConnectorConf Connector
+	ItemConcurNum *int
 
-    // 默认评估器并发数
-    EvaluatorsConcurNum *int
-    ItemRetryNum        *int
+	// 默认评估器并发数
+	EvaluatorsConcurNum *int
+	ItemRetryNum        *int
 
-    // ExptSource 实验来源信息
-    ExptSource *ExptSource `json:"expt_source,omitempty"`
+	// ExptSource 实验来源信息
+	ExptSource *ExptSource `json:"expt_source,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO

@@ -62,6 +62,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ScoreWeightConfig not valid, %w", err)
 		}
 	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -143,6 +148,11 @@ func (p *ExptSource) IsValid() error {
 	if p.Scheduler != nil {
 		if err := p.Scheduler.IsValid(); err != nil {
 			return fmt.Errorf("field Scheduler not valid, %w", err)
+		}
+	}
+	if p.Sampler != nil {
+		if err := p.Sampler.IsValid(); err != nil {
+			return fmt.Errorf("field Sampler not valid, %w", err)
 		}
 	}
 	return nil

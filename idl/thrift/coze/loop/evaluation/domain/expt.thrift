@@ -7,6 +7,7 @@ include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
 include "../../observability/domain/filter.thrift"
+include "../../observability/domain/task.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -33,6 +34,11 @@ enum SourceType {
     AutoTask = 2
     Workflow = 3
 }
+
+typedef string ExptTriggerType (ts.enum="true")
+const ExptTriggerType Manual = "manual"
+const ExptTriggerType OpenAPI = "openapi"
+const ExptTriggerType Schedule = "schedule"
 
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
@@ -72,6 +78,10 @@ struct Experiment {
     // 评估器得分加权配置
     61: optional ExptScoreWeight score_weight_config
     62: optional bool enable_weighted_score
+
+    // 触发方式
+    70: optional ExptTriggerType trigger_type
+    71: optional ExptSource expt_source
 }
 
 // 实验模板基础信息
@@ -128,9 +138,11 @@ struct ExptSource {
     // 不同source里的源数据结构
     100: optional filter.SpanFilterFields span_filter_fields
     101: optional Scheduler scheduler
+    // 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
+    102: optional task.Sampler sampler
 }
 
-typedef string Frequency
+typedef string Frequency (ts.enum="true")
 const Frequency FrequencyEveryday = "every_day"
 const Frequency FrequencyMonday = "monday"
 const Frequency FrequencyTuesday = "tuesday"
@@ -436,6 +448,7 @@ enum FieldType {
     EvaluatorWeightedScore = 71
     UpdatedBy = 72
     CronActivate = 73
+    TriggerType = 74
 }
 
 // 字段过滤器

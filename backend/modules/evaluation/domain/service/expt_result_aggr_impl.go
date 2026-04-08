@@ -220,17 +220,11 @@ func (e *ExptAggrResultServiceImpl) CreateOrUpdateExptAggrResult(ctx context.Con
 		})
 	}
 
-	// 追加"加权得分"聚合指标（FieldType_WeightedScore）：
-	// 基于行级 WeightedScore 做聚合（加权评分的聚合），而不是对各评估器聚合结果再加权。
-	experiment, err := e.experimentRepo.GetByID(ctx, experimentID, spaceID)
-	if err == nil && experiment != nil &&
-		experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		if weightedAggr, err := e.createWeightedScoreAggrResult(ctx, spaceID, experimentID); err != nil {
-			return err
-		} else if weightedAggr != nil {
-			aggrResults = append(aggrResults, weightedAggr)
-		}
+	// 追加"加权得分"聚合指标（FieldType_WeightedScore）：基于行级 WeightedScore 聚合；行级未启用配置权重时为等权汇总分。
+	if weightedAggr, err := e.createWeightedScoreAggrResult(ctx, spaceID, experimentID); err != nil {
+		return err
+	} else if weightedAggr != nil {
+		aggrResults = append(aggrResults, weightedAggr)
 	}
 
 	targetAggrResults, err := tmag.buildAggrResult(spaceID, experimentID)
@@ -448,41 +442,34 @@ func (e *ExptAggrResultServiceImpl) updateExptAggrResult(ctx context.Context, pa
 		return err
 	}
 
-	// 如果实验启用了加权得分，也需要更新加权分数的聚合结果
-	experiment, err := e.experimentRepo.GetByID(ctx, param.ExperimentID, param.SpaceID)
-	if err == nil && experiment != nil &&
-		experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-		experiment.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		// 更新加权分数的聚合结果
-		weightedAggr, err := e.createWeightedScoreAggrResult(ctx, param.SpaceID, param.ExperimentID)
+	// 同步更新行级汇总分的聚合结果（与 EnableScoreWeight 无关，行级为等权时此处同样为等权聚合）
+	weightedAggr, err := e.createWeightedScoreAggrResult(ctx, param.SpaceID, param.ExperimentID)
+	if err != nil {
+		logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+	} else if weightedAggr != nil {
+		// 检查加权分数的聚合结果是否已存在
+		_, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
 		if err != nil {
-			logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
-			// 不返回错误，避免影响主流程
-		} else if weightedAggr != nil {
-			// 检查加权分数的聚合结果是否已存在
-			_, err := e.exptAggrResultRepo.GetExptAggrResult(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
-			if err != nil {
-				statusErr, ok := errorx.FromStatusError(err)
-				if ok && statusErr.Code() == errno.ResourceNotFoundCode {
-					// 如果不存在，创建新的聚合结果
-					if err := e.exptAggrResultRepo.BatchCreateExptAggrResult(ctx, []*entity.ExptAggrResult{weightedAggr}); err != nil {
-						logs.CtxError(ctx, "Failed to create weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
-					}
-				} else {
-					logs.CtxError(ctx, "Failed to get weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+			statusErr, ok := errorx.FromStatusError(err)
+			if ok && statusErr.Code() == errno.ResourceNotFoundCode {
+				// 如果不存在，创建新的聚合结果
+				if err := e.exptAggrResultRepo.BatchCreateExptAggrResult(ctx, []*entity.ExptAggrResult{weightedAggr}); err != nil {
+					logs.CtxError(ctx, "Failed to create weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
 				}
 			} else {
-				// 如果已存在，更新聚合结果
-				version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
-				if err != nil {
-					logs.CtxError(ctx, "Failed to update version for weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+				logs.CtxError(ctx, "Failed to get weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+			}
+		} else {
+			// 如果已存在，更新聚合结果
+			version, err := e.exptAggrResultRepo.UpdateAndGetLatestVersion(ctx, param.ExperimentID, int32(entity.FieldType_WeightedScore), weightedAggr.FieldKey)
+			if err != nil {
+				logs.CtxError(ctx, "Failed to update version for weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
+			} else {
+				weightedAggr.Version = version
+				if err := e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, weightedAggr, version); err != nil {
+					logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
 				} else {
-					weightedAggr.Version = version
-					if err := e.exptAggrResultRepo.UpdateExptAggrResultByVersion(ctx, weightedAggr, version); err != nil {
-						logs.CtxError(ctx, "Failed to update weighted score aggr result, exptID: %d, err: %v", param.ExperimentID, err)
-					} else {
-						logs.CtxInfo(ctx, "update weighted score aggr result success, exptID: %d", param.ExperimentID)
-					}
+					logs.CtxInfo(ctx, "update weighted score aggr result success, exptID: %d", param.ExperimentID)
 				}
 			}
 		}

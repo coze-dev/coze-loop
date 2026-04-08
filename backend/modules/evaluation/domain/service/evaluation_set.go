@@ -6,8 +6,8 @@ package service
 import (
 	"context"
 
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
 
 //go:generate mockgen -destination=mocks/evaluation_set.go -package=mocks . IEvaluationSetService
@@ -21,6 +21,8 @@ type IEvaluationSetService interface {
 	GetEvaluationSet(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetEvaluationSets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (set []*entity.EvaluationSet, err error)
 	ListEvaluationSets(ctx context.Context, param *entity.ListEvaluationSetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
+	ImportEvaluationSet(ctx context.Context, param *entity.ImportEvaluationSetParam) (jobID int64, err error)
+	GetEvaluationSetIOJob(ctx context.Context, spaceID, jobID int64) (job *entity.DatasetIOJob, err error)
 	QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error)
 }
 

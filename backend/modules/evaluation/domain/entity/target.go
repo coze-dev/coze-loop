@@ -58,11 +58,11 @@ const (
 	EvalTargetTypeVolcengineAgentAgentkit EvalTargetType = 7
 
 	// 以下为仅记录型：评测过程中不执行对象，仅用于记录对象类型和基本信息
-	EvalTargetTypeCozeBotOnline              EvalTargetType = 11
-	EvalTargetTypeCozeLoopPromptOnline       EvalTargetType = 12
-	EvalTargetTypeCozeWorkflowOnline         EvalTargetType = 13
-	EvalTargetTypeVolcengineAgentOnline      EvalTargetType = 14
-	EvalTargetTypeCustomRPCServerOnline      EvalTargetType = 15
+	EvalTargetTypeCozeBotOnline                 EvalTargetType = 11
+	EvalTargetTypeCozeLoopPromptOnline          EvalTargetType = 12
+	EvalTargetTypeCozeWorkflowOnline            EvalTargetType = 13
+	EvalTargetTypeVolcengineAgentOnline         EvalTargetType = 14
+	EvalTargetTypeCustomRPCServerOnline         EvalTargetType = 15
 	EvalTargetTypeVolcengineAgentAgentkitOnline EvalTargetType = 16
 )
 
@@ -97,6 +97,34 @@ func (p EvalTargetType) RecordOnlyTypeToBaseType() (EvalTargetType, bool) {
 		return EvalTargetTypeCustomRPCServer, true
 	case EvalTargetTypeVolcengineAgentAgentkitOnline:
 		return EvalTargetTypeVolcengineAgentAgentkit, true
+	default:
+		return 0, false
+	}
+}
+
+// ToOperatorBaseType 拼装源信息（PackSource*）及与 typedOperators 对齐分支时使用：仅记录型映射为对应基础类型，否则原样返回。
+func (p EvalTargetType) ToOperatorBaseType() EvalTargetType {
+	if b, ok := p.RecordOnlyTypeToBaseType(); ok {
+		return b
+	}
+	return p
+}
+
+// BaseTypeToRecordOnlyType 基础类型映射到在线实验/模板在库中存储的仅记录型（与 RecordOnlyTypeToBaseType 互逆）
+func (p EvalTargetType) BaseTypeToRecordOnlyType() (EvalTargetType, bool) {
+	switch p {
+	case EvalTargetTypeCozeBot:
+		return EvalTargetTypeCozeBotOnline, true
+	case EvalTargetTypeLoopPrompt:
+		return EvalTargetTypeCozeLoopPromptOnline, true
+	case EvalTargetTypeCozeWorkflow:
+		return EvalTargetTypeCozeWorkflowOnline, true
+	case EvalTargetTypeVolcengineAgent:
+		return EvalTargetTypeVolcengineAgentOnline, true
+	case EvalTargetTypeCustomRPCServer:
+		return EvalTargetTypeCustomRPCServerOnline, true
+	case EvalTargetTypeVolcengineAgentAgentkit:
+		return EvalTargetTypeVolcengineAgentAgentkitOnline, true
 	default:
 		return 0, false
 	}

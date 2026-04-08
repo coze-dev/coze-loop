@@ -12,10 +12,12 @@ import (
 	common_eval "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatorpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
-	common_obs "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+
+	// common_obs kept for historical imports; no direct use
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	taskpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -40,9 +42,7 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 	evaluatorConfs := buildEvaluatorConfsFromItems(param.EvaluatorIDVersionItems, evaluatorFieldMapping)
 	applyScoreWeightsToEvaluatorConfs(evaluatorScoreWeights, evaluatorConfs)
 
-	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
-
-	// 转换 ExptSource
+	// 须在 buildTemplateConfForCreate 之前设置：ExptSource 会写入 template_conf（expt_source）
 	if req.ExptSource != nil {
 		exptSourceDTO := req.ExptSource
 		param.ExptSource = &entity.ExptSource{
@@ -50,6 +50,8 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 			SourceID:   gptr.Indirect(exptSourceDTO.SourceID),
 		}
 	}
+
+	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
 	return param, nil
 }
@@ -383,6 +385,24 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 	return result
 }
 
+// patchTemplateEvalTargetTypeFromTriple 出参前用三元组上的 TargetType 补齐 Target/Version 的 EvalTargetType，
+// 避免仅 DB 列有 target_type 时 DTO 走不到对应 EvalTargetContent 分支。
+func patchTemplateEvalTargetTypeFromTriple(template *entity.ExptTemplate) {
+	if template == nil || template.TripleConfig == nil || template.Target == nil {
+		return
+	}
+	if template.Target.EvalTargetType == 0 && template.TripleConfig.TargetType != 0 {
+		template.Target.EvalTargetType = template.TripleConfig.TargetType
+	}
+	if template.Target.EvalTargetVersion != nil && template.Target.EvalTargetVersion.EvalTargetType == 0 {
+		if template.Target.EvalTargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.Target.EvalTargetType
+		} else if template.TripleConfig.TargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.TripleConfig.TargetType
+		}
+	}
+}
+
 // ToExptTemplateDTO 转换实验模板实体为DTO
 func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate {
 	if template == nil {
@@ -398,6 +418,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
 	if dto.TripleConfig != nil {
+		patchTemplateEvalTargetTypeFromTriple(template)
 		dto.TripleConfig.EvalTarget = target.EvalTargetDO2DTO(template.Target)
 		if template.Meta != nil && template.Meta.ExptType != entity.ExptType_Online {
 			dto.TripleConfig.EvalSet = evaluation_set.EvaluationSetDO2DTO(template.EvalSet)
@@ -447,20 +468,48 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	}
 
 	// 填充 ExptSource
-	if template.ExptSource != nil {
-		exptSource := &domain_expt.ExptSource{
-			SourceType: gptr.Of(domain_expt.SourceType(template.ExptSource.SourceType)),
-			SourceID:   gptr.Of(template.ExptSource.SourceID),
-		}
-		if template.ExptSource.SpanFilterFields != nil {
-			exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(template.ExptSource.SpanFilterFields)
-		}
-		if template.ExptSource.Scheduler != nil {
-			exptSource.Scheduler = exptSchedulerDO2DTO(template.ExptSource.Scheduler)
-		}
-		dto.SetExptSource(exptSource)
+	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
+		dto.SetExptSource(es)
 	}
 
+	return dto
+}
+
+// ExptSourceDO2DTO 将 entity.ExptSource 转为领域 DTO（实验模板与 Experiment 查询共用）
+func ExptSourceDO2DTO(src *entity.ExptSource) *domain_expt.ExptSource {
+	if src == nil {
+		return nil
+	}
+	exptSource := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType(src.SourceType)),
+		SourceID:   gptr.Of(src.SourceID),
+	}
+	if src.SpanFilterFields != nil {
+		exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(src.SpanFilterFields)
+	}
+	if src.Scheduler != nil {
+		exptSource.Scheduler = exptSchedulerDO2DTO(src.Scheduler)
+	}
+	if src.Sampler != nil {
+		exptSource.Sampler = exptSamplerDO2DTO(src.Sampler)
+	}
+	return exptSource
+}
+
+// exptSamplerDO2DTO 将 entity.ExptSamplerDO 转为 task.Sampler
+func exptSamplerDO2DTO(do *entity.ExptSamplerDO) *taskpkg.Sampler {
+	if do == nil {
+		return nil
+	}
+	dto := taskpkg.NewSampler()
+	dto.SampleRate = do.SampleRate
+	dto.SampleSize = do.SampleSize
+	dto.IsCycle = do.IsCycle
+	dto.CycleCount = do.CycleCount
+	dto.CycleInterval = do.CycleInterval
+	if do.CycleTimeUnit != nil {
+		dto.CycleTimeUnit = do.CycleTimeUnit
+	}
 	return dto
 }
 
@@ -474,12 +523,10 @@ func spanFilterFieldsDO2DTO(do *entity.SpanFilterFieldsDO) *filter.SpanFilterFie
 		dto.Filters = filterFieldsDO2DTO(do.Filters)
 	}
 	if do.PlatformType != nil {
-		pt := common_obs.PlatformType(*do.PlatformType)
-		dto.PlatformType = &pt
+		dto.PlatformType = do.PlatformType
 	}
 	if do.SpanListType != nil {
-		slt := common_obs.SpanListType(*do.SpanListType)
-		dto.SpanListType = &slt
+		dto.SpanListType = do.SpanListType
 	}
 	return dto
 }
@@ -491,7 +538,7 @@ func filterFieldsDO2DTO(do *entity.FilterFieldsDO) *filter.FilterFields {
 	}
 	dto := filter.NewFilterFields()
 	if do.QueryAndOr != nil {
-		qao := filter.QueryRelation(*do.QueryAndOr)
+		qao := *do.QueryAndOr
 		dto.QueryAndOr = &qao
 	}
 	if len(do.FilterFields) > 0 {
@@ -514,16 +561,16 @@ func filterFieldDO2DTO(do *entity.FilterFieldDO) *filter.FilterField {
 	dto := filter.NewFilterField()
 	dto.FieldName = do.FieldName
 	if do.FieldType != nil {
-		ft := filter.FieldType(*do.FieldType)
+		ft := *do.FieldType
 		dto.FieldType = &ft
 	}
 	dto.Values = do.Values
 	if do.QueryType != nil {
-		qt := filter.QueryType(*do.QueryType)
+		qt := *do.QueryType
 		dto.QueryType = &qt
 	}
 	if do.QueryAndOr != nil {
-		qao := filter.QueryRelation(*do.QueryAndOr)
+		qao := *do.QueryAndOr
 		dto.QueryAndOr = &qao
 	}
 	if do.SubFilter != nil {
@@ -540,7 +587,7 @@ func exptSchedulerDO2DTO(do *entity.ExptSchedulerDO) *domain_expt.Scheduler {
 	dto := domain_expt.NewScheduler()
 	dto.Enabled = do.Enabled
 	if do.Frequency != nil {
-		f := domain_expt.Frequency(*do.Frequency)
+		f := *do.Frequency
 		dto.Frequency = &f
 	}
 	dto.TriggerAt = do.TriggerAt
@@ -978,7 +1025,8 @@ func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]
 
 	var evaluatorScoreWeights map[int64]float64
 	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
+		// 非正数视为未配置有效权重，以便回退到 TripleConfig；与「仅填 0」时走兼容逻辑一致
+		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
 			continue
 		}
 		if evaluatorScoreWeights == nil {

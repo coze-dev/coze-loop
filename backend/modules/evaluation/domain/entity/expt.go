@@ -52,6 +52,8 @@ const (
 	SourceType_Trace      SourceType = 2
 	// SourceType_AutoTask 用于 ExptSource，与 IDL domain_expt.SourceType_AutoTask 一致
 	SourceType_AutoTask SourceType = 2
+	// SourceType_Workflow 与 IDL domain_expt.SourceType_Workflow 一致（Pipeline / 工作流来源，用于 enrichExptSourceFromPipeline 等）
+	SourceType_Workflow SourceType = 3
 )
 
 type ExptRunLog struct {
@@ -137,6 +139,10 @@ type Experiment struct {
 	MaxAliveTime int64
 	SourceType   SourceType
 	SourceID     string
+	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule
+	TriggerType string
+	// ExptSource 查询时填充：与一级字段 source_type/source_id 一致；Workflow 时由 Pipeline 补充 span_filter / scheduler / sampler
+	ExptSource *ExptSource
 
 	Stats           *ExptStats
 	AggregateResult *ExptAggregateResult
@@ -369,7 +375,14 @@ type CreateEvalTargetParam struct {
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {
-	return c == nil || (c.SourceTargetID == nil && c.SourceTargetVersion == nil)
+	if c == nil {
+		return true
+	}
+	// 仅传 eval_target_type（如仅记录型 Online 评测对象）时也应走创建逻辑，不能仅依据 source 指针判断
+	if c.EvalTargetType != nil {
+		return false
+	}
+	return c.SourceTargetID == nil && c.SourceTargetVersion == nil
 }
 
 type InvokeExptReq struct {

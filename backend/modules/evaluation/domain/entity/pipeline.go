@@ -9,7 +9,7 @@ type Pipeline struct {
 	Name               *string     `json:"name,omitempty"`
 	Description        *string     `json:"description,omitempty"`
 	Flow               *FlowSchema `json:"flow,omitempty"` // Flow 使用 FlowSchema 表达，结构参考 workflow_graph.json
-	Scheduler          *Scheduler `json:"scheduler,omitempty"`
+	Scheduler          *Scheduler  `json:"scheduler,omitempty"`
 	PipelineType       *string     `json:"pipelineType,omitempty"`
 	SameAsLatestCommit *bool       `json:"sameAsLatestCommit,omitempty"`
 	SpaceID            *int64      `json:"spaceID,omitempty"`

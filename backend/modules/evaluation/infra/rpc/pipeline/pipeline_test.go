@@ -12,8 +12,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 )
 
-func TestNoopPipelineListAdapter_ListPipelineFlow(t *testing.T) {
-	adapter := NewNoopPipelineListAdapter()
+func TestPipelineListAdapter_ListPipelineFlow(t *testing.T) {
+	adapter := NewPipelineListAdapter()
 	ctx := context.Background()
 
 	t.Run("返回空列表", func(t *testing.T) {
@@ -40,8 +40,20 @@ func TestNoopPipelineListAdapter_ListPipelineFlow(t *testing.T) {
 	})
 }
 
+func TestPipelineListAdapter_PipelineNodeFinishCallback(t *testing.T) {
+	adapter := NewPipelineListAdapter()
+	err := adapter.PipelineNodeFinishCallback(context.Background(), 1, 2)
+	assert.NoError(t, err)
+}
+
+func TestNewPipelineListAdapter(t *testing.T) {
+	adapter := NewPipelineListAdapter()
+	assert.NotNil(t, adapter)
+	assert.IsType(t, &PipelineListAdapter{}, adapter)
+}
+
 func TestNewNoopPipelineListAdapter(t *testing.T) {
 	adapter := NewNoopPipelineListAdapter()
 	assert.NotNil(t, adapter)
-	assert.IsType(t, &NoopPipelineListAdapter{}, adapter)
+	assert.IsType(t, &PipelineListAdapter{}, adapter)
 }

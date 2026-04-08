@@ -10,9 +10,12 @@ import (
 )
 
 // IPipelineListAdapter 查询 ml_flow PipelineService ListPipeline 的适配器接口
+//
 //go:generate mockgen -destination=./mocks/pipeline_list_adapter.go -package=mocks . IPipelineListAdapter
 type IPipelineListAdapter interface {
 	ListPipelineFlow(ctx context.Context, req *ListPipelineFlowRequest) (*ListPipelineFlowResponse, error)
+	// PipelineNodeFinishCallback Pipeline 节点完成时回调 ml_flow（例如同步节点状态）；首参为评测实验 ID（ExperimentID）
+	PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error
 }
 
 // ListPipelineFlowRequest ListPipeline 查询请求参数
@@ -21,7 +24,7 @@ type ListPipelineFlowRequest struct {
 	Name       *string
 	Page       *int32
 	PageSize   *int32
-	WithDetail bool   // 为 true 时返回 Flow 详情（含 nodes、edges）
+	WithDetail bool    // 为 true 时返回 Flow 详情（含 nodes、edges）
 	IDList     []int64 // 按 ID 筛选，非空时只返回指定 ID 的 Pipeline
 }
 

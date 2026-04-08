@@ -6,9 +6,9 @@ package rpc
 import (
 	"context"
 
-	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	taskcommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 )
 
 //go:generate mockgen -destination=mocks/task.go -package=mocks . ITaskRPCAdapter

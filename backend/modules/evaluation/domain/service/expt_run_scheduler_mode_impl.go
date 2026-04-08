@@ -86,8 +86,8 @@ type DefaultSchedulerModeFactory struct {
 	evaluatorRecordService   EvaluatorRecordService
 	resultSvc                ExptResultService
 	templateManager          IExptTemplateManager
-	exptRunLogRepo repo.IExptRunLogRepo
-	mutex          lock.ILocker
+	exptRunLogRepo           repo.IExptRunLogRepo
+	mutex                    lock.ILocker
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -601,8 +601,8 @@ type ExptAppendExec struct {
 	configer                 component.IConfiger
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
-	templateManager IExptTemplateManager
-	mutex          lock.ILocker
+	templateManager          IExptTemplateManager
+	mutex                    lock.ILocker
 }
 
 func NewExptAppendMode(
@@ -650,7 +650,6 @@ func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
-
 	// 数据锁加锁，加锁后重新扫描 item
 	dataLockKey := fmt.Sprintf("expt_online_data_lock:%d:%d", event.ExptID, event.ExptRunID)
 	logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock acquiring, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
@@ -674,27 +673,27 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 	}()
 
 	// 加锁后重新扫描 item，不使用之前的 scan 结果
-	expt, err = e.manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+	exptDetail, err := e.manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
 	if err != nil {
 		return false, err
 	}
-	toSubmitItems, incompleteItems, completeItems, err := e.ScanEvalItems(ctx, event, expt)
+	toSubmitItems, incompleteItems, completeItems, err := e.ScanEvalItems(ctx, event, exptDetail)
 	if err != nil {
 		return false, err
 	}
-	toSubmit = len(toSubmitItems)
-	incomplete = len(incompleteItems)
+	toSubmitCnt := len(toSubmitItems)
+	incompleteCnt := len(incompleteItems)
 	complete := len(completeItems)
-	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmit, incomplete, complete)
+	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmitCnt, incompleteCnt, complete)
 	// 用新的 toSubmit、incomplete、complete 判断是否结束，需 Complete 数量也为零才不发送下一个心跳
-	if toSubmit == 0 && incomplete == 0 && complete == 0 {
-
-		if expt.Status == entity.ExptStatus_Draining {
+	if toSubmitCnt == 0 && incompleteCnt == 0 && complete == 0 {
+		switch exptDetail.Status {
+		case entity.ExptStatus_Draining:
 			logs.CtxInfo(ctx, "[ExptEval] expt daemon drained, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-			if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
+			if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, exptDetail); err != nil {
 				logs.CtxError(ctx, "[ExptEval] expt daemon end failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 			}
-		} else if expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending {
+		case entity.ExptStatus_Processing, entity.ExptStatus_Pending:
 			logs.CtxInfo(ctx, "[ExptEval] expt daemon found no data, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			if err := e.manager.RecordExptData(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
 				logs.CtxError(ctx, "[ExptEval] expt daemon record expt data failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
@@ -714,7 +713,7 @@ func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 	}
 
 	// 若未结束且有新数据或待 Complete，则发送下一次 tick；否则不发送
-	return toSubmit > 0 || incomplete > 0 || complete > 0, nil
+	return toSubmitCnt > 0 || incompleteCnt > 0 || complete > 0, nil
 }
 
 func (e *ExptAppendExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {

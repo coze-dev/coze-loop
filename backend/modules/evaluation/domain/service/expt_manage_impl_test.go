@@ -59,6 +59,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		templateManager:             svcMocks.NewMockIExptTemplateManager(ctrl),
 		notifyRPCAdapter:            mocks.NewMockINotifyRPCAdapter(ctrl),
 		userProvider:                mocks.NewMockIUserProvider(ctrl),
+		pipelineListAdapter:         nil,
 	}
 }
 
@@ -263,7 +264,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		}
 	})
 
-	t.Run("ScoreWeight为0时仍启用EnableScoreWeight", func(t *testing.T) {
+	t.Run("ScoreWeight为0时不启用EnableScoreWeight", func(t *testing.T) {
 		zeroWeight := 0.0
 		paramZeroWeight := &entity.CreateExptParam{
 			WorkspaceID:         1,
@@ -287,8 +288,8 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		expt, err := mgr.CreateExpt(ctx, paramZeroWeight, session)
 		if err == nil && expt != nil && expt.EvalConf != nil &&
 			expt.EvalConf.ConnectorConf.EvaluatorsConf != nil {
-			if !expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-				t.Errorf("CreateExpt() EnableScoreWeight should be true when ScoreWeight is explicitly 0")
+			if expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight is explicitly 0")
 			}
 		}
 	})
@@ -1142,6 +1143,7 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
+		nil,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)

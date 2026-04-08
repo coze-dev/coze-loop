@@ -266,6 +266,10 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 		if len(column) == 0 {
 			continue
 		}
+		// 仅允许白名单列名，禁止将用户输入直接拼入 ORDER BY（防止 SQL 注入）
+		if _, ok := entity.OrderBySet[column]; !ok {
+			continue
+		}
 
 		ordered = true
 		// 在闭包内部使用局部变量，避免闭包捕获问题

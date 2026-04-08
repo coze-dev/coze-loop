@@ -12,10 +12,10 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/base"
-	taskapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
-	taskmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task/mocks"
+	taskapi "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	taskmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 )

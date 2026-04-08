@@ -1631,7 +1631,7 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 						&entity.Session{},
 					).Return(nil)
 
-				// 模拟获取更新后的实验
+				// 模拟获取更新后的实验详情（写库读一致）
 				updatedExpt := &entity.Experiment{
 					ID:          validExptID,
 					SpaceID:     validWorkspaceID,
@@ -1641,7 +1641,7 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 					CreatedBy:   validUserID,
 				}
 				mockManager.EXPECT().
-					Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
+					GetDetail(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
 					Return(updatedExpt, nil)
 
 				// 模拟填充用户信息
@@ -3434,7 +3434,8 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			PageNumber:  gptr.Of(int32(1)),
 			PageSize:    gptr.Of(int32(10)),
 			OrderBys: []*common.OrderBy{
-				{Field: gptr.Of("name"), IsAsc: gptr.Of(true)},
+				// 仅白名单字段会生效（entity.OrderBySet）；name 等未开放字段会被忽略并回落默认排序
+				{Field: gptr.Of(entity.OrderByCreatedAt), IsAsc: gptr.Of(true)},
 			},
 		}
 
@@ -3444,7 +3445,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			DoAndReturn(func(_ context.Context, page, size int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 				// 验证使用指定的排序
 				assert.Len(t, orderBys, 1)
-				assert.Equal(t, "name", *orderBys[0].Field)
+				assert.Equal(t, entity.OrderByCreatedAt, *orderBys[0].Field)
 				assert.True(t, *orderBys[0].IsAsc)
 				return []*entity.ExptTemplate{}, int64(0), nil
 			})

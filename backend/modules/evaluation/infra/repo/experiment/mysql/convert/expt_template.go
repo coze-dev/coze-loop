@@ -216,11 +216,11 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 			}
 			fieldMappingConfig.EvaluatorFieldMapping = evaluatorMappings
 
-			// 如果有任一评估器配置了分数权重，则标记模板支持分数权重
+			// 若有任一评估器配置了正分数权重，则标记模板支持分数权重（0 与未配置等价，不开启）
 			if templateConf.ConnectorConf.EvaluatorsConf != nil {
 				templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
 				for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-					if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
+					if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
 						templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
 						break
 					}

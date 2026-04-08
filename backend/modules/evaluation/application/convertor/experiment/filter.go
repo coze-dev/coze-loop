@@ -44,6 +44,175 @@ func (e *ExptFilterConvertor) Convert(ctx context.Context, efo *domain_expt.Expt
 	return filters, nil
 }
 
+// buildExptListFilterExptTypeScopePreview 仅合并 expt_type / experiment_template_id 条件，并套用与 ConvertFilters 一致的默认离线类型，用于在解析 SourceTarget 前推断在线/离线范围。
+func buildExptListFilterExptTypeScopePreview(filters *domain_expt.Filters) (*entity.ExptListFilter, error) {
+	preview := &entity.ExptListFilter{
+		Includes: &entity.ExptFilterFields{},
+		Excludes: &entity.ExptFilterFields{},
+	}
+	setDefaultExptTypeFlag := true
+	ffieldsFn := func(operatorType domain_expt.FilterOperatorType) *entity.ExptFilterFields {
+		switch operatorType {
+		case domain_expt.FilterOperatorType_In, domain_expt.FilterOperatorType_Equal:
+			return preview.Includes
+		case domain_expt.FilterOperatorType_NotIn, domain_expt.FilterOperatorType_NotEqual:
+			return preview.Excludes
+		default:
+			return &entity.ExptFilterFields{}
+		}
+	}
+	for _, cond := range filters.GetFilterConditions() {
+		if cond.GetField() == nil {
+			continue
+		}
+		ff := ffieldsFn(cond.GetOperator())
+		switch cond.GetField().GetFieldType() {
+		case domain_expt.FieldType_ExptType:
+			setDefaultExptTypeFlag = false
+			types, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.ExptType = intersectIgnoreNull(ff.ExptType, types)
+		case domain_expt.FieldType_ExperimentTemplateID:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			ids, err := parseIntList(cond.GetValue())
+			if err != nil {
+				return nil, err
+			}
+			ff.ExptTemplateIDs = intersectIgnoreNull(ff.ExptTemplateIDs, ids)
+		}
+	}
+	if setDefaultExptTypeFlag && len(preview.Includes.ExptTemplateIDs) == 0 {
+		preview.Includes.ExptType = intersectIgnoreNull(preview.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline)})
+	}
+	return preview, nil
+}
+
+// buildExptTemplateListFilterExptTypeScopePreview 仅合并 expt_type，用于模板筛选中 SourceTarget 解析前的在线/离线范围。
+func buildExptTemplateListFilterExptTypeScopePreview(filters *domain_expt.Filters) (*entity.ExptTemplateListFilter, error) {
+	preview := &entity.ExptTemplateListFilter{
+		Includes: &entity.ExptTemplateFilterFields{},
+		Excludes: &entity.ExptTemplateFilterFields{},
+	}
+	ffieldsFn := func(operatorType domain_expt.FilterOperatorType) *entity.ExptTemplateFilterFields {
+		switch operatorType {
+		case domain_expt.FilterOperatorType_In, domain_expt.FilterOperatorType_Equal:
+			return preview.Includes
+		case domain_expt.FilterOperatorType_NotIn, domain_expt.FilterOperatorType_NotEqual:
+			return preview.Excludes
+		default:
+			return &entity.ExptTemplateFilterFields{}
+		}
+	}
+	for _, cond := range filters.GetFilterConditions() {
+		if cond.GetField() == nil {
+			continue
+		}
+		ff := ffieldsFn(cond.GetOperator())
+		if cond.GetField().GetFieldType() != domain_expt.FieldType_ExptType {
+			continue
+		}
+		types, err := parseIntList(cond.GetValue())
+		if err != nil {
+			return nil, err
+		}
+		ff.ExptType = intersectIgnoreNull(ff.ExptType, types)
+	}
+	return preview, nil
+}
+
+func exptTypeScopeHasOnlineOffline(incExptType []int64) (hasOnline, hasOffline bool) {
+	if len(incExptType) == 0 {
+		return false, true
+	}
+	return gslice.Contains(incExptType, int64(domain_expt.ExptType_Online)),
+		gslice.Contains(incExptType, int64(domain_expt.ExptType_Offline))
+}
+
+// filtersHasTargetTypeCondition 查询条件中是否出现 TargetType 字段（任意操作符）；出现则对 target_type 补充基础类型与对应 Online 类型以匹配库存。
+func filtersHasTargetTypeCondition(filters *domain_expt.Filters) bool {
+	if filters == nil {
+		return false
+	}
+	for _, cond := range filters.GetFilterConditions() {
+		if cond == nil || cond.GetField() == nil {
+			continue
+		}
+		if cond.GetField().GetFieldType() == domain_expt.FieldType_TargetType {
+			return true
+		}
+	}
+	return false
+}
+
+func mapTargetTypeInt64sForExptStorage(ids []int64, hasOnline, hasOffline bool) []int64 {
+	if len(ids) == 0 {
+		return nil
+	}
+	out := make([]int64, 0)
+	seen := map[int64]struct{}{}
+	add := func(v int64) {
+		if _, ok := seen[v]; ok {
+			return
+		}
+		seen[v] = struct{}{}
+		out = append(out, v)
+	}
+	for _, id := range ids {
+		t := entity.EvalTargetType(id)
+		if t.IsRecordOnlyType() {
+			add(id)
+			continue
+		}
+		if t == entity.EvalTargetTypeLoopTrace {
+			add(id)
+			continue
+		}
+		onlineT, ok := t.BaseTypeToRecordOnlyType()
+		if !ok {
+			add(id)
+			continue
+		}
+		if hasOnline && hasOffline {
+			add(int64(t))
+			add(int64(onlineT))
+		} else if hasOnline && !hasOffline {
+			add(int64(onlineT))
+		} else {
+			add(int64(t))
+		}
+	}
+	return out
+}
+
+func evalTargetTypesForSourceTargetFilter(userType entity.EvalTargetType, hasOnline, hasOffline bool) []entity.EvalTargetType {
+	if !hasOnline {
+		if userType.IsRecordOnlyType() {
+			return nil
+		}
+		return []entity.EvalTargetType{userType}
+	}
+	if hasOffline {
+		if userType.IsRecordOnlyType() {
+			return []entity.EvalTargetType{userType}
+		}
+		if onlineT, ok := userType.BaseTypeToRecordOnlyType(); ok {
+			return []entity.EvalTargetType{userType, onlineT}
+		}
+		return []entity.EvalTargetType{userType}
+	}
+	if userType.IsRecordOnlyType() {
+		return []entity.EvalTargetType{userType}
+	}
+	if onlineT, ok := userType.BaseTypeToRecordOnlyType(); ok {
+		return []entity.EvalTargetType{onlineT}
+	}
+	return []entity.EvalTargetType{userType}
+}
+
 func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domain_expt.Filters, spaceID int64) (*entity.ExptListFilter, error) {
 	efo := &entity.ExptListFilter{
 		Includes: &entity.ExptFilterFields{},
@@ -57,6 +226,12 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 	if filters.GetLogicOp() != domain_expt.FilterLogicOp_And {
 		return nil, fmt.Errorf("ConvertFilters fail, opertaor type must be and, got: %v", filters.GetLogicOp())
 	}
+
+	scopePreview, err := buildExptListFilterExptTypeScopePreview(filters)
+	if err != nil {
+		return nil, err
+	}
+	hasOnline, hasOffline := exptTypeScopeHasOnlineOffline(scopePreview.Includes.ExptType)
 
 	ffieldsFn := func(operatorType domain_expt.FilterOperatorType) *entity.ExptFilterFields {
 		switch operatorType {
@@ -80,12 +255,20 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			if len(cond.GetValue()) == 0 {
 				continue
 			}
-			ff.CreatedBy = intersectIgnoreNull(ff.CreatedBy, []string{cond.GetValue()})
+			ids := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			if len(ids) == 0 {
+				continue
+			}
+			ff.CreatedBy = intersectIgnoreNull(ff.CreatedBy, ids)
 		case domain_expt.FieldType_UpdatedBy:
 			if len(cond.GetValue()) == 0 {
 				continue
 			}
-			ff.UpdatedBy = intersectIgnoreNull(ff.UpdatedBy, []string{cond.GetValue()})
+			ids := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			if len(ids) == 0 {
+				continue
+			}
+			ff.UpdatedBy = intersectIgnoreNull(ff.UpdatedBy, ids)
 		case domain_expt.FieldType_ExptStatus:
 			if len(cond.GetValue()) == 0 {
 				continue
@@ -138,23 +321,36 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			if cond.GetSourceTarget() == nil || len(cond.GetSourceTarget().GetSourceTargetIds()) == 0 {
 				continue
 			}
-			param := &entity.BatchGetEvalTargetBySourceParam{
-				SpaceID:        spaceID,
-				SourceTargetID: cond.GetSourceTarget().GetSourceTargetIds(),
-				TargetType:     entity.EvalTargetType(cond.GetSourceTarget().GetEvalTargetType()),
+			userT := entity.EvalTargetType(cond.GetSourceTarget().GetEvalTargetType())
+			queryTypes := evalTargetTypesForSourceTargetFilter(userT, hasOnline, hasOffline)
+			if len(queryTypes) == 0 {
+				ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, []int64{-1})
+				continue
 			}
-			targets, err := e.evalTargetService.BatchGetEvalTargetBySource(ctx, param)
-			// targets, err := e.evalCall.BatchGetEvalTargetBySource(ctx, cond.GetSourceTarget().GetSourceTargetIds(), 0, spaceID)
-			if err != nil {
-				return nil, err
+			targetIDSet := make(map[int64]struct{})
+			for _, qt := range queryTypes {
+				param := &entity.BatchGetEvalTargetBySourceParam{
+					SpaceID:        spaceID,
+					SourceTargetID: cond.GetSourceTarget().GetSourceTargetIds(),
+					TargetType:     qt,
+				}
+				targets, err := e.evalTargetService.BatchGetEvalTargetBySource(ctx, param)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					if target != nil {
+						targetIDSet[target.ID] = struct{}{}
+					}
+				}
 			}
-			if len(cond.GetSourceTarget().GetSourceTargetIds()) == 1 && len(targets) == 0 {
+			targetIDs := make([]int64, 0, len(targetIDSet))
+			for id := range targetIDSet {
+				targetIDs = append(targetIDs, id)
+			}
+			if len(cond.GetSourceTarget().GetSourceTargetIds()) == 1 && len(targetIDs) == 0 {
 				ff.TargetIDs = append(ff.TargetIDs, -1) // 无效查询，返回空结果
 				break
-			}
-			targetIDs := make([]int64, 0, len(targets))
-			for _, target := range targets {
-				targetIDs = append(targetIDs, target.ID)
 			}
 			ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, targetIDs)
 		case domain_expt.FieldType_ExptType:
@@ -179,6 +375,12 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 			}
 			sourceIDs := parseStringList(cond.GetValue())
 			ff.SourceID = intersectIgnoreNull(ff.SourceID, sourceIDs)
+		case domain_expt.FieldType_TriggerType:
+			if len(cond.GetValue()) == 0 {
+				continue
+			}
+			vals := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			ff.TriggerType = intersectIgnoreNull(ff.TriggerType, vals)
 		case domain_expt.FieldType_ExperimentTemplateID:
 			if len(cond.GetValue()) == 0 {
 				continue
@@ -193,7 +395,19 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 		}
 	}
 	if setDefaultExptTypeFlag {
-		efo.Includes.ExptType = intersectIgnoreNull(efo.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline)})
+		// 未显式指定 expt_type 时默认只查离线实验；但若按实验模板 ID 筛选，不能强加离线条件，
+		// 否则在线实验（与模板关联）无法与 expt_template_id 组合命中。
+		if len(efo.Includes.ExptTemplateIDs) == 0 {
+			efo.Includes.ExptType = intersectIgnoreNull(efo.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline)})
+		}
+	}
+
+	// 筛选条件中出现 target_type 时，将用户传入的基础类型扩充为「基础类型 + 对应 Online 仅记录型」，与库存一致，无需再依赖 ExptType 推断
+	if filtersHasTargetTypeCondition(filters) {
+		efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, true, true)
+		if efo.Excludes != nil {
+			efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, true, true)
+		}
 	}
 
 	return efo, nil
@@ -245,6 +459,19 @@ func parseCronActivateIntList(str string) ([]int64, error) {
 
 func parseStringList(str string) []string {
 	return strings.Split(str, ",")
+}
+
+// parseCommaSeparatedTrimmedStrings 解析逗号分隔字符串，去掉空白与空项（用于 trigger_type 等枚举类筛选）
+func parseCommaSeparatedTrimmedStrings(str string) []string {
+	split := strings.Split(str, ",")
+	res := make([]string, 0, len(split))
+	for _, s := range split {
+		t := strings.TrimSpace(s)
+		if t != "" {
+			res = append(res, t)
+		}
+	}
+	return res
 }
 
 func parseOperator(operatorType domain_expt.FilterOperatorType) (string, error) {
@@ -591,6 +818,12 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 		return nil, fmt.Errorf("ConvertFilters fail, operator type must be and, got: %v", filters.GetLogicOp())
 	}
 
+	tplScopePreview, err := buildExptTemplateListFilterExptTypeScopePreview(filters)
+	if err != nil {
+		return nil, err
+	}
+	tplHasOnline, tplHasOffline := exptTypeScopeHasOnlineOffline(tplScopePreview.Includes.ExptType)
+
 	ffieldsFn := func(operatorType domain_expt.FilterOperatorType) *entity.ExptTemplateFilterFields {
 		switch operatorType {
 		case domain_expt.FilterOperatorType_In, domain_expt.FilterOperatorType_Equal:
@@ -612,12 +845,20 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 			if len(cond.GetValue()) == 0 {
 				continue
 			}
-			ff.CreatedBy = intersectIgnoreNull(ff.CreatedBy, []string{cond.GetValue()})
+			ids := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			if len(ids) == 0 {
+				continue
+			}
+			ff.CreatedBy = intersectIgnoreNull(ff.CreatedBy, ids)
 		case domain_expt.FieldType_UpdatedBy:
 			if len(cond.GetValue()) == 0 {
 				continue
 			}
-			ff.UpdatedBy = intersectIgnoreNull(ff.UpdatedBy, []string{cond.GetValue()})
+			ids := parseCommaSeparatedTrimmedStrings(cond.GetValue())
+			if len(ids) == 0 {
+				continue
+			}
+			ff.UpdatedBy = intersectIgnoreNull(ff.UpdatedBy, ids)
 		case domain_expt.FieldType_EvalSetID:
 			if len(cond.GetValue()) == 0 {
 				continue
@@ -658,22 +899,36 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 			if cond.GetSourceTarget() == nil || len(cond.GetSourceTarget().GetSourceTargetIds()) == 0 {
 				continue
 			}
-			param := &entity.BatchGetEvalTargetBySourceParam{
-				SpaceID:        spaceID,
-				SourceTargetID: cond.GetSourceTarget().GetSourceTargetIds(),
-				TargetType:     entity.EvalTargetType(cond.GetSourceTarget().GetEvalTargetType()),
+			userT := entity.EvalTargetType(cond.GetSourceTarget().GetEvalTargetType())
+			queryTypes := evalTargetTypesForSourceTargetFilter(userT, tplHasOnline, tplHasOffline)
+			if len(queryTypes) == 0 {
+				ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, []int64{-1})
+				continue
 			}
-			targets, err := e.evalTargetService.BatchGetEvalTargetBySource(ctx, param)
-			if err != nil {
-				return nil, err
+			targetIDSet := make(map[int64]struct{})
+			for _, qt := range queryTypes {
+				param := &entity.BatchGetEvalTargetBySourceParam{
+					SpaceID:        spaceID,
+					SourceTargetID: cond.GetSourceTarget().GetSourceTargetIds(),
+					TargetType:     qt,
+				}
+				targets, err := e.evalTargetService.BatchGetEvalTargetBySource(ctx, param)
+				if err != nil {
+					return nil, err
+				}
+				for _, target := range targets {
+					if target != nil {
+						targetIDSet[target.ID] = struct{}{}
+					}
+				}
 			}
-			if len(cond.GetSourceTarget().GetSourceTargetIds()) == 1 && len(targets) == 0 {
+			targetIDs := make([]int64, 0, len(targetIDSet))
+			for id := range targetIDSet {
+				targetIDs = append(targetIDs, id)
+			}
+			if len(cond.GetSourceTarget().GetSourceTargetIds()) == 1 && len(targetIDs) == 0 {
 				ff.TargetIDs = append(ff.TargetIDs, -1) // 无效查询，返回空结果
 				break
-			}
-			targetIDs := make([]int64, 0, len(targets))
-			for _, target := range targets {
-				targetIDs = append(targetIDs, target.ID)
 			}
 			ff.TargetIDs = intersectIgnoreNull(ff.TargetIDs, targetIDs)
 		case domain_expt.FieldType_ExptType:
@@ -693,6 +948,14 @@ func (e *ExptTemplateFilterConvertor) ConvertFilters(ctx context.Context, filter
 			ff.CronActivate = intersectIgnoreNull(ff.CronActivate, vals)
 		default:
 			logs.CtxWarn(ctx, "ConvertFilters with unsupport condition: %v", json.Jsonify(cond))
+		}
+	}
+
+	// 筛选条件中出现 target_type 时，将基础类型扩充为「基础 + 对应 Online」
+	if filtersHasTargetTypeCondition(filters) {
+		efo.Includes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Includes.TargetType, true, true)
+		if efo.Excludes != nil {
+			efo.Excludes.TargetType = mapTargetTypeInt64sForExptStorage(efo.Excludes.TargetType, true, true)
 		}
 	}
 

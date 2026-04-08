@@ -2280,6 +2280,7 @@ func TestToExptDTO_BuildEvaluatorIDVersionItemsFromVersionRef(t *testing.T) {
 func TestToExptDTO_FillExptTemplateMeta(t *testing.T) {
 	t.Run("填充ExptTemplateMeta", func(t *testing.T) {
 		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Offline,
 			ExptTemplateMeta: &entity.ExptTemplateMeta{
 				ID:          100,
 				WorkspaceID: 200,
@@ -2302,6 +2303,23 @@ func TestToExptDTO_FillExptTemplateMeta(t *testing.T) {
 	t.Run("ExptTemplateMeta为nil，不填充", func(t *testing.T) {
 		experiment := &entity.Experiment{
 			ExptTemplateMeta: nil,
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.ExptTemplateMeta)
+	})
+
+	t.Run("在线实验不返回ExptTemplateMeta", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Online,
+			ExptTemplateMeta: &entity.ExptTemplateMeta{
+				ID:          100,
+				WorkspaceID: 200,
+				Name:        "template_name",
+				Desc:        "template_desc",
+				ExptType:    entity.ExptType_Offline,
+			},
 		}
 
 		result := ToExptDTO(experiment)

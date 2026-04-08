@@ -242,9 +242,108 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 		}
 		return nil, 0, err
 	}
-
+ 
 	return sourceIDs, total, nil
 }
+
+func evaluatorFiltersEmpty(f *entity.EvaluatorFilters) bool {
+	if f == nil {
+		return true
+	}
+	return len(f.FilterConditions) == 0 && len(f.SubFilters) == 0
+}
+
+func (dao *EvaluatorTagDAOImpl) allDistinctSourceIDs(ctx context.Context, tagType int32, langType string, opts ...db.Option) ([]int64, error) {
+	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	q := dbsession.WithContext(ctx).
+		Table(model.TableNameEvaluatorTag).
+		Distinct("source_id").
+		Where("tag_type = ? AND deleted_at IS NULL", tagType)
+	if langType != "" {
+		q = q.Where("lang_type = ?", langType)
+	}
+	var ids []int64
+	if err := q.Pluck("source_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+
+// evalFiltersToSourceIDs 递归求满足 Filters 的 source_id（无 JOIN）
+func (dao *EvaluatorTagDAOImpl) evalFiltersToSourceIDs(ctx context.Context, tagType int32, langType string, filters *entity.EvaluatorFilters, opts ...db.Option) ([]int64, error) {
+	if filters == nil || evaluatorFiltersEmpty(filters) {
+		return dao.allDistinctSourceIDs(ctx, tagType, langType, opts...)
+	}
+
+	isOr := filters.LogicOp != nil && *filters.LogicOp == entity.FilterLogicOp_Or
+	if isOr {
+		set := make(map[int64]struct{})
+		for _, c := range filters.FilterConditions {
+			if c == nil {
+				continue
+			}
+			part, err := dao.querySourceIDsForCondition(ctx, tagType, langType, c, nil, opts...)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range part {
+				set[id] = struct{}{}
+			}
+		}
+		for _, sub := range filters.SubFilters {
+			part, err := dao.evalFiltersToSourceIDs(ctx, tagType, langType, sub, opts...)
+			if err != nil {
+				return nil, err
+			}
+			for _, id := range part {
+				set[id] = struct{}{}
+			}
+		}
+		return mapKeysToSlice(set), nil
+	}
+
+	var s []int64
+	for _, c := range filters.FilterConditions {
+		if c == nil {
+			continue
+		}
+		var part []int64
+		var err error
+		if s == nil {
+			part, err = dao.querySourceIDsForCondition(ctx, tagType, langType, c, nil, opts...)
+		} else {
+			part, err = dao.querySourceIDsForCondition(ctx, tagType, langType, c, s, opts...)
+		}
+		if err != nil {
+			return nil, err
+		}
+		s = part
+		if len(s) == 0 {
+			return s, nil
+		}
+	}
+	for _, sub := range filters.SubFilters {
+		subIDs, err := dao.evalFiltersToSourceIDs(ctx, tagType, langType, sub, opts...)
+		if err != nil {
+			return nil, err
+		}
+		if s == nil {
+			s = subIDs
+		} else {
+			s = intersectInt64Slice(s, subIDs)
+		}
+		if len(s) == 0 {
+			return s, nil
+		}
+	}
+	if s == nil {
+		return dao.allDistinctSourceIDs(ctx, tagType, langType, opts...)
+	}
+	return s, nil
+}
+
+// NOTE: 以下基于 Name 标签的 LIKE 与排序逻辑已经由 GetSourceIDsByFilterConditions 内部的
+// LEFT JOIN + ORDER BY 语句统一处理，原基于多次单表查询 + 内存集合运算的实现已移除。
 
 // buildFilterConditions 构建筛选条件的SQL和参数
 // nolint:unused // 保留备用：复杂筛选条件的 SQL 生成

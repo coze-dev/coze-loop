@@ -48,7 +48,7 @@ type ExptSchedulerImpl struct {
 	ResultSvc                ExptResultService
 	IDGen                    idgen.IIDGenerator
 	evaluationSetItemService EvaluationSetItemService
-	schedulerModeFactory SchedulerModeFactory
+	schedulerModeFactory     SchedulerModeFactory
 }
 
 func NewExptSchedulerSvc(

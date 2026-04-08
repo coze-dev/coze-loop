@@ -436,6 +436,8 @@ type ExptFilterFields struct {
 	SourceType      []int64
 	SourceID        []string
 	ExptTemplateIDs []int64
+	// TriggerType 对应表字段 trigger_type，多值 IN 筛选（如 manual,openapi）
+	TriggerType []string
 }
 
 func (e *ExptFilterFields) IsValid() bool {
@@ -450,6 +452,11 @@ func (e *ExptFilterFields) IsValid() bool {
 		}
 	}
 	for _, item := range e.CreatedBy {
+		if len(item) <= 0 {
+			return false
+		}
+	}
+	for _, item := range e.TriggerType {
 		if len(item) <= 0 {
 			return false
 		}

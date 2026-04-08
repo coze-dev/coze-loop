@@ -162,9 +162,7 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	if err != nil {
 		return err
 	}
-	if expt == nil || expt.EvalConf == nil || expt.EvalConf.ConnectorConf.EvaluatorsConf == nil ||
-		!expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		// 未启用加权得分，则不需要重算
+	if expt == nil {
 		return nil
 	}
 
@@ -202,11 +200,16 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	// 用当前已校正的 record 覆盖，避免主从延迟或读从库时 BatchGet 拿到旧数据，导致重算加权分仍用旧分
 	version2Record[rec.EvaluatorVersionID] = rec
 
-	// 6. 构建权重映射
-	scoreWeights := make(map[int64]float64)
-	if expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
+	// 6. 构建权重映射：仅当 EnableScoreWeight 为 true 时使用配置权重，否则等权
+	var scoreWeights map[int64]float64
+	if expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 && ec.EvaluatorVersionID > 0 {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
+				if scoreWeights == nil {
+					scoreWeights = make(map[int64]float64)
+				}
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 			}
 		}

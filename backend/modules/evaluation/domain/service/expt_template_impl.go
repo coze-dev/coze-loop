@@ -235,6 +235,10 @@ func (e *ExptTemplateManagerImpl) MGet(ctx context.Context, templateIDs []int64,
 		templates[idx].Evaluators = exptTuples[idx].Evaluators
 	}
 
+	if err := e.enrichExptSourceFromPipeline(ctx, templates, spaceID); err != nil {
+		return nil, errorx.Wrapf(err, "enrich expt source from pipeline fail, workspace_id: %d", spaceID)
+	}
+
 	return templates, nil
 }
 
@@ -407,6 +411,11 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	// 如果 TemplateConf 为空，保持原有值
 	if updatedTemplate.TemplateConf == nil {
 		updatedTemplate.TemplateConf = existingTemplate.TemplateConf
+	} else if existingTemplate.TemplateConf != nil && existingTemplate.TemplateConf.ExptSource != nil {
+		// 增量更新请求未带 expt_source 时，避免整份 template_conf 覆盖导致 DB 中 expt_source 丢失
+		if updatedTemplate.TemplateConf.ExptSource == nil {
+			updatedTemplate.TemplateConf.ExptSource = existingTemplate.TemplateConf.ExptSource
+		}
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
@@ -625,6 +634,11 @@ func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32
 		templates[idx].Evaluators = exptTuples[idx].Evaluators
 	}
 
+	// ListExperimentTemplates 走 List 分支时也需要填充：ExptSource 来自 DB，span_filter / scheduler 依赖 Pipeline
+	if err := e.enrichExptSourceFromPipeline(ctx, templates, spaceID); err != nil {
+		return nil, 0, errorx.Wrapf(err, "enrich expt source from pipeline fail, workspace_id: %d", spaceID)
+	}
+
 	return templates, count, nil
 }
 
@@ -646,7 +660,7 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 		if err != nil {
 			return nil, 0, errorx.Wrapf(err, "list tasks fail, workspace_id: %d", spaceID)
 		}
-		if tasks == nil || len(tasks) == 0 {
+		if len(tasks) == 0 {
 			break
 		}
 		allTasks = append(allTasks, tasks...)
@@ -679,6 +693,8 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 			return nil, 0, errorx.Wrapf(err, "mget expt tuple for task templates fail")
 		}
 		for idx := range taskExptTuples {
+			taskTemplates[idx].EvalSet = taskExptTuples[idx].EvalSet
+			taskTemplates[idx].Target = taskExptTuples[idx].Target
 			taskTemplates[idx].Evaluators = taskExptTuples[idx].Evaluators
 		}
 	}
@@ -694,14 +710,14 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 		onlineFilter.Excludes = filter.Excludes
 		if filter.Includes != nil {
 			onlineFilter.Includes = &entity.ExptTemplateFilterFields{
-				ExptType:       []int64{int64(entity.ExptType_Online)},
-				CreatedBy:      filter.Includes.CreatedBy,
-				UpdatedBy:      filter.Includes.UpdatedBy,
-				EvalSetIDs:     filter.Includes.EvalSetIDs,
-				TargetIDs:      filter.Includes.TargetIDs,
-				EvaluatorIDs:   filter.Includes.EvaluatorIDs,
-				TargetType:     filter.Includes.TargetType,
-				CronActivate:   filter.Includes.CronActivate,
+				ExptType:     []int64{int64(entity.ExptType_Online)},
+				CreatedBy:    filter.Includes.CreatedBy,
+				UpdatedBy:    filter.Includes.UpdatedBy,
+				EvalSetIDs:   filter.Includes.EvalSetIDs,
+				TargetIDs:    filter.Includes.TargetIDs,
+				EvaluatorIDs: filter.Includes.EvaluatorIDs,
+				TargetType:   filter.Includes.TargetType,
+				CronActivate: filter.Includes.CronActivate,
 			}
 		}
 	}
@@ -789,6 +805,9 @@ func taskToExptTemplate(task *taskdomain.Task, spaceID int64) *entity.ExptTempla
 	}
 	if task.Rule != nil && task.Rule.SpanFilters != nil {
 		exptSource.SpanFilterFields = spanFilterFieldsFromTaskRule(task.Rule.SpanFilters)
+	}
+	if task.Rule != nil && task.Rule.Sampler != nil {
+		exptSource.Sampler = exptSamplerFromTaskSampler(task.Rule.Sampler)
 	}
 	exptSource.Scheduler = taskRuleToExptScheduler(task.Rule)
 
@@ -997,12 +1016,10 @@ func spanFilterFieldsFromTaskRule(sf *taskfilter.SpanFilterFields) *entity.SpanF
 	}
 	do := &entity.SpanFilterFieldsDO{}
 	if sf.PlatformType != nil {
-		s := string(*sf.PlatformType)
-		do.PlatformType = &s
+		do.PlatformType = sf.PlatformType
 	}
 	if sf.SpanListType != nil {
-		s := string(*sf.SpanListType)
-		do.SpanListType = &s
+		do.SpanListType = sf.SpanListType
 	}
 	if sf.Filters != nil {
 		do.Filters = filterFieldsFromTaskRule(sf.Filters)
@@ -1017,8 +1034,7 @@ func filterFieldsFromTaskRule(ff *taskfilter.FilterFields) *entity.FilterFieldsD
 	}
 	do := &entity.FilterFieldsDO{}
 	if ff.QueryAndOr != nil {
-		s := string(*ff.QueryAndOr)
-		do.QueryAndOr = &s
+		do.QueryAndOr = ff.QueryAndOr
 	}
 	if len(ff.FilterFields) > 0 {
 		do.FilterFields = make([]*entity.FilterFieldDO, 0, len(ff.FilterFields))
@@ -1041,16 +1057,13 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 		Values:    f.Values,
 	}
 	if f.FieldType != nil {
-		s := string(*f.FieldType)
-		fd.FieldType = &s
+		fd.FieldType = f.FieldType
 	}
 	if f.QueryType != nil {
-		s := string(*f.QueryType)
-		fd.QueryType = &s
+		fd.QueryType = f.QueryType
 	}
 	if f.QueryAndOr != nil {
-		s := string(*f.QueryAndOr)
-		fd.QueryAndOr = &s
+		fd.QueryAndOr = f.QueryAndOr
 	}
 	if f.SubFilter != nil {
 		fd.SubFilter = filterFieldsFromTaskRule(f.SubFilter)
@@ -1059,8 +1072,9 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 }
 
 // enrichExptSourceFromPipeline 对在线实验模板，根据 source_id 和 space_id 调用 ListPipeline，
-// 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters 到 ExptSource.SpanFilterFields，
+// 从 Flow 中 node_template_type=data_reflow 的节点提取 task.rule.span_filters、task.rule.sampler 到 ExptSource，
 // 提取 Pipeline.Scheduler 到 ExptSource.Scheduler
+// 仅当 ExptSource.SourceType 为 IDL SourceType.Workflow（Pipeline）时拉取 Pipeline 详情。
 func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Context, templates []*entity.ExptTemplate, spaceID int64) error {
 	if e.pipelineRPCAdapter == nil {
 		return nil
@@ -1069,7 +1083,7 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 	pipelineIDs := make([]int64, 0)
 	templateByPipelineID := make(map[int64][]*entity.ExptTemplate)
 	for _, t := range templates {
-		if t.ExptSource == nil || t.ExptSource.SourceType != entity.SourceType_AutoTask || t.ExptSource.SourceID == "" {
+		if t.ExptSource == nil || t.ExptSource.SourceType != entity.SourceType_Workflow || t.ExptSource.SourceID == "" {
 			continue
 		}
 		pid, err := strconv.ParseInt(t.ExptSource.SourceID, 10, 64)
@@ -1106,11 +1120,18 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 		if len(targets) == 0 {
 			continue
 		}
-		spanFilterFields := extractSpanFilterFieldsFromPipeline(p)
+		dataReflow := extractDataReflowFieldsFromPipeline(p)
+		var spanFilterFields *entity.SpanFilterFieldsDO
+		var sampler *entity.ExptSamplerDO
+		if dataReflow != nil {
+			spanFilterFields = dataReflow.SpanFilterFields
+			sampler = dataReflow.Sampler
+		}
 		scheduler := extractSchedulerFromPipeline(p)
 		for _, tpl := range targets {
 			if tpl.ExptSource != nil {
 				tpl.ExptSource.SpanFilterFields = spanFilterFields
+				tpl.ExptSource.Sampler = sampler
 				tpl.ExptSource.Scheduler = scheduler
 			}
 		}
@@ -1118,8 +1139,14 @@ func (e *ExptTemplateManagerImpl) enrichExptSourceFromPipeline(ctx context.Conte
 	return nil
 }
 
-// extractSpanFilterFieldsFromPipeline 从 Pipeline Flow 中 node_template_type=data_reflow 的节点提取 span_filters
-func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterFieldsDO {
+// dataReflowParsed 解析 data_reflow 节点 task 内容中的 rule.span_filters 与 rule.sampler
+type dataReflowParsed struct {
+	SpanFilterFields *entity.SpanFilterFieldsDO
+	Sampler          *entity.ExptSamplerDO
+}
+
+// extractDataReflowFieldsFromPipeline 从 Pipeline Flow 中 node_template_type=data_reflow 的节点解析 task JSON
+func extractDataReflowFieldsFromPipeline(p *entity.Pipeline) *dataReflowParsed {
 	if p == nil || p.Flow == nil || len(p.Flow.Nodes) == 0 {
 		return nil
 	}
@@ -1134,16 +1161,34 @@ func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterF
 		if !ok || taskRef == nil || taskRef.Content == "" {
 			continue
 		}
-		return parseSpanFilterFieldsFromTaskJSON(taskRef.Content)
+		return parseDataReflowTaskJSON(taskRef.Content)
 	}
 	return nil
 }
 
-// taskRuleJSON 解析 task JSON 中的 rule.span_filters 结构
-type taskRuleSpanFiltersJSON struct {
+// extractSpanFilterFieldsFromPipeline 仅返回 span_filters 部分（与 extractDataReflowFieldsFromPipeline 同源）
+func extractSpanFilterFieldsFromPipeline(p *entity.Pipeline) *entity.SpanFilterFieldsDO {
+	if r := extractDataReflowFieldsFromPipeline(p); r != nil {
+		return r.SpanFilterFields
+	}
+	return nil
+}
+
+// taskRuleDataReflowJSON 解析 task JSON 中的 rule（span_filters、sampler）
+type taskRuleDataReflowJSON struct {
 	Rule *struct {
 		SpanFilters *spanFiltersJSON `json:"span_filters"`
+		Sampler     *samplerJSON     `json:"sampler"`
 	} `json:"rule"`
+}
+
+type samplerJSON struct {
+	SampleRate    *float64 `json:"sample_rate"`
+	SampleSize    *int64   `json:"sample_size"`
+	IsCycle       *bool    `json:"is_cycle"`
+	CycleCount    *int64   `json:"cycle_count"`
+	CycleInterval *int64   `json:"cycle_interval"`
+	CycleTimeUnit *string  `json:"cycle_time_unit"`
 }
 
 type spanFiltersJSON struct {
@@ -1166,15 +1211,38 @@ type filterFieldJSON struct {
 	SubFilter  *filtersJSON `json:"sub_filter"`
 }
 
-func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
-	var parsed taskRuleSpanFiltersJSON
+func parseDataReflowTaskJSON(content string) *dataReflowParsed {
+	var parsed taskRuleDataReflowJSON
 	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
 		return nil
 	}
-	if parsed.Rule == nil || parsed.Rule.SpanFilters == nil {
+	if parsed.Rule == nil {
 		return nil
 	}
-	sf := parsed.Rule.SpanFilters
+	out := &dataReflowParsed{}
+	if parsed.Rule.SpanFilters != nil {
+		out.SpanFilterFields = buildSpanFilterFieldsDOFromJSON(parsed.Rule.SpanFilters)
+	}
+	if parsed.Rule.Sampler != nil {
+		out.Sampler = exptSamplerDOFromSamplerJSON(parsed.Rule.Sampler)
+	}
+	if out.SpanFilterFields == nil && out.Sampler == nil {
+		return nil
+	}
+	return out
+}
+
+func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsDO {
+	if r := parseDataReflowTaskJSON(content); r != nil {
+		return r.SpanFilterFields
+	}
+	return nil
+}
+
+func buildSpanFilterFieldsDOFromJSON(sf *spanFiltersJSON) *entity.SpanFilterFieldsDO {
+	if sf == nil {
+		return nil
+	}
 	result := &entity.SpanFilterFieldsDO{
 		PlatformType: sf.PlatformType,
 		SpanListType: sf.SpanListType,
@@ -1207,6 +1275,37 @@ func parseSpanFilterFieldsFromTaskJSON(content string) *entity.SpanFilterFieldsD
 		}
 	}
 	return result
+}
+
+func exptSamplerDOFromSamplerJSON(j *samplerJSON) *entity.ExptSamplerDO {
+	if j == nil {
+		return nil
+	}
+	return &entity.ExptSamplerDO{
+		SampleRate:    j.SampleRate,
+		SampleSize:    j.SampleSize,
+		IsCycle:       j.IsCycle,
+		CycleCount:    j.CycleCount,
+		CycleInterval: j.CycleInterval,
+		CycleTimeUnit: j.CycleTimeUnit,
+	}
+}
+
+func exptSamplerFromTaskSampler(s *taskdomain.Sampler) *entity.ExptSamplerDO {
+	if s == nil {
+		return nil
+	}
+	out := &entity.ExptSamplerDO{
+		SampleRate:    s.SampleRate,
+		SampleSize:    s.SampleSize,
+		IsCycle:       s.IsCycle,
+		CycleCount:    s.CycleCount,
+		CycleInterval: s.CycleInterval,
+	}
+	if s.CycleTimeUnit != nil {
+		out.CycleTimeUnit = s.CycleTimeUnit
+	}
+	return out
 }
 
 // extractSchedulerFromPipeline 从 Pipeline 提取 Scheduler
@@ -1288,11 +1387,7 @@ func (e *ExptTemplateManagerImpl) matchesTemplateFilter(template *entity.ExptTem
 			}
 		}
 
-		// EvaluatorIDs
-		if len(includes.EvaluatorIDs) > 0 {
-			// 需要查询评估器ID，这里简化处理，暂时跳过这个筛选条件
-			// TODO: 实现评估器ID的精确匹配
-		}
+		// EvaluatorIDs: 暂不做内存过滤（由下游持久层处理或忽略）
 
 		// TargetType
 		if len(includes.TargetType) > 0 {
@@ -1769,11 +1864,11 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 		}
 		fieldMappingConfig.EvaluatorFieldMapping = evaluatorMappings
 
-		// 如果有任一评估器配置了分数权重，则标记模板支持分数权重
+		// 若有任一评估器配置了正分数权重，则标记模板支持分数权重（0 与未配置等价，不开启）
 		if templateConf.ConnectorConf.EvaluatorsConf != nil {
 			templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
 			for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-				if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
+				if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
 					templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
 					break
 				}

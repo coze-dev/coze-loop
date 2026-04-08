@@ -4,9 +4,11 @@
 package pipeline
 
 import (
+	evalrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/google/wire"
 )
 
 var PipelineRPCSet = wire.NewSet(
-	NewNoopPipelineListAdapter,
+	NewPipelineListAdapter,
+	wire.Bind(new(evalrpc.IPipelineListAdapter), new(*PipelineListAdapter)),
 )
