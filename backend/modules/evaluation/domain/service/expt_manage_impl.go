@@ -697,7 +697,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if do.EvalConf != nil && do.EvalConf.ConnectorConf.EvaluatorsConf != nil {
 		do.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
 		for _, ec := range do.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
 				do.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
 				break
 			}

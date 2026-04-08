@@ -671,7 +671,7 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
 
 			trajectoryAdapter.EXPECT().
-				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Nil()).
+				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.AssignableToTypeOf((*int64)(nil))).
 				Return(tt.trajectories, tt.err)
 
 			outputData := &entity.EvalTargetOutputData{
@@ -953,7 +953,7 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords_Trajectory(t *testing.T) {
 				},
 			})
 			trajectoryAdapter.EXPECT().
-				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.Nil()).
+				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.AssignableToTypeOf((*int64)(nil))).
 				Return(tt.trajectories, tt.err)
 
 			// use channel to safely observe async UpdateEvalTargetRecord calls from goroutine

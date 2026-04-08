@@ -76,7 +76,8 @@ type GetEvaluationSetItemFieldParam struct {
 	ItemPK int64
 	// 列名
 	FieldName string
-	FieldKey  *string
+	// 列的唯一键，用于精确查找
+	FieldKey *string
 	// 当 item 为多轮时，必须提供
 	TurnID *int64
 }

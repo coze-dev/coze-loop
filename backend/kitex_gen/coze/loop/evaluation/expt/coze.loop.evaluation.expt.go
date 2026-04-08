@@ -26600,12 +26600,691 @@ func (p *UpdateAnnotateRecordResp) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
+/** 实验报告 CSV 导出列：多个一级分组，组内 list<string>。不传 export_columns：导出全部（含标注列等）。传 export_columns（含空 struct）：白名单模式，仅 item_id、status 等必填列 + 各分组非空 list 中的列；某一 list 未传（unset）与传 [] 对该组均表示不导出。人工标注列需在 tag_key_ids 中显式列出 TagKeyID（十进制字符串）才会在白名单导出中出现。 */
+type ExptResultExportColumnSpec struct {
+	/** 评测集字段：ColumnEvalSetField.Key */
+	EvalSetFields []string `thrift:"eval_set_fields,1,optional" frugal:"1,optional,list<string>" json:"eval_set_fields" form:"eval_set_fields" query:"eval_set_fields"`
+	/** 评测对象输出（非性能指标）：ColumnEvalTarget.Name，如 actual_output、trajectory、自定义输出名 */
+	EvalTargetOutputs []string `thrift:"eval_target_outputs,2,optional" frugal:"2,optional,list<string>" json:"eval_target_outputs" form:"eval_target_outputs" query:"eval_target_outputs"`
+	/** 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等） */
+	Metrics []string `thrift:"metrics,3,optional" frugal:"3,optional,list<string>" json:"metrics" form:"metrics" query:"metrics"`
+	/** 评估器版本 ID 列表（字符串形式十进制）；每个 ID 导出该评估器的 score 与 reason 列 */
+	EvaluatorVersionIds []string `thrift:"evaluator_version_ids,4,optional" frugal:"4,optional,list<string>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
+	/** 是否导出加权分数 */
+	WeightedScore *bool `thrift:"weighted_score,5,optional" frugal:"5,optional,bool" json:"weighted_score" form:"weighted_score" query:"weighted_score"`
+	/** 人工标注：每项为标注 TagKeyID（十进制字符串），与 ColumnAnnotation.TagKeyID 对应，导出该标注列 */
+	TagKeyIds []string `thrift:"tag_key_ids,6,optional" frugal:"6,optional,list<string>" json:"tag_key_ids" form:"tag_key_ids" query:"tag_key_ids"`
+}
+
+func NewExptResultExportColumnSpec() *ExptResultExportColumnSpec {
+	return &ExptResultExportColumnSpec{}
+}
+
+func (p *ExptResultExportColumnSpec) InitDefault() {
+}
+
+var ExptResultExportColumnSpec_EvalSetFields_DEFAULT []string
+
+func (p *ExptResultExportColumnSpec) GetEvalSetFields() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalSetFields() {
+		return ExptResultExportColumnSpec_EvalSetFields_DEFAULT
+	}
+	return p.EvalSetFields
+}
+
+var ExptResultExportColumnSpec_EvalTargetOutputs_DEFAULT []string
+
+func (p *ExptResultExportColumnSpec) GetEvalTargetOutputs() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvalTargetOutputs() {
+		return ExptResultExportColumnSpec_EvalTargetOutputs_DEFAULT
+	}
+	return p.EvalTargetOutputs
+}
+
+var ExptResultExportColumnSpec_Metrics_DEFAULT []string
+
+func (p *ExptResultExportColumnSpec) GetMetrics() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMetrics() {
+		return ExptResultExportColumnSpec_Metrics_DEFAULT
+	}
+	return p.Metrics
+}
+
+var ExptResultExportColumnSpec_EvaluatorVersionIds_DEFAULT []string
+
+func (p *ExptResultExportColumnSpec) GetEvaluatorVersionIds() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEvaluatorVersionIds() {
+		return ExptResultExportColumnSpec_EvaluatorVersionIds_DEFAULT
+	}
+	return p.EvaluatorVersionIds
+}
+
+var ExptResultExportColumnSpec_WeightedScore_DEFAULT bool
+
+func (p *ExptResultExportColumnSpec) GetWeightedScore() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWeightedScore() {
+		return ExptResultExportColumnSpec_WeightedScore_DEFAULT
+	}
+	return *p.WeightedScore
+}
+
+var ExptResultExportColumnSpec_TagKeyIds_DEFAULT []string
+
+func (p *ExptResultExportColumnSpec) GetTagKeyIds() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTagKeyIds() {
+		return ExptResultExportColumnSpec_TagKeyIds_DEFAULT
+	}
+	return p.TagKeyIds
+}
+func (p *ExptResultExportColumnSpec) SetEvalSetFields(val []string) {
+	p.EvalSetFields = val
+}
+func (p *ExptResultExportColumnSpec) SetEvalTargetOutputs(val []string) {
+	p.EvalTargetOutputs = val
+}
+func (p *ExptResultExportColumnSpec) SetMetrics(val []string) {
+	p.Metrics = val
+}
+func (p *ExptResultExportColumnSpec) SetEvaluatorVersionIds(val []string) {
+	p.EvaluatorVersionIds = val
+}
+func (p *ExptResultExportColumnSpec) SetWeightedScore(val *bool) {
+	p.WeightedScore = val
+}
+func (p *ExptResultExportColumnSpec) SetTagKeyIds(val []string) {
+	p.TagKeyIds = val
+}
+
+var fieldIDToName_ExptResultExportColumnSpec = map[int16]string{
+	1: "eval_set_fields",
+	2: "eval_target_outputs",
+	3: "metrics",
+	4: "evaluator_version_ids",
+	5: "weighted_score",
+	6: "tag_key_ids",
+}
+
+func (p *ExptResultExportColumnSpec) IsSetEvalSetFields() bool {
+	return p.EvalSetFields != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetEvalTargetOutputs() bool {
+	return p.EvalTargetOutputs != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetMetrics() bool {
+	return p.Metrics != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetEvaluatorVersionIds() bool {
+	return p.EvaluatorVersionIds != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetWeightedScore() bool {
+	return p.WeightedScore != nil
+}
+
+func (p *ExptResultExportColumnSpec) IsSetTagKeyIds() bool {
+	return p.TagKeyIds != nil
+}
+
+func (p *ExptResultExportColumnSpec) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptResultExportColumnSpec[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptResultExportColumnSpec) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvalSetFields = _field
+	return nil
+}
+func (p *ExptResultExportColumnSpec) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvalTargetOutputs = _field
+	return nil
+}
+func (p *ExptResultExportColumnSpec) ReadField3(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Metrics = _field
+	return nil
+}
+func (p *ExptResultExportColumnSpec) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.EvaluatorVersionIds = _field
+	return nil
+}
+func (p *ExptResultExportColumnSpec) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WeightedScore = _field
+	return nil
+}
+func (p *ExptResultExportColumnSpec) ReadField6(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TagKeyIds = _field
+	return nil
+}
+
+func (p *ExptResultExportColumnSpec) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptResultExportColumnSpec"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptResultExportColumnSpec) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalSetFields() {
+		if err = oprot.WriteFieldBegin("eval_set_fields", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.EvalSetFields)); err != nil {
+			return err
+		}
+		for _, v := range p.EvalSetFields {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptResultExportColumnSpec) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvalTargetOutputs() {
+		if err = oprot.WriteFieldBegin("eval_target_outputs", thrift.LIST, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.EvalTargetOutputs)); err != nil {
+			return err
+		}
+		for _, v := range p.EvalTargetOutputs {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExptResultExportColumnSpec) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMetrics() {
+		if err = oprot.WriteFieldBegin("metrics", thrift.LIST, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.Metrics)); err != nil {
+			return err
+		}
+		for _, v := range p.Metrics {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ExptResultExportColumnSpec) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEvaluatorVersionIds() {
+		if err = oprot.WriteFieldBegin("evaluator_version_ids", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.EvaluatorVersionIds)); err != nil {
+			return err
+		}
+		for _, v := range p.EvaluatorVersionIds {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ExptResultExportColumnSpec) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWeightedScore() {
+		if err = oprot.WriteFieldBegin("weighted_score", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WeightedScore); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *ExptResultExportColumnSpec) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTagKeyIds() {
+		if err = oprot.WriteFieldBegin("tag_key_ids", thrift.LIST, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.TagKeyIds)); err != nil {
+			return err
+		}
+		for _, v := range p.TagKeyIds {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+
+func (p *ExptResultExportColumnSpec) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptResultExportColumnSpec(%+v)", *p)
+
+}
+
+func (p *ExptResultExportColumnSpec) DeepEqual(ano *ExptResultExportColumnSpec) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.EvalSetFields) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EvalTargetOutputs) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Metrics) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.EvaluatorVersionIds) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.WeightedScore) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TagKeyIds) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptResultExportColumnSpec) Field1DeepEqual(src []string) bool {
+
+	if len(p.EvalSetFields) != len(src) {
+		return false
+	}
+	for i, v := range p.EvalSetFields {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field2DeepEqual(src []string) bool {
+
+	if len(p.EvalTargetOutputs) != len(src) {
+		return false
+	}
+	for i, v := range p.EvalTargetOutputs {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field3DeepEqual(src []string) bool {
+
+	if len(p.Metrics) != len(src) {
+		return false
+	}
+	for i, v := range p.Metrics {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field4DeepEqual(src []string) bool {
+
+	if len(p.EvaluatorVersionIds) != len(src) {
+		return false
+	}
+	for i, v := range p.EvaluatorVersionIds {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field5DeepEqual(src *bool) bool {
+
+	if p.WeightedScore == src {
+		return true
+	} else if p.WeightedScore == nil || src == nil {
+		return false
+	}
+	if *p.WeightedScore != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptResultExportColumnSpec) Field6DeepEqual(src []string) bool {
+
+	if len(p.TagKeyIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TagKeyIds {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 type ExportExptResultRequest struct {
-	WorkspaceID int64                      `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	ExptID      int64                      `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
-	ExportType  *expt.ExptResultExportType `thrift:"export_type,4,optional" frugal:"4,optional,string" form:"export_type" json:"export_type,omitempty"`
-	Session     *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base        *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID   int64                       `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	ExptID        int64                       `thrift:"expt_id,2,required" frugal:"2,required,i64" json:"expt_id" path:"expt_id,required" `
+	ExportColumns *ExptResultExportColumnSpec `thrift:"export_columns,3,optional" frugal:"3,optional,ExptResultExportColumnSpec" form:"export_columns" json:"export_columns,omitempty"`
+	ExportType    *expt.ExptResultExportType  `thrift:"export_type,4,optional" frugal:"4,optional,string" form:"export_type" json:"export_type,omitempty"`
+	Session       *common.Session             `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base          *base.Base                  `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewExportExptResultRequest() *ExportExptResultRequest {
@@ -26627,6 +27306,18 @@ func (p *ExportExptResultRequest) GetExptID() (v int64) {
 		return p.ExptID
 	}
 	return
+}
+
+var ExportExptResultRequest_ExportColumns_DEFAULT *ExptResultExportColumnSpec
+
+func (p *ExportExptResultRequest) GetExportColumns() (v *ExptResultExportColumnSpec) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExportColumns() {
+		return ExportExptResultRequest_ExportColumns_DEFAULT
+	}
+	return p.ExportColumns
 }
 
 var ExportExptResultRequest_ExportType_DEFAULT expt.ExptResultExportType
@@ -26670,6 +27361,9 @@ func (p *ExportExptResultRequest) SetWorkspaceID(val int64) {
 func (p *ExportExptResultRequest) SetExptID(val int64) {
 	p.ExptID = val
 }
+func (p *ExportExptResultRequest) SetExportColumns(val *ExptResultExportColumnSpec) {
+	p.ExportColumns = val
+}
 func (p *ExportExptResultRequest) SetExportType(val *expt.ExptResultExportType) {
 	p.ExportType = val
 }
@@ -26683,9 +27377,14 @@ func (p *ExportExptResultRequest) SetBase(val *base.Base) {
 var fieldIDToName_ExportExptResultRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "expt_id",
+	3:   "export_columns",
 	4:   "export_type",
 	200: "session",
 	255: "Base",
+}
+
+func (p *ExportExptResultRequest) IsSetExportColumns() bool {
+	return p.ExportColumns != nil
 }
 
 func (p *ExportExptResultRequest) IsSetExportType() bool {
@@ -26735,6 +27434,14 @@ func (p *ExportExptResultRequest) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetExptID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -26824,6 +27531,14 @@ func (p *ExportExptResultRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.ExptID = _field
 	return nil
 }
+func (p *ExportExptResultRequest) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewExptResultExportColumnSpec()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExportColumns = _field
+	return nil
+}
 func (p *ExportExptResultRequest) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *expt.ExptResultExportType
@@ -26864,6 +27579,10 @@ func (p *ExportExptResultRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField4(oprot); err != nil {
@@ -26927,6 +27646,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExportExptResultRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExportColumns() {
+		if err = oprot.WriteFieldBegin("export_columns", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExportColumns.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *ExportExptResultRequest) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExportType() {
@@ -27003,6 +27740,9 @@ func (p *ExportExptResultRequest) DeepEqual(ano *ExportExptResultRequest) bool {
 	if !p.Field2DeepEqual(ano.ExptID) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.ExportColumns) {
+		return false
+	}
 	if !p.Field4DeepEqual(ano.ExportType) {
 		return false
 	}
@@ -27025,6 +27765,13 @@ func (p *ExportExptResultRequest) Field1DeepEqual(src int64) bool {
 func (p *ExportExptResultRequest) Field2DeepEqual(src int64) bool {
 
 	if p.ExptID != src {
+		return false
+	}
+	return true
+}
+func (p *ExportExptResultRequest) Field3DeepEqual(src *ExptResultExportColumnSpec) bool {
+
+	if !p.ExportColumns.DeepEqual(src) {
 		return false
 	}
 	return true

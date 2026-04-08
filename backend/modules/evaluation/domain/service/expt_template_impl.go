@@ -911,7 +911,7 @@ func (e *ExptTemplateManagerImpl) buildFieldMappingConfigAndEnableScoreWeight(te
 		if templateConf.ConnectorConf.EvaluatorsConf != nil {
 			templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
 			for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-				if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
+				if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
 					templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
 					break
 				}

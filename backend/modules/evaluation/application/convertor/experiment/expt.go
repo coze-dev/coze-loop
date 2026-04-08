@@ -48,7 +48,7 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 				if conf == nil {
 					continue
 				}
-				if w, ok := weights[conf.EvaluatorVersionID]; ok && w > 0 {
+				if w, ok := weights[conf.EvaluatorVersionID]; ok && w >= 0 {
 					conf.ScoreWeight = gptr.Of(w)
 				}
 			}
@@ -180,7 +180,7 @@ func (e *EvalConfConvert) ConvertEntityToDTO(ec *entity.EvaluationConfiguration)
 					item.SetEvaluatorVersionID(gptr.Of(evaluatorConf.EvaluatorVersionID))
 				}
 				// 如果 EvaluatorConf 中有 ScoreWeight，也填充到 item 中
-				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight > 0 {
+				if evaluatorConf.ScoreWeight != nil && *evaluatorConf.ScoreWeight >= 0 {
 					item.SetScoreWeight(gptr.Of(*evaluatorConf.ScoreWeight))
 				}
 				m.SetEvaluatorIDVersionItem(item)
@@ -266,7 +266,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	evalWeights := make(map[int64]float64)
 	if experiment.EvalConf != nil && experiment.EvalConf.ConnectorConf.EvaluatorsConf != nil {
 		for _, ec := range experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
 				continue
 			}
 			evalWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight

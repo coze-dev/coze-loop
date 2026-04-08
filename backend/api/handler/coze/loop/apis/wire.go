@@ -72,6 +72,7 @@ var (
 	promptSet = wire.NewSet(
 		NewPromptHandler,
 		promptapp.InitPromptManageApplication,
+		promptapp.InitToolManageApplication,
 		promptapp.InitPromptDebugApplication,
 		promptapp.InitPromptExecuteApplication,
 		promptapp.InitPromptOpenAPIApplication,

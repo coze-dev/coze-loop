@@ -136,7 +136,7 @@ func UploadAttachmentDetailDO2DTO(do *entity.UploadAttachmentDetail) *app_eval_s
 	if do == nil {
 		return nil
 	}
-	return &app_eval_set.UploadAttachmentDetail{
+	dto := &app_eval_set.UploadAttachmentDetail{
 		ContentType:     contentTypeDO2DTO(do.ContentType),
 		ImagexServiceID: do.ImagexServiceID,
 		OriginImage:     common.ConvertImageDO2DTO(do.OriginImage),
@@ -146,8 +146,11 @@ func UploadAttachmentDetailDO2DTO(do *entity.UploadAttachmentDetail) *app_eval_s
 		OriginVideo:     common.ConvertVideoDO2DTO(do.OriginVideo),
 		Video:           common.ConvertVideoDO2DTO(do.Video),
 		ErrMsg:          do.ErrMsg,
-		ErrorType:       gptr.Of(dataset.ItemErrorType(gptr.Indirect(do.ErrorType))),
 	}
+	if do.ErrorType != nil {
+		dto.ErrorType = gptr.Of(dataset.ItemErrorType(gptr.Indirect(do.ErrorType)))
+	}
+	return dto
 }
 
 func contentTypeDO2DTO(ct *entity.ContentType) *dataset.ContentType {
