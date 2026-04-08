@@ -329,10 +329,14 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	if updatedMeta.ExptType == 0 {
 		updatedMeta.ExptType = existingTemplate.GetExptType()
 	}
+	evalSetID := existingTemplate.GetEvalSetID()
+	if param.EvalSetID > 0 {
+		evalSetID = param.EvalSetID
+	}
 
 	// 准备更新后的 TripleConfig
 	updatedTripleConfig := &entity.ExptTemplateTuple{
-		EvalSetID:               existingTemplate.GetEvalSetID(), // 不允许修改
+		EvalSetID:               evalSetID, // 允许修改
 		EvalSetVersionID:        param.EvalSetVersionID,
 		TargetID:                finalTargetID,
 		TargetVersionID:         finalTargetVersionID,

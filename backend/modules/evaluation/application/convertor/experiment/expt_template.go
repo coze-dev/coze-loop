@@ -1030,6 +1030,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	// 从 triple_config 中提取三元组配置（注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置）
 	if req.GetTripleConfig() != nil {
 		tripleConfig := req.GetTripleConfig()
+		param.EvalSetID = tripleConfig.GetEvalSetID()
 		param.EvalSetVersionID = tripleConfig.GetEvalSetVersionID()
 		param.TargetVersionID = tripleConfig.GetTargetVersionID()
 		// 从 EvaluatorIDVersionItems 构建 entity 层的 EvaluatorIDVersionItems

@@ -358,6 +358,7 @@ type UpdateExptTemplateParam struct {
 	SpaceID                 int64
 	Name                    string
 	Description             string
+	EvalSetID               int64
 	EvalSetVersionID        int64
 	TargetVersionID         int64
 	EvaluatorIDVersionItems []*EvaluatorIDVersionItem // 评估器ID版本项列表（包含完整信息）
