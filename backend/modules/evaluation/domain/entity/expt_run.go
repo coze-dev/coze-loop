@@ -448,6 +448,13 @@ type ExptTurnRunResult struct {
 	AsyncAbort       bool
 }
 
+func (e *ExptTurnRunResult) GetTargetResult() *EvalTargetRecord {
+	if e != nil {
+		return e.TargetResult
+	}
+	return nil
+}
+
 func (e *ExptTurnRunResult) SetTargetResult(er *EvalTargetRecord) *ExptTurnRunResult {
 	e.TargetResult = er
 	return e

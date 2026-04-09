@@ -104,13 +104,19 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if err := e.validateEvalTargetCtx(ctx, etec); err != nil {
+	if err := e.validateEvalTargetCtx(etec); err != nil {
 		return nil, err
 	}
 
-	if existRecord := e.existedTargetRecord(etec); !etec.Event.IgnoreExistedTargetResult() && existRecord != nil {
-		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
-		return existRecord, nil
+	tr := etec.ExptTurnRunResult.GetTargetResult()
+
+	if etec.Event.AsyncReportTrigger {
+		etec.Event.WithCtxTargetCalled(ctx)
+		return tr, nil
+	}
+	if tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult() {
+		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", tr.ID)
+		return tr, nil
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
@@ -126,12 +132,9 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 	return record, nil
 }
 
-func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(ctx context.Context, etec *entity.ExptTurnEvalCtx) error {
-	if etec.Event.AsyncReportTrigger {
-		if etec.ExptTurnRunResult == nil || etec.ExptTurnRunResult.TargetResult == nil {
-			return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
-		}
-		etec.Event.WithCtxTargetCalled(ctx)
+func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptTurnEvalCtx) error {
+	if etec.Event.AsyncReportTrigger && etec.ExptTurnRunResult.GetTargetResult() == nil {
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
 	}
 	return nil
 }
@@ -146,16 +149,6 @@ func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) 
 		return true
 	}
 	return false
-}
-
-func (e *DefaultExptTurnEvaluationImpl) existedTargetRecord(etec *entity.ExptTurnEvalCtx) *entity.EvalTargetRecord {
-	if etec == nil || etec.ExptTurnRunResult.TargetResult == nil {
-		return nil
-	}
-	if gptr.Indirect(etec.ExptTurnRunResult.TargetResult.Status) == entity.EvalTargetRunStatusSuccess {
-		return etec.ExptTurnRunResult.TargetResult
-	}
-	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experiment) bool {
