@@ -13,6 +13,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/bytedance/gg/gptr"
 	"golang.org/x/sync/errgroup"
@@ -1283,15 +1285,15 @@ func (e *EvaluatorHandlerImpl) checkURIEmpty(ctx context.Context, inputFields []
 	for _, field := range inputFields {
 		switch gptr.Indirect(field.ContentType) {
 		case evaluatorcommon.ContentTypeImage:
-			if field.GetImage() != nil && field.GetImage().GetURI() == "" {
+			if field.GetImage() != nil && field.GetImage().GetURI() == "" && field.GetImage().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("image URI is empty"))
 			}
 		case evaluatorcommon.ContentTypeAudio:
-			if field.GetAudio() != nil && field.GetAudio().GetURI() == "" {
+			if field.GetAudio() != nil && field.GetAudio().GetURI() == "" && field.GetImage().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("audio URI is empty"))
 			}
 		case evaluatorcommon.ContentTypeVideo:
-			if field.GetVideo() != nil && field.GetVideo().GetURI() == "" {
+			if field.GetVideo() != nil && field.GetVideo().GetURI() == "" && field.GetImage().GetStorageProvider() != dataset.StorageProvider_ExternalUrl {
 				return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("video URI is empty"))
 			}
 		default:
