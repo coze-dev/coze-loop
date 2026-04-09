@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -120,4 +121,78 @@ func TestQuotaSpaceExpt_Serialize(t *testing.T) {
 	b, err := q.Serialize()
 	assert.NoError(t, err)
 	assert.NotNil(t, b)
+}
+
+func TestExperiment_AsyncCallTarget_WebAgent(t *testing.T) {
+	tests := []struct {
+		name     string
+		expt     *Experiment
+		expected bool
+	}{
+		{
+			name:     "nil实验返回false",
+			expt:     nil,
+			expected: false,
+		},
+		{
+			name:     "nil Target返回false",
+			expt:     &Experiment{Target: nil},
+			expected: false,
+		},
+		{
+			name: "WebAgent设置返回true",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						WebAgent: &WebAgent{ID: 1, Name: "test-web-agent"},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "CustomRPCServer异步IsAsync=true返回true",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						CustomRPCServer: &CustomRPCServer{IsAsync: gptr.Of(true)},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "无WebAgent且非异步CustomRPCServer返回false",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						CustomRPCServer: &CustomRPCServer{IsAsync: gptr.Of(false)},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.expt.AsyncCallTarget())
+		})
+	}
+}
+
+func TestTargetConf_Valid_WebAgent(t *testing.T) {
+	ctx := context.Background()
+	conf := &TargetConf{
+		TargetVersionID: 1,
+	}
+	err := conf.Valid(ctx, EvalTargetTypeWebAgent)
+	assert.NoError(t, err)
+}
+
+func TestVisibility_Hidden(t *testing.T) {
+	assert.Equal(t, Visibility(1), Visibility_Hidden)
+}
+
+func TestSourceType_IntelligentGen(t *testing.T) {
+	assert.Equal(t, SourceType(3), SourceType_IntelligentGen)
 }

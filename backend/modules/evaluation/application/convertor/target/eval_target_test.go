@@ -518,3 +518,304 @@ func TestCustomEvalTargetConversions(t *testing.T) {
 	assert.Nil(t, CustomEvalTargetDTO2DO(nil))
 	assert.Nil(t, CustomEvalTargetDO2DTO(nil))
 }
+
+func TestWebAgentDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *dto.WebAgent
+		expected *do.WebAgent
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "完整WebAgent转换",
+			input: &dto.WebAgent{
+				ID:          gptr.Of(int64(100)),
+				Name:        gptr.Of("agent-name"),
+				Description: gptr.Of("agent-desc"),
+				AgentConfig: &commondto.AgentConfig{
+					AgentType: gptr.Of("vibe"),
+				},
+				PromptConfig: &dto.WebAgentTargetPromptConfig{
+					MessageList: []*commondto.Message{},
+				},
+			},
+			expected: &do.WebAgent{
+				ID:          100,
+				Name:        "agent-name",
+				Description: "agent-desc",
+				AgentConfig: &do.AgentConfig{
+					AgentType: do.AgentType("vibe"),
+				},
+				PromptConfig: &do.WebAgentTargetPromptConfig{
+					MessageList: []*do.Message{},
+				},
+			},
+		},
+		{
+			name: "AgentConfig为nil",
+			input: &dto.WebAgent{
+				ID:   gptr.Of(int64(1)),
+				Name: gptr.Of("test"),
+			},
+			expected: &do.WebAgent{
+				ID:   1,
+				Name: "test",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebAgentDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *do.WebAgent
+		expected *dto.WebAgent
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "完整WebAgent转换",
+			input: &do.WebAgent{
+				ID:          100,
+				Name:        "agent-name",
+				Description: "agent-desc",
+				AgentConfig: &do.AgentConfig{
+					AgentType: do.AgentType("vibe"),
+				},
+				PromptConfig: &do.WebAgentTargetPromptConfig{
+					MessageList: []*do.Message{},
+				},
+			},
+			expected: &dto.WebAgent{
+				ID:          gptr.Of(int64(100)),
+				Name:        gptr.Of("agent-name"),
+				Description: gptr.Of("agent-desc"),
+				AgentConfig: &commondto.AgentConfig{
+					AgentType: gptr.Of("vibe"),
+				},
+				PromptConfig: &dto.WebAgentTargetPromptConfig{
+					MessageList: []*commondto.Message{},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestAgentConfigDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *commondto.AgentConfig
+		expected *do.AgentConfig
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "正常转换",
+			input: &commondto.AgentConfig{
+				AgentType: gptr.Of("vibe"),
+			},
+			expected: &do.AgentConfig{
+				AgentType: do.AgentType("vibe"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := AgentConfigDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestAgentConfigDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *do.AgentConfig
+		expected *commondto.AgentConfig
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name: "正常转换",
+			input: &do.AgentConfig{
+				AgentType: do.AgentType("vibe"),
+			},
+			expected: &commondto.AgentConfig{
+				AgentType: gptr.Of("vibe"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := AgentConfigDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebAgentTargetPromptConfigDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *dto.WebAgentTargetPromptConfig
+		expected *do.WebAgentTargetPromptConfig
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:  "空MessageList",
+			input: &dto.WebAgentTargetPromptConfig{},
+			expected: &do.WebAgentTargetPromptConfig{
+				MessageList: []*do.Message{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentTargetPromptConfigDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebAgentTargetPromptConfigDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *do.WebAgentTargetPromptConfig
+		expected *dto.WebAgentTargetPromptConfig
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentTargetPromptConfigDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebAgentTargetPromptConfigOutputRuleDTO2DO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *dto.WebAgentTargetPromptConfigOutputRule
+		expected *do.WebAgentTargetPromptConfigOutputRule
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentTargetPromptConfigOutputRuleDTO2DO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestWebAgentTargetPromptConfigOutputRuleDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		input    *do.WebAgentTargetPromptConfigOutputRule
+		expected *dto.WebAgentTargetPromptConfigOutputRule
+	}{
+		{
+			name:     "nil输入",
+			input:    nil,
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := WebAgentTargetPromptConfigOutputRuleDO2DTO(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestEvalTargetVersionDO2DTO_WebAgent(t *testing.T) {
+	t.Parallel()
+
+	targetVersionDO := &do.EvalTargetVersion{
+		ID:                  1,
+		SpaceID:             2,
+		TargetID:            3,
+		SourceTargetVersion: "v1.0",
+		EvalTargetType:      do.EvalTargetTypeWebAgent,
+		WebAgent: &do.WebAgent{
+			ID:   1,
+			Name: "test",
+		},
+	}
+
+	result := EvalTargetVersionDO2DTO(targetVersionDO)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.EvalTargetContent)
+	assert.NotNil(t, result.EvalTargetContent.WebAgent)
+	assert.Equal(t, int64(1), gptr.Indirect(result.EvalTargetContent.WebAgent.ID))
+	assert.Equal(t, "test", gptr.Indirect(result.EvalTargetContent.WebAgent.Name))
+}

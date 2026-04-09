@@ -23,6 +23,7 @@ import (
 	benefitmocks "github.com/coze-dev/coze-loop/backend/infra/external/benefit/mocks"
 	idgenmocks "github.com/coze-dev/coze-loop/backend/infra/idgen/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	common "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatordto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	evaluatorservice "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evaluator"
@@ -1376,6 +1377,131 @@ func TestEvaluatorHandlerImpl_SubmitEvaluatorVersion(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
+			}
+		})
+	}
+}
+
+func TestEvaluatorHandlerImpl_checkURIs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		configer: mockConfiger,
+	}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		inputFields map[string]*common.Content
+		mockSetup   func()
+		wantErr     bool
+	}{
+		{
+			name: "检查功能关闭时直接返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)),
+							Image:       &common.Image{URI: gptr.Of(""), StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(false)
+			},
+			wantErr: false,
+		},
+		{
+			name: "无MultiPart字段返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeText)),
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name: "MultiPart中Image URI为空返回错误",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)),
+							Image:       &common.Image{URI: gptr.Of(""), StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "MultiPart中Image URI非空返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)),
+							Image:       &common.Image{URI: gptr.Of("tos://xxx"), StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name: "MultiPart中Image StorageProvider为ExternalUrl返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)),
+							Image:       &common.Image{URI: gptr.Of(""), StorageProvider: gptr.Of(dataset.StorageProvider_ExternalUrl)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name:        "空inputFields返回nil",
+			inputFields: map[string]*common.Content{},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			err := app.checkURIs(ctx, tt.inputFields)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}
