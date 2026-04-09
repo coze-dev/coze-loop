@@ -305,30 +305,16 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 				mock.ExpectQuery("SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*").WillReturnRows(countRows)
 			}
 
-			// Mock SELECT 查询（放宽匹配，兼容 DISTINCT、JOIN、ORDER BY 等）
-			// 所有查询都会包含 LEFT JOIN t_name（用于排序）和 ORDER BY t_name.tag_value
 			selectRows := sqlmock.NewRows([]string{"source_id"})
 
 			if hasSearchKeyword && hasFilters {
-				// 既有 SearchKeyword 又有 Filters 时，SQL 包含：
-				// - LEFT JOIN t_name
-				// - JOIN t_1, JOIN t_2 等（自连接，来自 Filters 的 AND 条件）
-				// - WHERE t_name.tag_value LIKE ? (来自 SearchKeyword，使用 t_name 别名)
-				// - 可能还有其他 WHERE 条件（来自 Filters 的 OR 条件）
-				// - ORDER BY
-				// 注意：WHERE 条件可能包含括号，且使用参数化查询（?），需要更宽松的匹配
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
+				mock.ExpectQuery("SELECT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS.*WHERE .*t_name\\.tag_value.*LIKE.*GROUP BY.*ORDER BY.*").WillReturnRows(selectRows)
 			} else if hasSearchKeyword {
-				// 只有 SearchKeyword 时，SQL 包含 WHERE t_name.tag_value LIKE ? (使用 t_name 别名)
-				// 注意：WHERE 条件可能包含括号，且还有其他基础 WHERE 条件（tag_type, deleted_at），使用参数化查询
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*").WillReturnRows(selectRows)
+				mock.ExpectQuery("SELECT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*WHERE .*t_name\\.tag_value.*LIKE.*GROUP BY.*ORDER BY.*").WillReturnRows(selectRows)
 			} else if hasFilters {
-				// 只有 Filters 时，SQL 可能包含 JOIN 其他表（自连接）和 WHERE 条件
-				// 需要匹配可能包含的 JOIN 自连接
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
+				mock.ExpectQuery("SELECT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*GROUP BY.*ORDER BY.*").WillReturnRows(selectRows)
 			} else {
-				// 无 SearchKeyword 和 Filters 时，SQL 只包含基础查询和 LEFT JOIN t_name
-				mock.ExpectQuery("SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*ORDER BY.*").WillReturnRows(selectRows)
+				mock.ExpectQuery("SELECT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*GROUP BY.*ORDER BY.*").WillReturnRows(selectRows)
 			}
 
 			// 创建DAO实例
@@ -550,11 +536,9 @@ func TestGetSourceIDsByFilterConditions_SelfJoinAndLike(t *testing.T) {
 		"SELECT COUNT\\(DISTINCT\\(.*source_id.*\\)\\) FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*",
 	).WillReturnRows(countRows)
 
-	// 断言 SELECT：包含 DISTINCT、LEFT JOIN t_name、JOIN t_1 / t_2、LIKE 与 Name 标签限定
-	// SearchKeyword 现在使用 t_name 别名进行 LIKE 查询，避免与主表条件冲突
 	selectRows := sqlmock.NewRows([]string{"source_id"})
 	mock.ExpectQuery(
-		"SELECT DISTINCT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*ORDER BY.*",
+		"SELECT .*source_id.* FROM `evaluator_tag`.*LEFT JOIN evaluator_tag AS t_name.*JOIN evaluator_tag AS t_1.*JOIN evaluator_tag AS t_2.*WHERE .*t_name\\.tag_value.*LIKE.*GROUP BY.*ORDER BY.*",
 	).WillReturnRows(selectRows)
 
 	dao := &EvaluatorTagDAOImpl{provider: mockProvider}
