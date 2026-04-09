@@ -35,8 +35,9 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
 	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
 	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+	mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
-	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo, mockEvalSetItemSvc)
+	eval := NewExptTurnEvaluation(mockMetric, mockEvalTargetService, mockEvaluatorService, mockBenefitService, mockEvalAsyncRepo, mockEvalSetItemSvc, mockEvaluatorRecordService)
 	assert.NotNil(t, eval)
 
 	impl, ok := eval.(*DefaultExptTurnEvaluationImpl)
@@ -47,6 +48,7 @@ func TestNewExptTurnEvaluation(t *testing.T) {
 	assert.Equal(t, mockBenefitService, impl.benefitService)
 	assert.Equal(t, mockEvalAsyncRepo, impl.evalAsyncRepo)
 	assert.Equal(t, mockEvalSetItemSvc, impl.evalSetItemSvc)
+	assert.Equal(t, mockEvaluatorRecordService, impl.evaluatorRecordService)
 }
 
 func TestDefaultExptTurnEvaluationImpl_Eval(t *testing.T) {
