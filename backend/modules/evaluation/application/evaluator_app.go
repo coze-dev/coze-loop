@@ -1069,9 +1069,11 @@ func (e *EvaluatorHandlerImpl) DebugEvaluator(ctx context.Context, request *eval
 	}
 
 	// 检查uri是否传递
-	err = e.checkURIs(ctx, request.InputData.InputFields)
-	if err != nil {
-		return nil, err
+	if request.InputData != nil {
+		err = e.checkURIs(ctx, request.InputData.InputFields)
+		if err != nil {
+			return nil, err
+		}
 	}
 	// URI转换处理
 	if request.InputData != nil {

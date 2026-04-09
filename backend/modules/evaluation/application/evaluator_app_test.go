@@ -3277,6 +3277,7 @@ func TestEvaluatorHandlerImpl_DebugEvaluator_Comprehensive(t *testing.T) {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
 					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(false)
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(map[string]string{"uri1": "url1"}, nil)
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
 					Return(&entity.EvaluatorOutputData{}, nil)
@@ -3315,6 +3316,7 @@ func TestEvaluatorHandlerImpl_DebugEvaluator_Comprehensive(t *testing.T) {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
 					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(false)
 				mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri1"}).Return(map[string]string{"uri1": "url1"}, nil)
 				mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), workspaceID).
 					Return(&entity.EvaluatorOutputData{}, nil)
@@ -3414,11 +3416,13 @@ func TestEvaluatorHandlerImpl_DebugEvaluator_RuntimeParamExt(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 
 	handler := &EvaluatorHandlerImpl{
 		auth:             mockAuth,
 		evaluatorService: mockEvaluatorService,
 		benefitService:   mockBenefitService,
+		configer:         mockConfiger,
 	}
 
 	// 构造带有运行时参数的请求
@@ -3439,6 +3443,7 @@ func TestEvaluatorHandlerImpl_DebugEvaluator_RuntimeParamExt(t *testing.T) {
 	mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 	mockBenefitService.EXPECT().CheckEvaluatorBenefit(gomock.Any(), gomock.Any()).
 		Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil)
+	mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(false)
 
 	// 期望 DebugEvaluator 收到注入了 builtin_runtime_param 的扩展字段，且携带运行配置
 	mockEvaluatorService.EXPECT().DebugEvaluator(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).

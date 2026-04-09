@@ -452,11 +452,11 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	}
 
 	res := &entity.CreateEvalTargetParam{
-		SourceTargetID:      param.SourceTargetID,
-		SourceTargetVersion: param.SourceTargetVersion,
-		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
+		SourceTargetID:       param.SourceTargetID,
+		SourceTargetVersion:  param.SourceTargetVersion,
+		BotPublishVersion:    param.BotPublishVersion,
+		Region:               param.Region,
+		Env:                  param.Env,
 		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
