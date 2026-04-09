@@ -212,38 +212,30 @@ func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Conte
 		return nil, 0, err
 	}
 
-	// 为 SELECT 构造一个不带分页副作用的基准查询
 	selectBaseQuery := query.Session(&gorm.Session{})
 
-	// 分页参数（延后到最外层查询中再应用，避免影响 DISTINCT 子查询）
 	var limit, offset int
 	if pageSize > 0 && pageNum > 0 {
 		limit = int(pageSize)
 		offset = int((pageNum - 1) * pageSize)
 	}
 
-	// 为了兼容 MySQL 在 DISTINCT 场景下对 ORDER BY 的限制（排序字段必须出现在 SELECT 列表中），
-	// 这里构造一个子查询：内部 SELECT DISTINCT source_id, t_name.tag_value，外层再按 tag_value 排序并做分页。
-	subQuery := selectBaseQuery.
-		Select("DISTINCT evaluator_tag.source_id, t_name.tag_value")
-
-	outerQuery := dbsession.WithContext(ctx).
-		Table("(?) AS src", subQuery).
-		Order("ISNULL(src.tag_value), src.tag_value ASC")
+	selectQuery := selectBaseQuery.
+		Select("evaluator_tag.source_id").
+		Group("evaluator_tag.source_id").
+		Order("ISNULL(MIN(t_name.tag_value)), MIN(t_name.tag_value) ASC")
 	if limit > 0 {
-		outerQuery = outerQuery.Limit(limit).Offset(offset)
+		selectQuery = selectQuery.Limit(limit).Offset(offset)
 	}
 
-	// 执行查询（按 Name 标签值排序；无 Name 的排在后面）
 	var sourceIDs []int64
-	// 打印 SELECT SQL（完整）
-	selectSQL := outerQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
+	selectSQL := selectQuery.ToSQL(func(tx *gorm.DB) *gorm.DB {
 		var tmp []int64
-		return tx.Pluck("src.source_id", &tmp)
+		return tx.Pluck("evaluator_tag.source_id", &tmp)
 	})
 	logs.CtxInfo(ctx, "[GetSourceIDsByFilterConditions] SELECT SQL: %s", selectSQL)
-	err := outerQuery.
-		Pluck("src.source_id", &sourceIDs).Error
+	err := selectQuery.
+		Pluck("evaluator_tag.source_id", &sourceIDs).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return []int64{}, total, nil

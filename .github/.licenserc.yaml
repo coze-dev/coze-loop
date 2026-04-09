@@ -42,6 +42,34 @@ dependency:
   licenses:
     - name: github.com/cloudwego/eino-ext/*/*/*
       license: Apache-2.0
+    - name: github.com/cloudwego/eino
+      license: Apache-2.0
+    - name: github.com/cloudwego/gopkg
+      license: Apache-2.0
+    - name: github.com/cloudwego/configmanager
+      license: Apache-2.0
+    - name: github.com/cloudwego/localsession
+      license: Apache-2.0
+    - name: github.com/cloudwego/runtimex
+      license: Apache-2.0
+    - name: github.com/hertz-contrib/sse
+      license: Apache-2.0
+    - name: github.com/xeipuuv/gojsonschema
+      license: Apache-2.0
+    - name: github.com/xeipuuv/gojsonpointer
+      license: Apache-2.0
+    - name: github.com/xeipuuv/gojsonreference
+      license: Apache-2.0
+    - name: github.com/google/s2a-go
+      license: Apache-2.0
+    - name: github.com/josharian/intern
+      license: MIT
+    - name: github.com/lib/pq
+      license: MIT
+    - name: github.com/olekukonko/tablewriter
+      license: MIT
+    - name: github.com/paulmach/orb
+      license: MIT
   excludes:
     - name: github.com/alicebob/gopher-json
       license: Unlicense
