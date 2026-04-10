@@ -800,6 +800,44 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 				})
 			},
 		},
+		{
+			name: "record有Ext数据合并到param",
+			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
+				status := entity.EvalTargetRunStatusAsyncInvoking
+				record.Status = &status
+				record.EvalTargetOutputData = &entity.EvalTargetOutputData{
+					Ext: map[string]string{"screen_recording_uri": "tos://recording"},
+				}
+				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+
+				param.OutputData = &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{},
+				}
+				param.Session = &entity.Session{UserID: "user"}
+			},
+		},
+		{
+			name: "record有Ext且param无OutputData时自动创建",
+			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
+				status := entity.EvalTargetRunStatusAsyncInvoking
+				record.Status = &status
+				record.EvalTargetOutputData = &entity.EvalTargetOutputData{
+					Ext: map[string]string{"key1": "val1"},
+				}
+				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+
+				param.OutputData = nil
+				param.Session = &entity.Session{UserID: "user"}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2098,4 +2136,20 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		err := svc.LoadRecordFullData(ctx, rec)
 		assert.NoError(t, err)
 	})
+}
+
+func TestEvalTargetServiceImpl_GetRecordByRunItemTurn(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+	expectedRecord := &entity.EvalTargetRecord{ID: 100}
+	mockRepo.EXPECT().GetEvalTargetRecordByRunItemTurn(gomock.Any(), int64(1), int64(2), int64(3), int64(4)).Return(expectedRecord, nil)
+
+	record, err := svc.GetRecordByRunItemTurn(context.Background(), 1, 2, 3, 4)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedRecord, record)
 }

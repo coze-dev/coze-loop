@@ -196,3 +196,147 @@ func TestVisibility_Hidden(t *testing.T) {
 func TestSourceType_IntelligentGen(t *testing.T) {
 	assert.Equal(t, SourceType(3), SourceType_IntelligentGen)
 }
+
+func TestExperiment_AsyncExec(t *testing.T) {
+	tests := []struct {
+		name     string
+		expt     *Experiment
+		expected bool
+	}{
+		{
+			name:     "nil实验返回false",
+			expt:     nil,
+			expected: false,
+		},
+		{
+			name: "AsyncCallTarget为true返回true",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{
+						WebAgent: &WebAgent{ID: 1, Name: "agent"},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "AsyncCallEvaluators为true返回true",
+			expt: &Experiment{
+				Evaluators: []*Evaluator{
+					{EvaluatorType: EvaluatorTypeAgent},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "Both false返回false",
+			expt: &Experiment{
+				Target: &EvalTarget{
+					EvalTargetVersion: &EvalTargetVersion{},
+				},
+				Evaluators: []*Evaluator{
+					{EvaluatorType: EvaluatorTypePrompt},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.expt.AsyncExec())
+		})
+	}
+}
+
+func TestTargetConf_Valid_MoreBranches(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name       string
+		conf       *TargetConf
+		targetType EvalTargetType
+		wantErr    bool
+	}{
+		{
+			name:       "TargetVersionID为0返回错误",
+			conf:       &TargetConf{TargetVersionID: 0},
+			targetType: EvalTargetTypeCozeBot,
+			wantErr:    true,
+		},
+		{
+			name:       "LoopPrompt类型无需IngressConf",
+			conf:       &TargetConf{TargetVersionID: 1},
+			targetType: EvalTargetTypeLoopPrompt,
+			wantErr:    false,
+		},
+		{
+			name:       "CustomRPCServer类型无需IngressConf",
+			conf:       &TargetConf{TargetVersionID: 1},
+			targetType: EvalTargetTypeCustomRPCServer,
+			wantErr:    false,
+		},
+		{
+			name: "IngressConf的EvalSetAdapter为nil返回错误",
+			conf: &TargetConf{
+				TargetVersionID: 1,
+				IngressConf:     &TargetIngressConf{EvalSetAdapter: nil},
+			},
+			targetType: EvalTargetTypeCozeBot,
+			wantErr:    true,
+		},
+		{
+			name: "有效IngressConf返回nil",
+			conf: &TargetConf{
+				TargetVersionID: 1,
+				IngressConf: &TargetIngressConf{
+					EvalSetAdapter: &FieldAdapter{FieldConfs: []*FieldConf{{}}},
+				},
+			},
+			targetType: EvalTargetTypeCozeBot,
+			wantErr:    false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.conf.Valid(ctx, tt.targetType)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestWithOperationInstruction(t *testing.T) {
+	instruction := "test instruction"
+	opt := &Opt{}
+	WithOperationInstruction(&instruction)(opt)
+	assert.Equal(t, &instruction, opt.OperationInstruction)
+}
+
+func TestWithOptions(t *testing.T) {
+	opt := &Opt{}
+
+	pv := "v1"
+	WithCozeBotPublishVersion(&pv)(opt)
+	assert.Equal(t, &pv, opt.PublishVersion)
+
+	WithCozeBotInfoType(CozeBotInfoType(1))(opt)
+	assert.Equal(t, CozeBotInfoType(1), opt.BotInfoType)
+
+	ct := &CustomEvalTarget{ID: gptr.Of("1")}
+	WithCustomEvalTarget(ct)(opt)
+	assert.Equal(t, ct, opt.CustomEvalTarget)
+
+	region := Region("us-east")
+	WithRegion(&region)(opt)
+	assert.Equal(t, &region, opt.Region)
+
+	env := "prod"
+	WithEnv(&env)(opt)
+	assert.Equal(t, &env, opt.Env)
+
+	instruction := "do something"
+	WithOperationInstruction(&instruction)(opt)
+	assert.Equal(t, &instruction, opt.OperationInstruction)
+}

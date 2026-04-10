@@ -1485,6 +1485,120 @@ func TestEvaluatorHandlerImpl_checkURIs(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "MultiPart中Audio URI为空返回错误",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeAudio)),
+							Audio:       &common.Audio{URI: gptr.Of("")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "MultiPart中Audio URI非空返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeAudio)),
+							Audio:       &common.Audio{URI: gptr.Of("tos://audio")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name: "MultiPart中Video URI为空返回错误",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeVideo)),
+							Video:       &common.Video{URI: gptr.Of("")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: true,
+		},
+		{
+			name: "MultiPart中Video URI非空返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeVideo)),
+							Video:       &common.Video{URI: gptr.Of("tos://video")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_TOS)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name: "MultiPart中Audio ExternalUrl返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeAudio)),
+							Audio:       &common.Audio{URI: gptr.Of("")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_ExternalUrl)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
+			name: "MultiPart中Video ExternalUrl返回nil",
+			inputFields: map[string]*common.Content{
+				"field1": {
+					ContentType: gptr.Of(common.ContentType(common.ContentTypeMultiPart)),
+					MultiPart: []*common.Content{
+						{
+							ContentType: gptr.Of(common.ContentType(common.ContentTypeVideo)),
+							Video:       &common.Video{URI: gptr.Of("")},
+							Image:       &common.Image{StorageProvider: gptr.Of(dataset.StorageProvider_ExternalUrl)},
+						},
+					},
+				},
+			},
+			mockSetup: func() {
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(true)
+			},
+			wantErr: false,
+		},
+		{
 			name:        "空inputFields返回nil",
 			inputFields: map[string]*common.Content{},
 			mockSetup: func() {
