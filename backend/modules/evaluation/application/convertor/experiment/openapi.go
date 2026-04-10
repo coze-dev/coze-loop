@@ -233,6 +233,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EndedAt = dto.EndTime
 	result.ExptStats = DomainExperimentStatsDTO2OpenAPI(dto.ExptStats)
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
+	result.EnableExtractTrajectory = dto.EnableExtractTrajectory
 	return result
 }
 
@@ -423,6 +424,8 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf, experiment.Evaluators); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
+
+		result.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 	}
 
 	if experiment.Target != nil {
@@ -1480,6 +1483,9 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	}
 
 	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
+	if template.TemplateConf != nil {
+		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
 	return dto
 }
 
@@ -1680,6 +1686,9 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 				},
 			},
 		}
+		if req.IsSetEnableExtractTrajectory() {
+			param.TemplateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
+		}
 		tc := req.GetTripleConfig()
 		for i, em := range fmc.EvaluatorFieldMapping {
 			if em == nil {
@@ -1731,6 +1740,12 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 		}
 	}
 
+	if req.IsSetEnableExtractTrajectory() && param.TemplateConf == nil {
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			EnableExtractTrajectory: gptr.Of(req.GetEnableExtractTrajectory()),
+		}
+	}
+
 	return param, nil
 }
 
@@ -1773,6 +1788,9 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
 				},
 			},
+		}
+		if req.IsSetEnableExtractTrajectory() {
+			param.TemplateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
 		}
 		tc := req.GetTripleConfig()
 		for i, em := range fmc.EvaluatorFieldMapping {
@@ -1822,6 +1840,12 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
 			}
 			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	if req.IsSetEnableExtractTrajectory() && param.TemplateConf == nil {
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			EnableExtractTrajectory: gptr.Of(req.GetEnableExtractTrajectory()),
 		}
 	}
 

@@ -58,6 +58,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
 	}
+	if cer.IsSetEnableExtractTrajectory() {
+		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
+	}
 	return ec, nil
 }
 
@@ -373,6 +376,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		} else {
 			res.ItemRetryNum = gptr.Of(int32(0))
 		}
+		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）

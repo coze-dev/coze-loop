@@ -52,6 +52,7 @@ type CreateExperimentRequest struct {
 	EvaluatorScoreWeights map[int64]float64 `thrift:"evaluator_score_weights,42,optional" frugal:"42,optional,map<i64:double>" json:"evaluator_score_weights" form:"evaluator_score_weights" `
 	ExptTemplateID        *int64            `thrift:"expt_template_id,43,optional" frugal:"43,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum          *int32            `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	EnableExtractTrajectory *bool            `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Session               *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                  *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -334,6 +335,13 @@ func (p *CreateExperimentRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+func (p *CreateExperimentRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var CreateExperimentRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentRequest) GetSession() (v *common.Session) {
@@ -547,6 +555,10 @@ func (p *CreateExperimentRequest) IsSetExptTemplateID() bool {
 
 func (p *CreateExperimentRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *CreateExperimentRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *CreateExperimentRequest) IsSetSession() bool {
@@ -2369,6 +2381,7 @@ type SubmitExperimentRequest struct {
 	EnableWeightedScore *bool             `thrift:"enable_weighted_score,41,optional" frugal:"41,optional,bool" json:"enable_weighted_score" form:"enable_weighted_score" `
 	ExptTemplateID      *int64            `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum        *int32            `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	EnableExtractTrajectory *bool          `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session             *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2640,6 +2653,13 @@ func (p *SubmitExperimentRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+func (p *SubmitExperimentRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -2861,6 +2881,10 @@ func (p *SubmitExperimentRequest) IsSetExptTemplateID() bool {
 
 func (p *SubmitExperimentRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -17255,6 +17279,7 @@ type CreateExperimentTemplateRequest struct {
 	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	// 调度配置（不在 ExptTemplate 结构中，保留在顶层）
 	ScheduleCron *string         `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
+	EnableExtractTrajectory *bool `thrift:"enable_extract_trajectory,23,optional" frugal:"23,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Session      *common.Session `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base         *base.Base      `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17345,6 +17370,13 @@ func (p *CreateExperimentTemplateRequest) GetScheduleCron() (v string) {
 	return *p.ScheduleCron
 }
 
+func (p *CreateExperimentTemplateRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var CreateExperimentTemplateRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentTemplateRequest) GetSession() (v *common.Session) {
@@ -17430,6 +17462,10 @@ func (p *CreateExperimentTemplateRequest) IsSetDefaultEvaluatorsConcurNum() bool
 
 func (p *CreateExperimentTemplateRequest) IsSetScheduleCron() bool {
 	return p.ScheduleCron != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetSession() bool {
@@ -19466,6 +19502,7 @@ type UpdateExperimentTemplateRequest struct {
 	DefaultEvaluatorsConcurNum *int32 `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
 	// 调度配置（不在 ExptTemplate 结构中，保留在顶层）
 	ScheduleCron *string    `thrift:"schedule_cron,22,optional" frugal:"22,optional,string" form:"schedule_cron" json:"schedule_cron,omitempty"`
+	EnableExtractTrajectory *bool `thrift:"enable_extract_trajectory,23,optional" frugal:"23,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Base         *base.Base `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -19562,6 +19599,13 @@ func (p *UpdateExperimentTemplateRequest) GetScheduleCron() (v string) {
 	return *p.ScheduleCron
 }
 
+func (p *UpdateExperimentTemplateRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var UpdateExperimentTemplateRequest_Base_DEFAULT *base.Base
 
 func (p *UpdateExperimentTemplateRequest) GetBase() (v *base.Base) {
@@ -19635,6 +19679,10 @@ func (p *UpdateExperimentTemplateRequest) IsSetDefaultEvaluatorsConcurNum() bool
 
 func (p *UpdateExperimentTemplateRequest) IsSetScheduleCron() bool {
 	return p.ScheduleCron != nil
+}
+
+func (p *UpdateExperimentTemplateRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *UpdateExperimentTemplateRequest) IsSetBase() bool {

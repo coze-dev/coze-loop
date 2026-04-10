@@ -533,4 +533,5 @@ type EvalAsyncCtx struct {
 	Session            *Session
 	Callee             string
 	EvaluatorVersionID int64 // evaluator version id, used for evaluator async scenario
+	EnableExtractTrajectory *bool
 }

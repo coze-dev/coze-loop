@@ -17797,6 +17797,7 @@ type SubmitExperimentOApiRequest struct {
 	ItemConcurNum      *int32               `thrift:"item_concur_num,20,optional" frugal:"20,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty"`
 	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	ItemRetryNum       *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
+	EnableExtractTrajectory *bool            `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Extra              *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base               *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17940,6 +17941,13 @@ func (p *SubmitExperimentOApiRequest) GetItemRetryNum() (v int32) {
 	return *p.ItemRetryNum
 }
 
+func (p *SubmitExperimentOApiRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var SubmitExperimentOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SubmitExperimentOApiRequest) GetExtra() (v *extra.Extra) {
@@ -18061,6 +18069,10 @@ func (p *SubmitExperimentOApiRequest) IsSetTargetRuntimeParam() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
 	return p.ItemRetryNum != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExtra() bool {
@@ -39607,6 +39619,7 @@ type CreateExptTemplateOApiRequest struct {
 	FieldMappingConfig         *experiment.ExptFieldMapping     `thrift:"field_mapping_config,4,optional" frugal:"4,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
 	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
+	EnableExtractTrajectory      *bool                            `thrift:"enable_extract_trajectory,22,optional" frugal:"22,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Extra                      *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -39690,6 +39703,13 @@ func (p *CreateExptTemplateOApiRequest) GetDefaultEvaluatorsConcurNum() (v int32
 	return *p.DefaultEvaluatorsConcurNum
 }
 
+func (p *CreateExptTemplateOApiRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var CreateExptTemplateOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *CreateExptTemplateOApiRequest) GetExtra() (v *extra.Extra) {
@@ -39771,6 +39791,10 @@ func (p *CreateExptTemplateOApiRequest) IsSetCreateEvalTargetParam() bool {
 
 func (p *CreateExptTemplateOApiRequest) IsSetDefaultEvaluatorsConcurNum() bool {
 	return p.DefaultEvaluatorsConcurNum != nil
+}
+
+func (p *CreateExptTemplateOApiRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *CreateExptTemplateOApiRequest) IsSetExtra() bool {
@@ -42895,6 +42919,7 @@ type UpdateExptTemplateOApiRequest struct {
 	FieldMappingConfig         *experiment.ExptFieldMapping     `thrift:"field_mapping_config,5,optional" frugal:"5,optional,experiment.ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty"`
 	CreateEvalTargetParam      *SubmitExperimentEvalTargetParam `thrift:"create_eval_target_param,20,optional" frugal:"20,optional,SubmitExperimentEvalTargetParam" form:"create_eval_target_param" json:"create_eval_target_param,omitempty"`
 	DefaultEvaluatorsConcurNum *int32                           `thrift:"default_evaluators_concur_num,21,optional" frugal:"21,optional,i32" form:"default_evaluators_concur_num" json:"default_evaluators_concur_num,omitempty"`
+	EnableExtractTrajectory      *bool                            `thrift:"enable_extract_trajectory,22,optional" frugal:"22,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty"`
 	Extra                      *extra.Extra                     `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base                       *base.Base                       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -42990,6 +43015,13 @@ func (p *UpdateExptTemplateOApiRequest) GetDefaultEvaluatorsConcurNum() (v int32
 	return *p.DefaultEvaluatorsConcurNum
 }
 
+func (p *UpdateExptTemplateOApiRequest) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var UpdateExptTemplateOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *UpdateExptTemplateOApiRequest) GetExtra() (v *extra.Extra) {
@@ -43079,6 +43111,10 @@ func (p *UpdateExptTemplateOApiRequest) IsSetCreateEvalTargetParam() bool {
 
 func (p *UpdateExptTemplateOApiRequest) IsSetDefaultEvaluatorsConcurNum() bool {
 	return p.DefaultEvaluatorsConcurNum != nil
+}
+
+func (p *UpdateExptTemplateOApiRequest) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *UpdateExptTemplateOApiRequest) IsSetExtra() bool {

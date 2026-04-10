@@ -995,6 +995,7 @@ type Experiment struct {
 	// 评估器得分加权配置
 	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	EnableExtractTrajectory *bool          `thrift:"enable_extract_trajectory,63,optional" frugal:"63,optional,bool" json:"enable_extract_trajectory,omitempty"`
 }
 
 func NewExperiment() *Experiment {
@@ -1375,6 +1376,13 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	}
 	return *p.EnableWeightedScore
 }
+
+func (p *Experiment) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1625,6 +1633,10 @@ func (p *Experiment) IsSetScoreWeightConfig() bool {
 
 func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -5506,6 +5518,7 @@ type ExptTemplate struct {
 	FieldMappingConfig *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
 	ScoreWeightConfig  *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	ExptInfo           *ExptInfo         `thrift:"expt_info,5,optional" frugal:"5,optional,ExptInfo" form:"expt_info" json:"expt_info,omitempty" query:"expt_info"`
+	EnableExtractTrajectory *bool          `thrift:"enable_extract_trajectory,6,optional" frugal:"6,optional,bool" json:"enable_extract_trajectory,omitempty"`
 	BaseInfo           *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
@@ -5576,6 +5589,13 @@ func (p *ExptTemplate) GetExptInfo() (v *ExptInfo) {
 	return p.ExptInfo
 }
 
+func (p *ExptTemplate) GetEnableExtractTrajectory() (v bool) {
+	if !p.IsSetEnableExtractTrajectory() {
+		return v
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
@@ -5633,6 +5653,10 @@ func (p *ExptTemplate) IsSetScoreWeightConfig() bool {
 
 func (p *ExptTemplate) IsSetExptInfo() bool {
 	return p.ExptInfo != nil
+}
+
+func (p *ExptTemplate) IsSetEnableExtractTrajectory() bool {
+	return p != nil && p.EnableExtractTrajectory != nil
 }
 
 func (p *ExptTemplate) IsSetBaseInfo() bool {

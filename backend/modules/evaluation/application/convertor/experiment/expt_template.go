@@ -235,6 +235,9 @@ func buildTemplateConfForCreate(
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 		ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 	}
+	if req.IsSetEnableExtractTrajectory() {
+		templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
+	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
 		return templateConf
@@ -372,6 +375,9 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.TripleConfig = buildTemplateTripleConfigDTO(template)
 	dto.FieldMappingConfig = buildTemplateFieldMappingDTO(template)
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
+	if template.TemplateConf != nil {
+		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
 	if dto.TripleConfig != nil {
@@ -837,6 +843,10 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EnableWeightedScore = gptr.Of(true)
 	}
 
+	if template.TemplateConf != nil && template.TemplateConf.EnableExtractTrajectory != nil {
+		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
 	return req
 }
 
@@ -1069,12 +1079,16 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	hasFieldMapping := targetFieldMapping != nil || len(evaluatorFieldMapping) > 0
 	hasScoreWeight := len(evaluatorScoreWeights) > 0
 	hasConcurNum := itemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil
+	hasEnableExtractTrajectory := req.IsSetEnableExtractTrajectory()
 
-	if hasFieldMapping || hasScoreWeight || hasConcurNum {
+	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory {
 		templateConf := &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 			ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
+		}
+		if req.IsSetEnableExtractTrajectory() {
+			templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
 		}
 
 		// 构建 ConnectorConf

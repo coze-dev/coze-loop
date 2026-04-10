@@ -871,11 +871,12 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
-		SpaceID:    req.GetWorkspaceID(),
-		RecordID:   req.GetInvokeID(),
-		OutputData: outputData,
-		Status:     target.ToTargetRunStatsDO(req.GetStatus()),
-		Session:    actx.Session,
+		SpaceID:               req.GetWorkspaceID(),
+		RecordID:              req.GetInvokeID(),
+		OutputData:            outputData,
+		Status:                target.ToTargetRunStatsDO(req.GetStatus()),
+		Session:               actx.Session,
+		EnableExtractTrajectory: actx.EnableExtractTrajectory,
 	}); err != nil {
 		return nil, err
 	}
@@ -974,6 +975,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
 		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
 		ItemRetryNum:           req.ItemRetryNum,
+		EnableExtractTrajectory:  req.EnableExtractTrajectory,
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)

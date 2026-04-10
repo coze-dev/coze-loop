@@ -142,6 +142,7 @@ type ExecuteTargetCtx struct {
 	TruncateLargeContent *bool
 	// 评测集数据项轮次ID
 	TurnID int64
+	EnableExtractTrajectory *bool
 }
 
 type TargetTrajectoryConf struct {

@@ -699,7 +699,7 @@ func (e ExptResultServiceImpl) getExptColumnsEvalTarget(ctx context.Context, spa
 			}
 		}
 		// 当 fullTrajectory=true 且 TargetType 支持 trajectory 时，额外返回 trajectory 列
-		if expt.TargetType.SupptTrajectory() {
+		if expt.TargetType.SupptTrajectory() && (expt.EvalConf == nil || expt.EvalConf.EnableExtractTrajectory == nil || *expt.EvalConf.EnableExtractTrajectory) {
 			columns = append(columns, columnEvalTargetTrajectory)
 		}
 		columns = append(columns, columnsEvalTargetMtr...)

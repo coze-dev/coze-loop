@@ -125,13 +125,12 @@ func (e *ExptTemplateEvaluatorVersionRef) String() string {
 // 包含评估器列表、字段映射、加权配置、默认并发及调度等
 // 该配置会序列化为JSON存储在数据库的template_conf字段中
 type ExptTemplateConfiguration struct {
-	// 字段映射 & 运行时参数（使用与EvaluationConfiguration类似的结构）
 	ConnectorConf Connector
 	ItemConcurNum *int
 
-	// 默认评估器并发数
-	EvaluatorsConcurNum *int
-	ItemRetryNum        *int
+	EvaluatorsConcurNum   *int
+	ItemRetryNum          *int
+	EnableExtractTrajectory *bool
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO
