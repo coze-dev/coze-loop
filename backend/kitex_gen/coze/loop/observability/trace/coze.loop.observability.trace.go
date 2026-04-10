@@ -21781,95 +21781,1954 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 	return true
 }
 
-type ListMetadataRequest struct {
-	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
-	PlatformType *common.PlatformType `thrift:"platform_type,2,optional" frugal:"2,optional,string" form:"platform_type" json:"platform_type,omitempty"`
-	SpanListType *common.SpanListType `thrift:"span_list_type,3,optional" frugal:"3,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+type ColumnExtractRule struct {
+	Column   string `thrift:"column,1,required" frugal:"1,required,string" form:"column,required" json:"column,required"`
+	JSONPath string `thrift:"json_path,2,required" frugal:"2,required,string" form:"json_path,required" json:"json_path,required"`
+}
+
+func NewColumnExtractRule() *ColumnExtractRule {
+	return &ColumnExtractRule{}
+}
+
+func (p *ColumnExtractRule) InitDefault() {
+}
+
+func (p *ColumnExtractRule) GetColumn() (v string) {
+	if p != nil {
+		return p.Column
+	}
+	return
+}
+
+func (p *ColumnExtractRule) GetJSONPath() (v string) {
+	if p != nil {
+		return p.JSONPath
+	}
+	return
+}
+func (p *ColumnExtractRule) SetColumn(val string) {
+	p.Column = val
+}
+func (p *ColumnExtractRule) SetJSONPath(val string) {
+	p.JSONPath = val
+}
+
+var fieldIDToName_ColumnExtractRule = map[int16]string{
+	1: "column",
+	2: "json_path",
+}
+
+func (p *ColumnExtractRule) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetColumn bool = false
+	var issetJSONPath bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetColumn = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetJSONPath = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetColumn {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetJSONPath {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ColumnExtractRule[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ColumnExtractRule[fieldId]))
+}
+
+func (p *ColumnExtractRule) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Column = _field
+	return nil
+}
+func (p *ColumnExtractRule) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.JSONPath = _field
+	return nil
+}
+
+func (p *ColumnExtractRule) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ColumnExtractRule"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ColumnExtractRule) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("column", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Column); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ColumnExtractRule) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("json_path", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.JSONPath); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ColumnExtractRule) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ColumnExtractRule(%+v)", *p)
+
+}
+
+func (p *ColumnExtractRule) DeepEqual(ano *ColumnExtractRule) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Column) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.JSONPath) {
+		return false
+	}
+	return true
+}
+
+func (p *ColumnExtractRule) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Column, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ColumnExtractRule) Field2DeepEqual(src string) bool {
+
+	if strings.Compare(p.JSONPath, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type UpsertColumnExtractConfigRequest struct {
+	WorkspaceID  *int64               `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	PlatformType common.PlatformType  `thrift:"platform_type,2,required" frugal:"2,required,string" form:"platform_type,required" json:"platform_type,required"`
+	SpanListType common.SpanListType  `thrift:"span_list_type,3,required" frugal:"3,required,string" form:"span_list_type,required" json:"span_list_type,required"`
+	AgentName    *string              `thrift:"agent_name,4,optional" frugal:"4,optional,string" form:"agent_name" json:"agent_name,omitempty"`
+	Columns      []*ColumnExtractRule `thrift:"columns,5,required" frugal:"5,required,list<ColumnExtractRule>" form:"columns,required" json:"columns,required"`
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
-func NewListMetadataRequest() *ListMetadataRequest {
-	return &ListMetadataRequest{}
+func NewUpsertColumnExtractConfigRequest() *UpsertColumnExtractConfigRequest {
+	return &UpsertColumnExtractConfigRequest{}
 }
 
-func (p *ListMetadataRequest) InitDefault() {
+func (p *UpsertColumnExtractConfigRequest) InitDefault() {
 }
 
-func (p *ListMetadataRequest) GetWorkspaceID() (v int64) {
+var UpsertColumnExtractConfigRequest_WorkspaceID_DEFAULT int64
+
+func (p *UpsertColumnExtractConfigRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return UpsertColumnExtractConfigRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+func (p *UpsertColumnExtractConfigRequest) GetPlatformType() (v common.PlatformType) {
+	if p != nil {
+		return p.PlatformType
+	}
+	return
+}
+
+func (p *UpsertColumnExtractConfigRequest) GetSpanListType() (v common.SpanListType) {
+	if p != nil {
+		return p.SpanListType
+	}
+	return
+}
+
+var UpsertColumnExtractConfigRequest_AgentName_DEFAULT string
+
+func (p *UpsertColumnExtractConfigRequest) GetAgentName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentName() {
+		return UpsertColumnExtractConfigRequest_AgentName_DEFAULT
+	}
+	return *p.AgentName
+}
+
+func (p *UpsertColumnExtractConfigRequest) GetColumns() (v []*ColumnExtractRule) {
+	if p != nil {
+		return p.Columns
+	}
+	return
+}
+
+var UpsertColumnExtractConfigRequest_Base_DEFAULT *base.Base
+
+func (p *UpsertColumnExtractConfigRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return UpsertColumnExtractConfigRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *UpsertColumnExtractConfigRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *UpsertColumnExtractConfigRequest) SetPlatformType(val common.PlatformType) {
+	p.PlatformType = val
+}
+func (p *UpsertColumnExtractConfigRequest) SetSpanListType(val common.SpanListType) {
+	p.SpanListType = val
+}
+func (p *UpsertColumnExtractConfigRequest) SetAgentName(val *string) {
+	p.AgentName = val
+}
+func (p *UpsertColumnExtractConfigRequest) SetColumns(val []*ColumnExtractRule) {
+	p.Columns = val
+}
+func (p *UpsertColumnExtractConfigRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_UpsertColumnExtractConfigRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "platform_type",
+	3:   "span_list_type",
+	4:   "agent_name",
+	5:   "columns",
+	255: "Base",
+}
+
+func (p *UpsertColumnExtractConfigRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *UpsertColumnExtractConfigRequest) IsSetAgentName() bool {
+	return p.AgentName != nil
+}
+
+func (p *UpsertColumnExtractConfigRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *UpsertColumnExtractConfigRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetPlatformType bool = false
+	var issetSpanListType bool = false
+	var issetColumns bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetPlatformType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetSpanListType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetColumns = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetPlatformType {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetSpanListType {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetColumns {
+		fieldId = 5
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpsertColumnExtractConfigRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_UpsertColumnExtractConfigRequest[fieldId]))
+}
+
+func (p *UpsertColumnExtractConfigRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field common.PlatformType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.PlatformType = _field
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field common.SpanListType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpanListType = _field
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentName = _field
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) ReadField5(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ColumnExtractRule, 0, size)
+	values := make([]ColumnExtractRule, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Columns = _field
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *UpsertColumnExtractConfigRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpsertColumnExtractConfigRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpsertColumnExtractConfigRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *UpsertColumnExtractConfigRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.PlatformType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *UpsertColumnExtractConfigRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.SpanListType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *UpsertColumnExtractConfigRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentName() {
+		if err = oprot.WriteFieldBegin("agent_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *UpsertColumnExtractConfigRequest) writeField5(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("columns", thrift.LIST, 5); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Columns)); err != nil {
+		return err
+	}
+	for _, v := range p.Columns {
+		if err := v.Write(oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *UpsertColumnExtractConfigRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpsertColumnExtractConfigRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpsertColumnExtractConfigRequest(%+v)", *p)
+
+}
+
+func (p *UpsertColumnExtractConfigRequest) DeepEqual(ano *UpsertColumnExtractConfigRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SpanListType) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AgentName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Columns) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *UpsertColumnExtractConfigRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *UpsertColumnExtractConfigRequest) Field2DeepEqual(src common.PlatformType) bool {
+
+	if strings.Compare(p.PlatformType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpsertColumnExtractConfigRequest) Field3DeepEqual(src common.SpanListType) bool {
+
+	if strings.Compare(p.SpanListType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpsertColumnExtractConfigRequest) Field4DeepEqual(src *string) bool {
+
+	if p.AgentName == src {
+		return true
+	} else if p.AgentName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *UpsertColumnExtractConfigRequest) Field5DeepEqual(src []*ColumnExtractRule) bool {
+
+	if len(p.Columns) != len(src) {
+		return false
+	}
+	for i, v := range p.Columns {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *UpsertColumnExtractConfigRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type UpsertColumnExtractConfigResponse struct {
+	BaseResp *base.BaseResp `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewUpsertColumnExtractConfigResponse() *UpsertColumnExtractConfigResponse {
+	return &UpsertColumnExtractConfigResponse{}
+}
+
+func (p *UpsertColumnExtractConfigResponse) InitDefault() {
+}
+
+var UpsertColumnExtractConfigResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *UpsertColumnExtractConfigResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return UpsertColumnExtractConfigResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *UpsertColumnExtractConfigResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_UpsertColumnExtractConfigResponse = map[int16]string{
+	255: "BaseResp",
+}
+
+func (p *UpsertColumnExtractConfigResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *UpsertColumnExtractConfigResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_UpsertColumnExtractConfigResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *UpsertColumnExtractConfigResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *UpsertColumnExtractConfigResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("UpsertColumnExtractConfigResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *UpsertColumnExtractConfigResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *UpsertColumnExtractConfigResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("UpsertColumnExtractConfigResponse(%+v)", *p)
+
+}
+
+func (p *UpsertColumnExtractConfigResponse) DeepEqual(ano *UpsertColumnExtractConfigResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *UpsertColumnExtractConfigResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetColumnExtractConfigRequest struct {
+	WorkspaceID  *int64              `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id,string,omitempty" query:"workspace_id"`
+	PlatformType common.PlatformType `thrift:"platform_type,2,required" frugal:"2,required,string" json:"platform_type,required" query:"platform_type,required"`
+	SpanListType common.SpanListType `thrift:"span_list_type,3,required" frugal:"3,required,string" json:"span_list_type,required" query:"span_list_type,required"`
+	AgentName    *string             `thrift:"agent_name,4,optional" frugal:"4,optional,string" json:"agent_name,omitempty" query:"agent_name"`
+	Base         *base.Base          `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetColumnExtractConfigRequest() *GetColumnExtractConfigRequest {
+	return &GetColumnExtractConfigRequest{}
+}
+
+func (p *GetColumnExtractConfigRequest) InitDefault() {
+}
+
+var GetColumnExtractConfigRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetColumnExtractConfigRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetColumnExtractConfigRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+func (p *GetColumnExtractConfigRequest) GetPlatformType() (v common.PlatformType) {
+	if p != nil {
+		return p.PlatformType
+	}
+	return
+}
+
+func (p *GetColumnExtractConfigRequest) GetSpanListType() (v common.SpanListType) {
+	if p != nil {
+		return p.SpanListType
+	}
+	return
+}
+
+var GetColumnExtractConfigRequest_AgentName_DEFAULT string
+
+func (p *GetColumnExtractConfigRequest) GetAgentName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentName() {
+		return GetColumnExtractConfigRequest_AgentName_DEFAULT
+	}
+	return *p.AgentName
+}
+
+var GetColumnExtractConfigRequest_Base_DEFAULT *base.Base
+
+func (p *GetColumnExtractConfigRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetColumnExtractConfigRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetColumnExtractConfigRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *GetColumnExtractConfigRequest) SetPlatformType(val common.PlatformType) {
+	p.PlatformType = val
+}
+func (p *GetColumnExtractConfigRequest) SetSpanListType(val common.SpanListType) {
+	p.SpanListType = val
+}
+func (p *GetColumnExtractConfigRequest) SetAgentName(val *string) {
+	p.AgentName = val
+}
+func (p *GetColumnExtractConfigRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetColumnExtractConfigRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "platform_type",
+	3:   "span_list_type",
+	4:   "agent_name",
+	255: "Base",
+}
+
+func (p *GetColumnExtractConfigRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *GetColumnExtractConfigRequest) IsSetAgentName() bool {
+	return p.AgentName != nil
+}
+
+func (p *GetColumnExtractConfigRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetColumnExtractConfigRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetPlatformType bool = false
+	var issetSpanListType bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetPlatformType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetSpanListType = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetPlatformType {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetSpanListType {
+		fieldId = 3
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetColumnExtractConfigRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetColumnExtractConfigRequest[fieldId]))
+}
+
+func (p *GetColumnExtractConfigRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetColumnExtractConfigRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field common.PlatformType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.PlatformType = _field
+	return nil
+}
+func (p *GetColumnExtractConfigRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field common.SpanListType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.SpanListType = _field
+	return nil
+}
+func (p *GetColumnExtractConfigRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AgentName = _field
+	return nil
+}
+func (p *GetColumnExtractConfigRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetColumnExtractConfigRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetColumnExtractConfigRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetColumnExtractConfigRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetColumnExtractConfigRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.PlatformType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetColumnExtractConfigRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 3); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.SpanListType); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetColumnExtractConfigRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentName() {
+		if err = oprot.WriteFieldBegin("agent_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AgentName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *GetColumnExtractConfigRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetColumnExtractConfigRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetColumnExtractConfigRequest(%+v)", *p)
+
+}
+
+func (p *GetColumnExtractConfigRequest) DeepEqual(ano *GetColumnExtractConfigRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SpanListType) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.AgentName) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetColumnExtractConfigRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetColumnExtractConfigRequest) Field2DeepEqual(src common.PlatformType) bool {
+
+	if strings.Compare(p.PlatformType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetColumnExtractConfigRequest) Field3DeepEqual(src common.SpanListType) bool {
+
+	if strings.Compare(p.SpanListType, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetColumnExtractConfigRequest) Field4DeepEqual(src *string) bool {
+
+	if p.AgentName == src {
+		return true
+	} else if p.AgentName == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AgentName, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetColumnExtractConfigRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetColumnExtractConfigResponse struct {
+	Columns  []*ColumnExtractRule `thrift:"columns,1,optional" frugal:"1,optional,list<ColumnExtractRule>" form:"columns" json:"columns,omitempty" query:"columns"`
+	BaseResp *base.BaseResp       `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewGetColumnExtractConfigResponse() *GetColumnExtractConfigResponse {
+	return &GetColumnExtractConfigResponse{}
+}
+
+func (p *GetColumnExtractConfigResponse) InitDefault() {
+}
+
+var GetColumnExtractConfigResponse_Columns_DEFAULT []*ColumnExtractRule
+
+func (p *GetColumnExtractConfigResponse) GetColumns() (v []*ColumnExtractRule) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetColumns() {
+		return GetColumnExtractConfigResponse_Columns_DEFAULT
+	}
+	return p.Columns
+}
+
+var GetColumnExtractConfigResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetColumnExtractConfigResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetColumnExtractConfigResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetColumnExtractConfigResponse) SetColumns(val []*ColumnExtractRule) {
+	p.Columns = val
+}
+func (p *GetColumnExtractConfigResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetColumnExtractConfigResponse = map[int16]string{
+	1:   "columns",
+	255: "BaseResp",
+}
+
+func (p *GetColumnExtractConfigResponse) IsSetColumns() bool {
+	return p.Columns != nil
+}
+
+func (p *GetColumnExtractConfigResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetColumnExtractConfigResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetColumnExtractConfigResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetColumnExtractConfigResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*ColumnExtractRule, 0, size)
+	values := make([]ColumnExtractRule, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Columns = _field
+	return nil
+}
+func (p *GetColumnExtractConfigResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetColumnExtractConfigResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetColumnExtractConfigResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetColumnExtractConfigResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetColumns() {
+		if err = oprot.WriteFieldBegin("columns", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Columns)); err != nil {
+			return err
+		}
+		for _, v := range p.Columns {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetColumnExtractConfigResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetColumnExtractConfigResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetColumnExtractConfigResponse(%+v)", *p)
+
+}
+
+func (p *GetColumnExtractConfigResponse) DeepEqual(ano *GetColumnExtractConfigResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Columns) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetColumnExtractConfigResponse) Field1DeepEqual(src []*ColumnExtractRule) bool {
+
+	if len(p.Columns) != len(src) {
+		return false
+	}
+	for i, v := range p.Columns {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *GetColumnExtractConfigResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type AgentMetadata struct {
+	AgentName string `thrift:"agent_name,1,required" frugal:"1,required,string" form:"agent_name,required" json:"agent_name,required" query:"agent_name,required"`
+}
+
+func NewAgentMetadata() *AgentMetadata {
+	return &AgentMetadata{}
+}
+
+func (p *AgentMetadata) InitDefault() {
+}
+
+func (p *AgentMetadata) GetAgentName() (v string) {
+	if p != nil {
+		return p.AgentName
+	}
+	return
+}
+func (p *AgentMetadata) SetAgentName(val string) {
+	p.AgentName = val
+}
+
+var fieldIDToName_AgentMetadata = map[int16]string{
+	1: "agent_name",
+}
+
+func (p *AgentMetadata) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetAgentName bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetAgentName = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetAgentName {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_AgentMetadata[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_AgentMetadata[fieldId]))
+}
+
+func (p *AgentMetadata) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.AgentName = _field
+	return nil
+}
+
+func (p *AgentMetadata) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("AgentMetadata"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *AgentMetadata) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("agent_name", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.AgentName); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *AgentMetadata) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("AgentMetadata(%+v)", *p)
+
+}
+
+func (p *AgentMetadata) DeepEqual(ano *AgentMetadata) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.AgentName) {
+		return false
+	}
+	return true
+}
+
+func (p *AgentMetadata) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.AgentName, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type GetAgentMetadataRequest struct {
+	WorkspaceID  int64                `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id,string,required" query:"workspace_id,required"`
+	PlatformType *common.PlatformType `thrift:"platform_type,2,optional" frugal:"2,optional,string" json:"platform_type,omitempty" query:"platform_type"`
+	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetAgentMetadataRequest() *GetAgentMetadataRequest {
+	return &GetAgentMetadataRequest{}
+}
+
+func (p *GetAgentMetadataRequest) InitDefault() {
+}
+
+func (p *GetAgentMetadataRequest) GetWorkspaceID() (v int64) {
 	if p != nil {
 		return p.WorkspaceID
 	}
 	return
 }
 
-var ListMetadataRequest_PlatformType_DEFAULT common.PlatformType
+var GetAgentMetadataRequest_PlatformType_DEFAULT common.PlatformType
 
-func (p *ListMetadataRequest) GetPlatformType() (v common.PlatformType) {
+func (p *GetAgentMetadataRequest) GetPlatformType() (v common.PlatformType) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetPlatformType() {
-		return ListMetadataRequest_PlatformType_DEFAULT
+		return GetAgentMetadataRequest_PlatformType_DEFAULT
 	}
 	return *p.PlatformType
 }
 
-var ListMetadataRequest_SpanListType_DEFAULT common.SpanListType
+var GetAgentMetadataRequest_Base_DEFAULT *base.Base
 
-func (p *ListMetadataRequest) GetSpanListType() (v common.SpanListType) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetSpanListType() {
-		return ListMetadataRequest_SpanListType_DEFAULT
-	}
-	return *p.SpanListType
-}
-
-var ListMetadataRequest_Base_DEFAULT *base.Base
-
-func (p *ListMetadataRequest) GetBase() (v *base.Base) {
+func (p *GetAgentMetadataRequest) GetBase() (v *base.Base) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBase() {
-		return ListMetadataRequest_Base_DEFAULT
+		return GetAgentMetadataRequest_Base_DEFAULT
 	}
 	return p.Base
 }
-func (p *ListMetadataRequest) SetWorkspaceID(val int64) {
+func (p *GetAgentMetadataRequest) SetWorkspaceID(val int64) {
 	p.WorkspaceID = val
 }
-func (p *ListMetadataRequest) SetPlatformType(val *common.PlatformType) {
+func (p *GetAgentMetadataRequest) SetPlatformType(val *common.PlatformType) {
 	p.PlatformType = val
 }
-func (p *ListMetadataRequest) SetSpanListType(val *common.SpanListType) {
-	p.SpanListType = val
-}
-func (p *ListMetadataRequest) SetBase(val *base.Base) {
+func (p *GetAgentMetadataRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
 
-var fieldIDToName_ListMetadataRequest = map[int16]string{
+var fieldIDToName_GetAgentMetadataRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "platform_type",
-	3:   "span_list_type",
 	255: "Base",
 }
 
-func (p *ListMetadataRequest) IsSetPlatformType() bool {
+func (p *GetAgentMetadataRequest) IsSetPlatformType() bool {
 	return p.PlatformType != nil
 }
 
-func (p *ListMetadataRequest) IsSetSpanListType() bool {
-	return p.SpanListType != nil
-}
-
-func (p *ListMetadataRequest) IsSetBase() bool {
+func (p *GetAgentMetadataRequest) IsSetBase() bool {
 	return p.Base != nil
 }
 
-func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 	var issetWorkspaceID bool = false
@@ -21900,14 +23759,6 @@ func (p *ListMetadataRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 3:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21944,7 +23795,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListMetadataRequest[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetAgentMetadataRequest[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -21953,10 +23804,10 @@ ReadFieldEndError:
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListMetadataRequest[fieldId]))
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_GetAgentMetadataRequest[fieldId]))
 }
 
-func (p *ListMetadataRequest) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetAgentMetadataRequest) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -21967,7 +23818,7 @@ func (p *ListMetadataRequest) ReadField1(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
-func (p *ListMetadataRequest) ReadField2(iprot thrift.TProtocol) error {
+func (p *GetAgentMetadataRequest) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *common.PlatformType
 	if v, err := iprot.ReadString(); err != nil {
@@ -21978,18 +23829,7 @@ func (p *ListMetadataRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.PlatformType = _field
 	return nil
 }
-func (p *ListMetadataRequest) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field *common.SpanListType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.SpanListType = _field
-	return nil
-}
-func (p *ListMetadataRequest) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetAgentMetadataRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -21998,9 +23838,9 @@ func (p *ListMetadataRequest) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ListMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListMetadataRequest"); err != nil {
+	if err = oprot.WriteStructBegin("GetAgentMetadataRequest"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22010,10 +23850,6 @@ func (p *ListMetadataRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -22038,7 +23874,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListMetadataRequest) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataRequest) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -22054,7 +23890,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListMetadataRequest) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataRequest) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetPlatformType() {
 		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -22072,25 +23908,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *ListMetadataRequest) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSpanListType() {
-		if err = oprot.WriteFieldBegin("span_list_type", thrift.STRING, 3); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.SpanListType); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
-func (p *ListMetadataRequest) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -22109,15 +23927,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListMetadataRequest) String() string {
+func (p *GetAgentMetadataRequest) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListMetadataRequest(%+v)", *p)
+	return fmt.Sprintf("GetAgentMetadataRequest(%+v)", *p)
 
 }
 
-func (p *ListMetadataRequest) DeepEqual(ano *ListMetadataRequest) bool {
+func (p *GetAgentMetadataRequest) DeepEqual(ano *GetAgentMetadataRequest) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -22129,23 +23947,20 @@ func (p *ListMetadataRequest) DeepEqual(ano *ListMetadataRequest) bool {
 	if !p.Field2DeepEqual(ano.PlatformType) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.SpanListType) {
-		return false
-	}
 	if !p.Field255DeepEqual(ano.Base) {
 		return false
 	}
 	return true
 }
 
-func (p *ListMetadataRequest) Field1DeepEqual(src int64) bool {
+func (p *GetAgentMetadataRequest) Field1DeepEqual(src int64) bool {
 
 	if p.WorkspaceID != src {
 		return false
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field2DeepEqual(src *common.PlatformType) bool {
+func (p *GetAgentMetadataRequest) Field2DeepEqual(src *common.PlatformType) bool {
 
 	if p.PlatformType == src {
 		return true
@@ -22157,19 +23972,7 @@ func (p *ListMetadataRequest) Field2DeepEqual(src *common.PlatformType) bool {
 	}
 	return true
 }
-func (p *ListMetadataRequest) Field3DeepEqual(src *common.SpanListType) bool {
-
-	if p.SpanListType == src {
-		return true
-	} else if p.SpanListType == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.SpanListType, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
+func (p *GetAgentMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 
 	if !p.Base.DeepEqual(src) {
 		return false
@@ -22177,297 +23980,64 @@ func (p *ListMetadataRequest) Field255DeepEqual(src *base.Base) bool {
 	return true
 }
 
-type MetadataItemInfo struct {
-	Key       string                 `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
-	ValueType span.MetadataValueType `thrift:"value_type,2,required" frugal:"2,required,string" form:"value_type,required" json:"value_type,required" query:"value_type,required"`
+type GetAgentMetadataResponse struct {
+	Agents   []*AgentMetadata `thrift:"agents,1,optional" frugal:"1,optional,list<AgentMetadata>" form:"agents" json:"agents,omitempty" query:"agents"`
+	BaseResp *base.BaseResp   `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
 }
 
-func NewMetadataItemInfo() *MetadataItemInfo {
-	return &MetadataItemInfo{}
+func NewGetAgentMetadataResponse() *GetAgentMetadataResponse {
+	return &GetAgentMetadataResponse{}
 }
 
-func (p *MetadataItemInfo) InitDefault() {
+func (p *GetAgentMetadataResponse) InitDefault() {
 }
 
-func (p *MetadataItemInfo) GetKey() (v string) {
-	if p != nil {
-		return p.Key
-	}
-	return
-}
+var GetAgentMetadataResponse_Agents_DEFAULT []*AgentMetadata
 
-func (p *MetadataItemInfo) GetValueType() (v span.MetadataValueType) {
-	if p != nil {
-		return p.ValueType
-	}
-	return
-}
-func (p *MetadataItemInfo) SetKey(val string) {
-	p.Key = val
-}
-func (p *MetadataItemInfo) SetValueType(val span.MetadataValueType) {
-	p.ValueType = val
-}
-
-var fieldIDToName_MetadataItemInfo = map[int16]string{
-	1: "key",
-	2: "value_type",
-}
-
-func (p *MetadataItemInfo) Read(iprot thrift.TProtocol) (err error) {
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	var issetKey bool = false
-	var issetValueType bool = false
-
-	if _, err = iprot.ReadStructBegin(); err != nil {
-		goto ReadStructBeginError
-	}
-
-	for {
-		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField1(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetKey = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 2:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField2(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetValueType = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		default:
-			if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		}
-		if err = iprot.ReadFieldEnd(); err != nil {
-			goto ReadFieldEndError
-		}
-	}
-	if err = iprot.ReadStructEnd(); err != nil {
-		goto ReadStructEndError
-	}
-
-	if !issetKey {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetValueType {
-		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-	return nil
-ReadStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
-ReadFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_MetadataItemInfo[fieldId]), err)
-SkipFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-
-ReadFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
-ReadStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_MetadataItemInfo[fieldId]))
-}
-
-func (p *MetadataItemInfo) ReadField1(iprot thrift.TProtocol) error {
-
-	var _field string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.Key = _field
-	return nil
-}
-func (p *MetadataItemInfo) ReadField2(iprot thrift.TProtocol) error {
-
-	var _field span.MetadataValueType
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.ValueType = _field
-	return nil
-}
-
-func (p *MetadataItemInfo) Write(oprot thrift.TProtocol) (err error) {
-	var fieldId int16
-	if err = oprot.WriteStructBegin("MetadataItemInfo"); err != nil {
-		goto WriteStructBeginError
-	}
-	if p != nil {
-		if err = p.writeField1(oprot); err != nil {
-			fieldId = 1
-			goto WriteFieldError
-		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
-			goto WriteFieldError
-		}
-	}
-	if err = oprot.WriteFieldStop(); err != nil {
-		goto WriteFieldStopError
-	}
-	if err = oprot.WriteStructEnd(); err != nil {
-		goto WriteStructEndError
-	}
-	return nil
-WriteStructBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
-WriteFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
-WriteFieldStopError:
-	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
-WriteStructEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
-}
-
-func (p *MetadataItemInfo) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.Key); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
-}
-func (p *MetadataItemInfo) writeField2(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("value_type", thrift.STRING, 2); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteString(p.ValueType); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
-}
-
-func (p *MetadataItemInfo) String() string {
+func (p *GetAgentMetadataResponse) GetAgents() (v []*AgentMetadata) {
 	if p == nil {
-		return "<nil>"
+		return
 	}
-	return fmt.Sprintf("MetadataItemInfo(%+v)", *p)
-
-}
-
-func (p *MetadataItemInfo) DeepEqual(ano *MetadataItemInfo) bool {
-	if p == ano {
-		return true
-	} else if p == nil || ano == nil {
-		return false
+	if !p.IsSetAgents() {
+		return GetAgentMetadataResponse_Agents_DEFAULT
 	}
-	if !p.Field1DeepEqual(ano.Key) {
-		return false
-	}
-	if !p.Field2DeepEqual(ano.ValueType) {
-		return false
-	}
-	return true
+	return p.Agents
 }
 
-func (p *MetadataItemInfo) Field1DeepEqual(src string) bool {
+var GetAgentMetadataResponse_BaseResp_DEFAULT *base.BaseResp
 
-	if strings.Compare(p.Key, src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *MetadataItemInfo) Field2DeepEqual(src span.MetadataValueType) bool {
-
-	if strings.Compare(p.ValueType, src) != 0 {
-		return false
-	}
-	return true
-}
-
-type ListMetadataResponse struct {
-	MetadataItemList []*MetadataItemInfo `thrift:"metadataItemList,1,required" frugal:"1,required,list<MetadataItemInfo>" form:"metadataItemList,required" json:"metadataItemList,required" query:"metadataItemList,required"`
-	BaseResp         *base.BaseResp      `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
-}
-
-func NewListMetadataResponse() *ListMetadataResponse {
-	return &ListMetadataResponse{}
-}
-
-func (p *ListMetadataResponse) InitDefault() {
-}
-
-func (p *ListMetadataResponse) GetMetadataItemList() (v []*MetadataItemInfo) {
-	if p != nil {
-		return p.MetadataItemList
-	}
-	return
-}
-
-var ListMetadataResponse_BaseResp_DEFAULT *base.BaseResp
-
-func (p *ListMetadataResponse) GetBaseResp() (v *base.BaseResp) {
+func (p *GetAgentMetadataResponse) GetBaseResp() (v *base.BaseResp) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetBaseResp() {
-		return ListMetadataResponse_BaseResp_DEFAULT
+		return GetAgentMetadataResponse_BaseResp_DEFAULT
 	}
 	return p.BaseResp
 }
-func (p *ListMetadataResponse) SetMetadataItemList(val []*MetadataItemInfo) {
-	p.MetadataItemList = val
+func (p *GetAgentMetadataResponse) SetAgents(val []*AgentMetadata) {
+	p.Agents = val
 }
-func (p *ListMetadataResponse) SetBaseResp(val *base.BaseResp) {
+func (p *GetAgentMetadataResponse) SetBaseResp(val *base.BaseResp) {
 	p.BaseResp = val
 }
 
-var fieldIDToName_ListMetadataResponse = map[int16]string{
-	1:   "metadataItemList",
+var fieldIDToName_GetAgentMetadataResponse = map[int16]string{
+	1:   "agents",
 	255: "BaseResp",
 }
 
-func (p *ListMetadataResponse) IsSetBaseResp() bool {
+func (p *GetAgentMetadataResponse) IsSetAgents() bool {
+	return p.Agents != nil
+}
+
+func (p *GetAgentMetadataResponse) IsSetBaseResp() bool {
 	return p.BaseResp != nil
 }
 
-func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetMetadataItemList bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -22488,7 +24058,6 @@ func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
-				issetMetadataItemList = true
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -22513,17 +24082,13 @@ func (p *ListMetadataResponse) Read(iprot thrift.TProtocol) (err error) {
 		goto ReadStructEndError
 	}
 
-	if !issetMetadataItemList {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return nil
 ReadStructBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListMetadataResponse[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetAgentMetadataResponse[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -22531,17 +24096,15 @@ ReadFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
 ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
-RequiredFieldNotSetError:
-	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListMetadataResponse[fieldId]))
 }
 
-func (p *ListMetadataResponse) ReadField1(iprot thrift.TProtocol) error {
+func (p *GetAgentMetadataResponse) ReadField1(iprot thrift.TProtocol) error {
 	_, size, err := iprot.ReadListBegin()
 	if err != nil {
 		return err
 	}
-	_field := make([]*MetadataItemInfo, 0, size)
-	values := make([]MetadataItemInfo, size)
+	_field := make([]*AgentMetadata, 0, size)
+	values := make([]AgentMetadata, size)
 	for i := 0; i < size; i++ {
 		_elem := &values[i]
 		_elem.InitDefault()
@@ -22555,10 +24118,10 @@ func (p *ListMetadataResponse) ReadField1(iprot thrift.TProtocol) error {
 	if err := iprot.ReadListEnd(); err != nil {
 		return err
 	}
-	p.MetadataItemList = _field
+	p.Agents = _field
 	return nil
 }
-func (p *ListMetadataResponse) ReadField255(iprot thrift.TProtocol) error {
+func (p *GetAgentMetadataResponse) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBaseResp()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -22567,9 +24130,9 @@ func (p *ListMetadataResponse) ReadField255(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *ListMetadataResponse) Write(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataResponse) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListMetadataResponse"); err != nil {
+	if err = oprot.WriteStructBegin("GetAgentMetadataResponse"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -22599,23 +24162,25 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *ListMetadataResponse) writeField1(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("metadataItemList", thrift.LIST, 1); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteListBegin(thrift.STRUCT, len(p.MetadataItemList)); err != nil {
-		return err
-	}
-	for _, v := range p.MetadataItemList {
-		if err := v.Write(oprot); err != nil {
+func (p *GetAgentMetadataResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgents() {
+		if err = oprot.WriteFieldBegin("agents", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Agents)); err != nil {
 			return err
 		}
-	}
-	if err := oprot.WriteListEnd(); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
+		for _, v := range p.Agents {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
 	}
 	return nil
 WriteFieldBeginError:
@@ -22623,7 +24188,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ListMetadataResponse) writeField255(oprot thrift.TProtocol) (err error) {
+func (p *GetAgentMetadataResponse) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseResp() {
 		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
 			goto WriteFieldBeginError
@@ -22642,21 +24207,21 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
 }
 
-func (p *ListMetadataResponse) String() string {
+func (p *GetAgentMetadataResponse) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("ListMetadataResponse(%+v)", *p)
+	return fmt.Sprintf("GetAgentMetadataResponse(%+v)", *p)
 
 }
 
-func (p *ListMetadataResponse) DeepEqual(ano *ListMetadataResponse) bool {
+func (p *GetAgentMetadataResponse) DeepEqual(ano *GetAgentMetadataResponse) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.MetadataItemList) {
+	if !p.Field1DeepEqual(ano.Agents) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.BaseResp) {
@@ -22665,12 +24230,12 @@ func (p *ListMetadataResponse) DeepEqual(ano *ListMetadataResponse) bool {
 	return true
 }
 
-func (p *ListMetadataResponse) Field1DeepEqual(src []*MetadataItemInfo) bool {
+func (p *GetAgentMetadataResponse) Field1DeepEqual(src []*AgentMetadata) bool {
 
-	if len(p.MetadataItemList) != len(src) {
+	if len(p.Agents) != len(src) {
 		return false
 	}
-	for i, v := range p.MetadataItemList {
+	for i, v := range p.Agents {
 		_src := src[i]
 		if !v.DeepEqual(_src) {
 			return false
@@ -22678,7 +24243,7 @@ func (p *ListMetadataResponse) Field1DeepEqual(src []*MetadataItemInfo) bool {
 	}
 	return true
 }
-func (p *ListMetadataResponse) Field255DeepEqual(src *base.BaseResp) bool {
+func (p *GetAgentMetadataResponse) Field255DeepEqual(src *base.BaseResp) bool {
 
 	if !p.BaseResp.DeepEqual(src) {
 		return false
@@ -22735,7 +24300,11 @@ type TraceService interface {
 
 	ListTrajectory(ctx context.Context, req *ListTrajectoryRequest) (r *ListTrajectoryResponse, err error)
 
-	ListMetadata(ctx context.Context, req *ListMetadataRequest) (r *ListMetadataResponse, err error)
+	UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) (r *UpsertColumnExtractConfigResponse, err error)
+
+	GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (r *GetColumnExtractConfigResponse, err error)
+
+	GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (r *GetAgentMetadataResponse, err error)
 }
 
 type TraceServiceClient struct {
@@ -22980,11 +24549,29 @@ func (p *TraceServiceClient) ListTrajectory(ctx context.Context, req *ListTrajec
 	}
 	return _result.GetSuccess(), nil
 }
-func (p *TraceServiceClient) ListMetadata(ctx context.Context, req *ListMetadataRequest) (r *ListMetadataResponse, err error) {
-	var _args TraceServiceListMetadataArgs
+func (p *TraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) (r *UpsertColumnExtractConfigResponse, err error) {
+	var _args TraceServiceUpsertColumnExtractConfigArgs
 	_args.Req = req
-	var _result TraceServiceListMetadataResult
-	if err = p.Client_().Call(ctx, "ListMetadata", &_args, &_result); err != nil {
+	var _result TraceServiceUpsertColumnExtractConfigResult
+	if err = p.Client_().Call(ctx, "UpsertColumnExtractConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *TraceServiceClient) GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (r *GetColumnExtractConfigResponse, err error) {
+	var _args TraceServiceGetColumnExtractConfigArgs
+	_args.Req = req
+	var _result TraceServiceGetColumnExtractConfigResult
+	if err = p.Client_().Call(ctx, "GetColumnExtractConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *TraceServiceClient) GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (r *GetAgentMetadataResponse, err error) {
+	var _args TraceServiceGetAgentMetadataArgs
+	_args.Req = req
+	var _result TraceServiceGetAgentMetadataResult
+	if err = p.Client_().Call(ctx, "GetAgentMetadata", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -23034,7 +24621,9 @@ func NewTraceServiceProcessor(handler TraceService) *TraceServiceProcessor {
 	self.AddToProcessorMap("UpsertTrajectoryConfig", &traceServiceProcessorUpsertTrajectoryConfig{handler: handler})
 	self.AddToProcessorMap("GetTrajectoryConfig", &traceServiceProcessorGetTrajectoryConfig{handler: handler})
 	self.AddToProcessorMap("ListTrajectory", &traceServiceProcessorListTrajectory{handler: handler})
-	self.AddToProcessorMap("ListMetadata", &traceServiceProcessorListMetadata{handler: handler})
+	self.AddToProcessorMap("UpsertColumnExtractConfig", &traceServiceProcessorUpsertColumnExtractConfig{handler: handler})
+	self.AddToProcessorMap("GetColumnExtractConfig", &traceServiceProcessorGetColumnExtractConfig{handler: handler})
+	self.AddToProcessorMap("GetAgentMetadata", &traceServiceProcessorGetAgentMetadata{handler: handler})
 	return self
 }
 func (p *TraceServiceProcessor) Process(ctx context.Context, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
@@ -24207,16 +25796,16 @@ func (p *traceServiceProcessorListTrajectory) Process(ctx context.Context, seqId
 	return true, err
 }
 
-type traceServiceProcessorListMetadata struct {
+type traceServiceProcessorUpsertColumnExtractConfig struct {
 	handler TraceService
 }
 
-func (p *traceServiceProcessorListMetadata) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
-	args := TraceServiceListMetadataArgs{}
+func (p *traceServiceProcessorUpsertColumnExtractConfig) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TraceServiceUpsertColumnExtractConfigArgs{}
 	if err = args.Read(iprot); err != nil {
 		iprot.ReadMessageEnd()
 		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
-		oprot.WriteMessageBegin("ListMetadata", thrift.EXCEPTION, seqId)
+		oprot.WriteMessageBegin("UpsertColumnExtractConfig", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -24225,11 +25814,11 @@ func (p *traceServiceProcessorListMetadata) Process(ctx context.Context, seqId i
 
 	iprot.ReadMessageEnd()
 	var err2 error
-	result := TraceServiceListMetadataResult{}
-	var retval *ListMetadataResponse
-	if retval, err2 = p.handler.ListMetadata(ctx, args.Req); err2 != nil {
-		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListMetadata: "+err2.Error())
-		oprot.WriteMessageBegin("ListMetadata", thrift.EXCEPTION, seqId)
+	result := TraceServiceUpsertColumnExtractConfigResult{}
+	var retval *UpsertColumnExtractConfigResponse
+	if retval, err2 = p.handler.UpsertColumnExtractConfig(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing UpsertColumnExtractConfig: "+err2.Error())
+		oprot.WriteMessageBegin("UpsertColumnExtractConfig", thrift.EXCEPTION, seqId)
 		x.Write(oprot)
 		oprot.WriteMessageEnd()
 		oprot.Flush(ctx)
@@ -24237,7 +25826,103 @@ func (p *traceServiceProcessorListMetadata) Process(ctx context.Context, seqId i
 	} else {
 		result.Success = retval
 	}
-	if err2 = oprot.WriteMessageBegin("ListMetadata", thrift.REPLY, seqId); err2 != nil {
+	if err2 = oprot.WriteMessageBegin("UpsertColumnExtractConfig", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type traceServiceProcessorGetColumnExtractConfig struct {
+	handler TraceService
+}
+
+func (p *traceServiceProcessorGetColumnExtractConfig) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TraceServiceGetColumnExtractConfigArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetColumnExtractConfig", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := TraceServiceGetColumnExtractConfigResult{}
+	var retval *GetColumnExtractConfigResponse
+	if retval, err2 = p.handler.GetColumnExtractConfig(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetColumnExtractConfig: "+err2.Error())
+		oprot.WriteMessageBegin("GetColumnExtractConfig", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetColumnExtractConfig", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type traceServiceProcessorGetAgentMetadata struct {
+	handler TraceService
+}
+
+func (p *traceServiceProcessorGetAgentMetadata) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := TraceServiceGetAgentMetadataArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetAgentMetadata", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := TraceServiceGetAgentMetadataResult{}
+	var retval *GetAgentMetadataResponse
+	if retval, err2 = p.handler.GetAgentMetadata(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetAgentMetadata: "+err2.Error())
+		oprot.WriteMessageBegin("GetAgentMetadata", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetAgentMetadata", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -32511,41 +34196,41 @@ func (p *TraceServiceListTrajectoryResult) Field0DeepEqual(src *ListTrajectoryRe
 	return true
 }
 
-type TraceServiceListMetadataArgs struct {
-	Req *ListMetadataRequest `thrift:"req,1" frugal:"1,default,ListMetadataRequest"`
+type TraceServiceUpsertColumnExtractConfigArgs struct {
+	Req *UpsertColumnExtractConfigRequest `thrift:"req,1" frugal:"1,default,UpsertColumnExtractConfigRequest"`
 }
 
-func NewTraceServiceListMetadataArgs() *TraceServiceListMetadataArgs {
-	return &TraceServiceListMetadataArgs{}
+func NewTraceServiceUpsertColumnExtractConfigArgs() *TraceServiceUpsertColumnExtractConfigArgs {
+	return &TraceServiceUpsertColumnExtractConfigArgs{}
 }
 
-func (p *TraceServiceListMetadataArgs) InitDefault() {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) InitDefault() {
 }
 
-var TraceServiceListMetadataArgs_Req_DEFAULT *ListMetadataRequest
+var TraceServiceUpsertColumnExtractConfigArgs_Req_DEFAULT *UpsertColumnExtractConfigRequest
 
-func (p *TraceServiceListMetadataArgs) GetReq() (v *ListMetadataRequest) {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) GetReq() (v *UpsertColumnExtractConfigRequest) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetReq() {
-		return TraceServiceListMetadataArgs_Req_DEFAULT
+		return TraceServiceUpsertColumnExtractConfigArgs_Req_DEFAULT
 	}
 	return p.Req
 }
-func (p *TraceServiceListMetadataArgs) SetReq(val *ListMetadataRequest) {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) SetReq(val *UpsertColumnExtractConfigRequest) {
 	p.Req = val
 }
 
-var fieldIDToName_TraceServiceListMetadataArgs = map[int16]string{
+var fieldIDToName_TraceServiceUpsertColumnExtractConfigArgs = map[int16]string{
 	1: "req",
 }
 
-func (p *TraceServiceListMetadataArgs) IsSetReq() bool {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) IsSetReq() bool {
 	return p.Req != nil
 }
 
-func (p *TraceServiceListMetadataArgs) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -32590,7 +34275,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListMetadataArgs[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigArgs[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -32600,8 +34285,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataArgs) ReadField1(iprot thrift.TProtocol) error {
-	_field := NewListMetadataRequest()
+func (p *TraceServiceUpsertColumnExtractConfigArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewUpsertColumnExtractConfigRequest()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -32609,9 +34294,9 @@ func (p *TraceServiceListMetadataArgs) ReadField1(iprot thrift.TProtocol) error 
 	return nil
 }
 
-func (p *TraceServiceListMetadataArgs) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListMetadata_args"); err != nil {
+	if err = oprot.WriteStructBegin("UpsertColumnExtractConfig_args"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -32637,7 +34322,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataArgs) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) writeField1(oprot thrift.TProtocol) (err error) {
 	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
 		goto WriteFieldBeginError
 	}
@@ -32654,15 +34339,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataArgs) String() string {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceListMetadataArgs(%+v)", *p)
+	return fmt.Sprintf("TraceServiceUpsertColumnExtractConfigArgs(%+v)", *p)
 
 }
 
-func (p *TraceServiceListMetadataArgs) DeepEqual(ano *TraceServiceListMetadataArgs) bool {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) DeepEqual(ano *TraceServiceUpsertColumnExtractConfigArgs) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -32674,7 +34359,7 @@ func (p *TraceServiceListMetadataArgs) DeepEqual(ano *TraceServiceListMetadataAr
 	return true
 }
 
-func (p *TraceServiceListMetadataArgs) Field1DeepEqual(src *ListMetadataRequest) bool {
+func (p *TraceServiceUpsertColumnExtractConfigArgs) Field1DeepEqual(src *UpsertColumnExtractConfigRequest) bool {
 
 	if !p.Req.DeepEqual(src) {
 		return false
@@ -32682,41 +34367,41 @@ func (p *TraceServiceListMetadataArgs) Field1DeepEqual(src *ListMetadataRequest)
 	return true
 }
 
-type TraceServiceListMetadataResult struct {
-	Success *ListMetadataResponse `thrift:"success,0,optional" frugal:"0,optional,ListMetadataResponse"`
+type TraceServiceUpsertColumnExtractConfigResult struct {
+	Success *UpsertColumnExtractConfigResponse `thrift:"success,0,optional" frugal:"0,optional,UpsertColumnExtractConfigResponse"`
 }
 
-func NewTraceServiceListMetadataResult() *TraceServiceListMetadataResult {
-	return &TraceServiceListMetadataResult{}
+func NewTraceServiceUpsertColumnExtractConfigResult() *TraceServiceUpsertColumnExtractConfigResult {
+	return &TraceServiceUpsertColumnExtractConfigResult{}
 }
 
-func (p *TraceServiceListMetadataResult) InitDefault() {
+func (p *TraceServiceUpsertColumnExtractConfigResult) InitDefault() {
 }
 
-var TraceServiceListMetadataResult_Success_DEFAULT *ListMetadataResponse
+var TraceServiceUpsertColumnExtractConfigResult_Success_DEFAULT *UpsertColumnExtractConfigResponse
 
-func (p *TraceServiceListMetadataResult) GetSuccess() (v *ListMetadataResponse) {
+func (p *TraceServiceUpsertColumnExtractConfigResult) GetSuccess() (v *UpsertColumnExtractConfigResponse) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetSuccess() {
-		return TraceServiceListMetadataResult_Success_DEFAULT
+		return TraceServiceUpsertColumnExtractConfigResult_Success_DEFAULT
 	}
 	return p.Success
 }
-func (p *TraceServiceListMetadataResult) SetSuccess(x interface{}) {
-	p.Success = x.(*ListMetadataResponse)
+func (p *TraceServiceUpsertColumnExtractConfigResult) SetSuccess(x interface{}) {
+	p.Success = x.(*UpsertColumnExtractConfigResponse)
 }
 
-var fieldIDToName_TraceServiceListMetadataResult = map[int16]string{
+var fieldIDToName_TraceServiceUpsertColumnExtractConfigResult = map[int16]string{
 	0: "success",
 }
 
-func (p *TraceServiceListMetadataResult) IsSetSuccess() bool {
+func (p *TraceServiceUpsertColumnExtractConfigResult) IsSetSuccess() bool {
 	return p.Success != nil
 }
 
-func (p *TraceServiceListMetadataResult) Read(iprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigResult) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -32761,7 +34446,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceListMetadataResult[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigResult[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -32771,8 +34456,8 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataResult) ReadField0(iprot thrift.TProtocol) error {
-	_field := NewListMetadataResponse()
+func (p *TraceServiceUpsertColumnExtractConfigResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewUpsertColumnExtractConfigResponse()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -32780,9 +34465,9 @@ func (p *TraceServiceListMetadataResult) ReadField0(iprot thrift.TProtocol) erro
 	return nil
 }
 
-func (p *TraceServiceListMetadataResult) Write(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigResult) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("ListMetadata_result"); err != nil {
+	if err = oprot.WriteStructBegin("UpsertColumnExtractConfig_result"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -32808,7 +34493,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataResult) writeField0(oprot thrift.TProtocol) (err error) {
+func (p *TraceServiceUpsertColumnExtractConfigResult) writeField0(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSuccess() {
 		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
 			goto WriteFieldBeginError
@@ -32827,15 +34512,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
 }
 
-func (p *TraceServiceListMetadataResult) String() string {
+func (p *TraceServiceUpsertColumnExtractConfigResult) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("TraceServiceListMetadataResult(%+v)", *p)
+	return fmt.Sprintf("TraceServiceUpsertColumnExtractConfigResult(%+v)", *p)
 
 }
 
-func (p *TraceServiceListMetadataResult) DeepEqual(ano *TraceServiceListMetadataResult) bool {
+func (p *TraceServiceUpsertColumnExtractConfigResult) DeepEqual(ano *TraceServiceUpsertColumnExtractConfigResult) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -32847,7 +34532,695 @@ func (p *TraceServiceListMetadataResult) DeepEqual(ano *TraceServiceListMetadata
 	return true
 }
 
-func (p *TraceServiceListMetadataResult) Field0DeepEqual(src *ListMetadataResponse) bool {
+func (p *TraceServiceUpsertColumnExtractConfigResult) Field0DeepEqual(src *UpsertColumnExtractConfigResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TraceServiceGetColumnExtractConfigArgs struct {
+	Req *GetColumnExtractConfigRequest `thrift:"req,1" frugal:"1,default,GetColumnExtractConfigRequest"`
+}
+
+func NewTraceServiceGetColumnExtractConfigArgs() *TraceServiceGetColumnExtractConfigArgs {
+	return &TraceServiceGetColumnExtractConfigArgs{}
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) InitDefault() {
+}
+
+var TraceServiceGetColumnExtractConfigArgs_Req_DEFAULT *GetColumnExtractConfigRequest
+
+func (p *TraceServiceGetColumnExtractConfigArgs) GetReq() (v *GetColumnExtractConfigRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return TraceServiceGetColumnExtractConfigArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *TraceServiceGetColumnExtractConfigArgs) SetReq(val *GetColumnExtractConfigRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_TraceServiceGetColumnExtractConfigArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetColumnExtractConfigRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetColumnExtractConfig_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraceServiceGetColumnExtractConfigArgs(%+v)", *p)
+
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) DeepEqual(ano *TraceServiceGetColumnExtractConfigArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) Field1DeepEqual(src *GetColumnExtractConfigRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TraceServiceGetColumnExtractConfigResult struct {
+	Success *GetColumnExtractConfigResponse `thrift:"success,0,optional" frugal:"0,optional,GetColumnExtractConfigResponse"`
+}
+
+func NewTraceServiceGetColumnExtractConfigResult() *TraceServiceGetColumnExtractConfigResult {
+	return &TraceServiceGetColumnExtractConfigResult{}
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) InitDefault() {
+}
+
+var TraceServiceGetColumnExtractConfigResult_Success_DEFAULT *GetColumnExtractConfigResponse
+
+func (p *TraceServiceGetColumnExtractConfigResult) GetSuccess() (v *GetColumnExtractConfigResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return TraceServiceGetColumnExtractConfigResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *TraceServiceGetColumnExtractConfigResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetColumnExtractConfigResponse)
+}
+
+var fieldIDToName_TraceServiceGetColumnExtractConfigResult = map[int16]string{
+	0: "success",
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetColumnExtractConfigResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetColumnExtractConfig_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraceServiceGetColumnExtractConfigResult(%+v)", *p)
+
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) DeepEqual(ano *TraceServiceGetColumnExtractConfigResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) Field0DeepEqual(src *GetColumnExtractConfigResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TraceServiceGetAgentMetadataArgs struct {
+	Req *GetAgentMetadataRequest `thrift:"req,1" frugal:"1,default,GetAgentMetadataRequest"`
+}
+
+func NewTraceServiceGetAgentMetadataArgs() *TraceServiceGetAgentMetadataArgs {
+	return &TraceServiceGetAgentMetadataArgs{}
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) InitDefault() {
+}
+
+var TraceServiceGetAgentMetadataArgs_Req_DEFAULT *GetAgentMetadataRequest
+
+func (p *TraceServiceGetAgentMetadataArgs) GetReq() (v *GetAgentMetadataRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return TraceServiceGetAgentMetadataArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *TraceServiceGetAgentMetadataArgs) SetReq(val *GetAgentMetadataRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_TraceServiceGetAgentMetadataArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetAgentMetadataRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetAgentMetadata_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraceServiceGetAgentMetadataArgs(%+v)", *p)
+
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) DeepEqual(ano *TraceServiceGetAgentMetadataArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) Field1DeepEqual(src *GetAgentMetadataRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TraceServiceGetAgentMetadataResult struct {
+	Success *GetAgentMetadataResponse `thrift:"success,0,optional" frugal:"0,optional,GetAgentMetadataResponse"`
+}
+
+func NewTraceServiceGetAgentMetadataResult() *TraceServiceGetAgentMetadataResult {
+	return &TraceServiceGetAgentMetadataResult{}
+}
+
+func (p *TraceServiceGetAgentMetadataResult) InitDefault() {
+}
+
+var TraceServiceGetAgentMetadataResult_Success_DEFAULT *GetAgentMetadataResponse
+
+func (p *TraceServiceGetAgentMetadataResult) GetSuccess() (v *GetAgentMetadataResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return TraceServiceGetAgentMetadataResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *TraceServiceGetAgentMetadataResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetAgentMetadataResponse)
+}
+
+var fieldIDToName_TraceServiceGetAgentMetadataResult = map[int16]string{
+	0: "success",
+}
+
+func (p *TraceServiceGetAgentMetadataResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *TraceServiceGetAgentMetadataResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetAgentMetadataResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *TraceServiceGetAgentMetadataResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetAgentMetadata_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *TraceServiceGetAgentMetadataResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TraceServiceGetAgentMetadataResult(%+v)", *p)
+
+}
+
+func (p *TraceServiceGetAgentMetadataResult) DeepEqual(ano *TraceServiceGetAgentMetadataResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *TraceServiceGetAgentMetadataResult) Field0DeepEqual(src *GetAgentMetadataResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

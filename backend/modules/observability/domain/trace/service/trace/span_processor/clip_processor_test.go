@@ -10,8 +10,11 @@ import (
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
@@ -242,7 +245,7 @@ func TestClipProcessor_TransformSkipNil(t *testing.T) {
 }
 
 func TestClipProcessorFactory(t *testing.T) {
-	factory := NewClipProcessorFactory()
+	factory := NewClipProcessorFactory(nil)
 	processor, err := factory.CreateProcessor(context.Background(), Settings{})
 	require.NoError(t, err)
 	require.IsType(t, &ClipProcessor{}, processor)
@@ -252,4 +255,145 @@ func TestClipJSONValue_DefaultBranch(t *testing.T) {
 	res, changed := clipJSONValue(float64(123.456))
 	require.Equal(t, float64(123.456), res)
 	require.False(t, changed)
+}
+
+func TestClipProcessor_DefaultExtractRules(t *testing.T) {
+	llmInput := `{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"Hello"}]}`
+	llmOutput := `{"messages":[{"role":"assistant","content":"Hi there!"},{"role":"user","content":"Bye"}]}`
+
+	tests := []struct {
+		name            string
+		spanListType    loop_span.SpanListType
+		input           string
+		output          string
+		expectedInput   string
+		expectedOutput  string
+		dbConfigReturns *entity.ColumnExtractConfig
+	}{
+		{
+			name:            "LLMSpan uses default JSONPath when no DB config",
+			spanListType:    loop_span.SpanListTypeLLMSpan,
+			input:           llmInput,
+			output:          llmOutput,
+			expectedInput:   "You are a helpful assistant.",
+			expectedOutput:  "Hi there!",
+			dbConfigReturns: nil,
+		},
+		{
+			name:           "LLMSpan DB config overrides default",
+			spanListType:   loop_span.SpanListTypeLLMSpan,
+			input:          llmInput,
+			output:         llmOutput,
+			expectedInput:  "Hello",
+			expectedOutput: "Bye",
+			dbConfigReturns: &entity.ColumnExtractConfig{
+				Columns: []entity.ColumnExtractRule{
+					{Column: "input", JSONPath: "$.messages[1].content"},
+					{Column: "output", JSONPath: "$.messages[1].content"},
+				},
+			},
+		},
+		{
+			name:            "RootSpan has no default, clips original JSON",
+			spanListType:    loop_span.SpanListTypeRootSpan,
+			input:           `{"key":"value"}`,
+			output:          `{"key":"value"}`,
+			expectedInput:   `{"key":"value"}`,
+			expectedOutput:  `{"key":"value"}`,
+			dbConfigReturns: nil,
+		},
+		{
+			name:            "AllSpan has no default, clips original JSON",
+			spanListType:    loop_span.SpanListTypeAllSpan,
+			input:           "plain text content",
+			output:          "plain text output",
+			expectedInput:   "plain text content",
+			expectedOutput:  "plain text output",
+			dbConfigReturns: nil,
+		},
+		{
+			name:            "LLMSpan default with non-JSON input falls back to clip",
+			spanListType:    loop_span.SpanListTypeLLMSpan,
+			input:           "not json",
+			output:          "not json either",
+			expectedInput:   "not json",
+			expectedOutput:  "not json either",
+			dbConfigReturns: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			mockRepo := mocks.NewMockITraceRepo(ctrl)
+
+			if tt.dbConfigReturns != nil {
+				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+					Return(tt.dbConfigReturns, nil).Times(1)
+			} else {
+				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+					Return(nil, nil).Times(1)
+			}
+
+			processor := &ClipProcessor{
+				traceRepo: mockRepo,
+				settings: Settings{
+					WorkspaceId:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: tt.spanListType,
+				},
+			}
+			spans := loop_span.SpanList{{Input: tt.input, Output: tt.output}}
+			res, err := processor.Transform(context.Background(), spans)
+			require.NoError(t, err)
+			require.Len(t, res, 1)
+			require.Equal(t, tt.expectedInput, res[0].Input)
+			require.Equal(t, tt.expectedOutput, res[0].Output)
+		})
+	}
+}
+
+func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockRepo := mocks.NewMockITraceRepo(ctrl)
+	mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+		Return(nil, nil).Times(1)
+
+	longContent := strings.Repeat("a", clipProcessorPlainTextMaxLength+100)
+	llmInput, _ := json.MarshalString(map[string]interface{}{
+		"messages": []interface{}{
+			map[string]interface{}{"role": "user", "content": longContent},
+		},
+	})
+
+	processor := &ClipProcessor{
+		traceRepo: mockRepo,
+		settings: Settings{
+			WorkspaceId:  1,
+			PlatformType: loop_span.PlatformCozeLoop,
+			SpanListType: loop_span.SpanListTypeLLMSpan,
+		},
+	}
+	spans := loop_span.SpanList{{Input: llmInput}}
+	res, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.True(t, strings.HasSuffix(res[0].Input, clipProcessorSuffix))
+	require.True(t, len(res[0].Input) <= clipProcessorPlainTextMaxLength+len(clipProcessorSuffix))
+}
+
+func TestClipProcessor_NoRepoUsesDefault(t *testing.T) {
+	llmInput := `{"messages":[{"role":"system","content":"Hello world"}]}`
+
+	processor := &ClipProcessor{
+		traceRepo: nil,
+		settings: Settings{
+			SpanListType: loop_span.SpanListTypeLLMSpan,
+		},
+	}
+	spans := loop_span.SpanList{{Input: llmInput}}
+	res, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "Hello world", res[0].Input)
 }

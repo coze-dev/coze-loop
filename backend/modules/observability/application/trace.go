@@ -1318,6 +1318,95 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 	}, nil
 }
 
+func (t *TraceApplication) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest) (r *trace.UpsertColumnExtractConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	if userID == "" {
+		return nil, errorx.NewByCode(obErrorx.UserParseFailedCode)
+	}
+
+	columns := tconv.ColumnExtractRulesDTO2DO(req.GetColumns())
+	if err := t.traceService.UpsertColumnExtractConfig(ctx, &service.UpsertColumnExtractConfigRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		PlatformType: req.GetPlatformType(),
+		SpanListType: req.GetSpanListType(),
+		AgentName:    req.GetAgentName(),
+		Columns:      columns,
+		UserID:       userID,
+	}); err != nil {
+		return nil, err
+	}
+
+	return &trace.UpsertColumnExtractConfigResponse{}, nil
+}
+
+func (t *TraceApplication) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest) (r *trace.GetColumnExtractConfigResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	confResp, err := t.traceService.GetColumnExtractConfig(ctx, &service.GetColumnExtractConfigRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		PlatformType: req.GetPlatformType(),
+		SpanListType: req.GetSpanListType(),
+		AgentName:    req.GetAgentName(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if confResp == nil {
+		return &trace.GetColumnExtractConfigResponse{}, nil
+	}
+
+	return &trace.GetColumnExtractConfigResponse{
+		Columns: tconv.ColumnExtractRulesDO2DTO(confResp.Columns),
+	}, nil
+}
+
+func (t *TraceApplication) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest) (r *trace.GetAgentMetadataResponse, err error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10),
+		false); err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	resp, err := t.traceService.GetAgentMetadata(ctx, &service.GetAgentMetadataRequest{
+		WorkspaceID:  req.GetWorkspaceID(),
+		PlatformType: platformType,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return &trace.GetAgentMetadataResponse{}, nil
+	}
+
+	agents := make([]*trace.AgentMetadata, 0, len(resp.Agents))
+	for _, a := range resp.Agents {
+		agents = append(agents, &trace.AgentMetadata{
+			AgentName: a.AgentName,
+		})
+	}
+	return &trace.GetAgentMetadataResponse{
+		Agents: agents,
+	}, nil
+}
+
 // inner usage
 type GetDisplayInfoRequest struct {
 	WorkspaceID  int64

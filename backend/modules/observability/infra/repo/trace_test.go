@@ -152,6 +152,7 @@ func TestTraceRepoImpl_InsertSpans(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 				WithTraceStorageSpanDao("ck", fields.spansDao),
 			)
 			assert.NoError(t, err)
@@ -352,6 +353,7 @@ func TestTraceRepoImpl_ListSpans(t *testing.T) {
 			r, err := NewTraceRepoImpl(
 				fields.traceConfig,
 				&mockStorageProvider{},
+				nil,
 				nil,
 				nil,
 				nil,
@@ -643,6 +645,7 @@ func TestTraceRepoImpl_GetTrace(t *testing.T) {
 				nil,
 				nil,
 				nil,
+				nil,
 				WithTraceStorageDaos("ck", fields.spansDao, fields.annoDao),
 			)
 			assert.NoError(t, err)
@@ -877,6 +880,7 @@ func TestTraceRepoImpl_InsertAnnotation(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
+				nil,
 				WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)
@@ -974,6 +978,7 @@ func TestTraceRepoImpl_GetAnnotation(t *testing.T) {
 				&mockStorageProvider{},
 				fields.spanRedisDao,
 				fields.spanProducer,
+				nil,
 				nil,
 				nil,
 				WithTraceStorageAnnotationDao("ck", fields.annoDao),
@@ -1074,6 +1079,7 @@ func TestTraceRepoImpl_ListAnnotations(t *testing.T) {
 				&mockStorageProvider{},
 				fields.spanRedisDao,
 				fields.spanProducer,
+				nil,
 				nil,
 				nil,
 				WithTraceStorageAnnotationDao("ck", fields.annoDao),

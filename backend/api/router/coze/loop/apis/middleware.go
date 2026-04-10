@@ -2194,3 +2194,23 @@ func _batchgetevaluatorversionidsMw(handler *apis.APIHandler) []app.HandlerFunc 
 	// your code...
 	return nil
 }
+
+func _agentMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getagentmetadataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getcolumnextractconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _upsertcolumnextractconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

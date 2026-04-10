@@ -412,6 +412,39 @@ type ListTrajectoryResponse struct {
 	Trajectories []*loop_span.Trajectory
 }
 
+type UpsertColumnExtractConfigRequest struct {
+	WorkspaceID  int64
+	PlatformType string
+	SpanListType string
+	AgentName    string
+	Columns      []entity.ColumnExtractRule
+	UserID       string
+}
+
+type GetColumnExtractConfigRequest struct {
+	WorkspaceID  int64
+	PlatformType string
+	SpanListType string
+	AgentName    string
+}
+
+type GetColumnExtractConfigResponse struct {
+	Columns []entity.ColumnExtractRule
+}
+
+type GetAgentMetadataRequest struct {
+	WorkspaceID  int64
+	PlatformType loop_span.PlatformType
+}
+
+type AgentMetadataItem struct {
+	AgentName string
+}
+
+type GetAgentMetadataResponse struct {
+	Agents []AgentMetadataItem
+}
+
 type IAnnotationEvent interface {
 	Send(ctx context.Context, msg *entity.AnnotationEvent) error
 }
@@ -446,6 +479,9 @@ type ITraceService interface {
 	GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64,
 		platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
 	MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error
+	UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) error
+	GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (*GetColumnExtractConfigResponse, error)
+	GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error)
 }
 
 func NewTraceServiceImpl(
@@ -1006,6 +1042,154 @@ func (r *TraceServiceImpl) UpsertTrajectoryConfig(ctx context.Context, req *Upse
 	return nil
 }
 
+func (r *TraceServiceImpl) UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) error {
+	marshalConfig, err := json.MarshalString(req.Columns)
+	if err != nil {
+		return err
+	}
+
+	if err := r.traceRepo.UpsertColumnExtractConfig(ctx, &repo.UpsertColumnExtractConfigParam{
+		WorkspaceId:  req.WorkspaceID,
+		PlatformType: req.PlatformType,
+		SpanListType: req.SpanListType,
+		AgentName:    req.AgentName,
+		Config:       marshalConfig,
+		UserID:       req.UserID,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *TraceServiceImpl) GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (*GetColumnExtractConfigResponse, error) {
+	config, err := r.traceRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
+		WorkspaceId:  req.WorkspaceID,
+		PlatformType: req.PlatformType,
+		SpanListType: req.SpanListType,
+		AgentName:    req.AgentName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if config == nil || len(config.Columns) == 0 {
+		return &GetColumnExtractConfigResponse{}, nil
+	}
+	return &GetColumnExtractConfigResponse{
+		Columns: config.Columns,
+	}, nil
+}
+
+func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+
+	const defaultAgentScanLimit = 100
+	now := time.Now()
+	startTime := now.Add(-7 * 24 * time.Hour).UnixMilli()
+	endTime := now.UnixMilli()
+
+	andOp := loop_span.QueryAndOrEnumAnd
+	orOp := loop_span.QueryAndOrEnumOr
+	agentNameFilter := &loop_span.FilterFields{
+		QueryAndOr: &orOp,
+		FilterFields: []*loop_span.FilterField{
+			{
+				FieldName: tagKeyAgentName,
+				FieldType: loop_span.FieldTypeString,
+				QueryType: ptr.Of(loop_span.QueryTypeEnumExist),
+				IsCustom:  true,
+			},
+			{
+				FieldName: tagKeyGenAIAgentName,
+				FieldType: loop_span.FieldTypeString,
+				QueryType: ptr.Of(loop_span.QueryTypeEnumExist),
+				IsCustom:  true,
+			},
+		},
+	}
+	filters := &loop_span.FilterFields{
+		QueryAndOr: &andOp,
+		FilterFields: []*loop_span.FilterField{
+			{
+				SubFilter: agentNameFilter,
+			},
+		},
+	}
+
+	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:         tenants,
+		Filters:         filters,
+		StartAt:         startTime,
+		EndAt:           endTime,
+		Limit:           defaultAgentScanLimit,
+		DescByStartTime: true,
+		SelectColumns:   []string{"tags_string"},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	agentSet := make(map[string]struct{})
+	for _, s := range tRes.Spans {
+		if s == nil {
+			continue
+		}
+		name := extractAgentName(s)
+		if name == "" {
+			continue
+		}
+		agentSet[name] = struct{}{}
+	}
+
+	agents := make([]AgentMetadataItem, 0, len(agentSet))
+	for name := range agentSet {
+		agents = append(agents, AgentMetadataItem{
+			AgentName: name,
+		})
+	}
+
+	return &GetAgentMetadataResponse{
+		Agents: agents,
+	}, nil
+}
+
+const (
+	tagKeyAgentName      = "agent.name"
+	tagKeyGenAIAgentName = "gen_ai.agent.name"
+)
+
+func extractAgentName(s *loop_span.Span) string {
+	if s.TagsString != nil {
+		if name, ok := s.TagsString[tagKeyAgentName]; ok && name != "" {
+			return name
+		}
+		if name, ok := s.TagsString[tagKeyGenAIAgentName]; ok && name != "" {
+			return name
+		}
+	}
+	return ""
+}
+
+func extractAgentNameFromFilters(filters *loop_span.FilterFields) string {
+	if filters == nil {
+		return ""
+	}
+	var agentName string
+	_ = filters.Traverse(func(f *loop_span.FilterField) error {
+		if f.FieldName == tagKeyAgentName || f.FieldName == tagKeyGenAIAgentName {
+			if len(f.Values) > 0 && f.Values[0] != "" {
+				agentName = f.Values[0]
+			}
+		}
+		return nil
+	})
+	return agentName
+}
+
 func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*GetTraceResp, error) {
 	if req != nil && req.Filters != nil {
 		if err := req.Filters.Traverse(processSpecificFilter); err != nil {
@@ -1135,6 +1319,8 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	processors, err := r.buildHelper.BuildListSpansProcessors(ctx, span_processor.Settings{
 		WorkspaceId:    req.WorkspaceID,
 		PlatformType:   req.PlatformType,
+		SpanListType:   req.SpanListType,
+		AgentName:      extractAgentNameFromFilters(req.Filters),
 		QueryStartTime: req.StartTime,
 		QueryEndTime:   req.EndTime,
 		QueryTenants:   tenants,

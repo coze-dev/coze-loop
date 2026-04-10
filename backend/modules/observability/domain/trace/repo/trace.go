@@ -117,6 +117,22 @@ type ListTrajectoryParam struct {
 	StartAt     *int64 // ms
 }
 
+type UpsertColumnExtractConfigParam struct {
+	WorkspaceId  int64
+	PlatformType string
+	SpanListType string
+	AgentName    string
+	Config       string
+	UserID       string
+}
+
+type GetColumnExtractConfigParam struct {
+	WorkspaceId  int64
+	PlatformType string
+	SpanListType string
+	AgentName    string
+}
+
 //go:generate mockgen -destination=mocks/trace.go -package=mocks . ITraceRepo
 type ITraceRepo interface {
 	InsertSpans(context.Context, *InsertTraceParam) error
@@ -130,4 +146,6 @@ type ITraceRepo interface {
 	InsertAnnotations(context.Context, *InsertAnnotationParam) error
 	UpsertTrajectoryConfig(context.Context, *UpsertTrajectoryConfigParam) error
 	GetTrajectoryConfig(context.Context, GetTrajectoryConfigParam) (*entity.TrajectoryConfig, error)
+	UpsertColumnExtractConfig(context.Context, *UpsertColumnExtractConfigParam) error
+	GetColumnExtractConfig(context.Context, GetColumnExtractConfigParam) (*entity.ColumnExtractConfig, error)
 }

@@ -256,11 +256,13 @@ func generateForObservability(db *gorm.DB) {
 	observabilityTask := g.GenerateModelAs("task", "ObservabilityTask")
 	observabilityTaskRun := g.GenerateModelAs("auto_task_run", "ObservabilityTaskRun")
 	observabilityTrajectoryConfig := g.GenerateModelAs("observability_trajectory_config", "ObservabilityTrajectoryConfig")
+	observabilityColumnExtractConfig := g.GenerateModelAs("observability_column_extract_config", "ObservabilityColumnExtractConfig")
 
 	g.ApplyBasic(observabilityView)
 	g.ApplyBasic(observabilityTask)
 	g.ApplyBasic(observabilityTaskRun)
 	g.ApplyBasic(observabilityTrajectoryConfig)
+	g.ApplyBasic(observabilityColumnExtractConfig)
 	g.Execute()
 }
 

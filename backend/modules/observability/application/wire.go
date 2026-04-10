@@ -116,6 +116,7 @@ var (
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
@@ -138,6 +139,7 @@ var (
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -178,13 +180,14 @@ func provideTraceRepo(
 	ckProvider ck.Provider,
 	spanProducer mq3.ISpanProducer,
 	trajectoryConfDao mysqldao.ITrajectoryConfigDao,
+	columnExtractConfDao mysqldao.IColumnExtractConfigDao,
 	idGenerator idgen.IIDGenerator,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, columnExtractConfDao, idGenerator, options...)
 }
 
 func provideTraceMetricRepo(

@@ -179,14 +179,20 @@ func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListTrajectory)
 }
 
-// ListWorkspaceAnnotations .
-// @router /api/observability/v1/annotations/list_by_workspace [POST]
-func ListWorkspaceAnnotations(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.ListWorkspaceAnnotations)
+// UpsertColumnExtractConfig .
+// @router /api/observability/v1/column_extract_config [POST]
+func UpsertColumnExtractConfig(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.UpsertColumnExtractConfig)
 }
 
-// ListMetadata .
-// @router /api/observability/v1/traces/metadata/list [POST]
-func ListMetadata(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.ListMetadata)
+// GetColumnExtractConfig .
+// @router /api/observability/v1/column_extract_config [GET]
+func GetColumnExtractConfig(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.GetColumnExtractConfig)
+}
+
+// GetAgentMetadata .
+// @router /api/observability/v1/trace/agent/metadata [GET]
+func GetAgentMetadata(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.GetAgentMetadata)
 }

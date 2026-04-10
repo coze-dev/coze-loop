@@ -7,11 +7,16 @@ import (
 	"context"
 	"unicode/utf8"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
-type ClipProcessor struct{}
+type ClipProcessor struct {
+	traceRepo repo.ITraceRepo
+	settings  Settings
+}
 
 const (
 	clipProcessorPlainTextMaxLength = 10 * 1024
@@ -19,25 +24,58 @@ const (
 	clipProcessorSuffix             = "..."
 )
 
+var defaultExtractRules = map[loop_span.SpanListType][]entity.ColumnExtractRule{
+	loop_span.SpanListTypeLLMSpan: {
+		{Column: "input", JSONPath: "$.messages[0].content"},
+		{Column: "output", JSONPath: "$.messages[0].content"},
+	},
+}
+
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
-	for _, span := range spans {
-		if span == nil {
+	var rules []entity.ColumnExtractRule
+	if c.traceRepo != nil && c.settings.WorkspaceId > 0 {
+		cfg, err := c.traceRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
+			WorkspaceId:  c.settings.WorkspaceId,
+			PlatformType: string(c.settings.PlatformType),
+			SpanListType: string(c.settings.SpanListType),
+			AgentName:    c.settings.AgentName,
+		})
+		if err == nil && cfg != nil {
+			rules = cfg.Columns
+		}
+	}
+
+	if len(rules) == 0 {
+		if defaults, ok := defaultExtractRules[c.settings.SpanListType]; ok {
+			rules = defaults
+		}
+	}
+
+	inputRule, outputRule := findExtractRules(rules)
+
+	for _, s := range spans {
+		if s == nil {
 			continue
 		}
-		span.Input = clipSpanField(span.Input)
-		span.Output = clipSpanField(span.Output)
+		s.Input = extractAndClip(s.Input, inputRule)
+		s.Output = extractAndClip(s.Output, outputRule)
 	}
 	return spans, nil
 }
 
-type ClipProcessorFactory struct{}
-
-func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
-	return &ClipProcessor{}, nil
+type ClipProcessorFactory struct {
+	traceRepo repo.ITraceRepo
 }
 
-func NewClipProcessorFactory() Factory {
-	return new(ClipProcessorFactory)
+func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
+	return &ClipProcessor{
+		traceRepo: c.traceRepo,
+		settings:  set,
+	}, nil
+}
+
+func NewClipProcessorFactory(traceRepo repo.ITraceRepo) Factory {
+	return &ClipProcessorFactory{traceRepo: traceRepo}
 }
 
 func clipSpanField(content string) string {
@@ -131,4 +169,39 @@ func clipJSONValue(value interface{}) (interface{}, bool) {
 	default:
 		return val, false
 	}
+}
+
+func findExtractRules(rules []entity.ColumnExtractRule) (inputRule, outputRule *entity.ColumnExtractRule) {
+	for i := range rules {
+		switch rules[i].Column {
+		case "input":
+			inputRule = &rules[i]
+		case "output":
+			outputRule = &rules[i]
+		}
+	}
+	return
+}
+
+func extractAndClip(content string, rule *entity.ColumnExtractRule) string {
+	if rule != nil {
+		if extracted := extractByJSONPath(content, rule.JSONPath); extracted != "" {
+			return clipSpanField(extracted)
+		}
+	}
+	return clipSpanField(content)
+}
+
+func extractByJSONPath(content, jsonPath string) string {
+	if content == "" || jsonPath == "" {
+		return ""
+	}
+	if !json.Valid([]byte(content)) {
+		return ""
+	}
+	result, err := json.GetStringByJSONPath(content, jsonPath)
+	if err != nil {
+		return ""
+	}
+	return result
 }
