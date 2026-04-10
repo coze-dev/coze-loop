@@ -179,16 +179,54 @@ func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListTrajectory)
 }
 
+// UpsertColumnExtractConfig .
+// @router /api/observability/v1/column_extract_config [POST]
+func UpsertColumnExtractConfig(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.UpsertColumnExtractConfig)
+}
+
+// GetColumnExtractConfig .
+// @router /api/observability/v1/column_extract_config [GET]
+func GetColumnExtractConfig(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.GetColumnExtractConfig)
+}
+
+// GetAgentMetadata .
+// @router /api/observability/v1/trace/agent/metadata [GET]
+func GetAgentMetadata(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.GetAgentMetadata)
+}
+
 // ListWorkspaceAnnotations .
 // @router /api/observability/v1/annotations/list_by_workspace [POST]
 func ListWorkspaceAnnotations(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.ListWorkspaceAnnotations)
+	var err error
+	var req trace.ListWorkspaceAnnotationsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListWorkspaceAnnotationsResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }
 
 // ListMetadata .
 // @router /api/observability/v1/traces/metadata/list [POST]
 func ListMetadata(ctx context.Context, c *app.RequestContext) {
-	invokeAndRender(ctx, c, observabilityClient.ListMetadata)
+	var err error
+	var req trace.ListMetadataRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(trace.ListMetadataResponse)
+
+	c.JSON(consts.StatusOK, resp)
 }
 
 // ListTraceChat .

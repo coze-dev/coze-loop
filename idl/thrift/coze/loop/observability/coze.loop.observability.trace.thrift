@@ -451,6 +451,7 @@ struct MetadataItemInfo {
     1: required string key
     2: required span.MetadataValueType value_type
 }
+
 struct ListMetadataResponse {
     1: required list<MetadataItemInfo> metadataItemList ,
 
@@ -525,6 +526,57 @@ struct ChatMessage {
     2: optional span.OutputSpan span (go.tag='json:"span,omitempty"')
 }
 
+struct ColumnExtractRule {
+    1: required string column
+    2: required string json_path
+}
+
+struct UpsertColumnExtractConfigRequest {
+    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: required common.PlatformType platform_type (api.body="platform_type")
+    3: required common.SpanListType span_list_type (api.body="span_list_type")
+    4: optional string agent_name (api.body="agent_name")
+    5: required list<ColumnExtractRule> columns (api.body="columns")
+
+    255: optional base.Base Base
+}
+
+struct UpsertColumnExtractConfigResponse {
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetColumnExtractConfigRequest {
+    1: optional i64 workspace_id (api.js_conv='true', api.query='workspace_id')
+    2: required common.PlatformType platform_type (api.query='platform_type')
+    3: required common.SpanListType span_list_type (api.query='span_list_type')
+    4: optional string agent_name (api.query='agent_name')
+
+    255: optional base.Base Base
+}
+
+struct GetColumnExtractConfigResponse {
+    1: optional list<ColumnExtractRule> columns
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct AgentMetadata {
+    1: required string agent_name
+}
+
+struct GetAgentMetadataRequest {
+    1: required i64 workspace_id (api.js_conv='true', api.query='workspace_id')
+    2: optional common.PlatformType platform_type (api.query='platform_type')
+
+    255: optional base.Base Base
+}
+
+struct GetAgentMetadataResponse {
+    1: optional list<AgentMetadata> agents
+
+    255: optional base.BaseResp BaseResp
+}
+
 service TraceService {
     ListSpansResponse ListSpans(1: ListSpansRequest req) (api.post = '/api/observability/v1/spans/list')
     ListPreSpanResponse ListPreSpan(1: ListPreSpanRequest req) (api.post = '/api/observability/v1/spans/pre_list')
@@ -554,4 +606,7 @@ service TraceService {
     ListTraceChatResponse ListTraceChat(1: ListTraceChatRequest req) (api.post = '/api/observability/v1/traces/chat/list')
     ListThreadChatResponse ListThreadChat(1: ListThreadChatRequest req) (api.post = '/api/observability/v1/threads/chat/list')
     GetThreadStatResponse GetThreadStat(1: GetThreadStatRequest req) (api.post = '/api/observability/v1/threads/stat')
+    UpsertColumnExtractConfigResponse UpsertColumnExtractConfig(1: UpsertColumnExtractConfigRequest req) (api.post = '/api/observability/v1/column_extract_config')
+    GetColumnExtractConfigResponse GetColumnExtractConfig(1: GetColumnExtractConfigRequest req) (api.get = '/api/observability/v1/column_extract_config')
+    GetAgentMetadataResponse GetAgentMetadata(1: GetAgentMetadataRequest req) (api.get = '/api/observability/v1/trace/agent/metadata')
 }

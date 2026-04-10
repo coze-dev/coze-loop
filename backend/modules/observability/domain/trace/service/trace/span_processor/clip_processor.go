@@ -7,11 +7,17 @@ import (
 	"context"
 	"unicode/utf8"
 
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-type ClipProcessor struct{}
+type ClipProcessor struct {
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo
+	settings                Settings
+}
 
 const (
 	clipProcessorPlainTextMaxLength = 10 * 1024
@@ -20,24 +26,51 @@ const (
 )
 
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
-	for _, span := range spans {
-		if span == nil {
+	var cfg *entity.ColumnExtractConfig
+	if c.columnExtractConfigRepo != nil {
+		configs, err := c.columnExtractConfigRepo.ListColumnExtractConfigs(ctx, repo.ListColumnExtractConfigParam{
+			WorkspaceID:  c.settings.WorkspaceId,
+			PlatformType: string(c.settings.PlatformType),
+			SpanListType: string(c.settings.SpanListType),
+		})
+		if err != nil {
+			logs.CtxWarn(ctx, "fail to list column extract configs, err: %v", err)
+		} else if len(configs) > 0 {
+			cfg = entity.ColumnExtractConfigs(configs).SelectBest(c.settings.WorkspaceId, c.settings.AgentName, string(c.settings.PlatformType), string(c.settings.SpanListType))
+		}
+	}
+
+	for _, s := range spans {
+		if s == nil {
 			continue
 		}
-		span.Input = clipSpanField(span.Input)
-		span.Output = clipSpanField(span.Output)
+		if cfg != nil {
+			if extracted := cfg.Extract(s.Input, "input"); extracted != "" {
+				s.Input = extracted
+			}
+			if extracted := cfg.Extract(s.Output, "output"); extracted != "" {
+				s.Output = extracted
+			}
+		}
+		s.Input = clipSpanField(s.Input)
+		s.Output = clipSpanField(s.Output)
 	}
 	return spans, nil
 }
 
-type ClipProcessorFactory struct{}
-
-func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
-	return &ClipProcessor{}, nil
+type ClipProcessorFactory struct {
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo
 }
 
-func NewClipProcessorFactory() Factory {
-	return new(ClipProcessorFactory)
+func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
+	return &ClipProcessor{
+		columnExtractConfigRepo: c.columnExtractConfigRepo,
+		settings:                set,
+	}, nil
+}
+
+func NewClipProcessorFactory(columnExtractConfigRepo repo.IColumnExtractConfigRepo) Factory {
+	return &ClipProcessorFactory{columnExtractConfigRepo: columnExtractConfigRepo}
 }
 
 func clipSpanField(content string) string {
