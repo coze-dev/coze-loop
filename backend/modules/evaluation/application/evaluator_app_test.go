@@ -2094,7 +2094,10 @@ func TestEvaluatorHandlerImpl_ComplexBusinessScenarios(t *testing.T) {
 					Return(&benefit.CheckEvaluatorBenefitResult{DenyReason: nil}, nil).
 					Times(1)
 
-				// 3. 文件 URI 转 URL
+				// 3. URI检查
+				mockConfiger.EXPECT().CheckURIEnabled(gomock.Any()).Return(false)
+
+				// 4. 文件 URI 转 URL
 				mockFileProvider.EXPECT().
 					MGetFileURL(gomock.Any(), []string{"input-image-uri"}).
 					Return(map[string]string{"input-image-uri": "https://example.com/image.jpg"}, nil).
