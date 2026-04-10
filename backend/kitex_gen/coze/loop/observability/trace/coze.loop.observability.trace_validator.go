@@ -618,7 +618,10 @@ func (p *ListTrajectoryResponse) IsValid() error {
 	}
 	return nil
 }
-func (p *ListMetadataRequest) IsValid() error {
+func (p *ColumnExtractRule) IsValid() error {
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -626,10 +629,42 @@ func (p *ListMetadataRequest) IsValid() error {
 	}
 	return nil
 }
-func (p *MetadataItemInfo) IsValid() error {
+func (p *UpsertColumnExtractConfigResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
 	return nil
 }
-func (p *ListMetadataResponse) IsValid() error {
+func (p *GetColumnExtractConfigRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetColumnExtractConfigResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AgentMetadata) IsValid() error {
+	return nil
+}
+func (p *GetAgentMetadataRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetAgentMetadataResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)

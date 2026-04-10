@@ -39,6 +39,9 @@ type Client interface {
 	ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error)
 	ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (r *trace.ListThreadChatResponse, err error)
 	GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error)
+	UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error)
+	GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.GetColumnExtractConfigResponse, err error)
+	GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (r *trace.GetAgentMetadataResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -190,9 +193,19 @@ func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.Lis
 	return p.kClient.ListTrajectory(ctx, req)
 }
 
-func (p *kTraceServiceClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error) {
+func (p *kTraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.ListMetadata(ctx, req)
+	return p.kClient.UpsertColumnExtractConfig(ctx, req)
+}
+
+func (p *kTraceServiceClient) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.GetColumnExtractConfigResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetColumnExtractConfig(ctx, req)
+}
+
+func (p *kTraceServiceClient) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (r *trace.GetAgentMetadataResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAgentMetadata(ctx, req)
 }
 
 func (p *kTraceServiceClient) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error) {

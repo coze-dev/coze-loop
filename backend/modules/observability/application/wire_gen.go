@@ -101,7 +101,8 @@ func InitTraceApplication(db2 db.Provider, ckDb ck.Provider, redis3 redis.Cmdabl
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iColumnExtractConfigDao := mysql.NewColumnExtractConfigDaoImpl(db2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, iColumnExtractConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +163,8 @@ func InitOpenAPIApplication(mqFactory mq.IFactory, configFactory conf.IConfigLoa
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iColumnExtractConfigDao := mysql.NewColumnExtractConfigDaoImpl(db2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, iColumnExtractConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -249,7 +251,8 @@ func InitTraceIngestionApplication(configFactory conf.IConfigLoaderFactory, stor
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idGenerator)
+	iColumnExtractConfigDao := mysql.NewColumnExtractConfigDaoImpl(db2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, storageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, iColumnExtractConfigDao, idGenerator)
 	if err != nil {
 		return nil, err
 	}
@@ -303,7 +306,8 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 		return nil, err
 	}
 	iTrajectoryConfigDao := mysql.NewTrajectoryConfigDaoImpl(db2)
-	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, idgen2)
+	iColumnExtractConfigDao := mysql.NewColumnExtractConfigDaoImpl(db2)
+	iTraceRepo, err := provideTraceRepo(iTraceConfig, iStorageProvider, iSpansRedisDao, ckDb, iSpanProducer, iTrajectoryConfigDao, iColumnExtractConfigDao, idgen2)
 	if err != nil {
 		return nil, err
 	}
@@ -341,14 +345,14 @@ var (
 		NewInitTaskProcessor, service3.NewTaskServiceImpl, repo.NewTaskRepoImpl, mysql.NewTaskDaoImpl, redis2.NewTaskDAO, redis2.NewTaskRunDAO, mysql.NewTaskRunDaoImpl, producer.NewBackfillProducerImpl, NewScheduledTask,
 	)
 	traceDomainSet = wire.NewSet(service.NewTraceServiceImpl, service.NewTraceExportServiceImpl, provideTraceRepo, storage.NewTraceStorageProvider, metrics2.NewTraceMetricsImpl, collector.NewEventCollectorProvider, producer.NewTraceProducerImpl, producer.NewAnnotationProducerImpl, producer.NewSpanWithAnnotationProducerImpl, file.NewFileRPCProvider, NewTraceConfigLoader,
-		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, span_context_extractor.NewSpanContextExtractor, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl, taskDomainSet,
+		NewTraceProcessorBuilder, config.NewTraceConfigCenter, tenant.NewTenantProvider, workspace.NewWorkspaceProvider, span_context_extractor.NewSpanContextExtractor, evaluator.NewEvaluatorRPCProvider, NewDatasetServiceAdapter, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl, mysql.NewColumnExtractConfigDaoImpl, taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication, repo.NewViewRepoImpl, mysql.NewViewDaoImpl, auth.NewAuthProvider, user.NewUserRPCProvider, tag.NewTagRPCProvider, workflow.NewWorkflowProvider, time_range.NewTimeRangeProvider, traceDomainSet,
 	)
 	traceIngestionSet = wire.NewSet(
 		NewIngestionApplication, service.NewIngestionServiceImpl, provideTraceRepo, config.NewTraceConfigCenter, NewTraceConfigLoader,
-		NewIngestionCollectorFactory, producer.NewSpanWithAnnotationProducerImpl, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl,
+		NewIngestionCollectorFactory, producer.NewSpanWithAnnotationProducerImpl, redis2.NewSpansRedisDaoImpl, mysql.NewTrajectoryConfigDaoImpl, mysql.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication, auth.NewAuthProvider, traceDomainSet, time_range.NewTimeRangeProvider,
@@ -369,13 +373,14 @@ func provideTraceRepo(
 	ckProvider ck.Provider,
 	spanProducer mq2.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
+	columnExtractConfDao mysql.IColumnExtractConfigDao,
 	idGenerator idgen.IIDGenerator,
 ) (repo2.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
+	return repo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, columnExtractConfDao, idGenerator, options...)
 }
 
 func provideTraceMetricRepo(

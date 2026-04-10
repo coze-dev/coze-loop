@@ -205,3 +205,32 @@ func (mr *MockITraceRepoMockRecorder) UpsertTrajectoryConfig(arg0, arg1 any) *go
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrajectoryConfig", reflect.TypeOf((*MockITraceRepo)(nil).UpsertTrajectoryConfig), arg0, arg1)
 }
+
+// UpsertColumnExtractConfig mocks base method.
+func (m *MockITraceRepo) UpsertColumnExtractConfig(arg0 context.Context, arg1 *repo.UpsertColumnExtractConfigParam) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertColumnExtractConfig", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpsertColumnExtractConfig indicates an expected call of UpsertColumnExtractConfig.
+func (mr *MockITraceRepoMockRecorder) UpsertColumnExtractConfig(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertColumnExtractConfig", reflect.TypeOf((*MockITraceRepo)(nil).UpsertColumnExtractConfig), arg0, arg1)
+}
+
+// GetColumnExtractConfig mocks base method.
+func (m *MockITraceRepo) GetColumnExtractConfig(arg0 context.Context, arg1 repo.GetColumnExtractConfigParam) (*entity.ColumnExtractConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetColumnExtractConfig", arg0, arg1)
+	ret0, _ := ret[0].(*entity.ColumnExtractConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetColumnExtractConfig indicates an expected call of GetColumnExtractConfig.
+func (mr *MockITraceRepoMockRecorder) GetColumnExtractConfig(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetColumnExtractConfig", reflect.TypeOf((*MockITraceRepo)(nil).GetColumnExtractConfig), arg0, arg1)
+}
