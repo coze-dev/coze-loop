@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
+	"github.com/coze-dev/coze-loop/backend/infra/db"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/gorm_gen/model"
 	compare_model "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/experiment/ck/model"
@@ -234,6 +235,7 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 	}
 
 	for _, f := range cond.MapCond.EvalTargetDataFilters {
+		f.Key = db.EscapeSQLData(f.Key)
 		switch f.Op {
 		case "=":
 			// 删除 mapContains 条件
@@ -254,6 +256,7 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 		}
 	}
 	for _, f := range cond.MapCond.EvaluatorScoreFilters {
+		f.Key = db.EscapeSQLData(f.Key)
 		switch f.Op {
 		case "=":
 			floatValue, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
@@ -317,6 +320,7 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 		}
 	}
 	for _, f := range cond.MapCond.AnnotationFloatFilters {
+		f.Key = db.EscapeSQLData(f.Key)
 		switch f.Op {
 		case "=":
 			floatValue, err := strconv.ParseFloat(fmt.Sprintf("%v", f.Values[0]), 64)
@@ -350,6 +354,7 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 	}
 
 	for _, f := range cond.MapCond.AnnotationStringFilters {
+		f.Key = db.EscapeSQLData(f.Key)
 		switch f.Op {
 		case "=":
 			// 删除 mapContains 条件
@@ -380,6 +385,7 @@ func (d *exptTurnResultFilterDAOImpl) buildMapFieldConditions(cond *ExptTurnResu
 		}
 	}
 	for _, f := range cond.MapCond.EvalTargetMetricsFilters {
+		f.Key = db.EscapeSQLData(f.Key)
 		switch f.Op {
 		case "=":
 			intValue, err := strconv.ParseInt(fmt.Sprintf("%v", f.Values[0]), 10, 64)
@@ -455,6 +461,7 @@ func (d *exptTurnResultFilterDAOImpl) buildKeywordSearchConditions(ctx context.C
 	// 处理 EvalTargetDataFilters
 	if len(cond.KeywordSearch.EvalTargetDataFilters) > 0 {
 		for _, f := range cond.KeywordSearch.EvalTargetDataFilters {
+			f.Key = db.EscapeSQLData(f.Key)
 			*keywordCond += " OR "
 			// 删除 mapContains 条件
 			*keywordCond += fmt.Sprintf("etrf.eval_target_data['%s'] LIKE ?", f.Key)
