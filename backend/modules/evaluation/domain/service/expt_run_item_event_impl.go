@@ -161,6 +161,9 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 		if event.MaxRetryTimes > 0 {
 			needRetry = event.RetryTimes < event.MaxRetryTimes
 		}
+		if event.CtxForceNoRetry(ctx) {
+			needRetry = false
+		}
 
 		defer func() {
 			code, stable, _ := errno.ParseStatusError(nextErr)
@@ -197,7 +200,10 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 
 			clone.RetryTimes += 1
 
-			return e.publisher.PublishExptRecordEvalEvent(ctx, clone, gptr.Of(retryConf.GetRetryInterval()), nil)
+			return e.publisher.PublishExptRecordEvalEvent(ctx, clone, gptr.Of(retryConf.GetRetryInterval()), func(ne *entity.ExptItemEvalEvent) {
+				ne.AsyncReportTrigger = false
+				ne.AsyncEvaluatorReportTrigger = false
+			})
 		}
 
 		return nil

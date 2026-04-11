@@ -5535,9 +5535,29 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					EvaluatorVersionID: 9,
 				}, nil)
 				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(errors.New("pub failed"))
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).Return(errors.New("pub failed"))
 			},
 			wantErr: -1,
+		},
+		{
+			name: "success with nil event skip publish",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+				Output: &spi.InvokeEvaluatorOutputData{
+					EvaluatorResult_: &spi.InvokeEvaluatorResult_{Score: gptr.Of(float64(0.8))},
+				},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, evaluatorSvc *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(&entity.EvalAsyncCtx{
+					Event:              nil,
+					AsyncUnixMS:        time.Now().UnixMilli() - 10,
+					EvaluatorVersionID: 9,
+				}, nil)
+				evaluatorSvc.EXPECT().ReportEvaluatorInvokeResult(gomock.Any(), gomock.Any()).Return(nil)
+			},
 		},
 		{
 			name: "success",
@@ -5565,7 +5585,14 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 					assert.GreaterOrEqual(t, param.OutputData.TimeConsumingMS, int64(0))
 					return nil
 				})
-				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Nil(), gomock.Any()).Return(nil)
+				publisher.EXPECT().PublishExptRecordEvalEvent(gomock.Any(), gomock.Any(), gomock.Not(gomock.Nil()), gomock.Any()).DoAndReturn(
+					func(_ context.Context, ev *entity.ExptItemEvalEvent, _ *time.Duration, modifyFunc func(*entity.ExptItemEvalEvent)) error {
+						if modifyFunc != nil {
+							modifyFunc(ev)
+						}
+						assert.True(t, ev.AsyncEvaluatorReportTrigger)
+						return nil
+					})
 			},
 		},
 	}
