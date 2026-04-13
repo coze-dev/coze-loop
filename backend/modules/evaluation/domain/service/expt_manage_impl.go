@@ -226,12 +226,14 @@ func (e *ExptMangerImpl) fillExperimentExptSourceForQuery(ctx context.Context, e
 		if ex == nil {
 			continue
 		}
+		var existingTimeRange *entity.TaskTimeRangeDO
+		if ex.ExptSource != nil {
+			existingTimeRange = ex.ExptSource.TimeRange
+		}
 		ex.ExptSource = &entity.ExptSource{
 			SourceType: ex.SourceType,
 			SourceID:   ex.SourceID,
-		}
-		if ex.EvalConf != nil && ex.EvalConf.TimeRange != nil {
-			ex.ExptSource.TimeRange = ex.EvalConf.TimeRange
+			TimeRange:  existingTimeRange,
 		}
 	}
 	return e.enrichExperimentExptSourceFromPipeline(ctx, expts, spaceID)
@@ -352,10 +354,14 @@ func (e *ExptMangerImpl) fillExptTemplates(ctx context.Context, expts []*entity.
 			continue
 		}
 		if tpl, ok := templateMap[ex.ExptTemplateMeta.ID]; ok {
-			// 只回填模板的 Meta 到 Experiment.ExptTemplateMeta，避免在 Experiment 上挂完整模板对象
 			ex.ExptTemplateMeta = tpl.Meta
+			if tpl.ExptSource != nil && tpl.ExptSource.TimeRange != nil {
+				if ex.ExptSource == nil {
+					ex.ExptSource = &entity.ExptSource{}
+				}
+				ex.ExptSource.TimeRange = tpl.ExptSource.TimeRange
+			}
 		} else {
-			// 如果模板在数据库中查不到了（已被删除），将 ExptTemplateMeta 设置为 nil
 			ex.ExptTemplateMeta = nil
 		}
 	}
@@ -885,28 +891,6 @@ func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, se
 	e.lwt.SetWriteFlag(ctx, platestwrite.ResourceTypeExperiment, expt.ID)
 
 	return nil
-}
-
-func (e *ExptMangerImpl) InjectExptConfTimeRange(ctx context.Context, exptID int64, startTime, endTime *int64) {
-	if startTime == nil && endTime == nil {
-		return
-	}
-	expts, err := e.exptRepo.MGetBasicByID(ctx, []int64{exptID})
-	if err != nil || len(expts) == 0 {
-		logs.CtxError(ctx, "[InjectExptConfTimeRange] get expt fail, expt_id: %d, err: %v", exptID, err)
-		return
-	}
-	ex := expts[0]
-	if ex.EvalConf == nil {
-		ex.EvalConf = &entity.EvaluationConfiguration{}
-	}
-	ex.EvalConf.TimeRange = &entity.TaskTimeRangeDO{
-		StartTime: startTime,
-		EndTime:   endTime,
-	}
-	if err := e.exptRepo.Update(ctx, ex); err != nil {
-		logs.CtxError(ctx, "[InjectExptConfTimeRange] update expt fail, expt_id: %d, err: %v", exptID, err)
-	}
 }
 
 func (e *ExptMangerImpl) Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {

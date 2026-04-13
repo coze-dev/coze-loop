@@ -44,11 +44,7 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	// 须在 buildTemplateConfForCreate 之前设置：ExptSource 会写入 template_conf（expt_source）
 	if req.ExptSource != nil {
-		exptSourceDTO := req.ExptSource
-		param.ExptSource = &entity.ExptSource{
-			SourceType: entity.SourceType(gptr.Indirect(exptSourceDTO.SourceType)),
-			SourceID:   gptr.Indirect(exptSourceDTO.SourceID),
-		}
+		param.ExptSource = exptSourceDTO2DO(req.ExptSource)
 	}
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
@@ -616,6 +612,17 @@ func taskTimeRangeDTO2DO(dto *domain_expt.TaskTimeRange) *entity.TaskTimeRangeDO
 	return &entity.TaskTimeRangeDO{
 		StartTime: dto.StartTime,
 		EndTime:   dto.EndTime,
+	}
+}
+
+func exptSourceDTO2DO(dto *domain_expt.ExptSource) *entity.ExptSource {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ExptSource{
+		SourceType: entity.SourceType(gptr.Indirect(dto.SourceType)),
+		SourceID:   gptr.Indirect(dto.SourceID),
+		TimeRange:  taskTimeRangeDTO2DO(dto.TimeRange),
 	}
 }
 

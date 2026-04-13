@@ -207,7 +207,6 @@ type EvaluationConfiguration struct {
 	ConnectorConf Connector
 	ItemConcurNum *int
 	ItemRetryNum  *int
-	TimeRange     *TaskTimeRangeDO `json:"time_range,omitempty"`
 }
 
 type Connector struct {

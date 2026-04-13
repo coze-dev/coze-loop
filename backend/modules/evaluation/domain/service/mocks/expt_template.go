@@ -176,6 +176,20 @@ func (mr *MockIExptTemplateManagerMockRecorder) UpdateExptInfo(ctx, templateID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptInfo", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateExptInfo), ctx, templateID, spaceID, exptID, exptStatus, adjustCount, latestExptStartTime)
 }
 
+// UpdateExptSourceTimeRange mocks base method.
+func (m *MockIExptTemplateManager) UpdateExptSourceTimeRange(ctx context.Context, templateID, spaceID int64, timeRange *entity.TaskTimeRangeDO) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateExptSourceTimeRange", ctx, templateID, spaceID, timeRange)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateExptSourceTimeRange indicates an expected call of UpdateExptSourceTimeRange.
+func (mr *MockIExptTemplateManagerMockRecorder) UpdateExptSourceTimeRange(ctx, templateID, spaceID, timeRange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateExptSourceTimeRange", reflect.TypeOf((*MockIExptTemplateManager)(nil).UpdateExptSourceTimeRange), ctx, templateID, spaceID, timeRange)
+}
+
 // UpdateMeta mocks base method.
 func (m *MockIExptTemplateManager) UpdateMeta(ctx context.Context, param *entity.UpdateExptTemplateMetaParam, session *entity.Session) (*entity.ExptTemplate, error) {
 	m.ctrl.T.Helper()

@@ -514,10 +514,6 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	if req.TimeRange != nil && cresp.GetExperiment() != nil {
-		e.manager.InjectExptConfTimeRange(ctx, gptr.Indirect(cresp.GetExperiment().ID), req.TimeRange.StartTime, req.TimeRange.EndTime)
-	}
-
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
 		WorkspaceID:  gptr.Of(req.GetWorkspaceID()),
 		ExptID:       cresp.GetExperiment().ID,
@@ -539,6 +535,13 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed after SubmitExperiment, template_id: %v, expt_id: %v, err: %v",
 				req.GetExptTemplateID(), exptID, err)
+		}
+		if req.TimeRange != nil {
+			tr := &entity.TaskTimeRangeDO{StartTime: req.TimeRange.StartTime, EndTime: req.TimeRange.EndTime}
+			if err := e.templateManager.UpdateExptSourceTimeRange(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), tr); err != nil {
+				logs.CtxError(ctx, "[ExptEval] UpdateExptSourceTimeRange failed after SubmitExperiment, template_id: %v, err: %v",
+					req.GetExptTemplateID(), err)
+			}
 		}
 	}
 

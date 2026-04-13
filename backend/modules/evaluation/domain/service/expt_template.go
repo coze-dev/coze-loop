@@ -20,6 +20,7 @@ type IExptTemplateManager interface {
 	// adjustCount: 实验数量的增量（创建实验时为 +1，删除实验时为 -1，状态变更时为 0）
 	// latestExptStartTime: 最新实验开始时间（毫秒时间戳），创建实验时传入，其他场景传 nil
 	UpdateExptInfo(ctx context.Context, templateID, spaceID, exptID int64, exptStatus entity.ExptStatus, adjustCount int64, latestExptStartTime *int64) error
+	UpdateExptSourceTimeRange(ctx context.Context, templateID, spaceID int64, timeRange *entity.TaskTimeRangeDO) error
 	Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error
 	List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error)
 	// ListOnline 查询在线实验模板（通过 Task 查询）
