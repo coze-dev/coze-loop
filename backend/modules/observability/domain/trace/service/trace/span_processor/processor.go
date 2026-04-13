@@ -21,6 +21,7 @@ type Settings struct {
 	SpanDoubleCheck       bool
 	QueryTraceID          string
 	QueryLogID            string
+	QueryFilter           *loop_span.FilterFields
 	Scene                 entity.ProcessorScene
 }
 

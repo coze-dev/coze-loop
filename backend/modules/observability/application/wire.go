@@ -71,6 +71,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/span_context_extractor"
 	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
@@ -109,6 +110,7 @@ var (
 		obconfig.NewTraceConfigCenter,
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
+		span_context_extractor.NewSpanContextExtractor,
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
