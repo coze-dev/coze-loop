@@ -601,29 +601,6 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 	return nil
 }
 
-func (e *ExptTemplateManagerImpl) UpdateExptSourceTimeRange(ctx context.Context, templateID, spaceID int64, timeRange *entity.TaskTimeRangeDO) error {
-	template, err := e.templateRepo.GetByID(ctx, templateID, &spaceID)
-	if err != nil {
-		return errorx.Wrapf(err, "get template fail, template_id: %d", templateID)
-	}
-	if template.TemplateConf == nil {
-		template.TemplateConf = &entity.ExptTemplateConfiguration{}
-	}
-	if template.TemplateConf.ExptSource == nil {
-		template.TemplateConf.ExptSource = &entity.ExptSource{}
-	}
-	template.TemplateConf.ExptSource.TimeRange = timeRange
-
-	confBytes, err := json.Marshal(template.TemplateConf)
-	if err != nil {
-		return errorx.Wrapf(err, "marshal TemplateConf fail, template_id: %d", templateID)
-	}
-	if err := e.templateRepo.UpdateFields(ctx, templateID, map[string]any{"template_conf": confBytes}); err != nil {
-		return errorx.Wrapf(err, "update TemplateConf fail, template_id: %d", templateID)
-	}
-	return nil
-}
-
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
 	return e.templateRepo.Delete(ctx, templateID, spaceID)
 }

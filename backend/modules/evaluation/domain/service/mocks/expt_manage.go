@@ -90,6 +90,18 @@ func (mr *MockIExptManagerMockRecorder) Clone(ctx, exptID, spaceID, session any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockIExptManager)(nil).Clone), ctx, exptID, spaceID, session)
 }
 
+// InjectExptConfTimeRange mocks base method.
+func (m *MockIExptManager) InjectExptConfTimeRange(ctx context.Context, exptID int64, timeRange *entity.TaskTimeRangeDO) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InjectExptConfTimeRange", ctx, exptID, timeRange)
+}
+
+// InjectExptConfTimeRange indicates an expected call of InjectExptConfTimeRange.
+func (mr *MockIExptManagerMockRecorder) InjectExptConfTimeRange(ctx, exptID, timeRange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectExptConfTimeRange", reflect.TypeOf((*MockIExptManager)(nil).InjectExptConfTimeRange), ctx, exptID, timeRange)
+}
+
 // CompleteExpt mocks base method.
 func (m *MockIExptManager) CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	m.ctrl.T.Helper()

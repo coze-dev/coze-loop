@@ -536,13 +536,11 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed after SubmitExperiment, template_id: %v, expt_id: %v, err: %v",
 				req.GetExptTemplateID(), exptID, err)
 		}
-		if req.TimeRange != nil {
-			tr := &entity.TaskTimeRangeDO{StartTime: req.TimeRange.StartTime, EndTime: req.TimeRange.EndTime}
-			if err := e.templateManager.UpdateExptSourceTimeRange(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), tr); err != nil {
-				logs.CtxError(ctx, "[ExptEval] UpdateExptSourceTimeRange failed after SubmitExperiment, template_id: %v, err: %v",
-					req.GetExptTemplateID(), err)
-			}
-		}
+	}
+
+	if req.TimeRange != nil && cresp.GetExperiment() != nil {
+		tr := &entity.TaskTimeRangeDO{StartTime: req.TimeRange.StartTime, EndTime: req.TimeRange.EndTime}
+		e.manager.InjectExptConfTimeRange(ctx, gptr.Indirect(cresp.GetExperiment().ID), tr)
 	}
 
 	return &expt.SubmitExperimentResponse{
