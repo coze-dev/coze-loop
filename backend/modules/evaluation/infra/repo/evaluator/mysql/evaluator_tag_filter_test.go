@@ -22,12 +22,12 @@ func TestEvaluatorTagDAOImpl_GetSourceIDsByFilterConditions(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name                string
-		tagType             int32
-		filterOption        *entity.EvaluatorFilterOption
-		expectedErr         bool
-		description         string
-		expectedPluckCalls  int // GetSourceIDsByFilterConditions 多次单表 DISTINCT 查询次数（mock 空结果，不触发 Name 排序 Find）
+		name               string
+		tagType            int32
+		filterOption       *entity.EvaluatorFilterOption
+		expectedErr        bool
+		description        string
+		expectedPluckCalls int // GetSourceIDsByFilterConditions 多次单表 DISTINCT 查询次数（mock 空结果，不触发 Name 排序 Find）
 	}{
 		{
 			name:               "nil filter option",
