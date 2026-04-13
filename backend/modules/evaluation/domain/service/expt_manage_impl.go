@@ -230,6 +230,9 @@ func (e *ExptMangerImpl) fillExperimentExptSourceForQuery(ctx context.Context, e
 			SourceType: ex.SourceType,
 			SourceID:   ex.SourceID,
 		}
+		if ex.EvalConf != nil && ex.EvalConf.TimeRange != nil {
+			ex.ExptSource.TimeRange = ex.EvalConf.TimeRange
+		}
 	}
 	return e.enrichExperimentExptSourceFromPipeline(ctx, expts, spaceID)
 }
@@ -882,6 +885,28 @@ func (e *ExptMangerImpl) Create(ctx context.Context, expt *entity.Experiment, se
 	e.lwt.SetWriteFlag(ctx, platestwrite.ResourceTypeExperiment, expt.ID)
 
 	return nil
+}
+
+func (e *ExptMangerImpl) InjectExptConfTimeRange(ctx context.Context, exptID int64, startTime, endTime *int64) {
+	if startTime == nil && endTime == nil {
+		return
+	}
+	expts, err := e.exptRepo.MGetBasicByID(ctx, []int64{exptID})
+	if err != nil || len(expts) == 0 {
+		logs.CtxError(ctx, "[InjectExptConfTimeRange] get expt fail, expt_id: %d, err: %v", exptID, err)
+		return
+	}
+	ex := expts[0]
+	if ex.EvalConf == nil {
+		ex.EvalConf = &entity.EvaluationConfiguration{}
+	}
+	ex.EvalConf.TimeRange = &entity.TaskTimeRangeDO{
+		StartTime: startTime,
+		EndTime:   endTime,
+	}
+	if err := e.exptRepo.Update(ctx, ex); err != nil {
+		logs.CtxError(ctx, "[InjectExptConfTimeRange] update expt fail, expt_id: %d, err: %v", exptID, err)
+	}
 }
 
 func (e *ExptMangerImpl) Get(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error) {

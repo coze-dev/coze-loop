@@ -46,6 +46,12 @@ type ExptSource struct {
 	SpanFilterFields *SpanFilterFieldsDO // 从 Pipeline data_reflow 节点 task.rule.span_filters 提取
 	Scheduler        *ExptSchedulerDO    // 从 Pipeline.Scheduler 提取
 	Sampler          *ExptSamplerDO      // 从 Pipeline data_reflow 节点 task.rule.sampler 或 Task.Rule.Sampler 提取
+	TimeRange        *TaskTimeRangeDO    // 生效时间范围
+}
+
+type TaskTimeRangeDO struct {
+	StartTime *int64 `json:"start_time,omitempty"`
+	EndTime   *int64 `json:"end_time,omitempty"`
 }
 
 // ExptSamplerDO 采样配置，与 observability task.Sampler / pipeline task.rule.sampler 对齐

@@ -34,6 +34,8 @@ type IExptConfigManager interface {
 	MGet(ctx context.Context, exptIDs []int64, spaceID int64, session *entity.Session) ([]*entity.Experiment, error)
 
 	Clone(ctx context.Context, exptID, spaceID int64, session *entity.Session) (*entity.Experiment, error)
+
+	InjectExptConfTimeRange(ctx context.Context, exptID int64, startTime, endTime *int64)
 }
 
 // IExptExecutionManager 实验执行控制接口（负责实验的运行、监控和状态管理）

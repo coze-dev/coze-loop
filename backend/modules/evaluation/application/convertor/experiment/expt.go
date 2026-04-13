@@ -419,10 +419,14 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(es)
 	} else {
 		st := domain_expt.SourceType(experiment.SourceType)
-		res.SetExptSource(&domain_expt.ExptSource{
+		fallbackSource := &domain_expt.ExptSource{
 			SourceType: &st,
 			SourceID:   gptr.Of(experiment.SourceID),
-		})
+		}
+		if experiment.EvalConf != nil && experiment.EvalConf.TimeRange != nil {
+			fallbackSource.TimeRange = taskTimeRangeDO2DTO(experiment.EvalConf.TimeRange)
+		}
+		res.SetExptSource(fallbackSource)
 	}
 
 	return res

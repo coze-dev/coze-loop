@@ -62,18 +62,3 @@ type Edge struct {
 	Source string `json:"source,omitempty"`
 	Target string `json:"target,omitempty"`
 }
-
-// PipelineRun Pipeline 运行记录，参考 pipelinet.PipelineRunBrief 定义
-type PipelineRun struct {
-	ID         *int64  `json:"id,omitempty"`
-	PipelineID *int64  `json:"pipelineID,omitempty"`
-	VersionID  *int64  `json:"versionID,omitempty"`
-	Status     *string `json:"status,omitempty"`
-	SpaceID    *int64  `json:"spaceID,omitempty"`
-	CreatedBy  *string `json:"createdBy,omitempty"`
-	CreatedAt  *int64  `json:"createdAt,omitempty"`
-	UpdatedBy  *string `json:"updatedBy,omitempty"`
-	UpdatedAt  *int64  `json:"updatedAt,omitempty"`
-	StartedAt  *int64  `json:"startedAt,omitempty"`
-	EndedAt    *int64  `json:"endedAt,omitempty"`
-}

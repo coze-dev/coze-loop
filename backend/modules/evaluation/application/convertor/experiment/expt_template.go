@@ -493,6 +493,9 @@ func ExptSourceDO2DTO(src *entity.ExptSource) *domain_expt.ExptSource {
 	if src.Sampler != nil {
 		exptSource.Sampler = exptSamplerDO2DTO(src.Sampler)
 	}
+	if src.TimeRange != nil {
+		exptSource.TimeRange = taskTimeRangeDO2DTO(src.TimeRange)
+	}
 	return exptSource
 }
 
@@ -594,6 +597,26 @@ func exptSchedulerDO2DTO(do *entity.ExptSchedulerDO) *domain_expt.Scheduler {
 	dto.StartTime = do.StartTime
 	dto.EndTime = do.EndTime
 	return dto
+}
+
+func taskTimeRangeDO2DTO(do *entity.TaskTimeRangeDO) *domain_expt.TaskTimeRange {
+	if do == nil {
+		return nil
+	}
+	dto := domain_expt.NewTaskTimeRange()
+	dto.StartTime = do.StartTime
+	dto.EndTime = do.EndTime
+	return dto
+}
+
+func taskTimeRangeDTO2DO(dto *domain_expt.TaskTimeRange) *entity.TaskTimeRangeDO {
+	if dto == nil {
+		return nil
+	}
+	return &entity.TaskTimeRangeDO{
+		StartTime: dto.StartTime,
+		EndTime:   dto.EndTime,
+	}
 }
 
 // ConvertUpdateExptTemplateMetaReq 转换更新实验模板 Meta 请求为实体参数

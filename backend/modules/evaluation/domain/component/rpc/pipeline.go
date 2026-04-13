@@ -14,7 +14,6 @@ import (
 //go:generate mockgen -destination=./mocks/pipeline_list_adapter.go -package=mocks . IPipelineListAdapter
 type IPipelineListAdapter interface {
 	ListPipelineFlow(ctx context.Context, req *ListPipelineFlowRequest) (*ListPipelineFlowResponse, error)
-	ListPipelineRun(ctx context.Context, req *ListPipelineRunRequest) (*ListPipelineRunResponse, error)
 	// PipelineNodeFinishCallback Pipeline 节点完成时回调 ml_flow（例如同步节点状态）；首参为评测实验 ID（ExperimentID）
 	PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error
 }
@@ -33,17 +32,4 @@ type ListPipelineFlowRequest struct {
 type ListPipelineFlowResponse struct {
 	Total int64
 	Items []*entity.Pipeline
-}
-
-// ListPipelineRunRequest ListPipelineRun 查询请求参数
-type ListPipelineRunRequest struct {
-	PipelineID *int64
-	SpaceID    *int64
-	Page       *int32
-	PageSize   *int32
-}
-
-// ListPipelineRunResponse ListPipelineRun 查询响应
-type ListPipelineRunResponse struct {
-	Items []*entity.PipelineRun
 }

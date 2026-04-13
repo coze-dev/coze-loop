@@ -508,9 +508,14 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
+
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
+	}
+
+	if req.TimeRange != nil && cresp.GetExperiment() != nil {
+		e.manager.InjectExptConfTimeRange(ctx, gptr.Indirect(cresp.GetExperiment().ID), req.TimeRange.StartTime, req.TimeRange.EndTime)
 	}
 
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
