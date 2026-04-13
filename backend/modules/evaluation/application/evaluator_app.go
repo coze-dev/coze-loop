@@ -752,7 +752,9 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, 
 		return &evaluatorservice.BatchGetEvaluatorVersionIDsResponse{}, nil
 	}
 
-	pairs := make([][2]interface{}, 0, len(pairsIn))
+	builtinIDs := make([]int64, 0)
+	builtinIDSeen := make(map[int64]struct{})
+	normalPairs := make([][2]interface{}, 0)
 	for _, p := range pairsIn {
 		if p == nil {
 			continue
@@ -762,19 +764,38 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, 
 		if eid <= 0 || ver == "" {
 			continue
 		}
-		pairs = append(pairs, [2]interface{}{eid, ver})
+		if ver == evaluatordto.EvaluatorVersionTypeBuiltinVisible {
+			if _, ok := builtinIDSeen[eid]; !ok {
+				builtinIDSeen[eid] = struct{}{}
+				builtinIDs = append(builtinIDs, eid)
+			}
+			continue
+		}
+		normalPairs = append(normalPairs, [2]interface{}{eid, ver})
 	}
 
-	var dos []*entity.Evaluator
-	if len(pairs) > 0 {
-		dos, err = e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, pairs)
+	var dosBuiltin, dosNormal []*entity.Evaluator
+	if len(builtinIDs) > 0 {
+		dosBuiltin, err = e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(normalPairs) > 0 {
+		dosNormal, err = e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	idVer2DO := make(map[string]*entity.Evaluator, len(dos))
-	for _, ev := range dos {
+	idVer2DO := make(map[string]*entity.Evaluator, len(dosBuiltin)+len(dosNormal))
+	for _, ev := range dosBuiltin {
+		if ev == nil {
+			continue
+		}
+		idVer2DO[evaluatorIDVersionPairKey(ev.ID, evaluatordto.EvaluatorVersionTypeBuiltinVisible)] = ev
+	}
+	for _, ev := range dosNormal {
 		if ev == nil {
 			continue
 		}

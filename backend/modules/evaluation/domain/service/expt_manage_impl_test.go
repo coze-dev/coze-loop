@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"go.uber.org/mock/gomock"
@@ -30,6 +31,7 @@ import (
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
@@ -1532,5 +1534,84 @@ func TestExptMangerImpl_fillExptTemplates(t *testing.T) {
 		assert.NotNil(t, expts[0].ExptTemplateMeta)
 		// 第二个模板为nil，对应的实验的ExptTemplateMeta应该被置为nil
 		assert.Nil(t, expts[1].ExptTemplateMeta)
+	})
+}
+
+func TestExptMangerImpl_lockKeyHelpers(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+	assert.Equal(t, "expt_run_mutex_lock:42", mgr.makeExptMutexLockKey(42))
+	assert.Equal(t, "expt_completing_mutex_lock:1:2", mgr.makeExptCompletingLockKey(1, 2))
+	assert.Equal(t, "expt_online_daemon_lock:3:4", mgr.makeOnlineExptDaemonLockKey(3, 4))
+	assert.Equal(t, "expt_online_data_lock:5:6", mgr.makeOnlineExptDataLockKey(5, 6))
+}
+
+func TestExptMangerImpl_computeDaemonLockMaxHold(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+
+	t.Run("nil_expt", func(t *testing.T) {
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(nil))
+	})
+
+	t.Run("StartAt_nil", func(t *testing.T) {
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{MaxAliveTime: 3600000}))
+	})
+
+	t.Run("MaxAliveTime_非正", func(t *testing.T) {
+		now := time.Now()
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(now),
+			MaxAliveTime: 0,
+		}))
+	})
+
+	t.Run("已超过deadline返回一分钟兜底", func(t *testing.T) {
+		past := time.Now().Add(-2 * time.Hour)
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(past),
+			MaxAliveTime: 3600000,
+		}))
+	})
+
+	t.Run("剩余时间为正", func(t *testing.T) {
+		start := time.Now().Add(-30 * time.Minute)
+		h := mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(start),
+			MaxAliveTime: (2 * time.Hour).Milliseconds(),
+		})
+		assert.Greater(t, h, 30*time.Minute)
+		assert.LessOrEqual(t, h, 2*time.Hour)
+	})
+}
+
+func TestExptMangerImpl_packTupleID(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+
+	t.Run("仅评测集", func(t *testing.T) {
+		id := mgr.packTupleID(context.Background(), &entity.Experiment{
+			EvalSetID:        10,
+			EvalSetVersionID: 20,
+		})
+		require.NotNil(t, id.VersionedEvalSetID)
+		assert.Equal(t, int64(10), id.VersionedEvalSetID.EvalSetID)
+		assert.Equal(t, int64(20), id.VersionedEvalSetID.VersionID)
+		assert.Nil(t, id.VersionedTargetID)
+		assert.Nil(t, id.EvaluatorVersionIDs)
+	})
+
+	t.Run("含目标与评估器版本", func(t *testing.T) {
+		id := mgr.packTupleID(context.Background(), &entity.Experiment{
+			EvalSetID:        1,
+			EvalSetVersionID: 2,
+			TargetID:         3,
+			TargetVersionID:  4,
+			EvaluatorVersionRef: []*entity.ExptEvaluatorVersionRef{
+				{EvaluatorVersionID: 5},
+				{EvaluatorVersionID: 6},
+			},
+		})
+		require.NotNil(t, id.VersionedTargetID)
+		assert.Equal(t, int64(3), id.VersionedTargetID.TargetID)
+		assert.Equal(t, int64(4), id.VersionedTargetID.VersionID)
+		assert.Equal(t, []int64{5, 6}, id.EvaluatorVersionIDs)
 	})
 }

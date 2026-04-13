@@ -651,9 +651,21 @@ func (e *ExptTemplateManagerImpl) ListOnline(ctx context.Context, page, pageSize
 	limit := int32(200)
 	offset := int32(0)
 	var allTasks []*taskdomain.Task
+	taskTypeFilter := &taskfilter.TaskFilterFields{
+		QueryAndOr: gptr.Of(taskfilter.QueryRelationAnd),
+		FilterFields: []*taskfilter.TaskFilterField{
+			{
+				FieldName: gptr.Of(taskfilter.TaskFieldNameTaskType),
+				FieldType: gptr.Of(taskfilter.FieldTypeString),
+				QueryType: gptr.Of(taskfilter.QueryTypeIn),
+				Values:    []string{taskdomain.TaskTypeAutoEval},
+			},
+		},
+	}
 	for {
 		tasks, total, err := e.taskRPCAdapter.ListTasks(ctx, &rpc.ListTasksParam{
 			WorkspaceID: spaceID,
+			TaskFilters: taskTypeFilter,
 			Limit:       gptr.Of(limit),
 			Offset:      gptr.Of(offset),
 		})

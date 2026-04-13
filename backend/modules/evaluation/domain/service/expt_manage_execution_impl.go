@@ -852,7 +852,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	maxHold := e.computeDaemonLockMaxHold(expt)
 	lockKey := e.makeOnlineExptDaemonLockKey(invokeExptReq.ExptID, invokeExptReq.RunID)
 	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquiring, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
-	locked, _, _, lockErr := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
+	locked, lockCtx, cancel, lockErr := e.mutex.LockWithRenew(ctx, lockKey, time.Second*5, maxHold)
 	if lockErr != nil {
 		logs.CtxError(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt daemon lock err, expt_id: %v, run_id: %v, space_id: %v, err: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID, lockErr)
 		return lockErr
@@ -863,7 +863,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 	}
 	logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][Invoke] online expt heartbeat lock acquired, expt_id: %v, run_id: %v, space_id: %v", invokeExptReq.ExptID, invokeExptReq.RunID, invokeExptReq.SpaceID)
 	logs.CtxInfo(ctx, "[Invoke] PublishExptScheduleEvent, exptID: %v ", invokeExptReq.ExptID)
-	if err = e.publisher.PublishExptScheduleEvent(ctx, &entity.ExptScheduleEvent{
+	if err = e.publisher.PublishExptScheduleEvent(lockCtx, &entity.ExptScheduleEvent{
 		SpaceID:     invokeExptReq.SpaceID,
 		ExptID:      invokeExptReq.ExptID,
 		ExptRunID:   invokeExptReq.RunID,
@@ -873,6 +873,7 @@ func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.Invok
 		Session:     invokeExptReq.Session,
 		Ext:         invokeExptReq.Ext,
 	}, gptr.Of(time.Second*3)); err != nil {
+		cancel()
 		return err
 	}
 

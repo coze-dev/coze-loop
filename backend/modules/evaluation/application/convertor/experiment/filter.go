@@ -86,7 +86,7 @@ func buildExptListFilterExptTypeScopePreview(filters *domain_expt.Filters) (*ent
 		}
 	}
 	if setDefaultExptTypeFlag && len(preview.Includes.ExptTemplateIDs) == 0 {
-		preview.Includes.ExptType = intersectIgnoreNull(preview.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline)})
+		preview.Includes.ExptType = intersectIgnoreNull(preview.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline), int64(domain_expt.ExptType_Online)})
 	}
 	return preview, nil
 }
@@ -126,7 +126,7 @@ func buildExptTemplateListFilterExptTypeScopePreview(filters *domain_expt.Filter
 
 func exptTypeScopeHasOnlineOffline(incExptType []int64) (hasOnline, hasOffline bool) {
 	if len(incExptType) == 0 {
-		return false, true
+		return true, true
 	}
 	return gslice.Contains(incExptType, int64(domain_expt.ExptType_Online)),
 		gslice.Contains(incExptType, int64(domain_expt.ExptType_Offline))
@@ -395,10 +395,8 @@ func (e *ExptFilterConvertor) ConvertFilters(ctx context.Context, filters *domai
 		}
 	}
 	if setDefaultExptTypeFlag {
-		// 未显式指定 expt_type 时默认只查离线实验；但若按实验模板 ID 筛选，不能强加离线条件，
-		// 否则在线实验（与模板关联）无法与 expt_template_id 组合命中。
 		if len(efo.Includes.ExptTemplateIDs) == 0 {
-			efo.Includes.ExptType = intersectIgnoreNull(efo.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline)})
+			efo.Includes.ExptType = intersectIgnoreNull(efo.Includes.ExptType, []int64{int64(domain_expt.ExptType_Offline), int64(domain_expt.ExptType_Online)})
 		}
 	}
 

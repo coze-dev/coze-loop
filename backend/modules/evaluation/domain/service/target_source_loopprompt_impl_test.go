@@ -290,6 +290,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.NotNil(t, evalTarget.EvalTargetVersion.Prompt)
 				assert.Equal(t, defaultSourceTargetIDInt, evalTarget.EvalTargetVersion.Prompt.PromptID)
 				assert.Equal(t, defaultSourceTargetVersion, evalTarget.EvalTargetVersion.Prompt.Version)
+				assert.Equal(t, "test_prompt_key", evalTarget.EvalTargetVersion.Prompt.PromptKey)
 
 				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 11) // 10 variables + 1 user query schema
 				if len(evalTarget.EvalTargetVersion.InputSchema) == 11 {
@@ -329,6 +330,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.NotNil(t, evalTarget)
 				assert.Equal(t, "", evalTarget.EvalTargetVersion.SourceTargetVersion)
 				assert.Equal(t, "", evalTarget.EvalTargetVersion.Prompt.Version)
+				assert.Equal(t, "test_prompt_key", evalTarget.EvalTargetVersion.Prompt.PromptKey)
 				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
 				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 			},

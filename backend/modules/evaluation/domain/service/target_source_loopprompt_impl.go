@@ -253,6 +253,12 @@ func (t *PromptSourceEvalTargetServiceImpl) BuildBySource(ctx context.Context, s
 			Prompt: &entity.LoopPrompt{
 				PromptID: promptID,
 				Version:  srcVer,
+				PromptKey: func() string {
+					if prompt == nil {
+						return ""
+					}
+					return prompt.PromptKey
+				}(),
 			},
 			InputSchema: inputSchema,
 			OutputSchema: []*entity.ArgsSchema{
