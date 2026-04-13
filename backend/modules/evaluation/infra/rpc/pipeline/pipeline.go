@@ -30,6 +30,12 @@ func (a *PipelineListAdapter) ListPipelineFlow(ctx context.Context, req *rpc.Lis
 	}, nil
 }
 
+func (a *PipelineListAdapter) ListPipelineRun(ctx context.Context, req *rpc.ListPipelineRunRequest) (*rpc.ListPipelineRunResponse, error) {
+	return &rpc.ListPipelineRunResponse{
+		Items: []*entity.PipelineRun{},
+	}, nil
+}
+
 func (a *PipelineListAdapter) PipelineNodeFinishCallback(ctx context.Context, experimentID, spaceID int64) error {
 	return nil
 }

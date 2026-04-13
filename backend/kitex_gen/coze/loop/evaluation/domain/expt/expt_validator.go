@@ -139,6 +139,9 @@ func (p *ExptTemplate) IsValid() error {
 	}
 	return nil
 }
+func (p *TaskTimeRange) IsValid() error {
+	return nil
+}
 func (p *ExptSource) IsValid() error {
 	if p.SpanFilterFields != nil {
 		if err := p.SpanFilterFields.IsValid(); err != nil {
@@ -153,6 +156,11 @@ func (p *ExptSource) IsValid() error {
 	if p.Sampler != nil {
 		if err := p.Sampler.IsValid(); err != nil {
 			return fmt.Errorf("field Sampler not valid, %w", err)
+		}
+	}
+	if p.TimeRange != nil {
+		if err := p.TimeRange.IsValid(); err != nil {
+			return fmt.Errorf("field TimeRange not valid, %w", err)
 		}
 	}
 	return nil

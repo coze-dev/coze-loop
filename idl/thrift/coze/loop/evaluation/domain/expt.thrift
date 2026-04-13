@@ -131,6 +131,11 @@ struct ExptTemplate {
     255: optional common.BaseInfo base_info
 }
 
+struct TaskTimeRange {
+    1: optional i64 start_time (agw.js_conv = "str") // 生效开始时间（时间戳，毫秒）
+    2: optional i64 end_time (agw.js_conv = "str") // 生效结束时间（时间戳，毫秒）
+}
+
 struct ExptSource {
     1: optional SourceType source_type
     2: optional string source_id
@@ -140,6 +145,7 @@ struct ExptSource {
     101: optional Scheduler scheduler
     // 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
     102: optional task.Sampler sampler
+    103: optional TaskTimeRange time_range
 }
 
 typedef string Frequency (ts.enum="true")

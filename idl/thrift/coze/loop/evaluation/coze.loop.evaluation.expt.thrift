@@ -81,6 +81,7 @@ struct SubmitExperimentRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
 
     50: optional expt.ExptTriggerType trigger_type
+    51: optional expt.TaskTimeRange time_range (api.body = 'time_range')
 
     100: optional map<string, string> ext (api.body = 'ext')
 

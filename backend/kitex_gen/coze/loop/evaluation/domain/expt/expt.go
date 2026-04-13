@@ -6277,6 +6277,266 @@ func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 	return true
 }
 
+type TaskTimeRange struct {
+	// 生效开始时间（时间戳，毫秒）
+	StartTime *int64 `thrift:"start_time,1,optional" frugal:"1,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
+	// 生效结束时间（时间戳，毫秒）
+	EndTime *int64 `thrift:"end_time,2,optional" frugal:"2,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
+}
+
+func NewTaskTimeRange() *TaskTimeRange {
+	return &TaskTimeRange{}
+}
+
+func (p *TaskTimeRange) InitDefault() {
+}
+
+var TaskTimeRange_StartTime_DEFAULT int64
+
+func (p *TaskTimeRange) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return TaskTimeRange_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var TaskTimeRange_EndTime_DEFAULT int64
+
+func (p *TaskTimeRange) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return TaskTimeRange_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+func (p *TaskTimeRange) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *TaskTimeRange) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+
+var fieldIDToName_TaskTimeRange = map[int16]string{
+	1: "start_time",
+	2: "end_time",
+}
+
+func (p *TaskTimeRange) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *TaskTimeRange) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *TaskTimeRange) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskTimeRange[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TaskTimeRange) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *TaskTimeRange) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
+
+func (p *TaskTimeRange) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TaskTimeRange"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TaskTimeRange) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TaskTimeRange) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TaskTimeRange) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TaskTimeRange(%+v)", *p)
+
+}
+
+func (p *TaskTimeRange) DeepEqual(ano *TaskTimeRange) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EndTime) {
+		return false
+	}
+	return true
+}
+
+func (p *TaskTimeRange) Field1DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *TaskTimeRange) Field2DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
+		return false
+	}
+	return true
+}
+
 type ExptSource struct {
 	SourceType *SourceType `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
 	SourceID   *string     `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
@@ -6284,7 +6544,8 @@ type ExptSource struct {
 	SpanFilterFields *filter.SpanFilterFields `thrift:"span_filter_fields,100,optional" frugal:"100,optional,filter.SpanFilterFields" form:"span_filter_fields" json:"span_filter_fields,omitempty" query:"span_filter_fields"`
 	Scheduler        *Scheduler               `thrift:"scheduler,101,optional" frugal:"101,optional,Scheduler" form:"scheduler" json:"scheduler,omitempty" query:"scheduler"`
 	// 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
-	Sampler *task.Sampler `thrift:"sampler,102,optional" frugal:"102,optional,task.Sampler" form:"sampler" json:"sampler,omitempty" query:"sampler"`
+	Sampler   *task.Sampler  `thrift:"sampler,102,optional" frugal:"102,optional,task.Sampler" form:"sampler" json:"sampler,omitempty" query:"sampler"`
+	TimeRange *TaskTimeRange `thrift:"time_range,103,optional" frugal:"103,optional,TaskTimeRange" form:"time_range" json:"time_range,omitempty" query:"time_range"`
 }
 
 func NewExptSource() *ExptSource {
@@ -6353,6 +6614,18 @@ func (p *ExptSource) GetSampler() (v *task.Sampler) {
 	}
 	return p.Sampler
 }
+
+var ExptSource_TimeRange_DEFAULT *TaskTimeRange
+
+func (p *ExptSource) GetTimeRange() (v *TaskTimeRange) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeRange() {
+		return ExptSource_TimeRange_DEFAULT
+	}
+	return p.TimeRange
+}
 func (p *ExptSource) SetSourceType(val *SourceType) {
 	p.SourceType = val
 }
@@ -6368,6 +6641,9 @@ func (p *ExptSource) SetScheduler(val *Scheduler) {
 func (p *ExptSource) SetSampler(val *task.Sampler) {
 	p.Sampler = val
 }
+func (p *ExptSource) SetTimeRange(val *TaskTimeRange) {
+	p.TimeRange = val
+}
 
 var fieldIDToName_ExptSource = map[int16]string{
 	1:   "source_type",
@@ -6375,6 +6651,7 @@ var fieldIDToName_ExptSource = map[int16]string{
 	100: "span_filter_fields",
 	101: "scheduler",
 	102: "sampler",
+	103: "time_range",
 }
 
 func (p *ExptSource) IsSetSourceType() bool {
@@ -6395,6 +6672,10 @@ func (p *ExptSource) IsSetScheduler() bool {
 
 func (p *ExptSource) IsSetSampler() bool {
 	return p.Sampler != nil
+}
+
+func (p *ExptSource) IsSetTimeRange() bool {
+	return p.TimeRange != nil
 }
 
 func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
@@ -6450,6 +6731,14 @@ func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
 		case 102:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField102(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 103:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField103(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6531,6 +6820,14 @@ func (p *ExptSource) ReadField102(iprot thrift.TProtocol) error {
 	p.Sampler = _field
 	return nil
 }
+func (p *ExptSource) ReadField103(iprot thrift.TProtocol) error {
+	_field := NewTaskTimeRange()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TimeRange = _field
+	return nil
+}
 
 func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6556,6 +6853,10 @@ func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField102(oprot); err != nil {
 			fieldId = 102
+			goto WriteFieldError
+		}
+		if err = p.writeField103(oprot); err != nil {
+			fieldId = 103
 			goto WriteFieldError
 		}
 	}
@@ -6666,6 +6967,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
 }
+func (p *ExptSource) writeField103(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeRange() {
+		if err = oprot.WriteFieldBegin("time_range", thrift.STRUCT, 103); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TimeRange.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
+}
 
 func (p *ExptSource) String() string {
 	if p == nil {
@@ -6694,6 +7013,9 @@ func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
 		return false
 	}
 	if !p.Field102DeepEqual(ano.Sampler) {
+		return false
+	}
+	if !p.Field103DeepEqual(ano.TimeRange) {
 		return false
 	}
 	return true
@@ -6740,6 +7062,13 @@ func (p *ExptSource) Field101DeepEqual(src *Scheduler) bool {
 func (p *ExptSource) Field102DeepEqual(src *task.Sampler) bool {
 
 	if !p.Sampler.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field103DeepEqual(src *TaskTimeRange) bool {
+
+	if !p.TimeRange.DeepEqual(src) {
 		return false
 	}
 	return true

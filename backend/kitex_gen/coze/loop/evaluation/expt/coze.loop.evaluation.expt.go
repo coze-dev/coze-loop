@@ -2447,6 +2447,7 @@ type SubmitExperimentRequest struct {
 	ExptTemplateID      *int64                `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum        *int32                `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	TriggerType         *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	TimeRange           *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	Ext                 map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Session             *common.Session       `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
 	Base                *base.Base            `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
@@ -2730,6 +2731,18 @@ func (p *SubmitExperimentRequest) GetTriggerType() (v expt.ExptTriggerType) {
 	return *p.TriggerType
 }
 
+var SubmitExperimentRequest_TimeRange_DEFAULT *expt.TaskTimeRange
+
+func (p *SubmitExperimentRequest) GetTimeRange() (v *expt.TaskTimeRange) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeRange() {
+		return SubmitExperimentRequest_TimeRange_DEFAULT
+	}
+	return p.TimeRange
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -2834,6 +2847,9 @@ func (p *SubmitExperimentRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentRequest) SetTriggerType(val *expt.ExptTriggerType) {
 	p.TriggerType = val
 }
+func (p *SubmitExperimentRequest) SetTimeRange(val *expt.TaskTimeRange) {
+	p.TimeRange = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -2868,6 +2884,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	42:  "expt_template_id",
 	45:  "item_retry_num",
 	50:  "trigger_type",
+	51:  "time_range",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -2959,6 +2976,10 @@ func (p *SubmitExperimentRequest) IsSetItemRetryNum() bool {
 
 func (p *SubmitExperimentRequest) IsSetTriggerType() bool {
 	return p.TriggerType != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetTimeRange() bool {
+	return p.TimeRange != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -3172,6 +3193,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 51:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField51(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3518,6 +3547,14 @@ func (p *SubmitExperimentRequest) ReadField50(iprot thrift.TProtocol) error {
 	p.TriggerType = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField51(iprot thrift.TProtocol) error {
+	_field := expt.NewTaskTimeRange()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TimeRange = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -3660,6 +3697,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField51(oprot); err != nil {
+			fieldId = 51
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4128,6 +4169,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField51(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeRange() {
+		if err = oprot.WriteFieldBegin("time_range", thrift.STRUCT, 51); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TimeRange.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 51 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -4275,6 +4334,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.TriggerType) {
+		return false
+	}
+	if !p.Field51DeepEqual(ano.TimeRange) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -4544,6 +4606,13 @@ func (p *SubmitExperimentRequest) Field50DeepEqual(src *expt.ExptTriggerType) bo
 		return false
 	}
 	if strings.Compare(*p.TriggerType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field51DeepEqual(src *expt.TaskTimeRange) bool {
+
+	if !p.TimeRange.DeepEqual(src) {
 		return false
 	}
 	return true
