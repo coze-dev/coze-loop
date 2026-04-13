@@ -217,7 +217,7 @@ func (e *ExptSchedulerImpl) HandleEventErr(next SchedulerEndPoint) SchedulerEndP
 			return errorx.Wrapf(err, "terminate expt run fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		}
 
-		if err := e.Manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Failed),
+		if err := e.Manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Failed),
 			entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 			return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 		}

@@ -197,6 +197,7 @@ type ExportCSVEvent struct {
 
 type ExptLifecycleEvent struct {
 	ExptID     int64      `json:"expt_id"`
+	ExptRunID  *int64     `json:"expt_run_id"`
 	SpaceID    int64      `json:"space_id"`
 	FromStatus ExptStatus `json:"from_status"`
 	ToStatus   ExptStatus `json:"to_status"`

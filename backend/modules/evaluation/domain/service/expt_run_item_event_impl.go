@@ -184,7 +184,7 @@ func (e *ExptItemEventEvalServiceImpl) HandleEventErr(next RecordEvalEndPoint) R
 				return errorx.Wrapf(err, "terminate expt run fail, expt_id: %v", event.ExptID)
 			}
 
-			if err := e.manager.CompleteExpt(ctx, event.ExptID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated),
+			if err := e.manager.CompleteExpt(ctx, event.ExptID, &event.ExptRunID, event.SpaceID, event.Session, entity.WithStatus(entity.ExptStatus_Terminated),
 				entity.WithStatusMessage(nextErr.Error()), entity.WithCID(completeCID), entity.WithCompleteInterval(time.Second*2)); err != nil {
 				return errorx.Wrapf(err, "complete expt fail, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
 			}

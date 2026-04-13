@@ -513,7 +513,7 @@ func (e *ExptMangerImpl) calculateRunLogStats(ctx context.Context, exptID, exptR
 	return nil
 }
 
-func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	const idemKeyPrefix = "CompleteExpt:"
 
 	opt := &entity.CompleteExptOption{}
@@ -645,8 +645,8 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	fromStatus := got.Status
 	got.Status = status
 	got.EndAt = exptDo.EndAt
-	err = e.sendExptCompleteEvent(ctx, got, fromStatus)
-	if err != nil {
+
+	if err = e.sendExptCompleteEvent(ctx, got, exptRunID, fromStatus); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
 	}
 
@@ -656,13 +656,14 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID, spaceID int64
 	return nil
 }
 
-func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, fromStatus entity.ExptStatus) error {
+func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}
 
 	event := &entity.ExptLifecycleEvent{
 		ExptID:     expt.ID,
+		ExptRunID:  exptRunID,
 		SpaceID:    expt.SpaceID,
 		FromStatus: fromStatus,
 		ToStatus:   expt.Status,
@@ -701,8 +702,8 @@ func (e *ExptMangerImpl) terminateItemTurns(ctx context.Context, exptID int64, i
 	return nil
 }
 
-func (e *ExptMangerImpl) Kill(ctx context.Context, exptID, spaceID int64, msg string, session *entity.Session) error {
-	return e.CompleteExpt(ctx, exptID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(msg))
+func (e *ExptMangerImpl) Kill(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, msg string, session *entity.Session) error {
+	return e.CompleteExpt(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated), entity.WithStatusMessage(msg))
 }
 
 func (e *ExptMangerImpl) Invoke(ctx context.Context, invokeExptReq *entity.InvokeExptReq) error {

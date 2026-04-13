@@ -182,7 +182,7 @@ func TestExptSchedulerImpl_Schedule(t *testing.T) {
 				}).AnyTimes()
 				f.idGen.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2, 3}, nil).AnyTimes()
 				f.manager.EXPECT().CompleteRun(gomock.Any(), int64(1), int64(2), int64(3), args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				mode := entitymocks.NewMockExptSchedulerMode(ctrl)
 				mode.EXPECT().ExptStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				mode.EXPECT().ScheduleStart(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)

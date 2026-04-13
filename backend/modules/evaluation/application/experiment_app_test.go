@@ -2633,7 +2633,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止：允许在后台调用，不校验调用次数
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{
 				BaseResp: base.NewBaseResp(),
@@ -2675,7 +2675,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止：允许在后台调用，不校验调用次数
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{
 				BaseResp: base.NewBaseResp(),
@@ -2784,7 +2784,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},

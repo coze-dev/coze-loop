@@ -1083,7 +1083,7 @@ func (e *experimentApplication) KillExperiment(ctx context.Context, req *expt.Ki
 		if err := e.manager.CompleteRun(ctx, exptID, exptRunID, spaceID, session, entity.WithStatus(entity.ExptStatus_Terminated)); err != nil {
 			return err
 		}
-		return e.manager.CompleteExpt(ctx, exptID, spaceID, session,
+		return e.manager.CompleteExpt(ctx, exptID, &exptRunID, spaceID, session,
 			entity.WithStatus(entity.ExptStatus_Terminated), entity.WithCompleteInterval(time.Second), entity.NoAggrCalculate())
 	}
 

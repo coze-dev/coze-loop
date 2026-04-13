@@ -421,18 +421,20 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
-		name    string
-		exptID  int64
-		spaceID int64
-		msg     string
-		setup   func()
-		wantErr bool
+		name      string
+		exptID    int64
+		exptRunID *int64
+		spaceID   int64
+		msg       string
+		setup     func()
+		wantErr   bool
 	}{
 		{
-			name:    "successful_kill",
-			exptID:  123,
-			spaceID: 789,
-			msg:     "user terminated",
+			name:      "successful_kill",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			msg:       "user terminated",
 			setup: func() {
 				// Mock CompleteExpt dependencies
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -516,7 +518,7 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.Kill(ctx, tt.exptID, tt.spaceID, tt.msg, session)
+			err := mgr.Kill(ctx, tt.exptID, tt.exptRunID, tt.spaceID, tt.msg, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Kill() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1566,18 +1568,20 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
-		name    string
-		exptID  int64
-		spaceID int64
-		opts    []entity.CompleteExptOptionFn
-		setup   func()
-		wantErr bool
+		name      string
+		exptID    int64
+		exptRunID *int64
+		spaceID   int64
+		opts      []entity.CompleteExptOptionFn
+		setup     func()
+		wantErr   bool
 	}{
 		{
-			name:    "successful_complete_expt_with_default_options",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "successful_complete_expt_with_default_options",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock idempotent check
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -1652,9 +1656,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_terminated_status",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_terminated_status",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithStatus(entity.ExptStatus_Terminated),
 			},
@@ -1768,9 +1773,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_no_aggr_calculate",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_no_aggr_calculate",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.NoAggrCalculate(),
 			},
@@ -1844,9 +1850,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_no_complete_item_turn",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_no_complete_item_turn",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithStatus(entity.ExptStatus_Terminated),
 				entity.NoCompleteItemTurn(),
@@ -1919,9 +1926,10 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "complete_expt_with_interval",
-			exptID:  123,
-			spaceID: 789,
+			name:      "complete_expt_with_interval",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithCompleteInterval(time.Millisecond * 200),
 			},
@@ -1999,10 +2007,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "experiment_not_found",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "experiment_not_found",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock experiment retrieval failure
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
@@ -2013,10 +2022,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "stats_calculation_error",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "stats_calculation_error",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock idempotent check
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -2048,7 +2058,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.CompleteExpt(ctx, tt.exptID, tt.spaceID, session, tt.opts...)
+			err := mgr.CompleteExpt(ctx, tt.exptID, tt.exptRunID, tt.spaceID, session, tt.opts...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompleteExpt() error = %v, wantErr %v", err, tt.wantErr)
 			}
