@@ -150,6 +150,9 @@ func (dao *EvaluatorTagDAOImpl) DeleteEvaluatorTagsByConditions(ctx context.Cont
 	return query.Delete(&model.EvaluatorTag{}).Error
 }
 
+// sourceIDInChunkSize 单次 IN 查询中 source_id 个数上限，避免包体过大
+const sourceIDInChunkSize = 1000
+
 // GetSourceIDsByFilterConditions 根据筛选条件查询source_id列表，支持复杂的AND/OR逻辑和分页
 func (dao *EvaluatorTagDAOImpl) GetSourceIDsByFilterConditions(ctx context.Context, tagType int32, filterOption *entity.EvaluatorFilterOption, pageSize, pageNum int32, langType string, opts ...db.Option) ([]int64, int64, error) {
 	if filterOption == nil {
@@ -269,6 +272,10 @@ func (dao *EvaluatorTagDAOImpl) allDistinctSourceIDs(ctx context.Context, tagTyp
 	return ids, nil
 }
 
+/*
+// 旧的多次单表查询 + 内存集合运算实现，当前未在 GetSourceIDsByFilterConditions 中使用，
+// 暂时保留以备后续参考或回滚使用。
+
 // evalFiltersToSourceIDs 递归求满足 Filters 的 source_id（无 JOIN）
 func (dao *EvaluatorTagDAOImpl) evalFiltersToSourceIDs(ctx context.Context, tagType int32, langType string, filters *entity.EvaluatorFilters, opts ...db.Option) ([]int64, error) {
 	if filters == nil || evaluatorFiltersEmpty(filters) {
@@ -341,6 +348,106 @@ func (dao *EvaluatorTagDAOImpl) evalFiltersToSourceIDs(ctx context.Context, tagT
 	}
 	return s, nil
 }
+
+// mapKeysToSlice 将 map 的 key 转换为切片
+func mapKeysToSlice(m map[int64]struct{}) []int64 {
+	out := make([]int64, 0, len(m))
+	for id := range m {
+		out = append(out, id)
+	}
+	return out
+}
+
+// intersectInt64Slice 计算两个 int64 切片的交集
+func intersectInt64Slice(a, b []int64) []int64 {
+	if len(a) == 0 || len(b) == 0 {
+		return nil
+	}
+	if len(a) > len(b) {
+		a, b = b, a
+	}
+	m := make(map[int64]struct{}, len(a))
+	for _, id := range a {
+		m[id] = struct{}{}
+	}
+	out := make([]int64, 0)
+	for _, id := range b {
+		if _, ok := m[id]; ok {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// chunkInt64Slice 将 ids 按指定大小切分为多段
+func chunkInt64Slice(ids []int64, chunk int) [][]int64 {
+	if chunk <= 0 {
+		chunk = sourceIDInChunkSize
+	}
+	var out [][]int64
+	for i := 0; i < len(ids); i += chunk {
+		j := i + chunk
+		if j > len(ids) {
+			j = len(ids)
+		}
+		out = append(out, ids[i:j])
+	}
+	return out
+}
+
+// querySourceIDsForCondition 根据单个条件查询匹配的 source_id
+func (dao *EvaluatorTagDAOImpl) querySourceIDsForCondition(ctx context.Context, tagType int32, langType string, condition *entity.EvaluatorFilterCondition, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	if condition == nil {
+		return nil, nil
+	}
+	if restrictTo != nil {
+		if len(restrictTo) == 0 {
+			return nil, nil
+		}
+	}
+	if restrictTo == nil || len(restrictTo) <= sourceIDInChunkSize {
+		return dao.querySourceIDsForConditionOnce(ctx, tagType, langType, condition, restrictTo, opts...)
+	}
+	set := make(map[int64]struct{})
+	for _, ch := range chunkInt64Slice(restrictTo, sourceIDInChunkSize) {
+		part, err := dao.querySourceIDsForConditionOnce(ctx, tagType, langType, condition, ch, opts...)
+		if err != nil {
+			return nil, err
+		}
+		for _, id := range part {
+			set[id] = struct{}{}
+		}
+	}
+	return mapKeysToSlice(set), nil
+}
+
+// querySourceIDsForConditionOnce 执行一次实际的 DISTINCT source_id 查询
+func (dao *EvaluatorTagDAOImpl) querySourceIDsForConditionOnce(ctx context.Context, tagType int32, langType string, condition *entity.EvaluatorFilterCondition, restrictTo []int64, opts ...db.Option) ([]int64, error) {
+	dbsession := dao.provider.NewSession(ctx, append(opts, db.Debug())...)
+	q := dbsession.WithContext(ctx).
+		Table(model.TableNameEvaluatorTag).
+		Distinct("source_id").
+		Where("tag_type = ? AND deleted_at IS NULL", tagType)
+	if langType != "" {
+		q = q.Where("lang_type = ?", langType)
+	}
+	condSQL, condArgs, err := dao.buildSingleCondition(condition)
+	if err != nil {
+		return nil, err
+	}
+	if condSQL != "" {
+		q = q.Where(condSQL, condArgs...)
+	}
+	if restrictTo != nil {
+		q = q.Where("source_id IN ?", restrictTo)
+	}
+	var ids []int64
+	if err := q.Pluck("source_id", &ids).Error; err != nil {
+		return nil, err
+	}
+	return ids, nil
+}
+*/
 
 // NOTE: 以下基于 Name 标签的 LIKE 与排序逻辑已经由 GetSourceIDsByFilterConditions 内部的
 // LEFT JOIN + ORDER BY 语句统一处理，原基于多次单表查询 + 内存集合运算的实现已移除。
