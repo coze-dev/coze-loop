@@ -1127,7 +1127,7 @@ func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMe
 		EndAt:           endTime,
 		Limit:           defaultAgentScanLimit,
 		DescByStartTime: true,
-		SelectColumns:   []string{"tags_string"},
+		SelectColumns:   []string{"span_id", "start_time", "tags_string"},
 	})
 	if err != nil {
 		return nil, err
