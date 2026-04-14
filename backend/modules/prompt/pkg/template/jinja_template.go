@@ -33,7 +33,7 @@ func init() {
 func safeRangeFunction(_ *exec.Evaluator, params *exec.VarArgs) ([]int, error) {
 	var (
 		start = 0
-		stop  = -1
+		stop  int
 		step  = 1
 	)
 	switch n := len(params.Args); n > 0 {
