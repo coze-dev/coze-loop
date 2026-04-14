@@ -1224,15 +1224,20 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 		return nil
 	}
 
+	typ := targetDO.EvalTargetType
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
+	}
+
 	targetDTO := &openapiEvalTarget.EvalTarget{
 		ID:             gptr.Of(targetDO.ID),
 		SourceTargetID: gptr.Of(targetDO.SourceTargetID),
 	}
-	if targetDO.EvalTargetType != 0 {
-		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(targetDO.EvalTargetType))
+	if typ != 0 {
+		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(typ))
 	}
 	if targetDO.EvalTargetVersion != nil {
-		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, targetDO.EvalTargetType)
+		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, typ)
 	}
 	targetDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(targetDO.BaseInfo)
 	return targetDTO
@@ -1241,6 +1246,11 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ entity.EvalTargetType) *openapiEvalTarget.EvalTargetVersion {
 	if versionDO == nil {
 		return nil
+	}
+
+	// 与 Thrift 侧一致：仅记录型（*Online）按对应基础类型分支构建内容
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
 	}
 
 	versionDTO := &openapiEvalTarget.EvalTargetVersion{
@@ -1293,6 +1303,9 @@ func mapEntitySubmitStatusToOpenAPI(status entity.SubmitStatus) openapiEvalTarge
 }
 
 func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEvalTarget.EvalTargetType {
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
+	}
 	switch typ {
 	case entity.EvalTargetTypeCozeBot:
 		return openapiEvalTarget.EvalTargetTypeCozeBot
@@ -1365,14 +1378,15 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		return nil
 	}
 
+	metaDTO := &openapiExperiment.ExptTemplateMeta{
+		ID:          gptr.Of(template.Meta.ID),
+		WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+		Name:        gptr.Of(template.Meta.Name),
+		Description: gptr.Of(template.Meta.Desc),
+		ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
+	}
 	dto := &openapiExperiment.ExptTemplate{
-		Meta: &openapiExperiment.ExptTemplateMeta{
-			ID:          gptr.Of(template.Meta.ID),
-			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
-			Name:        gptr.Of(template.Meta.Name),
-			Description: gptr.Of(template.Meta.Desc),
-			ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
-		},
+		Meta:     metaDTO,
 		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
 	}
 
@@ -1483,6 +1497,7 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	}
 
 	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
+
 	return dto
 }
 

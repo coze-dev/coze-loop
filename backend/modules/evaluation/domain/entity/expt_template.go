@@ -34,6 +34,69 @@ type ExptTemplate struct {
 
 	// ExptInfo 实验运行状态信息（存储在数据库的 expt_info 字段中，JSON格式）
 	ExptInfo *ExptInfo
+
+	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
+	ExptSource *ExptSource
+}
+
+// ExptSource 实验来源信息
+type ExptSource struct {
+	SourceType       SourceType
+	SourceID         string
+	SpanFilterFields *SpanFilterFieldsDO // 从 Pipeline data_reflow 节点 task.rule.span_filters 提取
+	Scheduler        *ExptSchedulerDO    // 从 Pipeline.Scheduler 提取
+	Sampler          *ExptSamplerDO      // 从 Pipeline data_reflow 节点 task.rule.sampler 或 Task.Rule.Sampler 提取
+	TimeRange        *TaskTimeRangeDO    // 生效时间范围
+}
+
+type TaskTimeRangeDO struct {
+	StartTime *int64 `json:"start_time,omitempty"`
+	EndTime   *int64 `json:"end_time,omitempty"`
+}
+
+// ExptSamplerDO 采样配置，与 observability task.Sampler / pipeline task.rule.sampler 对齐
+type ExptSamplerDO struct {
+	SampleRate    *float64 `json:"sample_rate,omitempty"`
+	SampleSize    *int64   `json:"sample_size,omitempty"`
+	IsCycle       *bool    `json:"is_cycle,omitempty"`
+	CycleCount    *int64   `json:"cycle_count,omitempty"`
+	CycleInterval *int64   `json:"cycle_interval,omitempty"`
+	CycleTimeUnit *string  `json:"cycle_time_unit,omitempty"`
+}
+
+// SpanFilterFieldsDO Span 过滤条件，与 filter.SpanFilterFields 结构对应
+type SpanFilterFieldsDO struct {
+	Filters      *FilterFieldsDO
+	PlatformType *string
+	SpanListType *string
+}
+
+// FilterFieldsDO 过滤条件
+type FilterFieldsDO struct {
+	QueryAndOr   *string
+	FilterFields []*FilterFieldDO
+}
+
+// FilterFieldDO 过滤字段
+type FilterFieldDO struct {
+	FieldName          *string
+	FieldType          *string
+	Values             []string
+	QueryType          *string
+	QueryAndOr         *string
+	LogicFieldNameType *string
+	IsCustom           *bool
+	ExtraInfo          map[string]string
+	SubFilter          *FilterFieldsDO
+}
+
+// ExptSchedulerDO 定时触发器配置，与 expt.Scheduler 结构对应
+type ExptSchedulerDO struct {
+	Enabled   *bool
+	Frequency *string
+	TriggerAt *int64
+	StartTime *int64
+	EndTime   *int64
 }
 
 // ExptInfo 实验模板关联的实验运行状态信息
@@ -44,6 +107,10 @@ type ExptInfo struct {
 	LatestExptID int64 `json:"latest_expt_id"`
 	// LatestExptStatus 最后一次创建实验的执行状态
 	LatestExptStatus ExptStatus `json:"latest_expt_status"`
+	// LatestExptStartTime 最新实验开始时间（时间戳，毫秒）
+	LatestExptStartTime int64 `json:"latest_expt_start_time"`
+	// CronActivate 是否开启定时触发（与表字段 cron_activate 同步）
+	CronActivate bool `json:"cron_activate"`
 }
 
 // ExptTemplateMeta 实验模板基础信息
@@ -133,6 +200,9 @@ type ExptTemplateConfiguration struct {
 	// 默认评估器并发数
 	EvaluatorsConcurNum *int
 	ItemRetryNum        *int
+
+	// ExptSource 实验来源信息
+	ExptSource *ExptSource `json:"expt_source,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO
@@ -349,7 +419,9 @@ type CreateExptTemplateParam struct {
 	TemplateConf            *ExptTemplateConfiguration
 	ExptType                ExptType
 	Visibility              *Visibility
+	CronActivate            bool // 是否开启定时触发
 	CreateEvalTargetParam   *CreateEvalTargetParam
+	ExptSource              *ExptSource // 实验来源信息
 }
 
 // UpdateExptTemplateParam 更新实验模板参数
@@ -364,15 +436,17 @@ type UpdateExptTemplateParam struct {
 	EvaluatorIDVersionItems []*EvaluatorIDVersionItem // 评估器ID版本项列表（包含完整信息）
 	TemplateConf            *ExptTemplateConfiguration
 	ExptType                ExptType
+	CronActivate            *bool // nil 表示不修改
 	CreateEvalTargetParam   *CreateEvalTargetParam
 }
 
 // UpdateExptTemplateMetaParam 更新实验模板 Meta 参数
 type UpdateExptTemplateMetaParam struct {
-	TemplateID  int64
-	SpaceID     int64
-	Name        string
-	Description string
-	ExptType    ExptType
-	Visibility  *Visibility
+	TemplateID   int64
+	SpaceID      int64
+	Name         string
+	Description  string
+	ExptType     ExptType
+	Visibility   *Visibility
+	CronActivate *bool // nil 表示不修改
 }

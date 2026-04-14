@@ -173,26 +173,20 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	logs.CtxInfo(ctx, "[ExptEval] expt item result with recording run_log, expt_id=%v, expt_run_id=%v, item_id=%v, cnt_op: %v", exptID, exptRunID, itemID, json.Jsonify(statsCntOp))
 
-	// 加载实验配置，判断是否启用加权分数，并从 EvaluatorConf.ScoreWeight 构建权重映射
-	var (
-		enableWeightedScore bool
-		scoreWeights        map[int64]float64
-	)
+	// 加载实验配置：仅在 EnableScoreWeight 为 true 时从 EvaluatorConf 构建权重；否则 scoreWeights 为空，calculateWeightedScore 按等权计算。
+	var scoreWeights map[int64]float64
 	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
 	if err == nil && expt != nil &&
 		expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
+			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
 				continue
 			}
 			if scoreWeights == nil {
 				scoreWeights = make(map[int64]float64)
 			}
 			scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-		}
-		if len(scoreWeights) > 0 {
-			enableWeightedScore = true
 		}
 	}
 
@@ -215,8 +209,8 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 		turnEvaluatorRefs = append(turnEvaluatorRefs, NewTurnEvaluatorResultRefs(0, result.ExptID, result.ID, spaceID, rl.EvaluatorResultIds)...)
 
-		// 计算并回写当前轮次的加权分数
-		if enableWeightedScore && rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
+		// 计算并回写当前轮次的汇总得分（EnableScoreWeight 为 false 或未配置正权重时为等权平均）
+		if rl.EvaluatorResultIds != nil && len(rl.EvaluatorResultIds.EvalVerIDToResID) > 0 {
 			evaluatorResultIDs := make([]int64, 0, len(rl.EvaluatorResultIds.EvalVerIDToResID))
 			for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
 				evaluatorResultIDs = append(evaluatorResultIDs, resID)
@@ -484,6 +478,7 @@ func (e ExptResultServiceImpl) ListTurnResult(ctx context.Context, param *entity
 		filterAccelerator.SpaceID = spaceID
 		filterAccelerator.CreatedDate = ptr.From(expt.StartAt)
 		filterAccelerator.Page = param.Page
+		filterAccelerator.IsOnlineExpt = expt.ExptType == entity.ExptType_Online
 		errOccur := false
 		var itemIDs []int64
 		if !filterAccelerator.HasFilters() {
@@ -1229,8 +1224,12 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 
 	b.ExptResultBuilders = []*ExptResultBuilder{exptResultBuilder}
 
-	// 填充数据
-	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, exptDO.EvalSetVersionID)
+	// 填充数据；在线实验：补充 eval_set_id，eval_set_version_id 写入 0
+	evalSetID, evalSetVersionID := exptDO.EvalSetID, exptDO.EvalSetVersionID
+	if exptDO.ExptType == entity.ExptType_Online {
+		evalSetVersionID = 0
+	}
+	err = b.fillExptTurnResultFilters(ctx, exptDO.StartAt, evalSetID, evalSetVersionID)
 	if err != nil {
 		return nil, err
 	}
@@ -1238,7 +1237,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 	return b.ExptTurnResultFilters, nil
 }
 
-func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetVersionID int64) error {
+func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdDate *time.Time, evalSetID, evalSetVersionID int64) error {
 	exptResultBuilder := b.ExptResultBuilders[0]
 	b.ExptTurnResultFilters = make([]*entity.ExptTurnResultFilterEntity, 0)
 	itemID2ItemIdx := make(map[int64]*entity.ExptItemResult)
@@ -1259,6 +1258,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 			AnnotationString:  make(map[string]string),
 			EvalTargetMetrics: make(map[string]int64),
 			CreatedDate:       ptr.From(createdDate),
+			EvalSetID:         evalSetID,
 			EvalSetVersionID:  evalSetVersionID,
 		}
 		exptTurnResultFilter.ExptID = b.BaselineExptID
@@ -1325,34 +1325,31 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 		if ok {
 			exptTurnResultFilter.EvaluatorScoreCorrected = evaluatorScoreCorrected
 		}
-		// 填充加权得分
+		// 填充加权得分（行级未落库时按配置重算；EnableScoreWeight 为 false 时 scoreWeights 为空，走等权）
 		weightedScore := exptTurnResult.WeightedScore
-		// 如果 WeightedScore 为 nil，但实验启用了加权分数，则重新计算
-		if weightedScore == nil && exptResultBuilder.exptDO != nil &&
-			exptResultBuilder.exptDO.EvalConf != nil &&
-			exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
-			exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-			// 构建权重映射
-			scoreWeights := make(map[int64]float64)
-			for _, ec := range exptResultBuilder.exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-				if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
-					continue
-				}
-				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
-			}
-			// 如果有评估器结果，则计算加权分数
-			// 如果没有权重配置，calculateWeightedScore 会按所有评估器权重都为1进行计算（简单平均）
-			if len(evaluatorVersionID2Result) > 0 {
-				// 将 map[int64]*entity.EvaluatorRecord 转换为 calculateWeightedScore 需要的格式
-				evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
-				for evaluatorVersionID, record := range evaluatorVersionID2Result {
-					if record != nil {
-						evaluatorRecords[evaluatorVersionID] = record
+		if weightedScore == nil && len(evaluatorVersionID2Result) > 0 {
+			var scoreWeights map[int64]float64
+			exptDO := exptResultBuilder.exptDO
+			if exptDO != nil && exptDO.EvalConf != nil && exptDO.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+				exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+				for _, ec := range exptDO.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
+					if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
+						continue
 					}
+					if scoreWeights == nil {
+						scoreWeights = make(map[int64]float64)
+					}
+					scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 				}
-				if len(evaluatorRecords) > 0 {
-					weightedScore = calculateWeightedScore(evaluatorRecords, scoreWeights)
+			}
+			evaluatorRecords := make(map[int64]*entity.EvaluatorRecord)
+			for evaluatorVersionID, record := range evaluatorVersionID2Result {
+				if record != nil {
+					evaluatorRecords[evaluatorVersionID] = record
 				}
+			}
+			if len(evaluatorRecords) > 0 {
+				weightedScore = calculateWeightedScore(evaluatorRecords, scoreWeights)
 			}
 		}
 		exptTurnResultFilter.EvaluatorWeightedScore = weightedScore
@@ -2296,15 +2293,13 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 	if (filter.ItemSnapshotCond == nil || len(filter.ItemSnapshotCond.StringMapFilters) == 0) && (filter.KeywordSearch == nil || filter.KeywordSearch.ItemSnapshotFilter == nil || len(filter.KeywordSearch.ItemSnapshotFilter.StringMapFilters) == 0) {
 		return nil
 	}
-	if baseExpt.ExptType == entity.ExptType_Online {
-		// todo 草稿版数据集不支持模糊搜索，本期暂不实现
-		return nil
+	req := &rpc.QueryItemSnapshotMappingRequest{
+		SpaceID:        baseExpt.SpaceID,
+		DatasetID:      baseExpt.EvalSetID,
+		IsDraftVersion: baseExpt.ExptType == entity.ExptType_Online,
+		VersionID:      gcond.If(baseExpt.ExptType == entity.ExptType_Online, ptr.Of(int64(0)), ptr.Of(baseExpt.EvalSetVersionID)),
 	}
-	// evaluationSetVersion, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, baseExpt.SpaceID, baseExptEvalSetVersionID, ptr.Of(true))
-	// if err != nil {
-	//	return err
-	// }
-	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, baseExpt.SpaceID, baseExpt.EvalSetID, ptr.Of(baseExpt.EvalSetVersionID))
+	itemSnapshotMappings, syncCkDate, err := e.evaluationSetService.QueryItemSnapshotMappings(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -2328,28 +2323,40 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		switch itemSnapshotMapping.MappingKey {
 		case "string_map":
 			itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "float_map":
 			itemSnapshotFilter.FloatMapFilters = append(itemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "int_map":
 			itemSnapshotFilter.IntMapFilters = append(itemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "bool_map":
 			itemSnapshotFilter.BoolMapFilters = append(itemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     item.Op,
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: item.Op, Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				itemSnapshotFilter.StringMapFilters = append(itemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		}
 	}
 	filter.ItemSnapshotCond = itemSnapshotFilter
@@ -2370,28 +2377,40 @@ func (e ExptResultServiceImpl) mapItemSnapshotFilter(ctx context.Context, filter
 		switch itemSnapshotMapping.MappingKey {
 		case "string_map":
 			keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "float_map":
 			keywordItemSnapshotFilter.FloatMapFilters = append(keywordItemSnapshotFilter.FloatMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "int_map":
 			keywordItemSnapshotFilter.IntMapFilters = append(keywordItemSnapshotFilter.IntMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		case "bool_map":
 			keywordItemSnapshotFilter.BoolMapFilters = append(keywordItemSnapshotFilter.BoolMapFilters, &entity.FieldFilter{
-				Key:    itemSnapshotMapping.MappingSubKey,
-				Op:     "LIKE",
-				Values: item.Values,
+				Key: itemSnapshotMapping.MappingSubKey, Op: "LIKE", Values: item.Values,
 			})
+			if baseExpt.ExptType == entity.ExptType_Online && itemSnapshotMapping.RecordID > 0 {
+				keywordItemSnapshotFilter.StringMapFilters = append(keywordItemSnapshotFilter.StringMapFilters, &entity.FieldFilter{
+					Key: "record_" + itemSnapshotMapping.MappingSubKey, Op: "=", Values: []any{strconv.FormatInt(itemSnapshotMapping.RecordID, 10)},
+				})
+			}
 		}
 	}
 	filter.KeywordSearch.ItemSnapshotFilter = keywordItemSnapshotFilter
@@ -2896,13 +2915,6 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		return nil
 	}
 
-	// 检查实验是否启用了加权得分
-	if expt.EvalConf == nil || expt.EvalConf.ConnectorConf.EvaluatorsConf == nil ||
-		!expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-		// 如果未启用加权得分，不需要重新计算
-		return nil
-	}
-
 	// 获取该轮次的所有评估器记录
 	turnEvaluatorRefs, err := e.ExptTurnResultRepo.BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{turnResult.ID})
 	if err != nil {
@@ -2938,17 +2950,21 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		}
 	}
 
-	// 构建权重映射
-	scoreWeights := make(map[int64]float64)
-	if expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
+	// 构建权重映射：仅当 EnableScoreWeight 为 true 时使用配置权重，否则等权
+	var scoreWeights map[int64]float64
+	if expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight &&
+		expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf != nil {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 && ec.EvaluatorVersionID > 0 {
+			if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 && ec.EvaluatorVersionID > 0 {
+				if scoreWeights == nil {
+					scoreWeights = make(map[int64]float64)
+				}
 				scoreWeights[ec.EvaluatorVersionID] = *ec.ScoreWeight
 			}
 		}
 	}
 
-	// 重新计算加权得分
 	weightedScore := calculateWeightedScore(version2Record, scoreWeights)
 
 	// 更新 expt_turn_result 的 weighted_score

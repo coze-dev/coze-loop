@@ -17,6 +17,14 @@ func TestEvalTargetType_String(t *testing.T) {
 	assert.Equal(t, "CozeWorkflow", EvalTargetTypeCozeWorkflow.String())
 	assert.Equal(t, "VolcengineAgent", EvalTargetTypeVolcengineAgent.String())
 	assert.Equal(t, "WebAgent", EvalTargetTypeWebAgent.String())
+	assert.Equal(t, "CustomRPCServer", EvalTargetTypeCustomRPCServer.String())
+	assert.Equal(t, "VolcengineAgentKit", EvalTargetTypeVolcengineAgentAgentkit.String())
+	assert.Equal(t, "CozeBotOnline", EvalTargetTypeCozeBotOnline.String())
+	assert.Equal(t, "CozeLoopPromptOnline", EvalTargetTypeCozeLoopPromptOnline.String())
+	assert.Equal(t, "CozeWorkflowOnline", EvalTargetTypeCozeWorkflowOnline.String())
+	assert.Equal(t, "VolcengineAgentOnline", EvalTargetTypeVolcengineAgentOnline.String())
+	assert.Equal(t, "CustomRPCServerOnline", EvalTargetTypeCustomRPCServerOnline.String())
+	assert.Equal(t, "VolcengineAgentAgentkitOnline", EvalTargetTypeVolcengineAgentAgentkitOnline.String())
 	var unknown EvalTargetType = 99
 	assert.Equal(t, "<UNSET>", unknown.String())
 }
@@ -166,6 +174,177 @@ func TestEvalTargetVersion_RuntimeParamDemo(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.version.RuntimeParamDemo = tt.demo
 			assert.Equal(t, tt.expected, tt.version.RuntimeParamDemo)
+		})
+	}
+}
+
+func TestEvalTargetType_NeedExecuteTarget(t *testing.T) {
+	tests := []struct {
+		name       string
+		targetType EvalTargetType
+		expected   bool
+	}{
+		{
+			name:       "CozeBot needs execute target",
+			targetType: EvalTargetTypeCozeBot,
+			expected:   true,
+		},
+		{
+			name:       "LoopPrompt needs execute target",
+			targetType: EvalTargetTypeLoopPrompt,
+			expected:   true,
+		},
+		{
+			name:       "LoopTrace needs execute target",
+			targetType: EvalTargetTypeLoopTrace,
+			expected:   true,
+		},
+		{
+			name:       "CozeWorkflow needs execute target",
+			targetType: EvalTargetTypeCozeWorkflow,
+			expected:   true,
+		},
+		{
+			name:       "VolcengineAgent needs execute target",
+			targetType: EvalTargetTypeVolcengineAgent,
+			expected:   true,
+		},
+		{
+			name:       "CustomRPCServer needs execute target",
+			targetType: EvalTargetTypeCustomRPCServer,
+			expected:   true,
+		},
+		{
+			name:       "VolcengineAgentAgentkit needs execute target",
+			targetType: EvalTargetTypeVolcengineAgentAgentkit,
+			expected:   true,
+		},
+		{
+			name:       "CozeBotOnline does not need execute target",
+			targetType: EvalTargetTypeCozeBotOnline,
+			expected:   false,
+		},
+		{
+			name:       "CozeLoopPromptOnline does not need execute target",
+			targetType: EvalTargetTypeCozeLoopPromptOnline,
+			expected:   false,
+		},
+		{
+			name:       "CozeWorkflowOnline does not need execute target",
+			targetType: EvalTargetTypeCozeWorkflowOnline,
+			expected:   false,
+		},
+		{
+			name:       "VolcengineAgentOnline does not need execute target",
+			targetType: EvalTargetTypeVolcengineAgentOnline,
+			expected:   false,
+		},
+		{
+			name:       "CustomRPCServerOnline does not need execute target",
+			targetType: EvalTargetTypeCustomRPCServerOnline,
+			expected:   false,
+		},
+		{
+			name:       "VolcengineAgentAgentkitOnline does not need execute target",
+			targetType: EvalTargetTypeVolcengineAgentAgentkitOnline,
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.targetType.NeedExecuteTarget())
+		})
+	}
+}
+
+func TestEvalTargetType_RecordOnlyTypeToBaseType(t *testing.T) {
+	tests := []struct {
+		name         string
+		targetType   EvalTargetType
+		expectedType EvalTargetType
+		expectedOk   bool
+	}{
+		{
+			name:         "CozeBotOnline to CozeBot",
+			targetType:   EvalTargetTypeCozeBotOnline,
+			expectedType: EvalTargetTypeCozeBot,
+			expectedOk:   true,
+		},
+		{
+			name:         "CozeLoopPromptOnline to LoopPrompt",
+			targetType:   EvalTargetTypeCozeLoopPromptOnline,
+			expectedType: EvalTargetTypeLoopPrompt,
+			expectedOk:   true,
+		},
+		{
+			name:         "CozeWorkflowOnline to CozeWorkflow",
+			targetType:   EvalTargetTypeCozeWorkflowOnline,
+			expectedType: EvalTargetTypeCozeWorkflow,
+			expectedOk:   true,
+		},
+		{
+			name:         "VolcengineAgentOnline to VolcengineAgent",
+			targetType:   EvalTargetTypeVolcengineAgentOnline,
+			expectedType: EvalTargetTypeVolcengineAgent,
+			expectedOk:   true,
+		},
+		{
+			name:         "CustomRPCServerOnline to CustomRPCServer",
+			targetType:   EvalTargetTypeCustomRPCServerOnline,
+			expectedType: EvalTargetTypeCustomRPCServer,
+			expectedOk:   true,
+		},
+		{
+			name:         "VolcengineAgentAgentkitOnline to VolcengineAgentAgentkit",
+			targetType:   EvalTargetTypeVolcengineAgentAgentkitOnline,
+			expectedType: EvalTargetTypeVolcengineAgentAgentkit,
+			expectedOk:   true,
+		},
+		{
+			name:         "CozeBot is not record only type",
+			targetType:   EvalTargetTypeCozeBot,
+			expectedType: 0,
+			expectedOk:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			baseType, ok := tt.targetType.RecordOnlyTypeToBaseType()
+			assert.Equal(t, tt.expectedType, baseType)
+			assert.Equal(t, tt.expectedOk, ok)
+		})
+	}
+}
+
+func TestEvalTargetType_ToOperatorBaseType(t *testing.T) {
+	assert.Equal(t, EvalTargetTypeLoopPrompt, EvalTargetTypeCozeLoopPromptOnline.ToOperatorBaseType())
+	assert.Equal(t, EvalTargetTypeCozeBot, EvalTargetTypeCozeBotOnline.ToOperatorBaseType())
+	assert.Equal(t, EvalTargetTypeCozeBot, EvalTargetTypeCozeBot.ToOperatorBaseType())
+}
+
+func TestEvalTargetType_BaseTypeToRecordOnlyType(t *testing.T) {
+	tests := []struct {
+		name         string
+		targetType   EvalTargetType
+		expectedType EvalTargetType
+		expectedOk   bool
+	}{
+		{name: "CozeBot to CozeBotOnline", targetType: EvalTargetTypeCozeBot, expectedType: EvalTargetTypeCozeBotOnline, expectedOk: true},
+		{name: "LoopPrompt to CozeLoopPromptOnline", targetType: EvalTargetTypeLoopPrompt, expectedType: EvalTargetTypeCozeLoopPromptOnline, expectedOk: true},
+		{name: "CozeWorkflow to CozeWorkflowOnline", targetType: EvalTargetTypeCozeWorkflow, expectedType: EvalTargetTypeCozeWorkflowOnline, expectedOk: true},
+		{name: "VolcengineAgent to VolcengineAgentOnline", targetType: EvalTargetTypeVolcengineAgent, expectedType: EvalTargetTypeVolcengineAgentOnline, expectedOk: true},
+		{name: "CustomRPCServer to CustomRPCServerOnline", targetType: EvalTargetTypeCustomRPCServer, expectedType: EvalTargetTypeCustomRPCServerOnline, expectedOk: true},
+		{name: "VolcengineAgentAgentkit to Online", targetType: EvalTargetTypeVolcengineAgentAgentkit, expectedType: EvalTargetTypeVolcengineAgentAgentkitOnline, expectedOk: true},
+		{name: "LoopTrace no mapping", targetType: EvalTargetTypeLoopTrace, expectedType: 0, expectedOk: false},
+		{name: "CozeBotOnline not base", targetType: EvalTargetTypeCozeBotOnline, expectedType: 0, expectedOk: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			onlineT, ok := tt.targetType.BaseTypeToRecordOnlyType()
+			assert.Equal(t, tt.expectedType, onlineT)
+			assert.Equal(t, tt.expectedOk, ok)
 		})
 	}
 }

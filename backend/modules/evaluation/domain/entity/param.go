@@ -299,6 +299,7 @@ type CreateExptParam struct {
 	ExptConf              *EvaluationConfiguration `json:"expt_conf"`
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
 	TrialRunItemCount     int64                    `json:"trial_run_item_count"`
+	TriggerType           string                   `json:"trigger_type,omitempty"`
 }
 
 type ExptRunCheckOption struct {

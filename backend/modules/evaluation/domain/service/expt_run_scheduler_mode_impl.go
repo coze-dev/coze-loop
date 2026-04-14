@@ -13,12 +13,15 @@ import (
 	"gorm.io/gorm/clause"
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
+	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
@@ -47,6 +50,7 @@ func NewSchedulerModeFactory(
 	resultSvc ExptResultService,
 	templateManager IExptTemplateManager,
 	exptRunLogRepo repo.IExptRunLogRepo,
+	mutex lock.ILocker,
 ) SchedulerModeFactory {
 	return &DefaultSchedulerModeFactory{
 		manager:                  manager,
@@ -63,6 +67,7 @@ func NewSchedulerModeFactory(
 		resultSvc:                resultSvc,
 		templateManager:          templateManager,
 		exptRunLogRepo:           exptRunLogRepo,
+		mutex:                    mutex,
 	}
 }
 
@@ -82,6 +87,7 @@ type DefaultSchedulerModeFactory struct {
 	resultSvc                ExptResultService
 	templateManager          IExptTemplateManager
 	exptRunLogRepo           repo.IExptRunLogRepo
+	mutex                    lock.ILocker
 }
 
 func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
@@ -95,7 +101,7 @@ func (f *DefaultSchedulerModeFactory) NewSchedulerMode(
 	case entity.EvaluationModeFailRetry:
 		return NewExptFailRetryMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeAppend:
-		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
+		return NewExptAppendMode(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager, f.mutex), nil
 	case entity.EvaluationModeRetryAll:
 		return NewExptRetryAllExec(f.manager, f.exptItemResultRepo, f.exptStatsRepo, f.exptTurnResultRepo, f.idgenerator, f.evaluationSetItemService, f.exptRepo, f.idem, f.configer, f.publisher, f.evaluatorRecordService, f.templateManager), nil
 	case entity.EvaluationModeRetryItems:
@@ -496,7 +502,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 	}
 	if templateID > 0 && e.templateManager != nil {
 		// 离线实验开始执行，状态变更，数量不变
-		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
 			logs.CtxError(ctx, "UpdateExptInfo failed in ExptSubmitExec.ExptStart, template_id: %v, expt_id: %v, err: %v",
 				templateID, event.ExptID, err)
 		} else {
@@ -561,10 +567,6 @@ func (e *ExptSubmitExec) ExptEnd(ctx context.Context, event *entity.ExptSchedule
 		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
 	}
 	return true, nil
-}
-
-func (e *ExptSubmitExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
-	return nil
 }
 
 func (e *ExptSubmitExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
@@ -747,7 +749,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			}
 		}
 		if templateID > 0 {
-			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
 				logs.CtxError(ctx, "UpdateExptInfo failed in ExptFailRetryExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
 			} else {
 				logs.CtxInfo(ctx, "UpdateExptInfo succeeded in ExptFailRetryExec.ExptStart, template_id: %v, expt_id: %v, status: %v", templateID, event.ExptID, entity.ExptStatus_Processing)
@@ -775,10 +777,6 @@ func (e *ExptFailRetryExec) ExptEnd(ctx context.Context, event *entity.ExptSched
 		return false, newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt)
 	}
 	return true, nil
-}
-
-func (e *ExptFailRetryExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
-	return nil
 }
 
 func (e *ExptFailRetryExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
@@ -811,6 +809,7 @@ type ExptAppendExec struct {
 	publisher                events.ExptEventPublisher
 	evaluatorRecordService   EvaluatorRecordService
 	templateManager          IExptTemplateManager
+	mutex                    lock.ILocker
 }
 
 func NewExptAppendMode(
@@ -826,6 +825,7 @@ func NewExptAppendMode(
 	publisher events.ExptEventPublisher,
 	evaluatorRecordService EvaluatorRecordService,
 	templateManager IExptTemplateManager,
+	mutex lock.ILocker,
 ) *ExptAppendExec {
 	return &ExptAppendExec{
 		manager:                  manager,
@@ -840,6 +840,7 @@ func NewExptAppendMode(
 		publisher:                publisher,
 		evaluatorRecordService:   evaluatorRecordService,
 		templateManager:          templateManager,
+		mutex:                    mutex,
 	}
 }
 
@@ -856,34 +857,73 @@ func (e *ExptAppendExec) ScanEvalItems(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) ExptEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) (nextTick bool, err error) {
-	if toSubmit == 0 && incomplete == 0 && expt.Status == entity.ExptStatus_Draining {
-		logs.CtxInfo(ctx, "[ExptEval] expt daemon finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, expt); err != nil {
-			logs.CtxError(ctx, "[ExptEval] expt daemon end failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+	// 数据锁加锁，加锁后重新扫描 item
+	dataLockKey := fmt.Sprintf("expt_online_data_lock:%d:%d", event.ExptID, event.ExptRunID)
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock acquiring, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+	locked, err := e.mutex.LockBackoff(ctx, dataLockKey, time.Second*30, time.Minute*5)
+	if err != nil {
+		logs.CtxError(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+		return false, err
+	}
+	if !locked {
+		logs.CtxError(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock timeout, expt_id: %v, run_id: %v", event.ExptID, event.ExptRunID)
+		return false, errorx.New("[ExptEval] online expt data lock timeout")
+	}
+	logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock acquired, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+	defer func() {
+		logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		if _, uerr := e.mutex.Unlock(dataLockKey); uerr != nil {
+			logs.CtxWarn(ctx, "[ScheduleLock][Data][ExptEval] online expt data unlock err, expt_id: %v, run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
+		} else {
+			logs.CtxInfo(ctx, "[ScheduleLock][Data][ExptEval] online expt data lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		}
+	}()
+
+	// 加锁后重新扫描 item，不使用之前的 scan 结果
+	exptDetail, err := e.manager.GetDetail(contexts.WithCtxWriteDB(ctx), event.ExptID, event.SpaceID, event.Session)
+	if err != nil {
+		return false, err
+	}
+	toSubmitItems, incompleteItems, completeItems, err := e.ScanEvalItems(ctx, event, exptDetail)
+	if err != nil {
+		return false, err
+	}
+	toSubmitCnt := len(toSubmitItems)
+	incompleteCnt := len(incompleteItems)
+	complete := len(completeItems)
+	logs.CtxInfo(ctx, "[ExptEval] expt append ExptEnd scan item, to_submit: %v, incomplete: %v, complete: %v", toSubmitCnt, incompleteCnt, complete)
+	// 用新的 toSubmit、incomplete、complete 判断是否结束，需 Complete 数量也为零才不发送下一个心跳
+	if toSubmitCnt == 0 && incompleteCnt == 0 && complete == 0 {
+		switch exptDetail.Status {
+		case entity.ExptStatus_Draining:
+			logs.CtxInfo(ctx, "[ExptEval] expt daemon drained, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			if err = newExptBaseExec(e.manager, e.idem, e.configer, e.exptItemResultRepo, e.publisher, e.evaluatorRecordService).exptEnd(ctx, event, exptDetail); err != nil {
+				logs.CtxError(ctx, "[ExptEval] expt daemon end failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+			}
+		case entity.ExptStatus_Processing, entity.ExptStatus_Pending:
+			logs.CtxInfo(ctx, "[ExptEval] expt daemon found no data, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
+			if err := e.manager.RecordExptData(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
+				logs.CtxError(ctx, "[ExptEval] expt daemon record expt data failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
+			}
+		}
+		// 在线实验 daemon 结束：主动释放 Redis 心跳锁，适配分布式架构（ExptEnd 可能在任意实例执行）
+		lockKey := fmt.Sprintf("expt_online_daemon_lock:%d:%d", event.ExptID, event.ExptRunID)
+		logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock releasing, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		if released, uerr := e.mutex.UnlockForce(ctx, lockKey); uerr != nil {
+			logs.CtxWarn(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock UnlockForce err, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, uerr)
+		} else if released {
+			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock released, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
+		} else {
+			logs.CtxInfo(ctx, "[ScheduleLock][HeartBeat][ExptEval] online expt heartbeat lock already released or not held, expt_id: %v, expt_run_id: %v, space_id: %v", event.ExptID, event.ExptRunID, event.SpaceID)
 		}
 		return false, nil
 	}
-	return true, nil
+
+	// 若未结束且有新数据或待 Complete，则发送下一次 tick；否则不发送
+	return toSubmitCnt > 0 || incompleteCnt > 0 || complete > 0, nil
 }
 
 func (e *ExptAppendExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
-	return nil
-}
-
-func (e *ExptAppendExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
-	if toSubmit == 0 && incomplete == 0 && (expt.Status == entity.ExptStatus_Processing || expt.Status == entity.ExptStatus_Pending) {
-		// 没有数据且未完成，计算一次stats
-		logs.CtxInfo(ctx, "[ExptEval] expt daemon found no data, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-		if err := e.manager.PendRun(ctx, event.ExptID, event.ExptRunID, event.SpaceID, event.Session); err != nil {
-			logs.CtxError(ctx, "[ExptEval] expt daemon pend run failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
-		}
-		if err := e.manager.PendExpt(ctx, event.ExptID, event.SpaceID, event.Session); err != nil {
-			logs.CtxError(ctx, "[ExptEval] expt daemon pend expt failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
-		}
-		time.Sleep(time.Second * 60)
-	} else if entity.IsExptFinished(expt.Status) {
-		logs.CtxInfo(ctx, "[ExptEval] online expt finished, expt_id: %v, expt_run_id: %v", event.ExptID, event.ExptRunID)
-	}
 	return nil
 }
 
@@ -903,7 +943,7 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 		} else {
 			// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
 			if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0); err != nil {
+				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0, nil); err != nil {
 					logs.CtxError(ctx, "UpdateExptInfo failed in ScheduleStart (Draining), template_id: %v, expt_id: %v, err: %v",
 						expt.ExptTemplateMeta.ID, event.ExptID, err)
 				}
@@ -920,7 +960,7 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 		} else {
 			// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
 			if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
-				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0); err != nil {
+				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0, nil); err != nil {
 					logs.CtxError(ctx, "UpdateExptInfo failed in ScheduleStart, template_id: %v, expt_id: %v, err: %v",
 						expt.ExptTemplateMeta.ID, event.ExptID, err)
 				}
@@ -931,7 +971,12 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 }
 
 func (e *ExptAppendExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {
-	interval := e.configer.GetExptExecConf(ctx, event.SpaceID).GetDaemonInterval()
+	conf := e.configer.GetExptExecConf(ctx, event.SpaceID)
+	interval := 20 * time.Second
+	if conf != nil {
+		interval = conf.GetDaemonInterval()
+	}
+	// 锁由 scheduler 的自动续期 goroutine 持有，此处直接发送
 	event.CreatedAt = time.Now().Unix()
 	return e.publisher.PublishExptScheduleEvent(ctx, event, gptr.Of(interval))
 }
@@ -1309,7 +1354,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			templateID = expt.ExptTemplateMeta.ID
 		}
 		if templateID > 0 {
-			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
 				logs.CtxError(ctx, "UpdateExptInfo failed in ExptRetryAllExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
 			}
 		}
@@ -1338,10 +1383,6 @@ func (e *ExptRetryAllExec) ExptEnd(ctx context.Context, event *entity.ExptSchedu
 }
 
 func (e *ExptRetryAllExec) ScheduleStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
-	return nil
-}
-
-func (e *ExptRetryAllExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
 	return nil
 }
 
@@ -1437,7 +1478,7 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 			templateID = expt.ExptTemplateMeta.ID
 		}
 		if templateID > 0 {
-			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+			if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
 				logs.CtxError(ctx, "UpdateExptInfo failed in ExptRetryItemsExec.ExptStart, template_id: %v, expt_id: %v, err: %v", templateID, event.ExptID, err)
 			}
 		}
@@ -1623,10 +1664,6 @@ func (e *ExptRetryItemsExec) ScheduleStart(ctx context.Context, event *entity.Ex
 	logs.CtxInfo(ctx, "ExptRetryItemsExec.ScheduleStart found absent item_id: %v, expt_id: %v", absence, event.ExptID)
 
 	return e.resetEvalItems(ctx, event, expt, absence)
-}
-
-func (e *ExptRetryItemsExec) ScheduleEnd(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, toSubmit, incomplete int) error {
-	return nil
 }
 
 func (e *ExptRetryItemsExec) NextTick(ctx context.Context, event *entity.ExptScheduleEvent, nextTick bool) error {

@@ -738,9 +738,102 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersions(ctx context.Context, re
 		evaluatorVersionDTOList = append(evaluatorVersionDTOList, dto.CurrentVersion)
 	}
 	e.userInfoService.PackUserInfo(ctx, userinfo.BatchConvertDTO2UserInfoCarrier(evaluatorVersionDTOList))
+	logs.CtxInfo(ctx, "batch get evaluator version list: %v", dtoList)
 	return &evaluatorservice.BatchGetEvaluatorVersionsResponse{
 		Evaluators: dtoList,
 	}, nil
+}
+
+// BatchGetEvaluatorVersionIDs 按 evaluator_id + version 批量解析 evaluator_version_id（与请求顺序一致；未命中时 evaluator_version_id 为空或 0）。内部 RPC，不做用户级鉴权。
+func (e *EvaluatorHandlerImpl) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluatorservice.BatchGetEvaluatorVersionIDsRequest) (resp *evaluatorservice.BatchGetEvaluatorVersionIDsResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
+	}
+	pairsIn := request.GetEvaluatorIDVersionPairs()
+	if len(pairsIn) == 0 {
+		return &evaluatorservice.BatchGetEvaluatorVersionIDsResponse{}, nil
+	}
+
+	builtinIDs := make([]int64, 0)
+	builtinIDSeen := make(map[int64]struct{})
+	normalPairs := make([][2]interface{}, 0)
+	for _, p := range pairsIn {
+		if p == nil {
+			continue
+		}
+		eid := p.GetEvaluatorID()
+		ver := strings.TrimSpace(p.GetVersion())
+		if eid <= 0 || ver == "" {
+			continue
+		}
+		if ver == evaluatordto.EvaluatorVersionTypeBuiltinVisible {
+			if _, ok := builtinIDSeen[eid]; !ok {
+				builtinIDSeen[eid] = struct{}{}
+				builtinIDs = append(builtinIDs, eid)
+			}
+			continue
+		}
+		normalPairs = append(normalPairs, [2]interface{}{eid, ver})
+	}
+
+	var dosBuiltin, dosNormal []*entity.Evaluator
+	if len(builtinIDs) > 0 {
+		dosBuiltin, err = e.evaluatorService.BatchGetBuiltinEvaluator(ctx, builtinIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(normalPairs) > 0 {
+		dosNormal, err = e.evaluatorService.BatchGetEvaluatorByIDAndVersion(ctx, normalPairs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	idVer2DO := make(map[string]*entity.Evaluator, len(dosBuiltin)+len(dosNormal))
+	for _, ev := range dosBuiltin {
+		if ev == nil {
+			continue
+		}
+		idVer2DO[evaluatorIDVersionPairKey(ev.ID, evaluatordto.EvaluatorVersionTypeBuiltinVisible)] = ev
+	}
+	for _, ev := range dosNormal {
+		if ev == nil {
+			continue
+		}
+		idVer2DO[evaluatorIDVersionPairKey(ev.ID, ev.GetVersion())] = ev
+	}
+
+	out := make([]*evaluatordto.EvaluatorIDVersionItem, 0, len(pairsIn))
+	for _, p := range pairsIn {
+		if p == nil {
+			continue
+		}
+		eid := p.GetEvaluatorID()
+		ver := strings.TrimSpace(p.GetVersion())
+		item := evaluatordto.NewEvaluatorIDVersionItem()
+		item.SetEvaluatorID(gptr.Of(eid))
+		item.SetVersion(gptr.Of(p.GetVersion()))
+		if eid <= 0 || ver == "" {
+			out = append(out, item)
+			continue
+		}
+		if ev, ok := idVer2DO[evaluatorIDVersionPairKey(eid, ver)]; ok {
+			vid := ev.GetEvaluatorVersionID()
+			if vid > 0 {
+				item.SetEvaluatorVersionID(gptr.Of(vid))
+			}
+		}
+		out = append(out, item)
+	}
+
+	return &evaluatorservice.BatchGetEvaluatorVersionIDsResponse{
+		IDVersionItems: out,
+	}, nil
+}
+
+func evaluatorIDVersionPairKey(evaluatorID int64, version string) string {
+	return strconv.FormatInt(evaluatorID, 10) + "\x00" + version
 }
 
 // SubmitEvaluatorVersion 提交 evaluator_version 版本

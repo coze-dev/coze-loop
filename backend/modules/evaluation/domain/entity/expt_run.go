@@ -526,7 +526,6 @@ type ExptSchedulerMode interface {
 	ScanEvalItems(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) (toSubmit, incomplete, complete []*ExptEvalItem, err error)
 	ExptEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) (nextTick bool, err error)
 	ScheduleStart(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) error
-	ScheduleEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) error
 	NextTick(ctx context.Context, event *ExptScheduleEvent, nextTick bool) error
 	PublishResult(ctx context.Context, turnEvaluatorRefs []*ExptTurnEvaluatorResultRef, event *ExptScheduleEvent) error
 }

@@ -66,6 +66,14 @@ func NewEvalTargetHandlerImpl(
 	return evalTargetHandler
 }
 
+// resolveOperatorType 仅记录型映射到 base 类型以复用 operator，其他类型原样返回
+func resolveOperatorType(targetType entity.EvalTargetType) entity.EvalTargetType {
+	if baseType, ok := targetType.RecordOnlyTypeToBaseType(); ok {
+		return baseType
+	}
+	return targetType
+}
+
 func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request *eval_target.CreateEvalTargetRequest) (r *eval_target.CreateEvalTargetResponse, err error) {
 	// 校验参数是否为空
 	if request == nil {
@@ -248,10 +256,11 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargets(ctx context.Context, re
 		KeyWord:    request.Name,
 		TargetType: entity.EvalTargetType(request.GetTargetType()),
 	}
-	if e.typedOperators[param.TargetType] == nil {
+	opType := resolveOperatorType(param.TargetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, nextCursor, hasMore, err = e.typedOperators[param.TargetType].ListSource(ctx, param)
+	res, nextCursor, hasMore, err = e.typedOperators[opType].ListSource(ctx, param)
 	if err != nil {
 		return nil, err
 	}
@@ -294,10 +303,11 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 		SourceTargetID: request.SourceTargetID,
 		TargetType:     entity.EvalTargetType(request.GetTargetType()),
 	}
-	if e.typedOperators[param.TargetType] == nil {
+	opType := resolveOperatorType(param.TargetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, nextCursor, hasMore, err = e.typedOperators[param.TargetType].ListSourceVersion(ctx, param)
+	res, nextCursor, hasMore, err = e.typedOperators[opType].ListSourceVersion(ctx, param)
 	if err != nil {
 		return nil, err
 	}
@@ -481,11 +491,12 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	var res []*entity.EvalTarget
-	if e.typedOperators[entity.EvalTargetType(request.GetTargetType())] == nil {
+	targetType := entity.EvalTargetType(request.GetTargetType())
+	opType := resolveOperatorType(targetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, err = e.typedOperators[entity.EvalTargetType(request.GetTargetType())].BatchGetSource(ctx, request.WorkspaceID, request.SourceTargetIds)
+	res, err := e.typedOperators[opType].BatchGetSource(ctx, request.WorkspaceID, request.SourceTargetIds)
 	if err != nil {
 		return nil, err
 	}
@@ -590,15 +601,16 @@ func (e EvalTargetApplicationImpl) MockEvalTargetOutput(ctx context.Context, req
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
 	}
 
-	// 验证targetType是否支持
+	// 验证targetType是否支持（仅记录型复用 base 的 operator）
 	targetType := entity.EvalTargetType(request.TargetType)
-	if e.typedOperators[targetType] == nil {
+	opType := resolveOperatorType(targetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
 
 	// 使用BuildBySource构建target实体（不保存）
 	sourceTargetID := strconv.FormatInt(request.SourceTargetID, 10)
-	evalTarget, err := e.typedOperators[targetType].BuildBySource(ctx, request.WorkspaceID, sourceTargetID, request.EvalTargetVersion)
+	evalTarget, err := e.typedOperators[opType].BuildBySource(ctx, request.WorkspaceID, sourceTargetID, request.EvalTargetVersion)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ package prompt
 
 import (
 	"context"
+	"strings"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -148,9 +149,15 @@ func (p PromptRPCAdapter) MGetPrompt(ctx context.Context, spaceID int64, promptQ
 		promptQuery := &manage.PromptQuery{
 			PromptID: &query.PromptID,
 		}
+		ver := ""
 		if query.Version != nil {
+			ver = strings.TrimSpace(*query.Version)
+		}
+		if ver != "" {
 			promptQuery.WithCommit = gptr.Of(true)
-			promptQuery.CommitVersion = query.Version
+			promptQuery.CommitVersion = gptr.Of(ver)
+		} else {
+			promptQuery.WithCommit = gptr.Of(false)
 		}
 		queries = append(queries, promptQuery)
 	}

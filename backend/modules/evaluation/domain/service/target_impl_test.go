@@ -179,6 +179,48 @@ func TestEvalTargetServiceImpl_CreateEvalTarget(t *testing.T) {
 	}
 }
 
+func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithoutSource(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	deps := &evalTargetServiceTestDeps{
+		repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+		idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+		metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+		configer: componentmocks.NewMockIConfiger(ctrl),
+	}
+
+	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
+	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
+		func(ctx context.Context, do *entity.EvalTarget) (int64, int64, error) {
+			assert.Equal(t, entity.EvalTargetTypeCozeWorkflowOnline, do.EvalTargetType)
+			assert.Equal(t, "", do.SourceTargetID)
+			require.NotNil(t, do.EvalTargetVersion)
+			assert.Equal(t, consts.DefaultSourceTargetVersion, do.EvalTargetVersion.SourceTargetVersion)
+			assert.Equal(t, entity.EvalTargetTypeCozeWorkflowOnline, do.EvalTargetVersion.EvalTargetType)
+			return 901, 902, nil
+		},
+	)
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo: deps.repo,
+		idgen:          deps.idgen,
+		metric:         deps.metric,
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeCozeWorkflow: deps.operator,
+		},
+	}
+
+	id, vid, err := svc.CreateEvalTarget(ctx, 7, "", "", entity.EvalTargetTypeCozeWorkflowOnline)
+	require.NoError(t, err)
+	assert.Equal(t, int64(901), id)
+	assert.Equal(t, int64(902), vid)
+}
+
 func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
 	t.Parallel()
 

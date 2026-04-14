@@ -123,6 +123,7 @@ func TestQuotaSpaceExpt_Serialize(t *testing.T) {
 	assert.NotNil(t, b)
 }
 
+<<<<<<< HEAD
 func TestExperiment_AsyncCallTarget_WebAgent(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -339,4 +340,11 @@ func TestWithOptions(t *testing.T) {
 	instruction := "do something"
 	WithOperationInstruction(&instruction)(opt)
 	assert.Equal(t, &instruction, opt.OperationInstruction)
+}
+func TestCreateEvalTargetParam_IsNull(t *testing.T) {
+	assert.True(t, ((*CreateEvalTargetParam)(nil)).IsNull())
+	assert.True(t, (&CreateEvalTargetParam{}).IsNull())
+	assert.False(t, (&CreateEvalTargetParam{EvalTargetType: gptr.Of(EvalTargetTypeCozeLoopPromptOnline)}).IsNull())
+	s := "x"
+	assert.False(t, (&CreateEvalTargetParam{SourceTargetID: &s}).IsNull())
 }

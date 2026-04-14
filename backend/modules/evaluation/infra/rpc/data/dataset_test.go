@@ -531,7 +531,12 @@ func TestQueryItemSnapshotMappings(t *testing.T) {
 
 	adapter, _ := newTestAdapter(ctrl)
 
-	mappings, syncDate, err := adapter.QueryItemSnapshotMappings(ctx, 1, 2, gptr.Of(int64(3)))
+	mappings, syncDate, err := adapter.QueryItemSnapshotMappings(ctx, &rpc.QueryItemSnapshotMappingRequest{
+		SpaceID:        1,
+		DatasetID:      2,
+		IsDraftVersion: false,
+		VersionID:      gptr.Of(int64(3)),
+	})
 	assert.Nil(t, mappings)
 	assert.Equal(t, "", syncDate)
 	assert.NoError(t, err)

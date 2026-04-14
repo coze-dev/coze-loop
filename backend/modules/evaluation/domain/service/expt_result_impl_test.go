@@ -979,7 +979,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -1479,7 +1479,7 @@ func TestExptResultServiceImpl_MGetExperimentResult(t *testing.T) {
 				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvaluatorRecord{}, nil).AnyTimes()
 				mockEvalTargetService.EXPECT().BatchGetRecordByIDs(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.EvalTargetRecord{}, nil).AnyTimes()
 				mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+				mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 					{
 						FieldKey:      "field_key_string",
 						MappingKey:    "string_map",
@@ -1644,6 +1644,18 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 						TurnID: 1,
 						Status: int32(entity.TurnRunState_Success),
 					}}, nil)
+
+				mockEvaluatorRecordService.EXPECT().
+					BatchGetEvaluatorRecord(gomock.Any(), []int64{1}, false, false).
+					Return([]*entity.EvaluatorRecord{
+						{
+							ID:                 1,
+							EvaluatorVersionID: 1,
+							EvaluatorOutputData: &entity.EvaluatorOutputData{
+								EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.5)},
+							},
+						},
+					}, nil)
 
 				// idgen mock
 				mockIdgen.EXPECT().
@@ -2035,15 +2047,15 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 
 			svc := tt.setup(ctrl)
 
-			// RecordItemRunLogs 内部会通过 ExperimentRepo.GetByID 加载实验配置，用于判断是否启用加权分数。
-			// 旧单测未初始化 ExperimentRepo，导致新增逻辑下出现 nil pointer。
-			// 这里为所有用例统一注入一个 mock ExperimentRepo，并让 GetByID 返回 nil 实验，跳过加权逻辑。
-			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
-			svc.ExperimentRepo = mockExperimentRepo
-			mockExperimentRepo.EXPECT().
-				GetByID(gomock.Any(), tt.exptID, tt.spaceID).
-				Return((*entity.Experiment)(nil), nil).
-				AnyTimes()
+			// 未在 setup 中注入 ExperimentRepo 的用例：补默认 mock（GetByID 返回 nil，行级分按等权计算）。
+			if svc.ExperimentRepo == nil {
+				mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+				svc.ExperimentRepo = mockExperimentRepo
+				mockExperimentRepo.EXPECT().
+					GetByID(gomock.Any(), tt.exptID, tt.spaceID).
+					Return((*entity.Experiment)(nil), nil).
+					AnyTimes()
+			}
 
 			_, err := svc.RecordItemRunLogs(context.Background(), tt.exptID, tt.exptRunID, tt.itemID, tt.spaceID)
 			if (err != nil) != tt.wantErr {
@@ -2841,7 +2853,7 @@ func TestExptResultServiceImpl_CompareExptTurnResultFilters(t *testing.T) {
 			},
 		}, nil).AnyTimes()
 		mockEvaluationSetService.EXPECT().GetEvaluationSet(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvaluationSet{}, nil).AnyTimes()
-		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
+		mockEvaluationSetService.EXPECT().QueryItemSnapshotMappings(gomock.Any(), gomock.Any()).Return([]*entity.ItemSnapshotFieldMapping{
 			{
 				FieldKey:      "field_key_string",
 				MappingKey:    "string_map",
@@ -4990,7 +5002,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("未启用加权分数，不构建权重映射", func(t *testing.T) {
+	t.Run("未启用配置权重时仍按等权计算行级分", func(t *testing.T) {
 		mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
 		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 		mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
@@ -5042,7 +5054,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 				{ID: 1, TurnID: 1, Status: int32(entity.TurnRunState_Success)},
 			}, nil)
 
-		// Mock GetByID - 返回未启用加权分数的实验配置
+		// Mock GetByID - EnableScoreWeight 为 false，行级分按等权
 		mockExperimentRepo.EXPECT().
 			GetByID(ctx, exptID, spaceID).
 			Return(&entity.Experiment{
@@ -5050,8 +5062,20 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
 						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: false, // 未启用加权分数
+							EnableScoreWeight: false,
 						},
+					},
+				},
+			}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, []int64{1}, false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID:                 1,
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.88)},
 					},
 				},
 			}, nil)
@@ -5082,6 +5106,125 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 			Return(nil)
 
 		// Mock ArithOperateCount
+		mockExptStatsRepo.EXPECT().
+			ArithOperateCount(ctx, exptID, spaceID, gomock.Any()).
+			Return(nil)
+
+		_, err := service.RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID)
+		assert.NoError(t, err)
+	})
+
+	t.Run("启用加权但 EvaluatorConf 无有效 ScoreWeight 时仍计算等权平均", func(t *testing.T) {
+		mockExptItemResultRepo := repoMocks.NewMockIExptItemResultRepo(ctrl)
+		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+		mockExptStatsRepo := repoMocks.NewMockIExptStatsRepo(ctrl)
+		mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
+		mockPublisher := eventsMocks.NewMockExptEventPublisher(ctrl)
+		mockIdgen := idgenMocks.NewMockIIDGenerator(ctrl)
+		mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+
+		service := ExptResultServiceImpl{
+			ExptItemResultRepo:     mockExptItemResultRepo,
+			ExptTurnResultRepo:     mockExptTurnResultRepo,
+			ExptStatsRepo:          mockExptStatsRepo,
+			evaluatorRecordService: mockEvaluatorRecordService,
+			publisher:              mockPublisher,
+			idgen:                  mockIdgen,
+			ExperimentRepo:         mockExperimentRepo,
+		}
+
+		mockExptItemResultRepo.EXPECT().
+			GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID).
+			Return(&entity.ExptItemResultRunLog{
+				Status:      1,
+				ResultState: int32(entity.ExptItemResultStateLogged),
+			}, nil)
+
+		mockExptItemResultRepo.EXPECT().
+			BatchGet(ctx, spaceID, exptID, []int64{itemID}).
+			Return([]*entity.ExptItemResult{
+				{ID: 1, ItemID: itemID, Status: entity.ItemRunState_Processing},
+			}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			GetItemTurnRunLogs(ctx, exptID, exptRunID, itemID, spaceID).
+			Return([]*entity.ExptTurnResultRunLog{
+				{
+					TurnID:             1,
+					Status:             entity.TurnRunState_Success,
+					EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{101: 1, 102: 2}},
+				},
+			}, nil)
+
+		mockExptItemResultRepo.EXPECT().
+			GetItemTurnResults(ctx, spaceID, exptID, itemID).
+			Return([]*entity.ExptTurnResult{
+				{ID: 1, TurnID: 1, Status: int32(entity.TurnRunState_Success)},
+			}, nil)
+
+		// EnableScoreWeight 为 true，但无正权重（仅 nil/0），与库中不一致或在线场景仍应写行级分
+		mockExperimentRepo.EXPECT().
+			GetByID(ctx, exptID, spaceID).
+			Return(&entity.Experiment{
+				ID: exptID,
+				EvalConf: &entity.EvaluationConfiguration{
+					ConnectorConf: entity.Connector{
+						EvaluatorsConf: &entity.EvaluatorsConf{
+							EnableScoreWeight: true,
+							EvaluatorConf: []*entity.EvaluatorConf{
+								{EvaluatorVersionID: 101, ScoreWeight: nil},
+								{EvaluatorVersionID: 102, ScoreWeight: gptr.Of(0.0)},
+							},
+						},
+					},
+				},
+			}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, gomock.InAnyOrder([]int64{1, 2}), false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					ID:                 1,
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.6)},
+					},
+				},
+				{
+					ID:                 2,
+					EvaluatorVersionID: 102,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.8)},
+					},
+				},
+			}, nil)
+
+		mockIdgen.EXPECT().
+			GenMultiIDs(ctx, 2).
+			Return([]int64{1, 2}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			CreateTurnEvaluatorRefs(ctx, gomock.Any()).
+			Return(nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			SaveTurnResults(ctx, gomock.Any()).
+			DoAndReturn(func(_ context.Context, results []*entity.ExptTurnResult) error {
+				assert.Len(t, results, 1)
+				assert.NotNil(t, results[0].WeightedScore)
+				// 等权平均 (0.6+0.8)/2 = 0.7
+				assert.InDelta(t, 0.7, *results[0].WeightedScore, 0.001)
+				return nil
+			})
+
+		mockExptItemResultRepo.EXPECT().
+			UpdateItemsResult(ctx, spaceID, exptID, []int64{itemID}, gomock.Any()).
+			Return(nil)
+
+		mockExptItemResultRepo.EXPECT().
+			UpdateItemRunLog(ctx, exptID, exptRunID, []int64{itemID}, gomock.Any(), spaceID).
+			Return(nil)
+
 		mockExptStatsRepo.EXPECT().
 			ArithOperateCount(ctx, exptID, spaceID, gomock.Any()).
 			Return(nil)
@@ -5624,7 +5767,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		if assert.NotNil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore) {
@@ -5678,14 +5821,14 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
 		// 应该使用已有的加权分数
 		assert.Equal(t, existingScore, *builder.ExptTurnResultFilters[0].EvaluatorWeightedScore)
 	})
 
-	t.Run("未启用加权分数，不重新计算", func(t *testing.T) {
+	t.Run("未启用配置权重时按等权补算", func(t *testing.T) {
 		builder := &PayloadBuilder{
 			SpaceID:        100,
 			BaselineExptID: 1,
@@ -5707,7 +5850,7 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 						EvalConf: &entity.EvaluationConfiguration{
 							ConnectorConf: entity.Connector{
 								EvaluatorsConf: &entity.EvaluatorsConf{
-									EnableScoreWeight: false, // 未启用
+									EnableScoreWeight: false,
 								},
 							},
 						},
@@ -5728,11 +5871,12 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 			},
 		}
 
-		err := builder.fillExptTurnResultFilters(ctx, nil, 1)
+		err := builder.fillExptTurnResultFilters(ctx, nil, 0, 1)
 		assert.NoError(t, err)
 		assert.Len(t, builder.ExptTurnResultFilters, 1)
-		// 未启用加权分数，应该保持为 nil
-		assert.Nil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore)
+		if assert.NotNil(t, builder.ExptTurnResultFilters[0].EvaluatorWeightedScore) {
+			assert.InDelta(t, 0.8, *builder.ExptTurnResultFilters[0].EvaluatorWeightedScore, 0.01)
+		}
 	})
 }
 
@@ -5875,13 +6019,15 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		assert.NoError(t, err) // 应该返回 nil，不报错
 	})
 
-	t.Run("未启用加权分数，返回 nil", func(t *testing.T) {
+	t.Run("未启用配置权重时等权重算并更新", func(t *testing.T) {
 		mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 		mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 
 		service := ExptResultServiceImpl{
-			ExptTurnResultRepo: mockExptTurnResultRepo,
-			ExperimentRepo:     mockExperimentRepo,
+			ExptTurnResultRepo:     mockExptTurnResultRepo,
+			ExperimentRepo:         mockExperimentRepo,
+			evaluatorRecordService: mockEvaluatorRecordService,
 		}
 
 		mockExptTurnResultRepo.EXPECT().
@@ -5895,14 +6041,33 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 				EvalConf: &entity.EvaluationConfiguration{
 					ConnectorConf: entity.Connector{
 						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: false, // 未启用
+							EnableScoreWeight: false,
 						},
 					},
 				},
 			}, nil)
 
+		mockExptTurnResultRepo.EXPECT().
+			BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{10}).
+			Return([]*entity.ExptTurnEvaluatorResultRef{{EvaluatorResultID: 55}}, nil)
+
+		mockEvaluatorRecordService.EXPECT().
+			BatchGetEvaluatorRecord(ctx, []int64{55}, false, false).
+			Return([]*entity.EvaluatorRecord{
+				{
+					EvaluatorVersionID: 101,
+					EvaluatorOutputData: &entity.EvaluatorOutputData{
+						EvaluatorResult: &entity.EvaluatorResult{Score: gptr.Of(0.77)},
+					},
+				},
+			}, nil)
+
+		mockExptTurnResultRepo.EXPECT().
+			UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).
+			Return(nil)
+
 		err := service.RecalculateWeightedScore(ctx, spaceID, exptID, itemID, turnID)
-		assert.NoError(t, err) // 应该返回 nil，不报错
+		assert.NoError(t, err)
 	})
 
 	t.Run("无评估器引用，返回 nil", func(t *testing.T) {
@@ -6302,6 +6467,882 @@ func TestCalculateWeightedScore_TableDriven(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExptResultBuilder_getTurnEvaluatorResult(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("itemID not in ItemIDTurnID2TurnResultID", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{},
+		}
+		got := b.getTurnEvaluatorResult(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvaluatorRecords)
+		assert.Nil(t, got.WeightedScore)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+		}
+		got := b.getTurnEvaluatorResult(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvaluatorRecords)
+	})
+
+	t.Run("turnResultID not in turnResultID2EvaluatorVersionID2Result", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2EvaluatorVersionID2Result: map[int64]map[int64]*entity.EvaluatorRecord{},
+		}
+		got := b.getTurnEvaluatorResult(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvaluatorRecords)
+	})
+
+	t.Run("normal case with evaluator records and weighted score", func(t *testing.T) {
+		ws := 0.85
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2EvaluatorVersionID2Result: map[int64]map[int64]*entity.EvaluatorRecord{
+				100: {
+					200: &entity.EvaluatorRecord{ID: 300, EvaluatorVersionID: 200},
+				},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 100, ItemID: 1, TurnID: 10, WeightedScore: &ws},
+			},
+		}
+		got := b.getTurnEvaluatorResult(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Len(t, got.EvaluatorRecords, 1)
+		assert.Equal(t, int64(300), got.EvaluatorRecords[200].ID)
+		assert.NotNil(t, got.WeightedScore)
+		assert.Equal(t, 0.85, *got.WeightedScore)
+	})
+}
+
+func TestExptResultBuilder_getTurnAnnotateRecord(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("itemID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{},
+		}
+		got := b.getTurnAnnotateRecord(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.AnnotateRecords)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+		}
+		got := b.getTurnAnnotateRecord(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.AnnotateRecords)
+	})
+
+	t.Run("turnResultID not in turnResultID2TagKeyID2AnnotateRecord", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2TagKeyID2AnnotateRecord: map[int64]map[int64]*entity.AnnotateRecord{},
+		}
+		got := b.getTurnAnnotateRecord(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.AnnotateRecords)
+	})
+
+	t.Run("normal case", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2TagKeyID2AnnotateRecord: map[int64]map[int64]*entity.AnnotateRecord{
+				100: {
+					50: &entity.AnnotateRecord{ID: 500, TagKeyID: 50},
+				},
+			},
+		}
+		got := b.getTurnAnnotateRecord(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Len(t, got.AnnotateRecords, 1)
+		assert.Equal(t, int64(500), got.AnnotateRecords[50].ID)
+	})
+}
+
+func TestExptResultBuilder_getTurnEvalSet(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("itemID not in itemIDTurnID2Turn", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			itemIDTurnID2Turn: map[int64]map[int64]*entity.TurnEvalSet{},
+		}
+		got := b.getTurnEvalSet(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.Turn)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			itemIDTurnID2Turn: map[int64]map[int64]*entity.TurnEvalSet{
+				1: {10: &entity.TurnEvalSet{ItemID: 1, EvalSetID: 100}},
+			},
+		}
+		got := b.getTurnEvalSet(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.Turn)
+	})
+
+	t.Run("normal case", func(t *testing.T) {
+		expected := &entity.TurnEvalSet{
+			Turn:      &entity.Turn{ID: 10},
+			ItemID:    1,
+			EvalSetID: 100,
+		}
+		b := &ExptResultBuilder{
+			itemIDTurnID2Turn: map[int64]map[int64]*entity.TurnEvalSet{
+				1: {10: expected},
+			},
+		}
+		got := b.getTurnEvalSet(ctx, 1, 10)
+		assert.Equal(t, expected, got)
+	})
+}
+
+func TestExptResultBuilder_getAnalysisRecord(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("itemID not in itemIDTurnID2TrajectoryAnalysis", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			itemIDTurnID2TrajectoryAnalysis: map[int64]map[int64]*entity.AnalysisRecord{},
+		}
+		got := b.getAnalysisRecord(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Equal(t, &entity.AnalysisRecord{}, got)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			itemIDTurnID2TrajectoryAnalysis: map[int64]map[int64]*entity.AnalysisRecord{
+				1: {10: &entity.AnalysisRecord{ID: 100}},
+			},
+		}
+		got := b.getAnalysisRecord(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Equal(t, &entity.AnalysisRecord{}, got)
+	})
+
+	t.Run("normal case", func(t *testing.T) {
+		expected := &entity.AnalysisRecord{ID: 100, WorkspaceID: 1}
+		b := &ExptResultBuilder{
+			itemIDTurnID2TrajectoryAnalysis: map[int64]map[int64]*entity.AnalysisRecord{
+				1: {10: expected},
+			},
+		}
+		got := b.getAnalysisRecord(ctx, 1, 10)
+		assert.Equal(t, expected, got)
+	})
+}
+
+func TestExptResultBuilder_getTurnTargetOutput(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("exptType is online", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			exptDO: &entity.Experiment{ExptType: entity.ExptType_Online},
+		}
+		got := b.getTurnTargetOutput(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvalTargetRecord)
+	})
+
+	t.Run("itemID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			exptDO:                    &entity.Experiment{ExptType: entity.ExptType_Offline},
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{},
+			turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{},
+		}
+		got := b.getTurnTargetOutput(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvalTargetRecord)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			exptDO: &entity.Experiment{ExptType: entity.ExptType_Offline},
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{},
+		}
+		got := b.getTurnTargetOutput(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvalTargetRecord)
+	})
+
+	t.Run("turnResultID not in turnResultID2TargetOutput", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			exptDO: &entity.Experiment{ExptType: entity.ExptType_Offline},
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{},
+		}
+		got := b.getTurnTargetOutput(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Nil(t, got.EvalTargetRecord)
+	})
+
+	t.Run("normal case", func(t *testing.T) {
+		expected := &entity.TurnTargetOutput{
+			EvalTargetRecord: &entity.EvalTargetRecord{ID: 300},
+		}
+		b := &ExptResultBuilder{
+			exptDO: &entity.Experiment{ExptType: entity.ExptType_Offline},
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultID2TargetOutput: map[int64]*entity.TurnTargetOutput{
+				100: expected,
+			},
+		}
+		got := b.getTurnTargetOutput(ctx, 1, 10)
+		assert.Equal(t, expected, got)
+	})
+}
+
+func TestExptResultBuilder_getTurnSystemInfo(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("itemID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{},
+			turnResultDO:              []*entity.ExptTurnResult{},
+		}
+		got := b.getTurnSystemInfo(ctx, 999, 1)
+		assert.NotNil(t, got)
+		assert.Equal(t, &entity.TurnSystemInfo{}, got)
+	})
+
+	t.Run("turnID not in map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{},
+		}
+		got := b.getTurnSystemInfo(ctx, 1, 999)
+		assert.NotNil(t, got)
+		assert.Equal(t, &entity.TurnSystemInfo{}, got)
+	})
+
+	t.Run("turnResultID not in turnResultDO map", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 200, ItemID: 1, TurnID: 10},
+			},
+		}
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Equal(t, &entity.TurnSystemInfo{}, got)
+	})
+
+	t.Run("normal case", func(t *testing.T) {
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 100, ItemID: 1, TurnID: 10, Status: 1, LogID: "log1", ErrMsg: ""},
+			},
+		}
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Equal(t, entity.TurnRunState(1), got.TurnRunState)
+		assert.NotNil(t, got.LogID)
+		assert.Equal(t, "log1", *got.LogID)
+		assert.Nil(t, got.Error)
+	})
+
+	t.Run("errMsg not containing turn other error", func(t *testing.T) {
+		errMsg := `{"code":11,"msg":"target error"}`
+		b := &ExptResultBuilder{
+			ItemIDTurnID2TurnResultID: map[int64]map[int64]int64{
+				1: {10: 100},
+			},
+			turnResultDO: []*entity.ExptTurnResult{
+				{ID: 100, ItemID: 1, TurnID: 10, Status: 2, LogID: "log2", ErrMsg: errMsg},
+			},
+		}
+		got := b.getTurnSystemInfo(ctx, 1, 10)
+		assert.NotNil(t, got)
+		assert.Equal(t, entity.TurnRunState(2), got.TurnRunState)
+		assert.Nil(t, got.Error)
+	})
+}
+
+func TestExptResultServiceImpl_compareItemIndex(t *testing.T) {
+	t.Run("equal item index returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{ItemIdx: 5}
+		turnKey2ItemIdx := map[string]int64{"key1": 5}
+		got := svc.compareItemIndex(filter, turnKey2ItemIdx, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("different item index returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{ItemIdx: 5}
+		turnKey2ItemIdx := map[string]int64{"key1": 10}
+		got := svc.compareItemIndex(filter, turnKey2ItemIdx, "key1")
+		assert.True(t, got)
+	})
+}
+
+func TestExptResultServiceImpl_compareStatus(t *testing.T) {
+	t.Run("equal status returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{Status: entity.ItemRunState_Success}
+		turnKey2ItemRunState := map[string]entity.ItemRunState{"key1": entity.ItemRunState_Success}
+		got := svc.compareStatus(filter, turnKey2ItemRunState, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("different status returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{Status: entity.ItemRunState_Success}
+		turnKey2ItemRunState := map[string]entity.ItemRunState{"key1": entity.ItemRunState_Fail}
+		got := svc.compareStatus(filter, turnKey2ItemRunState, "key1")
+		assert.True(t, got)
+	})
+}
+
+func TestExptResultServiceImpl_compareActualOutput(t *testing.T) {
+	t.Run("TargetOutput nil returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData: map[string]string{"actual_output": "hello"},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						TargetOutput: nil,
+					},
+				},
+			},
+		}
+		got := svc.compareActualOutput(filter, turnResult, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("actual_output matches returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData: map[string]string{"actual_output": "hello"},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						TargetOutput: &entity.TurnTargetOutput{
+							EvalTargetRecord: &entity.EvalTargetRecord{
+								EvalTargetOutputData: &entity.EvalTargetOutputData{
+									OutputFields: map[string]*entity.Content{
+										"actual_output": {Text: ptr.Of("hello")},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareActualOutput(filter, turnResult, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("actual_output not match returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData: map[string]string{"actual_output": "hello"},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						TargetOutput: &entity.TurnTargetOutput{
+							EvalTargetRecord: &entity.EvalTargetRecord{
+								EvalTargetOutputData: &entity.EvalTargetOutputData{
+									OutputFields: map[string]*entity.Content{
+										"actual_output": {Text: ptr.Of("world")},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareActualOutput(filter, turnResult, "key1")
+		assert.True(t, got)
+	})
+}
+
+func TestExptResultServiceImpl_compareEvaluatorScoreCorrected(t *testing.T) {
+	t.Run("both false returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScoreCorrected: false,
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScoreCorrected(filter, turnResult, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("ck false rds has correction returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScoreCorrected: false,
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score:      ptr.Of(0.8),
+											Correction: &entity.Correction{Score: ptr.Of(0.9)},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScoreCorrected(filter, turnResult, "key1")
+		assert.True(t, got)
+	})
+
+	t.Run("ck true rds has correction returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScoreCorrected: true,
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score:      ptr.Of(0.8),
+											Correction: &entity.Correction{Score: ptr.Of(0.9)},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScoreCorrected(filter, turnResult, "key1")
+		assert.False(t, got)
+	})
+}
+
+func TestExptResultServiceImpl_compareEvaluatorScore(t *testing.T) {
+	t.Run("EvaluatorOutput nil returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{"eval1": 0.8},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: nil,
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("scores match returns false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{"eval1": 0.8},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.False(t, got)
+	})
+
+	t.Run("scores not match returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{"eval1": 0.8},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.5),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.True(t, got)
+	})
+
+	t.Run("ck has but rds missing returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{"eval1": 0.8, "eval2": 0.9},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.True(t, got)
+	})
+
+	t.Run("rds has but ck missing returns true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.8),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.True(t, got)
+	})
+
+	t.Run("uses correction score", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvaluatorScore: map[string]float64{"eval1": 0.9},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score:      ptr.Of(0.8),
+											Correction: &entity.Correction{Score: ptr.Of(0.9)},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		got := svc.compareEvaluatorScore(filter, turnResult, map[string]string{"1": "eval1"}, "key1")
+		assert.False(t, got)
+	})
+}
+
+func TestExptResultServiceImpl_compareTurnResultFilter(t *testing.T) {
+	t.Run("turnKey not in map returns false false false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{}
+		diffExist, evalDiff, actualDiff := svc.compareTurnResultFilter(
+			context.Background(), "missing_key", filter,
+			map[string]*entity.TurnResult{},
+			map[string]int64{},
+			map[string]entity.ItemRunState{},
+			map[string]string{},
+		)
+		assert.False(t, diffExist)
+		assert.False(t, evalDiff)
+		assert.False(t, actualDiff)
+	})
+
+	t.Run("turn not finished returns false false false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						SystemInfo: &entity.TurnSystemInfo{
+							TurnRunState: entity.TurnRunState_Processing,
+						},
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{},
+						},
+					},
+				},
+			},
+		}
+		diffExist, evalDiff, actualDiff := svc.compareTurnResultFilter(
+			context.Background(), "key1", filter,
+			map[string]*entity.TurnResult{"key1": turnResult},
+			map[string]int64{},
+			map[string]entity.ItemRunState{},
+			map[string]string{},
+		)
+		assert.False(t, diffExist)
+		assert.False(t, evalDiff)
+		assert.False(t, actualDiff)
+	})
+
+	t.Run("all match returns false false false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData:          map[string]string{"actual_output": "hello"},
+			ItemIdx:                 0,
+			Status:                  entity.ItemRunState_Success,
+			EvaluatorScoreCorrected: false,
+			EvaluatorScore:          map[string]float64{},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						SystemInfo: &entity.TurnSystemInfo{
+							TurnRunState: entity.TurnRunState_Success,
+						},
+						TargetOutput: &entity.TurnTargetOutput{
+							EvalTargetRecord: &entity.EvalTargetRecord{
+								EvalTargetOutputData: &entity.EvalTargetOutputData{
+									OutputFields: map[string]*entity.Content{
+										"actual_output": {Text: ptr.Of("hello")},
+									},
+								},
+							},
+						},
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{},
+						},
+					},
+				},
+			},
+		}
+		diffExist, evalDiff, actualDiff := svc.compareTurnResultFilter(
+			context.Background(), "key1", filter,
+			map[string]*entity.TurnResult{"key1": turnResult},
+			map[string]int64{"key1": 0},
+			map[string]entity.ItemRunState{"key1": entity.ItemRunState_Success},
+			map[string]string{},
+		)
+		assert.False(t, diffExist)
+		assert.False(t, evalDiff)
+		assert.False(t, actualDiff)
+	})
+
+	t.Run("actual_output diff returns true false true", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData:          map[string]string{"actual_output": "hello"},
+			ItemIdx:                 0,
+			Status:                  entity.ItemRunState_Success,
+			EvaluatorScoreCorrected: false,
+			EvaluatorScore:          map[string]float64{},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						SystemInfo: &entity.TurnSystemInfo{
+							TurnRunState: entity.TurnRunState_Success,
+						},
+						TargetOutput: &entity.TurnTargetOutput{
+							EvalTargetRecord: &entity.EvalTargetRecord{
+								EvalTargetOutputData: &entity.EvalTargetOutputData{
+									OutputFields: map[string]*entity.Content{
+										"actual_output": {Text: ptr.Of("world")},
+									},
+								},
+							},
+						},
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{},
+						},
+					},
+				},
+			},
+		}
+		diffExist, evalDiff, actualDiff := svc.compareTurnResultFilter(
+			context.Background(), "key1", filter,
+			map[string]*entity.TurnResult{"key1": turnResult},
+			map[string]int64{"key1": 0},
+			map[string]entity.ItemRunState{"key1": entity.ItemRunState_Success},
+			map[string]string{},
+		)
+		assert.True(t, diffExist)
+		assert.False(t, evalDiff)
+		assert.True(t, actualDiff)
+	})
+
+	t.Run("evaluator_score diff returns true true false", func(t *testing.T) {
+		svc := ExptResultServiceImpl{}
+		filter := &entity.ExptTurnResultFilterEntity{
+			EvalTargetData:          map[string]string{"actual_output": "hello"},
+			ItemIdx:                 0,
+			Status:                  entity.ItemRunState_Success,
+			EvaluatorScoreCorrected: false,
+			EvaluatorScore:          map[string]float64{"eval1": 0.5},
+		}
+		turnResult := &entity.TurnResult{
+			ExperimentResults: []*entity.ExperimentResult{
+				{
+					Payload: &entity.ExperimentTurnPayload{
+						SystemInfo: &entity.TurnSystemInfo{
+							TurnRunState: entity.TurnRunState_Success,
+						},
+						TargetOutput: &entity.TurnTargetOutput{
+							EvalTargetRecord: &entity.EvalTargetRecord{
+								EvalTargetOutputData: &entity.EvalTargetOutputData{
+									OutputFields: map[string]*entity.Content{
+										"actual_output": {Text: ptr.Of("hello")},
+									},
+								},
+							},
+						},
+						EvaluatorOutput: &entity.TurnEvaluatorOutput{
+							EvaluatorRecords: map[int64]*entity.EvaluatorRecord{
+								1: {
+									EvaluatorVersionID: 1,
+									EvaluatorOutputData: &entity.EvaluatorOutputData{
+										EvaluatorResult: &entity.EvaluatorResult{
+											Score: ptr.Of(0.9),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		diffExist, evalDiff, actualDiff := svc.compareTurnResultFilter(
+			context.Background(), "key1", filter,
+			map[string]*entity.TurnResult{"key1": turnResult},
+			map[string]int64{"key1": 0},
+			map[string]entity.ItemRunState{"key1": entity.ItemRunState_Success},
+			map[string]string{"1": "eval1"},
+		)
+		assert.True(t, diffExist)
+		assert.True(t, evalDiff)
+		assert.False(t, actualDiff)
+	})
 }
 
 func TestGenerateTurnKey_Basic(t *testing.T) {

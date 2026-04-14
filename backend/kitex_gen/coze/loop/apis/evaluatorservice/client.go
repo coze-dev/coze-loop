@@ -22,6 +22,7 @@ type Client interface {
 	ListEvaluatorVersions(ctx context.Context, request *evaluator.ListEvaluatorVersionsRequest, callOptions ...callopt.Option) (r *evaluator.ListEvaluatorVersionsResponse, err error)
 	GetEvaluatorVersion(ctx context.Context, request *evaluator.GetEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.GetEvaluatorVersionResponse, err error)
 	BatchGetEvaluatorVersions(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorVersionsResponse, err error)
+	BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionIDsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorVersionIDsResponse, err error)
 	SubmitEvaluatorVersion(ctx context.Context, request *evaluator.SubmitEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.SubmitEvaluatorVersionResponse, err error)
 	ListTemplates(ctx context.Context, request *evaluator.ListTemplatesRequest, callOptions ...callopt.Option) (r *evaluator.ListTemplatesResponse, err error)
 	GetTemplateInfo(ctx context.Context, request *evaluator.GetTemplateInfoRequest, callOptions ...callopt.Option) (r *evaluator.GetTemplateInfoResponse, err error)
@@ -127,6 +128,11 @@ func (p *kEvaluatorServiceClient) GetEvaluatorVersion(ctx context.Context, reque
 func (p *kEvaluatorServiceClient) BatchGetEvaluatorVersions(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorVersionsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.BatchGetEvaluatorVersions(ctx, request)
+}
+
+func (p *kEvaluatorServiceClient) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionIDsRequest, callOptions ...callopt.Option) (r *evaluator.BatchGetEvaluatorVersionIDsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.BatchGetEvaluatorVersionIDs(ctx, request)
 }
 
 func (p *kEvaluatorServiceClient) SubmitEvaluatorVersion(ctx context.Context, request *evaluator.SubmitEvaluatorVersionRequest, callOptions ...callopt.Option) (r *evaluator.SubmitEvaluatorVersionResponse, err error) {

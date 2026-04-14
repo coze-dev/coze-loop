@@ -519,6 +519,7 @@ func TestCustomEvalTargetConversions(t *testing.T) {
 	assert.Nil(t, CustomEvalTargetDO2DTO(nil))
 }
 
+<<<<<<< HEAD
 func TestWebAgentDTO2DO(t *testing.T) {
 	t.Parallel()
 
@@ -818,4 +819,41 @@ func TestEvalTargetVersionDO2DTO_WebAgent(t *testing.T) {
 	assert.NotNil(t, result.EvalTargetContent.WebAgent)
 	assert.Equal(t, int64(1), gptr.Indirect(result.EvalTargetContent.WebAgent.ID))
 	assert.Equal(t, "test", gptr.Indirect(result.EvalTargetContent.WebAgent.Name))
+=======
+func TestEvalTargetDO2DTO_OnlineTypeSameDTOAsBase(t *testing.T) {
+	t.Parallel()
+
+	online := &do.EvalTarget{
+		ID:             1,
+		SpaceID:        2,
+		SourceTargetID: "src",
+		EvalTargetType: do.EvalTargetTypeCozeBotOnline,
+		EvalTargetVersion: &do.EvalTargetVersion{
+			ID:                  10,
+			SpaceID:             2,
+			TargetID:            1,
+			SourceTargetVersion: "v",
+			EvalTargetType:      do.EvalTargetTypeCozeBotOnline,
+			CozeBot: &do.CozeBot{
+				BotID: 999,
+			},
+		},
+	}
+	base := &do.EvalTarget{
+		ID:             online.ID,
+		SpaceID:        online.SpaceID,
+		SourceTargetID: online.SourceTargetID,
+		EvalTargetType: do.EvalTargetTypeCozeBot,
+		EvalTargetVersion: &do.EvalTargetVersion{
+			ID:                  online.EvalTargetVersion.ID,
+			SpaceID:             online.EvalTargetVersion.SpaceID,
+			TargetID:            online.EvalTargetVersion.TargetID,
+			SourceTargetVersion: online.EvalTargetVersion.SourceTargetVersion,
+			EvalTargetType:      do.EvalTargetTypeCozeBot,
+			CozeBot:             online.EvalTargetVersion.CozeBot,
+		},
+	}
+
+	assert.Equal(t, EvalTargetDO2DTO(base), EvalTargetDO2DTO(online))
+>>>>>>> main
 }

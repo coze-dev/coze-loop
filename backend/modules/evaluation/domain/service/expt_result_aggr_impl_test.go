@@ -72,9 +72,12 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 					GetExptAggrResultByExperimentID(gomock.Any(), int64(1)).
 					Return([]*entity.ExptAggrResult{}, nil)
 
-				// Mock ScanTurnResults
+				// buildExptTargetMtrAggregatorGroup：Scan limit=50；CreateOrUpdate 内 createWeightedScoreAggrResult：Scan limit=500
 				mockExptTurnResultRepo.EXPECT().
 					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(50), int64(100)).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
+				mockExptTurnResultRepo.EXPECT().
+					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(500), int64(100)).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
 				// Mock BatchCreateExptAggrResult
@@ -104,9 +107,11 @@ func TestExptAggrResultServiceImpl_CreateExptAggrResult(t *testing.T) {
 					GetTurnEvaluatorResultRefByExptID(gomock.Any(), int64(100), int64(1)).
 					Return([]*entity.ExptTurnEvaluatorResultRef{}, nil)
 
-				// Mock ScanTurnResults
 				mockExptTurnResultRepo.EXPECT().
 					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(50), int64(100)).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
+				mockExptTurnResultRepo.EXPECT().
+					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(500), int64(100)).
 					Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
 				// Mock BatchCreateExptAggrResult for target metrics
@@ -218,6 +223,11 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult(t *testing.T) {
 				mockExptAggrResultRepo.EXPECT().
 					UpdateAndGetLatestVersion(gomock.Any(), int64(1), int32(entity.FieldType_EvaluatorScore), "1").
 					Return(int64(1), nil)
+
+				// updateExptAggrResult 会尝试刷新行级汇总分聚合：无行级 WeightedScore 时跳过
+				mockExptTurnResultRepo.EXPECT().
+					ScanTurnResults(gomock.Any(), int64(1), gomock.Any(), int64(0), int64(500), int64(100)).
+					Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
 				// Mock GetTurnEvaluatorResultRefByEvaluatorVersionID
 				mockExptTurnResultRepo.EXPECT().
@@ -1372,12 +1382,19 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult(t *testing.T) {
 			defer ctrl.Finish()
 
 			mockExptAggrResultRepo := repoMocks.NewMockIExptAggrResultRepo(ctrl)
+			mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 			mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 			svc := &ExptAggrResultServiceImpl{
 				exptAggrResultRepo: mockExptAggrResultRepo,
+				exptTurnResultRepo: mockExptTurnResultRepo,
 				experimentRepo:     mockExperimentRepo,
 			}
+
+			// createWeightedScoreAggrResult：无成功轮次带 WeightedScore 时不创建 FieldType_WeightedScore
+			mockExptTurnResultRepo.EXPECT().
+				ScanTurnResults(gomock.Any(), tt.exptID, gomock.Any(), int64(0), int64(500), tt.spaceID).
+				Return([]*entity.ExptTurnResult{}, int64(0), nil)
 
 			// CreateOrUpdateExptAggrResult 内部在追加加权得分聚合指标时，会调用 experimentRepo.GetByID。
 			// 这里统一 mock 为返回 nil 实验，跳过加权逻辑，避免未预期的调用或 nil 访问。
@@ -2770,22 +2787,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 		}
 		existedAggrResults := []*entity.ExptAggrResult{}
 
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, experimentID, spaceID).
-			Return(&entity.Experiment{
-				ID: experimentID,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
-
-		// Mock createWeightedScoreAggrResult 的依赖
-		// ScanTurnResults 返回有加权得分的 turn results
+		// Mock createWeightedScoreAggrResult：ScanTurnResults 返回有加权得分的 turn results
 		mockExptTurnResultRepo.EXPECT().
 			ScanTurnResults(
 				ctx,
@@ -2823,7 +2825,7 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 		assert.NoError(t, err)
 	})
 
-	t.Run("实验未启用加权得分，不创建加权得分聚合结果", func(t *testing.T) {
+	t.Run("实验未启用配置权重仍创建行级汇总分聚合", func(t *testing.T) {
 		evaluatorVersionID2AggregatorGroup := map[int64]*AggregatorGroup{
 			1: func() *AggregatorGroup {
 				ag := NewAggregatorGroup()
@@ -2839,28 +2841,29 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 		}
 		existedAggrResults := []*entity.ExptAggrResult{}
 
-		// Mock GetByID 返回未启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, experimentID, spaceID).
-			Return(&entity.Experiment{
-				ID: experimentID,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: false,
-						},
-					},
-				},
-			}, nil)
+		mockExptTurnResultRepo.EXPECT().
+			ScanTurnResults(
+				ctx,
+				experimentID,
+				[]int32{int32(entity.TurnRunState_Success)},
+				int64(0),
+				int64(500),
+				spaceID,
+			).
+			Return([]*entity.ExptTurnResult{
+				{WeightedScore: gptr.Of(0.72)},
+			}, int64(0), nil)
 
-		// Mock BatchCreateExptAggrResult
 		mockExptAggrResultRepo.EXPECT().
 			BatchCreateExptAggrResult(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(ctx context.Context, results []*entity.ExptAggrResult) error {
-				// 验证不包含加权得分聚合结果
+				hasWeightedScore := false
 				for _, result := range results {
-					assert.NotEqual(t, int32(entity.FieldType_WeightedScore), result.FieldType, "不应该包含加权得分聚合结果")
+					if result.FieldType == int32(entity.FieldType_WeightedScore) {
+						hasWeightedScore = true
+					}
 				}
+				assert.True(t, hasWeightedScore, "未启用 EnableScoreWeight 时仍应有行级汇总聚合")
 				return nil
 			})
 
@@ -2883,20 +2886,6 @@ func TestExptAggrResultServiceImpl_CreateOrUpdateExptAggrResult_WithWeightedScor
 			totalTokens:  NewAggregatorGroup(),
 		}
 		existedAggrResults := []*entity.ExptAggrResult{}
-
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, experimentID, spaceID).
-			Return(&entity.Experiment{
-				ID: experimentID,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
 
 		// Mock ScanTurnResults 返回错误
 		mockExptTurnResultRepo.EXPECT().
@@ -3053,14 +3042,12 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockEvaluatorRecordService := svcMocks.NewMockEvaluatorRecordService(ctrl)
 	mockMetric := metricsMocks.NewMockExptMetric(ctrl)
-	mockExperimentRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 
 	svc := &ExptAggrResultServiceImpl{
 		exptAggrResultRepo:     mockExptAggrResultRepo,
 		exptTurnResultRepo:     mockExptTurnResultRepo,
 		evaluatorRecordService: mockEvaluatorRecordService,
 		metric:                 mockMetric,
-		experimentRepo:         mockExperimentRepo,
 	}
 
 	ctx := context.Background()
@@ -3114,20 +3101,6 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 		mockMetric.EXPECT().
 			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
 			Return()
-
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, int64(1), int64(100)).
-			Return(&entity.Experiment{
-				ID: 1,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
 
 		// Mock createWeightedScoreAggrResult 的依赖
 		mockExptTurnResultRepo.EXPECT().
@@ -3202,20 +3175,6 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 		mockMetric.EXPECT().
 			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
 			Return()
-
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, int64(1), int64(100)).
-			Return(&entity.Experiment{
-				ID: 1,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
 
 		// Mock createWeightedScoreAggrResult 的依赖
 		mockExptTurnResultRepo.EXPECT().
@@ -3301,20 +3260,6 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
 			Return()
 
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, int64(1), int64(100)).
-			Return(&entity.Experiment{
-				ID: 1,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
-
 		// Mock createWeightedScoreAggrResult 返回错误
 		mockExptTurnResultRepo.EXPECT().
 			ScanTurnResults(
@@ -3375,20 +3320,6 @@ func TestExptAggrResultServiceImpl_UpdateExptAggrResult_WithWeightedScore(t *tes
 		mockMetric.EXPECT().
 			EmitCalculateExptAggrResult(int64(100), int64(entity.UpdateSpecificField), false, gomock.Any()).
 			Return()
-
-		// Mock GetByID 返回启用加权得分的实验
-		mockExperimentRepo.EXPECT().
-			GetByID(ctx, int64(1), int64(100)).
-			Return(&entity.Experiment{
-				ID: 1,
-				EvalConf: &entity.EvaluationConfiguration{
-					ConnectorConf: entity.Connector{
-						EvaluatorsConf: &entity.EvaluatorsConf{
-							EnableScoreWeight: true,
-						},
-					},
-				},
-			}, nil)
 
 		// Mock createWeightedScoreAggrResult 的依赖
 		mockExptTurnResultRepo.EXPECT().
