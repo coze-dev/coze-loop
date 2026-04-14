@@ -6165,6 +6165,8 @@ func Test_parseSpanFilterFieldsFromTaskJSON_WithSubFilter(t *testing.T) {
 	assert.Equal(t, "or", *ff.QueryAndOr)
 	assert.NotNil(t, ff.SubFilter)
 	assert.Equal(t, "and", *ff.SubFilter.QueryAndOr)
+	assert.Len(t, ff.SubFilter.FilterFields, 1)
+	assert.Equal(t, "sub1", *ff.SubFilter.FilterFields[0].FieldName)
 }
 
 func Test_parseSpanFilterFieldsFromTaskJSON_NoFilters(t *testing.T) {
@@ -6178,6 +6180,69 @@ func Test_parseSpanFilterFieldsFromTaskJSON_NoFilters(t *testing.T) {
 	result := parseSpanFilterFieldsFromTaskJSON(taskJSON)
 	assert.NotNil(t, result)
 	assert.Nil(t, result.Filters)
+}
+
+func Test_parseSpanFilterFieldsFromTaskJSON_WithExtendedFilterFields(t *testing.T) {
+	taskJSON := `{
+		"rule": {
+			"span_filters": {
+				"platform_type": "inner_prompt",
+				"span_list_type": "all_span",
+				"filters": {
+					"query_and_or": "and",
+					"filter_fields": [
+						{
+							"field_name": "deployment_env",
+							"query_type": "not_in",
+							"values": ["boe"],
+							"is_custom": false,
+							"extra_info": {"source": "preset"}
+						},
+						{
+							"sub_filter": {
+								"query_and_or": "and",
+								"filter_fields": [
+									{
+										"field_name": "duration",
+										"logic_field_name_type": "duration",
+										"field_type": "long",
+										"query_type": "gte",
+										"values": ["12"],
+										"is_custom": false
+									},
+									{
+										"field_name": "latency_first_resp",
+										"logic_field_name_type": "latency_first_resp",
+										"field_type": "long",
+										"query_type": "gte",
+										"values": ["1000"],
+										"is_custom": false
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		}
+	}`
+	result := parseSpanFilterFieldsFromTaskJSON(taskJSON)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.Filters)
+	assert.Len(t, result.Filters.FilterFields, 2)
+
+	first := result.Filters.FilterFields[0]
+	assert.Equal(t, "deployment_env", *first.FieldName)
+	assert.NotNil(t, first.IsCustom)
+	assert.False(t, *first.IsCustom)
+	assert.Equal(t, "preset", first.ExtraInfo["source"])
+
+	second := result.Filters.FilterFields[1]
+	assert.NotNil(t, second.SubFilter)
+	assert.Len(t, second.SubFilter.FilterFields, 2)
+	assert.Equal(t, "duration", *second.SubFilter.FilterFields[0].FieldName)
+	assert.Equal(t, "duration", *second.SubFilter.FilterFields[0].LogicFieldNameType)
+	assert.Equal(t, "latency_first_resp", *second.SubFilter.FilterFields[1].LogicFieldNameType)
 }
 
 func TestExptTemplateManagerImpl_packTemplateTupleID_WithRefs(t *testing.T) {

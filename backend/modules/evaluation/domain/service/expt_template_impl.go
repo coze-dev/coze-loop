@@ -1067,6 +1067,7 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 	fd := &entity.FilterFieldDO{
 		FieldName: f.FieldName,
 		Values:    f.Values,
+		IsCustom:  f.IsCustom,
 	}
 	if f.FieldType != nil {
 		fd.FieldType = f.FieldType
@@ -1079,6 +1080,12 @@ func filterFieldFromTaskRule(f *taskfilter.FilterField) *entity.FilterFieldDO {
 	}
 	if f.SubFilter != nil {
 		fd.SubFilter = filterFieldsFromTaskRule(f.SubFilter)
+	}
+	if len(f.ExtraInfo) > 0 {
+		fd.ExtraInfo = make(map[string]string, len(f.ExtraInfo))
+		for k, v := range f.ExtraInfo {
+			fd.ExtraInfo[k] = v
+		}
 	}
 	return fd
 }
@@ -1215,12 +1222,15 @@ type filtersJSON struct {
 }
 
 type filterFieldJSON struct {
-	FieldName  *string      `json:"field_name"`
-	FieldType  *string      `json:"field_type"`
-	Values     []string     `json:"values"`
-	QueryType  *string      `json:"query_type"`
-	QueryAndOr *string      `json:"query_and_or"`
-	SubFilter  *filtersJSON `json:"sub_filter"`
+	FieldName          *string           `json:"field_name"`
+	FieldType          *string           `json:"field_type"`
+	Values             []string          `json:"values"`
+	QueryType          *string           `json:"query_type"`
+	QueryAndOr         *string           `json:"query_and_or"`
+	LogicFieldNameType *string           `json:"logic_field_name_type"`
+	IsCustom           *bool             `json:"is_custom"`
+	ExtraInfo          map[string]string `json:"extra_info"`
+	SubFilter          *filtersJSON      `json:"sub_filter"`
 }
 
 func parseDataReflowTaskJSON(content string) *dataReflowParsed {
@@ -1259,34 +1269,44 @@ func buildSpanFilterFieldsDOFromJSON(sf *spanFiltersJSON) *entity.SpanFilterFiel
 		PlatformType: sf.PlatformType,
 		SpanListType: sf.SpanListType,
 	}
-	if sf.Filters != nil {
-		result.Filters = &entity.FilterFieldsDO{
-			QueryAndOr: sf.Filters.QueryAndOr,
+	result.Filters = buildFilterFieldsDOFromJSON(sf.Filters)
+	return result
+}
+
+func buildFilterFieldsDOFromJSON(src *filtersJSON) *entity.FilterFieldsDO {
+	if src == nil {
+		return nil
+	}
+	out := &entity.FilterFieldsDO{
+		QueryAndOr: src.QueryAndOr,
+	}
+	if len(src.FilterFields) == 0 {
+		return out
+	}
+	out.FilterFields = make([]*entity.FilterFieldDO, 0, len(src.FilterFields))
+	for _, ff := range src.FilterFields {
+		if ff == nil {
+			continue
 		}
-		if len(sf.Filters.FilterFields) > 0 {
-			result.Filters.FilterFields = make([]*entity.FilterFieldDO, 0, len(sf.Filters.FilterFields))
-			for _, ff := range sf.Filters.FilterFields {
-				if ff == nil {
-					continue
-				}
-				fd := &entity.FilterFieldDO{
-					FieldName:  ff.FieldName,
-					FieldType:  ff.FieldType,
-					Values:     ff.Values,
-					QueryType:  ff.QueryType,
-					QueryAndOr: ff.QueryAndOr,
-				}
-				if ff.SubFilter != nil {
-					fd.SubFilter = &entity.FilterFieldsDO{
-						QueryAndOr:   ff.SubFilter.QueryAndOr,
-						FilterFields: nil, // 递归简化，暂不展开
-					}
-				}
-				result.Filters.FilterFields = append(result.Filters.FilterFields, fd)
+		fd := &entity.FilterFieldDO{
+			FieldName:          ff.FieldName,
+			FieldType:          ff.FieldType,
+			Values:             ff.Values,
+			QueryType:          ff.QueryType,
+			QueryAndOr:         ff.QueryAndOr,
+			LogicFieldNameType: ff.LogicFieldNameType,
+			IsCustom:           ff.IsCustom,
+			SubFilter:          buildFilterFieldsDOFromJSON(ff.SubFilter),
+		}
+		if len(ff.ExtraInfo) > 0 {
+			fd.ExtraInfo = make(map[string]string, len(ff.ExtraInfo))
+			for k, v := range ff.ExtraInfo {
+				fd.ExtraInfo[k] = v
 			}
 		}
+		out.FilterFields = append(out.FilterFields, fd)
 	}
-	return result
+	return out
 }
 
 func exptSamplerDOFromSamplerJSON(j *samplerJSON) *entity.ExptSamplerDO {

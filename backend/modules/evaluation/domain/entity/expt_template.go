@@ -79,12 +79,15 @@ type FilterFieldsDO struct {
 
 // FilterFieldDO 过滤字段
 type FilterFieldDO struct {
-	FieldName  *string
-	FieldType  *string
-	Values     []string
-	QueryType  *string
-	QueryAndOr *string
-	SubFilter  *FilterFieldsDO
+	FieldName          *string
+	FieldType          *string
+	Values             []string
+	QueryType          *string
+	QueryAndOr         *string
+	LogicFieldNameType *string
+	IsCustom           *bool
+	ExtraInfo          map[string]string
+	SubFilter          *FilterFieldsDO
 }
 
 // ExptSchedulerDO 定时触发器配置，与 expt.Scheduler 结构对应

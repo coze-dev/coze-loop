@@ -572,6 +572,16 @@ func filterFieldDO2DTO(do *entity.FilterFieldDO) *filter.FilterField {
 		qao := *do.QueryAndOr
 		dto.QueryAndOr = &qao
 	}
+	if do.IsCustom != nil {
+		dto.IsCustom = do.IsCustom
+	}
+	if len(do.ExtraInfo) > 0 {
+		extraInfo := make(map[string]string, len(do.ExtraInfo))
+		for k, v := range do.ExtraInfo {
+			extraInfo[k] = v
+		}
+		dto.ExtraInfo = extraInfo
+	}
 	if do.SubFilter != nil {
 		dto.SubFilter = filterFieldsDO2DTO(do.SubFilter)
 	}
