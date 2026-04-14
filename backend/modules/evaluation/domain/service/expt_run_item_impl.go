@@ -103,7 +103,7 @@ func (e *ExptItemEvalCtxExecutor) EvalTurns(ctx context.Context, eiec *entity.Ex
 
 		ctx = context.WithValue(ctx, consts.CtxKeyLogID, etec.GetTurnEvalLogID(ctx, turn.ID)) //nolint:staticcheck
 
-		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evalSetItemSvc).Eval(ctx, etec)
+		turnRunRes := NewExptTurnEvaluation(e.Metric, e.evalTargetService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evalSetItemSvc, e.evaluatorRecordService).Eval(ctx, etec)
 
 		if err := e.storeTurnRunResult(ctx, etec, turnRunRes); err != nil {
 			return false, err

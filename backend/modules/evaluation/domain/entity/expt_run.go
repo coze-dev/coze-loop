@@ -450,6 +450,13 @@ type ExptTurnRunResult struct {
 	AsyncAbort       bool
 }
 
+func (e *ExptTurnRunResult) GetTargetResult() *EvalTargetRecord {
+	if e != nil {
+		return e.TargetResult
+	}
+	return nil
+}
+
 func (e *ExptTurnRunResult) SetTargetResult(er *EvalTargetRecord) *ExptTurnRunResult {
 	e.TargetResult = er
 	return e
@@ -500,11 +507,12 @@ func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
 	return false
 }
 
-func (e *ExptTurnRunResult) AbortWithEvaluatorResults() bool {
+func (e *ExptTurnRunResult) AbortWithEvaluatorResults(ctx context.Context, event *ExptItemEvalEvent) bool {
 	// evaluator async exec, check if any evaluator is in async invoking status
 	for _, record := range e.EvaluatorResults {
 		if record != nil && record.Status == EvaluatorRunStatusAsyncInvoking {
 			e.AsyncAbort = true
+			event.WithCtxForceNoRetry(ctx)
 			return true
 		}
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -51,6 +52,7 @@ func (e *SpanWithAnnotationConsumer) ConsumerCfg(ctx context.Context) (*mq.Consu
 }
 
 func (e *SpanWithAnnotationConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	ctx = context.WithValue(ctx, consts.CtxKeyFlowMethodKey, "span_with_annotation_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.SpanEvent)

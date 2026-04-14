@@ -179,6 +179,8 @@ type ExecuteEvalTargetParam struct {
 	Input               *EvalTargetInputData
 	TargetType          EvalTargetType
 	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
+	EvalSetItemID       *int64
+	EvalSetTurnID       *int64
 }
 
 type ListEvaluatorRequest struct {

@@ -40,24 +40,27 @@ func NewExptTurnEvaluation(
 	benefitService benefit.IBenefitService,
 	evalAsyncRepo repo.IEvalAsyncRepo,
 	evalSetItemSvc EvaluationSetItemService,
+	evaluatorRecordService EvaluatorRecordService,
 ) ExptItemTurnEvaluation {
 	return &DefaultExptTurnEvaluationImpl{
-		metric:            metric,
-		evalTargetService: evalTargetService,
-		evaluatorService:  evaluatorService,
-		benefitService:    benefitService,
-		evalAsyncRepo:     evalAsyncRepo,
-		evalSetItemSvc:    evalSetItemSvc,
+		metric:                 metric,
+		evalTargetService:      evalTargetService,
+		evaluatorService:       evaluatorService,
+		benefitService:         benefitService,
+		evalAsyncRepo:          evalAsyncRepo,
+		evalSetItemSvc:         evalSetItemSvc,
+		evaluatorRecordService: evaluatorRecordService,
 	}
 }
 
 type DefaultExptTurnEvaluationImpl struct {
-	metric            metrics.ExptMetric
-	evalTargetService IEvalTargetService
-	evaluatorService  EvaluatorService
-	benefitService    benefit.IBenefitService
-	evalAsyncRepo     repo.IEvalAsyncRepo
-	evalSetItemSvc    EvaluationSetItemService
+	metric                 metrics.ExptMetric
+	evalTargetService      IEvalTargetService
+	evaluatorService       EvaluatorService
+	benefitService         benefit.IBenefitService
+	evalAsyncRepo          repo.IEvalAsyncRepo
+	evalSetItemSvc         EvaluationSetItemService
+	evaluatorRecordService EvaluatorRecordService
 }
 
 func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.ExptTurnEvalCtx) (trr *entity.ExptTurnRunResult) {
@@ -92,7 +95,7 @@ func (e *DefaultExptTurnEvaluationImpl) Eval(ctx context.Context, etec *entity.E
 
 	logs.CtxInfo(ctx, "[ExptTurnEval] call evaluators success, evaluator_results: %v", json.Jsonify(evaluatorResults))
 
-	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults() {
+	if trr.SetEvaluatorResults(evaluatorResults).AbortWithEvaluatorResults(ctx, etec.Event) {
 		return trr
 	}
 
@@ -104,23 +107,39 @@ func (e *DefaultExptTurnEvaluationImpl) CallTarget(ctx context.Context, etec *en
 		return &entity.EvalTargetRecord{EvalTargetOutputData: &entity.EvalTargetOutputData{OutputFields: make(map[string]*entity.Content)}}, nil
 	}
 
-	if existRecord := e.existedTargetRecord(etec); !etec.Event.IgnoreExistedResult() && existRecord != nil {
-		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", existRecord.ID)
-		return existRecord, nil
+	if err := e.validateEvalTargetCtx(etec); err != nil {
+		return nil, err
 	}
 
+	tr := etec.ExptTurnRunResult.GetTargetResult()
+
 	if etec.Event.AsyncReportTrigger {
-		if etec.ExptTurnRunResult == nil || etec.ExptTurnRunResult.TargetResult == nil {
-			return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
-		}
-		return etec.ExptTurnRunResult.TargetResult, nil
+		etec.Event.WithCtxTargetCalled(ctx)
+		return tr, nil
+	}
+	if tr != nil && gptr.Indirect(tr.Status) == entity.EvalTargetRunStatusSuccess && !etec.Event.IgnoreExistedTargetResult() {
+		logs.CtxInfo(ctx, "CallTarget return with existed target record, record_id: %v", tr.ID)
+		return tr, nil
 	}
 
 	if err := e.CheckBenefit(ctx, etec.Event.ExptID, etec.Event.SpaceID, etec.Expt.CreditCost == entity.CreditCostFree, etec.Event.Session); err != nil {
 		return nil, err
 	}
 
-	return e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+	record, err := e.callTarget(ctx, etec, etec.History, etec.Event.SpaceID)
+	if err != nil {
+		return nil, err
+	}
+
+	etec.Event.WithCtxTargetCalled(ctx)
+	return record, nil
+}
+
+func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptTurnEvalCtx) error {
+	if etec.Event.AsyncReportTrigger && etec.ExptTurnRunResult.GetTargetResult() == nil {
+		return errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("target result must not be nil in async reported event"))
+	}
+	return nil
 }
 
 // skipTargetNode Whether target is called is determined by the target info bound in expt;
@@ -133,16 +152,6 @@ func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) 
 		return true
 	}
 	return false
-}
-
-func (e *DefaultExptTurnEvaluationImpl) existedTargetRecord(etec *entity.ExptTurnEvalCtx) *entity.EvalTargetRecord {
-	if etec == nil || etec.ExptTurnRunResult.TargetResult == nil {
-		return nil
-	}
-	if gptr.Indirect(etec.ExptTurnRunResult.TargetResult.Status) == entity.EvalTargetRunStatusSuccess {
-		return etec.ExptTurnRunResult.TargetResult
-	}
-	return nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) skipEvaluatorNode(expt *entity.Experiment) bool {
@@ -276,7 +285,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 	for _, evaluatorVersion := range expt.Evaluators {
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
-		if !etec.Event.IgnoreExistedResult() && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
+		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults[existResult.ID] = existResult
 			continue
 		}
@@ -299,7 +308,31 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		evaluatorResults[evID] = result
 	}
 
+	if evalErr == nil {
+		evaluatorResults, evalErr = e.refreshAsyncEvaluatorRecords(ctx, evaluatorResults)
+	}
+
 	return evaluatorResults, evalErr
+}
+
+func (e *DefaultExptTurnEvaluationImpl) refreshAsyncEvaluatorRecords(ctx context.Context, evaluatorResults map[int64]*entity.EvaluatorRecord) (map[int64]*entity.EvaluatorRecord, error) {
+	if e.evaluatorRecordService == nil {
+		return evaluatorResults, nil
+	}
+	for evID, record := range evaluatorResults {
+		if record == nil || record.Status != entity.EvaluatorRunStatusAsyncInvoking {
+			continue
+		}
+		updatedRecord, err := e.evaluatorRecordService.GetEvaluatorRecord(ctx, record.ID, false)
+		if err != nil {
+			return evaluatorResults, err
+		}
+		if updatedRecord != nil {
+			logs.CtxInfo(ctx, "[ExptTurnEval] refreshed async evaluator record, record_id: %v, old_status: %v, new_status: %v", record.ID, record.Status, updatedRecord.Status)
+			evaluatorResults[evID] = updatedRecord
+		}
+	}
+	return evaluatorResults, nil
 }
 
 func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, execEvaluatorVersionIDs []int64, etec *entity.ExptTurnEvalCtx,
