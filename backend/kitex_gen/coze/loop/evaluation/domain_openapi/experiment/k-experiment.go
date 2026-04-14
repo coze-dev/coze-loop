@@ -3054,6 +3054,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 60:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField60(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -3269,6 +3283,20 @@ func (p *Experiment) FastReadField50(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField60(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -3292,6 +3320,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField13(buf[offset:], w)
+		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField10(buf[offset:], w)
@@ -3323,6 +3352,7 @@ func (p *Experiment) BLength() int {
 		l += p.field33Length()
 		l += p.field34Length()
 		l += p.field50Length()
+		l += p.field60Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -3449,6 +3479,15 @@ func (p *Experiment) fastWriteField50(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetExptStats() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 50)
 		offset += p.ExptStats.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField60(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableExtractTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 60)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
 	}
 	return offset
 }
@@ -3583,6 +3622,15 @@ func (p *Experiment) field50Length() int {
 	return l
 }
 
+func (p *Experiment) field60Length() int {
+	l := 0
+	if p.IsSetEnableExtractTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -3698,6 +3746,11 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ExptStats = _exptStats
+
+	if src.EnableExtractTrajectory != nil {
+		tmp := *src.EnableExtractTrajectory
+		p.EnableExtractTrajectory = &tmp
+	}
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {
@@ -7684,6 +7737,20 @@ func (p *ExptTemplate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -7764,6 +7831,20 @@ func (p *ExptTemplate) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptTemplate) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return offset, nil
+}
+
 func (p *ExptTemplate) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -7783,6 +7864,7 @@ func (p *ExptTemplate) FastWrite(buf []byte) int {
 func (p *ExptTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
@@ -7800,6 +7882,7 @@ func (p *ExptTemplate) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -7838,6 +7921,15 @@ func (p *ExptTemplate) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetScoreWeightConfig() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 4)
 		offset += p.ScoreWeightConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *ExptTemplate) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableExtractTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 5)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
 	}
 	return offset
 }
@@ -7883,6 +7975,15 @@ func (p *ExptTemplate) field4Length() int {
 	if p.IsSetScoreWeightConfig() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ScoreWeightConfig.BLength()
+	}
+	return l
+}
+
+func (p *ExptTemplate) field5Length() int {
+	l := 0
+	if p.IsSetEnableExtractTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
 	}
 	return l
 }
@@ -7937,6 +8038,11 @@ func (p *ExptTemplate) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ScoreWeightConfig = _scoreWeightConfig
+
+	if src.EnableExtractTrajectory != nil {
+		tmp := *src.EnableExtractTrajectory
+		p.EnableExtractTrajectory = &tmp
+	}
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {
