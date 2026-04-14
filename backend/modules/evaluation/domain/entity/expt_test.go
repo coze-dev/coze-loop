@@ -340,6 +340,7 @@ func TestWithOptions(t *testing.T) {
 	WithOperationInstruction(&instruction)(opt)
 	assert.Equal(t, &instruction, opt.OperationInstruction)
 }
+
 func TestCreateEvalTargetParam_IsNull(t *testing.T) {
 	assert.True(t, ((*CreateEvalTargetParam)(nil)).IsNull())
 	assert.True(t, (&CreateEvalTargetParam{}).IsNull())
