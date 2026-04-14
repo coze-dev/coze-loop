@@ -123,7 +123,6 @@ func TestQuotaSpaceExpt_Serialize(t *testing.T) {
 	assert.NotNil(t, b)
 }
 
-<<<<<<< HEAD
 func TestExperiment_AsyncCallTarget_WebAgent(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -195,7 +194,7 @@ func TestVisibility_Hidden(t *testing.T) {
 }
 
 func TestSourceType_IntelligentGen(t *testing.T) {
-	assert.Equal(t, SourceType(3), SourceType_IntelligentGen)
+	assert.Equal(t, SourceType(4), SourceType_IntelligentGen)
 }
 
 func TestExperiment_AsyncExec(t *testing.T) {

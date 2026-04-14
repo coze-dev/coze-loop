@@ -349,7 +349,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 	}
 	if templateID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0); err != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
 			logs.CtxError(ctx, "UpdateExptInfo failed in ExptTrialRunExec.ExptStart, template_id: %v, expt_id: %v, err: %v",
 				templateID, event.ExptID, err)
 		} else {
