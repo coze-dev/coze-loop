@@ -3380,3 +3380,219 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestExptMangerImpl_RecordExptData(t *testing.T) {
+	ctx := context.Background()
+	session := &entity.Session{UserID: "test_user"}
+
+	t.Run("success", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		runLog := &entity.ExptRunLog{
+			ID:        456,
+			ExptID:    123,
+			ExptRunID: 456,
+			Status:    int64(entity.ExptStatus_Pending),
+		}
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(runLog, nil)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().
+			ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{
+				{Status: int32(entity.TurnRunState_Success)},
+				{Status: int32(entity.TurnRunState_Processing)},
+			}, int64(2), nil)
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Save(ctx, gomock.Any()).
+			Do(func(_ context.Context, rl *entity.ExptRunLog) {
+				assert.Equal(t, int64(entity.ExptStatus_Processing), rl.Status)
+			}).
+			Return(nil)
+
+		mgr.exptResultService.(*svcMocks.MockExptResultService).
+			EXPECT().
+			CalculateStats(ctx, int64(123), int64(789), session).
+			Return(&entity.ExptCalculateStats{
+				SuccessItemCnt:    3,
+				PendingItemCnt:    1,
+				FailItemCnt:       0,
+				ProcessingItemCnt: 2,
+				TerminatedItemCnt: 0,
+			}, nil)
+
+		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
+			EXPECT().
+			UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).
+			Do(func(_ context.Context, _ int64, _ int64, stats *entity.ExptStats) {
+				assert.Equal(t, int32(3), stats.SuccessItemCnt)
+				assert.Equal(t, int32(1), stats.PendingItemCnt)
+				assert.Equal(t, int32(0), stats.FailItemCnt)
+				assert.Equal(t, int32(2), stats.ProcessingItemCnt)
+				assert.Equal(t, int32(0), stats.TerminatedItemCnt)
+			}).
+			Return(nil)
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.NoError(t, err)
+	})
+
+	t.Run("get_run_log_failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(nil, errors.New("run log not found"))
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "run log not found")
+	})
+
+	t.Run("calculate_run_log_stats_failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		runLog := &entity.ExptRunLog{
+			ID:        456,
+			ExptID:    123,
+			ExptRunID: 456,
+		}
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(runLog, nil)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().
+			ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+			Return(nil, int64(0), errors.New("list turn result error"))
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "list turn result error")
+	})
+
+	t.Run("save_run_log_failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		runLog := &entity.ExptRunLog{
+			ID:        456,
+			ExptID:    123,
+			ExptRunID: 456,
+		}
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(runLog, nil)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().
+			ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{}, int64(0), nil)
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Save(ctx, gomock.Any()).
+			Return(errors.New("save run log error"))
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "save run log error")
+	})
+
+	t.Run("calculate_stats_failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		runLog := &entity.ExptRunLog{
+			ID:        456,
+			ExptID:    123,
+			ExptRunID: 456,
+		}
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(runLog, nil)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().
+			ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{}, int64(0), nil)
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Save(ctx, gomock.Any()).
+			Return(nil)
+
+		mgr.exptResultService.(*svcMocks.MockExptResultService).
+			EXPECT().
+			CalculateStats(ctx, int64(123), int64(789), session).
+			Return(nil, errors.New("calculate stats error"))
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "calculate stats error")
+	})
+
+	t.Run("update_stats_failure", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mgr := newTestExptManager(ctrl)
+
+		runLog := &entity.ExptRunLog{
+			ID:        456,
+			ExptID:    123,
+			ExptRunID: 456,
+		}
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Get(ctx, int64(123), int64(456)).
+			Return(runLog, nil)
+
+		mgr.turnResultRepo.(*repoMocks.MockIExptTurnResultRepo).
+			EXPECT().
+			ListTurnResult(ctx, int64(789), int64(123), nil, gomock.Any(), false).
+			Return([]*entity.ExptTurnResult{}, int64(0), nil)
+
+		mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
+			EXPECT().
+			Save(ctx, gomock.Any()).
+			Return(nil)
+
+		mgr.exptResultService.(*svcMocks.MockExptResultService).
+			EXPECT().
+			CalculateStats(ctx, int64(123), int64(789), session).
+			Return(&entity.ExptCalculateStats{
+				SuccessItemCnt: 5,
+			}, nil)
+
+		mgr.statsRepo.(*repoMocks.MockIExptStatsRepo).
+			EXPECT().
+			UpdateByExptID(ctx, int64(123), int64(789), gomock.Any()).
+			Return(errors.New("update stats error"))
+
+		err := mgr.RecordExptData(ctx, 123, 456, 789, session)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "update stats error")
+	})
+}
