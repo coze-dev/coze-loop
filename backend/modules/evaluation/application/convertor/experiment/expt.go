@@ -357,17 +357,15 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		TargetRuntimeParam:     trtp,
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
-<<<<<<< HEAD
 	if experiment.Visibility == entity.Visibility_Hidden {
 		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 	}
 	if experiment.ThreadID != nil {
 		res.ThreadID = experiment.ThreadID
-=======
+	}
 	if experiment.TriggerType != "" {
 		tt := experiment.TriggerType
 		res.TriggerType = &tt
->>>>>>> main
 	}
 
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递

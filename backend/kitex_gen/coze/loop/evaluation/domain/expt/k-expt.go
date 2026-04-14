@@ -506,11 +506,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-<<<<<<< HEAD
 		case 63:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField63(buf[offset:])
-=======
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 70:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField70(buf[offset:])
@@ -528,7 +537,6 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 		case 71:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField71(buf[offset:])
->>>>>>> main
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1039,26 +1047,30 @@ func (p *Experiment) FastReadField62(buf []byte) (int, error) {
 	return offset, nil
 }
 
-<<<<<<< HEAD
 func (p *Experiment) FastReadField63(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
-=======
-func (p *Experiment) FastReadField70(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *ExptTriggerType
->>>>>>> main
 	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
 		_field = &v
 	}
-<<<<<<< HEAD
 	p.ThreadID = _field
-=======
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField70(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ExptTriggerType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
 	p.TriggerType = _field
 	return offset, nil
 }
@@ -1072,7 +1084,6 @@ func (p *Experiment) FastReadField71(buf []byte) (int, error) {
 		offset += l
 	}
 	p.ExptSource = _field
->>>>>>> main
 	return offset, nil
 }
 
@@ -1115,12 +1126,9 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField61(buf[offset:], w)
-<<<<<<< HEAD
 		offset += p.fastWriteField63(buf[offset:], w)
-=======
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField71(buf[offset:], w)
->>>>>>> main
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -1161,12 +1169,9 @@ func (p *Experiment) BLength() int {
 		l += p.field60Length()
 		l += p.field61Length()
 		l += p.field62Length()
-<<<<<<< HEAD
 		l += p.field63Length()
-=======
 		l += p.field70Length()
 		l += p.field71Length()
->>>>>>> main
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -1488,13 +1493,15 @@ func (p *Experiment) fastWriteField62(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-<<<<<<< HEAD
 func (p *Experiment) fastWriteField63(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetThreadID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 63)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ThreadID)
-=======
+	}
+	return offset
+}
+
 func (p *Experiment) fastWriteField70(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTriggerType() {
@@ -1509,7 +1516,6 @@ func (p *Experiment) fastWriteField71(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetExptSource() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 71)
 		offset += p.ExptSource.FastWriteNocopy(buf[offset:], w)
->>>>>>> main
 	}
 	return offset
 }
@@ -1816,13 +1822,15 @@ func (p *Experiment) field62Length() int {
 	return l
 }
 
-<<<<<<< HEAD
 func (p *Experiment) field63Length() int {
 	l := 0
 	if p.IsSetThreadID() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.ThreadID)
-=======
+	}
+	return l
+}
+
 func (p *Experiment) field70Length() int {
 	l := 0
 	if p.IsSetTriggerType() {
@@ -1837,7 +1845,6 @@ func (p *Experiment) field71Length() int {
 	if p.IsSetExptSource() {
 		l += thrift.Binary.FieldBeginLength()
 		l += p.ExptSource.BLength()
->>>>>>> main
 	}
 	return l
 }
@@ -2089,7 +2096,6 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		p.EnableWeightedScore = &tmp
 	}
 
-<<<<<<< HEAD
 	if src.ThreadID != nil {
 		var tmp string
 		if *src.ThreadID != "" {
@@ -2097,7 +2103,7 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 		p.ThreadID = &tmp
 	}
-=======
+
 	if src.TriggerType != nil {
 		tmp := *src.TriggerType
 		p.TriggerType = &tmp
@@ -2111,7 +2117,6 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ExptSource = _exptSource
->>>>>>> main
 
 	return nil
 }

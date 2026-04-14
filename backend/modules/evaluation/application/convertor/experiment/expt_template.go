@@ -61,17 +61,15 @@ func fillCreateTemplateMeta(param *entity.CreateExptTemplateParam, req *expt.Cre
 	param.Name = meta.GetName()
 	param.Description = meta.GetDesc()
 	param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
-<<<<<<< HEAD
 	if meta.IsSetVisibility() {
 		if meta.GetVisibility() == domain_expt.VisibilityHidden {
 			param.Visibility = gptr.Of(entity.Visibility_Hidden)
 		} else {
 			param.Visibility = gptr.Of(entity.Visibility(0))
 		}
-=======
+	}
 	if req.GetExptInfo() != nil && req.GetExptInfo().IsSetCronActivate() {
 		param.CronActivate = req.GetExptInfo().GetCronActivate()
->>>>>>> main
 	}
 }
 

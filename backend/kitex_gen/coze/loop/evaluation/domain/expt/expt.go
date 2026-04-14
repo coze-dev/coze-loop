@@ -19,9 +19,8 @@ import (
 )
 
 const (
-<<<<<<< HEAD
 	VisibilityHidden = "hidden"
-=======
+
 	Manual = "manual"
 
 	OpenAPI = "openapi"
@@ -43,7 +42,6 @@ const (
 	FrequencySaturday = "saturday"
 
 	FrequencySunday = "sunday"
->>>>>>> main
 
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
@@ -230,12 +228,9 @@ type SourceType int64
 const (
 	SourceType_Evaluation SourceType = 1
 	SourceType_AutoTask   SourceType = 2
-<<<<<<< HEAD
-	// 智能生成
-	SourceType_IntelligentGen SourceType = 3
-=======
 	SourceType_Workflow   SourceType = 3
->>>>>>> main
+	// 智能生成
+	SourceType_IntelligentGen SourceType = 4
 )
 
 func (p SourceType) String() string {
@@ -244,13 +239,10 @@ func (p SourceType) String() string {
 		return "Evaluation"
 	case SourceType_AutoTask:
 		return "AutoTask"
-<<<<<<< HEAD
-	case SourceType_IntelligentGen:
-		return "IntelligentGen"
-=======
 	case SourceType_Workflow:
 		return "Workflow"
->>>>>>> main
+	case SourceType_IntelligentGen:
+		return "IntelligentGen"
 	}
 	return "<UNSET>"
 }
@@ -261,13 +253,10 @@ func SourceTypeFromString(s string) (SourceType, error) {
 		return SourceType_Evaluation, nil
 	case "AutoTask":
 		return SourceType_AutoTask, nil
-<<<<<<< HEAD
-	case "IntelligentGen":
-		return SourceType_IntelligentGen, nil
-=======
 	case "Workflow":
 		return SourceType_Workflow, nil
->>>>>>> main
+	case "IntelligentGen":
+		return SourceType_IntelligentGen, nil
 	}
 	return SourceType(0), fmt.Errorf("not a valid SourceType string")
 }
@@ -1006,13 +995,11 @@ func (p *DataType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
-<<<<<<< HEAD
 type Visibility = string
-=======
+
 type ExptTriggerType = string
 
 type Frequency = string
->>>>>>> main
 
 type ExptResultExportType = string
 
@@ -1063,14 +1050,11 @@ type Experiment struct {
 	// 评估器得分加权配置
 	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
-<<<<<<< HEAD
 	// 智能评测相关
 	ThreadID *string `thrift:"thread_id,63,optional" frugal:"63,optional,string" form:"thread_id" json:"thread_id,omitempty" query:"thread_id"`
-=======
 	// 触发方式
 	TriggerType *ExptTriggerType `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	ExptSource  *ExptSource      `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
->>>>>>> main
 }
 
 func NewExperiment() *Experiment {
@@ -1464,7 +1448,6 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	return *p.EnableWeightedScore
 }
 
-<<<<<<< HEAD
 var Experiment_ThreadID_DEFAULT string
 
 func (p *Experiment) GetThreadID() (v string) {
@@ -1475,7 +1458,8 @@ func (p *Experiment) GetThreadID() (v string) {
 		return Experiment_ThreadID_DEFAULT
 	}
 	return *p.ThreadID
-=======
+}
+
 var Experiment_TriggerType_DEFAULT ExptTriggerType
 
 func (p *Experiment) GetTriggerType() (v ExptTriggerType) {
@@ -1498,7 +1482,6 @@ func (p *Experiment) GetExptSource() (v *ExptSource) {
 		return Experiment_ExptSource_DEFAULT
 	}
 	return p.ExptSource
->>>>>>> main
 }
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
@@ -1596,16 +1579,14 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
-<<<<<<< HEAD
 func (p *Experiment) SetThreadID(val *string) {
 	p.ThreadID = val
-=======
+}
 func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
 	p.TriggerType = val
 }
 func (p *Experiment) SetExptSource(val *ExptSource) {
 	p.ExptSource = val
->>>>>>> main
 }
 
 var fieldIDToName_Experiment = map[int16]string{
@@ -1641,12 +1622,9 @@ var fieldIDToName_Experiment = map[int16]string{
 	60: "expt_template_meta",
 	61: "score_weight_config",
 	62: "enable_weighted_score",
-<<<<<<< HEAD
 	63: "thread_id",
-=======
 	70: "trigger_type",
 	71: "expt_source",
->>>>>>> main
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1777,17 +1755,16 @@ func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
 }
 
-<<<<<<< HEAD
 func (p *Experiment) IsSetThreadID() bool {
 	return p.ThreadID != nil
-=======
+}
+
 func (p *Experiment) IsSetTriggerType() bool {
 	return p.TriggerType != nil
 }
 
 func (p *Experiment) IsSetExptSource() bool {
 	return p.ExptSource != nil
->>>>>>> main
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -2064,11 +2041,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-<<<<<<< HEAD
 		case 63:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField63(iprot); err != nil {
-=======
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 70:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField70(iprot); err != nil {
@@ -2080,7 +2060,6 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 71:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField71(iprot); err != nil {
->>>>>>> main
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2494,23 +2473,25 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
-<<<<<<< HEAD
 func (p *Experiment) ReadField63(iprot thrift.TProtocol) error {
 
 	var _field *string
-=======
-func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
-
-	var _field *ExptTriggerType
->>>>>>> main
 	if v, err := iprot.ReadString(); err != nil {
 		return err
 	} else {
 		_field = &v
 	}
-<<<<<<< HEAD
 	p.ThreadID = _field
-=======
+	return nil
+}
+func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
+
+	var _field *ExptTriggerType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
 	p.TriggerType = _field
 	return nil
 }
@@ -2520,7 +2501,6 @@ func (p *Experiment) ReadField71(iprot thrift.TProtocol) error {
 		return err
 	}
 	p.ExptSource = _field
->>>>>>> main
 	return nil
 }
 
@@ -2658,17 +2638,16 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 62
 			goto WriteFieldError
 		}
-<<<<<<< HEAD
 		if err = p.writeField63(oprot); err != nil {
 			fieldId = 63
-=======
+			goto WriteFieldError
+		}
 		if err = p.writeField70(oprot); err != nil {
 			fieldId = 70
 			goto WriteFieldError
 		}
 		if err = p.writeField71(oprot); err != nil {
 			fieldId = 71
->>>>>>> main
 			goto WriteFieldError
 		}
 	}
@@ -3297,21 +3276,12 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
 }
-<<<<<<< HEAD
 func (p *Experiment) writeField63(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
 		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 63); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := oprot.WriteString(*p.ThreadID); err != nil {
-=======
-func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
-	if p.IsSetTriggerType() {
-		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 70); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.TriggerType); err != nil {
->>>>>>> main
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -3320,11 +3290,24 @@ func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-<<<<<<< HEAD
 	return thrift.PrependError(fmt.Sprintf("%T write field 63 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 63 end error: ", p), err)
-=======
+}
+func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerType() {
+		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 70); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TriggerType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 70 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
@@ -3346,7 +3329,6 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
->>>>>>> main
 }
 
 func (p *Experiment) String() string {
@@ -3459,14 +3441,13 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field62DeepEqual(ano.EnableWeightedScore) {
 		return false
 	}
-<<<<<<< HEAD
 	if !p.Field63DeepEqual(ano.ThreadID) {
-=======
+		return false
+	}
 	if !p.Field70DeepEqual(ano.TriggerType) {
 		return false
 	}
 	if !p.Field71DeepEqual(ano.ExptSource) {
->>>>>>> main
 		return false
 	}
 	return true
@@ -3820,7 +3801,6 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 	}
 	return true
 }
-<<<<<<< HEAD
 func (p *Experiment) Field63DeepEqual(src *string) bool {
 
 	if p.ThreadID == src {
@@ -3829,7 +3809,10 @@ func (p *Experiment) Field63DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ThreadID, *src) != 0 {
-=======
+		return false
+	}
+	return true
+}
 func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
 
 	if p.TriggerType == src {
@@ -3845,7 +3828,6 @@ func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
 func (p *Experiment) Field71DeepEqual(src *ExptSource) bool {
 
 	if !p.ExptSource.DeepEqual(src) {
->>>>>>> main
 		return false
 	}
 	return true

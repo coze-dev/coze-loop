@@ -519,7 +519,6 @@ func TestCustomEvalTargetConversions(t *testing.T) {
 	assert.Nil(t, CustomEvalTargetDO2DTO(nil))
 }
 
-<<<<<<< HEAD
 func TestWebAgentDTO2DO(t *testing.T) {
 	t.Parallel()
 
@@ -819,7 +818,8 @@ func TestEvalTargetVersionDO2DTO_WebAgent(t *testing.T) {
 	assert.NotNil(t, result.EvalTargetContent.WebAgent)
 	assert.Equal(t, int64(1), gptr.Indirect(result.EvalTargetContent.WebAgent.ID))
 	assert.Equal(t, "test", gptr.Indirect(result.EvalTargetContent.WebAgent.Name))
-=======
+}
+
 func TestEvalTargetDO2DTO_OnlineTypeSameDTOAsBase(t *testing.T) {
 	t.Parallel()
 
@@ -855,5 +855,4 @@ func TestEvalTargetDO2DTO_OnlineTypeSameDTOAsBase(t *testing.T) {
 	}
 
 	assert.Equal(t, EvalTargetDO2DTO(base), EvalTargetDO2DTO(online))
->>>>>>> main
 }
