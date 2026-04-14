@@ -18,7 +18,7 @@ RUN mkdir -p ./bin && \
     go -C /coze-loop/src/backend build -buildvcs=false -o /coze-loop/bin/main "./cmd"
 
 # Minimal Node.js image (with Node.js + npm), additionally installs Rush to build frontend artifacts
-FROM node:20.13.1-alpine AS frontend_builder
+FROM node:24-alpine AS frontend_builder
 
 # 1. Install basic tools (curl, bash, etc.) for alpine
 RUN apk add --no-cache bash
