@@ -15,6 +15,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
@@ -1127,6 +1128,141 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersions(t *testing.T) {
 			assert.Len(t, resp.Evaluators, tt.wantEvaluatorCount)
 		})
 	}
+}
+
+func TestEvaluatorHandlerImpl_BatchGetEvaluatorVersionIDs(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
+
+	app := &EvaluatorHandlerImpl{
+		auth:             mockAuth,
+		evaluatorService: mockEvaluatorService,
+		configer:         mockConfiger,
+	}
+
+	workspaceID := int64(100)
+	ev := &entity.Evaluator{
+		ID:            1,
+		SpaceID:       workspaceID,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+			ID:          999,
+			EvaluatorID: 1,
+			Version:     "1.0.0",
+		},
+	}
+
+	t.Run("nil request", func(t *testing.T) {
+		_, err := app.BatchGetEvaluatorVersionIDs(context.Background(), nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorByIDAndVersion(gomock.Any(), [][2]interface{}{{int64(1), "1.0.0"}}).
+			Return([]*entity.Evaluator{ev}, nil)
+
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		pair := evaluatorservice.NewEvaluatorIDVersionPair()
+		pair.SetEvaluatorID(1)
+		pair.SetVersion("1.0.0")
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{pair})
+
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Len(t, resp.GetIDVersionItems(), 1)
+		assert.Equal(t, int64(999), resp.GetIDVersionItems()[0].GetEvaluatorVersionID())
+	})
+
+	t.Run("empty pairs", func(t *testing.T) {
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{})
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		assert.Empty(t, resp.GetIDVersionItems())
+	})
+
+	t.Run("BuiltinVisible_走BatchGetBuiltinEvaluator", func(t *testing.T) {
+		builtinEV := &entity.Evaluator{
+			ID:            7,
+			SpaceID:       workspaceID,
+			Builtin:       true,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          7001,
+				EvaluatorID: 7,
+				Version:     "2.0.0",
+			},
+		}
+		mockEvaluatorService.EXPECT().
+			BatchGetBuiltinEvaluator(gomock.Any(), []int64{7}).
+			Return([]*entity.Evaluator{builtinEV}, nil)
+
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		pair := evaluatorservice.NewEvaluatorIDVersionPair()
+		pair.SetEvaluatorID(7)
+		pair.SetVersion(evaluatordto.EvaluatorVersionTypeBuiltinVisible)
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{pair})
+
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		require.Len(t, resp.GetIDVersionItems(), 1)
+		assert.Equal(t, int64(7001), resp.GetIDVersionItems()[0].GetEvaluatorVersionID())
+		assert.Equal(t, evaluatordto.EvaluatorVersionTypeBuiltinVisible, resp.GetIDVersionItems()[0].GetVersion())
+	})
+
+	t.Run("BuiltinVisible与普通版本混合", func(t *testing.T) {
+		builtinEV := &entity.Evaluator{
+			ID:            7,
+			SpaceID:       workspaceID,
+			Builtin:       true,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          7001,
+				EvaluatorID: 7,
+				Version:     "2.0.0",
+			},
+		}
+		normalEV := &entity.Evaluator{
+			ID:            2,
+			SpaceID:       workspaceID,
+			EvaluatorType: entity.EvaluatorTypePrompt,
+			PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+				ID:          888,
+				EvaluatorID: 2,
+				Version:     "1.0.0",
+			},
+		}
+		mockEvaluatorService.EXPECT().
+			BatchGetBuiltinEvaluator(gomock.Any(), []int64{7}).
+			Return([]*entity.Evaluator{builtinEV}, nil)
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorByIDAndVersion(gomock.Any(), [][2]interface{}{{int64(2), "1.0.0"}}).
+			Return([]*entity.Evaluator{normalEV}, nil)
+
+		req := evaluatorservice.NewBatchGetEvaluatorVersionIDsRequest()
+		req.SetWorkspaceID(workspaceID)
+		p1 := evaluatorservice.NewEvaluatorIDVersionPair()
+		p1.SetEvaluatorID(7)
+		p1.SetVersion(evaluatordto.EvaluatorVersionTypeBuiltinVisible)
+		p2 := evaluatorservice.NewEvaluatorIDVersionPair()
+		p2.SetEvaluatorID(2)
+		p2.SetVersion("1.0.0")
+		req.SetEvaluatorIDVersionPairs([]*evaluatorservice.EvaluatorIDVersionPair{p1, p2})
+
+		resp, err := app.BatchGetEvaluatorVersionIDs(context.Background(), req)
+		assert.NoError(t, err)
+		require.Len(t, resp.GetIDVersionItems(), 2)
+		assert.Equal(t, int64(7001), resp.GetIDVersionItems()[0].GetEvaluatorVersionID())
+		assert.Equal(t, int64(888), resp.GetIDVersionItems()[1].GetEvaluatorVersionID())
+	})
 }
 
 func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {

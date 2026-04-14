@@ -90,11 +90,13 @@ func EvalTargetDO2DTO(targetDO *do.EvalTarget) (targetDTO *dto.EvalTarget) {
 		return nil
 	}
 
+	// 仅记录型（*Online）与基础类型对外统一为基础枚举，便于前端与完整内容构建一致
+	dtoEvalType := dto.EvalTargetType(targetDO.EvalTargetType.ToOperatorBaseType())
 	targetDTO = &dto.EvalTarget{
 		ID:             &targetDO.ID,
 		WorkspaceID:    &targetDO.SpaceID,
 		SourceTargetID: &targetDO.SourceTargetID,
-		EvalTargetType: gptr.Of(dto.EvalTargetType(targetDO.EvalTargetType)),
+		EvalTargetType: gptr.Of(dtoEvalType),
 	}
 	if targetDO.EvalTargetVersion != nil {
 		// 填充version上的类型
@@ -119,7 +121,9 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		TargetID:            &targetVersionDO.TargetID,
 		SourceTargetVersion: &targetVersionDO.SourceTargetVersion,
 	}
-	switch targetVersionDO.EvalTargetType {
+	// 仅记录型（*Online）与对应基础类型共用同一套 DTO 构建逻辑
+	verType := targetVersionDO.EvalTargetType.ToOperatorBaseType()
+	switch verType {
 	case do.EvalTargetTypeCozeBot:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
 			InputSchemas:  make([]*commondto.ArgsSchema, 0),

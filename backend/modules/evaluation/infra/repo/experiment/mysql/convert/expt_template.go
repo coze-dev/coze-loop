@@ -57,6 +57,11 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		updatedBy = *template.BaseInfo.UpdatedBy.UserID
 	}
 
+	var cronActivate bool
+	if template.ExptInfo != nil {
+		cronActivate = template.ExptInfo.CronActivate
+	}
+
 	po := &model.ExptTemplate{
 		ID:               id,
 		SpaceID:          spaceID,
@@ -70,6 +75,7 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		TargetType:       int64(targetType),
 		TargetVersionID:  targetVersionID,
 		ExptType:         int32(exptType),
+		CronActivate:     cronActivate,
 	}
 
 	if template.TemplateConf != nil {
@@ -210,11 +216,11 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 			}
 			fieldMappingConfig.EvaluatorFieldMapping = evaluatorMappings
 
-			// 如果有任一评估器配置了分数权重，则标记模板支持分数权重
+			// 若有任一评估器配置了正分数权重，则标记模板支持分数权重（0 与未配置等价，不开启）
 			if templateConf.ConnectorConf.EvaluatorsConf != nil {
 				templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = false
 				for _, ec := range templateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-					if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight >= 0 {
+					if ec != nil && ec.ScoreWeight != nil && *ec.ScoreWeight > 0 {
 						templateConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight = true
 						break
 					}
@@ -244,6 +250,20 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 			return nil, errorx.Wrapf(err, "ExptInfo json unmarshal fail, template_id: %v", po.ID)
 		}
 	}
+	// 表字段 cron_activate 为权威来源（兼容历史 JSON 中无该字段）
+	if exptInfo == nil {
+		if po.CronActivate {
+			exptInfo = &entity.ExptInfo{CronActivate: true}
+		}
+	} else {
+		exptInfo.CronActivate = po.CronActivate
+	}
+
+	// 从 TemplateConf 中提取 ExptSource
+	var exptSource *entity.ExptSource
+	if templateConf != nil && templateConf.ExptSource != nil {
+		exptSource = templateConf.ExptSource
+	}
 
 	return &entity.ExptTemplate{
 		Meta:                meta,
@@ -253,6 +273,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		TemplateConf:        templateConf,
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
+		ExptSource:          exptSource,
 	}, nil
 }
 

@@ -38,6 +38,9 @@ struct CreateExperimentRequest {
     43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
 
+    50: optional expt.ExptTriggerType trigger_type
+
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -76,6 +79,9 @@ struct SubmitExperimentRequest {
     41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
     42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+
+    50: optional expt.ExptTriggerType trigger_type
+    51: optional expt.TaskTimeRange time_range (api.body = 'time_range')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -376,6 +382,10 @@ struct CreateExperimentTemplateRequest {
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
 
+    30: optional expt.ExptSource expt_source (api.body = 'expt_source')
+    // 模板运行态信息（如是否开启定时触发）；创建时可只填 cron_activate
+    23: optional expt.ExptInfo expt_info (api.body = 'expt_info')
+
     200: optional common.Session session
     255: optional base.Base Base
 }
@@ -405,6 +415,7 @@ struct UpdateExperimentTemplateMetaRequest {
 
     10: optional expt.ExptTemplateMeta meta (api.body = 'meta')
 
+
     255: optional base.Base Base
 }
 
@@ -432,6 +443,7 @@ struct UpdateExperimentTemplateRequest {
     21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
+    23: optional expt.ExptInfo expt_info (api.body = 'expt_info')
 
     255: optional base.Base Base
 }

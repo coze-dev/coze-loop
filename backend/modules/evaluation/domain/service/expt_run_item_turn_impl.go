@@ -144,11 +144,22 @@ func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptT
 
 // skipTargetNode Whether target is called is determined by the target info bound in expt;
 // ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
+// 仅记录型（*Online）不需要执行对象，跳过 target 节点
 func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
 	if expt.TargetVersionID == 0 {
 		return true
 	}
 	if expt.ExptType == entity.ExptType_Online {
+		return true
+	}
+	targetType := expt.TargetType
+	if targetType == 0 && expt.Target != nil {
+		targetType = expt.Target.EvalTargetType
+		if targetType == 0 && expt.Target.EvalTargetVersion != nil {
+			targetType = expt.Target.EvalTargetVersion.EvalTargetType
+		}
+	}
+	if targetType.IsRecordOnlyType() {
 		return true
 	}
 	return false

@@ -55,6 +55,14 @@ enum EvalTargetType {
     CustomRPCServer = 6 // 自定义RPC服务 for内场
 
     VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
+
+    CozeBotOnline = 11 // CozeBot在线(评测过程中不执行对象，仅用于展示对象)
+    CozeLoopPromptOnline = 12 // Prompt在线(评测过程中不执行对象，仅用于展示对象)
+    CozeWorkflowOnline = 13 // CozeWorkflow在线(评测过程中不执行对象，仅用于展示对象)
+    VolcengineAgentOnline = 14 // 火山智能体在线(评测过程中不执行对象，仅用于展示对象)
+    CustomRPCServerOnline = 15 // 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象)
+    VolcengineAgentAgentkitOnline = 16 // 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象)
+
 }
 
 // Agent协议类型

@@ -47,6 +47,7 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		SourceType:       int32(experiment.SourceType),
 		SourceID:         experiment.SourceID,
 		ExptType:         int32(experiment.ExptType),
+		TriggerType:      experiment.TriggerType,
 	}
 
 	if experiment.MaxAliveTime != 0 {
@@ -105,6 +106,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		SourceID:            expt.SourceID,
 		ExptType:            entity.ExptType(expt.ExptType),
 		MaxAliveTime:        gptr.Indirect(expt.MaxAliveTime),
+		TriggerType:         expt.TriggerType,
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

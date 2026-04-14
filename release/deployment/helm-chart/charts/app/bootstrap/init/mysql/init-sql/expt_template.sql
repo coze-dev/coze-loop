@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS `expt_template`
 
     `expt_type`           int unsigned                                                   NOT NULL DEFAULT '1' COMMENT '实验类型，offline:1,online:2...',
 
+    `cron_activate`       tinyint(1)                                                   NOT NULL DEFAULT '0' COMMENT '是否开启定时触发',
+
     `template_conf`       blob COMMENT '实验模板配置，包含评估器列表、字段映射、加权配置、默认并发及调度等，json',
     `expt_info`           blob COMMENT '实验运行状态，包含创建实验数量，最后一次实验执行状态，json',
 

@@ -290,6 +290,7 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 				assert.NotNil(t, evalTarget.EvalTargetVersion.Prompt)
 				assert.Equal(t, defaultSourceTargetIDInt, evalTarget.EvalTargetVersion.Prompt.PromptID)
 				assert.Equal(t, defaultSourceTargetVersion, evalTarget.EvalTargetVersion.Prompt.Version)
+				assert.Equal(t, "test_prompt_key", evalTarget.EvalTargetVersion.Prompt.PromptKey)
 
 				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 11) // 10 variables + 1 user query schema
 				if len(evalTarget.EvalTargetVersion.InputSchema) == 11 {
@@ -308,6 +309,30 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 					assert.Equal(t, []entity.ContentType{entity.ContentTypeText, entity.ContentTypeMultipart}, evalTarget.EvalTargetVersion.OutputSchema[0].SupportContentTypes)
 					assert.Equal(t, consts.StringJsonSchema, *evalTarget.EvalTargetVersion.OutputSchema[0].JsonSchema)
 				}
+			},
+			wantErr: false,
+		},
+		{
+			name:                "success scenario - empty source version stored as empty",
+			sourceTargetID:      defaultSourceTargetIDStr,
+			sourceTargetVersion: "",
+			mockSetup: func() {
+				mockPrompt := &rpc.LoopPrompt{
+					ID:        defaultSourceTargetIDInt,
+					PromptKey: "test_prompt_key",
+					PromptBasic: &rpc.PromptBasic{
+						DisplayName: gptr.Of("Test Prompt"),
+					},
+				}
+				mockPromptRPCAdapter.EXPECT().MGetPrompt(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*rpc.LoopPrompt{mockPrompt}, nil)
+			},
+			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
+				assert.NotNil(t, evalTarget)
+				assert.Equal(t, "", evalTarget.EvalTargetVersion.SourceTargetVersion)
+				assert.Equal(t, "", evalTarget.EvalTargetVersion.Prompt.Version)
+				assert.Equal(t, "test_prompt_key", evalTarget.EvalTargetVersion.Prompt.PromptKey)
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 			},
 			wantErr: false,
 		},
@@ -425,7 +450,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
-				assert.Nil(t, evalTarget.EvalTargetVersion.InputSchema)
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 			},
 			wantErr: false,
 		},
@@ -447,7 +473,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
-				assert.Nil(t, evalTarget.EvalTargetVersion.InputSchema)
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 			},
 			wantErr: false,
 		},
@@ -466,7 +493,8 @@ func TestPromptSourceEvalTargetServiceImpl_BuildBySource(t *testing.T) {
 			},
 			wantEvalTargetCheck: func(t *testing.T, evalTarget *entity.EvalTarget) {
 				assert.NotNil(t, evalTarget)
-				assert.Nil(t, evalTarget.EvalTargetVersion.InputSchema)
+				assert.Len(t, evalTarget.EvalTargetVersion.InputSchema, 1)
+				assert.Equal(t, consts.EvalTargetInputFieldKeyPromptUserQuery, *evalTarget.EvalTargetVersion.InputSchema[0].Key)
 			},
 			wantErr: false,
 		},
