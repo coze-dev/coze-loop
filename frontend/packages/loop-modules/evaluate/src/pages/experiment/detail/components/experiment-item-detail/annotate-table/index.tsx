@@ -4,7 +4,10 @@ import { TypographyText } from '@cozeloop/shared-components';
 import { I18n } from '@cozeloop/i18n-adapter';
 import { TagInput, TagDetailLink } from '@cozeloop/evaluate-components';
 import { InfoTooltip, TooltipWhenDisabled } from '@cozeloop/components';
-import { tag, type ColumnAnnotation } from '@cozeloop/api-schema/evaluation';
+import {
+  data_tag,
+  type ColumnAnnotation,
+} from '@cozeloop/api-schema/evaluation';
 
 import { type ExperimentItem } from '@/types/experiment';
 
@@ -53,7 +56,7 @@ export function AnnotateTable({
             }
             theme="dark"
             position="topRight"
-            disabled={item.status !== tag.TagStatus.Active}
+            disabled={item.status !== data_tag.TagStatus.Active}
           >
             <div className="flex-1 min-w-0">
               <TagInput

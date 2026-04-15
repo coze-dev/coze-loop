@@ -4,7 +4,7 @@ import { useRef } from 'react';
 
 import cls from 'classnames';
 import { useHover } from 'ahooks';
-import { type Model } from '@cozeloop/api-schema/llm-manage';
+import { type Model, type ModelStatus } from '@cozeloop/api-schema/llm-manage';
 import { IconCozDiamondFill } from '@coze-arch/coze-design/icons';
 import {
   Avatar,
@@ -30,7 +30,7 @@ export interface ModelItemProps extends Model {
   /** model tags */
   tags?: Array<string>;
   disabled?: boolean;
-  status?: Int64;
+  status?: ModelStatus;
   statusInfo?: React.ReactNode;
 }
 
