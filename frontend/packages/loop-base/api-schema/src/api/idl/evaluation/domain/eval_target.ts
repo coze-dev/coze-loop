@@ -58,6 +58,29 @@ export interface EvalTargetContent {
   volcengine_agent?: VolcengineAgent,
   /** EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息 */
   custom_rpc_server?: CustomRPCServer,
+  /** EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息 */
+  web_agent?: WebAgent,
+}
+export interface WebAgent {
+  /** 应用ID */
+  id?: number,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  /** agent config */
+  agent_config?: common.AgentConfig,
+  /** agent prompt config for agent */
+  prompt_config?: WebAgentTargetPromptConfig,
+}
+export interface WebAgentTargetPromptConfig {
+  /** 通过messge list的方式描述target的操作说明 */
+  message_list?: common.Message[],
+  /** 输出规则 */
+  output_rule?: WebAgentTargetPromptConfigOutputRule,
+}
+export interface WebAgentTargetPromptConfigOutputRule {
+  message?: common.Message
 }
 export enum EvalTargetType {
   /** CozeBot */
@@ -73,6 +96,8 @@ export enum EvalTargetType {
   CustomRPCServer = 6,
   /** 火山智能体Agentkit */
   VolcengineAgentAgentkit = 7,
+  /** Web智能体 */
+  WebAgent = 8,
   /** CozeBot在线(评测过程中不执行对象，仅用于展示对象) */
   CozeBotOnline = 11,
   /** Prompt在线(评测过程中不执行对象，仅用于展示对象) */
@@ -302,6 +327,10 @@ export interface EvalTargetOutputData {
   eval_target_run_error?: EvalTargetRunError,
   /** 运行耗时 */
   time_consuming_ms?: string,
+  /** 平台扩展字段 */
+  ext?: {
+    [key: string | number]: string
+  },
 }
 export interface EvalTargetUsage {
   input_tokens: string,

@@ -23,16 +23,16 @@ is_coze_loop_repo() {
   return 1
 }
 
-# Copy idl/thrift from local coze-loop repository
-copy_from_local() {
-  echo "Detected coze-loop repository, copying from local idl/thrift..."
+# Symlink idl/thrift from local coze-loop repository
+link_from_local() {
+  echo "Detected coze-loop repository, creating symlink to local idl/thrift..."
   local REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../.." && pwd)"
   local LOCAL_IDL_DIR="$REPO_ROOT/idl/thrift"
 
   if [ -d "$LOCAL_IDL_DIR" ]; then
     mkdir -p "$OUTPUT_DIR"
-    cp -r "$LOCAL_IDL_DIR" "$OUTPUT_DIR/"
-    echo "Done: $OUTPUT_DIR/thrift (copied from local repository)"
+    ln -sf "$LOCAL_IDL_DIR" "$OUTPUT_DIR/thrift"
+    echo "Done: $OUTPUT_DIR/thrift -> $LOCAL_IDL_DIR (symlinked from local repository)"
   else
     echo "Error: Local idl/thrift directory not found at $LOCAL_IDL_DIR"
     exit 1
@@ -130,7 +130,7 @@ fi
 
 # Check if we are in the coze-loop repository and execute accordingly
 if is_coze_loop_repo; then
-  copy_from_local
+  link_from_local
 else
   download_from_remote
 fi

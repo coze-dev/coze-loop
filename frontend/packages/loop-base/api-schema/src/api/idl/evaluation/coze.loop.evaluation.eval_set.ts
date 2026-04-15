@@ -1,11 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import * as filter from './../data/domain/filter';
-export { filter };
-import * as dataset_job from './../data/domain/dataset_job';
-export { dataset_job };
-import * as dataset from './../data/domain/dataset';
-export { dataset };
+import * as data_filter from './../data/domain/filter';
+export { data_filter };
+import * as data_dataset_job from './../data/domain/dataset_job';
+export { data_dataset_job };
+import * as data_dataset from './../data/domain/dataset';
+export { data_dataset };
 import * as common from './domain/common';
 export { common };
 import * as eval_set from './domain/eval_set';
@@ -32,10 +32,10 @@ export interface CreateEvaluationSetWithImportRequest {
   evaluation_set_schema?: eval_set.EvaluationSetSchema,
   /** 业务分类 */
   biz_category?: eval_set.BizCategory,
-  source_type?: dataset_job.SourceType,
-  source: dataset_job.DatasetIOEndpoint,
-  fieldMappings?: dataset_job.FieldMapping[],
-  option?: dataset_job.DatasetIOJobOption,
+  source_type?: data_dataset_job.SourceType,
+  source: data_dataset_job.DatasetIOEndpoint,
+  fieldMappings?: data_dataset_job.FieldMapping[],
+  option?: data_dataset_job.DatasetIOJobOption,
   session?: common.Session,
 }
 export interface CreateEvaluationSetWithImportResponse {
@@ -45,7 +45,7 @@ export interface CreateEvaluationSetWithImportResponse {
 export interface ParseImportSourceFileRequest {
   workspace_id: string,
   /** 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析 */
-  file?: dataset_job.DatasetIOFile,
+  file?: data_dataset_job.DatasetIOFile,
 }
 export interface ParseImportSourceFileResponse {
   /** 文件大小，单位为 byte */
@@ -176,15 +176,15 @@ export interface BatchCreateEvaluationSetItemsRequest {
   skip_invalid_items?: boolean,
   /** 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条 */
   allow_partial_add?: boolean,
-  field_write_options?: dataset.FieldWriteOption[],
+  field_write_options?: data_dataset.FieldWriteOption[],
 }
 export interface BatchCreateEvaluationSetItemsResponse {
   /** key: item 在 items 中的索引 */
   added_items?: {
     [key: string | number]: string
   },
-  errors?: dataset.ItemErrorGroup[],
-  item_outputs?: dataset.CreateDatasetItemOutput[],
+  errors?: data_dataset.ItemErrorGroup[],
+  item_outputs?: data_dataset.CreateDatasetItemOutput[],
 }
 export interface UpdateEvaluationSetItemRequest {
   workspace_id: string,
@@ -192,7 +192,7 @@ export interface UpdateEvaluationSetItemRequest {
   item_id: string,
   /** 每轮对话 */
   turns?: eval_set.Turn[],
-  field_write_options?: dataset.FieldWriteOption[],
+  field_write_options?: data_dataset.FieldWriteOption[],
 }
 export interface UpdateEvaluationSetItemResponse {}
 export interface DeleteEvaluationSetItemRequest {
@@ -219,7 +219,7 @@ export interface ListEvaluationSetItemsRequest {
   order_bys?: common.OrderBy[],
   item_id_not_in?: string[],
   /** item 过滤条件 */
-  filter?: filter.Filter,
+  filter?: data_filter.Filter,
 }
 export interface ListEvaluationSetItemsResponse {
   items?: eval_set.EvaluationSetItem[],
@@ -265,7 +265,7 @@ export interface GetEvaluationSetItemFieldResponse {
   field_data?: eval_set.FieldData
 }
 export interface UploadAttachmentDetail {
-  content_type?: dataset.ContentType,
+  content_type?: data_dataset.ContentType,
   /** 图片处理服务 id */
   imagex_service_id?: string,
   /**
@@ -287,7 +287,7 @@ export interface UploadAttachmentDetail {
    * 错误信息
    * notice: 只返回图片相关的错误类型
   */
-  error_type?: dataset.ItemErrorType,
+  error_type?: data_dataset.ItemErrorType,
   err_msg?: string,
 }
 export interface ValidateEvaluationSetMultiPartDataRequest {
@@ -295,7 +295,7 @@ export interface ValidateEvaluationSetMultiPartDataRequest {
   /** 可以是包含特定格式的多模态数据或单一的 url 链接 */
   preview_data?: string[],
   /** 目前仅模态类型在当前接口有效 */
-  store_option?: dataset.MultiModalStoreOption,
+  store_option?: data_dataset.MultiModalStoreOption,
 }
 export interface ValidateEvaluationSetMultiPartDataResponse {
   /** 根据校验结果中是否包含错误，判断数据是否合法 */

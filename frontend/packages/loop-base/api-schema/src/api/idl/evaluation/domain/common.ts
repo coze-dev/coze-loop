@@ -1,9 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import * as manage from './../../llm/domain/manage';
-export { manage };
-import * as dataset from './../../data/domain/dataset';
-export { dataset };
+import * as llm_manage from './../../llm/domain/manage';
+export { llm_manage };
+import * as data_dataset from './../../data/domain/dataset';
+export { data_dataset };
 export enum ContentType {
   Text = "Text",
   /** 空间 */
@@ -15,7 +15,7 @@ export enum ContentType {
 }
 export interface Content {
   content_type?: ContentType,
-  format?: dataset.FieldDisplayFormat,
+  format?: data_dataset.FieldDisplayFormat,
   text?: string,
   image?: Image,
   multi_part?: Content[],
@@ -27,7 +27,7 @@ export interface Content {
   */
   content_omitted?: boolean,
   /** 被省略数据的完整信息，批量返回时会签发相应的 url，用户可以点击下载. 同时支持通过该字段传入已经上传好的超长数据(dataOmitted 为 true 时生效) */
-  full_content?: dataset.ObjectStorage,
+  full_content?: data_dataset.ObjectStorage,
   /** 超长数据完整内容的大小，单位 byte */
   full_content_bytes?: number,
 }
@@ -40,7 +40,7 @@ export interface Video {
   uri?: string,
   thumb_url?: string,
   /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
-  storage_provider?: dataset.StorageProvider,
+  storage_provider?: data_dataset.StorageProvider,
 }
 export interface Audio {
   format?: string,
@@ -48,7 +48,7 @@ export interface Audio {
   name?: string,
   uri?: string,
   /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
-  storage_provider?: dataset.StorageProvider,
+  storage_provider?: data_dataset.StorageProvider,
 }
 export interface Image {
   name?: string,
@@ -56,7 +56,7 @@ export interface Image {
   uri?: string,
   thumb_url?: string,
   /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
-  storage_provider?: dataset.StorageProvider,
+  storage_provider?: data_dataset.StorageProvider,
 }
 export interface OrderBy {
   field?: string,
@@ -124,7 +124,7 @@ export interface ModelConfig {
   temperature?: number,
   max_tokens?: number,
   top_p?: number,
-  protocol?: manage.Protocol,
+  protocol?: llm_manage.Protocol,
   identification?: string,
   preset_model?: boolean,
   json_ext?: string,

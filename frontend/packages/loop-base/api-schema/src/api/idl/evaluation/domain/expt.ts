@@ -1,13 +1,13 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import * as task from './../../observability/domain/task';
-export { task };
-import * as filter from './../../observability/domain/filter';
-export { filter };
-import * as dataset from './../../data/domain/dataset';
-export { dataset };
-import * as tag from './../../data/domain/tag';
-export { tag };
+import * as observability_task from './../../observability/domain/task';
+export { observability_task };
+import * as observability_filter from './../../observability/domain/filter';
+export { observability_filter };
+import * as data_dataset from './../../data/domain/dataset';
+export { data_dataset };
+import * as data_tag from './../../data/domain/tag';
+export { data_tag };
 import * as eval_set from './eval_set';
 export { eval_set };
 import * as evaluator from './evaluator';
@@ -43,6 +43,11 @@ export enum SourceType {
   Evaluation = 1,
   AutoTask = 2,
   Workflow = 3,
+  /** 智能生成 */
+  IntelligentGen = 4,
+}
+export enum Visibility {
+  Hidden = "hidden",
 }
 export enum ExptTriggerType {
   Manual = "manual",
@@ -59,6 +64,8 @@ export interface Experiment {
   start_time?: string,
   end_time?: string,
   item_concur_num?: number,
+  /** 实验可见性，默认为空，可见 */
+  visibility?: Visibility,
   eval_set_version_id?: string,
   target_version_id?: string,
   evaluator_version_ids?: string[],
@@ -83,6 +90,11 @@ export interface Experiment {
   /** 评估器得分加权配置 */
   score_weight_config?: ExptScoreWeight,
   enable_weighted_score?: boolean,
+  /**
+   * 智能评测相关
+   * 关联的智能评测会话ID
+  */
+  thread_id?: string,
   /** 触发方式 */
   trigger_type?: ExptTriggerType,
   expt_source?: ExptSource,
@@ -95,6 +107,8 @@ export interface ExptTemplateMeta {
   desc?: string,
   /** 模板对应的实验类型，当前主要为 Offline */
   expt_type?: ExptType,
+  /** 实验模板可见性，默认为空，可见 */
+  visibility?: Visibility,
 }
 /** 实验三元组配置 */
 export interface ExptTuple {
@@ -141,10 +155,10 @@ export interface ExptSource {
   source_type?: SourceType,
   source_id?: string,
   /** 不同source里的源数据结构 */
-  span_filter_fields?: filter.SpanFilterFields,
+  span_filter_fields?: observability_filter.SpanFilterFields,
   scheduler?: Scheduler,
   /** 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐 */
-  sampler?: task.Sampler,
+  sampler?: observability_task.Sampler,
   time_range?: TaskTimeRange,
 }
 export enum Frequency {
@@ -280,7 +294,7 @@ export interface ColumnEvalTarget {
   label?: string,
   content_type?: common.ContentType,
   text_schema?: string,
-  schema_key?: dataset.SchemaKey,
+  schema_key?: data_dataset.SchemaKey,
 }
 export interface ColumnEvalSetField {
   key?: string,
@@ -289,7 +303,7 @@ export interface ColumnEvalSetField {
   content_type?: common.ContentType,
   /** 5: optional datasetv3.FieldDisplayFormat DefaultDisplayFormat */
   text_schema?: string,
-  schema_key?: dataset.SchemaKey,
+  schema_key?: data_dataset.SchemaKey,
 }
 export interface ItemResult {
   item_id: string,
@@ -349,7 +363,7 @@ export interface AnnotateRecord {
   boolean_option?: string,
   categorical_option?: string,
   plain_text?: string,
-  tag_content_type?: tag.TagContentType,
+  tag_content_type?: data_tag.TagContentType,
   /** 标签选项值ID */
   tag_value_id?: string,
 }
@@ -594,13 +608,13 @@ export interface ColumnAnnotation {
   tag_key_name?: string,
   /** 描述 */
   description?: string,
-  status?: tag.TagStatus,
+  status?: data_tag.TagStatus,
   /** 标签选项值 */
-  tag_values?: tag.TagValue[],
+  tag_values?: data_tag.TagValue[],
   /** 标签内容类型 */
-  content_type?: tag.TagContentType,
+  content_type?: data_tag.TagContentType,
   /** 标签内容限制 */
-  content_spec?: tag.TagContentSpec,
+  content_spec?: data_tag.TagContentSpec,
 }
 export enum ExptResultExportType {
   CSV = "CSV",

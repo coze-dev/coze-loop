@@ -10,8 +10,8 @@ import * as coze_loop_evaluation_eval_target from './coze.loop.evaluation.eval_t
 export { coze_loop_evaluation_eval_target };
 import * as eval_set from './domain/eval_set';
 export { eval_set };
-import * as dataset from './../data/domain/dataset';
-export { dataset };
+import * as data_dataset from './../data/domain/dataset';
+export { data_dataset };
 import * as base from './../../../base';
 export { base };
 import { createAPI } from './../../config';
@@ -24,6 +24,8 @@ export interface CreateExperimentRequest {
   desc?: string,
   eval_set_id?: string,
   target_id?: string,
+  /** 实验模板可见性，默认为空，可见 */
+  visibility?: expt.Visibility,
   target_field_mapping?: expt.TargetFieldMapping,
   evaluator_field_mapping?: expt.EvaluatorFieldMapping[],
   item_concur_num?: number,
@@ -43,6 +45,10 @@ export interface CreateExperimentRequest {
   },
   expt_template_id?: string,
   item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
+  /** 关联的智能评测会话ID */
+  thread_id?: string,
   trigger_type?: expt.ExptTriggerType,
   session?: common.Session,
 }
@@ -58,6 +64,8 @@ export interface SubmitExperimentRequest {
   desc?: string,
   eval_set_id?: string,
   target_id?: string,
+  /** 实验模板可见性，默认为空，可见 */
+  visibility?: expt.Visibility,
   target_field_mapping?: expt.TargetFieldMapping,
   evaluator_field_mapping?: expt.EvaluatorFieldMapping[],
   item_concur_num?: number,
@@ -74,6 +82,13 @@ export interface SubmitExperimentRequest {
   enable_weighted_score?: boolean,
   expt_template_id?: string,
   item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
+  /**
+   * 智能评测相关
+   * 关联的智能评测会话ID
+  */
+  thread_id?: string,
   trigger_type?: expt.ExptTriggerType,
   time_range?: expt.TaskTimeRange,
   ext?: {
@@ -128,6 +143,8 @@ export interface RunExperimentRequest {
   item_ids?: string[],
   expt_type?: expt.ExptType,
   item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
   ext?: {
     [key: string | number]: string
   },
@@ -228,8 +245,8 @@ export interface InvokeExperimentResponse {
   added_items?: {
     [key: string | number]: number
   },
-  errors?: dataset.ItemErrorGroup[],
-  item_outputs?: dataset.CreateDatasetItemOutput[],
+  errors?: data_dataset.ItemErrorGroup[],
+  item_outputs?: data_dataset.CreateDatasetItemOutput[],
 }
 export interface FinishExperimentRequest {
   workspace_id?: number,
@@ -518,7 +535,7 @@ export const SubmitExperiment = /*#__PURE__*/createAPI<SubmitExperimentRequest, 
   "name": "SubmitExperiment",
   "reqType": "SubmitExperimentRequest",
   "reqMapping": {
-    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "evaluator_id_version_list", "enable_weighted_score", "expt_template_id", "item_retry_num", "trigger_type", "time_range", "ext", "session"]
+    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "visibility", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "evaluator_id_version_list", "enable_weighted_score", "expt_template_id", "item_retry_num", "trial_run_item_count", "thread_id", "trigger_type", "time_range", "ext", "session"]
   },
   "resType": "SubmitExperimentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import * as common from './common';
 export { common };
-import * as dataset from './../../data/domain/dataset';
-export { dataset };
+import * as data_dataset from './../../data/domain/dataset';
+export { data_dataset };
 export interface EvaluationSet {
   /** 主键&外键 */
   id?: string,
@@ -12,11 +12,11 @@ export interface EvaluationSet {
   /** 基础信息 */
   name?: string,
   description?: string,
-  status?: dataset.DatasetStatus,
+  status?: data_dataset.DatasetStatus,
   /** 规格限制 */
-  spec?: dataset.DatasetSpec,
+  spec?: data_dataset.DatasetSpec,
   /** 功能开关 */
-  features?: dataset.DatasetFeatures,
+  features?: data_dataset.DatasetFeatures,
   /** 数据条数 */
   item_count?: string,
   /** 是否有未提交的修改 */
@@ -79,24 +79,24 @@ export interface FieldSchema {
   /** 类型，如 文本，图片，etc. */
   content_type?: common.ContentType,
   /** 默认渲染格式，如 code, json, etc.mai */
-  default_display_format?: dataset.FieldDisplayFormat,
+  default_display_format?: data_dataset.FieldDisplayFormat,
   /** 当前列的状态 */
-  status?: dataset.FieldStatus,
+  status?: data_dataset.FieldStatus,
   /** 是否必填 */
   isRequired?: boolean,
   /** 对应的内置 schema */
-  schema_key?: dataset.SchemaKey,
+  schema_key?: data_dataset.SchemaKey,
   /**
    * [20,50) 内容格式限制相关
    * 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
   */
   text_schema?: string,
   /** 多模态规格限制 */
-  multi_model_spec?: dataset.MultiModalSpec,
+  multi_model_spec?: data_dataset.MultiModalSpec,
   /** 用户是否不可见 */
   hidden?: boolean,
   /** 默认的预置转换配置，目前在数据校验后执行 */
-  default_transformations?: dataset.FieldTransformationConfig[],
+  default_transformations?: data_dataset.FieldTransformationConfig[],
 }
 export interface EvaluationSetItem {
   /**

@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as data_dataset from './../../data/domain/dataset';
+export { data_dataset };
 import * as export_dataset from './export_dataset';
 export { export_dataset };
 import * as filter from './filter';
@@ -75,6 +77,10 @@ export interface Task {
   backfill_task_detail?: RunDetail,
   /** 创建来源 */
   task_source?: TaskSource,
+  /** 对应工作流 ID */
+  workflow_id?: string,
+  /** task runs */
+  task_runs?: TaskRun[],
   /** 基础信息 */
   base_info?: common.BaseInfo,
 }
@@ -109,12 +115,30 @@ export interface EffectiveTime {
   /** ms timestamp */
   end_at?: string,
 }
+export interface EvaluationExperimentConfig {
+  item_concurrency_count?: string,
+  item_max_retry_count?: string,
+  source_target_id?: string,
+  expt_template_id?: number,
+  source_target_version?: string,
+  full_eval_set_field_mappings?: EvaluateFieldMapping[],
+}
+export interface SourceInfo {
+  name?: string,
+  version?: string,
+}
 /** TaskConfig */
 export interface TaskConfig {
-  /** 配置的评测规则信息 */
+  /** 配置的评测规则信息 evaluator 维度 */
   auto_evaluate_configs?: AutoEvaluateConfig[],
   /** 配置的数据回流的数据集信息 */
   data_reflow_config?: DataReflowConfig[],
+  /** 评测实验配置 task 维度 */
+  evaluation_experiment_config?: EvaluationExperimentConfig,
+  /** 数据源信息 */
+  source_info?: SourceInfo[],
+  /** 工作流周期性任务 */
+  is_workflow_scheduled?: boolean,
 }
 export interface DataReflowConfig {
   /** 数据集id，新增数据集时可为空 */
@@ -124,11 +148,15 @@ export interface DataReflowConfig {
   /** 数据集列数据schema */
   dataset_schema?: export_dataset.DatasetSchema,
   field_mappings?: export_dataset.FieldMapping[],
+  /** 数据集类型 */
+  dataset_category?: data_dataset.DatasetCategory,
 }
 export interface AutoEvaluateConfig {
   evaluator_version_id: string,
   evaluator_id: string,
   field_mappings: EvaluateFieldMapping[],
+  score_weight?: number,
+  evaluator_version?: string,
 }
 /** RunDetail */
 export interface RunDetail {

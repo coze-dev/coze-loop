@@ -25,6 +25,13 @@ export enum SpanType {
   Agent = "agent",
   LLMCall = "LLMCall",
 }
+export enum MetadataValueType {
+  ValueType_String = "string",
+  ValueType_Byte = "byte",
+  ValueType_Long = "long",
+  ValueType_Double = "double",
+  ValueType_Bool = "bool",
+}
 export interface AttrTos {
   input_data_url?: string,
   output_data_url?: string,

@@ -1,7 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import * as runtime from './../../llm/domain/runtime';
-export { runtime };
+import * as llm_runtime from './../../llm/domain/runtime';
+export { llm_runtime };
 import * as common from './common';
 export { common };
 export enum EvaluatorType {
@@ -36,6 +36,10 @@ export enum EvaluatorRunStatus {
   Fail = 2,
   AsyncInvoking = 3,
 }
+export enum EvaluatorSourceType {
+  IntelligentGen = "intelligent_gen",
+}
+/** 智能生成 */
 export enum EvaluatorTagType {
   Evaluator = "Evaluator",
   Template = "Template",
@@ -191,6 +195,8 @@ export interface Evaluator {
   builtin_visible_version?: string,
   /** 默认白盒 */
   box_type?: EvaluatorBoxType,
+  /** 来源 */
+  source_type?: EvaluatorSourceType,
   tags?: {
     [key: string | number]: {
       [key: string | number]: string[]
