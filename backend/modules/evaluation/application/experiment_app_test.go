@@ -6808,8 +6808,8 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 			PageNumber:  gptr.Of(int32(1)),
 			PageSize:    gptr.Of(int32(10)),
 			OrderBys: []*common.OrderBy{
-				nil,                                                             // nil, should be skipped
-				{Field: gptr.Of("invalid_field"), IsAsc: gptr.Of(true)},         // invalid field, should be skipped
+				nil, // nil, should be skipped
+				{Field: gptr.Of("invalid_field"), IsAsc: gptr.Of(true)}, // invalid field, should be skipped
 			},
 		})
 		assert.NoError(t, err)
@@ -6847,9 +6847,9 @@ func TestExperimentApplication_BatchGetExperimentResult_MoreBranches(t *testing.
 		mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{}, nil)
 
 		resp, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
-			WorkspaceID:            validWorkspaceID,
-			ExperimentIds:          []int64{baselineExptID},
-			BaselineExperimentID:   gptr.Of(baselineExptID),
+			WorkspaceID:          validWorkspaceID,
+			ExperimentIds:        []int64{baselineExptID},
+			BaselineExperimentID: gptr.Of(baselineExptID),
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
@@ -6859,8 +6859,8 @@ func TestExperimentApplication_BatchGetExperimentResult_MoreBranches(t *testing.
 		mockManager.EXPECT().Get(gomock.Any(), baselineExptID, validWorkspaceID, gomock.Any()).Return(nil, errors.New("not found"))
 
 		_, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
-			WorkspaceID:            validWorkspaceID,
-			BaselineExperimentID:   gptr.Of(baselineExptID),
+			WorkspaceID:          validWorkspaceID,
+			BaselineExperimentID: gptr.Of(baselineExptID),
 		})
 		assert.Error(t, err)
 	})
