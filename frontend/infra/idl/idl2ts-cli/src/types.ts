@@ -23,6 +23,8 @@ export interface ApiConfig {
   aggregationExport?: string;
   // 格式化文件
   formatter: (name: string, content: string) => string;
+  // banner
+  banner?: string;
   idlFetchConfig?: {
     source: string;
     branch?: string;

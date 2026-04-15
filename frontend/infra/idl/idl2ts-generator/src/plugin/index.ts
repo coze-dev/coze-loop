@@ -8,3 +8,4 @@ export * from './auto-fix-path-plugin';
 export * from './ignore-struct-field';
 export * from './auto-fix-duplicate-plugin';
 export * from './comment-format-plugin';
+export * from './banner-plugin';
