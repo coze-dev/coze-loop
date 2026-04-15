@@ -119,6 +119,8 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			turn.Score,
 			turn.Reasoning,
 			turn.GetUserID(),
+			event.ExptID,
+			turn.GetExptTemplateIDFromExt(),
 		)
 		if err != nil {
 			return err

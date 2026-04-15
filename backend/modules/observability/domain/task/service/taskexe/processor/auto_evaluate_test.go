@@ -22,12 +22,15 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	evDomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
+	hookmocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task/mocks"
 	taskentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -1301,7 +1304,7 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	taskRepo := repomocks.NewMockITaskRepo(ctrl)
 
 	// Test constructor
-	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalMock, evaluationMock, taskRepo, &EvalTargetBuilderImpl{})
+	proc := NewAutoEvaluateProcessor(123, datasetServiceAdaptor, evalMock, evaluationMock, taskRepo, &EvalTargetBuilderImpl{}, nil)
 
 	assert.NotNil(t, proc)
 	assert.Equal(t, int32(123), proc.aid)
@@ -1309,6 +1312,248 @@ func TestAutoEvaluateProcessor_NewAutoEvaluateProcessor(t *testing.T) {
 	assert.Equal(t, evalMock, proc.evalSvc)
 	assert.Equal(t, evaluationMock, proc.evaluationSvc)
 	assert.Equal(t, taskRepo, proc.taskRepo)
+	assert.NotNil(t, proc.workflowProvider)
+}
+
+func TestAutoEvaluateProcessor_Invoke_ExptTemplateID_InExtMap(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	evalAdapter := &fakeEvaluationAdapter{}
+
+	workspaceID := int64(12345)
+	taskID := int64(1002)
+	runID := int64(2003)
+
+	schema := []*traceentity.FieldSchema{{
+		Key:         gptr.Of("input_text"),
+		Name:        "input_text",
+		ContentType: traceentity.ContentType_Text,
+	}}
+	schemaBytes, _ := json.Marshal(schema)
+	schemaStr := string(schemaBytes)
+
+	exptTemplateID := int64(9999)
+	taskObj := &taskentity.ObservabilityTask{
+		ID:          taskID,
+		WorkspaceID: workspaceID,
+		TaskType:    taskentity.TaskTypeAutoEval,
+		TaskStatus:  taskentity.TaskStatusRunning,
+		Sampler: &taskentity.Sampler{
+			SampleRate: 1,
+			SampleSize: 1000,
+		},
+		EffectiveTime: &taskentity.EffectiveTime{
+			StartAt: time.Now().Add(-time.Hour).UnixMilli(),
+			EndAt:   time.Now().Add(time.Hour).UnixMilli(),
+		},
+		CreatedBy: "1001",
+		TaskConfig: &taskentity.TaskConfig{
+			AutoEvaluateConfigs: []*taskentity.AutoEvaluateConfig{{
+				FieldMappings: []*taskentity.EvaluateFieldMapping{{
+					EvalSetName:        gptr.Of("input_text"),
+					TraceFieldKey:      "Input",
+					TraceFieldJsonpath: "",
+				}},
+			}},
+			EvaluationExperimentConfig: &taskentity.EvaluationExperimentConfig{
+				ExptTemplateID: &exptTemplateID,
+			},
+		},
+	}
+
+	taskRun := &taskentity.TaskRun{
+		ID: runID, TaskID: taskID, WorkspaceID: workspaceID,
+		TaskType: taskentity.TaskRunTypeNewData, RunStatus: taskentity.TaskRunStatusRunning,
+		RunStartAt: time.Now().Add(-30 * time.Minute), RunEndAt: time.Now().Add(30 * time.Minute),
+		TaskRunConfig: &taskentity.TaskRunConfig{AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{
+			ExptID: 3003, ExptRunID: 3004, EvalID: 4004, SchemaID: 5005,
+			Schema: gptr.Of(schemaStr),
+			EndAt:  time.Now().Add(30 * time.Minute).UnixMilli(),
+			Status: string(taskentity.TaskRunStatusRunning),
+		}},
+	}
+
+	span := &loop_span.Span{TraceID: "trace-abc", SpanID: "span-xyz", StartTime: time.Now().UnixMilli(), Input: "hello"}
+
+	repoMock.EXPECT().IncrTaskCount(gomock.Any(), taskID, gomock.Any()).Return(nil).AnyTimes()
+	repoMock.EXPECT().IncrTaskRunCount(gomock.Any(), taskID, runID, gomock.Any()).Return(nil).AnyTimes()
+	repoMock.EXPECT().GetTaskCount(gomock.Any(), taskID).Return(int64(0), nil).AnyTimes()
+	repoMock.EXPECT().GetTaskRunCount(gomock.Any(), taskID, runID).Return(int64(0), nil).AnyTimes()
+	repoMock.EXPECT().DecrTaskCount(gomock.Any(), taskID, gomock.Any()).Return(nil).AnyTimes()
+	repoMock.EXPECT().DecrTaskRunCount(gomock.Any(), taskID, runID, gomock.Any()).Return(nil).AnyTimes()
+
+	proc := &AutoEvaluateProcessor{taskRepo: repoMock, evaluationSvc: evalAdapter}
+	_ = proc.Invoke(context.Background(), &taskexe.Trigger{Task: taskObj, Span: span, TaskRun: taskRun})
+
+	require.NotNil(t, evalAdapter.lastInvoke)
+	assert.Equal(t, "9999", evalAdapter.lastInvoke.Ext["expt_template_id"])
+}
+
+func TestAutoEvaluateProcessor_OnCreateTaskRunChange_WithEvalExperimentConfig(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	datasetProvider := rpcmock.NewMockIDatasetProvider(ctrl)
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	taskObj := buildTestTask(t)
+	itemRetry := int32(3)
+	itemConcur := int32(5)
+	exptTplID := int64(7777)
+	taskObj.TaskConfig.EvaluationExperimentConfig = &taskentity.EvaluationExperimentConfig{
+		ItemMaxRetryCount:    &itemRetry,
+		ItemConcurrencyCount: &itemConcur,
+		ExptTemplateID:       &exptTplID,
+		FullEvalSetFieldMappings: []*taskentity.EvaluateFieldMapping{
+			{
+				EvalSetName:        gptr.Of("extra_field"),
+				DatasetKey:         gptr.Of("extra_field"),
+				TraceFieldJsonpath: "$.output",
+				FieldSchema: &dataset.FieldSchema{
+					ContentType: gptr.Of(common.ContentTypeText),
+					TextSchema:  gptr.Of("{}"),
+				},
+			},
+			{EvalSetName: nil},
+			{EvalSetName: gptr.Of("field_1")},
+		},
+	}
+
+	param := taskexe.OnTaskRunCreatedReq{
+		CurrentTask: taskObj,
+		RunType:     taskentity.TaskRunTypeNewData,
+		RunStartAt:  time.Now().Add(-time.Minute).UnixMilli(),
+		RunEndAt:    time.Now().Add(time.Hour).UnixMilli(),
+	}
+
+	datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.Any()).Return(int64(9001), nil)
+	datasetProvider.EXPECT().GetDataset(gomock.Any(), taskObj.WorkspaceID, int64(9001), traceentity.DatasetCategory_Evaluation).
+		Return(&traceentity.Dataset{DatasetVersion: traceentity.DatasetVersion{DatasetSchema: traceentity.DatasetSchema{ID: 7001}}}, nil)
+	repoMock.EXPECT().CreateTaskRun(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.TaskRun{})).Return(int64(1), nil)
+
+	adaptor := service.NewDatasetServiceAdaptor()
+	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
+
+	evalAdapter := &fakeEvaluationAdapter{}
+	evalAdapter.submitResp.exptID = 1111
+	evalAdapter.submitResp.exptRunID = 2222
+
+	proc := &AutoEvaluateProcessor{
+		datasetServiceAdaptor: adaptor,
+		evaluationSvc:         evalAdapter,
+		taskRepo:              repoAdapter,
+		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
+	}
+
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
+	err := proc.OnTaskRunCreated(ctx, param)
+	assert.NoError(t, err)
+
+	require.NotNil(t, evalAdapter.lastSubmit)
+	assert.Equal(t, &itemRetry, evalAdapter.lastSubmit.ItemRetryNum)
+	assert.Equal(t, &itemConcur, evalAdapter.lastSubmit.ItemConcurNum)
+	assert.Equal(t, &exptTplID, evalAdapter.lastSubmit.ExptTemplateID)
+}
+
+func TestAutoEvaluateProcessor_OnCreateTaskRunChange_WithWorkflowID(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	datasetProvider := rpcmock.NewMockIDatasetProvider(ctrl)
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+
+	taskObj := buildTestTask(t)
+	taskObj.WorkflowID = 888
+
+	param := taskexe.OnTaskRunCreatedReq{
+		CurrentTask: taskObj,
+		RunType:     taskentity.TaskRunTypeNewData,
+		RunStartAt:  time.Now().Add(-time.Minute).UnixMilli(),
+		RunEndAt:    time.Now().Add(time.Hour).UnixMilli(),
+	}
+
+	datasetProvider.EXPECT().CreateDataset(gomock.Any(), gomock.Any()).Return(int64(9001), nil)
+	datasetProvider.EXPECT().GetDataset(gomock.Any(), taskObj.WorkspaceID, int64(9001), traceentity.DatasetCategory_Evaluation).
+		Return(&traceentity.Dataset{DatasetVersion: traceentity.DatasetVersion{DatasetSchema: traceentity.DatasetSchema{ID: 7001}}}, nil)
+	repoMock.EXPECT().CreateTaskRun(gomock.Any(), gomock.AssignableToTypeOf(&taskentity.TaskRun{})).Return(int64(1), nil)
+
+	adaptor := service.NewDatasetServiceAdaptor()
+	adaptor.Register(traceentity.DatasetCategory_Evaluation, datasetProvider)
+
+	evalAdapter := &fakeEvaluationAdapter{}
+	evalAdapter.submitResp.exptID = 1111
+	evalAdapter.submitResp.exptRunID = 2222
+
+	proc := &AutoEvaluateProcessor{
+		datasetServiceAdaptor: adaptor,
+		evaluationSvc:         evalAdapter,
+		taskRepo:              repoAdapter,
+		aid:                   321,
+		evalTargetBuilder:     &EvalTargetBuilderImpl{},
+	}
+
+	ctx := session.WithCtxUser(context.Background(), &session.User{ID: taskObj.CreatedBy})
+	err := proc.OnTaskRunCreated(ctx, param)
+	assert.NoError(t, err)
+
+	require.NotNil(t, evalAdapter.lastSubmit)
+	assert.Equal(t, gptr.Of(evDomain.SourceType(3)), evalAdapter.lastSubmit.SourceType)
+	assert.Equal(t, gptr.Of("888"), evalAdapter.lastSubmit.SourceID)
+}
+
+func TestAutoEvaluateProcessor_OnFinishTaskRunChange_WorkflowCallback(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repoMock := repomocks.NewMockITaskRepo(ctrl)
+	repoAdapter := &taskRepoMockAdapter{MockITaskRepo: repoMock}
+	evalMock := &fakeEvaluationAdapter{}
+	workflowMock := hookmocks.NewMockIWorkflowProvider(ctrl)
+
+	taskRun := &taskentity.TaskRun{
+		ID: 8001,
+		TaskRunConfig: &taskentity.TaskRunConfig{
+			AutoEvaluateRunConfig: &taskentity.AutoEvaluateRunConfig{
+				ExptID: 9001, ExptRunID: 9002,
+			},
+		},
+	}
+	taskObj := &taskentity.ObservabilityTask{
+		ID:          101,
+		WorkspaceID: 1234,
+		CreatedBy:   "1001",
+		TaskSource:  gptr.Of(task.TaskSourceWorkflow),
+	}
+
+	repoMock.EXPECT().UpdateTaskRun(gomock.Any(), taskRun).Return(nil)
+	workflowMock.EXPECT().WorkflowCallback(gomock.Any(), &taskhook.WorkflowCallbackParam{
+		Task: taskObj, TaskRun: taskRun,
+	}).Return(errors.New("temp error")).Times(2)
+	workflowMock.EXPECT().WorkflowCallback(gomock.Any(), &taskhook.WorkflowCallbackParam{
+		Task: taskObj, TaskRun: taskRun,
+	}).Return(nil).Times(1)
+
+	proc := &AutoEvaluateProcessor{
+		taskRepo:         repoAdapter,
+		evaluationSvc:    evalMock,
+		workflowProvider: workflowMock,
+	}
+
+	err := proc.OnTaskRunFinished(context.Background(), taskexe.OnTaskRunFinishedReq{
+		Task:    taskObj,
+		TaskRun: taskRun,
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, taskentity.TaskRunStatusDone, taskRun.RunStatus)
 }
 
 // fakeEvaluatorAdapter 是 IEvaluatorRPCAdapter 的fake实现
@@ -1350,11 +1595,12 @@ type fakeEvaluationAdapter struct {
 	finishResp struct {
 		err error
 	}
-	// capture last invoke param for assertions
 	lastInvoke *rpc.InvokeExperimentReq
+	lastSubmit *rpc.SubmitExperimentReq
 }
 
 func (f *fakeEvaluationAdapter) SubmitExperiment(ctx context.Context, param *rpc.SubmitExperimentReq) (exptID, exptRunID int64, err error) {
+	f.lastSubmit = param
 	return f.submitResp.exptID, f.submitResp.exptRunID, f.submitResp.err
 }
 

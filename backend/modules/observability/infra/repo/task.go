@@ -71,6 +71,7 @@ func (v *TaskRepoImpl) ListTasks(ctx context.Context, param repo.ListTaskParam) 
 		ReqLimit:     param.ReqLimit,
 		ReqOffset:    param.ReqOffset,
 		OrderBy:      param.OrderBy,
+		NeedOnlyOld:  param.NeedOnlyOld,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -123,6 +124,10 @@ func (v *TaskRepoImpl) CreateTask(ctx context.Context, do *entity.ObservabilityT
 
 func (v *TaskRepoImpl) UpdateTask(ctx context.Context, do *entity.ObservabilityTask) error {
 	TaskPo := convertor.TaskDO2PO(do)
+
+	if do.TaskType == entity.TaskTypeAutoDataReflow && do.TaskConfig.DataReflowConfig == nil {
+		logs.CtxInfo(ctx, "Task update config is nil, task:%v", do)
+	}
 
 	// 先执行数据库操作
 	err := v.TaskDao.UpdateTask(ctx, TaskPo)

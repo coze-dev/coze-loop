@@ -49,7 +49,7 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
       pluginSass({
         sassLoaderOptions: {
           sassOptions: {
-            silenceDeprecations: ['mixed-decls', 'import', 'function-units'],
+            silenceDeprecations: ['import', 'function-units'],
           },
         },
       }),

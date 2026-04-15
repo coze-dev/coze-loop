@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -64,10 +65,30 @@ func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID in
 	defer func() {
 		e.metric.EmitCreate(spaceID, err)
 	}()
-	if e.typedOperators[targetType] == nil {
+
+	srcID := strings.TrimSpace(sourceTargetID)
+	srcVer := strings.TrimSpace(sourceTargetVersion)
+	// 仅记录型（*Online）：允许不传 source_target_id / source_target_version，落库占位对象供模板等引用
+	if targetType.IsRecordOnlyType() && srcID == "" && srcVer == "" {
+		do := e.newRecordOnlyEvalTargetWithoutSource(ctx, spaceID, targetType)
+		if do == nil {
+			return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+		}
+		return e.evalTargetRepo.CreateEvalTarget(ctx, do)
+	}
+
+	// 仅记录型复用对应基础类型的 operator 构建，再覆盖为记录型
+	buildType := targetType
+	if baseType, ok := targetType.RecordOnlyTypeToBaseType(); ok {
+		if e.typedOperators[baseType] == nil {
+			return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+		}
+		buildType = baseType
+	}
+	if e.typedOperators[buildType] == nil {
 		return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	do, err := e.typedOperators[targetType].BuildBySource(ctx, spaceID, sourceTargetID, sourceTargetVersion, opts...)
+	do, err := e.typedOperators[buildType].BuildBySource(ctx, spaceID, sourceTargetID, sourceTargetVersion, opts...)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -76,7 +97,46 @@ func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID in
 		return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode)
 	}
 
+	// 仅记录型：覆盖为请求的 targetType，保证存储的是 *Online 类型
+	if buildType != targetType {
+		do.EvalTargetType = targetType
+		if do.EvalTargetVersion != nil {
+			do.EvalTargetVersion.EvalTargetType = targetType
+		}
+	}
+
 	return e.evalTargetRepo.CreateEvalTarget(ctx, do)
+}
+
+// newRecordOnlyEvalTargetWithoutSource 构建无业务 source 的仅记录型评测对象（与 CreateExperiment 在线场景默认版本对齐）
+func (e *EvalTargetServiceImpl) newRecordOnlyEvalTargetWithoutSource(ctx context.Context, spaceID int64, targetType entity.EvalTargetType) *entity.EvalTarget {
+	if !targetType.IsRecordOnlyType() {
+		return nil
+	}
+	userID := session.UserIDInCtxOrEmpty(ctx)
+	now := time.Now().UnixMilli()
+	return &entity.EvalTarget{
+		SpaceID:        spaceID,
+		SourceTargetID: "",
+		EvalTargetType: targetType,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			SpaceID:             spaceID,
+			SourceTargetVersion: consts.DefaultSourceTargetVersion,
+			EvalTargetType:      targetType,
+			BaseInfo: &entity.BaseInfo{
+				CreatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+				UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+				CreatedAt: gptr.Of(now),
+				UpdatedAt: gptr.Of(now),
+			},
+		},
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(userID)},
+			CreatedAt: gptr.Of(now),
+			UpdatedAt: gptr.Of(now),
+		},
+	}
 }
 
 func (e *EvalTargetServiceImpl) GetEvalTarget(ctx context.Context, targetID int64) (do *entity.EvalTarget, err error) {
@@ -351,6 +411,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		Input:               inputData,
 		TargetType:          evalTargetDO.EvalTargetType,
 		EvalTarget:          evalTargetDO,
+		EvalSetItemID:       gptr.Of(param.ItemID),
+		EvalSetTurnID:       gptr.Of(param.TurnID),
 	})
 	if err != nil {
 		return nil, err
@@ -438,6 +500,8 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 		Input:               inputData,
 		TargetType:          target.EvalTargetType,
 		EvalTarget:          target,
+		EvalSetItemID:       gptr.Of(param.ItemID),
+		EvalSetTurnID:       gptr.Of(param.TurnID),
 	})
 	if execErr != nil {
 		// If an asynchronous call fails, return immediately without logging the error or propagating the exception.

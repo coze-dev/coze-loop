@@ -448,6 +448,13 @@ type ExptTurnRunResult struct {
 	AsyncAbort       bool
 }
 
+func (e *ExptTurnRunResult) GetTargetResult() *EvalTargetRecord {
+	if e != nil {
+		return e.TargetResult
+	}
+	return nil
+}
+
 func (e *ExptTurnRunResult) SetTargetResult(er *EvalTargetRecord) *ExptTurnRunResult {
 	e.TargetResult = er
 	return e
@@ -498,11 +505,12 @@ func (e *ExptTurnRunResult) AbortWithTargetResult(expt *Experiment) bool {
 	return false
 }
 
-func (e *ExptTurnRunResult) AbortWithEvaluatorResults() bool {
+func (e *ExptTurnRunResult) AbortWithEvaluatorResults(ctx context.Context, event *ExptItemEvalEvent) bool {
 	// evaluator async exec, check if any evaluator is in async invoking status
 	for _, record := range e.EvaluatorResults {
 		if record != nil && record.Status == EvaluatorRunStatusAsyncInvoking {
 			e.AsyncAbort = true
+			event.WithCtxForceNoRetry(ctx)
 			return true
 		}
 	}
@@ -516,7 +524,6 @@ type ExptSchedulerMode interface {
 	ScanEvalItems(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) (toSubmit, incomplete, complete []*ExptEvalItem, err error)
 	ExptEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) (nextTick bool, err error)
 	ScheduleStart(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) error
-	ScheduleEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) error
 	NextTick(ctx context.Context, event *ExptScheduleEvent, nextTick bool) error
 	PublishResult(ctx context.Context, turnEvaluatorRefs []*ExptTurnEvaluatorResultRef, event *ExptScheduleEvent) error
 }

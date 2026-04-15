@@ -62,6 +62,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ScoreWeightConfig not valid, %w", err)
 		}
 	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -122,11 +127,45 @@ func (p *ExptTemplate) IsValid() error {
 			return fmt.Errorf("field ExptInfo not valid, %w", err)
 		}
 	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *TaskTimeRange) IsValid() error {
+	return nil
+}
+func (p *ExptSource) IsValid() error {
+	if p.SpanFilterFields != nil {
+		if err := p.SpanFilterFields.IsValid(); err != nil {
+			return fmt.Errorf("field SpanFilterFields not valid, %w", err)
+		}
+	}
+	if p.Scheduler != nil {
+		if err := p.Scheduler.IsValid(); err != nil {
+			return fmt.Errorf("field Scheduler not valid, %w", err)
+		}
+	}
+	if p.Sampler != nil {
+		if err := p.Sampler.IsValid(); err != nil {
+			return fmt.Errorf("field Sampler not valid, %w", err)
+		}
+	}
+	if p.TimeRange != nil {
+		if err := p.TimeRange.IsValid(); err != nil {
+			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *Scheduler) IsValid() error {
 	return nil
 }
 func (p *ExptInfo) IsValid() error {

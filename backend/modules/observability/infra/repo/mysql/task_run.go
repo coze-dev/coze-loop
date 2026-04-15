@@ -123,7 +123,7 @@ func (v *TaskRunDaoImpl) CreateTaskRun(ctx context.Context, po *model.Observabil
 
 func (v *TaskRunDaoImpl) UpdateTaskRun(ctx context.Context, po *model.ObservabilityTaskRun) error {
 	q := genquery.Use(v.dbMgr.NewSession(ctx)).ObservabilityTaskRun
-	if err := q.WithContext(ctx).Save(po); err != nil {
+	if err := q.WithContext(ctx).Omit(q.CreatedAt).Save(po); err != nil {
 		return errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
 	} else {
 		return nil

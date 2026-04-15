@@ -29,6 +29,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/scheduledtask"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	metrics_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
 	metric_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/repo"
 	metric_service "github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/service"
@@ -71,6 +72,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/file"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/tag"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/rpc/user"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/span_context_extractor"
 	obstorage "github.com/coze-dev/coze-loop/backend/modules/observability/infra/storage"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/infra/time_range"
@@ -109,6 +111,7 @@ var (
 		obconfig.NewTraceConfigCenter,
 		tenant.NewTenantProvider,
 		workspace.NewWorkspaceProvider,
+		span_context_extractor.NewSpanContextExtractor,
 		evaluator.NewEvaluatorRPCProvider,
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
@@ -368,11 +371,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 }
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
-	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo,
+	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskHookProvider taskhook.IWorkflowProvider,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluateProcessor(
-		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}))
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}, taskHookProvider))
 	return taskProcessor
 }
 
@@ -476,6 +479,7 @@ func InitTaskApplication(
 	taskProcessor task_processor.TaskProcessor,
 	aid int32,
 	persistentCmdable redis.PersistentCmdable,
+	taskHookProvider taskhook.IWorkflowProvider,
 ) (ITaskApplication, error) {
 	wire.Build(taskSet)
 	return nil, nil

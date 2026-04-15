@@ -113,12 +113,14 @@ func (h *TraceHubServiceImpl) buildSubscriber(ctx context.Context, event *entity
 
 	proc := h.taskProcessor.GetTaskProcessor(taskDO.TaskType)
 	sub := &spanSubscriber{
-		taskID:    taskDO.ID,
-		t:         taskDO,
-		tr:        taskRun,
-		processor: proc,
-		taskRepo:  h.taskRepo,
-		runType:   entity.TaskRunTypeBackFill,
+		taskID:       taskDO.ID,
+		t:            taskDO,
+		tr:           taskRun,
+		processor:    proc,
+		taskRepo:     h.taskRepo,
+		runType:      entity.TaskRunTypeBackFill,
+		buildHelper:  h.buildHelper,
+		traceService: h.traceService,
 	}
 
 	return sub, nil

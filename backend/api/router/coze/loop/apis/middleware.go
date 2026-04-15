@@ -1850,6 +1850,21 @@ func _checkexperimenttemplatenameMw(handler *apis.APIHandler) []app.HandlerFunc 
 	return nil
 }
 
+func _listworkspaceannotationsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _metadataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listmetadataMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
 func _deleteevaluatoroapiMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
@@ -2166,6 +2181,11 @@ func _commits1Mw(handler *apis.APIHandler) []app.HandlerFunc {
 }
 
 func _drafts1Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _batchgetevaluatorversionidsMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }

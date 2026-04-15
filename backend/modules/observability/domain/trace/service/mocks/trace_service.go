@@ -233,6 +233,21 @@ func (mr *MockITraceServiceMockRecorder) ListAnnotationEvaluators(ctx, req any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotationEvaluators", reflect.TypeOf((*MockITraceService)(nil).ListAnnotationEvaluators), ctx, req)
 }
 
+// ListMetadata mocks base method.
+func (m *MockITraceService) ListMetadata(ctx context.Context, req *service.ListMetadataReq) (*service.ListMetadataResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListMetadata", ctx, req)
+	ret0, _ := ret[0].(*service.ListMetadataResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListMetadata indicates an expected call of ListMetadata.
+func (mr *MockITraceServiceMockRecorder) ListMetadata(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListMetadata", reflect.TypeOf((*MockITraceService)(nil).ListMetadata), ctx, req)
+}
+
 // ListAnnotations mocks base method.
 func (m *MockITraceService) ListAnnotations(ctx context.Context, req *service.ListAnnotationsReq) (*service.ListAnnotationsResp, error) {
 	m.ctrl.T.Helper()
@@ -246,6 +261,21 @@ func (m *MockITraceService) ListAnnotations(ctx context.Context, req *service.Li
 func (mr *MockITraceServiceMockRecorder) ListAnnotations(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotations", reflect.TypeOf((*MockITraceService)(nil).ListAnnotations), ctx, req)
+}
+
+// ListWorkspaceAnnotations mocks base method.
+func (m *MockITraceService) ListWorkspaceAnnotations(ctx context.Context, req *service.ListWorkspaceAnnotationsReq) (*service.ListWorkspaceAnnotationsResp, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaceAnnotations", ctx, req)
+	ret0, _ := ret[0].(*service.ListWorkspaceAnnotationsResp)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkspaceAnnotations indicates an expected call of ListWorkspaceAnnotations.
+func (mr *MockITraceServiceMockRecorder) ListWorkspaceAnnotations(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaceAnnotations", reflect.TypeOf((*MockITraceService)(nil).ListWorkspaceAnnotations), ctx, req)
 }
 
 // ListPreSpan mocks base method.

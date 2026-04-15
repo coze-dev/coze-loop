@@ -16,11 +16,13 @@ package experiment
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	eval_target "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
@@ -80,8 +82,7 @@ func TestExptFilterConvertor_ConvertFilters_BasicFieldsAndDefaultType(t *testing
 	assert.Equal(t, []string{"user1"}, got.Includes.CreatedBy)
 	assert.ElementsMatch(t, []int64{1, 2}, got.Includes.Status)
 	assert.ElementsMatch(t, []string{"s1", "s2"}, got.Includes.SourceID)
-	// 未显式传 ExptType，应该默认补上 Offline
-	assert.ElementsMatch(t, []int64{int64(domain_expt.ExptType_Offline)}, got.Includes.ExptType)
+	assert.ElementsMatch(t, []int64{int64(domain_expt.ExptType_Offline), int64(domain_expt.ExptType_Online)}, got.Includes.ExptType)
 }
 
 func TestExptFilterConvertor_ConvertFilters_InvalidLogicOp(t *testing.T) {
@@ -126,7 +127,14 @@ func TestExptFilterConvertor_ConvertFilters_SourceTarget_SingleNoTargets(t *test
 		BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
 			SpaceID:        100,
 			SourceTargetID: []string{"123"},
-			TargetType:     entity.EvalTargetType(eval_target.EvalTargetType_CozeBot),
+			TargetType:     entity.EvalTargetTypeCozeBot,
+		}).
+		Return([]*entity.EvalTarget{}, nil)
+	mockEvalTargetSvc.EXPECT().
+		BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
+			SpaceID:        100,
+			SourceTargetID: []string{"123"},
+			TargetType:     entity.EvalTargetTypeCozeBotOnline,
 		}).
 		Return([]*entity.EvalTarget{}, nil)
 
@@ -142,6 +150,13 @@ func TestParseIntListAndStringList(t *testing.T) {
 	assert.ElementsMatch(t, []int64{1, 2, 3}, ints)
 
 	_, err = parseIntList("a,b")
+	assert.Error(t, err)
+
+	vals, err := parseCronActivateIntList("0,1")
+	assert.NoError(t, err)
+	assert.ElementsMatch(t, []int64{0, 1}, vals)
+
+	_, err = parseCronActivateIntList("2")
 	assert.Error(t, err)
 
 	strs := parseStringList("a,b,c")
@@ -419,6 +434,34 @@ func TestExptFilterConvertor_ConvertFilters_FieldTypes_173_261(t *testing.T) {
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []int64{100, 200}, got.Includes.ExptTemplateIDs)
+		// 含模板 ID 筛选时不应默认 expt_type=Offline，否则在线实验无法按模板筛选
+		assert.Nil(t, got.Includes.ExptType)
+	})
+
+	t.Run("ExperimentTemplateID与ExptTypeOnline同时筛选", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2",
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExperimentTemplateID,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "100",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{int64(domain_expt.ExptType_Online)}, got.Includes.ExptType)
+		assert.ElementsMatch(t, []int64{100}, got.Includes.ExptTemplateIDs)
 	})
 
 	t.Run("ExperimentTemplateID字段值为空，跳过", func(t *testing.T) {
@@ -608,6 +651,32 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 		assert.Equal(t, []string{"user2"}, got.Includes.UpdatedBy)
 	})
 
+	t.Run("ConvertFilters方法，UpdatedBy 多用户 In 逗号分隔", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_UpdatedBy,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "7360531949942784002,7330560732527935490",
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_Equal,
+				Value:    "2",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []string{"7360531949942784002", "7330560732527935490"}, got.Includes.UpdatedBy)
+		assert.Equal(t, []int64{2}, got.Includes.ExptType)
+	})
+
 	t.Run("ConvertFilters方法，EvalSetID字段", func(t *testing.T) {
 		filters := &domain_expt.Filters{}
 		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
@@ -624,6 +693,42 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
 		assert.ElementsMatch(t, []int64{10, 20}, got.Includes.EvalSetIDs)
+	})
+
+	t.Run("ConvertFilters方法，CronActivate字段", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_CronActivate,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1,0",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{1, 0}, got.Includes.CronActivate)
+	})
+
+	t.Run("ConvertFilters方法，CronActivate非法取值返回错误", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_CronActivate,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.Error(t, err)
+		assert.Nil(t, got)
 	})
 
 	t.Run("ConvertFilters方法，TargetID字段", func(t *testing.T) {
@@ -677,7 +782,12 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []int64{1, 2}, got.Includes.TargetType)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+			int64(entity.EvalTargetTypeLoopPrompt),
+			int64(entity.EvalTargetTypeCozeLoopPromptOnline),
+		}, got.Includes.TargetType)
 	})
 
 	t.Run("ConvertFilters方法，SourceTarget字段，单个ID查不到目标时返回-1", func(t *testing.T) {
@@ -701,6 +811,13 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 				SpaceID:        100,
 				SourceTargetID: []string{"source1"},
 				TargetType:     entity.EvalTargetTypeCozeBot,
+			}).
+			Return([]*entity.EvalTarget{}, nil)
+		mockEvalTargetSvc.EXPECT().
+			BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        100,
+				SourceTargetID: []string{"source1"},
+				TargetType:     entity.EvalTargetTypeCozeBotOnline,
 			}).
 			Return([]*entity.EvalTarget{}, nil)
 
@@ -730,6 +847,13 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 				SpaceID:        100,
 				SourceTargetID: []string{"source1", "source2"},
 				TargetType:     entity.EvalTargetTypeCozeBot,
+			}).
+			Return([]*entity.EvalTarget{}, nil)
+		mockEvalTargetSvc.EXPECT().
+			BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        100,
+				SourceTargetID: []string{"source1", "source2"},
+				TargetType:     entity.EvalTargetTypeCozeBotOnline,
 			}).
 			Return([]*entity.EvalTarget{}, nil)
 
@@ -764,6 +888,13 @@ func TestExptTemplateFilterConvertor_Convert_527_676(t *testing.T) {
 				{ID: 100},
 				{ID: 200},
 			}, nil)
+		mockEvalTargetSvc.EXPECT().
+			BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        100,
+				SourceTargetID: []string{"source1"},
+				TargetType:     entity.EvalTargetTypeCozeBotOnline,
+			}).
+			Return([]*entity.EvalTarget{}, nil)
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
@@ -963,7 +1094,12 @@ func TestExptFilterConvertor_ConvertFilters_FieldTypes_110_140(t *testing.T) {
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
-		assert.ElementsMatch(t, []int64{1, 2}, got.Includes.TargetType)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+			int64(entity.EvalTargetTypeLoopPrompt),
+			int64(entity.EvalTargetTypeCozeLoopPromptOnline),
+		}, got.Includes.TargetType)
 	})
 
 	t.Run("TargetType字段值为空，跳过", func(t *testing.T) {
@@ -1058,6 +1194,13 @@ func TestExptFilterConvertor_ConvertFilters_SourceTarget_155_166(t *testing.T) {
 				{ID: 100},
 				{ID: 200},
 			}, nil)
+		mockEvalTargetSvc.EXPECT().
+			BatchGetEvalTargetBySource(gomock.Any(), &entity.BatchGetEvalTargetBySourceParam{
+				SpaceID:        100,
+				SourceTargetID: []string{"source1", "source2"},
+				TargetType:     entity.EvalTargetTypeCozeBotOnline,
+			}).
+			Return([]*entity.EvalTarget{}, nil)
 
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.NoError(t, err)
@@ -1101,6 +1244,91 @@ func TestExptFilterConvertor_ConvertFilters_SourceTarget_155_166(t *testing.T) {
 		got, err := conv.ConvertFilters(context.Background(), filters, 100)
 		assert.Error(t, err)
 		assert.Nil(t, got)
+	})
+}
+
+func TestExptFilterConvertor_ConvertFilters_TargetTypeExpandsBaseAndOnline(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	conv := NewExptFilterConvertor(mockEvalTargetSvc)
+
+	t.Run("出现TargetType条件时CozeBot扩充为基础与Online", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1", // CozeBot 基础类型
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
+	})
+
+	t.Run("TargetType与ExptType组合时仍按TargetType扩充", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "2", // Online
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
+	})
+
+	t.Run("仅ExptType为Offline且含TargetType时同样扩充基础与Online", func(t *testing.T) {
+		filters := &domain_expt.Filters{}
+		filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		filters.SetFilterConditions([]*domain_expt.FilterCondition{
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_ExptType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1", // Offline
+			},
+			{
+				Field: &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType_TargetType,
+				},
+				Operator: domain_expt.FilterOperatorType_In,
+				Value:    "1",
+			},
+		})
+
+		got, err := conv.ConvertFilters(context.Background(), filters, 100)
+		assert.NoError(t, err)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got.Includes.TargetType)
 	})
 }
 
@@ -1495,4 +1723,239 @@ func TestCheckFilterCondition(t *testing.T) {
 		err := checkFilterCondition(cond)
 		assert.NoError(t, err)
 	})
+}
+
+func TestBuildExptListFilterExptTypeScopePreview(t *testing.T) {
+	t.Run("ExperimentTemplateID_不补默认Offline", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExperimentTemplateID},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "100",
+		}})
+		got, err := buildExptListFilterExptTypeScopePreview(f)
+		require.NoError(t, err)
+		require.NotNil(t, got.Includes)
+		assert.Equal(t, []int64{100}, got.Includes.ExptTemplateIDs)
+		assert.Nil(t, got.Includes.ExptType)
+	})
+
+	t.Run("ExptType_NotIn_写入Excludes", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExptType},
+			Operator: domain_expt.FilterOperatorType_NotIn,
+			Value:    "2",
+		}})
+		got, err := buildExptListFilterExptTypeScopePreview(f)
+		require.NoError(t, err)
+		assert.Equal(t, []int64{2}, got.Excludes.ExptType)
+		assert.Nil(t, got.Includes.ExptType)
+	})
+
+	t.Run("ExptType_解析失败", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExptType},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "x",
+		}})
+		_, err := buildExptListFilterExptTypeScopePreview(f)
+		assert.Error(t, err)
+	})
+
+	t.Run("ExperimentTemplateID_解析失败", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExperimentTemplateID},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "bad",
+		}})
+		_, err := buildExptListFilterExptTypeScopePreview(f)
+		assert.Error(t, err)
+	})
+}
+
+func TestBuildExptTemplateListFilterExptTypeScopePreview(t *testing.T) {
+	t.Run("ExptType_解析失败", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExptType},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "not_int",
+		}})
+		_, err := buildExptTemplateListFilterExptTypeScopePreview(f)
+		assert.Error(t, err)
+	})
+
+	t.Run("合并Includes_ExptType", func(t *testing.T) {
+		f := &domain_expt.Filters{}
+		f.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+		f.SetFilterConditions([]*domain_expt.FilterCondition{{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_ExptType},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "1,2",
+		}})
+		got, err := buildExptTemplateListFilterExptTypeScopePreview(f)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []int64{1, 2}, got.Includes.ExptType)
+	})
+}
+
+func TestFiltersHasTargetTypeCondition(t *testing.T) {
+	assert.False(t, filtersHasTargetTypeCondition(nil))
+	f := &domain_expt.Filters{}
+	f.SetFilterConditions([]*domain_expt.FilterCondition{
+		nil,
+		{Field: nil},
+		{
+			Field:    &domain_expt.FilterField{FieldType: domain_expt.FieldType_TargetType},
+			Operator: domain_expt.FilterOperatorType_In,
+			Value:    "1",
+		},
+	})
+	assert.True(t, filtersHasTargetTypeCondition(f))
+}
+
+func TestMapTargetTypeInt64sForExptStorage(t *testing.T) {
+	assert.Nil(t, mapTargetTypeInt64sForExptStorage(nil, true, true))
+	assert.Nil(t, mapTargetTypeInt64sForExptStorage([]int64{}, true, true))
+
+	t.Run("仅记录型直接保留", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{int64(entity.EvalTargetTypeCozeBotOnline)}, true, true)
+		assert.Equal(t, []int64{int64(entity.EvalTargetTypeCozeBotOnline)}, got)
+	})
+
+	t.Run("LoopTrace", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{int64(entity.EvalTargetTypeLoopTrace)}, true, true)
+		assert.Equal(t, []int64{int64(entity.EvalTargetTypeLoopTrace)}, got)
+	})
+
+	t.Run("无映射的基础类型原样", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{999}, true, true)
+		assert.Equal(t, []int64{999}, got)
+	})
+
+	t.Run("CozeBot_在线且离线", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{int64(entity.EvalTargetTypeCozeBot)}, true, true)
+		assert.ElementsMatch(t, []int64{
+			int64(entity.EvalTargetTypeCozeBot),
+			int64(entity.EvalTargetTypeCozeBotOnline),
+		}, got)
+	})
+
+	t.Run("CozeBot_仅在线范围", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{int64(entity.EvalTargetTypeCozeBot)}, true, false)
+		assert.Equal(t, []int64{int64(entity.EvalTargetTypeCozeBotOnline)}, got)
+	})
+
+	t.Run("CozeBot_仅离线范围", func(t *testing.T) {
+		got := mapTargetTypeInt64sForExptStorage([]int64{int64(entity.EvalTargetTypeCozeBot)}, false, true)
+		assert.Equal(t, []int64{int64(entity.EvalTargetTypeCozeBot)}, got)
+	})
+
+	t.Run("去重", func(t *testing.T) {
+		id := int64(entity.EvalTargetTypeCozeBot)
+		got := mapTargetTypeInt64sForExptStorage([]int64{id, id}, true, true)
+		assert.Len(t, got, 2)
+	})
+}
+
+func TestEvalTargetTypesForSourceTargetFilter(t *testing.T) {
+	t.Run("无在线范围_非记录型返回用户类型", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeCozeBot, false, true)
+		assert.Equal(t, []entity.EvalTargetType{entity.EvalTargetTypeCozeBot}, got)
+	})
+
+	t.Run("无在线范围_记录型返回nil", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeCozeBotOnline, false, true)
+		assert.Nil(t, got)
+	})
+
+	t.Run("在线且离线_CozeBot", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeCozeBot, true, true)
+		assert.ElementsMatch(t, []entity.EvalTargetType{
+			entity.EvalTargetTypeCozeBot,
+			entity.EvalTargetTypeCozeBotOnline,
+		}, got)
+	})
+
+	t.Run("仅在线_CozeBot", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeCozeBot, true, false)
+		assert.Equal(t, []entity.EvalTargetType{entity.EvalTargetTypeCozeBotOnline}, got)
+	})
+
+	t.Run("仅在线_记录型", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeCozeBotOnline, true, false)
+		assert.Equal(t, []entity.EvalTargetType{entity.EvalTargetTypeCozeBotOnline}, got)
+	})
+
+	t.Run("在线且离线_LoopTrace无Base映射", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeLoopTrace, true, true)
+		assert.Equal(t, []entity.EvalTargetType{entity.EvalTargetTypeLoopTrace}, got)
+	})
+
+	t.Run("仅在线_LoopTrace无Base映射", func(t *testing.T) {
+		got := evalTargetTypesForSourceTargetFilter(entity.EvalTargetTypeLoopTrace, true, false)
+		assert.Equal(t, []entity.EvalTargetType{entity.EvalTargetTypeLoopTrace}, got)
+	})
+}
+
+func TestExptFilterConvertor_Convert_WithFuzzyName(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	conv := NewExptFilterConvertor(mockEvalTargetSvc)
+
+	opt := domain_expt.NewExptFilterOption()
+	opt.SetFuzzyName(gptr.Of("hello"))
+	filters := &domain_expt.Filters{}
+	filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+	opt.SetFilters(filters)
+
+	got, err := conv.Convert(context.Background(), opt, 100)
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, "hello", got.FuzzyName)
+}
+
+func TestExptFilterConvertor_ConvertFilters_SourceTarget_BatchGetError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvalTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	conv := NewExptFilterConvertor(mockEvalTargetSvc)
+
+	filters := &domain_expt.Filters{}
+	filters.SetLogicOp(domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And))
+	filters.SetFilterConditions([]*domain_expt.FilterCondition{{
+		Field: &domain_expt.FilterField{
+			FieldType: domain_expt.FieldType_ExptType,
+		},
+		Operator: domain_expt.FilterOperatorType_In,
+		Value:    "2",
+	}, {
+		Field: &domain_expt.FilterField{
+			FieldType: domain_expt.FieldType_SourceTarget,
+		},
+		Operator: domain_expt.FilterOperatorType_In,
+		SourceTarget: &domain_expt.SourceTarget{
+			EvalTargetType:  eval_target.EvalTargetTypePtr(eval_target.EvalTargetType_CozeBot),
+			SourceTargetIds: []string{"x"},
+		},
+	}})
+
+	mockEvalTargetSvc.EXPECT().
+		BatchGetEvalTargetBySource(gomock.Any(), gomock.Any()).
+		Return(nil, errors.New("batch error"))
+
+	got, err := conv.ConvertFilters(context.Background(), filters, 100)
+	assert.Error(t, err)
+	assert.Nil(t, got)
 }

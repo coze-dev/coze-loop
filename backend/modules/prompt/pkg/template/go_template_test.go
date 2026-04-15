@@ -4,6 +4,7 @@
 package template
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -315,4 +316,29 @@ func TestInterpolateGoTemplate_EdgeCases(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, "Value: <no value>", got)
 	})
+}
+
+func TestInterpolateGoTemplate_OutputSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	longValue := strings.Repeat("X", 512*1024)
+	templateStr := "{{.a}}{{.a}}{{.a}}"
+	_, err := InterpolateGoTemplate(templateStr, map[string]any{"a": longValue})
+	assert.Error(t, err)
+	statusErr, ok := errorx.FromStatusError(err)
+	assert.True(t, ok)
+	assert.Equal(t, int32(prompterr.TemplateRenderErrorCode), statusErr.Code())
+}
+
+func TestInterpolateGoTemplate_LargeRange(t *testing.T) {
+	t.Parallel()
+
+	items := make([]int, 100)
+	for i := range items {
+		items[i] = i
+	}
+	templateStr := "{{range .items}}{{.}},{{end}}"
+	got, err := InterpolateGoTemplate(templateStr, map[string]any{"items": items})
+	assert.NoError(t, err)
+	assert.NotEmpty(t, got)
 }

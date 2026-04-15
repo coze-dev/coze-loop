@@ -7,6 +7,8 @@ import (
 	"context"
 	"time"
 
+	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	taskdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -79,8 +81,8 @@ type ObservabilityTask struct {
 	CreatedBy             string            // 创建人
 	UpdatedBy             string            // 更新人
 	TaskSource            *string           // 创建来源
-
-	TaskRuns []*TaskRun
+	WorkflowID            int64             // 关联 workflow ID
+	TaskRuns              []*TaskRun
 }
 
 type RunDetail struct {
@@ -108,13 +110,31 @@ type Sampler struct {
 	CycleTimeUnit TimeUnit `json:"cycle_time_unit"`
 }
 type TaskConfig struct {
-	AutoEvaluateConfigs []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
-	DataReflowConfig    []*DataReflowConfig
+	AutoEvaluateConfigs        []*AutoEvaluateConfig `json:"auto_evaluate_configs"`
+	DataReflowConfig           []*DataReflowConfig
+	EvaluationExperimentConfig *EvaluationExperimentConfig `json:"evaluation_experiment_config,omitempty"`
+	SourceInfo                 []*SourceInfo               `json:"source_info,omitempty"`
+	IsWorkflowScheduled        *bool                       `json:"is_workflow_scheduled,omitempty"`
 }
 type AutoEvaluateConfig struct {
 	EvaluatorVersionID int64                   `json:"evaluator_version_id"`
 	EvaluatorID        int64                   `json:"evaluator_id"`
 	FieldMappings      []*EvaluateFieldMapping `json:"field_mappings"`
+	ScoreWeight        *float64                `json:"score_weight,omitempty"`
+	EvaluatorVersion   *string                 `json:"evaluator_version,omitempty"`
+}
+
+type EvaluationExperimentConfig struct {
+	ItemConcurrencyCount     *int32                  `json:"item_concurrency_count,omitempty"`
+	ItemMaxRetryCount        *int32                  `json:"item_max_retry_count,omitempty"`
+	SourceTargetID           *string                 `json:"source_target_id,omitempty"`
+	ExptTemplateID           *int64                  `json:"expt_template_id,omitempty"`
+	SourceTargetVersion      *string                 `json:"source_target_version,omitempty"`
+	FullEvalSetFieldMappings []*EvaluateFieldMapping `json:"full_eval_set_field_mappings,omitempty"`
+}
+type SourceInfo struct {
+	Name    *string `json:"name,omitempty"`
+	Version *string `json:"version,omitempty"`
 }
 type EvaluateFieldMapping struct {
 	// 数据集字段约束
@@ -122,12 +142,14 @@ type EvaluateFieldMapping struct {
 	TraceFieldKey      string               `json:"trace_field_key"`
 	TraceFieldJsonpath string               `json:"trace_field_jsonpath"`
 	EvalSetName        *string              `json:"eval_set_name"`
+	DatasetKey         *string              `json:"dataset_key"`
 }
 type DataReflowConfig struct {
-	DatasetID     *int64                 `json:"dataset_id"`
-	DatasetName   *string                `json:"dataset_name"`
-	DatasetSchema dataset.DatasetSchema  `json:"dataset_schema"`
-	FieldMappings []dataset.FieldMapping `json:"field_mappings"`
+	DatasetID       *int64                       `json:"dataset_id"`
+	DatasetName     *string                      `json:"dataset_name"`
+	DatasetSchema   dataset.DatasetSchema        `json:"dataset_schema"`
+	FieldMappings   []dataset.FieldMapping       `json:"field_mappings"`
+	DatasetCategory *datadataset.DatasetCategory `json:"dataset_category"`
 }
 
 type TaskRun struct {
@@ -326,4 +348,8 @@ func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
 		return t.SpanFilter.PlatformType
 	}
 	return loop_span.PlatformDefault
+}
+
+func (t *ObservabilityTask) IsNewWorkflowTask() bool {
+	return t.WorkflowID != 0
 }

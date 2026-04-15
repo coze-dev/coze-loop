@@ -12,6 +12,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
+	"github.com/coze-dev/coze-loop/backend/pkg/consts"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -50,6 +51,7 @@ func (e *BackFillConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig,
 }
 
 func (e *BackFillConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) error {
+	ctx = context.WithValue(ctx, consts.CtxKeyFlowMethodKey, "backfill_consumer")
 	logID := logs.NewLogID()
 	ctx = logs.SetLogID(ctx, logID)
 	event := new(entity.BackFillEvent)
@@ -57,6 +59,7 @@ func (e *BackFillConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt
 		logs.CtxError(ctx, "BackFill msg json unmarshal fail, raw: %v, err: %s", conv.UnsafeBytesToString(ext.Body), err)
 		return nil
 	}
+	newCtx := context.WithoutCancel(ctx)
 	logs.CtxInfo(ctx, "BackFill msg %+v,msgID=%s", event, ext.MsgID)
-	return e.handler.BackFill(ctx, event)
+	return e.handler.BackFill(newCtx, event)
 }

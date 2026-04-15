@@ -388,6 +388,26 @@ func TestEvalTargetVersionPO2DO(t *testing.T) {
 			},
 		},
 		{
+			name: "CozeLoopPromptOnline 经 ToOperatorBaseType 走 LoopPrompt 分支反序列化 TargetMeta",
+			targetVersionPO: &model.TargetVersion{
+				ID:                  1,
+				SpaceID:             2,
+				TargetID:            3,
+				SourceTargetVersion: "v2.0",
+				// LoopPrompt 字段无 snake_case 标签，与 DO2PO Marshal 输出一致（PromptID、Version）
+				TargetMeta: gptr.Of([]byte(`{"PromptID":456,"Version":"v2.0"}`)),
+				CreatedAt:  time.Now(),
+				UpdatedAt:  time.Now(),
+			},
+			targetType: entity.EvalTargetTypeCozeLoopPromptOnline,
+			checkResult: func(t *testing.T, do *entity.EvalTargetVersion) {
+				assert.NotNil(t, do)
+				assert.NotNil(t, do.Prompt)
+				assert.Equal(t, int64(456), do.Prompt.PromptID)
+				assert.Equal(t, "v2.0", do.Prompt.Version)
+			},
+		},
+		{
 			name: "火山智能体类型的版本转换",
 			targetVersionPO: &model.TargetVersion{
 				ID:                  1,

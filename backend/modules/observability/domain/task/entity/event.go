@@ -291,6 +291,18 @@ func (s *OnlineExptTurnEvalResult) GetTaskIDFromExt() int64 {
 	return taskID
 }
 
+func (s *OnlineExptTurnEvalResult) GetExptTemplateIDFromExt() int64 {
+	if s == nil {
+		return 0
+	}
+	exptTemplateIDStr := s.Ext["expt_template_id"]
+	exptTemplateID, err := strconv.ParseInt(exptTemplateIDStr, 10, 64)
+	if err != nil {
+		return 0
+	}
+	return exptTemplateID
+}
+
 func (s *OnlineExptTurnEvalResult) GetWorkspaceIDFromExt() (string, int64) {
 	if s == nil {
 		return "", 0

@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	rpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	entity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -194,9 +195,9 @@ func (mr *MockIEvaluationSetServiceMockRecorder) ValidateMultiPartData(ctx, spac
 }
 
 // QueryItemSnapshotMappings mocks base method.
-func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) ([]*entity.ItemSnapshotFieldMapping, string, error) {
+func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", ctx, spaceID, datasetID, versionID)
+	ret := m.ctrl.Call(m, "QueryItemSnapshotMappings", ctx, req)
 	ret0, _ := ret[0].([]*entity.ItemSnapshotFieldMapping)
 	ret1, _ := ret[1].(string)
 	ret2, _ := ret[2].(error)
@@ -204,9 +205,9 @@ func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Contex
 }
 
 // QueryItemSnapshotMappings indicates an expected call of QueryItemSnapshotMappings.
-func (mr *MockIEvaluationSetServiceMockRecorder) QueryItemSnapshotMappings(ctx, spaceID, datasetID, versionID any) *gomock.Call {
+func (mr *MockIEvaluationSetServiceMockRecorder) QueryItemSnapshotMappings(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIEvaluationSetService)(nil).QueryItemSnapshotMappings), ctx, spaceID, datasetID, versionID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryItemSnapshotMappings", reflect.TypeOf((*MockIEvaluationSetService)(nil).QueryItemSnapshotMappings), ctx, req)
 }
 
 // UpdateEvaluationSet mocks base method.

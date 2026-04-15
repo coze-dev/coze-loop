@@ -172,6 +172,8 @@ type ExecuteEvalTargetParam struct {
 	Input               *EvalTargetInputData
 	TargetType          EvalTargetType
 	EvalTarget          *EvalTarget // 透传，各个评测对象如需额外信息可以从这里消费
+	EvalSetItemID       *int64
+	EvalSetTurnID       *int64
 }
 
 type ListEvaluatorRequest struct {
@@ -287,6 +289,7 @@ type CreateExptParam struct {
 	ExptTemplateID        int64                    `json:"expt_template_id"`
 	ExptConf              *EvaluationConfiguration `json:"expt_conf"`
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
+	TriggerType           string                   `json:"trigger_type,omitempty"`
 }
 
 type ExptRunCheckOption struct {

@@ -22,7 +22,7 @@ jobs:
     name: Build All
     runs-on: ubuntu-latest
     env:
-      NODE_VERSION: '18'
+      NODE_VERSION: '24'
       BUILD_BRANCH: ${{ github.ref }}
     steps:
       - name: Checkout

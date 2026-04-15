@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"go.uber.org/mock/gomock"
 
@@ -30,6 +32,7 @@ import (
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
@@ -59,6 +62,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		templateManager:             svcMocks.NewMockIExptTemplateManager(ctrl),
 		notifyRPCAdapter:            mocks.NewMockINotifyRPCAdapter(ctrl),
 		userProvider:                mocks.NewMockIUserProvider(ctrl),
+		pipelineListAdapter:         nil,
 	}
 }
 
@@ -263,7 +267,7 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		}
 	})
 
-	t.Run("ScoreWeight为0时仍启用EnableScoreWeight", func(t *testing.T) {
+	t.Run("ScoreWeight为0时不启用EnableScoreWeight", func(t *testing.T) {
 		zeroWeight := 0.0
 		paramZeroWeight := &entity.CreateExptParam{
 			WorkspaceID:         1,
@@ -287,8 +291,8 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 		expt, err := mgr.CreateExpt(ctx, paramZeroWeight, session)
 		if err == nil && expt != nil && expt.EvalConf != nil &&
 			expt.EvalConf.ConnectorConf.EvaluatorsConf != nil {
-			if !expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
-				t.Errorf("CreateExpt() EnableScoreWeight should be true when ScoreWeight is explicitly 0")
+			if expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
+				t.Errorf("CreateExpt() EnableScoreWeight should be false when ScoreWeight is explicitly 0")
 			}
 		}
 	})
@@ -550,7 +554,7 @@ func TestExptMangerImpl_Delete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).Return(mockExpt, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Delete(ctx, exptID, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Success, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Success, int64(-1), nil).Return(nil)
 
 		err := mgr.Delete(ctx, exptID, spaceID, session)
 		if err != nil {
@@ -569,7 +573,7 @@ func TestExptMangerImpl_Delete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByID(ctx, exptID, spaceID).Return(mockExpt, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Delete(ctx, exptID, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Failed, int64(-1)).
+			UpdateExptInfo(ctx, templateID, spaceID, exptID, entity.ExptStatus_Failed, int64(-1), nil).
 			Return(errors.New("update error"))
 
 		// UpdateExptInfo失败不应该影响主流程，应该返回nil
@@ -1142,6 +1146,7 @@ func TestNewExptManager(t *testing.T) {
 		mockTemplateManager,
 		mockNotify,
 		mockUser,
+		nil,
 	)
 
 	impl, ok := mgr.(*ExptMangerImpl)
@@ -1209,9 +1214,9 @@ func TestExptMangerImpl_MDelete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, exptIDs, spaceID).Return(expts, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MDelete(ctx, exptIDs, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1), nil).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(200), spaceID, int64(2), entity.ExptStatus_Failed, int64(-1)).Return(nil)
+			UpdateExptInfo(ctx, int64(200), spaceID, int64(2), entity.ExptStatus_Failed, int64(-1), nil).Return(nil)
 
 		err := mgr.MDelete(ctx, exptIDs, spaceID, session)
 		if err != nil {
@@ -1257,7 +1262,7 @@ func TestExptMangerImpl_MDelete(t *testing.T) {
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MGetByID(ctx, exptIDs, spaceID).Return(expts, nil)
 		mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().MDelete(ctx, exptIDs, spaceID).Return(nil)
 		mgr.templateManager.(*svcMocks.MockIExptTemplateManager).EXPECT().
-			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1)).
+			UpdateExptInfo(ctx, int64(100), spaceID, int64(1), entity.ExptStatus_Success, int64(-1), nil).
 			Return(errors.New("update error"))
 
 		// UpdateExptInfo失败不应该影响主流程，应该返回nil
@@ -1530,5 +1535,394 @@ func TestExptMangerImpl_fillExptTemplates(t *testing.T) {
 		assert.NotNil(t, expts[0].ExptTemplateMeta)
 		// 第二个模板为nil，对应的实验的ExptTemplateMeta应该被置为nil
 		assert.Nil(t, expts[1].ExptTemplateMeta)
+	})
+}
+
+func TestExptMangerImpl_lockKeyHelpers(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+	assert.Equal(t, "expt_run_mutex_lock:42", mgr.makeExptMutexLockKey(42))
+	assert.Equal(t, "expt_completing_mutex_lock:1:2", mgr.makeExptCompletingLockKey(1, 2))
+	assert.Equal(t, "expt_online_daemon_lock:3:4", mgr.makeOnlineExptDaemonLockKey(3, 4))
+	assert.Equal(t, "expt_online_data_lock:5:6", mgr.makeOnlineExptDataLockKey(5, 6))
+}
+
+func TestExptMangerImpl_computeDaemonLockMaxHold(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+
+	t.Run("nil_expt", func(t *testing.T) {
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(nil))
+	})
+
+	t.Run("StartAt_nil", func(t *testing.T) {
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{MaxAliveTime: 3600000}))
+	})
+
+	t.Run("MaxAliveTime_非正", func(t *testing.T) {
+		now := time.Now()
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(now),
+			MaxAliveTime: 0,
+		}))
+	})
+
+	t.Run("已超过deadline返回一分钟兜底", func(t *testing.T) {
+		past := time.Now().Add(-2 * time.Hour)
+		assert.Equal(t, time.Minute, mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(past),
+			MaxAliveTime: 3600000,
+		}))
+	})
+
+	t.Run("剩余时间为正", func(t *testing.T) {
+		start := time.Now().Add(-30 * time.Minute)
+		h := mgr.computeDaemonLockMaxHold(&entity.Experiment{
+			StartAt:      gptr.Of(start),
+			MaxAliveTime: (2 * time.Hour).Milliseconds(),
+		})
+		assert.Greater(t, h, 30*time.Minute)
+		assert.LessOrEqual(t, h, 2*time.Hour)
+	})
+}
+
+func TestExptMangerImpl_packTupleID(t *testing.T) {
+	mgr := &ExptMangerImpl{}
+
+	t.Run("仅评测集", func(t *testing.T) {
+		id := mgr.packTupleID(context.Background(), &entity.Experiment{
+			EvalSetID:        10,
+			EvalSetVersionID: 20,
+		})
+		require.NotNil(t, id.VersionedEvalSetID)
+		assert.Equal(t, int64(10), id.VersionedEvalSetID.EvalSetID)
+		assert.Equal(t, int64(20), id.VersionedEvalSetID.VersionID)
+		assert.Nil(t, id.VersionedTargetID)
+		assert.Nil(t, id.EvaluatorVersionIDs)
+	})
+
+	t.Run("含目标与评估器版本", func(t *testing.T) {
+		id := mgr.packTupleID(context.Background(), &entity.Experiment{
+			EvalSetID:        1,
+			EvalSetVersionID: 2,
+			TargetID:         3,
+			TargetVersionID:  4,
+			EvaluatorVersionRef: []*entity.ExptEvaluatorVersionRef{
+				{EvaluatorVersionID: 5},
+				{EvaluatorVersionID: 6},
+			},
+		})
+		require.NotNil(t, id.VersionedTargetID)
+		assert.Equal(t, int64(3), id.VersionedTargetID.TargetID)
+		assert.Equal(t, int64(4), id.VersionedTargetID.VersionID)
+		assert.Equal(t, []int64{5, 6}, id.EvaluatorVersionIDs)
+	})
+}
+
+func TestExptMangerImpl_enrichExperimentExptSourceFromPipeline(t *testing.T) {
+	t.Run("pipelineListAdapter为nil，直接返回nil", func(t *testing.T) {
+		mgr := &ExptMangerImpl{pipelineListAdapter: nil}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "1"}},
+		}, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("无Workflow类型实验，跳过RPC调用", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Evaluation, SourceID: "1"}},
+			{ExptSource: nil},
+			nil,
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), expts, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("SourceID非法（非数字），跳过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "abc"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: ""}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "0"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "-1"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), expts, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ListPipelineFlow返回错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+
+		mockPipeline.EXPECT().
+			ListPipelineFlow(gomock.Any(), gomock.Any()).
+			Return(nil, errors.New("rpc error"))
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), expts, 1)
+		assert.Error(t, err)
+	})
+
+	t.Run("ListPipelineFlow返回nil响应", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+
+		mockPipeline.EXPECT().
+			ListPipelineFlow(gomock.Any(), gomock.Any()).
+			Return(nil, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), expts, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ListPipelineFlow返回空Items", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+
+		mockPipeline.EXPECT().
+			ListPipelineFlow(gomock.Any(), gomock.Any()).
+			Return(&rpc.ListPipelineFlowResponse{Items: nil}, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(context.Background(), expts, 1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("正常填充Scheduler", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+		ctx := context.Background()
+
+		pid := int64(100)
+		mockPipeline.EXPECT().
+			ListPipelineFlow(ctx, gomock.Any()).
+			Return(&rpc.ListPipelineFlowResponse{
+				Items: []*entity.Pipeline{
+					{
+						ID: gptr.Of(pid),
+						Scheduler: &entity.Scheduler{
+							Enabled:   gptr.Of(true),
+							Frequency: gptr.Of("daily"),
+						},
+					},
+				},
+			}, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(ctx, expts, 1)
+		assert.NoError(t, err)
+		assert.NotNil(t, expts[0].ExptSource.Scheduler)
+		assert.Equal(t, true, gptr.Indirect(expts[0].ExptSource.Scheduler.Enabled))
+		assert.Equal(t, "daily", gptr.Indirect(expts[0].ExptSource.Scheduler.Frequency))
+	})
+
+	t.Run("Pipeline的ID为nil，跳过该Pipeline", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+		ctx := context.Background()
+
+		mockPipeline.EXPECT().
+			ListPipelineFlow(ctx, gomock.Any()).
+			Return(&rpc.ListPipelineFlowResponse{
+				Items: []*entity.Pipeline{
+					nil,
+					{ID: nil},
+				},
+			}, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(ctx, expts, 1)
+		assert.NoError(t, err)
+		assert.Nil(t, expts[0].ExptSource.Scheduler)
+	})
+
+	t.Run("相同pipelineID的多个实验都被填充", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+		ctx := context.Background()
+
+		pid := int64(100)
+		mockPipeline.EXPECT().
+			ListPipelineFlow(ctx, gomock.Any()).
+			Return(&rpc.ListPipelineFlowResponse{
+				Items: []*entity.Pipeline{
+					{
+						ID: gptr.Of(pid),
+						Scheduler: &entity.Scheduler{
+							Enabled: gptr.Of(true),
+						},
+					},
+				},
+			}, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(ctx, expts, 1)
+		assert.NoError(t, err)
+		for _, ex := range expts {
+			assert.NotNil(t, ex.ExptSource.Scheduler)
+		}
+	})
+
+	t.Run("Pipeline ID不匹配任何实验，targets为空，跳过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockPipeline := mocks.NewMockIPipelineListAdapter(ctrl)
+		mgr := &ExptMangerImpl{pipelineListAdapter: mockPipeline}
+		ctx := context.Background()
+
+		mockPipeline.EXPECT().
+			ListPipelineFlow(ctx, gomock.Any()).
+			Return(&rpc.ListPipelineFlowResponse{
+				Items: []*entity.Pipeline{
+					{ID: gptr.Of(int64(999))},
+				},
+			}, nil)
+
+		expts := []*entity.Experiment{
+			{ExptSource: &entity.ExptSource{SourceType: entity.SourceType_Workflow, SourceID: "100"}},
+		}
+		err := mgr.enrichExperimentExptSourceFromPipeline(ctx, expts, 1)
+		assert.NoError(t, err)
+		assert.Nil(t, expts[0].ExptSource.Scheduler)
+	})
+}
+
+func TestExptMangerImpl_InjectExptConfTimeRange(t *testing.T) {
+	t.Run("timeRange为nil，直接返回", func(t *testing.T) {
+		mgr := &ExptMangerImpl{}
+		mgr.InjectExptConfTimeRange(context.Background(), 1, nil)
+	})
+
+	t.Run("MGetBasicByID返回错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockExptRepo}
+
+		mockExptRepo.EXPECT().
+			MGetBasicByID(gomock.Any(), []int64{1}).
+			Return(nil, errors.New("db error"))
+
+		mgr.InjectExptConfTimeRange(context.Background(), 1, &entity.TaskTimeRangeDO{
+			StartTime: gptr.Of(int64(1000)),
+			EndTime:   gptr.Of(int64(2000)),
+		})
+	})
+
+	t.Run("MGetBasicByID返回空列表", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockExptRepo}
+
+		mockExptRepo.EXPECT().
+			MGetBasicByID(gomock.Any(), []int64{1}).
+			Return([]*entity.Experiment{}, nil)
+
+		mgr.InjectExptConfTimeRange(context.Background(), 1, &entity.TaskTimeRangeDO{
+			StartTime: gptr.Of(int64(1000)),
+			EndTime:   gptr.Of(int64(2000)),
+		})
+	})
+
+	t.Run("EvalConf为nil时自动初始化并注入TimeRange", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockExptRepo}
+
+		expt := &entity.Experiment{ID: 1, EvalConf: nil}
+		tr := &entity.TaskTimeRangeDO{StartTime: gptr.Of(int64(1000)), EndTime: gptr.Of(int64(2000))}
+
+		mockExptRepo.EXPECT().
+			MGetBasicByID(gomock.Any(), []int64{1}).
+			Return([]*entity.Experiment{expt}, nil)
+		mockExptRepo.EXPECT().
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, ex *entity.Experiment) error {
+				assert.NotNil(t, ex.EvalConf)
+				assert.Equal(t, tr, ex.EvalConf.TimeRange)
+				return nil
+			})
+
+		mgr.InjectExptConfTimeRange(context.Background(), 1, tr)
+	})
+
+	t.Run("EvalConf已存在，注入TimeRange", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockExptRepo}
+
+		existingConf := &entity.EvaluationConfiguration{
+			ItemConcurNum: gptr.Of(5),
+		}
+		expt := &entity.Experiment{ID: 1, EvalConf: existingConf}
+		tr := &entity.TaskTimeRangeDO{StartTime: gptr.Of(int64(3000)), EndTime: gptr.Of(int64(4000))}
+
+		mockExptRepo.EXPECT().
+			MGetBasicByID(gomock.Any(), []int64{1}).
+			Return([]*entity.Experiment{expt}, nil)
+		mockExptRepo.EXPECT().
+			Update(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, ex *entity.Experiment) error {
+				assert.Equal(t, gptr.Of(5), ex.EvalConf.ItemConcurNum)
+				assert.Equal(t, tr, ex.EvalConf.TimeRange)
+				return nil
+			})
+
+		mgr.InjectExptConfTimeRange(context.Background(), 1, tr)
+	})
+
+	t.Run("Update返回错误，不panic", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+		mgr := &ExptMangerImpl{exptRepo: mockExptRepo}
+
+		expt := &entity.Experiment{ID: 1, EvalConf: nil}
+		tr := &entity.TaskTimeRangeDO{StartTime: gptr.Of(int64(1000))}
+
+		mockExptRepo.EXPECT().
+			MGetBasicByID(gomock.Any(), []int64{1}).
+			Return([]*entity.Experiment{expt}, nil)
+		mockExptRepo.EXPECT().
+			Update(gomock.Any(), gomock.Any()).
+			Return(errors.New("update error"))
+
+		mgr.InjectExptConfTimeRange(context.Background(), 1, tr)
 	})
 }

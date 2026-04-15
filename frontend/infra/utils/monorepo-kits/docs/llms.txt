@@ -46,7 +46,7 @@
 
 ## 依赖关系
 
-- **主要依赖**: `@rushstack/rush-sdk@5.100.2`
+- **主要依赖**: `@rushstack/rush-sdk@5.172.1`
 - **开发依赖**: 包含 ESLint、TypeScript、Vitest 等工具链
 
 ## 使用场景

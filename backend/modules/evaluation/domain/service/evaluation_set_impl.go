@@ -132,6 +132,6 @@ func (d *EvaluationSetServiceImpl) GetEvaluationSetIOJob(ctx context.Context, sp
 	return d.datasetRPCAdapter.GetDatasetIOJob(ctx, spaceID, jobID)
 }
 
-func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, spaceID, datasetID int64, versionID *int64) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
-	return d.datasetRPCAdapter.QueryItemSnapshotMappings(ctx, spaceID, datasetID, versionID)
+func (d *EvaluationSetServiceImpl) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) (fieldMappings []*entity.ItemSnapshotFieldMapping, syncCkDate string, err error) {
+	return d.datasetRPCAdapter.QueryItemSnapshotMappings(ctx, req)
 }
