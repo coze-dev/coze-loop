@@ -6,12 +6,8 @@
   "author": "fanwenjie.fe@bytedance.com",
   "maintainers": [],
   "exports": {
-    ".": [
-      "./src/index.ts"
-    ],
-    "./observation": [
-      "./src/api/observability/index.ts"
-    ],
+    ".": "./src/index.ts",
+    "./observation": "./src/api/observability/index.ts",
     "./evaluation": "./src/api/evaluation/index.ts",
     "./data": "./src/api/data/index.ts",
     "./llm-manage": "./src/api/llm-manage/index.ts",

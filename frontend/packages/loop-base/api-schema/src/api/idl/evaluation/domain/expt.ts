@@ -1,5 +1,9 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as task from './../../observability/domain/task';
+export { task };
+import * as filter from './../../observability/domain/filter';
+export { filter };
 import * as dataset from './../../data/domain/dataset';
 export { dataset };
 import * as tag from './../../data/domain/tag';
@@ -38,6 +42,12 @@ export enum ExptType {
 export enum SourceType {
   Evaluation = 1,
   AutoTask = 2,
+  Workflow = 3,
+}
+export enum ExptTriggerType {
+  Manual = "manual",
+  OpenAPI = "openapi",
+  Schedule = "schedule",
 }
 export interface Experiment {
   id?: string,
@@ -66,8 +76,107 @@ export interface Experiment {
   max_alive_time?: number,
   source_type?: SourceType,
   source_id?: string,
+  item_retry_num?: number,
   /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
   evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
+  expt_template_meta?: ExptTemplateMeta,
+  /** 评估器得分加权配置 */
+  score_weight_config?: ExptScoreWeight,
+  enable_weighted_score?: boolean,
+  /** 触发方式 */
+  trigger_type?: ExptTriggerType,
+  expt_source?: ExptSource,
+}
+/** 实验模板基础信息 */
+export interface ExptTemplateMeta {
+  id?: string,
+  workspace_id?: string,
+  name?: string,
+  desc?: string,
+  /** 模板对应的实验类型，当前主要为 Offline */
+  expt_type?: ExptType,
+}
+/** 实验三元组配置 */
+export interface ExptTuple {
+  eval_set_id?: string,
+  eval_set_version_id?: string,
+  target_id?: string,
+  target_version_id?: string,
+  evaluator_id_version_items?: evaluator.EvaluatorIDVersionItem[],
+  eval_set?: eval_set.EvaluationSet,
+  eval_target?: eval_target.EvalTarget,
+  evaluators?: evaluator.Evaluator[],
+}
+/** 实验字段映射和运行时参数配置 */
+export interface ExptFieldMapping {
+  target_field_mapping?: TargetFieldMapping,
+  evaluator_field_mapping?: EvaluatorFieldMapping[],
+  target_runtime_param?: common.RuntimeParam,
+  item_concur_num?: number,
+  item_retry_num?: number,
+}
+/** 实验评估器得分加权配置 */
+export interface ExptScoreWeight {
+  enable_weighted_score?: boolean,
+  evaluator_score_weights?: {
+    [key: string | number]: number
+  },
+}
+export interface ExptTemplate {
+  meta?: ExptTemplateMeta,
+  triple_config?: ExptTuple,
+  field_mapping_config?: ExptFieldMapping,
+  score_weight_config?: ExptScoreWeight,
+  expt_info?: ExptInfo,
+  expt_source?: ExptSource,
+  base_info?: common.BaseInfo,
+}
+export interface TaskTimeRange {
+  /** 生效开始时间（时间戳，毫秒） */
+  start_time?: string,
+  /** 生效结束时间（时间戳，毫秒） */
+  end_time?: string,
+}
+export interface ExptSource {
+  source_type?: SourceType,
+  source_id?: string,
+  /** 不同source里的源数据结构 */
+  span_filter_fields?: filter.SpanFilterFields,
+  scheduler?: Scheduler,
+  /** 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐 */
+  sampler?: task.Sampler,
+  time_range?: TaskTimeRange,
+}
+export enum Frequency {
+  FrequencyEveryday = "every_day",
+  FrequencyMonday = "monday",
+  FrequencyTuesday = "tuesday",
+  FrequencyWednesday = "wednesday",
+  FrequencyThursday = "thursday",
+  FrequencyFriday = "friday",
+  FrequencySaturday = "saturday",
+  FrequencySunday = "sunday",
+}
+export interface Scheduler {
+  /** 定时触发器开关，默认关闭 */
+  enabled?: boolean,
+  /** 触发频次 */
+  frequency?: Frequency,
+  /** 触发时间（时间戳，秒。只使用时间，不使用日期） */
+  trigger_at?: string,
+  /** 生效开始时间（时间戳，秒） */
+  start_time?: string,
+  /** 生效结束时间（时间戳，秒） */
+  end_time?: string,
+}
+export interface ExptInfo {
+  created_expt_count?: number,
+  latest_expt_id?: string,
+  latest_expt_status?: ExptStatus,
+  /** 最新实验开始时间（时间戳，毫秒） */
+  latest_expt_start_time?: string,
+  /** 是否开启定时触发 */
+  cron_activate?: boolean,
 }
 export interface TokenUsage {
   input_tokens?: string,
@@ -169,6 +278,9 @@ export interface ColumnEvalTarget {
   name?: string,
   description?: string,
   label?: string,
+  content_type?: common.ContentType,
+  text_schema?: string,
+  schema_key?: dataset.SchemaKey,
 }
 export interface ColumnEvalSetField {
   key?: string,
@@ -219,7 +331,9 @@ export interface TurnTargetOutput {
 export interface TurnEvaluatorOutput {
   evaluator_records: {
     [key: string | number]: evaluator.EvaluatorRecord
-  }
+  },
+  /** 加权汇总得分 */
+  weighted_score?: number,
 }
 export interface TurnAnnotateResult {
   /** tag_key_id -> annotate_record */
@@ -264,6 +378,11 @@ export interface KeywordSearch {
   filter_fields?: FilterField[],
 }
 export interface ExperimentFilter {
+  filters?: Filters,
+  keyword_search?: KeywordSearch,
+}
+/** 实验模板筛选器，字段设计复用实验的 Filters / KeywordSearch 能力 */
+export interface ExperimentTemplateFilter {
   filters?: Filters,
   keyword_search?: KeywordSearch,
 }
@@ -325,6 +444,11 @@ export enum FieldType {
   OutputTokens = 62,
   /** 目前使用固定key：total_tokens */
   TotalTokens = 63,
+  ExperimentTemplateID = 70,
+  EvaluatorWeightedScore = 71,
+  UpdatedBy = 72,
+  CronActivate = 73,
+  TriggerType = 74,
 }
 /** 字段过滤器 */
 export interface FilterCondition {
@@ -386,6 +510,7 @@ export interface ExptAggregateResult {
   eval_target_aggr_result?: EvalTargetAggregateResult,
   /** timestamp in seconds */
   update_time?: number,
+  weighted_results?: AggregatorResult[],
 }
 export interface EvalTargetAggregateResult {
   target_id?: string,
@@ -494,9 +619,11 @@ export interface ExptResultExportRecord {
   base_info?: common.BaseInfo,
   start_time?: string,
   end_time?: string,
+  /** deprecated, cause not match snake name */
   URL?: string,
   expired?: boolean,
   error?: RunError,
+  url?: string,
 }
 /** 分析任务状态 */
 export enum InsightAnalysisStatus {

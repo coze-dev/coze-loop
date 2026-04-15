@@ -93,6 +93,20 @@ export interface BatchGetEvalTargetRecordsRequest {
 export interface BatchGetEvalTargetRecordsResponse {
   eval_target_records: eval_target.EvalTargetRecord[]
 }
+/** 按需查询 output 中的大对象完整内容 */
+export interface GetEvalTargetOutputFieldContentRequest {
+  workspace_id: string,
+  /** eval_target_record_id */
+  eval_target_record_id: string,
+  /** output_fields 中待查询的字段 key */
+  field_keys: string[],
+}
+export interface GetEvalTargetOutputFieldContentResponse {
+  /** field_key -> 完整 Content */
+  field_contents?: {
+    [key: string | number]: common.Content
+  }
+}
 export interface ListSourceEvalTargetsRequest {
   workspace_id: string,
   target_type?: eval_target.EvalTargetType,
@@ -333,6 +347,19 @@ export const BatchGetEvalTargetRecords = /*#__PURE__*/createAPI<BatchGetEvalTarg
     "body": ["workspace_id", "eval_target_record_ids"]
   },
   "resType": "BatchGetEvalTargetRecordsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
+/** 按需查询 output 中大对象的完整内容 */
+export const GetEvalTargetOutputFieldContent = /*#__PURE__*/createAPI<GetEvalTargetOutputFieldContentRequest, GetEvalTargetOutputFieldContentResponse>({
+  "url": "/api/evaluation/v1/eval_target_records/output_fields",
+  "method": "POST",
+  "name": "GetEvalTargetOutputFieldContent",
+  "reqType": "GetEvalTargetOutputFieldContentRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "eval_target_record_id", "field_keys"]
+  },
+  "resType": "GetEvalTargetOutputFieldContentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });

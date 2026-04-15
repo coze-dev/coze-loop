@@ -27,6 +27,7 @@ import {
   AutoFixPathPlugin,
   IgnoreStructFiledPlugin,
   AutoFixDuplicateIncludesPlugin,
+  AutoFixDuplicateNamespacePlugin,
   CommentFormatPlugin,
   BannerPlugin,
 } from './plugin';
@@ -52,6 +53,7 @@ export class ClientGenerator {
       new AutoFixPathPlugin(),
       new CommentFormatPlugin(),
       new AutoFixDuplicateIncludesPlugin(),
+      new AutoFixDuplicateNamespacePlugin(),
       new BannerPlugin({ banner: options.banner }),
       new AdapterPlugin(options),
       new MetaPlugin(options),

@@ -71,6 +71,20 @@ export enum EvalTargetType {
   VolcengineAgent = 5,
   /** 自定义RPC服务 for内场 */
   CustomRPCServer = 6,
+  /** 火山智能体Agentkit */
+  VolcengineAgentAgentkit = 7,
+  /** CozeBot在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeBotOnline = 11,
+  /** Prompt在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeLoopPromptOnline = 12,
+  /** CozeWorkflow在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeWorkflowOnline = 13,
+  /** 火山智能体在线(评测过程中不执行对象，仅用于展示对象) */
+  VolcengineAgentOnline = 14,
+  /** 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象) */
+  CustomRPCServerOnline = 15,
+  /** 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象) */
+  VolcengineAgentAgentkitOnline = 16,
 }
 /** Agent协议类型 */
 export enum VolcengineAgentProtocol {
@@ -160,6 +174,7 @@ export interface VolcengineAgent {
   volcengine_agent_endpoints?: VolcengineAgentEndpoint[],
   /** 注册协议 */
   protocol?: VolcengineAgentProtocol,
+  runtime_id?: string,
   base_info?: common.BaseInfo,
 }
 export interface VolcengineAgentEndpoint {

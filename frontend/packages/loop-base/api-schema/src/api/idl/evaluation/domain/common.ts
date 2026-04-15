@@ -1,5 +1,7 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
+import * as manage from './../../llm/domain/manage';
+export { manage };
 import * as dataset from './../../data/domain/dataset';
 export { dataset };
 export enum ContentType {
@@ -7,6 +9,7 @@ export enum ContentType {
   /** 空间 */
   Image = "Image",
   Audio = "Audio",
+  Video = "Video",
   MultiPart = "MultiPart",
   MultiPartVariable = "multi_part_variable",
 }
@@ -17,6 +20,7 @@ export interface Content {
   image?: Image,
   multi_part?: Content[],
   audio?: Audio,
+  video?: Video,
   /**
    * 超大文本相关字段
    * 当前列的数据是否省略, 如果此处返回 true, 需要通过 GetDatasetItemField 获取当前列的具体内容, 或者是通过 omittedDataStorage.url 下载
@@ -30,9 +34,21 @@ export interface Content {
 export interface AudioContent {
   audios?: Audio[]
 }
+export interface Video {
+  name?: string,
+  url?: string,
+  uri?: string,
+  thumb_url?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: dataset.StorageProvider,
+}
 export interface Audio {
   format?: string,
   url?: string,
+  name?: string,
+  uri?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: dataset.StorageProvider,
 }
 export interface Image {
   name?: string,
@@ -45,6 +61,8 @@ export interface Image {
 export interface OrderBy {
   field?: string,
   is_asc?: boolean,
+  /** 用于区分当前字段是否是 field key，仅在评测集场景下生效 */
+  is_field_key?: boolean,
 }
 export enum Role {
   System = 1,
@@ -106,6 +124,9 @@ export interface ModelConfig {
   temperature?: number,
   max_tokens?: number,
   top_p?: number,
+  protocol?: manage.Protocol,
+  identification?: string,
+  preset_model?: boolean,
   json_ext?: string,
 }
 export interface Session {
@@ -120,4 +141,17 @@ export interface RateLimit {
   rate?: number,
   burst?: number,
   period?: string,
+}
+export enum AgentType {
+  Vibe = "vibe",
+}
+export interface AgentConfig {
+  /** Agent type */
+  agent_type?: AgentType
+}
+export interface SkillConfig {
+  /** skill id */
+  skill_id?: string,
+  /** skill version */
+  version?: string,
 }

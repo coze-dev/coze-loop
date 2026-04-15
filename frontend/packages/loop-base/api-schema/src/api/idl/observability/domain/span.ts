@@ -32,6 +32,9 @@ export interface AttrTos {
     [key: string | number]: string
   },
 }
+export interface EncryptionInfo {
+  workflow?: string
+}
 export interface OutputSpan {
   trace_id: string,
   span_id: string,
@@ -81,6 +84,7 @@ export interface OutputSpan {
     [key: string | number]: string
   },
   annotations?: annotation.Annotation[],
+  encryption?: EncryptionInfo,
 }
 export interface InputSpan {
   started_at_micros: string,

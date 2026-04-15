@@ -127,6 +127,7 @@ export interface FieldData {
   key?: string,
   name?: string,
   content?: common.Content,
+  trace_id?: string,
 }
 export enum BizCategory {
   FromOnlineTrace = "from_online_trace",

@@ -8,6 +8,7 @@ export enum EvaluatorType {
   Prompt = 1,
   Code = 2,
   CustomRPC = 3,
+  Agent = 4,
 }
 export enum LanguageType {
   Python = "Python",
@@ -33,6 +34,7 @@ export enum EvaluatorRunStatus {
   Unknown = 0,
   Success = 1,
   Fail = 2,
+  AsyncInvoking = 3,
 }
 export enum EvaluatorTagType {
   Evaluator = "Evaluator",
@@ -91,6 +93,29 @@ export interface PromptEvaluator {
   prompt_template_name?: string,
   tools?: Tool[],
 }
+/** AgentEvaluator: an agent implementation, based on a model, equipped with some skills, running some prompt */
+export interface AgentEvaluator {
+  /** agent config */
+  agent_config?: common.AgentConfig,
+  /** model config for agent */
+  model_config?: common.ModelConfig,
+  /** skill configs for agent */
+  skill_configs?: common.SkillConfig[],
+  /** agent prompt config for agent */
+  prompt_config?: AgentEvaluatorPromptConfig,
+}
+export interface AgentEvaluatorPromptConfig {
+  message_list?: common.Message[],
+  output_rules?: AgentEvaluatorPromptConfigOutputRules,
+}
+export interface AgentEvaluatorPromptConfigOutputRules {
+  /** 分值 */
+  score_prompt?: common.Message,
+  /** 原因 */
+  reasoning_prompt?: common.Message,
+  /** 附加输出 */
+  extra_output_prompt?: common.Message,
+}
 export interface CodeEvaluator {
   language_type?: LanguageType,
   code_content?: string,
@@ -135,12 +160,15 @@ export interface EvaluatorContent {
   prompt_evaluator?: PromptEvaluator,
   code_evaluator?: CodeEvaluator,
   custom_rpc_evaluator?: CustomRPCEvaluator,
+  agent_evaluator?: AgentEvaluator,
 }
 /** 明确有顺序的 evaluator 与版本映射元素 */
 export interface EvaluatorIDVersionItem {
   evaluator_id?: string,
   version?: string,
   run_config?: EvaluatorRunConfig,
+  evaluator_version_id?: string,
+  score_weight?: number,
 }
 export interface EvaluatorInfo {
   benchmark?: string,
@@ -266,6 +294,7 @@ export interface EvaluatorOutputData {
   evaluator_run_error?: EvaluatorRunError,
   time_consuming_ms?: string,
   stdout?: string,
+  extra_output?: EvaluatorExtraOutputContent,
 }
 export interface EvaluatorResult {
   score?: number,
@@ -279,6 +308,15 @@ export interface EvaluatorUsage {
 export interface EvaluatorRunError {
   code?: number,
   message?: string,
+}
+export enum EvaluatorExtraOutputType {
+  HTML = "html",
+  Markdown = "markdown",
+}
+export interface EvaluatorExtraOutputContent {
+  output_type?: EvaluatorExtraOutputType,
+  uri?: string,
+  url?: string,
 }
 export interface EvaluatorInputData {
   history_messages?: common.Message[],
@@ -306,4 +344,13 @@ export enum EvaluatorHTTPMethod {
 export interface EvaluatorRunConfig {
   env?: string,
   evaluator_runtime_param?: common.RuntimeParam,
+}
+export interface EvaluatorProgressMessage {
+  /** 如 system, assistant */
+  role?: string,
+  /** 如 tool_use, tool_result */
+  type?: string,
+  /** 如 Check current user identity and working directory */
+  message?: string,
+  created_at_ms?: number,
 }
