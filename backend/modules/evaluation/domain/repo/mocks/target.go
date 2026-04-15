@@ -133,6 +133,21 @@ func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetRecordByIDAndSpaceID(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetRecordByIDAndSpaceID", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetRecordByIDAndSpaceID), ctx, spaceID, recordID)
 }
 
+// GetEvalTargetRecordByRunItemTurn mocks base method.
+func (m *MockIEvalTargetRepo) GetEvalTargetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEvalTargetRecordByRunItemTurn", ctx, spaceID, runID, itemID, turnID)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEvalTargetRecordByRunItemTurn indicates an expected call of GetEvalTargetRecordByRunItemTurn.
+func (mr *MockIEvalTargetRepoMockRecorder) GetEvalTargetRecordByRunItemTurn(ctx, spaceID, runID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvalTargetRecordByRunItemTurn", reflect.TypeOf((*MockIEvalTargetRepo)(nil).GetEvalTargetRecordByRunItemTurn), ctx, spaceID, runID, itemID, turnID)
+}
+
 // GetEvalTargetVersion mocks base method.
 func (m *MockIEvalTargetRepo) GetEvalTargetVersion(ctx context.Context, spaceID, versionID int64) (*entity.EvalTarget, error) {
 	m.ctrl.T.Helper()

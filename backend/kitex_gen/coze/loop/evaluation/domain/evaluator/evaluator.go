@@ -16,6 +16,8 @@ const (
 
 	LanguageTypeJS = "JS"
 
+	EvaluatorSourceTypeIntelligentGen = "intelligent_gen"
+
 	EvaluatorTagTypeEvaluator = "Evaluator"
 
 	EvaluatorTagTypeTemplate = "Template"
@@ -319,6 +321,8 @@ func (p *EvaluatorRunStatus) Value() (driver.Value, error) {
 }
 
 type LanguageType = string
+
+type EvaluatorSourceType = string
 
 type EvaluatorTagType = string
 
@@ -5774,8 +5778,10 @@ type Evaluator struct {
 	EvaluatorInfo         *EvaluatorInfo    `thrift:"evaluator_info,21,optional" frugal:"21,optional,EvaluatorInfo" json:"evaluator_info" form:"evaluator_info" query:"evaluator_info"`
 	BuiltinVisibleVersion *string           `thrift:"builtin_visible_version,22,optional" frugal:"22,optional,string" json:"builtin_visible_version" form:"builtin_visible_version" query:"builtin_visible_version"`
 	// 默认白盒
-	BoxType *EvaluatorBoxType                                     `thrift:"box_type,23,optional" frugal:"23,optional,string" json:"box_type" form:"box_type" query:"box_type"`
-	Tags    map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
+	BoxType *EvaluatorBoxType `thrift:"box_type,23,optional" frugal:"23,optional,string" json:"box_type" form:"box_type" query:"box_type"`
+	// 来源
+	SourceType *EvaluatorSourceType                                  `thrift:"source_type,24,optional" frugal:"24,optional,string" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	Tags       map[EvaluatorTagLangType]map[EvaluatorTagKey][]string `thrift:"tags,100,optional" frugal:"100,optional,map<string:map<string:list<string>>>" json:"tags" form:"tags" query:"tags"`
 }
 
 func NewEvaluator() *Evaluator {
@@ -5941,6 +5947,18 @@ func (p *Evaluator) GetBoxType() (v EvaluatorBoxType) {
 	return *p.BoxType
 }
 
+var Evaluator_SourceType_DEFAULT EvaluatorSourceType
+
+func (p *Evaluator) GetSourceType() (v EvaluatorSourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceType() {
+		return Evaluator_SourceType_DEFAULT
+	}
+	return *p.SourceType
+}
+
 var Evaluator_Tags_DEFAULT map[EvaluatorTagLangType]map[EvaluatorTagKey][]string
 
 func (p *Evaluator) GetTags() (v map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
@@ -5991,6 +6009,9 @@ func (p *Evaluator) SetBuiltinVisibleVersion(val *string) {
 func (p *Evaluator) SetBoxType(val *EvaluatorBoxType) {
 	p.BoxType = val
 }
+func (p *Evaluator) SetSourceType(val *EvaluatorSourceType) {
+	p.SourceType = val
+}
 func (p *Evaluator) SetTags(val map[EvaluatorTagLangType]map[EvaluatorTagKey][]string) {
 	p.Tags = val
 }
@@ -6009,6 +6030,7 @@ var fieldIDToName_Evaluator = map[int16]string{
 	21:  "evaluator_info",
 	22:  "builtin_visible_version",
 	23:  "box_type",
+	24:  "source_type",
 	100: "tags",
 }
 
@@ -6062,6 +6084,10 @@ func (p *Evaluator) IsSetBuiltinVisibleVersion() bool {
 
 func (p *Evaluator) IsSetBoxType() bool {
 	return p.BoxType != nil
+}
+
+func (p *Evaluator) IsSetSourceType() bool {
+	return p.SourceType != nil
 }
 
 func (p *Evaluator) IsSetTags() bool {
@@ -6185,6 +6211,14 @@ func (p *Evaluator) Read(iprot thrift.TProtocol) (err error) {
 		case 23:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField23(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField24(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6362,6 +6396,17 @@ func (p *Evaluator) ReadField23(iprot thrift.TProtocol) error {
 	p.BoxType = _field
 	return nil
 }
+func (p *Evaluator) ReadField24(iprot thrift.TProtocol) error {
+
+	var _field *EvaluatorSourceType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceType = _field
+	return nil
+}
 func (p *Evaluator) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -6478,6 +6523,10 @@ func (p *Evaluator) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField23(oprot); err != nil {
 			fieldId = 23
+			goto WriteFieldError
+		}
+		if err = p.writeField24(oprot); err != nil {
+			fieldId = 24
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -6736,6 +6785,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 23 end error: ", p), err)
 }
+func (p *Evaluator) writeField24(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceType() {
+		if err = oprot.WriteFieldBegin("source_type", thrift.STRING, 24); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SourceType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 24 end error: ", p), err)
+}
 func (p *Evaluator) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTags() {
 		if err = oprot.WriteFieldBegin("tags", thrift.MAP, 100); err != nil {
@@ -6836,6 +6903,9 @@ func (p *Evaluator) DeepEqual(ano *Evaluator) bool {
 		return false
 	}
 	if !p.Field23DeepEqual(ano.BoxType) {
+		return false
+	}
+	if !p.Field24DeepEqual(ano.SourceType) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Tags) {
@@ -6981,6 +7051,18 @@ func (p *Evaluator) Field23DeepEqual(src *EvaluatorBoxType) bool {
 		return false
 	}
 	if strings.Compare(*p.BoxType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Evaluator) Field24DeepEqual(src *EvaluatorSourceType) bool {
+
+	if p.SourceType == src {
+		return true
+	} else if p.SourceType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SourceType, *src) != 0 {
 		return false
 	}
 	return true

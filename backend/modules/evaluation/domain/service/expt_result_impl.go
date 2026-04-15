@@ -55,6 +55,7 @@ func NewExptResultService(
 	publisher events.ExptEventPublisher,
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	analysisService IEvaluationAnalysisService,
+	fileProvider rpc.IFileProvider,
 ) ExptResultService {
 	return &ExptResultServiceImpl{
 		ExptItemResultRepo:          exptItemResultRepo,
@@ -75,6 +76,7 @@ func NewExptResultService(
 		publisher:                   publisher,
 		tagRPCAdapter:               tagRPCAdapter,
 		analysisService:             analysisService,
+		fileProvider:                fileProvider,
 	}
 }
 
@@ -96,6 +98,7 @@ type ExptResultServiceImpl struct {
 	evaluatorService            EvaluatorService
 	evaluatorRecordService      EvaluatorRecordService
 	evaluationSetItemService    EvaluationSetItemService
+	fileProvider                rpc.IFileProvider
 
 	publisher       events.ExptEventPublisher
 	analysisService IEvaluationAnalysisService
@@ -415,7 +418,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider)
 
 	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
@@ -894,6 +897,7 @@ type PayloadBuilder struct {
 	EvalTargetService                           IEvalTargetService
 	EvaluatorRecordService                      EvaluatorRecordService
 	AnalysisService                             IEvaluationAnalysisService
+	FileProvider                                rpc.IFileProvider
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
 
@@ -920,6 +924,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	exptTurnResultFilterKeyMappingEvaluatorMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	exptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	itemID2ItemRunState map[int64]entity.ItemRunState,
+	fileProvider rpc.IFileProvider,
 ) *PayloadBuilder {
 	builder := &PayloadBuilder{
 		BaselineExptID:           baselineExptID,
@@ -941,6 +946,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		LoadEvaluatorFullContent:      resolveLoadEvaluatorFullContent(param),
 		LoadEvalTargetFullContent:     resolveLoadEvalTargetFullContent(param),
 		LoadEvalTargetOutputFieldKeys: append([]string(nil), param.LoadEvalTargetOutputFieldKeys...),
+		FileProvider:                  fileProvider,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -1059,6 +1065,7 @@ type ExptResultBuilder struct {
 	evalTargetService        IEvalTargetService
 	evaluatorRecordService   EvaluatorRecordService
 	analysisService          IEvaluationAnalysisService
+	fileProvider             rpc.IFileProvider
 
 	// 控制是否保留 trajectory 字段
 	FullTrajectory bool
@@ -1097,6 +1104,7 @@ func (b *PayloadBuilder) BuildItemResults(ctx context.Context) ([]*entity.ItemRe
 			LoadEvaluatorFullContent:      b.LoadEvaluatorFullContent,
 			LoadEvalTargetFullContent:     b.LoadEvalTargetFullContent,
 			LoadEvalTargetOutputFieldKeys: append([]string(nil), b.LoadEvalTargetOutputFieldKeys...),
+			fileProvider:                  b.FileProvider,
 		}
 
 		if exptID == b.BaselineExptID {
@@ -1177,6 +1185,7 @@ func (b *PayloadBuilder) BuildTurnResultFilter(ctx context.Context) ([]*entity.E
 		LoadEvaluatorFullContent:      b.LoadEvaluatorFullContent,
 		LoadEvalTargetFullContent:     b.LoadEvalTargetFullContent,
 		LoadEvalTargetOutputFieldKeys: append([]string(nil), b.LoadEvalTargetOutputFieldKeys...),
+		fileProvider:                  b.FileProvider,
 	}
 
 	exptDO, err := exptResultBuilder.ExperimentRepo.GetByID(ctx, exptResultBuilder.ExptID, exptResultBuilder.SpaceID)
@@ -1858,6 +1867,31 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 	}
 
 	turnResultID2TargetOutput := make(map[int64]*entity.TurnTargetOutput) // turn_result_id -> version_id -> result
+	id2URI := make(map[int64]string)
+	id2URL := make(map[int64]string)
+	for _, targetRecord := range targetRecords {
+		if targetRecord == nil || targetRecord.EvalTargetOutputData == nil || targetRecord.EvalTargetOutputData.Ext == nil || targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] == "" {
+			continue
+		}
+		id2URI[targetRecord.ID] = targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI]
+	}
+	if len(id2URI) > 0 && e.fileProvider != nil {
+		uris := make([]string, 0, len(id2URI))
+		for _, uri := range id2URI {
+			uris = append(uris, uri)
+		}
+		urlMap, err := e.fileProvider.MGetFileURL(ctx, uris)
+		if err != nil {
+			logs.CtxError(ctx, "MGetFileURL failed, err: %v", err)
+		} else {
+			for id, uri := range id2URI {
+				if url, ok := urlMap[uri]; ok {
+					id2URL[id] = url
+				}
+			}
+		}
+	}
+
 	for _, targetRecord := range targetRecords {
 		turnResultID, ok := targetResultID2turnResultID[targetRecord.ID]
 		if !ok {
@@ -1878,6 +1912,12 @@ func (e *ExptResultBuilder) buildTargetOutput(ctx context.Context) error {
 					}
 				}
 			}
+		}
+
+		if targetRecord.EvalTargetOutputData != nil && targetRecord.EvalTargetOutputData.Ext != nil &&
+			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURI] != "" &&
+			id2URL != nil {
+			targetRecord.EvalTargetOutputData.Ext[consts.EvalTargetOutputFieldKeyScreenRecordingURL] = id2URL[targetRecord.ID]
 		}
 
 		turnResultID2TargetOutput[turnResultID] = &entity.TurnTargetOutput{
@@ -2234,7 +2274,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState))
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider)
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -2506,7 +2546,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState))
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider)
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err

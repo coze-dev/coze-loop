@@ -39,6 +39,7 @@ type IConfiger interface {
 	CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error)
 	// 检查当前空间是否可写Agent评估器
 	CheckAgentEvaluatorWritable(ctx context.Context) (bool, error)
+	CheckURIEnabled(ctx context.Context) bool
 }
 
 func NewEvaluatorConfiger(configFactory conf.IConfigLoaderFactory) IConfiger {
@@ -278,4 +279,13 @@ func (c *evaluatorConfiger) CheckCustomRPCEvaluatorWritable(ctx context.Context,
 
 func (c *evaluatorConfiger) CheckAgentEvaluatorWritable(ctx context.Context) (bool, error) {
 	return false, nil
+}
+
+func (c *evaluatorConfiger) CheckURIEnabled(ctx context.Context) bool {
+	const key = "check_uri_enabled"
+	var enabled bool
+	if c.loader.UnmarshalKey(ctx, key, &enabled) == nil {
+		return enabled
+	}
+	return true
 }

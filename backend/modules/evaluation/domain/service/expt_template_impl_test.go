@@ -6875,3 +6875,466 @@ func TestExptTemplateManagerImpl_enrichExptSourceFromPipeline_Error(t *testing.T
 	err := mgr.enrichExptSourceFromPipeline(ctx, templates, 100)
 	assert.Error(t, err)
 }
+
+// ==================== New coverage tests ====================
+
+func TestExptTemplateManagerImpl_Create_WithVisibility(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvalSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
+	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
+	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:                mockRepo,
+		idgen:                       mockIdgen,
+		evaluatorService:            mockEvalSvc,
+		evalTargetService:           mockTargetSvc,
+		evaluationSetService:        mockEvalSetSvc,
+		evaluationSetVersionService: mockEvalSetVerSvc,
+		lwt:                         mockLWT,
+	}
+
+	ctx := context.Background()
+	param := newBasicCreateParam()
+	param.EvaluatorIDVersionItems = []*entity.EvaluatorIDVersionItem{
+		{EvaluatorID: 10, Version: "v1", EvaluatorVersionID: 1001},
+	}
+	param.TemplateConf = &entity.ExptTemplateConfiguration{}
+	vis := entity.Visibility_Hidden
+	param.Visibility = &vis
+	session := &entity.Session{UserID: "u1"}
+
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockIdgen.EXPECT().GenID(ctx).Return(int64(10002), nil)
+	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, tpl *entity.ExptTemplate, _ []*entity.ExptTemplateEvaluatorRef) error {
+		// Verify Visibility is set on the created template
+		assert.Equal(t, entity.Visibility_Hidden, tpl.Meta.Visibility)
+		return nil
+	})
+	mockLWT.EXPECT().SetWriteFlag(ctx, platestwrite.ResourceTypeExptTemplate, int64(10002)).AnyTimes()
+	mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(param.SpaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(param.SpaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), param.SpaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+	mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+	got, err := mgr.Create(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, entity.Visibility_Hidden, got.Meta.Visibility)
+}
+
+func TestExptTemplateManagerImpl_UpdateMeta_WithVisibility(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo: mockRepo,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	session := &entity.Session{UserID: "u1"}
+
+	vis := entity.Visibility_Hidden
+	param := &entity.UpdateExptTemplateMetaParam{
+		TemplateID: templateID,
+		SpaceID:    spaceID,
+		Visibility: &vis,
+	}
+
+	existing := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "tpl",
+		},
+	}
+
+	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
+	mockRepo.EXPECT().UpdateFields(ctx, templateID, gomock.AssignableToTypeOf(map[string]any{})).DoAndReturn(func(_ context.Context, _ int64, fields map[string]any) error {
+		assert.Equal(t, int32(entity.Visibility_Hidden), fields["visibility"])
+		return nil
+	})
+
+	updated := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{ID: templateID, WorkspaceID: spaceID, Name: "tpl", Visibility: entity.Visibility_Hidden},
+	}
+	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(updated, nil)
+
+	got, err := mgr.UpdateMeta(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, entity.Visibility_Hidden, got.Meta.Visibility)
+}
+
+func Test_filterFieldFromTaskRule_AllBranches(t *testing.T) {
+	t.Run("nil input", func(t *testing.T) {
+		assert.Nil(t, filterFieldFromTaskRule(nil))
+	})
+
+	t.Run("with QueryAndOr and SubFilter and ExtraInfo", func(t *testing.T) {
+		queryAndOr := "and"
+		fieldType := "string"
+		queryType := "in"
+		isCustom := true
+		subQueryAndOr := "or"
+
+		f := &taskfilter.FilterField{
+			FieldName:  gptr.Of("name"),
+			FieldType:  &fieldType,
+			QueryType:  &queryType,
+			QueryAndOr: &queryAndOr,
+			IsCustom:   &isCustom,
+			Values:     []string{"a", "b"},
+			ExtraInfo:  map[string]string{"key1": "val1", "key2": "val2"},
+			SubFilter: &taskfilter.FilterFields{
+				QueryAndOr: &subQueryAndOr,
+				FilterFields: []*taskfilter.FilterField{
+					{FieldName: gptr.Of("sub_field")},
+				},
+			},
+		}
+
+		result := filterFieldFromTaskRule(f)
+		assert.NotNil(t, result)
+		assert.Equal(t, &queryAndOr, result.QueryAndOr)
+		assert.NotNil(t, result.SubFilter)
+		assert.Equal(t, &subQueryAndOr, result.SubFilter.QueryAndOr)
+		assert.Len(t, result.ExtraInfo, 2)
+		assert.Equal(t, "val1", result.ExtraInfo["key1"])
+		assert.Equal(t, "val2", result.ExtraInfo["key2"])
+		assert.Equal(t, &isCustom, result.IsCustom)
+	})
+}
+
+func Test_exptSamplerDOFromSamplerJSON_Nil(t *testing.T) {
+	assert.Nil(t, exptSamplerDOFromSamplerJSON(nil))
+}
+
+func Test_exptSamplerFromTaskSampler_NilCycleTimeUnit(t *testing.T) {
+	t.Run("nil sampler", func(t *testing.T) {
+		assert.Nil(t, exptSamplerFromTaskSampler(nil))
+	})
+
+	t.Run("nil CycleTimeUnit", func(t *testing.T) {
+		rate := 0.5
+		s := &taskdomain.Sampler{
+			SampleRate:    &rate,
+			CycleTimeUnit: nil,
+		}
+		result := exptSamplerFromTaskSampler(s)
+		assert.NotNil(t, result)
+		assert.Equal(t, &rate, result.SampleRate)
+		assert.Nil(t, result.CycleTimeUnit)
+	})
+
+	t.Run("with CycleTimeUnit", func(t *testing.T) {
+		unit := "day"
+		s := &taskdomain.Sampler{
+			CycleTimeUnit: &unit,
+		}
+		result := exptSamplerFromTaskSampler(s)
+		assert.NotNil(t, result)
+		assert.Equal(t, &unit, result.CycleTimeUnit)
+	})
+}
+
+func Test_buildSpanFilterFieldsDOFromJSON_Nil(t *testing.T) {
+	assert.Nil(t, buildSpanFilterFieldsDOFromJSON(nil))
+}
+
+func Test_convertTaskFrequency_DefaultWeekday(t *testing.T) {
+	// Cover the "default" branch (Sunday)
+	isCycle := true
+	unit := taskdomain.TimeUnitWeek
+	start := time.Date(2026, 4, 12, 10, 0, 0, 0, time.UTC).UnixMilli() // Sunday
+	sampler := &taskdomain.Sampler{
+		IsCycle:       &isCycle,
+		CycleTimeUnit: &unit,
+	}
+	effectiveTime := &taskdomain.EffectiveTime{
+		StartAt: &start,
+	}
+	f := convertTaskFrequency(sampler, effectiveTime)
+	assert.NotNil(t, f)
+	assert.Equal(t, "sunday", *f)
+}
+
+func TestExptTemplateManagerImpl_Create_CheckNameError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mgr := &ExptTemplateManagerImpl{templateRepo: mockRepo}
+
+	ctx := context.Background()
+	param := newBasicCreateParam()
+	session := &entity.Session{UserID: "u1"}
+
+	// CheckName returns error
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, errors.New("db err"))
+
+	got, err := mgr.Create(ctx, param, session)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+}
+
+func TestExptTemplateManagerImpl_Create_WithOperationInstruction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvalSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
+	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
+	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:                mockRepo,
+		idgen:                       mockIdgen,
+		evaluatorService:            mockEvalSvc,
+		evalTargetService:           mockTargetSvc,
+		evaluationSetService:        mockEvalSetSvc,
+		evaluationSetVersionService: mockEvalSetVerSvc,
+		lwt:                         mockLWT,
+	}
+
+	ctx := context.Background()
+	param := newBasicCreateParam()
+	instruction := "click the button"
+	param.CreateEvalTargetParam = &entity.CreateEvalTargetParam{
+		SourceTargetID:       gptr.Of("src-1"),
+		SourceTargetVersion:  gptr.Of("v1"),
+		EvalTargetType:       gptr.Of(entity.EvalTargetTypeWebAgent),
+		OperationInstruction: &instruction,
+	}
+	param.TemplateConf = &entity.ExptTemplateConfiguration{
+		ConnectorConf: entity.Connector{
+			TargetConf: &entity.TargetConf{TargetVersionID: 1},
+		},
+	}
+	param.EvaluatorIDVersionItems = []*entity.EvaluatorIDVersionItem{
+		{EvaluatorID: 10, Version: "v1", EvaluatorVersionID: 1001},
+	}
+	session := &entity.Session{UserID: "u1"}
+
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockIdgen.EXPECT().GenID(ctx).Return(int64(10003), nil)
+	mockTargetSvc.EXPECT().CreateEvalTarget(gomock.Any(), param.SpaceID, "src-1", "v1", entity.EvalTargetTypeWebAgent, gomock.Any()).Return(int64(30), int64(31), nil)
+	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil)
+	mockLWT.EXPECT().SetWriteFlag(ctx, platestwrite.ResourceTypeExptTemplate, int64(10003)).AnyTimes()
+	mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(param.SpaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(param.SpaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), param.SpaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+	mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+	got, err := mgr.Create(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, int64(10003), got.GetID())
+}
+
+func TestExptTemplateManagerImpl_Update_WithOperationInstruction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+	mockEvalSvc := svcmocks.NewMockEvaluatorService(ctrl)
+	mockTargetSvc := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvalSetSvc := svcmocks.NewMockIEvaluationSetService(ctrl)
+	mockEvalSetVerSvc := svcmocks.NewMockEvaluationSetVersionService(ctrl)
+	mockLWT := lwtmocks.NewMockILatestWriteTracker(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo:                mockRepo,
+		evaluatorService:            mockEvalSvc,
+		evalTargetService:           mockTargetSvc,
+		evaluationSetService:        mockEvalSetSvc,
+		evaluationSetVersionService: mockEvalSetVerSvc,
+		lwt:                         mockLWT,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	session := &entity.Session{UserID: "u1"}
+
+	existing := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "tpl-old",
+			ExptType:    entity.ExptType_Offline,
+		},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:        10,
+			EvalSetVersionID: 11,
+			TargetID:         20,
+			TargetVersionID:  21,
+			TargetType:       entity.EvalTargetTypeWebAgent,
+		},
+	}
+
+	instruction := "navigate to page"
+	param := &entity.UpdateExptTemplateParam{
+		TemplateID:       templateID,
+		SpaceID:          spaceID,
+		EvalSetVersionID: 11,
+		EvaluatorIDVersionItems: []*entity.EvaluatorIDVersionItem{
+			{EvaluatorID: 1, Version: "v1", EvaluatorVersionID: 101},
+		},
+		TemplateConf: &entity.ExptTemplateConfiguration{
+			ConnectorConf: entity.Connector{
+				TargetConf: &entity.TargetConf{},
+				EvaluatorsConf: &entity.EvaluatorsConf{
+					EvaluatorConf: []*entity.EvaluatorConf{
+						{
+							EvaluatorID:        1,
+							Version:            "v1",
+							EvaluatorVersionID: 101,
+							IngressConf:        &entity.EvaluatorIngressConf{EvalSetAdapter: &entity.FieldAdapter{}},
+						},
+					},
+				},
+			},
+		},
+		CreateEvalTargetParam: &entity.CreateEvalTargetParam{
+			SourceTargetID:       gptr.Of("src-id"),
+			SourceTargetVersion:  gptr.Of("v2"),
+			EvalTargetType:       gptr.Of(entity.EvalTargetTypeWebAgent),
+			OperationInstruction: &instruction,
+		},
+	}
+
+	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
+
+	mockTargetSvc.EXPECT().
+		GetEvalTarget(gomock.Any(), int64(20)).
+		Return(&entity.EvalTarget{
+			ID:             20,
+			SourceTargetID: "src-id",
+			EvalTargetType: entity.EvalTargetTypeWebAgent,
+		}, nil)
+
+	mockTargetSvc.EXPECT().
+		CreateEvalTarget(gomock.Any(), spaceID, "src-id", "v2", entity.EvalTargetTypeWebAgent, gomock.Any()).
+		Return(int64(30), int64(40), nil)
+
+	mockRepo.EXPECT().UpdateWithRefs(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+
+	updatedFromDB := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "tpl-old",
+			ExptType:    entity.ExptType_Offline,
+		},
+		TripleConfig: &entity.ExptTemplateTuple{
+			EvalSetID:           10,
+			EvalSetVersionID:    11,
+			TargetID:            30,
+			TargetVersionID:     40,
+			TargetType:          entity.EvalTargetTypeWebAgent,
+			EvaluatorVersionIds: []int64{101},
+		},
+	}
+	mockRepo.EXPECT().GetByID(gomock.Any(), templateID, gomock.AssignableToTypeOf(&spaceID)).Return(updatedFromDB, nil)
+
+	mockTargetSvc.EXPECT().BatchGetEvalTargetVersion(gomock.Any(), spaceID, gomock.Any(), true).Return(nil, nil).AnyTimes()
+	mockEvalSetVerSvc.EXPECT().BatchGetEvaluationSetVersions(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockEvalSetSvc.EXPECT().BatchGetEvaluationSets(gomock.Any(), gptr.Of(spaceID), gomock.Any(), gptr.Of(false)).Return(nil, nil).AnyTimes()
+	mockEvalSvc.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), nil, gomock.Any(), true).Return(nil, nil).AnyTimes()
+
+	got, err := mgr.Update(ctx, param, session)
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Equal(t, int64(40), got.GetTargetVersionID())
+}
+
+func TestExptTemplateManagerImpl_UpdateMeta_NameChange_Exists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo: mockRepo,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	session := &entity.Session{UserID: "u1"}
+
+	param := &entity.UpdateExptTemplateMetaParam{
+		TemplateID: templateID,
+		SpaceID:    spaceID,
+		Name:       "new-name",
+	}
+
+	existing := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "old-name",
+		},
+	}
+
+	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
+	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(&entity.ExptTemplate{}, true, nil)
+
+	got, err := mgr.UpdateMeta(ctx, param, session)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+	code, _, ok := errno.ParseStatusError(err)
+	assert.True(t, ok)
+	assert.Equal(t, errno.ExperimentNameExistedCode, int(code))
+}
+
+func TestExptTemplateManagerImpl_UpdateMeta_NameCheckError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repo_mocks.NewMockIExptTemplateRepo(ctrl)
+
+	mgr := &ExptTemplateManagerImpl{
+		templateRepo: mockRepo,
+	}
+
+	ctx := context.Background()
+	spaceID := int64(100)
+	templateID := int64(1)
+	session := &entity.Session{UserID: "u1"}
+
+	param := &entity.UpdateExptTemplateMetaParam{
+		TemplateID: templateID,
+		SpaceID:    spaceID,
+		Name:       "new-name",
+	}
+
+	existing := &entity.ExptTemplate{
+		Meta: &entity.ExptTemplateMeta{
+			ID:          templateID,
+			WorkspaceID: spaceID,
+			Name:        "old-name",
+		},
+	}
+
+	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
+	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(nil, false, errors.New("db err"))
+
+	got, err := mgr.UpdateMeta(ctx, param, session)
+	assert.Error(t, err)
+	assert.Nil(t, got)
+}

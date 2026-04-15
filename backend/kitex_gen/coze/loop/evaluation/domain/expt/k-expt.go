@@ -184,6 +184,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 21:
 			if fieldTypeId == thrift.I64 {
 				l, err = p.FastReadField21(buf[offset:])
@@ -492,6 +506,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 63:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField63(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 70:
 			if fieldTypeId == thrift.STRING {
 				l, err = p.FastReadField70(buf[offset:])
@@ -663,6 +691,20 @@ func (p *Experiment) FastReadField9(buf []byte) (int, error) {
 		_field = &v
 	}
 	p.ItemConcurNum = _field
+	return offset, nil
+}
+
+func (p *Experiment) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *Visibility
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Visibility = _field
 	return offset, nil
 }
 
@@ -1005,6 +1047,20 @@ func (p *Experiment) FastReadField62(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField63(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ThreadID = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField70(buf []byte) (int, error) {
 	offset := 0
 
@@ -1054,6 +1110,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField23(buf[offset:], w)
 		offset += p.fastWriteField24(buf[offset:], w)
 		offset += p.fastWriteField25(buf[offset:], w)
@@ -1069,6 +1126,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField51(buf[offset:], w)
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField61(buf[offset:], w)
+		offset += p.fastWriteField63(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField71(buf[offset:], w)
 	}
@@ -1088,6 +1146,7 @@ func (p *Experiment) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
@@ -1110,6 +1169,7 @@ func (p *Experiment) BLength() int {
 		l += p.field60Length()
 		l += p.field61Length()
 		l += p.field62Length()
+		l += p.field63Length()
 		l += p.field70Length()
 		l += p.field71Length()
 	}
@@ -1194,6 +1254,15 @@ func (p *Experiment) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetItemConcurNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 9)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemConcurNum)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVisibility() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Visibility)
 	}
 	return offset
 }
@@ -1424,6 +1493,15 @@ func (p *Experiment) fastWriteField62(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *Experiment) fastWriteField63(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetThreadID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 63)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ThreadID)
+	}
+	return offset
+}
+
 func (p *Experiment) fastWriteField70(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetTriggerType() {
@@ -1519,6 +1597,15 @@ func (p *Experiment) field9Length() int {
 	if p.IsSetItemConcurNum() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *Experiment) field10Length() int {
+	l := 0
+	if p.IsSetVisibility() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Visibility)
 	}
 	return l
 }
@@ -1735,6 +1822,15 @@ func (p *Experiment) field62Length() int {
 	return l
 }
 
+func (p *Experiment) field63Length() int {
+	l := 0
+	if p.IsSetThreadID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ThreadID)
+	}
+	return l
+}
+
 func (p *Experiment) field70Length() int {
 	l := 0
 	if p.IsSetTriggerType() {
@@ -1814,6 +1910,11 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 	if src.ItemConcurNum != nil {
 		tmp := *src.ItemConcurNum
 		p.ItemConcurNum = &tmp
+	}
+
+	if src.Visibility != nil {
+		tmp := *src.Visibility
+		p.Visibility = &tmp
 	}
 
 	if src.EvalSetVersionID != nil {
@@ -1995,6 +2096,14 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		p.EnableWeightedScore = &tmp
 	}
 
+	if src.ThreadID != nil {
+		var tmp string
+		if *src.ThreadID != "" {
+			tmp = kutils.StringDeepCopy(*src.ThreadID)
+		}
+		p.ThreadID = &tmp
+	}
+
 	if src.TriggerType != nil {
 		tmp := *src.TriggerType
 		p.TriggerType = &tmp
@@ -2099,6 +2208,20 @@ func (p *ExptTemplateMeta) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2189,6 +2312,20 @@ func (p *ExptTemplateMeta) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptTemplateMeta) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *Visibility
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Visibility = _field
+	return offset, nil
+}
+
 func (p *ExptTemplateMeta) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2201,6 +2338,7 @@ func (p *ExptTemplateMeta) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2214,6 +2352,7 @@ func (p *ExptTemplateMeta) BLength() int {
 		l += p.field3Length()
 		l += p.field4Length()
 		l += p.field5Length()
+		l += p.field6Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2264,6 +2403,15 @@ func (p *ExptTemplateMeta) fastWriteField5(buf []byte, w thrift.NocopyWriter) in
 	return offset
 }
 
+func (p *ExptTemplateMeta) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetVisibility() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Visibility)
+	}
+	return offset
+}
+
 func (p *ExptTemplateMeta) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -2309,6 +2457,15 @@ func (p *ExptTemplateMeta) field5Length() int {
 	return l
 }
 
+func (p *ExptTemplateMeta) field6Length() int {
+	l := 0
+	if p.IsSetVisibility() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Visibility)
+	}
+	return l
+}
+
 func (p *ExptTemplateMeta) DeepCopy(s interface{}) error {
 	src, ok := s.(*ExptTemplateMeta)
 	if !ok {
@@ -2344,6 +2501,11 @@ func (p *ExptTemplateMeta) DeepCopy(s interface{}) error {
 	if src.ExptType != nil {
 		tmp := *src.ExptType
 		p.ExptType = &tmp
+	}
+
+	if src.Visibility != nil {
+		tmp := *src.Visibility
+		p.Visibility = &tmp
 	}
 
 	return nil

@@ -11,6 +11,8 @@ import (
 const (
 	EvalTargetInputFieldKeyPromptUserQuery = expt.PromptUserQueryFieldKey
 
-	EvalTargetOutputFieldKeyActualOutput = common.ArgSchemaKeyActualOutput
-	EvalTargetOutputFieldKeyTrajectory   = common.ArgSchemaKeyTrajectory
+	EvalTargetOutputFieldKeyActualOutput       = common.ArgSchemaKeyActualOutput
+	EvalTargetOutputFieldKeyTrajectory         = common.ArgSchemaKeyTrajectory
+	EvalTargetOutputFieldKeyScreenRecordingURI = "screen_recording_uri"
+	EvalTargetOutputFieldKeyScreenRecordingURL = "screen_recording_url"
 )

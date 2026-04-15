@@ -2106,6 +2106,7 @@ func TestNewExptResultService(t *testing.T) {
 		mockPublisher,
 		mockTagAdapter,
 		nil,
+		nil,
 	)
 
 	impl, ok := svc.(*ExptResultServiceImpl)
@@ -3957,6 +3958,7 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 				nil,
 				nil,
 				tt.itemID2ItemRunState,
+				nil,
 			)
 
 			// 验证结果

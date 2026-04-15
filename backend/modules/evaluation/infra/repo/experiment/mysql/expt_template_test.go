@@ -323,11 +323,11 @@ func TestExptTemplateDAOImpl_List_SQLShapes(t *testing.T) {
 		provider.EXPECT().NewSession(gomock.Any()).Return(gormDB).Times(1)
 
 		countRows := sqlmock.NewRows([]string{"count"}).AddRow(0)
-		mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_template` WHERE space_id = \\? AND deleted_at IS NULL AND `expt_template`\\.`deleted_at` IS NULL").
-			WithArgs(100).
+		mock.ExpectQuery("SELECT count\\(\\*\\) FROM `expt_template` WHERE space_id = \\? AND deleted_at IS NULL AND expt_template\\.visibility <> \\? AND `expt_template`\\.`deleted_at` IS NULL").
+			WithArgs(100, int32(1)).
 			WillReturnRows(countRows)
-		mock.ExpectQuery("SELECT \\* FROM `expt_template` WHERE space_id = \\? AND deleted_at IS NULL AND `expt_template`\\.`deleted_at` IS NULL LIMIT \\?").
-			WithArgs(100, 20).
+		mock.ExpectQuery("SELECT \\* FROM `expt_template` WHERE space_id = \\? AND deleted_at IS NULL AND expt_template\\.visibility <> \\? AND `expt_template`\\.`deleted_at` IS NULL LIMIT \\?").
+			WithArgs(100, int32(1), 20).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 		dao := &exptTemplateDAOImpl{db: provider}
@@ -356,13 +356,13 @@ func TestExptTemplateDAOImpl_List_SQLShapes(t *testing.T) {
 		provider.EXPECT().NewSession(gomock.Any()).Return(gormDB).Times(1)
 
 		countRows := sqlmock.NewRows([]string{"count"}).AddRow(1)
-		countSQL := "SELECT count\\(\\*\\) FROM `expt_template` INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id WHERE expt_template.space_id = \\? AND expt_template.deleted_at IS NULL AND expt_template_evaluator_ref.evaluator_id IN \\(\\?\\) AND `expt_template`\\.`deleted_at` IS NULL GROUP BY `expt_template`\\.`id` ORDER BY expt_template.created_at asc"
-		findSQL := "SELECT `expt_template`\\.`id`,`expt_template`\\.`space_id`,`expt_template`\\.`name`,`expt_template`\\.`description`,`expt_template`\\.`eval_set_id`,`expt_template`\\.`eval_set_version_id`,`expt_template`\\.`target_id`,`expt_template`\\.`target_type`,`expt_template`\\.`target_version_id`,`expt_template`\\.`expt_type`,`expt_template`\\.`cron_activate`,`expt_template`\\.`template_conf`,`expt_template`\\.`expt_info`,`expt_template`\\.`created_by`,`expt_template`\\.`updated_by`,`expt_template`\\.`created_at`,`expt_template`\\.`updated_at`,`expt_template`\\.`deleted_at` FROM `expt_template` INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id WHERE expt_template.space_id = \\? AND expt_template.deleted_at IS NULL AND expt_template_evaluator_ref.evaluator_id IN \\(\\?\\) AND `expt_template`\\.`deleted_at` IS NULL GROUP BY `expt_template`\\.`id` ORDER BY expt_template.created_at asc LIMIT \\? OFFSET \\?"
+		countSQL := "SELECT count\\(\\*\\) FROM `expt_template` INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id WHERE expt_template.space_id = \\? AND expt_template.deleted_at IS NULL AND expt_template\\.visibility <> \\? AND expt_template_evaluator_ref.evaluator_id IN \\(\\?\\) AND `expt_template`\\.`deleted_at` IS NULL GROUP BY `expt_template`\\.`id` ORDER BY expt_template.created_at asc"
+		findSQL := "SELECT `expt_template`\\.`id`,`expt_template`\\.`space_id`,`expt_template`\\.`name`,`expt_template`\\.`description`,`expt_template`\\.`eval_set_id`,`expt_template`\\.`eval_set_version_id`,`expt_template`\\.`target_id`,`expt_template`\\.`target_type`,`expt_template`\\.`target_version_id`,`expt_template`\\.`expt_type`,`expt_template`\\.`cron_activate`,`expt_template`\\.`template_conf`,`expt_template`\\.`expt_info`,`expt_template`\\.`created_by`,`expt_template`\\.`updated_by`,`expt_template`\\.`created_at`,`expt_template`\\.`updated_at`,`expt_template`\\.`deleted_at`,`expt_template`\\.`visibility` FROM `expt_template` INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id WHERE expt_template.space_id = \\? AND expt_template.deleted_at IS NULL AND expt_template\\.visibility <> \\? AND expt_template_evaluator_ref.evaluator_id IN \\(\\?\\) AND `expt_template`\\.`deleted_at` IS NULL GROUP BY `expt_template`\\.`id` ORDER BY expt_template.created_at asc LIMIT \\? OFFSET \\?"
 		mock.ExpectQuery(countSQL).
-			WithArgs(100, 1001).
+			WithArgs(100, int32(1), 1001).
 			WillReturnRows(countRows)
 		mock.ExpectQuery(findSQL).
-			WithArgs(100, 1001, 5, 5).
+			WithArgs(100, int32(1), 1001, 5, 5).
 			WillReturnRows(sqlmock.NewRows([]string{"id"}))
 
 		field := "created_at"

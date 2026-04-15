@@ -107,6 +107,7 @@ struct EvalTargetOutputData {
     2: optional EvalTargetUsage eval_target_usage             // 运行消耗
     3: optional EvalTargetRunError eval_target_run_error         // 运行报错
     4: optional i64 time_consuming_ms (api.js_conv='true', go.tag='json:\"time_consuming_ms\"') // 运行耗时
+    20: optional map<string, string> ext    // 平台扩展字段
 }
 
 struct EvalTargetUsage {

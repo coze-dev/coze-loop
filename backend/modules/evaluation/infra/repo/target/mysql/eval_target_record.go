@@ -24,6 +24,7 @@ type EvalTargetRecordDAO interface {
 	Save(ctx context.Context, record *model.TargetRecord) error
 	Update(ctx context.Context, record *model.TargetRecord) error
 	GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error)
+	GetByRunIDItemIDTurnID(ctx context.Context, spaceID, runID, itemID, turnID int64) (*model.TargetRecord, error)
 	ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error)
 }
 
@@ -62,6 +63,26 @@ func (e *EvalTargetRecordDAOImpl) Create(ctx context.Context, record *model.Targ
 func (e *EvalTargetRecordDAOImpl) GetByIDAndSpaceID(ctx context.Context, recordID, spaceID int64) (*model.TargetRecord, error) {
 	q := e.query
 	first, err := q.WithContext(ctx).TargetRecord.Where(q.TargetRecord.SpaceID.Eq(spaceID), q.TargetRecord.ID.Eq(recordID), q.TargetRecord.DeletedAt.IsNull()).First()
+
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommonMySqlErrorCode)
+	}
+
+	return first, nil
+}
+
+func (e *EvalTargetRecordDAOImpl) GetByRunIDItemIDTurnID(ctx context.Context, spaceID, runID, itemID, turnID int64) (*model.TargetRecord, error) {
+	q := e.query
+	first, err := q.WithContext(ctx).TargetRecord.Where(
+		q.TargetRecord.SpaceID.Eq(spaceID),
+		q.TargetRecord.ExperimentRunID.Eq(runID),
+		q.TargetRecord.ItemID.Eq(itemID),
+		q.TargetRecord.TurnID.Eq(turnID),
+		q.TargetRecord.DeletedAt.IsNull(),
+	).First()
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, nil

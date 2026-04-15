@@ -47,6 +47,8 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		SourceType:       int32(experiment.SourceType),
 		SourceID:         experiment.SourceID,
 		ExptType:         int32(experiment.ExptType),
+		Visibility:       int32(experiment.Visibility),
+		ThreadID:         experiment.ThreadID,
 		TriggerType:      experiment.TriggerType,
 	}
 
@@ -60,6 +62,9 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 			return nil, errorx.Wrapf(err, "EvaluationConfiguration json marshal fail")
 		}
 		expt.EvalConf = &bytes
+	}
+	if experiment.TrialRunItemCount != 0 {
+		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
 
 	return expt, nil
@@ -106,6 +111,9 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		SourceID:            expt.SourceID,
 		ExptType:            entity.ExptType(expt.ExptType),
 		MaxAliveTime:        gptr.Indirect(expt.MaxAliveTime),
+		Visibility:          entity.Visibility(expt.Visibility),
+		ThreadID:            expt.ThreadID,
+		TrialRunItemCount:   gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:         expt.TriggerType,
 	}
 

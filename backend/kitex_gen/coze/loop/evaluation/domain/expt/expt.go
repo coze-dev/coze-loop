@@ -19,6 +19,8 @@ import (
 )
 
 const (
+	VisibilityHidden = "hidden"
+
 	Manual = "manual"
 
 	OpenAPI = "openapi"
@@ -227,6 +229,8 @@ const (
 	SourceType_Evaluation SourceType = 1
 	SourceType_AutoTask   SourceType = 2
 	SourceType_Workflow   SourceType = 3
+	// 智能生成
+	SourceType_IntelligentGen SourceType = 4
 )
 
 func (p SourceType) String() string {
@@ -237,6 +241,8 @@ func (p SourceType) String() string {
 		return "AutoTask"
 	case SourceType_Workflow:
 		return "Workflow"
+	case SourceType_IntelligentGen:
+		return "IntelligentGen"
 	}
 	return "<UNSET>"
 }
@@ -249,6 +255,8 @@ func SourceTypeFromString(s string) (SourceType, error) {
 		return SourceType_AutoTask, nil
 	case "Workflow":
 		return SourceType_Workflow, nil
+	case "IntelligentGen":
+		return SourceType_IntelligentGen, nil
 	}
 	return SourceType(0), fmt.Errorf("not a valid SourceType string")
 }
@@ -987,6 +995,8 @@ func (p *DataType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type Visibility = string
+
 type ExptTriggerType = string
 
 type Frequency = string
@@ -1005,15 +1015,17 @@ type InsightAnalysisReportVoteType = string
 type FeedbackActionType = string
 
 type Experiment struct {
-	ID                    *int64                   `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name                  *string                  `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Desc                  *string                  `thrift:"desc,3,optional" frugal:"3,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
-	CreatorBy             *string                  `thrift:"creator_by,4,optional" frugal:"4,optional,string" form:"creator_by" json:"creator_by,omitempty" query:"creator_by"`
-	Status                *ExptStatus              `thrift:"status,5,optional" frugal:"5,optional,ExptStatus" form:"status" json:"status,omitempty" query:"status"`
-	StatusMessage         *string                  `thrift:"status_message,6,optional" frugal:"6,optional,string" form:"status_message" json:"status_message,omitempty" query:"status_message"`
-	StartTime             *int64                   `thrift:"start_time,7,optional" frugal:"7,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
-	EndTime               *int64                   `thrift:"end_time,8,optional" frugal:"8,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
-	ItemConcurNum         *int32                   `thrift:"item_concur_num,9,optional" frugal:"9,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name          *string     `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Desc          *string     `thrift:"desc,3,optional" frugal:"3,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
+	CreatorBy     *string     `thrift:"creator_by,4,optional" frugal:"4,optional,string" form:"creator_by" json:"creator_by,omitempty" query:"creator_by"`
+	Status        *ExptStatus `thrift:"status,5,optional" frugal:"5,optional,ExptStatus" form:"status" json:"status,omitempty" query:"status"`
+	StatusMessage *string     `thrift:"status_message,6,optional" frugal:"6,optional,string" form:"status_message" json:"status_message,omitempty" query:"status_message"`
+	StartTime     *int64      `thrift:"start_time,7,optional" frugal:"7,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
+	EndTime       *int64      `thrift:"end_time,8,optional" frugal:"8,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
+	ItemConcurNum *int32      `thrift:"item_concur_num,9,optional" frugal:"9,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+	// 实验可见性，默认为空，可见
+	Visibility            *Visibility              `thrift:"visibility,10,optional" frugal:"10,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
 	EvalSetVersionID      *int64                   `thrift:"eval_set_version_id,21,optional" frugal:"21,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" query:"eval_set_version_id"`
 	TargetVersionID       *int64                   `thrift:"target_version_id,22,optional" frugal:"22,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
 	EvaluatorVersionIds   []int64                  `thrift:"evaluator_version_ids,23,optional" frugal:"23,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
@@ -1038,6 +1050,8 @@ type Experiment struct {
 	// 评估器得分加权配置
 	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
 	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	// 智能评测相关
+	ThreadID *string `thrift:"thread_id,63,optional" frugal:"63,optional,string" form:"thread_id" json:"thread_id,omitempty" query:"thread_id"`
 	// 触发方式
 	TriggerType *ExptTriggerType `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	ExptSource  *ExptSource      `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
@@ -1156,6 +1170,18 @@ func (p *Experiment) GetItemConcurNum() (v int32) {
 		return Experiment_ItemConcurNum_DEFAULT
 	}
 	return *p.ItemConcurNum
+}
+
+var Experiment_Visibility_DEFAULT Visibility
+
+func (p *Experiment) GetVisibility() (v Visibility) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVisibility() {
+		return Experiment_Visibility_DEFAULT
+	}
+	return *p.Visibility
 }
 
 var Experiment_EvalSetVersionID_DEFAULT int64
@@ -1422,6 +1448,18 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	return *p.EnableWeightedScore
 }
 
+var Experiment_ThreadID_DEFAULT string
+
+func (p *Experiment) GetThreadID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetThreadID() {
+		return Experiment_ThreadID_DEFAULT
+	}
+	return *p.ThreadID
+}
+
 var Experiment_TriggerType_DEFAULT ExptTriggerType
 
 func (p *Experiment) GetTriggerType() (v ExptTriggerType) {
@@ -1471,6 +1509,9 @@ func (p *Experiment) SetEndTime(val *int64) {
 }
 func (p *Experiment) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
+}
+func (p *Experiment) SetVisibility(val *Visibility) {
+	p.Visibility = val
 }
 func (p *Experiment) SetEvalSetVersionID(val *int64) {
 	p.EvalSetVersionID = val
@@ -1538,6 +1579,9 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
+func (p *Experiment) SetThreadID(val *string) {
+	p.ThreadID = val
+}
 func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
 	p.TriggerType = val
 }
@@ -1555,6 +1599,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	7:  "start_time",
 	8:  "end_time",
 	9:  "item_concur_num",
+	10: "visibility",
 	21: "eval_set_version_id",
 	22: "target_version_id",
 	23: "evaluator_version_ids",
@@ -1577,6 +1622,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	60: "expt_template_meta",
 	61: "score_weight_config",
 	62: "enable_weighted_score",
+	63: "thread_id",
 	70: "trigger_type",
 	71: "expt_source",
 }
@@ -1615,6 +1661,10 @@ func (p *Experiment) IsSetEndTime() bool {
 
 func (p *Experiment) IsSetItemConcurNum() bool {
 	return p.ItemConcurNum != nil
+}
+
+func (p *Experiment) IsSetVisibility() bool {
+	return p.Visibility != nil
 }
 
 func (p *Experiment) IsSetEvalSetVersionID() bool {
@@ -1703,6 +1753,10 @@ func (p *Experiment) IsSetScoreWeightConfig() bool {
 
 func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetThreadID() bool {
+	return p.ThreadID != nil
 }
 
 func (p *Experiment) IsSetTriggerType() bool {
@@ -1798,6 +1852,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1979,6 +2041,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 63:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField63(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 70:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField70(iprot); err != nil {
@@ -2122,6 +2192,17 @@ func (p *Experiment) ReadField9(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.ItemConcurNum = _field
+	return nil
+}
+func (p *Experiment) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *Visibility
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Visibility = _field
 	return nil
 }
 func (p *Experiment) ReadField21(iprot thrift.TProtocol) error {
@@ -2392,6 +2473,17 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
+func (p *Experiment) ReadField63(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ThreadID = _field
+	return nil
+}
 func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
 
 	var _field *ExptTriggerType
@@ -2452,6 +2544,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField21(oprot); err != nil {
@@ -2540,6 +2636,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField62(oprot); err != nil {
 			fieldId = 62
+			goto WriteFieldError
+		}
+		if err = p.writeField63(oprot); err != nil {
+			fieldId = 63
 			goto WriteFieldError
 		}
 		if err = p.writeField70(oprot); err != nil {
@@ -2729,6 +2829,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *Experiment) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibility() {
+		if err = oprot.WriteFieldBegin("visibility", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Visibility); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 func (p *Experiment) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetVersionID() {
@@ -3158,6 +3276,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
 }
+func (p *Experiment) writeField63(oprot thrift.TProtocol) (err error) {
+	if p.IsSetThreadID() {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 63); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ThreadID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 63 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 63 end error: ", p), err)
+}
 func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTriggerType() {
 		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 70); err != nil {
@@ -3236,6 +3372,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field9DeepEqual(ano.ItemConcurNum) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.Visibility) {
+		return false
+	}
 	if !p.Field21DeepEqual(ano.EvalSetVersionID) {
 		return false
 	}
@@ -3300,6 +3439,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field62DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field63DeepEqual(ano.ThreadID) {
 		return false
 	}
 	if !p.Field70DeepEqual(ano.TriggerType) {
@@ -3415,6 +3557,18 @@ func (p *Experiment) Field9DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemConcurNum != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field10DeepEqual(src *Visibility) bool {
+
+	if p.Visibility == src {
+		return true
+	} else if p.Visibility == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Visibility, *src) != 0 {
 		return false
 	}
 	return true
@@ -3647,6 +3801,18 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *Experiment) Field63DeepEqual(src *string) bool {
+
+	if p.ThreadID == src {
+		return true
+	} else if p.ThreadID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ThreadID, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
 
 	if p.TriggerType == src {
@@ -3675,6 +3841,8 @@ type ExptTemplateMeta struct {
 	Desc        *string `thrift:"desc,4,optional" frugal:"4,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
 	// 模板对应的实验类型，当前主要为 Offline
 	ExptType *ExptType `thrift:"expt_type,5,optional" frugal:"5,optional,ExptType" form:"expt_type" json:"expt_type,omitempty" query:"expt_type"`
+	// 实验模板可见性，默认为空，可见
+	Visibility *Visibility `thrift:"visibility,6,optional" frugal:"6,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
 }
 
 func NewExptTemplateMeta() *ExptTemplateMeta {
@@ -3743,6 +3911,18 @@ func (p *ExptTemplateMeta) GetExptType() (v ExptType) {
 	}
 	return *p.ExptType
 }
+
+var ExptTemplateMeta_Visibility_DEFAULT Visibility
+
+func (p *ExptTemplateMeta) GetVisibility() (v Visibility) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVisibility() {
+		return ExptTemplateMeta_Visibility_DEFAULT
+	}
+	return *p.Visibility
+}
 func (p *ExptTemplateMeta) SetID(val *int64) {
 	p.ID = val
 }
@@ -3758,6 +3938,9 @@ func (p *ExptTemplateMeta) SetDesc(val *string) {
 func (p *ExptTemplateMeta) SetExptType(val *ExptType) {
 	p.ExptType = val
 }
+func (p *ExptTemplateMeta) SetVisibility(val *Visibility) {
+	p.Visibility = val
+}
 
 var fieldIDToName_ExptTemplateMeta = map[int16]string{
 	1: "id",
@@ -3765,6 +3948,7 @@ var fieldIDToName_ExptTemplateMeta = map[int16]string{
 	3: "name",
 	4: "desc",
 	5: "expt_type",
+	6: "visibility",
 }
 
 func (p *ExptTemplateMeta) IsSetID() bool {
@@ -3785,6 +3969,10 @@ func (p *ExptTemplateMeta) IsSetDesc() bool {
 
 func (p *ExptTemplateMeta) IsSetExptType() bool {
 	return p.ExptType != nil
+}
+
+func (p *ExptTemplateMeta) IsSetVisibility() bool {
+	return p.Visibility != nil
 }
 
 func (p *ExptTemplateMeta) Read(iprot thrift.TProtocol) (err error) {
@@ -3840,6 +4028,14 @@ func (p *ExptTemplateMeta) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3930,6 +4126,17 @@ func (p *ExptTemplateMeta) ReadField5(iprot thrift.TProtocol) error {
 	p.ExptType = _field
 	return nil
 }
+func (p *ExptTemplateMeta) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *Visibility
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Visibility = _field
+	return nil
+}
 
 func (p *ExptTemplateMeta) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3955,6 +4162,10 @@ func (p *ExptTemplateMeta) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -4065,6 +4276,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExptTemplateMeta) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibility() {
+		if err = oprot.WriteFieldBegin("visibility", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Visibility); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ExptTemplateMeta) String() string {
 	if p == nil {
@@ -4093,6 +4322,9 @@ func (p *ExptTemplateMeta) DeepEqual(ano *ExptTemplateMeta) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.ExptType) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Visibility) {
 		return false
 	}
 	return true
@@ -4154,6 +4386,18 @@ func (p *ExptTemplateMeta) Field5DeepEqual(src *ExptType) bool {
 		return false
 	}
 	if *p.ExptType != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field6DeepEqual(src *Visibility) bool {
+
+	if p.Visibility == src {
+		return true
+	} else if p.Visibility == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Visibility, *src) != 0 {
 		return false
 	}
 	return true

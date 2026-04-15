@@ -45,6 +45,7 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 	_exptTemplate.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTemplate.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTemplate.DeletedAt = field.NewField(tableName, "deleted_at")
+	_exptTemplate.Visibility = field.NewInt32(tableName, "visibility")
 
 	_exptTemplate.fillFieldMap()
 
@@ -74,6 +75,7 @@ type exptTemplate struct {
 	CreatedAt        field.Time   // 创建时间
 	UpdatedAt        field.Time   // 更新时间
 	DeletedAt        field.Field  // 删除时间
+	Visibility       field.Int32  // 可见性，默认0-可见，1-隐藏
 
 	fieldMap map[string]field.Expr
 }
@@ -108,6 +110,7 @@ func (e *exptTemplate) updateTableName(table string) *exptTemplate {
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
+	e.Visibility = field.NewInt32(table, "visibility")
 
 	e.fillFieldMap()
 
@@ -136,7 +139,7 @@ func (e *exptTemplate) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (e *exptTemplate) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 18)
+	e.fieldMap = make(map[string]field.Expr, 19)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["name"] = e.Name
@@ -155,6 +158,7 @@ func (e *exptTemplate) fillFieldMap() {
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
+	e.fieldMap["visibility"] = e.Visibility
 }
 
 func (e exptTemplate) clone(db *gorm.DB) exptTemplate {

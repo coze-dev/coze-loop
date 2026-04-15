@@ -491,7 +491,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
 
-	invokeID, callee, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
+	invokeID, callee, ext, execErr := operator.AsyncExecute(ctx, spaceID, &entity.ExecuteEvalTargetParam{
 		ExptID:              gptr.Indirect(param.ExperimentID),
 		TargetID:            targetID,
 		VersionID:           targetVersionID,
@@ -512,7 +512,7 @@ func (e *EvalTargetServiceImpl) asyncExecuteTarget(ctx context.Context, spaceID 
 	}
 
 	logs.CtxInfo(ctx, "AsyncExecute with invoke_id %v, callee: %v, target_id: %v, target_version_id: %v", invokeID, callee, targetID, targetVersionID)
-
+	outputData.Ext = ext
 	userID := session.UserIDInCtxOrEmpty(ctx)
 	record = &entity.EvalTargetRecord{
 		ID:                   invokeID,
@@ -649,6 +649,10 @@ func (e *EvalTargetServiceImpl) GetRecordByID(ctx context.Context, spaceID, reco
 	return e.evalTargetRepo.GetEvalTargetRecordByIDAndSpaceID(ctx, spaceID, recordID)
 }
 
+func (e *EvalTargetServiceImpl) GetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	return e.evalTargetRepo.GetEvalTargetRecordByRunItemTurn(ctx, spaceID, runID, itemID, turnID)
+}
+
 func (e *EvalTargetServiceImpl) BatchGetRecordByIDs(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	if spaceID == 0 || len(recordIDs) == 0 {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode)
@@ -683,6 +687,17 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 
 	if status := gptr.Indirect(record.Status); status != entity.EvalTargetRunStatusAsyncInvoking {
 		return errorx.NewByCode(errno.CommonBadRequestCode, errorx.WithExtraMsg(fmt.Sprintf("unexpected target result status %d", status)))
+	}
+	if record.EvalTargetOutputData != nil && len(record.EvalTargetOutputData.Ext) > 0 {
+		if param.OutputData == nil {
+			param.OutputData = &entity.EvalTargetOutputData{}
+		}
+		if param.OutputData.Ext == nil {
+			param.OutputData.Ext = make(map[string]string)
+		}
+		for k, v := range record.EvalTargetOutputData.Ext {
+			param.OutputData.Ext[k] = v
+		}
 	}
 
 	record.EvalTargetOutputData = param.OutputData

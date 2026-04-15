@@ -61,6 +61,13 @@ func fillCreateTemplateMeta(param *entity.CreateExptTemplateParam, req *expt.Cre
 	param.Name = meta.GetName()
 	param.Description = meta.GetDesc()
 	param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
+	if meta.IsSetVisibility() {
+		if meta.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
 	if req.GetExptInfo() != nil && req.GetExptInfo().IsSetCronActivate() {
 		param.CronActivate = req.GetExptInfo().GetCronActivate()
 	}
@@ -655,6 +662,13 @@ func ConvertUpdateExptTemplateMetaReq(req *expt.UpdateExperimentTemplateMetaRequ
 		if meta.IsSetExptType() {
 			param.ExptType = entity.ExptType(meta.GetExptType())
 		}
+		if meta.IsSetVisibility() {
+			if meta.GetVisibility() == domain_expt.VisibilityHidden {
+				param.Visibility = gptr.Of(entity.Visibility_Hidden)
+			} else {
+				param.Visibility = gptr.Of(entity.Visibility(0))
+			}
+		}
 	}
 
 	return param, nil
@@ -671,6 +685,9 @@ func fillTemplateMetaDTO(template *entity.ExptTemplate, dto *domain_expt.ExptTem
 		Name:        gptr.Of(template.Meta.Name),
 		Desc:        gptr.Of(template.Meta.Desc),
 		ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
+	}
+	if template.Meta.Visibility == entity.Visibility_Hidden {
+		dto.Meta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 	}
 }
 
@@ -1180,11 +1197,12 @@ func CreateEvalTargetParamDTO2DOForTemplate(param *eval_target.CreateEvalTargetP
 	}
 
 	res := &entity.CreateEvalTargetParam{
-		SourceTargetID:      param.SourceTargetID,
-		SourceTargetVersion: param.SourceTargetVersion,
-		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
+		SourceTargetID:       param.SourceTargetID,
+		SourceTargetVersion:  param.SourceTargetVersion,
+		BotPublishVersion:    param.BotPublishVersion,
+		Region:               param.Region,
+		Env:                  param.Env,
+		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
@@ -1237,6 +1255,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	// 从 triple_config 中提取三元组配置（注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置）
 	if req.GetTripleConfig() != nil {
 		tripleConfig := req.GetTripleConfig()
+		param.EvalSetID = tripleConfig.GetEvalSetID()
 		param.EvalSetVersionID = tripleConfig.GetEvalSetVersionID()
 		param.TargetVersionID = tripleConfig.GetTargetVersionID()
 		// 从 EvaluatorIDVersionItems 构建 entity 层的 EvaluatorIDVersionItems

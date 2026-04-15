@@ -125,6 +125,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			Name:        param.Name,
 			Desc:        param.Description,
 			ExptType:    param.ExptType,
+			Visibility:  gptr.Indirect(param.Visibility),
 		},
 		ExptInfo: &entity.ExptInfo{
 			CronActivate: param.CronActivate,
@@ -147,6 +148,9 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
 		ExptSource: param.ExptSource,
+	}
+	if param.Visibility != nil {
+		template.Meta.Visibility = *param.Visibility
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
@@ -303,7 +307,8 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
-			entity.WithEnv(param.CreateEvalTargetParam.Env))
+			entity.WithEnv(param.CreateEvalTargetParam.Env),
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -348,6 +353,10 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	if updatedMeta.ExptType == 0 {
 		updatedMeta.ExptType = existingTemplate.GetExptType()
 	}
+	evalSetID := existingTemplate.GetEvalSetID()
+	if param.EvalSetID > 0 {
+		evalSetID = param.EvalSetID
+	}
 
 	// 合并 ExptInfo（cron_activate 等运行态字段）
 	var mergedExptInfo *entity.ExptInfo
@@ -363,7 +372,7 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 
 	// 准备更新后的 TripleConfig
 	updatedTripleConfig := &entity.ExptTemplateTuple{
-		EvalSetID:               existingTemplate.GetEvalSetID(), // 不允许修改
+		EvalSetID:               evalSetID, // 允许修改
 		EvalSetVersionID:        param.EvalSetVersionID,
 		TargetID:                finalTargetID,
 		TargetVersionID:         finalTargetVersionID,
@@ -489,6 +498,9 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 	}
 	if param.ExptType > 0 {
 		ufields["expt_type"] = int32(param.ExptType)
+	}
+	if param.Visibility != nil {
+		ufields["visibility"] = int32(*param.Visibility)
 	}
 	if param.CronActivate != nil {
 		ufields["cron_activate"] = *param.CronActivate
@@ -1796,7 +1808,8 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 		opts = append(opts, entity.WithCozeBotPublishVersion(param.CreateEvalTargetParam.BotPublishVersion),
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
-			entity.WithEnv(param.CreateEvalTargetParam.Env))
+			entity.WithEnv(param.CreateEvalTargetParam.Env),
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,

@@ -320,7 +320,7 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	}
 
 	switch runMode {
-	case entity.EvaluationModeSubmit:
+	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
 		if err = e.sendExptNotify(ctx, expt); err != nil {
 			logs.CtxWarn(ctx, "[Run] SendExptNotify failed, expt_id: %v, error: %v", exptID, err)
 		}
@@ -672,6 +672,9 @@ func (e *ExptMangerImpl) sendExptNotify(ctx context.Context, expt *entity.Experi
 		param["end_time"] = expt.EndAt.Format(time.DateTime)
 	} else {
 		param["end_time"] = "-"
+	}
+	if expt.SourceType == entity.SourceType_IntelligentGen {
+		param["thread_id"] = gptr.Indirect(expt.ThreadID)
 	}
 	switch expt.Status {
 	case entity.ExptStatus_Success:

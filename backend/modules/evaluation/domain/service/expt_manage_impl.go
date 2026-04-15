@@ -720,7 +720,8 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		opts = append(opts, entity.WithCozeBotPublishVersion(req.CreateEvalTargetParam.BotPublishVersion),
 			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(req.CreateEvalTargetParam.Region),
-			entity.WithEnv(req.CreateEvalTargetParam.Env))
+			entity.WithEnv(req.CreateEvalTargetParam.Env),
+			entity.WithOperationInstruction(req.CreateEvalTargetParam.OperationInstruction))
 		if req.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        req.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -800,11 +801,18 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		MaxAliveTime:        req.MaxAliveTime,
 		SourceType:          req.SourceType,
 		SourceID:            req.SourceID,
+		TrialRunItemCount:   req.TrialRunItemCount,
 		TriggerType:         triggerType,
 
 		Target:     tuple.Target,
 		Evaluators: tuple.Evaluators,
 		EvalSet:    tuple.EvalSet,
+	}
+	if req.Visibility != nil {
+		do.Visibility = *req.Visibility
+	}
+	if req.ThreadID != nil {
+		do.ThreadID = req.ThreadID
 	}
 
 	// 如果提供了模板 ID，设置 ExptTemplateMeta
