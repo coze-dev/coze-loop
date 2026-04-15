@@ -9136,3 +9136,192 @@ func TestEvaluatorHandlerImpl_UpdateEvaluatorRecord_Comprehensive(t *testing.T) 
 		})
 	}
 }
+
+func TestBuildAsyncRunEvaluatorRequest(t *testing.T) {
+	rpJSON := `{"model_config":{"model_id":"m-1","temperature":0.8}}`
+
+	tests := []struct {
+		name           string
+		request        *evaluatorservice.AsyncRunEvaluatorRequest
+		evaluatorName  string
+		wantRuntimeExt bool
+	}{
+		{
+			name:          "带RuntimeParam且InputData非nil - Ext为nil",
+			evaluatorName: "test-evaluator",
+			request: &evaluatorservice.AsyncRunEvaluatorRequest{
+				WorkspaceID:        123,
+				EvaluatorVersionID: 456,
+				InputData: &evaluatordto.EvaluatorInputData{
+					InputFields: map[string]*common.Content{
+						"input": {ContentType: ptr.Of(common.ContentTypeText), Text: ptr.Of("hello")},
+					},
+				},
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: ptr.Of(rpJSON)},
+				},
+			},
+			wantRuntimeExt: true,
+		},
+		{
+			name:          "带RuntimeParam且InputData为nil",
+			evaluatorName: "test-evaluator-2",
+			request: &evaluatorservice.AsyncRunEvaluatorRequest{
+				WorkspaceID:        123,
+				EvaluatorVersionID: 789,
+				EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+					EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: ptr.Of(rpJSON)},
+				},
+			},
+			wantRuntimeExt: true,
+		},
+		{
+			name:          "不带RuntimeParam",
+			evaluatorName: "test-evaluator-3",
+			request: &evaluatorservice.AsyncRunEvaluatorRequest{
+				WorkspaceID:        100,
+				EvaluatorVersionID: 200,
+				ExperimentID:       gptr.Of(int64(300)),
+				ExperimentRunID:    gptr.Of(int64(400)),
+				ItemID:             gptr.Of(int64(500)),
+				TurnID:             gptr.Of(int64(600)),
+				InputData:          &evaluatordto.EvaluatorInputData{},
+			},
+			wantRuntimeExt: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := buildAsyncRunEvaluatorRequest(tt.evaluatorName, tt.request)
+			require.NotNil(t, got)
+			assert.Equal(t, tt.request.WorkspaceID, got.SpaceID)
+			assert.Equal(t, tt.evaluatorName, got.Name)
+			assert.Equal(t, tt.request.EvaluatorVersionID, got.EvaluatorVersionID)
+			assert.Equal(t, tt.request.GetExperimentID(), got.ExperimentID)
+			assert.Equal(t, tt.request.GetExperimentRunID(), got.ExperimentRunID)
+			assert.Equal(t, tt.request.GetItemID(), got.ItemID)
+			assert.Equal(t, tt.request.GetTurnID(), got.TurnID)
+
+			if tt.wantRuntimeExt {
+				require.NotNil(t, got.InputData)
+				require.NotNil(t, got.InputData.Ext)
+				assert.Equal(t, rpJSON, got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+			} else {
+				if got.InputData != nil && got.InputData.Ext != nil {
+					_, exists := got.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam]
+					assert.False(t, exists)
+				}
+			}
+		})
+	}
+}
+
+func TestAsyncDebugEvaluator_ErrorBranches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockEvalAsyncRepo := repomocks.NewMockIEvalAsyncRepo(ctrl)
+	mockFileProvider := rpcmocks.NewMockIFileProvider(ctrl)
+
+	handler := &EvaluatorHandlerImpl{
+		evaluatorService: mockEvaluatorService,
+		auth:             mockAuth,
+		evalAsyncRepo:    mockEvalAsyncRepo,
+		fileProvider:     mockFileProvider,
+	}
+
+	ctx := context.Background()
+
+	t.Run("失败 - transformURIsToURLs出错", func(t *testing.T) {
+		req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+			WorkspaceID:   1,
+			EvaluatorType: evaluatordto.EvaluatorType_Agent,
+			InputData: &evaluatordto.EvaluatorInputData{
+				InputFields: map[string]*common.Content{
+					"img": {
+						ContentType: gptr.Of(common.ContentType(common.ContentTypeImage)),
+						Image: &common.Image{
+							URI: gptr.Of("uri:fail"),
+						},
+					},
+				},
+			},
+			EvaluatorContent: &evaluatordto.EvaluatorContent{
+				AgentEvaluator: &evaluatordto.AgentEvaluator{
+					AgentConfig: &common.AgentConfig{
+						AgentType: gptr.Of("single_agent"),
+					},
+				},
+			},
+		}
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockFileProvider.EXPECT().MGetFileURL(gomock.Any(), []string{"uri:fail"}).Return(nil, errors.New("file url error"))
+
+		resp, err := handler.AsyncDebugEvaluator(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("失败 - ConvertEvaluatorDTO2DO出错(CustomRPC无效RateLimit)", func(t *testing.T) {
+		req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+			WorkspaceID:   1,
+			EvaluatorType: evaluatordto.EvaluatorType_CustomRPC,
+			InputData:     &evaluatordto.EvaluatorInputData{},
+			EvaluatorContent: &evaluatordto.EvaluatorContent{
+				CustomRPCEvaluator: &evaluatordto.CustomRPCEvaluator{
+					RateLimit: &common.RateLimit{
+						Rate:   gptr.Of(int32(1)),
+						Burst:  gptr.Of(int32(1)),
+						Period: gptr.Of("not_a_duration"),
+					},
+				},
+			},
+		}
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+
+		resp, err := handler.AsyncDebugEvaluator(ctx, req)
+		assert.Error(t, err)
+		assert.Nil(t, resp)
+	})
+
+	t.Run("成功 - 带RuntimeParam和EvaluatorRunConf", func(t *testing.T) {
+		rpJSON := `{"model_config":{"model_id":"m-1"}}`
+		req := &evaluatorservice.AsyncDebugEvaluatorRequest{
+			WorkspaceID:   1,
+			EvaluatorType: evaluatordto.EvaluatorType_Agent,
+			InputData:     &evaluatordto.EvaluatorInputData{},
+			EvaluatorContent: &evaluatordto.EvaluatorContent{
+				AgentEvaluator: &evaluatordto.AgentEvaluator{
+					AgentConfig: &common.AgentConfig{
+						AgentType: gptr.Of("single_agent"),
+					},
+				},
+			},
+			EvaluatorRunConf: &evaluatordto.EvaluatorRunConfig{
+				EvaluatorRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(rpJSON)},
+			},
+		}
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockEvaluatorService.EXPECT().AsyncDebugEvaluator(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, req *entity.AsyncDebugEvaluatorRequest) (*entity.AsyncDebugEvaluatorResponse, error) {
+				// 验证 RuntimeParam 被注入到 InputData.Ext
+				require.NotNil(t, req.InputData)
+				require.NotNil(t, req.InputData.Ext)
+				assert.Equal(t, rpJSON, req.InputData.Ext[consts.FieldAdapterBuiltinFieldNameRuntimeParam])
+				// 验证 EvaluatorRunConf 被透传
+				require.NotNil(t, req.EvaluatorRunConf)
+				require.NotNil(t, req.EvaluatorRunConf.EvaluatorRuntimeParam)
+				assert.Equal(t, rpJSON, gptr.Indirect(req.EvaluatorRunConf.EvaluatorRuntimeParam.JSONValue))
+				return &entity.AsyncDebugEvaluatorResponse{InvokeID: 777}, nil
+			})
+		mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), "evaluator:777", gomock.Any()).Return(nil)
+
+		resp, err := handler.AsyncDebugEvaluator(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, int64(777), resp.GetInvokeID())
+	})
+}

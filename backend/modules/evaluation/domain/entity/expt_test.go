@@ -348,3 +348,114 @@ func TestCreateEvalTargetParam_IsNull(t *testing.T) {
 	s := "x"
 	assert.False(t, (&CreateEvalTargetParam{SourceTargetID: &s}).IsNull())
 }
+
+func TestGetItemIDs(t *testing.T) {
+	tests := []struct {
+		name     string
+		runLog   *ExptRunLog
+		expected []int64
+	}{
+		{
+			name:     "空ItemIds返回nil",
+			runLog:   &ExptRunLog{},
+			expected: nil,
+		},
+		{
+			name: "单个chunk",
+			runLog: &ExptRunLog{
+				ItemIds: []ExptRunLogItems{
+					{ItemIDs: []int64{1, 2, 3}},
+				},
+			},
+			expected: []int64{1, 2, 3},
+		},
+		{
+			name: "多个chunk合并",
+			runLog: &ExptRunLog{
+				ItemIds: []ExptRunLogItems{
+					{ItemIDs: []int64{1, 2}},
+					{ItemIDs: []int64{3, 4}},
+				},
+			},
+			expected: []int64{1, 2, 3, 4},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.runLog.GetItemIDs())
+		})
+	}
+}
+
+func TestAppendItemIDs(t *testing.T) {
+	tests := []struct {
+		name    string
+		runLog  *ExptRunLog
+		input   []int64
+		wantErr bool
+	}{
+		{
+			name:    "nil接收者返回错误",
+			runLog:  nil,
+			input:   []int64{1},
+			wantErr: true,
+		},
+		{
+			name:    "正常追加",
+			runLog:  &ExptRunLog{},
+			input:   []int64{1, 2},
+			wantErr: false,
+		},
+		{
+			name: "重复ID返回错误",
+			runLog: &ExptRunLog{
+				ItemIds: []ExptRunLogItems{
+					{ItemIDs: []int64{1, 2}},
+				},
+			},
+			input:   []int64{2, 3},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.runLog.AppendItemIDs(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				ids := tt.runLog.GetItemIDs()
+				assert.Equal(t, tt.input, ids)
+			}
+		})
+	}
+}
+
+func TestContainsEvalTarget(t *testing.T) {
+	tests := []struct {
+		name     string
+		expt     *Experiment
+		expected bool
+	}{
+		{
+			name:     "nil实验返回false",
+			expt:     nil,
+			expected: false,
+		},
+		{
+			name:     "TargetVersionID为0返回false",
+			expt:     &Experiment{TargetVersionID: 0},
+			expected: false,
+		},
+		{
+			name:     "TargetVersionID大于0返回true",
+			expt:     &Experiment{TargetVersionID: 1},
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.expt.ContainsEvalTarget())
+		})
+	}
+}
