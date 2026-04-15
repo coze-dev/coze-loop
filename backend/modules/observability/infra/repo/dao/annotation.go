@@ -23,7 +23,9 @@ type GetAnnotationParam struct {
 
 type ListAnnotationsParam struct {
 	Tables          []string
+	WorkspaceID     string
 	SpanIDs         []string
+	AnnotationType  string
 	StartTime       int64 // us
 	EndTime         int64 // us
 	DescByUpdatedAt bool

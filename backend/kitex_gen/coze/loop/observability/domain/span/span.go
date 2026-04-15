@@ -47,11 +47,23 @@ const (
 	SpanTypeAgent = "agent"
 
 	SpanTypeLLMCall = "LLMCall"
+
+	ValueTypeString = "string"
+
+	ValueTypeByte = "byte"
+
+	ValueTypeLong = "long"
+
+	ValueTypeDouble = "double"
+
+	ValueTypeBool = "bool"
 )
 
 type SpanStatus = string
 
 type SpanType = string
+
+type MetadataValueType = string
 
 type AttrTos struct {
 	InputDataURL   *string           `thrift:"input_data_url,1,optional" frugal:"1,optional,string" form:"input_data_url" json:"input_data_url,omitempty" query:"input_data_url"`

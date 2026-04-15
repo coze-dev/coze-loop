@@ -84,6 +84,7 @@ func PreviewRequestDTO2DO(req *trace.PreviewExportTracesToDatasetRequest) *servi
 		SpanIds:     convertSpanIdsDTO2DO(req.GetSpanIds()),
 		Category:    convertDatasetCategoryDTO2DO(req.GetCategory()),
 		Config:      convertDatasetConfigDTO2DO(req.GetConfig()),
+		Limit:       req.Limit,
 	}
 	result.StartTime = req.GetStartTime()
 	result.EndTime = req.GetEndTime()
@@ -107,6 +108,10 @@ func PreviewRequestDTO2DO(req *trace.PreviewExportTracesToDatasetRequest) *servi
 	// 转换字段映射
 	if req.IsSetFieldMappings() {
 		result.FieldMappings = ConvertFieldMappingsDTO2DO(req.GetFieldMappings())
+	}
+
+	if req.IsSetSpanFilters() {
+		result.SpanFilters = req.SpanFilters
 	}
 
 	return result

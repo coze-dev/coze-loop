@@ -147,6 +147,21 @@ func (mr *MockITraceRepoMockRecorder) ListAnnotations(arg0, arg1 any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAnnotations", reflect.TypeOf((*MockITraceRepo)(nil).ListAnnotations), arg0, arg1)
 }
 
+// ListWorkspaceAnnotations mocks base method.
+func (m *MockITraceRepo) ListWorkspaceAnnotations(arg0 context.Context, arg1 *repo.ListWorkspaceAnnotationsParam) (loop_span.AnnotationList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaceAnnotations", arg0, arg1)
+	ret0, _ := ret[0].(loop_span.AnnotationList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkspaceAnnotations indicates an expected call of ListWorkspaceAnnotations.
+func (mr *MockITraceRepoMockRecorder) ListWorkspaceAnnotations(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaceAnnotations", reflect.TypeOf((*MockITraceRepo)(nil).ListWorkspaceAnnotations), arg0, arg1)
+}
+
 // ListSpans mocks base method.
 func (m *MockITraceRepo) ListSpans(arg0 context.Context, arg1 *repo.ListSpansParam) (*repo.ListSpansResult, error) {
 	m.ctrl.T.Helper()

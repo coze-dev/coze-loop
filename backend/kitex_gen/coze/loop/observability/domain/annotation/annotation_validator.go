@@ -99,3 +99,6 @@ func (p *Annotation) IsValid() error {
 func (p *AnnotationEvaluator) IsValid() error {
 	return nil
 }
+func (p *SimpleAnnotationInfo) IsValid() error {
+	return nil
+}
