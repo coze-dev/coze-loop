@@ -440,8 +440,8 @@ struct ListTrajectoryResponse {
 }
 
 struct ColumnExtractRule {
-    1: required string column (api.body="column")
-    2: required string json_path (api.body="json_path")
+    1: required string column
+    2: required string json_path
 }
 
 struct UpsertColumnExtractConfigRequest {

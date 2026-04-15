@@ -21782,8 +21782,8 @@ func (p *ListTrajectoryResponse) Field255DeepEqual(src *base.BaseResp) bool {
 }
 
 type ColumnExtractRule struct {
-	Column   string `thrift:"column,1,required" frugal:"1,required,string" form:"column,required" json:"column,required"`
-	JSONPath string `thrift:"json_path,2,required" frugal:"2,required,string" form:"json_path,required" json:"json_path,required"`
+	Column   string `thrift:"column,1,required" frugal:"1,required,string" form:"column,required" json:"column,required" query:"column,required"`
+	JSONPath string `thrift:"json_path,2,required" frugal:"2,required,string" form:"json_path,required" json:"json_path,required" query:"json_path,required"`
 }
 
 func NewColumnExtractRule() *ColumnExtractRule {
