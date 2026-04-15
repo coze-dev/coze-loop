@@ -16,6 +16,7 @@ type ListTaskParam struct {
 	ReqLimit     int32
 	ReqOffset    int32
 	OrderBy      *common.OrderBy
+	NeedOnlyOld  bool
 }
 
 //go:generate mockgen -destination=mocks/Task.go -package=mocks . ITaskRepo

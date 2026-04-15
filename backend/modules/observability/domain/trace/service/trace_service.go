@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -56,6 +57,8 @@ type ListSpansReq struct {
 	PlatformType          loop_span.PlatformType
 	SpanListType          loop_span.SpanListType
 	Source                span_filter.SourceType
+	SelectColumns         []string
+	OmitColumns           []string
 	Scene                 entity.ProcessorScene
 }
 
@@ -122,6 +125,18 @@ type GetTraceReq struct {
 type GetTraceResp struct {
 	TraceId string
 	Spans   loop_span.SpanList
+}
+
+type ListMetadataReq struct {
+	WorkspaceID  int64
+	StartTime    int64 // ms
+	EndTime      int64 // ms
+	SpanListType loop_span.SpanListType
+	PlatformType loop_span.PlatformType
+}
+
+type ListMetadataResp struct {
+	MetadataItemList []*trace.MetadataItemInfo
 }
 
 type SearchTraceOApiReq struct {
@@ -277,6 +292,18 @@ type ListAnnotationsResp struct {
 	Annotations loop_span.AnnotationList
 }
 
+type ListWorkspaceAnnotationsReq struct {
+	WorkspaceID    int64
+	StartTime      int64
+	AnnotationType string
+	SpanListType   loop_span.SpanListType
+	PlatformType   loop_span.PlatformType
+}
+
+type ListWorkspaceAnnotationsResp struct {
+	Annotations loop_span.AnnotationList
+}
+
 type ChangeEvaluatorScoreRequest struct {
 	WorkspaceID  int64
 	AnnotationID string
@@ -401,7 +428,9 @@ type ITraceService interface {
 	GetTracesAdvanceInfo(ctx context.Context, req *GetTracesAdvanceInfoReq) (*GetTracesAdvanceInfoResp, error)
 	IngestTraces(ctx context.Context, req *IngestTracesReq) error
 	GetTracesMetaInfo(ctx context.Context, req *GetTracesMetaInfoReq) (*GetTracesMetaInfoResp, error)
+	ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error)
 	ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error)
+	ListWorkspaceAnnotations(ctx context.Context, req *ListWorkspaceAnnotationsReq) (*ListWorkspaceAnnotationsResp, error)
 	CreateAnnotation(ctx context.Context, req *CreateAnnotationReq) error
 	DeleteAnnotation(ctx context.Context, req *DeleteAnnotationReq) error
 	CreateManualAnnotation(ctx context.Context, req *CreateManualAnnotationReq) (*CreateManualAnnotationResp, error)
@@ -1032,7 +1061,7 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 			QueryType: ptr.Of(loop_span.QueryTypeEnumEq),
 		})
 	}
-	queryFilter := r.combineFilters(logTraceFilter, req.Filters)
+	queryFilter := CombineFilters(logTraceFilter, req.Filters)
 	spans := traceResult.Spans
 	processors, err := r.buildHelper.BuildGetTraceProcessors(ctx, span_processor.Settings{
 		WorkspaceId:     req.WorkspaceID,
@@ -1069,13 +1098,18 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	if err != nil {
 		return nil, err
 	}
-	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, req)
+	env := &span_filter.SpanEnv{
+		WorkspaceID:           req.WorkspaceID,
+		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
+		Source:                req.Source,
+	}
+	builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, req.SpanListType)
 	if err != nil {
 		return nil, err
 	} else if builtinFilter == nil {
 		return &ListSpansResp{Spans: loop_span.SpanList{}}, nil
 	}
-	filters := r.combineFilters(builtinFilter, req.Filters)
+	filters := CombineFilters(builtinFilter, req.Filters)
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err
@@ -1090,6 +1124,8 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		Limit:           req.Limit,
 		DescByStartTime: req.DescByStartTime,
 		PageToken:       req.PageToken,
+		SelectColumns:   req.SelectColumns,
+		OmitColumns:     req.OmitColumns,
 	})
 	r.metrics.EmitListSpans(req.WorkspaceID, string(req.SpanListType), st, err != nil)
 	if err != nil {
@@ -1188,17 +1224,17 @@ func (r *TraceServiceImpl) ListSpansOApi(ctx context.Context, req *ListSpansOApi
 	if err != nil {
 		return nil, err
 	}
-	builtinFilter, err := r.buildBuiltinFilters(ctx, platformFilter, &ListSpansReq{
+	env := &span_filter.SpanEnv{
 		WorkspaceID:           req.WorkspaceID,
 		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
-		SpanListType:          req.SpanListType,
-	})
+	}
+	builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, req.SpanListType)
 	if err != nil {
 		return nil, err
 	} else if builtinFilter == nil {
 		return &ListSpansOApiResp{Spans: loop_span.SpanList{}}, nil
 	}
-	filters := r.combineFilters(builtinFilter, req.Filters)
+	filters := CombineFilters(builtinFilter, req.Filters)
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         req.Tenants,
@@ -1450,6 +1486,121 @@ func (r *TraceServiceImpl) GetTracesMetaInfo(ctx context.Context, req *GetTraces
 	}, nil
 }
 
+func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataReq) (*ListMetadataResp, error) {
+	const maxListMetadataSpansList = 300
+	listSpansResp, err := r.ListSpans(ctx, &ListSpansReq{
+		WorkspaceID:  req.WorkspaceID,
+		StartTime:    req.StartTime,
+		EndTime:      req.EndTime,
+		SpanListType: req.SpanListType,
+		PlatformType: req.PlatformType,
+		Limit:        maxListMetadataSpansList,
+		OmitColumns: []string{
+			"input",
+			"output",
+		},
+		DescByStartTime: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	type keyInfo struct {
+		count     int
+		valueType string
+	}
+	keyInfoMap := make(map[string]*keyInfo)
+	for _, span := range listSpansResp.Spans {
+		for key := range span.SystemTagsString {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
+			}
+		}
+		for key := range span.SystemTagsLong {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
+			}
+		}
+		for key := range span.SystemTagsDouble {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
+			}
+		}
+		for key := range span.TagsString {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
+			}
+		}
+		for key := range span.TagsLong {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
+			}
+		}
+		for key := range span.TagsDouble {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
+			}
+		}
+		for key := range span.TagsBool {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeBool}
+			}
+		}
+		for key := range span.TagsByte {
+			if info, ok := keyInfoMap[key]; ok {
+				info.count++
+			} else {
+				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
+			}
+		}
+	}
+
+	keys := lo.Keys(keyInfoMap)
+	sort.Slice(keys, func(i, j int) bool {
+		if keyInfoMap[keys[i]].count != keyInfoMap[keys[j]].count {
+			return keyInfoMap[keys[i]].count > keyInfoMap[keys[j]].count
+		}
+		return keys[i] < keys[j]
+	})
+
+	structFieldSet := make(map[string]struct{}, len(loop_span.SpanStructFieldKeys))
+	for _, k := range loop_span.SpanStructFieldKeys {
+		structFieldSet[k] = struct{}{}
+	}
+
+	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
+	for _, key := range loop_span.SpanStructFieldKeys {
+		items = append(items, &trace.MetadataItemInfo{
+			Key:       key,
+			ValueType: loop_span.SpanStructFieldValueTypes[key],
+		})
+	}
+	for _, key := range keys {
+		if _, ok := structFieldSet[key]; ok {
+			continue
+		}
+		items = append(items, &trace.MetadataItemInfo{
+			Key:       key,
+			ValueType: keyInfoMap[key].valueType,
+		})
+	}
+
+	return &ListMetadataResp{MetadataItemList: items}, nil
+}
+
 func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotationsReq) (*ListAnnotationsResp, error) {
 	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
 	if err != nil {
@@ -1469,6 +1620,33 @@ func (r *TraceServiceImpl) ListAnnotations(ctx context.Context, req *ListAnnotat
 		return nil, err
 	}
 	return &ListAnnotationsResp{
+		Annotations: annotations,
+	}, nil
+}
+
+func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *ListWorkspaceAnnotationsReq) (*ListWorkspaceAnnotationsResp, error) {
+	tenants, err := r.getTenants(ctx, req.PlatformType, tenant.WithWorkspaceID(req.WorkspaceID))
+	if err != nil {
+		return nil, err
+	}
+	const (
+		defaultLimit           = 300
+		defaultDescByUpdatedAt = true
+	)
+	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:         tenants,
+		AnnotationType:  req.AnnotationType,
+		StartAt:         req.StartTime,
+		EndAt:           time.Now().UnixMilli(),
+		DescByUpdatedAt: defaultDescByUpdatedAt,
+		Limit:           defaultLimit,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &ListWorkspaceAnnotationsResp{
 		Annotations: annotations,
 	}, nil
 }
@@ -1855,65 +2033,6 @@ func (r *TraceServiceImpl) getAnnotationCallerCfg(ctx context.Context, caller st
 		return &callerCfg, nil
 	}
 	return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode)
-}
-
-func (r *TraceServiceImpl) buildBuiltinFilters(ctx context.Context, f span_filter.Filter, req *ListSpansReq) (*loop_span.FilterFields, error) {
-	filters := make([]*loop_span.FilterField, 0)
-	env := &span_filter.SpanEnv{
-		WorkspaceID:           req.WorkspaceID,
-		ThirdPartyWorkspaceID: req.ThirdPartyWorkspaceID,
-		Source:                req.Source,
-	}
-	basicFilter, forceQuery, err := f.BuildBasicSpanFilter(ctx, env)
-	if err != nil {
-		return nil, err
-	} else if len(basicFilter) == 0 && !forceQuery { // if it's null, no need to query from ck
-		return nil, nil
-	}
-	filters = append(filters, basicFilter...)
-	switch req.SpanListType {
-	case loop_span.SpanListTypeRootSpan:
-		subFilter, err := f.BuildRootSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	case loop_span.SpanListTypeLLMSpan:
-		subFilter, err := f.BuildLLMSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	case loop_span.SpanListTypeAllSpan:
-		subFilter, err := f.BuildALLSpanFilter(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-		filters = append(filters, subFilter...)
-	default:
-		return nil, errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid span list type: %s"))
-	}
-	filterAggr := &loop_span.FilterFields{
-		QueryAndOr:   ptr.Of(loop_span.QueryAndOrEnumAnd),
-		FilterFields: filters,
-	}
-	return filterAggr, nil
-}
-
-func (r *TraceServiceImpl) combineFilters(filters ...*loop_span.FilterFields) *loop_span.FilterFields {
-	filterAggr := &loop_span.FilterFields{
-		QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-	}
-	for _, f := range filters {
-		if f == nil {
-			continue
-		}
-		filterAggr.FilterFields = append(filterAggr.FilterFields, &loop_span.FilterField{
-			QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
-			SubFilter:  f,
-		})
-	}
-	return filterAggr
 }
 
 func (r *TraceServiceImpl) getTenants(ctx context.Context, platform loop_span.PlatformType, opts ...tenant.OptFn) ([]string, error) {
@@ -2373,74 +2492,6 @@ func buildContent(value string) *dataset.Content {
 		}
 	}
 	return content
-}
-
-func processSpecificFilter(f *loop_span.FilterField) error {
-	switch f.FieldName {
-	case loop_span.SpanFieldStatus:
-		if err := processStatusFilter(f); err != nil {
-			return err
-		}
-	case loop_span.SpanFieldDuration,
-		loop_span.SpanFieldLatencyFirstResp,
-		loop_span.SpanFieldStartTimeFirstResp,
-		loop_span.SpanFieldStartTimeFirstTokenResp,
-		loop_span.SpanFieldLatencyFirstTokenResp,
-		loop_span.SpanFieldReasoningDuration:
-		if err := processLatencyFilter(f); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func processStatusFilter(f *loop_span.FilterField) error {
-	if f.QueryType == nil || *f.QueryType != loop_span.QueryTypeEnumIn {
-		return fmt.Errorf("status filter should use in operator")
-	}
-	f.FieldName = loop_span.SpanFieldStatusCode
-	f.FieldType = loop_span.FieldTypeLong
-	checkSuccess, checkError := false, false
-	for _, val := range f.Values {
-		switch val {
-		case loop_span.SpanStatusSuccess:
-			checkSuccess = true
-		case loop_span.SpanStatusError:
-			checkError = true
-		default:
-			return fmt.Errorf("invalid status code field value")
-		}
-	}
-	if checkSuccess && checkError {
-		f.QueryType = ptr.Of(loop_span.QueryTypeEnumAlwaysTrue)
-		f.Values = nil
-	} else if checkSuccess {
-		f.Values = []string{"0"}
-	} else if checkError {
-		f.QueryType = ptr.Of(loop_span.QueryTypeEnumNotIn)
-		f.Values = []string{"0"}
-	} else {
-		return fmt.Errorf("invalid status code query")
-	}
-	return nil
-}
-
-// ms -> us
-func processLatencyFilter(f *loop_span.FilterField) error {
-	if f.FieldType != loop_span.FieldTypeLong {
-		return fmt.Errorf("latency field type should be long ")
-	}
-	micros := make([]string, 0)
-	for _, val := range f.Values {
-		integer, err := strconv.ParseInt(val, 10, 64)
-		if err != nil {
-			return fmt.Errorf("fail to parse long value %s, %v", val, err)
-		}
-		integer = timeutil.MillSec2MicroSec(integer)
-		micros = append(micros, strconv.FormatInt(integer, 10))
-	}
-	f.Values = micros
-	return nil
 }
 
 //go:generate mockgen -destination=mocks/span_processor.go -package=mocks . TraceFilterProcessorBuilder

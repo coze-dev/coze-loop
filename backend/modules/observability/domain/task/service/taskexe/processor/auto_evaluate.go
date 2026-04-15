@@ -9,17 +9,23 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/gg/gslice"
+	"github.com/samber/lo"
+
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
@@ -43,6 +49,7 @@ type AutoEvaluateProcessor struct {
 	taskRepo              repo.ITaskRepo
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
+	workflowProvider      taskhook.IWorkflowProvider
 }
 
 func NewAutoEvaluateProcessor(
@@ -52,7 +59,12 @@ func NewAutoEvaluateProcessor(
 	evaluationService rpc.IEvaluationRPCAdapter,
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
+	workflowProvider taskhook.IWorkflowProvider,
 ) *AutoEvaluateProcessor {
+	if workflowProvider == nil {
+		logs.Info("Auto Evaluate workflowProvider is nil")
+		workflowProvider = taskhook.NewNoopTaskHookProvider()
+	}
 	return &AutoEvaluateProcessor{
 		datasetServiceAdaptor: datasetServiceProvider,
 		evalSvc:               evalService,
@@ -60,6 +72,7 @@ func NewAutoEvaluateProcessor(
 		taskRepo:              taskRepo,
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
+		workflowProvider:      workflowProvider,
 	}
 }
 
@@ -86,6 +99,7 @@ func (p *AutoEvaluateProcessor) ValidateConfig(ctx context.Context, config any) 
 		return errorx.NewByCode(obErrorx.CommonInvalidParamCode)
 	}
 	// Verify evaluator version validity
+	evaluatorVersionIDs = lo.Uniq(evaluatorVersionIDs)
 	evaluators, _, err := p.evalSvc.BatchGetEvaluatorVersions(ctx, &rpc.BatchGetEvaluatorVersionsParam{
 		WorkspaceID:         cfg.WorkspaceID,
 		EvaluatorVersionIds: evaluatorVersionIDs,
@@ -107,8 +121,26 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 	workspaceID := trigger.Task.WorkspaceID
 	sessionInfo := p.getSession(ctx, trigger.Task)
 	var mapping []*task_entity.EvaluateFieldMapping
+	evalsetName := make(map[string]bool)
+
 	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
 		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
+		for _, fieldMapping := range autoEvaluateConfig.FieldMappings {
+			if fieldMapping.EvalSetName != nil {
+				evalsetName[*fieldMapping.EvalSetName] = true
+			}
+		}
+	}
+	if trigger.Task.TaskConfig.EvaluationExperimentConfig != nil && trigger.Task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings != nil {
+		for _, fieldMapping := range trigger.Task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings {
+			if fieldMapping.EvalSetName == nil {
+				continue
+			}
+			if ok := evalsetName[*fieldMapping.EvalSetName]; !ok {
+				mapping = append(mapping, fieldMapping)
+				evalsetName[*fieldMapping.EvalSetName] = true
+			}
+		}
 	}
 	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema(), strconv.FormatInt(taskRun.ID, 10))
 	if len(turns) == 0 {
@@ -127,6 +159,18 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 		_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		return nil
 	}
+	extMap := map[string]string{
+		"workspace_id":    strconv.FormatInt(trigger.Task.WorkspaceID, 10),
+		"span_id":         trigger.Span.SpanID,
+		"task_id":         cast.ToString(trigger.Task.ID),
+		"task_run_id":     cast.ToString(taskRun.ID),
+		"span_start_time": cast.ToString(trigger.Span.StartTime/1000 - time.Hour.Milliseconds()),
+		"span_end_time":   cast.ToString(trigger.Span.StartTime/1000 + time.Hour.Milliseconds()),
+		"platform_type":   string(trigger.Task.GetPlatformType()),
+	}
+	if trigger.Task.TaskConfig.EvaluationExperimentConfig != nil && trigger.Task.TaskConfig.EvaluationExperimentConfig.ExptTemplateID != nil {
+		extMap["expt_template_id"] = cast.ToString(trigger.Task.TaskConfig.EvaluationExperimentConfig.ExptTemplateID)
+	}
 	addedItems, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
 		WorkspaceID:     workspaceID,
 		EvaluationSetID: taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
@@ -144,15 +188,7 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
 		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
 		Session:          sessionInfo,
-		Ext: map[string]string{
-			"workspace_id":    strconv.FormatInt(trigger.Task.WorkspaceID, 10),
-			"span_id":         trigger.Span.SpanID,
-			"task_id":         cast.ToString(trigger.Task.ID),
-			"task_run_id":     cast.ToString(taskRun.ID),
-			"span_start_time": cast.ToString(trigger.Span.StartTime/1000 - time.Hour.Milliseconds()),
-			"span_end_time":   cast.ToString(trigger.Span.StartTime/1000 + time.Hour.Milliseconds()),
-			"platform_type":   string(trigger.Task.GetPlatformType()),
-		},
+		Ext:              extMap,
 	})
 	if err != nil {
 		_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
@@ -268,6 +304,15 @@ func (p *AutoEvaluateProcessor) OnTaskFinished(ctx context.Context, param taskex
 			logs.CtxError(ctx, "OnUpdateChangeProcessor failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
 		}
+
+		//if err := p.workflowProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+		//	Task:    param.Task,
+		//	TaskRun: param.TaskRun,
+		//}); err != nil {
+		//	logs.CtxError(ctx, "workflowProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
+		//	return err
+		//}
+
 		if err := p.taskRepo.RemoveNonFinalTask(ctx, strconv.FormatInt(param.Task.WorkspaceID, 10), param.Task.ID); err != nil {
 			logs.CtxError(ctx, "RemoveNonFinalTask failed, taskID:%d, err:%v", param.Task.ID, err)
 			return err
@@ -290,7 +335,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 	var evaluationSetColumns []string
 	var evaluatorVersionIds []int64
 	var evaluatorFieldMappings []*expt.EvaluatorFieldMapping
-	evaluationSetColumns = append(evaluationSetColumns, "span_id", "trace_id", "run_id")
+	evaluationSetColumns = append(evaluationSetColumns, "span_id", "trace_id")
 	autoEvaluateConfigs := currentTask.TaskConfig.AutoEvaluateConfigs
 	evaluationSetSchema, fromEvalSet := getBasicEvaluationSetSchema(evaluationSetColumns)
 	for _, autoEvaluateConfig := range autoEvaluateConfigs {
@@ -300,30 +345,68 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 			if fieldMapping.FieldSchema == nil {
 				continue
 			}
+			logs.CtxInfo(ctx, "Data key fall back: %v", fieldMapping)
+			// 兼容老版 无 evalsetname
+			var evalsetName *string
+			if fieldMapping.EvalSetName == nil || *fieldMapping.EvalSetName == "" {
+				evalsetName = fieldMapping.DatasetKey
+			} else {
+				evalsetName = fieldMapping.EvalSetName
+			}
 			fromEvalSet = append(fromEvalSet, &expt.FieldMapping{
 				FieldName:     fieldMapping.FieldSchema.Name,
-				FromFieldName: fieldMapping.EvalSetName,
+				FromFieldName: evalsetName,
 			})
-			if slices.Contains(evaluationSetColumns, *fieldMapping.EvalSetName) {
+			if slices.Contains(evaluationSetColumns, *evalsetName) {
 				continue
 			}
-			// historical data compatibility, convert plain_text to text, data needs to be refreshed
-			evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, &dataset0.FieldSchema{
-				Key:         gptr.Of(*fieldMapping.EvalSetName),
-				Name:        gptr.Of(*fieldMapping.EvalSetName),
+			evalsetSchema := &dataset0.FieldSchema{
+				// todo fby test
+				Key:         fieldMapping.DatasetKey,
+				Name:        evalsetName,
 				Description: gptr.Of(fieldMapping.TraceFieldJsonpath),
 				ContentType: fieldMapping.FieldSchema.ContentType,
 				// DefaultDisplayFormat: gptr.Of(dataset.FieldDisplayFormat_PlainText),
 				TextSchema: fieldMapping.FieldSchema.TextSchema,
 				// Hidden:               gptr.Of(false),
-			})
-			evaluationSetColumns = append(evaluationSetColumns, *fieldMapping.EvalSetName)
+			}
+			// historical data compatibility, convert plain_text to text, data needs to be refreshed
+			evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, evalsetSchema)
+			evaluationSetColumns = append(evaluationSetColumns, *evalsetName)
 		}
 
 		evaluatorFieldMappings = append(evaluatorFieldMappings, &expt.EvaluatorFieldMapping{
 			EvaluatorVersionID: autoEvaluateConfig.EvaluatorVersionID,
 			FromEvalSet:        fromEvalSet,
+			EvaluatorIDVersionItem: &evaluator.EvaluatorIDVersionItem{
+				EvaluatorID:        gptr.Of(autoEvaluateConfig.EvaluatorID),
+				EvaluatorVersionID: gptr.Of(autoEvaluateConfig.EvaluatorVersionID),
+				ScoreWeight:        autoEvaluateConfig.ScoreWeight,
+				Version:            autoEvaluateConfig.EvaluatorVersion,
+			},
 		})
+	}
+	if currentTask.TaskConfig.EvaluationExperimentConfig != nil && currentTask.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings != nil {
+		addEvalSetNameList := gslice.ToMap(evaluationSetSchema.FieldSchemas, func(schema *dataset0.FieldSchema) (string, bool) {
+			return schema.GetName(), true
+		})
+		for _, mapping := range currentTask.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings {
+			if mapping.EvalSetName == nil {
+				continue
+			}
+			if ok := addEvalSetNameList[*mapping.EvalSetName]; ok {
+				continue
+			}
+			evalsetSchema := &dataset0.FieldSchema{
+				Key:         mapping.DatasetKey,
+				Name:        mapping.EvalSetName,
+				Description: gptr.Of(mapping.TraceFieldJsonpath),
+				ContentType: mapping.FieldSchema.ContentType,
+				TextSchema:  mapping.FieldSchema.TextSchema,
+			}
+			addEvalSetNameList[*mapping.EvalSetName] = true
+			evaluationSetSchema.FieldSchemas = append(evaluationSetSchema.FieldSchemas, evalsetSchema)
+		}
 	}
 	category := getCategory(task.TaskType(currentTask.TaskType))
 	schema := convertDatasetSchemaDTO2DO(evaluationSetSchema)
@@ -344,7 +427,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		category,
 		schema,
 		sessionInfo,
-		ptr.Of(entity.BizCategoryFromOnlineTrace),
+		ptr.Of(entity.BizCategoryFromOnlineTrace), false, 0,
 	))
 	if err != nil {
 		logs.CtxError(ctx, "CreateDataset failed, workspace_id=%d, err=%#v", currentTask.WorkspaceID, err)
@@ -358,7 +441,7 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		EvalSetVersionID:      gptr.Of(datasetID),
 		EvaluatorVersionIds:   evaluatorVersionIds,
 		Name:                  ptr.Of(exptName),
-		Desc:                  gptr.Of("Auto Task Experiment"),
+		Desc:                  currentTask.Description,
 		EvalSetID:             gptr.Of(datasetID),
 		EvaluatorFieldMapping: evaluatorFieldMappings,
 		TargetFieldMapping: &expt.TargetFieldMapping{
@@ -370,6 +453,21 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 		SourceType:            gptr.Of(expt.SourceType_AutoTask),
 		SourceID:              gptr.Of(cast.ToString(currentTask.ID)),
 		Session:               sessionInfo,
+		IsWorkflowScheduled:   currentTask.TaskConfig.IsWorkflowScheduled,
+		TimeRange: &expt.TaskTimeRange{
+			StartTime: gptr.Of(param.RunStartAt),
+			EndTime:   gptr.Of(param.RunEndAt),
+		},
+	}
+	if currentTask.TaskConfig.EvaluationExperimentConfig != nil {
+		submitExperimentReq.ItemRetryNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemMaxRetryCount
+		submitExperimentReq.ItemConcurNum = currentTask.TaskConfig.EvaluationExperimentConfig.ItemConcurrencyCount
+		submitExperimentReq.ExptTemplateID = currentTask.TaskConfig.EvaluationExperimentConfig.ExptTemplateID
+	}
+	if currentTask.WorkflowID != 0 {
+		// triggered by workflow
+		submitExperimentReq.SourceType = gptr.Of(expt.SourceType(3))
+		submitExperimentReq.SourceID = gptr.Of(cast.ToString(currentTask.WorkflowID))
 	}
 	logs.CtxInfo(ctx, "[auto_task] SubmitExperiment:%+v", submitExperimentReq)
 	exptID, exptRunID, err := p.evaluationSvc.SubmitExperiment(ctx, &submitExperimentReq)
@@ -439,6 +537,16 @@ func (p *AutoEvaluateProcessor) OnTaskRunFinished(ctx context.Context, param tas
 	if err != nil {
 		logs.CtxError(ctx, "[auto_task] OnFinishTaskRunProcessor, UpdateTaskRun err, taskRunID:%d, err:%v", taskRun.ID, err)
 		return err
+	}
+	if param.Task.TaskSource != nil && *param.Task.TaskSource == task.TaskSourceWorkflow {
+		if err := backoff.RetryWithMaxTimes(ctx, 3, func() error {
+			return p.workflowProvider.WorkflowCallback(ctx, &taskhook.WorkflowCallbackParam{
+				Task:    param.Task,
+				TaskRun: param.TaskRun,
+			})
+		}); err != nil {
+			logs.CtxError(ctx, "workflowProvider.WorkflowCallback failed, taskID:%d, err:%v", param.Task.ID, err)
+		}
 	}
 	return nil
 }

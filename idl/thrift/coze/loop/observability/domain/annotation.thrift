@@ -36,6 +36,8 @@ struct AutoEvaluate {
     4: optional EvaluatorResult evaluator_result
     5: required i64 record_id (api.js_conv='true', go.tag='json:"record_id"')
     6: required string task_id
+    7: optional i64 expt_id (api.js_conv='true', go.tag='json:"expt_id"')
+    8: optional i64 expt_template_id (api.js_conv='true', go.tag='json:"expt_template_id"')
 }
 
 struct ManualFeedback {
@@ -67,4 +69,10 @@ struct AnnotationEvaluator {
     1: required i64 evaluator_version_id,
     2: required string evaluator_name,
     3: required string evaluator_version,
+}
+
+struct SimpleAnnotationInfo {
+    1: required string key
+    2: optional AnnotationType annotation_type
+    3: optional string original_key
 }
