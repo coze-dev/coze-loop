@@ -270,11 +270,11 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
-		Event:                 etec.Event,
-		RecordID:              targetRecord.ID,
-		AsyncUnixMS:           ts.UnixMilli(),
-		Session:               etec.Event.Session,
-		Callee:                callee,
+		Event:                   etec.Event,
+		RecordID:                targetRecord.ID,
+		AsyncUnixMS:             ts.UnixMilli(),
+		Session:                 etec.Event.Session,
+		Callee:                  callee,
 		EnableExtractTrajectory: etc.EnableExtractTrajectory,
 	}); err != nil {
 		return nil, err

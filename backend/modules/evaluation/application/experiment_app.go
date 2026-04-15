@@ -502,8 +502,8 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		Session:                req.Session,
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
-		ItemRetryNum: req.ItemRetryNum,
-		TriggerType:  gptr.Of(triggerType),
+		ItemRetryNum:            req.ItemRetryNum,
+		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 	}
 	if req.IsSetExptTemplateID() {

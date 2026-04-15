@@ -418,7 +418,7 @@ type ReportTargetRecordParam struct {
 	Status     EvalTargetRunStatus
 	OutputData *EvalTargetOutputData
 
-	Session               *Session
+	Session                 *Session
 	EnableExtractTrajectory *bool
 }
 

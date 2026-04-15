@@ -141,7 +141,7 @@ type ExecuteTargetCtx struct {
 	// TruncateLargeContent 是否对大对象剪裁，仅 DebugTarget 使用，nil 时默认剪裁
 	TruncateLargeContent *bool
 	// 评测集数据项轮次ID
-	TurnID int64
+	TurnID                  int64
 	EnableExtractTrajectory *bool
 }
 
