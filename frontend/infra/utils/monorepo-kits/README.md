@@ -9,17 +9,20 @@
 ## ✨ 主要功能
 
 ### 📦 子包管理
+
 - **依赖递归查找**: 自动查找包的所有子依赖关系
 - **路径解析**: 获取包在文件系统中的实际位置
 - **配置查询**: 读取包的 package.json 配置信息
 - **缓存优化**: 智能缓存机制提升查找性能
 
 ### ⚙️ Rush 配置管理
+
 - **配置加载**: 自动加载和管理 Rush 配置
 - **单例模式**: 避免重复加载配置文件
 - **类型安全**: 完整的 TypeScript 类型支持
 
 ### 🔍 项目查找
+
 - **依赖分析**: 查找包的直接和间接依赖关系
 - **项目定位**: 快速定位指定包的项目配置
 - **关系查询**: 分析包之间的依赖关系图
@@ -29,6 +32,7 @@
 ### 子包管理
 
 #### `lookupSubPackages(packageName: string): string[]`
+
 递归查找指定包的所有子依赖包。
 
 ```typescript
@@ -39,6 +43,7 @@ console.log(deps); // ['@coze/icons', '@coze/themes', ...]
 ```
 
 #### `getPackageLocation(packageName: string): string`
+
 获取指定包的文件系统路径。
 
 ```typescript
@@ -49,6 +54,7 @@ console.log(location); // '/path/to/packages/ui-components'
 ```
 
 #### `getPackageJson(packageName: string): RushConfigurationProject['packageJson']`
+
 获取指定包的 package.json 配置信息。
 
 ```typescript
@@ -61,6 +67,7 @@ console.log(pkg.version); // '1.0.0'
 ### Rush 配置管理
 
 #### `getRushConfiguration(): RushConfiguration`
+
 获取 Rush 配置实例（单例模式）。
 
 ```typescript
@@ -73,6 +80,7 @@ console.log(rushConfig.projects.length); // 项目总数
 ### 项目查找
 
 #### `lookupTo(to: string): string[]`
+
 查找指定包的直接依赖项。
 
 ```typescript
@@ -83,6 +91,7 @@ console.log(dependencies); // 依赖的包名数组
 ```
 
 #### `lookupOnly(packageName: string): RushConfigurationProject`
+
 查找并返回指定包的完整项目配置对象。
 
 ```typescript
@@ -137,6 +146,7 @@ src/
 ## 🎯 使用场景
 
 ### 1. 依赖分析工具
+
 ```typescript
 // 分析包的依赖关系
 const analyzeDependencies = (packageName: string) => {
@@ -152,6 +162,7 @@ const analyzeDependencies = (packageName: string) => {
 ```
 
 ### 2. 构建脚本集成
+
 ```typescript
 // 在构建脚本中获取包信息
 const buildPackage = (packageName: string) => {
@@ -164,6 +175,7 @@ const buildPackage = (packageName: string) => {
 ```
 
 ### 3. 自动化工具开发
+
 ```typescript
 // 为自动化工具提供项目信息
 const getProjectInfo = (packageName: string) => {
@@ -189,7 +201,7 @@ const getProjectInfo = (packageName: string) => {
 
 ## 📄 依赖信息
 
-- **主要依赖**: `@rushstack/rush-sdk@5.100.2`
+- **主要依赖**: `@rushstack/rush-sdk@5.172.1`
 - **开发依赖**: ESLint、TypeScript、Vitest 等工具链
 - **运行环境**: Node.js 18+
 
@@ -203,6 +215,6 @@ Apache-2.0 License
 
 ---
 
-**作者**: fanwenjie.fe@bytedance.com
+**作者**: <fanwenjie.fe@bytedance.com>
 
 如需了解更多信息，请查看项目文档或联系维护团队。

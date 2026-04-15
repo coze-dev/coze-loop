@@ -13,7 +13,7 @@ jobs:
     name: Send Lark Message
     runs-on: ubuntu-latest
     env:
-      NODE_VERSION: '18'
+      NODE_VERSION: '24'
       LARK_APP_ID: ${{ secrets.COZELOOP_LARK_APP_ID }}
       LARK_APP_SECRET: ${{ secrets.COZELOOP_LARK_APP_SECRET }}
       PR_CR_BASE_URL: ${{ secrets.COZELOOP_PR_CR_BASE_URL }}
