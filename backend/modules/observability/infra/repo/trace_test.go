@@ -1551,3 +1551,233 @@ func TestTraceRepoImpl_getSpanInsertTable(t *testing.T) {
 		})
 	}
 }
+
+func TestTraceRepoImpl_ListWorkspaceAnnotations(t *testing.T) {
+	type fields struct {
+		annoDao      dao.IAnnotationDao
+		traceConfig  config.ITraceConfig
+		spanRedisDao *redis_dao_mock.MockISpansRedisDao
+		spanProducer mq.ISpanProducer
+	}
+	type args struct {
+		ctx   context.Context
+		param *repo.ListWorkspaceAnnotationsParam
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         loop_span.AnnotationList
+		wantErr      bool
+	}{
+		{
+			name: "annoDao is nil returns error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				return fields{
+					annoDao:     nil,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID: "ws1",
+					Tenants:     []string{"test"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "getQueryTenantTables error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					annoDao:     annoDaoMock,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID: "ws1",
+					Tenants:     []string{"test"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "empty anno tables returns empty list",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+					TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+						"test": {
+							loop_span.TTL3d: {
+								AnnoTable: "",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					annoDao:     annoDaoMock,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID: "ws1",
+					Tenants:     []string{"test"},
+				},
+			},
+			want: loop_span.AnnotationList{},
+		},
+		{
+			name: "annoDao.List error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+				annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+					TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+						"test": {
+							loop_span.TTL3d: {
+								AnnoTable: "annotations",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					annoDao:     annoDaoMock,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID: "ws1",
+					Tenants:     []string{"test"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "success with default limit",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+				annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return([]*dao.Annotation{
+					{
+						ID:      "anno1",
+						TraceID: "trace1",
+						SpaceID: "ws1",
+					},
+				}, nil)
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+					TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+						"test": {
+							loop_span.TTL3d: {
+								AnnoTable: "annotations",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					annoDao:     annoDaoMock,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID:     "ws1",
+					Tenants:         []string{"test"},
+					AnnotationType:  "manual",
+					DescByUpdatedAt: true,
+					StartAt:         1000,
+					EndAt:           2000,
+					Limit:           0,
+				},
+			},
+			want: loop_span.AnnotationList{
+				{
+					ID:          "anno1",
+					TraceID:     "trace1",
+					WorkspaceID: "ws1",
+					StartTime:   time.UnixMicro(0),
+					UpdatedAt:   time.UnixMicro(0),
+					CreatedAt:   time.UnixMicro(0),
+				},
+			},
+		},
+		{
+			name: "success with explicit limit",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+				annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).Return([]*dao.Annotation{
+					{
+						ID:      "anno2",
+						TraceID: "trace2",
+						SpaceID: "ws2",
+					},
+				}, nil)
+				traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+				traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+					TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+						"test": {
+							loop_span.TTL3d: {
+								AnnoTable: "annotations",
+							},
+						},
+					},
+				}, nil)
+				return fields{
+					annoDao:     annoDaoMock,
+					traceConfig: traceConfigMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				param: &repo.ListWorkspaceAnnotationsParam{
+					WorkSpaceID: "ws2",
+					Tenants:     []string{"test"},
+					Limit:       50,
+				},
+			},
+			want: loop_span.AnnotationList{
+				{
+					ID:          "anno2",
+					TraceID:     "trace2",
+					WorkspaceID: "ws2",
+					StartTime:   time.UnixMicro(0),
+					UpdatedAt:   time.UnixMicro(0),
+					CreatedAt:   time.UnixMicro(0),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r, err := NewTraceRepoImpl(
+				fields.traceConfig,
+				&mockStorageProvider{},
+				fields.spanRedisDao,
+				fields.spanProducer,
+				nil,
+				nil,
+				WithTraceStorageAnnotationDao("ck", fields.annoDao),
+			)
+			assert.NoError(t, err)
+			got, err := r.ListWorkspaceAnnotations(tt.args.ctx, tt.args.param)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

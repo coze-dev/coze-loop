@@ -178,3 +178,15 @@ func GetTrajectoryConfig(ctx context.Context, c *app.RequestContext) {
 func ListTrajectory(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityClient.ListTrajectory)
 }
+
+// ListWorkspaceAnnotations .
+// @router /api/observability/v1/annotations/list_by_workspace [POST]
+func ListWorkspaceAnnotations(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListWorkspaceAnnotations)
+}
+
+// ListMetadata .
+// @router /api/observability/v1/traces/metadata/list [POST]
+func ListMetadata(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityClient.ListMetadata)
+}

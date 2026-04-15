@@ -507,6 +507,8 @@ func TestTraceApplication_ListSpans(t *testing.T) {
 									TaskID:             "123",
 									RecordID:           123,
 									EvaluatorVersionID: 123,
+									ExptID:             ptr.Of(int64(0)),
+									ExptTemplateID:     ptr.Of(int64(0)),
 									EvaluatorResult_: &annodto.EvaluatorResult_{
 										Score:     ptr.Of(1.0),
 										Reasoning: ptr.Of(""),
@@ -2344,6 +2346,319 @@ func TestTraceApplication_ListAnnotationEvaluators(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestTraceApplication_ListMetadata(t *testing.T) {
+	t.Run("nil request returns error", func(t *testing.T) {
+		tr := &TraceApplication{}
+		_, err := tr.ListMetadata(context.Background(), nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid workspace_id returns error", func(t *testing.T) {
+		tr := &TraceApplication{}
+		_, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID: 0,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("permission error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(fmt.Errorf("denied"))
+		tr := &TraceApplication{authSvc: mockAuth}
+		_, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID: 123,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("service error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListMetadata(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		_, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID: 123,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("success with default platform and span list type", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListMetadata(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.ListMetadataReq) (*service.ListMetadataResp, error) {
+				assert.Equal(t, int64(123), req.WorkspaceID)
+				assert.Equal(t, loop_span.PlatformCozeLoop, req.PlatformType)
+				assert.Equal(t, loop_span.SpanListTypeRootSpan, req.SpanListType)
+				return &service.ListMetadataResp{
+					MetadataItemList: []*trace.MetadataItemInfo{
+						{Key: "k1", ValueType: "string"},
+					},
+				}, nil
+			},
+		)
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID: 123,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.MetadataItemList, 1)
+		assert.Equal(t, "k1", resp.MetadataItemList[0].Key)
+	})
+
+	t.Run("explicit platform type and all_span list type", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListMetadata(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.ListMetadataReq) (*service.ListMetadataResp, error) {
+				assert.Equal(t, loop_span.PlatformType(commondto.PlatformTypeCozeBot), req.PlatformType)
+				assert.Equal(t, loop_span.SpanListTypeAllSpan, req.SpanListType)
+				return &service.ListMetadataResp{}, nil
+			},
+		)
+		pt := commondto.PlatformTypeCozeBot
+		slt := commondto.SpanListTypeAllSpan
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID:  123,
+			PlatformType: &pt,
+			SpanListType: &slt,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("llm_span list type", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListMetadata(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.ListMetadataReq) (*service.ListMetadataResp, error) {
+				assert.Equal(t, loop_span.SpanListTypeLLMSpan, req.SpanListType)
+				return &service.ListMetadataResp{}, nil
+			},
+		)
+		slt := commondto.SpanListTypeLlmSpan
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID:  123,
+			SpanListType: &slt,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("root_span list type explicit", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListMetadata(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, req *service.ListMetadataReq) (*service.ListMetadataResp, error) {
+				assert.Equal(t, loop_span.SpanListTypeRootSpan, req.SpanListType)
+				return &service.ListMetadataResp{}, nil
+			},
+		)
+		slt := commondto.SpanListTypeRootSpan
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListMetadata(context.Background(), &trace.ListMetadataRequest{
+			WorkspaceID:  123,
+			SpanListType: &slt,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+}
+
+func TestTraceApplication_ListWorkspaceAnnotations(t *testing.T) {
+	t.Run("nil request returns error", func(t *testing.T) {
+		tr := &TraceApplication{}
+		_, err := tr.ListWorkspaceAnnotations(context.Background(), nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid workspace_id returns error", func(t *testing.T) {
+		tr := &TraceApplication{}
+		_, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 0,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("permission error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(fmt.Errorf("denied"))
+		tr := &TraceApplication{authSvc: mockAuth}
+		_, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("service error", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		_, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("empty annotations returns empty list", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListWorkspaceAnnotationsResp{
+			Annotations: loop_span.AnnotationList{},
+		}, nil)
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 0)
+	})
+
+	t.Run("auto_evaluate annotation key is converted with original_key preserved", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockUser := rpcmock.NewMockIUserProvider(ctrl)
+		mockEval := rpcmock.NewMockIEvaluatorRPCAdapter(ctrl)
+		mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
+
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListWorkspaceAnnotationsResp{
+			Annotations: loop_span.AnnotationList{
+				{
+					Key:            "100:200",
+					AnnotationType: loop_span.AnnotationTypeAutoEvaluate,
+					Metadata: loop_span.AutoEvaluateMetadata{
+						TaskID:             100,
+						EvaluatorVersionID: 200,
+					},
+					CreatedBy: "user1",
+					UpdatedBy: "user1",
+				},
+			},
+		}, nil)
+		mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil, nil).AnyTimes()
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, map[int64]*rpc.Evaluator{
+			200: {EvaluatorName: "MyEvaluator"},
+		}, nil).AnyTimes()
+		mockTag.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+		tr := &TraceApplication{
+			authSvc:      mockAuth,
+			traceService: mockSvc,
+			userSvc:      mockUser,
+			evalSvc:      mockEval,
+			tagSvc:       mockTag,
+		}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 1)
+		assert.Equal(t, "MyEvaluator", resp.SimpleAnnotationList[0].Key)
+		assert.Equal(t, "100:200", resp.SimpleAnnotationList[0].GetOriginalKey())
+	})
+
+	t.Run("dedup and sort by frequency with original_key", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+		mockUser := rpcmock.NewMockIUserProvider(ctrl)
+		mockEval := rpcmock.NewMockIEvaluatorRPCAdapter(ctrl)
+		mockTag := rpcmock.NewMockITagRPCAdapter(ctrl)
+
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListWorkspaceAnnotationsResp{
+			Annotations: loop_span.AnnotationList{
+				{Key: "100:200", AnnotationType: loop_span.AnnotationTypeAutoEvaluate, Metadata: loop_span.AutoEvaluateMetadata{TaskID: 100, EvaluatorVersionID: 200}, CreatedBy: "u1", UpdatedBy: "u1"},
+				{Key: "100:200", AnnotationType: loop_span.AnnotationTypeAutoEvaluate, Metadata: loop_span.AutoEvaluateMetadata{TaskID: 100, EvaluatorVersionID: 200}, CreatedBy: "u1", UpdatedBy: "u1"},
+				{Key: "100:300", AnnotationType: loop_span.AnnotationTypeAutoEvaluate, Metadata: loop_span.AutoEvaluateMetadata{TaskID: 100, EvaluatorVersionID: 300}, CreatedBy: "u1", UpdatedBy: "u1"},
+			},
+		}, nil)
+		mockUser.EXPECT().GetUserInfo(gomock.Any(), gomock.Any()).Return(nil, nil, nil).AnyTimes()
+		mockEval.EXPECT().BatchGetEvaluatorVersions(gomock.Any(), gomock.Any()).Return(nil, map[int64]*rpc.Evaluator{
+			200: {EvaluatorName: "EvalA"},
+			300: {EvaluatorName: "EvalB"},
+		}, nil).AnyTimes()
+		mockTag.EXPECT().BatchGetTagInfo(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+
+		tr := &TraceApplication{
+			authSvc:      mockAuth,
+			traceService: mockSvc,
+			userSvc:      mockUser,
+			evalSvc:      mockEval,
+			tagSvc:       mockTag,
+		}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID: 123,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 2)
+		assert.Equal(t, "EvalA", resp.SimpleAnnotationList[0].Key)
+		assert.Equal(t, "100:200", resp.SimpleAnnotationList[0].GetOriginalKey())
+		assert.Equal(t, "EvalB", resp.SimpleAnnotationList[1].Key)
+		assert.Equal(t, "100:300", resp.SimpleAnnotationList[1].GetOriginalKey())
+	})
+
+	t.Run("with PlatformType and SpanListType params", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+		mockSvc := svcmock.NewMockITraceService(ctrl)
+
+		mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), rpc.AuthActionTraceRead, "123", false).Return(nil)
+		mockSvc.EXPECT().ListWorkspaceAnnotations(gomock.Any(), gomock.Any()).Return(&service.ListWorkspaceAnnotationsResp{
+			Annotations: loop_span.AnnotationList{},
+		}, nil)
+
+		slt := commondto.SpanListTypeAllSpan
+		pt := commondto.PlatformTypeCozeBot
+		tr := &TraceApplication{authSvc: mockAuth, traceService: mockSvc}
+		resp, err := tr.ListWorkspaceAnnotations(context.Background(), &trace.ListWorkspaceAnnotationsRequest{
+			WorkspaceID:  123,
+			PlatformType: &pt,
+			SpanListType: &slt,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Len(t, resp.SimpleAnnotationList, 0)
+	})
 }
 
 func TestTraceApplication_ExtractSpanInfo(t *testing.T) {

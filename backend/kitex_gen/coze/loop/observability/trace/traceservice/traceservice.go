@@ -118,6 +118,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListWorkspaceAnnotations": kitex.NewMethodInfo(
+		listWorkspaceAnnotationsHandler,
+		newTraceServiceListWorkspaceAnnotationsArgs,
+		newTraceServiceListWorkspaceAnnotationsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ExportTracesToDataset": kitex.NewMethodInfo(
 		exportTracesToDatasetHandler,
 		newTraceServiceExportTracesToDatasetArgs,
@@ -171,6 +178,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		listTrajectoryHandler,
 		newTraceServiceListTrajectoryArgs,
 		newTraceServiceListTrajectoryResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"ListMetadata": kitex.NewMethodInfo(
+		listMetadataHandler,
+		newTraceServiceListMetadataArgs,
+		newTraceServiceListMetadataResult,
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
@@ -492,6 +506,25 @@ func newTraceServiceListAnnotationsResult() interface{} {
 	return trace.NewTraceServiceListAnnotationsResult()
 }
 
+func listWorkspaceAnnotationsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListWorkspaceAnnotationsArgs)
+	realResult := result.(*trace.TraceServiceListWorkspaceAnnotationsResult)
+	success, err := handler.(trace.TraceService).ListWorkspaceAnnotations(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListWorkspaceAnnotationsArgs() interface{} {
+	return trace.NewTraceServiceListWorkspaceAnnotationsArgs()
+}
+
+func newTraceServiceListWorkspaceAnnotationsResult() interface{} {
+	return trace.NewTraceServiceListWorkspaceAnnotationsResult()
+}
+
 func exportTracesToDatasetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceExportTracesToDatasetArgs)
 	realResult := result.(*trace.TraceServiceExportTracesToDatasetResult)
@@ -642,6 +675,25 @@ func newTraceServiceListTrajectoryArgs() interface{} {
 
 func newTraceServiceListTrajectoryResult() interface{} {
 	return trace.NewTraceServiceListTrajectoryResult()
+}
+
+func listMetadataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListMetadataArgs)
+	realResult := result.(*trace.TraceServiceListMetadataResult)
+	success, err := handler.(trace.TraceService).ListMetadata(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListMetadataArgs() interface{} {
+	return trace.NewTraceServiceListMetadataArgs()
+}
+
+func newTraceServiceListMetadataResult() interface{} {
+	return trace.NewTraceServiceListMetadataResult()
 }
 
 type kClient struct {
@@ -806,6 +858,16 @@ func (p *kClient) ListAnnotations(ctx context.Context, req *trace.ListAnnotation
 	return _result.GetSuccess(), nil
 }
 
+func (p *kClient) ListWorkspaceAnnotations(ctx context.Context, req *trace.ListWorkspaceAnnotationsRequest) (r *trace.ListWorkspaceAnnotationsResponse, err error) {
+	var _args trace.TraceServiceListWorkspaceAnnotationsArgs
+	_args.Req = req
+	var _result trace.TraceServiceListWorkspaceAnnotationsResult
+	if err = p.c.Call(ctx, "ListWorkspaceAnnotations", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
 func (p *kClient) ExportTracesToDataset(ctx context.Context, req *trace.ExportTracesToDatasetRequest) (r *trace.ExportTracesToDatasetResponse, err error) {
 	var _args trace.TraceServiceExportTracesToDatasetArgs
 	_args.Req = req
@@ -881,6 +943,16 @@ func (p *kClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryR
 	_args.Req = req
 	var _result trace.TraceServiceListTrajectoryResult
 	if err = p.c.Call(ctx, "ListTrajectory", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest) (r *trace.ListMetadataResponse, err error) {
+	var _args trace.TraceServiceListMetadataArgs
+	_args.Req = req
+	var _result trace.TraceServiceListMetadataResult
+	if err = p.c.Call(ctx, "ListMetadata", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
