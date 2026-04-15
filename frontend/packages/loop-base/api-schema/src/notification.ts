@@ -1,7 +1,6 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
 import { EventEmitter } from 'eventemitter3';
-import { logger } from '@coze-arch/logger';
 
 import { HttpStatusCode } from './http-codes';
 
@@ -25,14 +24,23 @@ class ApiError extends Error {
   }
 }
 
+function logApi(uri: string, data: { code?: number; msg?: string }) {
+  const ok = data.code === 0 || data.code === undefined;
+  const tag = ok ? '✓' : `✗ ${data.code}`;
+  const bg = ok ? '#22c55e' : '#ef4444';
+
+  console.info(
+    `%cAPI Schema%c${tag}%c ${uri}`,
+    'background:#544cfd;color:#fff;padding:1px 4px;border-radius:2px 0 0 2px',
+    `background:${bg};color:#fff;padding:1px 4px;border-radius:0 2px 2px 0`,
+    'color:#6b7280',
+    data,
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- skip
 export function checkResponseData(uri: string, data: any) {
-  logger.info({
-    namespace: 'API',
-    scope: uri,
-    message: '-',
-    meta: data,
-  });
+  logApi(uri, data);
 
   if (typeof data.code === 'number' && data.code !== 0) {
     const msg = data.msg || data.message || 'Unknown error';

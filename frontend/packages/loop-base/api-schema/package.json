@@ -62,7 +62,6 @@
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/idl2ts-cli": "workspace:*",
     "@coze-arch/idl2ts-runtime": "workspace:*",
-    "@coze-arch/logger": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
     "@microsoft/api-extractor": "7.43.0",
