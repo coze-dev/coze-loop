@@ -35,6 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -6136,6 +6137,7 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 	type fields struct {
 		traceRepo      repo.ITraceRepo
 		tenantProvider tenant.ITenantProvider
+		buildHelper    TraceFilterProcessorBuilder
 	}
 	type args struct {
 		ctx context.Context
@@ -6170,7 +6172,10 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						},
 					},
 				}, nil)
-				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock}
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -6210,7 +6215,10 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						},
 					},
 				}, nil)
-				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock}
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -6241,7 +6249,10 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						},
 					},
 				}, nil)
-				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock}
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -6276,7 +6287,10 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
 				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
 				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
-				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock}
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
 			},
 			args: args{
 				ctx: context.Background(),
@@ -6296,6 +6310,7 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 			r := &TraceServiceImpl{
 				traceRepo:      fields.traceRepo,
 				tenantProvider: fields.tenantProvider,
+				buildHelper:    fields.buildHelper,
 			}
 			got, err := r.GetAgentMetadata(tt.args.ctx, tt.args.req)
 			if tt.wantErr {

@@ -1091,7 +1091,23 @@ func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMe
 	startTime := now.Add(-7 * 24 * time.Hour).UnixMilli()
 	endTime := now.UnixMilli()
 
-	andOp := loop_span.QueryAndOrEnumAnd
+	// build builtin filters (space_id, call_type, etc.) same as ListSpans
+	platformFilter, err := r.buildHelper.BuildPlatformRelatedFilter(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	env := &span_filter.SpanEnv{
+		WorkspaceID: req.WorkspaceID,
+	}
+	builtinFilter, err := BuildBuiltinFilters(ctx, platformFilter, env, loop_span.SpanListTypeAllSpan)
+	if err != nil {
+		return nil, err
+	}
+	if builtinFilter == nil {
+		return &GetAgentMetadataResponse{}, nil
+	}
+
+	// agent name exist filter
 	orOp := loop_span.QueryAndOrEnumOr
 	agentNameFilter := &loop_span.FilterFields{
 		QueryAndOr: &orOp,
@@ -1110,14 +1126,8 @@ func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMe
 			},
 		},
 	}
-	filters := &loop_span.FilterFields{
-		QueryAndOr: &andOp,
-		FilterFields: []*loop_span.FilterField{
-			{
-				SubFilter: agentNameFilter,
-			},
-		},
-	}
+
+	filters := CombineFilters(builtinFilter, agentNameFilter)
 
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
