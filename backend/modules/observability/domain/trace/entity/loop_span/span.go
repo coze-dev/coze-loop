@@ -606,7 +606,7 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	a.CreatedBy = userID
 	a.UpdatedAt = time.Now()
 	a.UpdatedBy = userID
-
+	a.AnnotationIndex = []string{strconv.FormatInt(evaluatorVersionID, 10)}
 	if err := a.GenID(); err != nil {
 		return nil, err
 	}
