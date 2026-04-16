@@ -20,6 +20,11 @@ type (
 	ExptStatus int64
 	ExptType   int64
 	SourceType = int64
+	Visibility = int64
+)
+
+const (
+	Visibility_Hidden Visibility = 1
 )
 
 const (
@@ -53,7 +58,8 @@ const (
 	// SourceType_AutoTask 用于 ExptSource，与 IDL domain_expt.SourceType_AutoTask 一致
 	SourceType_AutoTask SourceType = 2
 	// SourceType_Workflow 与 IDL domain_expt.SourceType_Workflow 一致（Pipeline / 工作流来源，用于 enrichExptSourceFromPipeline 等）
-	SourceType_Workflow SourceType = 3
+	SourceType_Workflow       SourceType = 3
+	SourceType_IntelligentGen SourceType = 4
 )
 
 type ExptRunLog struct {
@@ -142,12 +148,16 @@ type Experiment struct {
 	// TriggerType 实验触发方式，与表字段 trigger_type 一致：manual / openapi / schedule
 	TriggerType string
 	// ExptSource 查询时填充：与一级字段 source_type/source_id 一致；Workflow 时由 Pipeline 补充 span_filter / scheduler / sampler
-	ExptSource *ExptSource
+	ExptSource        *ExptSource
+	TrialRunItemCount int64
 
 	Stats           *ExptStats
 	AggregateResult *ExptAggregateResult
 
 	ExptTemplateMeta *ExptTemplateMeta // 关联的实验模板基础信息（仅在查询时按需填充，包含模板 ID）
+
+	Visibility Visibility // 实验模板可见性，默认为空，可见
+	ThreadID   *string    // 关联的智能评测会话ID
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {
@@ -172,10 +182,16 @@ func (e *Experiment) AsyncExec() bool {
 }
 
 func (e *Experiment) AsyncCallTarget() bool {
-	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil || e.Target.EvalTargetVersion.CustomRPCServer == nil {
+	if e == nil || e.Target == nil || e.Target.EvalTargetVersion == nil {
 		return false
 	}
-	return gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync)
+	if e.Target.EvalTargetVersion.CustomRPCServer != nil && gptr.Indirect(e.Target.EvalTargetVersion.CustomRPCServer.IsAsync) {
+		return true
+	}
+	if e.Target.EvalTargetVersion.WebAgent != nil {
+		return true
+	}
+	return false
 }
 
 func (e *Experiment) AsyncCallEvaluators() bool {
@@ -226,7 +242,7 @@ func (t *TargetConf) Valid(ctx context.Context, targetType EvalTargetType) error
 		return fmt.Errorf("invalid TargetConf: %v", json.Jsonify(t))
 	}
 	// prompt/custom_rpc 可能无输入；仅记录型不需要执行，仅需记录对象类型和基本信息
-	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer || targetType.IsRecordOnlyType() {
+	if targetType == EvalTargetTypeLoopPrompt || targetType == EvalTargetTypeCustomRPCServer || targetType == EvalTargetTypeWebAgent || targetType.IsRecordOnlyType() {
 		return nil
 	}
 	if t.IngressConf != nil && t.IngressConf.EvalSetAdapter != nil && len(t.IngressConf.EvalSetAdapter.FieldConfs) > 0 {
@@ -366,14 +382,15 @@ type VersionedEvalSetID struct {
 }
 
 type CreateEvalTargetParam struct {
-	SourceTargetID      *string
-	SourceTargetVersion *string
-	EvalTargetType      *EvalTargetType
-	BotInfoType         *CozeBotInfoType
-	BotPublishVersion   *string
-	CustomEvalTarget    *CustomEvalTarget // 搜索对象返回的信息
-	Region              *Region
-	Env                 *string
+	SourceTargetID       *string
+	SourceTargetVersion  *string
+	EvalTargetType       *EvalTargetType
+	BotInfoType          *CozeBotInfoType
+	BotPublishVersion    *string
+	CustomEvalTarget     *CustomEvalTarget // 搜索对象返回的信息
+	Region               *Region
+	Env                  *string
+	OperationInstruction *string
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

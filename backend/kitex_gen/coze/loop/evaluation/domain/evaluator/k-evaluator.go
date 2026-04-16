@@ -4211,6 +4211,20 @@ func (p *Evaluator) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 24:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField24(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -4421,6 +4435,20 @@ func (p *Evaluator) FastReadField23(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Evaluator) FastReadField24(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *EvaluatorSourceType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SourceType = _field
+	return offset, nil
+}
+
 func (p *Evaluator) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -4501,6 +4529,7 @@ func (p *Evaluator) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField21(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField23(buf[offset:], w)
+		offset += p.fastWriteField24(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -4523,6 +4552,7 @@ func (p *Evaluator) BLength() int {
 		l += p.field21Length()
 		l += p.field22Length()
 		l += p.field23Length()
+		l += p.field24Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4642,6 +4672,15 @@ func (p *Evaluator) fastWriteField23(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetBoxType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 23)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.BoxType)
+	}
+	return offset
+}
+
+func (p *Evaluator) fastWriteField24(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSourceType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 24)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SourceType)
 	}
 	return offset
 }
@@ -4795,6 +4834,15 @@ func (p *Evaluator) field23Length() int {
 	return l
 }
 
+func (p *Evaluator) field24Length() int {
+	l := 0
+	if p.IsSetSourceType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SourceType)
+	}
+	return l
+}
+
 func (p *Evaluator) field100Length() int {
 	l := 0
 	if p.IsSetTags() {
@@ -4913,6 +4961,11 @@ func (p *Evaluator) DeepCopy(s interface{}) error {
 	if src.BoxType != nil {
 		tmp := *src.BoxType
 		p.BoxType = &tmp
+	}
+
+	if src.SourceType != nil {
+		tmp := *src.SourceType
+		p.SourceType = &tmp
 	}
 
 	if src.Tags != nil {

@@ -360,6 +360,12 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		TargetRuntimeParam:     trtp,
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
+	if experiment.Visibility == entity.Visibility_Hidden {
+		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
+	}
+	if experiment.ThreadID != nil {
+		res.ThreadID = experiment.ThreadID
+	}
 	if experiment.TriggerType != "" {
 		tt := experiment.TriggerType
 		res.TriggerType = &tt
@@ -406,6 +412,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
 			Desc:        gptr.Of(experiment.ExptTemplateMeta.Desc),
 			ExptType:    gptr.Of(domain_expt.ExptType(experiment.ExptTemplateMeta.ExptType)),
+		}
+		if experiment.ExptTemplateMeta.Visibility == entity.Visibility_Hidden {
+			res.ExptTemplateMeta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 		}
 	}
 
@@ -469,11 +478,12 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	}
 
 	res := &entity.CreateEvalTargetParam{
-		SourceTargetID:      param.SourceTargetID,
-		SourceTargetVersion: param.SourceTargetVersion,
-		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
+		SourceTargetID:       param.SourceTargetID,
+		SourceTargetVersion:  param.SourceTargetVersion,
+		BotPublishVersion:    param.BotPublishVersion,
+		Region:               param.Region,
+		Env:                  param.Env,
+		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
@@ -492,8 +502,11 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	return res
 }
 
-func ExptType2EvalMode(exptType domain_expt.ExptType) entity.ExptRunMode {
+func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) entity.ExptRunMode {
 	exptMode := entity.EvaluationModeSubmit
+	if trialRunItemCount != nil && *trialRunItemCount > 0 {
+		return entity.EvaluationModeTrialRun
+	}
 	if exptType == domain_expt.ExptType_Online {
 		exptMode = entity.EvaluationModeAppend
 	}
@@ -515,7 +528,18 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		MaxAliveTime:          cer.GetMaxAliveTime(),
 		SourceType:            entity.SourceType(cer.GetSourceType()),
 		SourceID:              cer.GetSourceID(),
+		TrialRunItemCount:     cer.GetTrialRunItemCount(),
 		ExptConf:              nil,
+	}
+	if cer.IsSetVisibility() {
+		if cer.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
+	if cer.IsSetThreadID() {
+		param.ThreadID = cer.ThreadID
 	}
 	evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
 	if err != nil {

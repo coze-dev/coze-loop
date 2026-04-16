@@ -30,6 +30,7 @@ type EvalTargetVersion struct {
 	CozeWorkflow    *CozeWorkflow
 	VolcengineAgent *VolcengineAgent
 	CustomRPCServer *CustomRPCServer
+	WebAgent        *WebAgent
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -56,6 +57,8 @@ const (
 
 	// 火山智能体Agentkit
 	EvalTargetTypeVolcengineAgentAgentkit EvalTargetType = 7
+	// Web智能体
+	EvalTargetTypeWebAgent EvalTargetType = 8
 
 	// 以下为仅记录型：评测过程中不执行对象，仅用于记录对象类型和基本信息
 	EvalTargetTypeCozeBotOnline                 EvalTargetType = 11
@@ -146,6 +149,8 @@ func (p EvalTargetType) String() string {
 		return "CustomRPCServer"
 	case EvalTargetTypeVolcengineAgentAgentkit:
 		return "VolcengineAgentKit"
+	case EvalTargetTypeWebAgent:
+		return "WebAgent"
 	case EvalTargetTypeCozeBotOnline:
 		return "CozeBotOnline"
 	case EvalTargetTypeCozeLoopPromptOnline:

@@ -26,12 +26,14 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 	var id, spaceID int64
 	var name, description string
 	var exptType entity.ExptType
+	var visibility entity.Visibility
 	if template.Meta != nil {
 		id = template.Meta.ID
 		spaceID = template.Meta.WorkspaceID
 		name = template.Meta.Name
 		description = template.Meta.Desc
 		exptType = template.Meta.ExptType
+		visibility = template.Meta.Visibility
 	}
 
 	// 从 BaseInfo 获取 CreatedBy
@@ -75,6 +77,7 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		TargetType:       int64(targetType),
 		TargetVersionID:  targetVersionID,
 		ExptType:         int32(exptType),
+		Visibility:       int32(visibility),
 		CronActivate:     cronActivate,
 	}
 

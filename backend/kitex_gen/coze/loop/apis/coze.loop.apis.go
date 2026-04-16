@@ -19,7 +19,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/ingestion"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
@@ -499,32 +498,6 @@ func NewObservabilityMetricServiceClient(c thrift.TClient) *ObservabilityMetricS
 	}
 }
 
-type ObservabilityIngestionService interface {
-	ingestion.IngestionService
-}
-
-type ObservabilityIngestionServiceClient struct {
-	*ingestion.IngestionServiceClient
-}
-
-func NewObservabilityIngestionServiceClientFactory(t thrift.TTransport, f thrift.TProtocolFactory) *ObservabilityIngestionServiceClient {
-	return &ObservabilityIngestionServiceClient{
-		IngestionServiceClient: ingestion.NewIngestionServiceClientFactory(t, f),
-	}
-}
-
-func NewObservabilityIngestionServiceClientProtocol(t thrift.TTransport, iprot thrift.TProtocol, oprot thrift.TProtocol) *ObservabilityIngestionServiceClient {
-	return &ObservabilityIngestionServiceClient{
-		IngestionServiceClient: ingestion.NewIngestionServiceClientProtocol(t, iprot, oprot),
-	}
-}
-
-func NewObservabilityIngestionServiceClient(c thrift.TClient) *ObservabilityIngestionServiceClient {
-	return &ObservabilityIngestionServiceClient{
-		IngestionServiceClient: ingestion.NewIngestionServiceClient(c),
-	}
-}
-
 type FoundationAuthService interface {
 	auth.AuthService
 }
@@ -840,15 +813,6 @@ type ObservabilityMetricServiceProcessor struct {
 
 func NewObservabilityMetricServiceProcessor(handler ObservabilityMetricService) *ObservabilityMetricServiceProcessor {
 	self := &ObservabilityMetricServiceProcessor{metric.NewMetricServiceProcessor(handler)}
-	return self
-}
-
-type ObservabilityIngestionServiceProcessor struct {
-	*ingestion.IngestionServiceProcessor
-}
-
-func NewObservabilityIngestionServiceProcessor(handler ObservabilityIngestionService) *ObservabilityIngestionServiceProcessor {
-	self := &ObservabilityIngestionServiceProcessor{ingestion.NewIngestionServiceProcessor(handler)}
 	return self
 }
 

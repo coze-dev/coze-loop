@@ -2388,6 +2388,65 @@ func TestToTargetFieldMappingDOForTemplate_RuntimeParam(t *testing.T) {
 	})
 }
 
+func TestExptType2EvalMode(t *testing.T) {
+	tests := []struct {
+		name              string
+		exptType          domain_expt.ExptType
+		trialRunItemCount *int64
+		want              entity.ExptRunMode
+	}{
+		{
+			name:              "trial run with positive count",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(10)),
+			want:              entity.EvaluationModeTrialRun,
+		},
+		{
+			name:              "trial run with count 1",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: gptr.Of(int64(1)),
+			want:              entity.EvaluationModeTrialRun,
+		},
+		{
+			name:              "trial run with zero count falls through",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(0)),
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "trial run with negative count falls through",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(-1)),
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "nil trial run count with online type",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: nil,
+			want:              entity.EvaluationModeAppend,
+		},
+		{
+			name:              "nil trial run count with offline type",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: nil,
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "zero trial run count with online type",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: gptr.Of(int64(0)),
+			want:              entity.EvaluationModeAppend,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExptType2EvalMode(tt.exptType, tt.trialRunItemCount)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestToEvaluatorFieldMappingDoForTemplate_Complete(t *testing.T) {
 	t.Run("完整转换评估器字段映射", func(t *testing.T) {
 		mapping := []*domain_expt.EvaluatorFieldMapping{

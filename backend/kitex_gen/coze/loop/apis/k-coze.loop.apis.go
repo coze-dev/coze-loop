@@ -25,7 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user"
 	manage0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/manage"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/ingestion"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/metric"
 	openapi2 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
@@ -53,7 +52,6 @@ var (
 	_ = user.KitexUnusedProtection
 	_ = manage0.KitexUnusedProtection
 	_ = runtime.KitexUnusedProtection
-	_ = ingestion.KitexUnusedProtection
 	_ = metric.KitexUnusedProtection
 	_ = openapi2.KitexUnusedProtection
 	_ = task.KitexUnusedProtection

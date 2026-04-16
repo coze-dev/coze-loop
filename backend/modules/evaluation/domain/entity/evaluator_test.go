@@ -1966,3 +1966,415 @@ func TestEvaluator_SettersDelegate_Extra(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluator_GetRateLimit(t *testing.T) {
+	t.Parallel()
+
+	rl := &RateLimit{Rate: gptr.Of(int32(10))}
+
+	tests := []struct {
+		name     string
+		e        *Evaluator
+		expected *RateLimit
+	}{
+		{
+			name: "custom rpc with rate limit",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					RateLimit: rl,
+				},
+			},
+			expected: rl,
+		},
+		{
+			name: "custom rpc with nil rate limit",
+			e: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{},
+			},
+			expected: nil,
+		},
+		{
+			name: "custom rpc with nil version",
+			e: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "prompt type returns nil",
+			e: &Evaluator{
+				EvaluatorType:          EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &PromptEvaluatorVersion{},
+			},
+			expected: nil,
+		},
+		{
+			name: "code type returns nil",
+			e: &Evaluator{
+				EvaluatorType:        EvaluatorTypeCode,
+				CodeEvaluatorVersion: &CodeEvaluatorVersion{},
+			},
+			expected: nil,
+		},
+		{
+			name: "agent type returns nil",
+			e: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{},
+			},
+			expected: nil,
+		},
+		{
+			name: "unknown type returns nil",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorType(999),
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.e.GetRateLimit()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestEvaluator_GetInputSchemas(t *testing.T) {
+	t.Parallel()
+
+	schemas := []*ArgsSchema{
+		{Key: gptr.Of("field1"), SupportContentTypes: []ContentType{ContentTypeText}},
+	}
+
+	tests := []struct {
+		name     string
+		e        *Evaluator
+		expected []*ArgsSchema
+	}{
+		{
+			name: "prompt with schemas",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorTypePrompt,
+				PromptEvaluatorVersion: &PromptEvaluatorVersion{
+					InputSchemas: schemas,
+				},
+			},
+			expected: schemas,
+		},
+		{
+			name: "prompt with nil version",
+			e: &Evaluator{
+				EvaluatorType:          EvaluatorTypePrompt,
+				PromptEvaluatorVersion: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "code type returns nil",
+			e: &Evaluator{
+				EvaluatorType:        EvaluatorTypeCode,
+				CodeEvaluatorVersion: &CodeEvaluatorVersion{},
+			},
+			expected: nil,
+		},
+		{
+			name: "custom rpc with schemas",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					InputSchemas: schemas,
+				},
+			},
+			expected: schemas,
+		},
+		{
+			name: "custom rpc with nil version",
+			e: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "agent with schemas",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{
+					InputSchemas: schemas,
+				},
+			},
+			expected: schemas,
+		},
+		{
+			name: "agent with nil version",
+			e: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: nil,
+			},
+			expected: nil,
+		},
+		{
+			name: "unknown type returns nil",
+			e: &Evaluator{
+				EvaluatorType: EvaluatorType(999),
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.e.GetInputSchemas()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestEvaluator_ValidateInput_CustomRPCAndAgent(t *testing.T) {
+	t.Parallel()
+
+	validInput := &EvaluatorInputData{
+		InputFields: map[string]*Content{
+			"f1": {ContentType: gptr.Of(ContentTypeText), Text: gptr.Of(`"hello"`)},
+		},
+	}
+
+	tests := []struct {
+		name      string
+		evaluator *Evaluator
+		input     *EvaluatorInputData
+		expectErr bool
+	}{
+		{
+			name: "custom rpc with valid version delegates",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					InputSchemas: []*ArgsSchema{
+						{Key: gptr.Of("f1"), SupportContentTypes: []ContentType{ContentTypeText}, JsonSchema: gptr.Of(`{"type": "string"}`)},
+					},
+				},
+			},
+			input:     validInput,
+			expectErr: false,
+		},
+		{
+			name: "custom rpc with nil input returns error",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					InputSchemas: []*ArgsSchema{},
+				},
+			},
+			input:     nil,
+			expectErr: true,
+		},
+		{
+			name: "agent with valid version delegates",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{
+					InputSchemas: []*ArgsSchema{
+						{Key: gptr.Of("f1"), SupportContentTypes: []ContentType{ContentTypeText}, JsonSchema: gptr.Of(`{"type": "string"}`)},
+					},
+				},
+			},
+			input:     validInput,
+			expectErr: false,
+		},
+		{
+			name: "agent with nil input returns error",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{
+					InputSchemas: []*ArgsSchema{},
+				},
+			},
+			input:     nil,
+			expectErr: true,
+		},
+		{
+			name: "agent with nil version returns nil",
+			evaluator: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: nil,
+			},
+			input:     validInput,
+			expectErr: false,
+		},
+		{
+			name: "custom rpc with nil version returns nil",
+			evaluator: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: nil,
+			},
+			input:     validInput,
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := tt.evaluator.ValidateInput(tt.input)
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEvaluator_ValidateBaseInfo_CustomRPCAndAgent(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		evaluator *Evaluator
+		expectErr bool
+	}{
+		{
+			name: "custom rpc with valid version delegates",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					AccessProtocol: EvaluatorAccessProtocolRPC,
+					ServiceName:    gptr.Of("svc"),
+				},
+			},
+			expectErr: false,
+		},
+		{
+			name: "custom rpc with invalid version returns error",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					AccessProtocol: "",
+				},
+			},
+			expectErr: true,
+		},
+		{
+			name: "custom rpc with nil version returns nil",
+			evaluator: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: nil,
+			},
+			expectErr: false,
+		},
+		{
+			name: "agent with valid version delegates",
+			evaluator: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{},
+			},
+			expectErr: false,
+		},
+		{
+			name: "agent with nil version returns nil",
+			evaluator: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: nil,
+			},
+			expectErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			err := tt.evaluator.ValidateBaseInfo()
+			if tt.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEvaluator_SetEvaluatorVersion_CustomRPCAndAgent(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		evaluator *Evaluator
+		version   *Evaluator
+		verify    func(*testing.T, *Evaluator)
+	}{
+		{
+			name: "set custom rpc evaluator version",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeCustomRPC,
+			},
+			version: &Evaluator{
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{
+					Version: "v3.0.0",
+					ID:      789,
+				},
+			},
+			verify: func(t *testing.T, e *Evaluator) {
+				assert.NotNil(t, e.CustomRPCEvaluatorVersion)
+				assert.Equal(t, "v3.0.0", e.CustomRPCEvaluatorVersion.Version)
+				assert.Equal(t, int64(789), e.CustomRPCEvaluatorVersion.ID)
+			},
+		},
+		{
+			name: "set agent evaluator version",
+			evaluator: &Evaluator{
+				EvaluatorType: EvaluatorTypeAgent,
+			},
+			version: &Evaluator{
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{
+					Version: "v4.0.0",
+					ID:      101,
+				},
+			},
+			verify: func(t *testing.T, e *Evaluator) {
+				assert.NotNil(t, e.AgentEvaluatorVersion)
+				assert.Equal(t, "v4.0.0", e.AgentEvaluatorVersion.Version)
+				assert.Equal(t, int64(101), e.AgentEvaluatorVersion.ID)
+			},
+		},
+		{
+			name: "nil version for custom rpc no panic",
+			evaluator: &Evaluator{
+				EvaluatorType:             EvaluatorTypeCustomRPC,
+				CustomRPCEvaluatorVersion: &CustomRPCEvaluatorVersion{Version: "keep"},
+			},
+			version: nil,
+			verify: func(t *testing.T, e *Evaluator) {
+				require.NotNil(t, e.CustomRPCEvaluatorVersion)
+				assert.Equal(t, "keep", e.CustomRPCEvaluatorVersion.Version)
+			},
+		},
+		{
+			name: "nil version for agent no panic",
+			evaluator: &Evaluator{
+				EvaluatorType:         EvaluatorTypeAgent,
+				AgentEvaluatorVersion: &AgentEvaluatorVersion{Version: "keep"},
+			},
+			version: nil,
+			verify: func(t *testing.T, e *Evaluator) {
+				require.NotNil(t, e.AgentEvaluatorVersion)
+				assert.Equal(t, "keep", e.AgentEvaluatorVersion.Version)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			tt.evaluator.SetEvaluatorVersion(tt.version)
+			tt.verify(t, tt.evaluator)
+		})
+	}
+}

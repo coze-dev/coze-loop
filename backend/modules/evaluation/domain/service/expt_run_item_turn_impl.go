@@ -205,7 +205,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			return nil, nil
 		}
 		switch etec.Expt.Target.EvalTargetType {
-		case entity.EvalTargetTypeCustomRPCServer:
+		case entity.EvalTargetTypeCustomRPCServer, entity.EvalTargetTypeWebAgent:
 			fields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
 			for _, field := range turn.FieldDataList {
 				if field.Content != nil && field.Content.IsContentOmitted() {

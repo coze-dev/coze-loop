@@ -341,7 +341,7 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 			name: "async execute failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
 				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(0), "callee", map[string]string(nil), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantErr:      true,
@@ -352,7 +352,7 @@ func TestEvalTargetServiceImpl_asyncExecuteTarget(t *testing.T) {
 			name: "success",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, target *entity.EvalTarget, input *entity.EvalTargetInputData) {
 				deps.operator.EXPECT().ValidateInput(ctx, target.SpaceID, target.EvalTargetVersion.InputSchema, input).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(999), "callee", nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, target.SpaceID, gomock.Any()).Return(int64(999), "callee", map[string]string(nil), nil)
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, target.SpaceID, target.EvalTargetVersion.ID).Return(target, nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(target.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -840,6 +840,44 @@ func TestEvalTargetServiceImpl_ReportInvokeRecords(t *testing.T) {
 					assert.Equal(t, param.OutputData, saved.EvalTargetOutputData)
 					assert.Equal(t, param.Status, gptr.Indirect(saved.Status))
 				})
+			},
+		},
+		{
+			name: "record有Ext数据合并到param",
+			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
+				status := entity.EvalTargetRunStatusAsyncInvoking
+				record.Status = &status
+				record.EvalTargetOutputData = &entity.EvalTargetOutputData{
+					Ext: map[string]string{"screen_recording_uri": "tos://recording"},
+				}
+				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+
+				param.OutputData = &entity.EvalTargetOutputData{
+					OutputFields: map[string]*entity.Content{},
+				}
+				param.Session = &entity.Session{UserID: "user"}
+			},
+		},
+		{
+			name: "record有Ext且param无OutputData时自动创建",
+			prepare: func(deps *evalTargetServiceTestDeps, param *entity.ReportTargetRecordParam, record *entity.EvalTargetRecord) {
+				status := entity.EvalTargetRunStatusAsyncInvoking
+				record.Status = &status
+				record.EvalTargetOutputData = &entity.EvalTargetOutputData{
+					Ext: map[string]string{"key1": "val1"},
+				}
+				deps.repo.EXPECT().GetEvalTargetRecordByIDAndSpaceID(ctx, param.SpaceID, param.RecordID).Return(record, nil)
+				deps.repo.EXPECT().SaveEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				deps.metric.EXPECT().EmitRun(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+				deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+				deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
+
+				param.OutputData = nil
+				param.Session = &entity.Session{UserID: "user"}
 			},
 		},
 	}
@@ -1595,7 +1633,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 			name: "async execute failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(0), "callee", map[string]string(nil), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantErr:      true,
@@ -1606,7 +1644,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 			name: "create record failed",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(999), "callee", nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(999), "callee", map[string]string(nil), nil)
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.ID).Return(param.PatchyTarget, nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -1619,7 +1657,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 			name: "success with TruncateLargeContent nil",
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(999), "callee", nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(999), "callee", map[string]string(nil), nil)
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.ID).Return(param.PatchyTarget, nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Nil()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -1632,7 +1670,7 @@ func TestEvalTargetServiceImpl_AsyncDebugTarget(t *testing.T) {
 			prepare: func(ctx context.Context, deps *evalTargetServiceTestDeps, param *entity.DebugTargetParam) {
 				param.TruncateLargeContent = gptr.Of(false)
 				deps.operator.EXPECT().ValidateInput(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.InputSchema, param.InputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(888), "proxy-callee", nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, param.SpaceID, gomock.Any()).Return(int64(888), "proxy-callee", map[string]string(nil), nil)
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, param.SpaceID, param.PatchyTarget.EvalTargetVersion.ID).Return(param.PatchyTarget, nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gptr.Of(false)).Return(int64(888), nil)
 				deps.metric.EXPECT().EmitRun(param.SpaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -1902,7 +1940,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				}
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil)
 				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(0), "callee", errorx.NewByCode(errno.CommonInternalErrorCode))
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(0), "callee", map[string]string(nil), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
 			wantErr:      true,
@@ -1927,7 +1965,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				}
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil).Times(2)
 				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(999), "callee", nil)
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).Return(int64(999), "callee", map[string]string(nil), nil)
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(0), errorx.NewByCode(errno.CommonInternalErrorCode))
 				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
 			},
@@ -1953,7 +1991,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 				}
 				deps.repo.EXPECT().GetEvalTargetVersion(ctx, spaceID, targetVersionID).Return(evalTarget, nil).Times(2)
 				deps.operator.EXPECT().ValidateInput(ctx, spaceID, evalTarget.EvalTargetVersion.InputSchema, inputData).Return(nil)
-				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (int64, string, error) {
+				deps.operator.EXPECT().AsyncExecute(ctx, spaceID, gomock.Any()).DoAndReturn(func(_ context.Context, _ int64, execParam *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
 					assert.Equal(t, targetID, execParam.TargetID)
 					assert.Equal(t, targetVersionID, execParam.VersionID)
 					assert.Equal(t, "test-source", execParam.SourceTargetID)
@@ -1961,7 +1999,7 @@ func TestEvalTargetServiceImpl_AsyncExecuteTarget(t *testing.T) {
 					assert.Equal(t, inputData, execParam.Input)
 					assert.Equal(t, entity.EvalTargetTypeLoopPrompt, execParam.TargetType)
 					assert.Equal(t, evalTarget, execParam.EvalTarget)
-					return int64(999), "callee", nil
+					return int64(999), "callee", nil, nil
 				})
 				deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).Return(int64(999), nil)
 				deps.metric.EXPECT().EmitRun(spaceID, gomock.Any(), gomock.Any()).Times(1)
@@ -2140,4 +2178,20 @@ func TestEvalTargetServiceImpl_BatchGetRecordByIDs_LoadRecordOutputFields_LoadRe
 		err := svc.LoadRecordFullData(ctx, rec)
 		assert.NoError(t, err)
 	})
+}
+
+func TestEvalTargetServiceImpl_GetRecordByRunItemTurn(t *testing.T) {
+	t.Parallel()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := repomocks.NewMockIEvalTargetRepo(ctrl)
+	svc := &EvalTargetServiceImpl{evalTargetRepo: mockRepo}
+
+	expectedRecord := &entity.EvalTargetRecord{ID: 100}
+	mockRepo.EXPECT().GetEvalTargetRecordByRunItemTurn(gomock.Any(), int64(1), int64(2), int64(3), int64(4)).Return(expectedRecord, nil)
+
+	record, err := svc.GetRecordByRunItemTurn(context.Background(), 1, 2, 3, 4)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedRecord, record)
 }

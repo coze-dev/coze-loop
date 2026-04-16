@@ -10,6 +10,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
@@ -172,4 +173,139 @@ func TestToSPIContentHelpers(t *testing.T) {
 	assert.Equal(t, entity.EvalTargetRunStatusSuccess, ToTargetRunStatsDO(spi.InvokeEvalTargetStatus_SUCCESS))
 	assert.Equal(t, entity.EvalTargetRunStatusFail, ToTargetRunStatsDO(spi.InvokeEvalTargetStatus_FAILED))
 	assert.Equal(t, entity.EvalTargetRunStatusUnknown, ToTargetRunStatsDO(spi.InvokeEvalTargetStatus(42)))
+}
+
+func TestNilInputBranches(t *testing.T) {
+	t.Parallel()
+
+	// InputDO2DTO nil input returns nil
+	assert.Nil(t, InputDO2DTO(nil))
+
+	// OutputDO2DTO nil input returns nil
+	assert.Nil(t, OutputDO2DTO(nil))
+
+	// InputDTO2ToDO nil input returns nil
+	assert.Nil(t, InputDTO2ToDO(nil))
+
+	// OutputDTO2ToDO nil input returns nil
+	assert.Nil(t, OutputDTO2ToDO(nil))
+
+	// StatusDO2DTO nil input returns nil
+	assert.Nil(t, StatusDO2DTO(nil))
+
+	// StatusDTO2DO nil input returns nil
+	assert.Nil(t, StatusDTO2DO(nil))
+
+	// getInt64Value nil input returns 0
+	assert.Equal(t, int64(0), getInt64Value(nil))
+
+	// getStringValue nil input returns ""
+	assert.Equal(t, "", getStringValue(nil))
+
+	// getInt32Value nil input returns 0
+	assert.Equal(t, int32(0), getInt32Value(nil))
+
+	// UsageDO2DTO nil input returns nil
+	assert.Nil(t, UsageDO2DTO(nil))
+
+	// RunErrorDO2DTO nil input returns nil
+	assert.Nil(t, RunErrorDO2DTO(nil))
+
+	// UsageDTO2DO nil input returns nil
+	assert.Nil(t, UsageDTO2DO(nil))
+
+	// RunErrorDTO2DO nil input returns nil
+	assert.Nil(t, RunErrorDTO2DO(nil))
+
+	// EvalTargetRecordDO2DTO nil input returns nil
+	assert.Nil(t, EvalTargetRecordDO2DTO(nil))
+
+	// RecordDTO2DO nil input returns nil
+	assert.Nil(t, RecordDTO2DO(nil))
+}
+
+func TestContentDTO2DOs_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+
+	// nil input
+	res := ContentDTO2DOs(nil)
+	assert.NotNil(t, res)
+	assert.Empty(t, res)
+
+	// empty input
+	res = ContentDTO2DOs(map[string]*common.Content{})
+	assert.NotNil(t, res)
+	assert.Empty(t, res)
+
+	// input with nil value
+	res = ContentDTO2DOs(map[string]*common.Content{"key": nil})
+	assert.Len(t, res, 1)
+	assert.Nil(t, res["key"])
+}
+
+func TestMessagesDTO2DO_NilMessage(t *testing.T) {
+	t.Parallel()
+
+	// nil slice
+	res := MessagesDTO2DO(nil)
+	assert.NotNil(t, res)
+	assert.Empty(t, res)
+
+	// slice with nil element - should be skipped
+	res = MessagesDTO2DO([]*common.Message{nil})
+	assert.NotNil(t, res)
+	assert.Empty(t, res)
+}
+
+func TestToSPIContentTypeDO_AudioAndVideo(t *testing.T) {
+	t.Parallel()
+
+	// Audio branch
+	audioType := spi.ContentTypeAudio
+	audioContent := &spi.Content{
+		ContentType: &audioType,
+		Audio: &spi.Audio{
+			URL: gptr.Of("http://example.com/audio.mp3"),
+		},
+	}
+	audioDO := ToSPIContentDO(audioContent)
+	assert.NotNil(t, audioDO)
+	assert.Equal(t, entity.ContentTypeAudio, *audioDO.ContentType)
+	assert.NotNil(t, audioDO.Audio)
+	assert.Equal(t, "http://example.com/audio.mp3", *audioDO.Audio.URL)
+
+	// Video branch
+	videoType := spi.ContentTypeVideo
+	videoContent := &spi.Content{
+		ContentType: &videoType,
+		Video: &spi.Video{
+			URL: gptr.Of("http://example.com/video.mp4"),
+		},
+	}
+	videoDO := ToSPIContentDO(videoContent)
+	assert.NotNil(t, videoDO)
+	assert.Equal(t, entity.ContentTypeVideo, *videoDO.ContentType)
+	assert.NotNil(t, videoDO.Video)
+	assert.Equal(t, "http://example.com/video.mp4", *videoDO.Video.URL)
+
+	// nil content
+	assert.Nil(t, ToSPIContentDO(nil))
+
+	// multipart type
+	multipartType := spi.ContentTypeMultiPart
+	mpContent := &spi.Content{
+		ContentType: &multipartType,
+	}
+	mpDO := ToSPIContentDO(mpContent)
+	assert.NotNil(t, mpDO)
+	assert.Equal(t, entity.ContentTypeMultipart, *mpDO.ContentType)
+
+	// unknown type falls back to Text (default branch)
+	unknownType := spi.ContentType("unknown")
+	unknownContent := &spi.Content{
+		ContentType: &unknownType,
+	}
+	unknownDO := ToSPIContentDO(unknownContent)
+	assert.NotNil(t, unknownDO)
+	assert.Equal(t, entity.ContentTypeText, *unknownDO.ContentType)
 }

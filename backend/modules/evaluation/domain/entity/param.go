@@ -126,11 +126,12 @@ type BatchGetEvaluationSetVersionsResult struct {
 type Option func(option *Opt)
 
 type Opt struct {
-	PublishVersion   *string
-	BotInfoType      CozeBotInfoType
-	CustomEvalTarget *CustomEvalTarget
-	Region           *Region
-	Env              *string
+	PublishVersion       *string
+	BotInfoType          CozeBotInfoType
+	CustomEvalTarget     *CustomEvalTarget
+	Region               *Region
+	Env                  *string
+	OperationInstruction *string
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -160,6 +161,12 @@ func WithRegion(region *Region) Option {
 func WithEnv(env *string) Option {
 	return func(option *Opt) {
 		option.Env = env
+	}
+}
+
+func WithOperationInstruction(operationInstruction *string) Option {
+	return func(option *Opt) {
+		option.OperationInstruction = operationInstruction
 	}
 }
 
@@ -286,9 +293,12 @@ type CreateExptParam struct {
 	MaxAliveTime          int64                    `json:"max_alive_time"`
 	SourceType            SourceType               `json:"source_type"`
 	SourceID              string                   `json:"source_id"`
+	Visibility            *Visibility              `json:"visibility,omitempty"`
+	ThreadID              *string                  `json:"thread_id,omitempty"`
 	ExptTemplateID        int64                    `json:"expt_template_id"`
 	ExptConf              *EvaluationConfiguration `json:"expt_conf"`
 	ItemRetryNum          *int                     `json:"item_retry_num,omitempty"`
+	TrialRunItemCount     int64                    `json:"trial_run_item_count"`
 	TriggerType           string                   `json:"trigger_type,omitempty"`
 }
 

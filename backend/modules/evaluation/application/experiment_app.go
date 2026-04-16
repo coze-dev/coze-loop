@@ -488,6 +488,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvaluatorVersionIds:    req.EvaluatorVersionIds,
 		Name:                   req.Name,
 		Desc:                   req.Desc,
+		Visibility:             req.Visibility,
 		TargetFieldMapping:     req.TargetFieldMapping,
 		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
 		ItemConcurNum:          req.ItemConcurNum,
@@ -499,10 +500,12 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		SourceID:               req.SourceID,
 		TargetRuntimeParam:     req.TargetRuntimeParam,
 		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		ThreadID:               req.ThreadID,
 		Session:                req.Session,
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
 		ItemRetryNum:            req.ItemRetryNum,
+		TrialRunItemCount:       req.TrialRunItemCount,
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 	}
@@ -516,12 +519,13 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}
 
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
-		WorkspaceID:  gptr.Of(req.GetWorkspaceID()),
-		ExptID:       cresp.GetExperiment().ID,
-		ExptType:     req.ExptType,
-		ItemRetryNum: req.ItemRetryNum,
-		Session:      req.Session,
-		Ext:          req.Ext,
+		WorkspaceID:       gptr.Of(req.GetWorkspaceID()),
+		ExptID:            cresp.GetExperiment().ID,
+		ExptType:          req.ExptType,
+		ItemRetryNum:      req.ItemRetryNum,
+		TrialRunItemCount: req.TrialRunItemCount,
+		Session:           req.Session,
+		Ext:               req.Ext,
 	})
 	if err != nil {
 		return nil, err
@@ -1019,7 +1023,7 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 		return nil, err
 	}
 
-	evalMode := experiment.ExptType2EvalMode(req.GetExptType())
+	evalMode := experiment.ExptType2EvalMode(req.GetExptType(), req.TrialRunItemCount)
 
 	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), nil, session); err != nil {
 		return nil, err

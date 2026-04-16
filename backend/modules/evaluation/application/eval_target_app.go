@@ -5,9 +5,13 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
@@ -28,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -96,7 +101,8 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	opts = append(opts, entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
 		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())),
 		entity.WithRegion(request.Param.Region),
-		entity.WithEnv(request.Param.Env))
+		entity.WithEnv(request.Param.Env),
+		entity.WithOperationInstruction(request.Param.OperationInstruction))
 	if request.GetParam().CustomEvalTarget != nil {
 		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 			ID:        request.GetParam().GetCustomEvalTarget().ID,
@@ -504,6 +510,45 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 	}, nil
 }
 
+func (e EvalTargetApplicationImpl) GetSourceEvalTargetVersion(ctx context.Context, request *eval_target.GetSourceEvalTargetVersionRequest) (r *eval_target.GetSourceEvalTargetVersionResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if request.TargetType == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type is nil"))
+	}
+	if strings.TrimSpace(request.GetSourceTargetID()) == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target id is nil"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	targetType := entity.EvalTargetType(request.GetTargetType())
+	typedOperator := e.typedOperators[targetType]
+	if typedOperator == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+	evalTarget, err := typedOperator.BuildBySource(ctx, request.WorkspaceID, request.GetSourceTargetID(), request.GetSourceTargetVersion())
+	if err != nil {
+		return nil, err
+	}
+	if evalTarget == nil {
+		return &eval_target.GetSourceEvalTargetVersionResponse{}, nil
+	}
+	if err := typedOperator.PackSourceVersionInfo(ctx, request.WorkspaceID, []*entity.EvalTarget{evalTarget}); err != nil {
+		return nil, err
+	}
+	return &eval_target.GetSourceEvalTargetVersionResponse{
+		EvalTargetVersion: target.EvalTargetVersionDO2DTO(evalTarget.EvalTargetVersion),
+	}, nil
+}
+
 func (e EvalTargetApplicationImpl) SearchCustomEvalTarget(ctx context.Context, req *eval_target.SearchCustomEvalTargetRequest) (r *eval_target.SearchCustomEvalTargetResponse, err error) {
 	// 参数校验
 	if req == nil {
@@ -610,9 +655,11 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 	//	return nil, err
 	// }
 
+	logID := logs.GetLogID(ctx)
+
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("logid: %s, param json unmarshal fail", logID)))
 	}
 
 	switch request.GetEvalTargetType() {
@@ -638,14 +685,19 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 			},
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, fmt.Sprintf("logid: %s", logID))
+		}
+		if record != nil && record.Status != nil && *record.Status == entity.EvalTargetRunStatusFail {
+			if record.EvalTargetOutputData != nil && record.EvalTargetOutputData.EvalTargetRunError != nil {
+				record.EvalTargetOutputData.EvalTargetRunError.Message = fmt.Sprintf("logid: %s, %s", logID, record.EvalTargetOutputData.EvalTargetRunError.Message)
+			}
 		}
 		return &eval_target.DebugEvalTargetResponse{
 			EvalTargetRecord: target.EvalTargetRecordDO2DTO(record),
 			BaseResp:         base.NewBaseResp(),
 		}, err
 	default:
-		return nil, errorx.New("unsupported eval target type %v", request.GetEvalTargetType())
+		return nil, errorx.New("logid: %s, unsupported eval target type %v", logID, request.GetEvalTargetType())
 	}
 }
 

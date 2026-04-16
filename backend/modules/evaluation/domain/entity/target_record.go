@@ -83,6 +83,8 @@ func (e *EvalTargetInputData) ValidateInputSchema(inputSchema []*ArgsSchema) err
 type EvalTargetOutputData struct {
 	// 变量
 	OutputFields map[string]*Content
+	// 平台扩展字段
+	Ext map[string]string
 	// 运行消耗
 	EvalTargetUsage *EvalTargetUsage
 	// 运行报错

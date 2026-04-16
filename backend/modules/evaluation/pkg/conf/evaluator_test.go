@@ -608,3 +608,61 @@ func TestConfiger_CheckCustomRPCEvaluatorWritable(t *testing.T) {
 		})
 	}
 }
+
+func TestConfiger_CheckURIEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+	c := &evaluatorConfiger{loader: mockLoader}
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		mockSetup      func()
+		expectedResult bool
+	}{
+		{
+			name: "配置返回true",
+			mockSetup: func() {
+				mockLoader.EXPECT().UnmarshalKey(ctx, "check_uri_enabled", gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+						ptr := out.(*bool)
+						*ptr = true
+						return nil
+					},
+				)
+			},
+			expectedResult: true,
+		},
+		{
+			name: "配置返回false",
+			mockSetup: func() {
+				mockLoader.EXPECT().UnmarshalKey(ctx, "check_uri_enabled", gomock.Any()).DoAndReturn(
+					func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+						ptr := out.(*bool)
+						*ptr = false
+						return nil
+					},
+				)
+			},
+			expectedResult: false,
+		},
+		{
+			name: "配置读取失败返回默认值true",
+			mockSetup: func() {
+				mockLoader.EXPECT().UnmarshalKey(ctx, "check_uri_enabled", gomock.Any()).Return(errors.New("not found"))
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+			result := c.CheckURIEnabled(ctx)
+			assert.Equal(t, tt.expectedResult, result)
+		})
+	}
+}

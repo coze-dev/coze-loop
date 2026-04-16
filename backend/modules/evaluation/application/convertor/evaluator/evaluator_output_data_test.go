@@ -116,6 +116,64 @@ func TestConvertEvaluatorOutputData_RoundTrip(t *testing.T) {
 	}
 }
 
+func TestConvertCorrectionDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertCorrectionDTO2DO(nil))
+}
+
+func TestConvertCorrectionDO2DTO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertCorrectionDO2DTO(nil))
+}
+
+func TestConvertEvaluatorResultDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorResultDTO2DO(nil))
+}
+
+func TestConvertEvaluatorResultDO2DTO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorResultDO2DTO(nil))
+}
+
+func TestConvertEvaluatorUsageDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorUsageDTO2DO(nil))
+}
+
+func TestConvertEvaluatorUsageDO2DTO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorUsageDO2DTO(nil))
+}
+
+func TestConvertEvaluatorRunErrorDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorRunErrorDTO2DO(nil))
+}
+
+func TestConvertEvaluatorRunErrorDO2DTO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, ConvertEvaluatorRunErrorDO2DTO(nil))
+}
+
+func TestToInvokeEvaluatorResultDO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, toInvokeEvaluatorResultDO(nil))
+}
+
+func TestToInvokeEvaluatorUsageDO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, toInvokeEvaluatorUsageDO(nil))
+}
+
+func TestToInvokeEvaluatorRunErrorDO_Nil(t *testing.T) {
+	t.Parallel()
+	result := toInvokeEvaluatorRunErrorDO(nil)
+	assert.NotNil(t, result)
+	assert.Equal(t, int32(errno.RunEvaluatorFailCode), result.Code)
+	assert.Equal(t, "unknown error", result.Message)
+}
+
 func TestToEvaluatorRunStatusDO(t *testing.T) {
 	t.Parallel()
 
