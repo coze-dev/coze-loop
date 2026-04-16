@@ -19,6 +19,6 @@ CREATE TABLE IF NOT EXISTS `prompt_basic`
     UNIQUE KEY `uniq_space_id_prompt_key_deleted_at` (`space_id`, `prompt_key`, `deleted_at`),
     KEY `idx_created_at` (`created_at`) USING BTREE,
     KEY `idx_pid_ptype_delat` (`space_id`, `prompt_type`, `deleted_at`) USING BTREE
-    ) ENGINE = InnoDB
-    DEFAULT CHARSET = utf8mb4
-    COLLATE = utf8mb4_general_ci COMMENT ='Prompt基础表';
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='Prompt基础表';

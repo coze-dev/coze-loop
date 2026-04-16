@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `expt_template`
     `created_at`           timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updated_at`           timestamp       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted_at`           timestamp       NULL     DEFAULT NULL COMMENT '删除时间',
-
+    `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_space_id_name_deleted_at` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_id_created_by_deleted_at` (`space_id`, `created_by`, `deleted_at`),
