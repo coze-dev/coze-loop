@@ -9,3 +9,9 @@ ALTER TABLE `experiment`
 
 ALTER TABLE `experiment`
     ADD INDEX `idx_space_trigger_type_delete_at` (`space_id`, `trigger_type`, `deleted_at`);
+
+ALTER TABLE `experiment` ADD COLUMN `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏';
+
+ALTER TABLE `experiment` ADD COLUMN `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID';
+
+ALTER TABLE `experiment` ADD COLUMN `trial_run_item_count` bigint unsigned DEFAULT NULL COMMENT '试运行行数';
