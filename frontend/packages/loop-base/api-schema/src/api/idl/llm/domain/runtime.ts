@@ -17,8 +17,14 @@ export interface ModelConfig {
   top_k?: number,
   presence_penalty?: number,
   frequency_penalty?: number,
+  identification?: string,
+  /** 模型提供方 */
+  protocol?: manage.Protocol,
+  /** 是否为预置模型 */
+  preset_model?: boolean,
   /** 与ParamSchema对应 */
   param_config_values?: ParamConfigValue[],
+  extra?: string,
 }
 export interface ParamConfigValue {
   /** 传给下游模型的key，与ParamSchema.name对齐 */

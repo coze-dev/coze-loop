@@ -17,7 +17,7 @@ export const CreatePrompt = /*#__PURE__*/createAPI<CreatePromptRequest, CreatePr
   "name": "CreatePrompt",
   "reqType": "CreatePromptRequest",
   "reqMapping": {
-    "body": ["workspace_id", "prompt_name", "prompt_key", "prompt_description", "prompt_type", "draft_detail"]
+    "body": ["workspace_id", "prompt_name", "prompt_key", "prompt_description", "prompt_type", "security_level", "draft_detail"]
   },
   "resType": "CreatePromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -88,6 +88,18 @@ export const ListParentPrompt = /*#__PURE__*/createAPI<ListParentPromptRequest, 
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
   "service": "promptManage"
 });
+export const BatchGetPromptBasic = /*#__PURE__*/createAPI<BatchGetPromptBasicRequest, BatchGetPromptBasicResponse>({
+  "url": "/api/prompt/v1/prompts/batch_get_prompt_basic",
+  "method": "POST",
+  "name": "BatchGetPromptBasic",
+  "reqType": "BatchGetPromptBasicRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "prompt_ids"]
+  },
+  "resType": "BatchGetPromptBasicResponse",
+  "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
+  "service": "promptManage"
+});
 /** 改 */
 export const UpdatePrompt = /*#__PURE__*/createAPI<UpdatePromptRequest, UpdatePromptResponse>({
   "url": "/api/prompt/v1/prompts/:prompt_id",
@@ -96,7 +108,7 @@ export const UpdatePrompt = /*#__PURE__*/createAPI<UpdatePromptRequest, UpdatePr
   "reqType": "UpdatePromptRequest",
   "reqMapping": {
     "path": ["prompt_id"],
-    "body": ["prompt_name", "prompt_description"]
+    "body": ["prompt_name", "prompt_description", "security_level", "downgrade_reason"]
   },
   "resType": "UpdatePromptResponse",
   "schemaRoot": "api://schemas/prompt_coze.loop.prompt.manage",
@@ -216,6 +228,7 @@ export interface CreatePromptRequest {
   prompt_key?: string,
   prompt_description?: string,
   prompt_type?: prompt.PromptType,
+  security_level?: prompt.SecurityLevel,
   draft_detail?: prompt.PromptDetail,
 }
 export interface CreatePromptResponse {
@@ -291,6 +304,8 @@ export interface UpdatePromptRequest {
   prompt_id?: string,
   prompt_name?: string,
   prompt_description?: string,
+  security_level?: prompt.SecurityLevel,
+  downgrade_reason?: string,
 }
 export interface UpdatePromptResponse {}
 export interface SaveDraftRequest {
@@ -386,4 +401,11 @@ export interface ListParentPromptResponse {
   parent_prompts?: {
     [key: string | number]: prompt.PromptCommitVersions[]
   }
+}
+export interface BatchGetPromptBasicRequest {
+  workspace_id?: string,
+  prompt_ids?: number[],
+}
+export interface BatchGetPromptBasicResponse {
+  prompts?: prompt.Prompt[]
 }

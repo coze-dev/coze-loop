@@ -26,9 +26,6 @@
     },
     {
       "path": "../../../infra/idl/idl2ts-runtime/tsconfig.build.json"
-    },
-    {
-      "path": "../logger/tsconfig.build.json"
     }
   ]
 }

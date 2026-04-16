@@ -1001,9 +1001,6 @@ importers:
       '@coze-arch/idl2ts-runtime':
         specifier: workspace:*
         version: link:../../../infra/idl/idl2ts-runtime
-      '@coze-arch/logger':
-        specifier: workspace:*
-        version: link:../logger
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../config/ts-config

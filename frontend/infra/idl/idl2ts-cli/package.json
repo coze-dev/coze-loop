@@ -5,6 +5,7 @@
   "homepage": "",
   "license": "Apache-2.0",
   "author": "fanwenjie.fe@bytedance.com",
+  "main": "./src/index.ts",
   "bin": {
     "idl2ts": "./src/cli.js"
   },

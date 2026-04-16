@@ -10,8 +10,8 @@ import * as coze_loop_evaluation_eval_target from './coze.loop.evaluation.eval_t
 export { coze_loop_evaluation_eval_target };
 import * as eval_set from './domain/eval_set';
 export { eval_set };
-import * as dataset from './../data/domain/dataset';
-export { dataset };
+import * as data_dataset from './../data/domain/dataset';
+export { data_dataset };
 import * as base from './../../../base';
 export { base };
 import { createAPI } from './../../config';
@@ -24,6 +24,8 @@ export interface CreateExperimentRequest {
   desc?: string,
   eval_set_id?: string,
   target_id?: string,
+  /** 实验模板可见性，默认为空，可见 */
+  visibility?: expt.Visibility,
   target_field_mapping?: expt.TargetFieldMapping,
   evaluator_field_mapping?: expt.EvaluatorFieldMapping[],
   item_concur_num?: number,
@@ -36,6 +38,18 @@ export interface CreateExperimentRequest {
   source_id?: string,
   /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
   evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
+  /** 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重） */
+  enable_weighted_score?: boolean,
+  evaluator_score_weights?: {
+    [key: string | number]: number
+  },
+  expt_template_id?: string,
+  item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
+  /** 关联的智能评测会话ID */
+  thread_id?: string,
+  trigger_type?: expt.ExptTriggerType,
   session?: common.Session,
 }
 export interface CreateExperimentResponse {
@@ -50,6 +64,8 @@ export interface SubmitExperimentRequest {
   desc?: string,
   eval_set_id?: string,
   target_id?: string,
+  /** 实验模板可见性，默认为空，可见 */
+  visibility?: expt.Visibility,
   target_field_mapping?: expt.TargetFieldMapping,
   evaluator_field_mapping?: expt.EvaluatorFieldMapping[],
   item_concur_num?: number,
@@ -62,6 +78,19 @@ export interface SubmitExperimentRequest {
   source_id?: string,
   /** 补充的评估器id+version关联评估器方式，和evaluator_version_ids共同使用，兼容老逻辑 */
   evaluator_id_version_list?: evaluator.EvaluatorIDVersionItem[],
+  /** 是否启用评估器得分加权汇总，以及各评估器的权重配置（key 为 evaluator_version_id，value 为权重） */
+  enable_weighted_score?: boolean,
+  expt_template_id?: string,
+  item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
+  /**
+   * 智能评测相关
+   * 关联的智能评测会话ID
+  */
+  thread_id?: string,
+  trigger_type?: expt.ExptTriggerType,
+  time_range?: expt.TaskTimeRange,
   ext?: {
     [key: string | number]: string
   },
@@ -113,6 +142,9 @@ export interface RunExperimentRequest {
   expt_id?: string,
   item_ids?: string[],
   expt_type?: expt.ExptType,
+  item_retry_num?: number,
+  /** 试运行行数 */
+  trial_run_item_count?: number,
   ext?: {
     [key: string | number]: string
   },
@@ -213,8 +245,8 @@ export interface InvokeExperimentResponse {
   added_items?: {
     [key: string | number]: number
   },
-  errors?: dataset.ItemErrorGroup[],
-  item_outputs?: dataset.CreateDatasetItemOutput[],
+  errors?: data_dataset.ItemErrorGroup[],
+  item_outputs?: data_dataset.CreateDatasetItemOutput[],
 }
 export interface FinishExperimentRequest {
   workspace_id?: number,
@@ -234,6 +266,91 @@ export interface ListExperimentStatsRequest {
 export interface ListExperimentStatsResponse {
   expt_stats_infos?: expt.ExptStatsInfo[],
   total?: number,
+}
+/**
+ * =========================
+ * 实验模板相关接口
+ * =========================
+*/
+export interface CreateExperimentTemplateRequest {
+  workspace_id: string,
+  /** 模板结构，与 ExptTemplate 保持一致 */
+  meta?: expt.ExptTemplateMeta,
+  triple_config?: expt.ExptTuple,
+  field_mapping_config?: expt.ExptFieldMapping,
+  /** 创建评估对象参数（不在 ExptTemplate 结构中，保留在顶层） */
+  create_eval_target_param?: coze_loop_evaluation_eval_target.CreateEvalTargetParam,
+  /** 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层） */
+  default_evaluators_concur_num?: number,
+  /** 调度配置（不在 ExptTemplate 结构中，保留在顶层） */
+  schedule_cron?: string,
+  expt_source?: expt.ExptSource,
+  /** 模板运行态信息（如是否开启定时触发）；创建时可只填 cron_activate */
+  expt_info?: expt.ExptInfo,
+  session?: common.Session,
+}
+export interface CreateExperimentTemplateResponse {
+  experiment_template?: expt.ExptTemplate
+}
+export interface BatchGetExperimentTemplateRequest {
+  workspace_id: string,
+  template_ids: string[],
+}
+export interface BatchGetExperimentTemplateResponse {
+  experiment_templates?: expt.ExptTemplate[]
+}
+export interface UpdateExperimentTemplateMetaRequest {
+  workspace_id: string,
+  template_id: string,
+  meta?: expt.ExptTemplateMeta,
+}
+export interface UpdateExperimentTemplateMetaResponse {
+  meta?: expt.ExptTemplateMeta
+}
+export interface UpdateExperimentTemplateRequest {
+  workspace_id: string,
+  template_id: string,
+  /**
+   * 模板结构，与 ExptTemplate 保持一致
+   * 注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置
+  */
+  meta?: expt.ExptTemplateMeta,
+  triple_config?: expt.ExptTuple,
+  field_mapping_config?: expt.ExptFieldMapping,
+  /** 创建评估对象参数（不在 ExptTemplate 结构中，保留在顶层） */
+  create_eval_target_param?: coze_loop_evaluation_eval_target.CreateEvalTargetParam,
+  /** 默认评估器并发数（不在 ExptTemplate 结构中，保留在顶层） */
+  default_evaluators_concur_num?: number,
+  /** 调度配置（不在 ExptTemplate 结构中，保留在顶层） */
+  schedule_cron?: string,
+  expt_info?: expt.ExptInfo,
+}
+export interface UpdateExperimentTemplateResponse {
+  experiment_template?: expt.ExptTemplate
+}
+export interface DeleteExperimentTemplateRequest {
+  workspace_id: string,
+  template_id: string,
+}
+export interface DeleteExperimentTemplateResponse {}
+export interface ListExperimentTemplatesRequest {
+  workspace_id: string,
+  page_number?: number,
+  page_size?: number,
+  filter_option?: expt.ExperimentTemplateFilter,
+  order_bys?: common.OrderBy[],
+}
+export interface ListExperimentTemplatesResponse {
+  experiment_templates?: expt.ExptTemplate[],
+  total?: number,
+}
+export interface CheckExperimentTemplateNameRequest {
+  workspace_id: string,
+  name: string,
+  template_id?: string,
+}
+export interface CheckExperimentTemplateNameResponse {
+  is_available?: boolean
 }
 export enum UpsertExptTurnResultFilterType {
   /** 标签状态 */
@@ -287,9 +404,25 @@ export interface UpdateAnnotateRecordReq {
   session?: common.Session,
 }
 export interface UpdateAnnotateRecordResp {}
+/** 实验报告 CSV 导出列：多个一级分组，组内 list<string>。不传 export_columns：导出全部（含标注列等）。传 export_columns（含空 struct）：白名单模式，仅 item_id、status 等必填列 + 各分组非空 list 中的列；某一 list 未传（unset）与传 [] 对该组均表示不导出。人工标注列需在 tag_key_ids 中显式列出 TagKeyID（十进制字符串）才会在白名单导出中出现。 */
+export interface ExptResultExportColumnSpec {
+  /** 评测集字段：ColumnEvalSetField.Key */
+  eval_set_fields?: string[],
+  /** 评测对象输出（非性能指标）：ColumnEvalTarget.Name，如 actual_output、trajectory、自定义输出名 */
+  eval_target_outputs?: string[],
+  /** 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等） */
+  metrics?: string[],
+  /** 评估器版本 ID 列表（字符串形式十进制）；每个 ID 导出该评估器的 score 与 reason 列 */
+  evaluator_version_ids?: string[],
+  /** 是否导出加权分数 */
+  weighted_score?: boolean,
+  /** 人工标注：每项为标注 TagKeyID（十进制字符串），与 ColumnAnnotation.TagKeyID 对应，导出该标注列 */
+  tag_key_ids?: string[],
+}
 export interface ExportExptResultRequest {
   workspace_id: string,
   expt_id: string,
+  export_columns?: ExptResultExportColumnSpec,
   export_type?: expt.ExptResultExportType,
   session?: common.Session,
 }
@@ -402,7 +535,7 @@ export const SubmitExperiment = /*#__PURE__*/createAPI<SubmitExperimentRequest, 
   "name": "SubmitExperiment",
   "reqType": "SubmitExperimentRequest",
   "reqMapping": {
-    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "evaluator_id_version_list", "ext", "session"]
+    "body": ["workspace_id", "eval_set_version_id", "target_version_id", "evaluator_version_ids", "name", "desc", "eval_set_id", "target_id", "visibility", "target_field_mapping", "evaluator_field_mapping", "item_concur_num", "evaluators_concur_num", "create_eval_target_param", "target_runtime_param", "expt_type", "max_alive_time", "source_type", "source_id", "evaluator_id_version_list", "enable_weighted_score", "expt_template_id", "item_retry_num", "trial_run_item_count", "thread_id", "trigger_type", "time_range", "ext", "session"]
   },
   "resType": "SubmitExperimentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
@@ -609,7 +742,7 @@ export const ExportExptResult = /*#__PURE__*/createAPI<ExportExptResultRequest, 
   "name": "ExportExptResult",
   "reqType": "ExportExptResultRequest",
   "reqMapping": {
-    "body": ["workspace_id", "export_type", "session"],
+    "body": ["workspace_id", "export_columns", "export_type", "session"],
     "path": ["expt_id"]
   },
   "resType": "ExportExptResultResponse",
@@ -731,6 +864,94 @@ export const GetAnalysisRecordFeedbackVote = /*#__PURE__*/createAPI<GetAnalysisR
     "path": ["insight_analysis_record_id"]
   },
   "resType": "GetAnalysisRecordFeedbackVoteResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+/** 实验模板 */
+export const CreateExperimentTemplate = /*#__PURE__*/createAPI<CreateExperimentTemplateRequest, CreateExperimentTemplateResponse>({
+  "url": "/api/evaluation/v1/experiment_templates",
+  "method": "POST",
+  "name": "CreateExperimentTemplate",
+  "reqType": "CreateExperimentTemplateRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "meta", "triple_config", "field_mapping_config", "create_eval_target_param", "default_evaluators_concur_num", "schedule_cron", "expt_source", "expt_info", "session"]
+  },
+  "resType": "CreateExperimentTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const BatchGetExperimentTemplate = /*#__PURE__*/createAPI<BatchGetExperimentTemplateRequest, BatchGetExperimentTemplateResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/batch_get",
+  "method": "POST",
+  "name": "BatchGetExperimentTemplate",
+  "reqType": "BatchGetExperimentTemplateRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "template_ids"]
+  },
+  "resType": "BatchGetExperimentTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const UpdateExperimentTemplateMeta = /*#__PURE__*/createAPI<UpdateExperimentTemplateMetaRequest, UpdateExperimentTemplateMetaResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/update_meta",
+  "method": "POST",
+  "name": "UpdateExperimentTemplateMeta",
+  "reqType": "UpdateExperimentTemplateMetaRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "template_id", "meta"]
+  },
+  "resType": "UpdateExperimentTemplateMetaResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const UpdateExperimentTemplate = /*#__PURE__*/createAPI<UpdateExperimentTemplateRequest, UpdateExperimentTemplateResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/:template_id",
+  "method": "PATCH",
+  "name": "UpdateExperimentTemplate",
+  "reqType": "UpdateExperimentTemplateRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "meta", "triple_config", "field_mapping_config", "create_eval_target_param", "default_evaluators_concur_num", "schedule_cron", "expt_info"],
+    "path": ["template_id"]
+  },
+  "resType": "UpdateExperimentTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+/** 更新实验模板（不允许修改关联的评测对象 / 评测集，仅允许修改默认版本、映射、评估器与配置） */
+export const DeleteExperimentTemplate = /*#__PURE__*/createAPI<DeleteExperimentTemplateRequest, DeleteExperimentTemplateResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/:template_id",
+  "method": "DELETE",
+  "name": "DeleteExperimentTemplate",
+  "reqType": "DeleteExperimentTemplateRequest",
+  "reqMapping": {
+    "body": ["workspace_id"],
+    "path": ["template_id"]
+  },
+  "resType": "DeleteExperimentTemplateResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const ListExperimentTemplates = /*#__PURE__*/createAPI<ListExperimentTemplatesRequest, ListExperimentTemplatesResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/list",
+  "method": "POST",
+  "name": "ListExperimentTemplates",
+  "reqType": "ListExperimentTemplatesRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "page_number", "page_size", "filter_option", "order_bys"]
+  },
+  "resType": "ListExperimentTemplatesResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
+  "service": "evaluationExpt"
+});
+export const CheckExperimentTemplateName = /*#__PURE__*/createAPI<CheckExperimentTemplateNameRequest, CheckExperimentTemplateNameResponse>({
+  "url": "/api/evaluation/v1/experiment_templates/check_name",
+  "method": "POST",
+  "name": "CheckExperimentTemplateName",
+  "reqType": "CheckExperimentTemplateNameRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "name", "template_id"]
+  },
+  "resType": "CheckExperimentTemplateNameResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.expt",
   "service": "evaluationExpt"
 });

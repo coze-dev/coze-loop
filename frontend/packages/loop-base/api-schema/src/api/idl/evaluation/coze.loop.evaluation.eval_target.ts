@@ -26,6 +26,8 @@ export interface CreateEvalTargetParam {
   region?: eval_target.Region,
   /** 有环境限制需要填充这个字段 */
   env?: string,
+  /** type=8时需填写，评测对象操作说明 */
+  operation_instruction?: string,
 }
 export interface CreateEvalTargetResponse {
   id?: string,
@@ -93,6 +95,20 @@ export interface BatchGetEvalTargetRecordsRequest {
 export interface BatchGetEvalTargetRecordsResponse {
   eval_target_records: eval_target.EvalTargetRecord[]
 }
+/** 按需查询 output 中的大对象完整内容 */
+export interface GetEvalTargetOutputFieldContentRequest {
+  workspace_id: string,
+  /** eval_target_record_id */
+  eval_target_record_id: string,
+  /** output_fields 中待查询的字段 key */
+  field_keys: string[],
+}
+export interface GetEvalTargetOutputFieldContentResponse {
+  /** field_key -> 完整 Content */
+  field_contents?: {
+    [key: string | number]: common.Content
+  }
+}
 export interface ListSourceEvalTargetsRequest {
   workspace_id: string,
   target_type?: eval_target.EvalTargetType,
@@ -113,6 +129,15 @@ export interface BatchGetSourceEvalTargetsRequest {
 }
 export interface BatchGetSourceEvalTargetsResponse {
   eval_targets?: eval_target.EvalTarget[]
+}
+export interface GetSourceEvalTargetVersionRequest {
+  workspace_id: string,
+  source_target_id?: string,
+  source_target_version?: string,
+  target_type?: eval_target.EvalTargetType,
+}
+export interface GetSourceEvalTargetVersionResponse {
+  eval_target_version?: eval_target.EvalTargetVersion
 }
 export interface ListSourceEvalTargetVersionsRequest {
   workspace_id: string,
@@ -284,6 +309,19 @@ export const BatchGetSourceEvalTargets = /*#__PURE__*/createAPI<BatchGetSourceEv
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });
+/** 获取Source评测对象版本的详情 */
+export const GetSourceEvalTargetVersion = /*#__PURE__*/createAPI<GetSourceEvalTargetVersionRequest, GetSourceEvalTargetVersionResponse>({
+  "url": "/api/evaluation/v1/eval_targets/get_source_version",
+  "method": "GET",
+  "name": "GetSourceEvalTargetVersion",
+  "reqType": "GetSourceEvalTargetVersionRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "source_target_id", "source_target_version", "target_type"]
+  },
+  "resType": "GetSourceEvalTargetVersionResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
 /** 搜索自定义评测对象 */
 export const SearchCustomEvalTarget = /*#__PURE__*/createAPI<SearchCustomEvalTargetRequest, SearchCustomEvalTargetResponse>({
   "url": "/api/evaluation/v1/eval_targets/search_custom",
@@ -333,6 +371,19 @@ export const BatchGetEvalTargetRecords = /*#__PURE__*/createAPI<BatchGetEvalTarg
     "body": ["workspace_id", "eval_target_record_ids"]
   },
   "resType": "BatchGetEvalTargetRecordsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
+  "service": "evaluationEvalTarget"
+});
+/** 按需查询 output 中大对象的完整内容 */
+export const GetEvalTargetOutputFieldContent = /*#__PURE__*/createAPI<GetEvalTargetOutputFieldContentRequest, GetEvalTargetOutputFieldContentResponse>({
+  "url": "/api/evaluation/v1/eval_target_records/output_fields",
+  "method": "POST",
+  "name": "GetEvalTargetOutputFieldContent",
+  "reqType": "GetEvalTargetOutputFieldContentRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "eval_target_record_id", "field_keys"]
+  },
+  "resType": "GetEvalTargetOutputFieldContentResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_target",
   "service": "evaluationEvalTarget"
 });

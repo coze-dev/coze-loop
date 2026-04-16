@@ -102,7 +102,8 @@ export interface DatasetIOJob {
 }
 export interface DatasetIOJobOption {
   /** 覆盖数据集 */
-  overwrite_dataset?: boolean
+  overwrite_dataset?: boolean,
+  field_write_options?: dataset.FieldWriteOption[],
 }
 export interface DatasetIOJobProgress {
   /** 总量 */

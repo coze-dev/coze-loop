@@ -19,6 +19,8 @@ export interface Options {
   patchTypesOutput?: string;
   // patchTypesOutput 的别名，patch type 需要使用额外的 pkg 组织时需要提供
   patchTypesAliasOutput?: string;
+  /** file banner */
+  banner?: string;
 }
 
 export interface IGenOptions extends Options {

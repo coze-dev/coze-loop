@@ -207,6 +207,7 @@ export interface BatchCreateDatasetItemsRequest {
   skip_invalid_items?: boolean,
   /** 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条 */
   allow_partial_add?: boolean,
+  field_write_options?: dataset.FieldWriteOption[],
 }
 export interface BatchCreateDatasetItemsResponse {
   /** key: item 在 items 中的索引 */
@@ -223,6 +224,7 @@ export interface UpdateDatasetItemRequest {
   data?: dataset.FieldData[],
   /** 多轮对话数据内容，当数据集为多轮对话时，写入此处的值 */
   repeated_data?: dataset.ItemData[],
+  field_write_options?: dataset.FieldWriteOption[],
 }
 export interface UpdateDatasetItemResponse {}
 export interface DeleteDatasetItemRequest {
@@ -253,6 +255,7 @@ export interface ListDatasetItemsResponse {
   /** pagination */
   next_page_token?: string,
   total?: string,
+  filter_total?: string,
 }
 export interface ListDatasetItemsByVersionRequest {
   workspace_id?: string,
@@ -271,6 +274,7 @@ export interface ListDatasetItemsByVersionResponse {
   /** pagination */
   next_page_token?: string,
   total?: string,
+  filter_total?: string,
 }
 export interface GetDatasetItemRequest {
   workspace_id?: string,
@@ -543,7 +547,7 @@ export const BatchCreateDatasetItems = /*#__PURE__*/createAPI<BatchCreateDataset
   "name": "BatchCreateDatasetItems",
   "reqType": "BatchCreateDatasetItemsRequest",
   "reqMapping": {
-    "body": ["workspace_id", "items", "skip_invalid_items", "allow_partial_add"],
+    "body": ["workspace_id", "items", "skip_invalid_items", "allow_partial_add", "field_write_options"],
     "path": ["dataset_id"]
   },
   "resType": "BatchCreateDatasetItemsResponse",
@@ -557,7 +561,7 @@ export const UpdateDatasetItem = /*#__PURE__*/createAPI<UpdateDatasetItemRequest
   "name": "UpdateDatasetItem",
   "reqType": "UpdateDatasetItemRequest",
   "reqMapping": {
-    "body": ["workspace_id", "data", "repeated_data"],
+    "body": ["workspace_id", "data", "repeated_data", "field_write_options"],
     "path": ["dataset_id", "item_id"]
   },
   "resType": "UpdateDatasetItemResponse",
