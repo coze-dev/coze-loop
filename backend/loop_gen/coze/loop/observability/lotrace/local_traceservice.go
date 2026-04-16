@@ -526,6 +526,27 @@ func (l *LocalTraceService) ListTrajectory(ctx context.Context, req *trace.ListT
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (*trace.ListMetadataResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceListMetadataArgs)
+		result := out.(*trace.TraceServiceListMetadataResult)
+		resp, err := l.impl.ListMetadata(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceListMetadataArgs{Req: req}
+	result := &trace.TraceServiceListMetadataResult{}
+	ctx = l.injectRPCInfo(ctx, "ListMetadata")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (*trace.UpsertColumnExtractConfigResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceUpsertColumnExtractConfigArgs)

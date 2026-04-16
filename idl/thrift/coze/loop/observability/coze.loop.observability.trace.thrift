@@ -440,6 +440,25 @@ struct ListTrajectoryResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ListMetadataRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional common.SpanListType span_list_type (api.body="span_list_type")
+
+    255: optional base.Base Base
+}
+
+struct MetadataItemInfo {
+    1: required string key
+    2: required span.MetadataValueType value_type
+}
+
+struct ListMetadataResponse {
+    1: required list<MetadataItemInfo> metadataItemList ,
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ColumnExtractRule {
     1: required string column
     2: required string json_path

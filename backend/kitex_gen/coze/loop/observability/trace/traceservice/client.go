@@ -193,6 +193,11 @@ func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.Lis
 	return p.kClient.ListTrajectory(ctx, req)
 }
 
+func (p *kTraceServiceClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMetadata(ctx, req)
+}
+
 func (p *kTraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.UpsertColumnExtractConfig(ctx, req)
