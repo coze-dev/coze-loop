@@ -439,6 +439,25 @@ struct ListTrajectoryResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct ListMetadataRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: optional common.PlatformType platform_type (api.body="platform_type")
+    3: optional common.SpanListType span_list_type (api.body="span_list_type")
+
+    255: optional base.Base Base
+}
+
+struct MetadataItemInfo {
+    1: required string key
+    2: required span.MetadataValueType value_type
+}
+
+struct ListMetadataResponse {
+    1: required list<MetadataItemInfo> metadataItemList ,
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ColumnExtractRule {
     1: required string column
     2: required string json_path
@@ -515,6 +534,7 @@ service TraceService {
     UpsertTrajectoryConfigResponse UpsertTrajectoryConfig(1: UpsertTrajectoryConfigRequest req) (api.post = '/api/observability/v1/traces/trajectory_config')
     GetTrajectoryConfigResponse GetTrajectoryConfig(1: GetTrajectoryConfigRequest req) (api.get = '/api/observability/v1/traces/trajectory_config')
     ListTrajectoryResponse ListTrajectory(1: ListTrajectoryRequest req) (api.post = '/api/observability/v1/traces/trajectory')
+    ListMetadataResponse ListMetadata(1: ListMetadataRequest req) (api.post = '/api/observability/v1/traces/metadata/list')
     UpsertColumnExtractConfigResponse UpsertColumnExtractConfig(1: UpsertColumnExtractConfigRequest req) (api.post = '/api/observability/v1/column_extract_config')
     GetColumnExtractConfigResponse GetColumnExtractConfig(1: GetColumnExtractConfigRequest req) (api.get = '/api/observability/v1/column_extract_config')
     GetAgentMetadataResponse GetAgentMetadata(1: GetAgentMetadataRequest req) (api.get = '/api/observability/v1/trace/agent/metadata')

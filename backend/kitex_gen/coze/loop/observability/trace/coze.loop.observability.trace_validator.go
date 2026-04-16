@@ -618,6 +618,25 @@ func (p *ListTrajectoryResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ListMetadataRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *MetadataItemInfo) IsValid() error {
+	return nil
+}
+func (p *ListMetadataResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ColumnExtractRule) IsValid() error {
 	return nil
 }

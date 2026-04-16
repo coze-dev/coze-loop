@@ -330,6 +330,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
+				_annotations.POST("/list_by_workspace", append(_listworkspaceannotationsMw(handler), apis.ListWorkspaceAnnotations)...)
 				_v14.GET("/column_extract_config", append(_getcolumnextractconfigMw(handler), apis.GetColumnExtractConfig)...)
 				_v14.POST("/column_extract_config", append(_upsertcolumnextractconfigMw(handler), apis.UpsertColumnExtractConfig)...)
 				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)

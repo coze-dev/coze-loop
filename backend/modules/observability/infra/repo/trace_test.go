@@ -1778,6 +1778,7 @@ func TestTraceRepoImpl_ListWorkspaceAnnotations(t *testing.T) {
 				fields.spanProducer,
 				nil,
 				nil,
+				nil,
 				WithTraceStorageAnnotationDao("ck", fields.annoDao),
 			)
 			assert.NoError(t, err)

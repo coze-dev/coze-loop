@@ -35,6 +35,7 @@ type Client interface {
 	UpsertTrajectoryConfig(ctx context.Context, req *trace.UpsertTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertTrajectoryConfigResponse, err error)
 	GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.GetTrajectoryConfigResponse, err error)
 	ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error)
+	ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error)
 	UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error)
 	GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.GetColumnExtractConfigResponse, err error)
 	GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (r *trace.GetAgentMetadataResponse, err error)
@@ -187,6 +188,11 @@ func (p *kTraceServiceClient) GetTrajectoryConfig(ctx context.Context, req *trac
 func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTrajectory(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListMetadata(ctx, req)
 }
 
 func (p *kTraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error) {

@@ -182,6 +182,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ListMetadata": kitex.NewMethodInfo(
+		listMetadataHandler,
+		newTraceServiceListMetadataArgs,
+		newTraceServiceListMetadataResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"UpsertColumnExtractConfig": kitex.NewMethodInfo(
 		upsertColumnExtractConfigHandler,
 		newTraceServiceUpsertColumnExtractConfigArgs,
@@ -692,6 +699,25 @@ func newTraceServiceListTrajectoryResult() interface{} {
 	return trace.NewTraceServiceListTrajectoryResult()
 }
 
+func listMetadataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceListMetadataArgs)
+	realResult := result.(*trace.TraceServiceListMetadataResult)
+	success, err := handler.(trace.TraceService).ListMetadata(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceListMetadataArgs() interface{} {
+	return trace.NewTraceServiceListMetadataArgs()
+}
+
+func newTraceServiceListMetadataResult() interface{} {
+	return trace.NewTraceServiceListMetadataResult()
+}
+
 func upsertColumnExtractConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceUpsertColumnExtractConfigArgs)
 	realResult := result.(*trace.TraceServiceUpsertColumnExtractConfigResult)
@@ -996,6 +1022,16 @@ func (p *kClient) ListTrajectory(ctx context.Context, req *trace.ListTrajectoryR
 	_args.Req = req
 	var _result trace.TraceServiceListTrajectoryResult
 	if err = p.c.Call(ctx, "ListTrajectory", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest) (r *trace.ListMetadataResponse, err error) {
+	var _args trace.TraceServiceListMetadataArgs
+	_args.Req = req
+	var _result trace.TraceServiceListMetadataResult
+	if err = p.c.Call(ctx, "ListMetadata", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
