@@ -338,7 +338,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			span.Finish(ctx)
 		}
 
-		if execErr == nil && evalTargetDO.EvalTargetType.SupptTrajectory() {
+		if execErr == nil && evalTargetDO.EvalTargetType.SupptTrajectory() && (param.EnableExtractTrajectory == nil || *param.EnableExtractTrajectory) {
 			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(spaceID))
 			trajectory, err := e.ExtractTrajectory(ctx, spaceID, span.GetTraceID(), gptr.Of(startTime.UnixMilli()))
 			if err != nil {
@@ -742,12 +742,14 @@ func (e *EvalTargetServiceImpl) ReportInvokeRecords(ctx context.Context, param *
 		return e.evalTargetRepo.UpdateEvalTargetRecord(ctx, updateRec, nil)
 	}
 
-	goroutine.Go(ctx, func() {
-		time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(param.SpaceID))
-		if err := recordTrajectory(); err != nil {
-			logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
-		}
-	})
+	if param.EnableExtractTrajectory == nil || *param.EnableExtractTrajectory {
+		goroutine.Go(ctx, func() {
+			time.Sleep(e.configer.GetTargetTrajectoryConf(ctx).GetExtractInterval(param.SpaceID))
+			if err := recordTrajectory(); err != nil {
+				logs.CtxError(ctx, "extract and record trajectory fail, record_id: %v, err: %v", record.ID, err)
+			}
+		})
+	}
 
 	return nil
 }

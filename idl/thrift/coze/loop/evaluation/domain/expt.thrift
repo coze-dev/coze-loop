@@ -87,6 +87,8 @@ struct Experiment {
 
     // 智能评测相关
     63: optional string thread_id// 关联的智能评测会话ID
+    64: optional bool enable_extract_trajectory
+
     // 触发方式
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
@@ -136,6 +138,7 @@ struct ExptTemplate {
     4: optional ExptScoreWeight score_weight_config
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
+    7: optional bool enable_extract_trajectory
 
     255: optional common.BaseInfo base_info
 }

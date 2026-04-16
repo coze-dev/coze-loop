@@ -220,10 +220,11 @@ func (e *ExptEvaluatorVersionRef) String() string {
 }
 
 type EvaluationConfiguration struct {
-	ConnectorConf Connector
-	ItemConcurNum *int
-	ItemRetryNum  *int
-	TimeRange     *TaskTimeRangeDO `json:"time_range,omitempty"`
+	ConnectorConf           Connector
+	ItemConcurNum           *int
+	ItemRetryNum            *int
+	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
+	EnableExtractTrajectory *bool
 }
 
 type Connector struct {

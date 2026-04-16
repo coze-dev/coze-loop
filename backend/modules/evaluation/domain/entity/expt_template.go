@@ -198,8 +198,9 @@ type ExptTemplateConfiguration struct {
 	ItemConcurNum *int
 
 	// 默认评估器并发数
-	EvaluatorsConcurNum *int
-	ItemRetryNum        *int
+	EvaluatorsConcurNum     *int
+	ItemRetryNum            *int
+	EnableExtractTrajectory *bool
 
 	// ExptSource 实验来源信息
 	ExptSource *ExptSource `json:"expt_source,omitempty"`
