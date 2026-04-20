@@ -102,6 +102,10 @@ func TestExptMangerImpl_Run(t *testing.T) {
 					EXPECT().
 					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), gomock.Any()).
+					Return([]*entity.UserInfo{}, nil)
 			},
 			wantErr: false,
 		},
@@ -505,11 +509,10 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -2111,10 +2114,9 @@ func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t
 	mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().
 		EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).AnyTimes()
 
-	mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-		{UserID: gptr.Of("test_user")},
-	}, nil)
+	mgr.publisher.(*eventsMocks.MockExptEventPublisher).EXPECT().
+		PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil)
 
 	err := mgr.CompleteExpt(ctx, 123, nil, 789, session)
 	assert.NoError(t, err)
@@ -3344,6 +3346,10 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			EXPECT().
 			PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 			Return(nil)
+		mgr.userProvider.(*mocks.MockIUserProvider).
+			EXPECT().
+			MGetUserInfo(gomock.Any(), gomock.Any()).
+			Return([]*entity.UserInfo{}, nil)
 
 		err := mgr.Run(ctx, 123, 456, 789, 0, session, entity.EvaluationModeSubmit, nil)
 		assert.NoError(t, err)
