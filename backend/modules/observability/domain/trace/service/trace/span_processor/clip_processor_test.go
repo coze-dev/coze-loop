@@ -259,7 +259,7 @@ func TestClipJSONValue_DefaultBranch(t *testing.T) {
 
 func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 	llmInput := `{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"Hello"}]}`
-	llmOutput := `{"messages":[{"role":"assistant","content":"Hi there!"},{"role":"user","content":"Bye"}]}`
+	llmOutput := `{"choices":[{"message":{"role":"assistant","content":"Hi there!"}}]}`
 
 	tests := []struct {
 		name            string
@@ -268,14 +268,14 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 		output          string
 		expectedInput   string
 		expectedOutput  string
-		dbConfigReturns *entity.ColumnExtractConfig
+		dbConfigReturns []*entity.ColumnExtractConfig
 	}{
 		{
 			name:            "LLMSpan uses default JSONPath when no DB config",
 			spanListType:    loop_span.SpanListTypeLLMSpan,
 			input:           llmInput,
 			output:          llmOutput,
-			expectedInput:   "You are a helpful assistant.",
+			expectedInput:   "Hello",
 			expectedOutput:  "Hi there!",
 			dbConfigReturns: nil,
 		},
@@ -283,13 +283,16 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			name:           "LLMSpan DB config overrides default",
 			spanListType:   loop_span.SpanListTypeLLMSpan,
 			input:          llmInput,
-			output:         llmOutput,
+			output:         `{"messages":[{"role":"assistant","content":"Hi there!"},{"role":"user","content":"Bye"}]}`,
 			expectedInput:  "Hello",
 			expectedOutput: "Bye",
-			dbConfigReturns: &entity.ColumnExtractConfig{
-				Columns: []entity.ColumnExtractRule{
-					{Column: "input", JSONPath: "$.messages[1].content"},
-					{Column: "output", JSONPath: "$.messages[1].content"},
+			dbConfigReturns: []*entity.ColumnExtractConfig{
+				{
+					WorkspaceID: 1,
+					Columns: []entity.ColumnExtractRule{
+						{Column: "input", JSONPath: "$.messages[1].content"},
+						{Column: "output", JSONPath: "$.messages[1].content"},
+					},
 				},
 			},
 		},
@@ -320,6 +323,15 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			expectedOutput:  "not json either",
 			dbConfigReturns: nil,
 		},
+		{
+			name:            "RootSpan default extracts last content via recursive descent",
+			spanListType:    loop_span.SpanListTypeRootSpan,
+			input:           `{"stream":[[{"role":"user","content":"你好"}]]}`,
+			output:          `{"role":"assistant","content":"世界你好","extra":{"id":"123"}}`,
+			expectedInput:   "你好",
+			expectedOutput:  "世界你好",
+			dbConfigReturns: nil,
+		},
 	}
 
 	for _, tt := range tests {
@@ -328,10 +340,10 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
 
 			if tt.dbConfigReturns != nil {
-				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+				mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
 					Return(tt.dbConfigReturns, nil).Times(1)
 			} else {
-				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+				mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
 					Return(nil, nil).Times(1)
 			}
 
@@ -356,7 +368,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
-	mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
+	mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
 		Return(nil, nil).Times(1)
 
 	longContent := strings.Repeat("a", clipProcessorPlainTextMaxLength+100)
@@ -398,114 +410,94 @@ func TestClipProcessor_NoRepoUsesDefault(t *testing.T) {
 	require.Equal(t, "Hello world", res[0].Input)
 }
 
-func TestNormalizeJSONPath(t *testing.T) {
+func TestSelectBestConfig(t *testing.T) {
+	makeConfig := func(wsID int64, agentName string) *entity.ColumnExtractConfig {
+		return &entity.ColumnExtractConfig{
+			WorkspaceID: wsID,
+			AgentName:   agentName,
+			Columns: []entity.ColumnExtractRule{
+				{Column: "input", JSONPath: "$.test"},
+			},
+		}
+	}
+
+	allConfigs := []*entity.ColumnExtractConfig{
+		makeConfig(100, "bot_a"),
+		makeConfig(100, ""),
+		makeConfig(200, "bot_a"),
+		makeConfig(200, ""),
+		makeConfig(0, "bot_a"),
+		makeConfig(0, ""),
+	}
+
 	tests := []struct {
-		name     string
-		column   string
-		jsonPath string
-		want     string
+		name        string
+		configs     []*entity.ColumnExtractConfig
+		workspaceId int64
+		agentName   string
+		wantWsID    int64
+		wantAgent   string
+		wantNil     bool
 	}{
 		{
-			name:     "standard jsonpath unchanged",
-			column:   "input",
-			jsonPath: "$.messages[0].content",
-			want:     "$.messages[0].content",
+			name:        "exact match: workspace + agent",
+			configs:     allConfigs,
+			workspaceId: 100,
+			agentName:   "bot_a",
+			wantWsID:    100,
+			wantAgent:   "bot_a",
 		},
 		{
-			name:     "strip input prefix and add $",
-			column:   "input",
-			jsonPath: "input.stream[0][0].content",
-			want:     "$.stream[0][0].content",
+			name:        "fallback: workspace match + no agent config",
+			configs:     allConfigs,
+			workspaceId: 100,
+			agentName:   "bot_b",
+			wantWsID:    100,
+			wantAgent:   "",
 		},
 		{
-			name:     "strip output prefix and add $",
-			column:   "output",
-			jsonPath: "output.choices[0].finish_reason",
-			want:     "$.choices[0].finish_reason",
+			name:        "fallback: no workspace + agent match",
+			configs:     allConfigs,
+			workspaceId: 999,
+			agentName:   "bot_a",
+			wantWsID:    100,
+			wantAgent:   "bot_a",
 		},
 		{
-			name:     "no prefix but missing $",
-			column:   "input",
-			jsonPath: "messages[0].content",
-			want:     "$.messages[0].content",
+			name:        "fallback: no workspace + no agent -> first non-ws match",
+			configs:     allConfigs,
+			workspaceId: 999,
+			agentName:   "bot_b",
+			wantWsID:    100,
+			wantAgent:   "",
 		},
 		{
-			name:     "column prefix not matched",
-			column:   "input",
-			jsonPath: "output.stream[0].content",
-			want:     "$.output.stream[0].content",
+			name:        "workspace match + empty agent query",
+			configs:     allConfigs,
+			workspaceId: 100,
+			agentName:   "",
+			wantWsID:    100,
+			wantAgent:   "",
 		},
 		{
-			name:     "column with bracket index",
-			column:   "input",
-			jsonPath: "input[0].content",
-			want:     "$[0].content",
-		},
-		{
-			name:     "output with bracket index",
-			column:   "output",
-			jsonPath: "output[0].content",
-			want:     "$[0].content",
-		},
-		{
-			name:     "bare bracket index no prefix",
-			column:   "input",
-			jsonPath: "[0].content",
-			want:     "$[0].content",
-		},
-		{
-			name:     "key with hyphen gets bracket notation",
-			column:   "output",
-			jsonPath: "output.extra.openai-request-id",
-			want:     `$.extra["openai-request-id"]`,
-		},
-		{
-			name:     "standard jsonpath with hyphen key",
-			column:   "output",
-			jsonPath: `$.extra.openai-request-id`,
-			want:     `$.extra["openai-request-id"]`,
-		},
-		{
-			name:     "mixed normal and hyphen keys",
-			column:   "output",
-			jsonPath: "output.data.some-key.normal_key",
-			want:     `$.data["some-key"].normal_key`,
-		},
-		{
-			name:     "empty jsonpath",
-			column:   "input",
-			jsonPath: "",
-			want:     "",
-		},
-		{
-			name:     "column name only",
-			column:   "output",
-			jsonPath: "output",
-			want:     "",
-		},
-		{
-			name:     "column with trailing dot",
-			column:   "input",
-			jsonPath: "input.",
-			want:     "",
-		},
-		{
-			name:     "multi-dimensional array index",
-			column:   "input",
-			jsonPath: "input[0][1].content",
-			want:     "$[0][1].content",
-		},
-		{
-			name:     "bracket notation without $",
-			column:   "output",
-			jsonPath: `output["extra"]["openai-request-id"]`,
-			want:     `$["extra"]["openai-request-id"]`,
+			name:        "empty configs returns nil",
+			configs:     nil,
+			workspaceId: 100,
+			agentName:   "bot_a",
+			wantNil:     true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := normalizeJSONPath(tt.column, tt.jsonPath)
-			require.Equal(t, tt.want, got)
+			got := selectBestConfig(tt.configs, tt.workspaceId, tt.agentName)
+			if tt.wantNil {
+				require.Nil(t, got)
+				return
+			}
+			require.NotNil(t, got)
+			require.Equal(t, tt.wantWsID, got.WorkspaceID)
+			require.Equal(t, tt.wantAgent, got.AgentName)
 		})
 	}
 }

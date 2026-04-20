@@ -68,3 +68,18 @@ func (r *ColumnExtractConfigRepoImpl) GetColumnExtractConfig(ctx context.Context
 
 	return convertor.ColumnExtractConfigPO2DO(po), nil
 }
+
+func (r *ColumnExtractConfigRepoImpl) ListColumnExtractConfigs(ctx context.Context, param repo.ListColumnExtractConfigParam) ([]*entity.ColumnExtractConfig, error) {
+	pos, err := r.dao.ListColumnExtractConfigs(ctx, param.PlatformType, param.SpanListType)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*entity.ColumnExtractConfig, 0, len(pos))
+	for _, po := range pos {
+		if do := convertor.ColumnExtractConfigPO2DO(po); do != nil {
+			result = append(result, do)
+		}
+	}
+	return result, nil
+}

@@ -83,3 +83,18 @@ func (mr *MockIColumnExtractConfigDaoMockRecorder) UpdateColumnExtractConfig(ctx
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateColumnExtractConfig", reflect.TypeOf((*MockIColumnExtractConfigDao)(nil).UpdateColumnExtractConfig), ctx, po)
 }
+
+// ListColumnExtractConfigs mocks base method.
+func (m *MockIColumnExtractConfigDao) ListColumnExtractConfigs(ctx context.Context, platformType, spanListType string) ([]*model.ObservabilityColumnExtractConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListColumnExtractConfigs", ctx, platformType, spanListType)
+	ret0, _ := ret[0].([]*model.ObservabilityColumnExtractConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListColumnExtractConfigs indicates an expected call of ListColumnExtractConfigs.
+func (mr *MockIColumnExtractConfigDaoMockRecorder) ListColumnExtractConfigs(ctx, platformType, spanListType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListColumnExtractConfigs", reflect.TypeOf((*MockIColumnExtractConfigDao)(nil).ListColumnExtractConfigs), ctx, platformType, spanListType)
+}

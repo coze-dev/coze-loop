@@ -27,28 +27,46 @@ const (
 
 var defaultExtractRules = map[loop_span.SpanListType][]entity.ColumnExtractRule{
 	loop_span.SpanListTypeLLMSpan: {
-		{Column: "input", JSONPath: "$.messages[0].content"},
-		{Column: "output", JSONPath: "$.messages[0].content"},
+		{Column: "input", JSONPath: "$.messages[-1:].content"},
+		{Column: "output", JSONPath: "$.choices[0].message.content"},
 	},
+}
+
+var defaultPlatformExtractRules = map[loop_span.PlatformType][]entity.ColumnExtractRule{
+	loop_span.PlatformPrompt: {
+		{Column: "input", JSONPath: "$.query.Content"},
+		{Column: "output", JSONPath: "$.choices[0].message.content"},
+	},
+}
+
+var fallbackExtractRules = []entity.ColumnExtractRule{
+	{Column: "input", JSONPath: "$..content"},
+	{Column: "output", JSONPath: "$..content"},
 }
 
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	var rules []entity.ColumnExtractRule
-	if c.columnExtractConfigRepo != nil && c.settings.WorkspaceId > 0 {
-		cfg, err := c.columnExtractConfigRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
-			WorkspaceId:  c.settings.WorkspaceId,
+	if c.columnExtractConfigRepo != nil {
+		configs, err := c.columnExtractConfigRepo.ListColumnExtractConfigs(ctx, repo.ListColumnExtractConfigParam{
 			PlatformType: string(c.settings.PlatformType),
 			SpanListType: string(c.settings.SpanListType),
-			AgentName:    c.settings.AgentName,
 		})
-		if err == nil && cfg != nil {
-			rules = cfg.Columns
+		if err == nil && len(configs) > 0 {
+			cfg := selectBestConfig(configs, c.settings.WorkspaceId, c.settings.AgentName)
+			if cfg != nil {
+				rules = cfg.Columns
+			}
 		}
 	}
 
+	// fallback chain: SpanListType defaults -> PlatformType defaults -> recursive $..content
 	if len(rules) == 0 {
 		if defaults, ok := defaultExtractRules[c.settings.SpanListType]; ok {
 			rules = defaults
+		} else if defaults, ok := defaultPlatformExtractRules[c.settings.PlatformType]; ok {
+			rules = defaults
+		} else {
+			rules = fallbackExtractRules
 		}
 	}
 
@@ -62,6 +80,41 @@ func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 		s.Output = extractAndClip(s.Output, "output", outputRule)
 	}
 	return spans, nil
+}
+
+// selectBestConfig selects the best matching config from a list using fallback strategy.
+// Priority: workspace+agent > workspace+no_agent > any_workspace+agent > any_workspace+no_agent
+func selectBestConfig(configs []*entity.ColumnExtractConfig, workspaceId int64, agentName string) *entity.ColumnExtractConfig {
+	var (
+		wsNoAgent  *entity.ColumnExtractConfig // workspace match + agent empty
+		anyAgent   *entity.ColumnExtractConfig // any workspace + agent match
+		anyNoAgent *entity.ColumnExtractConfig // any workspace + agent empty
+	)
+
+	for _, cfg := range configs {
+		wsMatch := cfg.WorkspaceID == workspaceId
+		agentMatch := agentName != "" && cfg.AgentName == agentName
+		agentEmpty := cfg.AgentName == ""
+
+		switch {
+		case wsMatch && agentMatch:
+			return cfg // highest priority, return immediately
+		case wsMatch && agentEmpty && wsNoAgent == nil:
+			wsNoAgent = cfg
+		case !wsMatch && agentMatch && anyAgent == nil:
+			anyAgent = cfg
+		case !wsMatch && agentEmpty && anyNoAgent == nil:
+			anyNoAgent = cfg
+		}
+	}
+
+	if wsNoAgent != nil {
+		return wsNoAgent
+	}
+	if anyAgent != nil {
+		return anyAgent
+	}
+	return anyNoAgent
 }
 
 type ClipProcessorFactory struct {
@@ -186,93 +239,11 @@ func findExtractRules(rules []entity.ColumnExtractRule) (inputRule, outputRule *
 
 func extractAndClip(content string, column string, rule *entity.ColumnExtractRule) string {
 	if rule != nil {
-		jsonPath := normalizeJSONPath(column, rule.JSONPath)
-		if extracted := extractByJSONPath(content, jsonPath); extracted != "" {
+		if extracted := extractByJSONPath(content, rule.JSONPath); extracted != "" {
 			return clipSpanField(extracted)
 		}
 	}
 	return clipSpanField(content)
-}
-
-func normalizeJSONPath(column, jsonPath string) string {
-	if jsonPath == "" {
-		return ""
-	}
-	if strings.HasPrefix(jsonPath, "$") {
-		return escapeJSONPathKeys(jsonPath)
-	}
-	// strip column prefix: "input.xxx" -> "xxx", "input[0]" -> "[0]"
-	stripped := strings.TrimPrefix(jsonPath, column)
-	stripped = strings.TrimPrefix(stripped, ".")
-	if stripped == "" {
-		return ""
-	}
-	var result string
-	if strings.HasPrefix(stripped, "[") {
-		result = "$" + stripped
-	} else {
-		result = "$." + stripped
-	}
-	return escapeJSONPathKeys(result)
-}
-
-// escapeJSONPathKeys converts dot-notation keys containing special characters
-// to bracket notation. e.g. "$.extra.openai-request-id" -> `$.extra["openai-request-id"]`
-func escapeJSONPathKeys(jsonPath string) string {
-	if !strings.HasPrefix(jsonPath, "$") {
-		return jsonPath
-	}
-	rest := jsonPath[1:]
-	if rest == "" {
-		return jsonPath
-	}
-
-	var builder strings.Builder
-	builder.WriteByte('$')
-
-	for len(rest) > 0 {
-		if rest[0] == '.' {
-			rest = rest[1:]
-			// find end of key (next '.', '[', or end)
-			end := 0
-			for end < len(rest) && rest[end] != '.' && rest[end] != '[' {
-				end++
-			}
-			key := rest[:end]
-			rest = rest[end:]
-			if needsBracket(key) {
-				builder.WriteString(`["`)
-				builder.WriteString(key)
-				builder.WriteString(`"]`)
-			} else {
-				builder.WriteByte('.')
-				builder.WriteString(key)
-			}
-		} else if rest[0] == '[' {
-			// find closing bracket
-			end := strings.IndexByte(rest, ']')
-			if end == -1 {
-				builder.WriteString(rest)
-				break
-			}
-			builder.WriteString(rest[:end+1])
-			rest = rest[end+1:]
-		} else {
-			builder.WriteByte(rest[0])
-			rest = rest[1:]
-		}
-	}
-	return builder.String()
-}
-
-// needsBracket returns true if a key contains characters that require bracket notation.
-func needsBracket(key string) bool {
-	for _, c := range key {
-		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
-			return true
-		}
-	}
-	return false
 }
 
 func extractByJSONPath(content, jsonPath string) string {
@@ -281,6 +252,14 @@ func extractByJSONPath(content, jsonPath string) string {
 	}
 	if !json.Valid([]byte(content)) {
 		return ""
+	}
+	// For recursive descent queries ($..field), take the last match
+	if strings.Contains(jsonPath, "..") {
+		result, err := json.GetLastStringByJSONPath(content, jsonPath)
+		if err != nil {
+			return ""
+		}
+		return result
 	}
 	result, err := json.GetStringByJSONPathRecursively(content, jsonPath)
 	if err != nil {

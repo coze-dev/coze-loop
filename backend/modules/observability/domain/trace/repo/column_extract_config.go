@@ -25,8 +25,14 @@ type GetColumnExtractConfigParam struct {
 	AgentName    string
 }
 
+type ListColumnExtractConfigParam struct {
+	PlatformType string
+	SpanListType string
+}
+
 //go:generate mockgen -destination=mocks/column_extract_config.go -package=mocks . IColumnExtractConfigRepo
 type IColumnExtractConfigRepo interface {
 	UpsertColumnExtractConfig(ctx context.Context, param *UpsertColumnExtractConfigParam) error
 	GetColumnExtractConfig(ctx context.Context, param GetColumnExtractConfigParam) (*entity.ColumnExtractConfig, error)
+	ListColumnExtractConfigs(ctx context.Context, param ListColumnExtractConfigParam) ([]*entity.ColumnExtractConfig, error)
 }
