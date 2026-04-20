@@ -195,16 +195,84 @@ func extractAndClip(content string, column string, rule *entity.ColumnExtractRul
 }
 
 func normalizeJSONPath(column, jsonPath string) string {
+	if jsonPath == "" {
+		return ""
+	}
 	if strings.HasPrefix(jsonPath, "$") {
-		return jsonPath
+		return escapeJSONPathKeys(jsonPath)
 	}
 	// strip column prefix: "input.xxx" -> "xxx", "input[0]" -> "[0]"
 	stripped := strings.TrimPrefix(jsonPath, column)
 	stripped = strings.TrimPrefix(stripped, ".")
-	if strings.HasPrefix(stripped, "[") {
-		return "$" + stripped
+	if stripped == "" {
+		return ""
 	}
-	return "$." + stripped
+	var result string
+	if strings.HasPrefix(stripped, "[") {
+		result = "$" + stripped
+	} else {
+		result = "$." + stripped
+	}
+	return escapeJSONPathKeys(result)
+}
+
+// escapeJSONPathKeys converts dot-notation keys containing special characters
+// to bracket notation. e.g. "$.extra.openai-request-id" -> `$.extra["openai-request-id"]`
+func escapeJSONPathKeys(jsonPath string) string {
+	if !strings.HasPrefix(jsonPath, "$") {
+		return jsonPath
+	}
+	rest := jsonPath[1:]
+	if rest == "" {
+		return jsonPath
+	}
+
+	var builder strings.Builder
+	builder.WriteByte('$')
+
+	for len(rest) > 0 {
+		if rest[0] == '.' {
+			rest = rest[1:]
+			// find end of key (next '.', '[', or end)
+			end := 0
+			for end < len(rest) && rest[end] != '.' && rest[end] != '[' {
+				end++
+			}
+			key := rest[:end]
+			rest = rest[end:]
+			if needsBracket(key) {
+				builder.WriteString(`["`)
+				builder.WriteString(key)
+				builder.WriteString(`"]`)
+			} else {
+				builder.WriteByte('.')
+				builder.WriteString(key)
+			}
+		} else if rest[0] == '[' {
+			// find closing bracket
+			end := strings.IndexByte(rest, ']')
+			if end == -1 {
+				builder.WriteString(rest)
+				break
+			}
+			builder.WriteString(rest[:end+1])
+			rest = rest[end+1:]
+		} else {
+			builder.WriteByte(rest[0])
+			rest = rest[1:]
+		}
+	}
+	return builder.String()
+}
+
+// needsBracket returns true if a key contains characters that require bracket notation.
+func needsBracket(key string) bool {
+	for _, c := range key {
+		if (c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9') && c != '_' {
+			return true
+		}
+	}
+	return false
 }
 
 func extractByJSONPath(content, jsonPath string) string {
@@ -214,7 +282,7 @@ func extractByJSONPath(content, jsonPath string) string {
 	if !json.Valid([]byte(content)) {
 		return ""
 	}
-	result, err := json.GetStringByJSONPath(content, jsonPath)
+	result, err := json.GetStringByJSONPathRecursively(content, jsonPath)
 	if err != nil {
 		return ""
 	}

@@ -453,6 +453,54 @@ func TestNormalizeJSONPath(t *testing.T) {
 			jsonPath: "[0].content",
 			want:     "$[0].content",
 		},
+		{
+			name:     "key with hyphen gets bracket notation",
+			column:   "output",
+			jsonPath: "output.extra.openai-request-id",
+			want:     `$.extra["openai-request-id"]`,
+		},
+		{
+			name:     "standard jsonpath with hyphen key",
+			column:   "output",
+			jsonPath: `$.extra.openai-request-id`,
+			want:     `$.extra["openai-request-id"]`,
+		},
+		{
+			name:     "mixed normal and hyphen keys",
+			column:   "output",
+			jsonPath: "output.data.some-key.normal_key",
+			want:     `$.data["some-key"].normal_key`,
+		},
+		{
+			name:     "empty jsonpath",
+			column:   "input",
+			jsonPath: "",
+			want:     "",
+		},
+		{
+			name:     "column name only",
+			column:   "output",
+			jsonPath: "output",
+			want:     "",
+		},
+		{
+			name:     "column with trailing dot",
+			column:   "input",
+			jsonPath: "input.",
+			want:     "",
+		},
+		{
+			name:     "multi-dimensional array index",
+			column:   "input",
+			jsonPath: "input[0][1].content",
+			want:     "$[0][1].content",
+		},
+		{
+			name:     "bracket notation without $",
+			column:   "output",
+			jsonPath: `output["extra"]["openai-request-id"]`,
+			want:     `$["extra"]["openai-request-id"]`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
