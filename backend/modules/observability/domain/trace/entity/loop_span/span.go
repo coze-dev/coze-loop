@@ -382,41 +382,8 @@ func (s *Span) getStatus() string {
 
 // filter使用, 当前只支持特定参数,后续有需要可拓展到其他参数
 func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
-	switch fieldName {
-	case SpanFieldStartTime:
-		return s.StartTime
-	case SpanFieldDuration:
-		return s.DurationMicros
-	case SpanFieldSpanId:
-		return s.SpanID
-	case SpanFieldParentID:
-		return s.ParentID
-	case SpanFieldCallType:
-		return s.CallType
-	case SpanFieldSpanType:
-		return s.SpanType
-	case SpanFieldInput:
-		return s.Input
-	case SpanFieldOutput:
-		return s.Output
-	case SpanFieldTraceId:
-		return s.TraceID
-	case SpanFieldSpanName:
-		return s.SpanName
-	case SpanFieldSpaceId:
-		return s.WorkspaceID
-	case SpanFieldPSM:
-		return s.PSM
-	case SpanFieldLogID:
-		return s.LogID
-	case SpanFieldStatusCode:
-		return s.StatusCode
-	case SpanFieldObjectStorage:
-		return s.ObjectStorage
-	case SpanFieldMethod:
-		return s.Method
-	case SpanFieldStatus:
-		return s.getStatus()
+	if value, ok := s.getPredefinedMetadata(fieldName); ok {
+		return value
 	}
 	if isCustom {
 		if val, ok := s.TagsString[fieldName]; ok {
@@ -455,6 +422,71 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 		return val
 	}
 	return s.getAnnotationValue(fieldName)
+}
+func (s *Span) getPredefinedMetadata(fieldName string) (any, bool) {
+	switch fieldName {
+	case SpanFieldStartTime:
+		return s.StartTime, true
+	case SpanFieldDuration:
+		return s.DurationMicros, true
+	case SpanFieldSpanId:
+		return s.SpanID, true
+	case SpanFieldParentID:
+		return s.ParentID, true
+	case SpanFieldCallType:
+		return s.CallType, true
+	case SpanFieldSpanType:
+		return s.SpanType, true
+	case SpanFieldInput:
+		return s.Input, true
+	case SpanFieldOutput:
+		return s.Output, true
+	case SpanFieldTraceId:
+		return s.TraceID, true
+	case SpanFieldSpanName:
+		return s.SpanName, true
+	case SpanFieldSpaceId:
+		return s.WorkspaceID, true
+	case SpanFieldPSM:
+		return s.PSM, true
+	case SpanFieldLogID:
+		return s.LogID, true
+	case SpanFieldStatusCode:
+		return s.StatusCode, true
+	case SpanFieldObjectStorage:
+		return s.ObjectStorage, true
+	case SpanFieldMethod:
+		return s.Method, true
+	case SpanFieldStatus:
+		return s.getStatus(), true
+	}
+	return nil, false
+}
+func (s *Span) GetMetaDataValue(fieldName string) any {
+	if value, ok := s.getPredefinedMetadata(fieldName); ok {
+		return value
+	}
+	if val, ok := s.TagsString[fieldName]; ok {
+		return val
+	} else if val, ok := s.TagsLong[fieldName]; ok {
+		return val
+	} else if val, ok := s.TagsDouble[fieldName]; ok {
+		return val
+	} else if val, ok := s.TagsBool[fieldName]; ok {
+		return val
+	} else if val, ok := s.TagsByte[fieldName]; ok {
+		return val
+	}
+
+	if val, ok := s.SystemTagsString[fieldName]; ok {
+		return val
+	} else if val, ok := s.SystemTagsLong[fieldName]; ok {
+		return val
+	} else if val, ok := s.SystemTagsDouble[fieldName]; ok {
+		return val
+	}
+
+	return nil
 }
 
 func (s *Span) getAnnotationValue(fieldName string) any {
@@ -677,7 +709,7 @@ func (s *Span) extractByJsonpath(ctx context.Context, key string, jsonpath strin
 		data = conv.ToString(tag)
 	} else if strings.HasPrefix(key, "Metadata.") {
 		key = strings.TrimPrefix(key, "Metadata.")
-		metadata := s.GetFieldValue(key, true, false)
+		metadata := s.GetMetaDataValue(key)
 		checkKey := key
 		if checkKey == SpanFieldStartTime || checkKey == SpanFieldDuration || checkKey == SpanFieldLogicDeleteDate ||
 			slices.Contains(TimeTagSlice, checkKey) {

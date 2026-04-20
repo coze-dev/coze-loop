@@ -1210,3 +1210,118 @@ func TestEncryptionInfo(t *testing.T) {
 		assert.False(t, span.Encryption.NeedWorkflow)
 	})
 }
+
+func TestSpan_getPredefinedMetadata(t *testing.T) {
+	t.Parallel()
+	span := &Span{
+		StartTime:      1000000,
+		DurationMicros: 12345,
+		SpanID:         "s1",
+		ParentID:       "p1",
+		CallType:       "Custom",
+		SpanType:       "model",
+		Input:          "in",
+		Output:         "out",
+		TraceID:        "t1",
+		SpanName:       "testSpan",
+		WorkspaceID:    "ws1",
+		PSM:            "psm1",
+		LogID:          "log1",
+		StatusCode:     0,
+		ObjectStorage:  "oss://bucket/key",
+		Method:         "POST",
+	}
+
+	tests := []struct {
+		field string
+		want  any
+	}{
+		{SpanFieldStartTime, int64(1000000)},
+		{SpanFieldDuration, int64(12345)},
+		{SpanFieldSpanId, "s1"},
+		{SpanFieldParentID, "p1"},
+		{SpanFieldCallType, "Custom"},
+		{SpanFieldSpanType, "model"},
+		{SpanFieldInput, "in"},
+		{SpanFieldOutput, "out"},
+		{SpanFieldTraceId, "t1"},
+		{SpanFieldSpanName, "testSpan"},
+		{SpanFieldSpaceId, "ws1"},
+		{SpanFieldPSM, "psm1"},
+		{SpanFieldLogID, "log1"},
+		{SpanFieldStatusCode, int32(0)},
+		{SpanFieldObjectStorage, "oss://bucket/key"},
+		{SpanFieldMethod, "POST"},
+		{SpanFieldStatus, "success"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.field, func(t *testing.T) {
+			val, ok := span.getPredefinedMetadata(tt.field)
+			assert.True(t, ok)
+			assert.Equal(t, tt.want, val)
+		})
+	}
+
+	t.Run("unknown field returns false", func(t *testing.T) {
+		val, ok := span.getPredefinedMetadata("nonexistent")
+		assert.False(t, ok)
+		assert.Nil(t, val)
+	})
+}
+
+func TestSpan_GetMetaDataValue(t *testing.T) {
+	t.Parallel()
+	span := &Span{
+		SpanID:           "s1",
+		TraceID:          "t1",
+		TagsString:       map[string]string{"custom_str": "str_val"},
+		TagsLong:         map[string]int64{"custom_long": 42},
+		TagsDouble:       map[string]float64{"custom_double": 3.14},
+		TagsBool:         map[string]bool{"custom_bool": true},
+		TagsByte:         map[string]string{"custom_byte": "byte_val"},
+		SystemTagsString: map[string]string{"sys_str": "sys_val"},
+		SystemTagsLong:   map[string]int64{"sys_long": 99},
+		SystemTagsDouble: map[string]float64{"sys_double": 2.71},
+	}
+
+	t.Run("predefined field", func(t *testing.T) {
+		assert.Equal(t, "s1", span.GetMetaDataValue(SpanFieldSpanId))
+	})
+
+	t.Run("tags string", func(t *testing.T) {
+		assert.Equal(t, "str_val", span.GetMetaDataValue("custom_str"))
+	})
+
+	t.Run("tags long", func(t *testing.T) {
+		assert.Equal(t, int64(42), span.GetMetaDataValue("custom_long"))
+	})
+
+	t.Run("tags double", func(t *testing.T) {
+		assert.Equal(t, 3.14, span.GetMetaDataValue("custom_double"))
+	})
+
+	t.Run("tags bool", func(t *testing.T) {
+		assert.Equal(t, true, span.GetMetaDataValue("custom_bool"))
+	})
+
+	t.Run("tags byte", func(t *testing.T) {
+		assert.Equal(t, "byte_val", span.GetMetaDataValue("custom_byte"))
+	})
+
+	t.Run("system tags string", func(t *testing.T) {
+		assert.Equal(t, "sys_val", span.GetMetaDataValue("sys_str"))
+	})
+
+	t.Run("system tags long", func(t *testing.T) {
+		assert.Equal(t, int64(99), span.GetMetaDataValue("sys_long"))
+	})
+
+	t.Run("system tags double", func(t *testing.T) {
+		assert.Equal(t, 2.71, span.GetMetaDataValue("sys_double"))
+	})
+
+	t.Run("not found returns nil", func(t *testing.T) {
+		assert.Nil(t, span.GetMetaDataValue("nonexistent"))
+	})
+}

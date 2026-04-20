@@ -196,13 +196,18 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 
 		if pageToken == "" || shouldFinish {
 			logs.CtxInfo(ctx, "no more spans to process, task_id=%d", sub.t.ID)
+			isFinished := false // 任务可能同时有历史回溯和新任务，不能直接关闭
+			if sub.t.IsNewWorkflowTask() {
+				isFinished = true // 新版任务只会有一个 run，直接更新提升效率
+			}
 			if err = sub.processor.OnTaskFinished(ctx, taskexe.OnTaskFinishedReq{
 				Task:     sub.t,
 				TaskRun:  sub.tr,
-				IsFinish: false, // 任务可能同时有历史回溯和新任务，不能直接关闭
+				IsFinish: isFinished, // 任务可能同时有历史回溯和新任务，不能直接关闭
 			}); err != nil {
 				return err
 			}
+
 			return nil
 		}
 	}
