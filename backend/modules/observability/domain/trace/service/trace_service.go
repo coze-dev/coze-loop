@@ -412,26 +412,6 @@ type ListTrajectoryResponse struct {
 	Trajectories []*loop_span.Trajectory
 }
 
-type UpsertColumnExtractConfigRequest struct {
-	WorkspaceID  int64
-	PlatformType string
-	SpanListType string
-	AgentName    string
-	Columns      []entity.ColumnExtractRule
-	UserID       string
-}
-
-type GetColumnExtractConfigRequest struct {
-	WorkspaceID  int64
-	PlatformType string
-	SpanListType string
-	AgentName    string
-}
-
-type GetColumnExtractConfigResponse struct {
-	Columns []entity.ColumnExtractRule
-}
-
 type GetAgentMetadataRequest struct {
 	WorkspaceID  int64
 	PlatformType loop_span.PlatformType
@@ -479,8 +459,6 @@ type ITraceService interface {
 	GetTrajectories(ctx context.Context, workspaceID int64, traceIDs []string, startTime, endTime int64,
 		platformType loop_span.PlatformType) (map[string]*loop_span.Trajectory, error)
 	MergeHistoryMessagesByRespIDBatch(ctx context.Context, spans []*loop_span.Span, platformType loop_span.PlatformType) error
-	UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) error
-	GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (*GetColumnExtractConfigResponse, error)
 	GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error)
 }
 
@@ -1042,44 +1020,6 @@ func (r *TraceServiceImpl) UpsertTrajectoryConfig(ctx context.Context, req *Upse
 	return nil
 }
 
-func (r *TraceServiceImpl) UpsertColumnExtractConfig(ctx context.Context, req *UpsertColumnExtractConfigRequest) error {
-	marshalConfig, err := json.MarshalString(req.Columns)
-	if err != nil {
-		return err
-	}
-
-	if err := r.traceRepo.UpsertColumnExtractConfig(ctx, &repo.UpsertColumnExtractConfigParam{
-		WorkspaceId:  req.WorkspaceID,
-		PlatformType: req.PlatformType,
-		SpanListType: req.SpanListType,
-		AgentName:    req.AgentName,
-		Config:       marshalConfig,
-		UserID:       req.UserID,
-	}); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *TraceServiceImpl) GetColumnExtractConfig(ctx context.Context, req *GetColumnExtractConfigRequest) (*GetColumnExtractConfigResponse, error) {
-	config, err := r.traceRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
-		WorkspaceId:  req.WorkspaceID,
-		PlatformType: req.PlatformType,
-		SpanListType: req.SpanListType,
-		AgentName:    req.AgentName,
-	})
-	if err != nil {
-		return nil, err
-	}
-	if config == nil || len(config.Columns) == 0 {
-		return &GetColumnExtractConfigResponse{}, nil
-	}
-	return &GetColumnExtractConfigResponse{
-		Columns: config.Columns,
-	}, nil
-}
-
 func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMetadataRequest) (*GetAgentMetadataResponse, error) {
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
@@ -1108,18 +1048,10 @@ func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMe
 	}
 
 	// agent name exist filter
-	orOp := loop_span.QueryAndOrEnumOr
 	agentNameFilter := &loop_span.FilterFields{
-		QueryAndOr: &orOp,
 		FilterFields: []*loop_span.FilterField{
 			{
 				FieldName: tagKeyAgentName,
-				FieldType: loop_span.FieldTypeString,
-				QueryType: ptr.Of(loop_span.QueryTypeEnumExist),
-				IsCustom:  true,
-			},
-			{
-				FieldName: tagKeyGenAIAgentName,
 				FieldType: loop_span.FieldTypeString,
 				QueryType: ptr.Of(loop_span.QueryTypeEnumExist),
 				IsCustom:  true,
@@ -1168,16 +1100,12 @@ func (r *TraceServiceImpl) GetAgentMetadata(ctx context.Context, req *GetAgentMe
 }
 
 const (
-	tagKeyAgentName      = "agent.name"
-	tagKeyGenAIAgentName = "gen_ai.agent.name"
+	tagKeyAgentName = "agent_name"
 )
 
 func extractAgentName(s *loop_span.Span) string {
 	if s.TagsString != nil {
 		if name, ok := s.TagsString[tagKeyAgentName]; ok && name != "" {
-			return name
-		}
-		if name, ok := s.TagsString[tagKeyGenAIAgentName]; ok && name != "" {
 			return name
 		}
 	}
@@ -1190,7 +1118,7 @@ func extractAgentNameFromFilters(filters *loop_span.FilterFields) string {
 	}
 	var agentName string
 	_ = filters.Traverse(func(f *loop_span.FilterField) error {
-		if f.FieldName == tagKeyAgentName || f.FieldName == tagKeyGenAIAgentName {
+		if f.FieldName == tagKeyAgentName {
 			if len(f.Values) > 0 && f.Values[0] != "" {
 				agentName = f.Values[0]
 			}

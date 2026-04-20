@@ -3429,19 +3429,19 @@ func TestTraceApplication_buildListPreSpanSvcReq(t *testing.T) {
 func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 	tests := []struct {
 		name         string
-		fieldsGetter func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider)
+		fieldsGetter func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider)
 		ctx          context.Context
 		req          *trace.UpsertColumnExtractConfigRequest
 		wantErr      bool
 	}{
 		{
 			name: "success",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil)
-				return mockSvc, mockAuth
+				mockRepo.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil)
+				return mockRepo, mockAuth
 			},
 			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user-1"}),
 			req: &trace.UpsertColumnExtractConfigRequest{
@@ -3457,11 +3457,11 @@ func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 		},
 		{
 			name: "auth error",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("no permission"))
-				return mockSvc, mockAuth
+				return mockRepo, mockAuth
 			},
 			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user-1"}),
 			req: &trace.UpsertColumnExtractConfigRequest{
@@ -3473,11 +3473,11 @@ func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 		},
 		{
 			name: "no user id",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				return mockSvc, mockAuth
+				return mockRepo, mockAuth
 			},
 			ctx: context.Background(),
 			req: &trace.UpsertColumnExtractConfigRequest{
@@ -3488,13 +3488,13 @@ func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "service error",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			name: "repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(errors.New("db error"))
-				return mockSvc, mockAuth
+				mockRepo.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(errors.New("db error"))
+				return mockRepo, mockAuth
 			},
 			ctx: session.WithCtxUser(context.Background(), &session.User{ID: "user-1"}),
 			req: &trace.UpsertColumnExtractConfigRequest{
@@ -3509,10 +3509,10 @@ func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			svc, auth := tt.fieldsGetter(ctrl)
+			columnExtractConfigRepo, auth := tt.fieldsGetter(ctrl)
 			tr := &TraceApplication{
-				traceService: svc,
-				authSvc:      auth,
+				columnExtractConfigRepo: columnExtractConfigRepo,
+				authSvc:                 auth,
 			}
 			got, err := tr.UpsertColumnExtractConfig(tt.ctx, tt.req)
 			if tt.wantErr {
@@ -3528,7 +3528,7 @@ func TestTraceApplication_UpsertColumnExtractConfig(t *testing.T) {
 func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 	tests := []struct {
 		name         string
-		fieldsGetter func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider)
+		fieldsGetter func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider)
 		ctx          context.Context
 		req          *trace.GetColumnExtractConfigRequest
 		wantErr      bool
@@ -3536,16 +3536,16 @@ func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 	}{
 		{
 			name: "success with columns",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(&service.GetColumnExtractConfigResponse{
+				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(&entity.ColumnExtractConfig{
 					Columns: []entity.ColumnExtractRule{
 						{Column: "input", JSONPath: "$.messages[0].content"},
 					},
 				}, nil)
-				return mockSvc, mockAuth
+				return mockRepo, mockAuth
 			},
 			ctx: context.Background(),
 			req: &trace.GetColumnExtractConfigRequest{
@@ -3558,12 +3558,12 @@ func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 		},
 		{
 			name: "success nil response",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
-				return mockSvc, mockAuth
+				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
+				return mockRepo, mockAuth
 			},
 			ctx: context.Background(),
 			req: &trace.GetColumnExtractConfigRequest{
@@ -3576,11 +3576,11 @@ func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 		},
 		{
 			name: "auth error",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
-				return mockSvc, mockAuth
+				return mockRepo, mockAuth
 			},
 			ctx: context.Background(),
 			req: &trace.GetColumnExtractConfigRequest{
@@ -3589,13 +3589,13 @@ func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "service error",
-			fieldsGetter: func(ctrl *gomock.Controller) (service.ITraceService, rpc.IAuthProvider) {
-				mockSvc := svcmock.NewMockITraceService(ctrl)
+			name: "repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) (repo.IColumnExtractConfigRepo, rpc.IAuthProvider) {
+				mockRepo := repomock.NewMockIColumnExtractConfigRepo(ctrl)
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				mockSvc.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
-				return mockSvc, mockAuth
+				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+				return mockRepo, mockAuth
 			},
 			ctx: context.Background(),
 			req: &trace.GetColumnExtractConfigRequest{
@@ -3610,10 +3610,10 @@ func TestTraceApplication_GetColumnExtractConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			svc, auth := tt.fieldsGetter(ctrl)
+			columnExtractConfigRepo, auth := tt.fieldsGetter(ctrl)
 			tr := &TraceApplication{
-				traceService: svc,
-				authSvc:      auth,
+				columnExtractConfigRepo: columnExtractConfigRepo,
+				authSvc:                 auth,
 			}
 			got, err := tr.GetColumnExtractConfig(tt.ctx, tt.req)
 			if tt.wantErr {

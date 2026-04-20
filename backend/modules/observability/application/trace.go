@@ -31,6 +31,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -58,6 +59,7 @@ func NewTraceApplication(
 	traceService service.ITraceService,
 	traceExportService service.ITraceExportService,
 	viewRepo repo.IViewRepo,
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo,
 	benefitService benefit.IBenefitService,
 	tenant tenant.ITenantProvider,
 	traceMetrics metrics.ITraceMetrics,
@@ -69,34 +71,36 @@ func NewTraceApplication(
 	workflowService rpc.IWorkflowProvider,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
-		traceService:       traceService,
-		traceExportService: traceExportService,
-		viewRepo:           viewRepo,
-		traceConfig:        traceConfig,
-		metrics:            traceMetrics,
-		benefit:            benefitService,
-		tenant:             tenant,
-		authSvc:            authService,
-		evalSvc:            evalService,
-		userSvc:            userService,
-		tagSvc:             tagService,
-		workflowSvc:        workflowService,
+		traceService:            traceService,
+		traceExportService:      traceExportService,
+		viewRepo:                viewRepo,
+		columnExtractConfigRepo: columnExtractConfigRepo,
+		traceConfig:             traceConfig,
+		metrics:                 traceMetrics,
+		benefit:                 benefitService,
+		tenant:                  tenant,
+		authSvc:                 authService,
+		evalSvc:                 evalService,
+		userSvc:                 userService,
+		tagSvc:                  tagService,
+		workflowSvc:             workflowService,
 	}, nil
 }
 
 type TraceApplication struct {
-	traceService       service.ITraceService
-	traceExportService service.ITraceExportService
-	viewRepo           repo.IViewRepo
-	traceConfig        config.ITraceConfig
-	metrics            metrics.ITraceMetrics
-	benefit            benefit.IBenefitService
-	tenant             tenant.ITenantProvider
-	authSvc            rpc.IAuthProvider
-	evalSvc            rpc.IEvaluatorRPCAdapter
-	userSvc            rpc.IUserProvider
-	tagSvc             rpc.ITagRPCAdapter
-	workflowSvc        rpc.IWorkflowProvider
+	traceService            service.ITraceService
+	traceExportService      service.ITraceExportService
+	viewRepo                repo.IViewRepo
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo
+	traceConfig             config.ITraceConfig
+	metrics                 metrics.ITraceMetrics
+	benefit                 benefit.IBenefitService
+	tenant                  tenant.ITenantProvider
+	authSvc                 rpc.IAuthProvider
+	evalSvc                 rpc.IEvaluatorRPCAdapter
+	userSvc                 rpc.IUserProvider
+	tagSvc                  rpc.ITagRPCAdapter
+	workflowSvc             rpc.IWorkflowProvider
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
@@ -1332,12 +1336,17 @@ func (t *TraceApplication) UpsertColumnExtractConfig(ctx context.Context, req *t
 	}
 
 	columns := tconv.ColumnExtractRulesDTO2DO(req.GetColumns())
-	if err := t.traceService.UpsertColumnExtractConfig(ctx, &service.UpsertColumnExtractConfigRequest{
-		WorkspaceID:  req.GetWorkspaceID(),
+	marshalConfig, err := json.MarshalString(columns)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := t.columnExtractConfigRepo.UpsertColumnExtractConfig(ctx, &repo.UpsertColumnExtractConfigParam{
+		WorkspaceId:  req.GetWorkspaceID(),
 		PlatformType: req.GetPlatformType(),
 		SpanListType: req.GetSpanListType(),
 		AgentName:    req.GetAgentName(),
-		Columns:      columns,
+		Config:       marshalConfig,
 		UserID:       userID,
 	}); err != nil {
 		return nil, err
@@ -1354,8 +1363,8 @@ func (t *TraceApplication) GetColumnExtractConfig(ctx context.Context, req *trac
 		return nil, err
 	}
 
-	confResp, err := t.traceService.GetColumnExtractConfig(ctx, &service.GetColumnExtractConfigRequest{
-		WorkspaceID:  req.GetWorkspaceID(),
+	config, err := t.columnExtractConfigRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
+		WorkspaceId:  req.GetWorkspaceID(),
 		PlatformType: req.GetPlatformType(),
 		SpanListType: req.GetSpanListType(),
 		AgentName:    req.GetAgentName(),
@@ -1363,12 +1372,12 @@ func (t *TraceApplication) GetColumnExtractConfig(ctx context.Context, req *trac
 	if err != nil {
 		return nil, err
 	}
-	if confResp == nil {
+	if config == nil || len(config.Columns) == 0 {
 		return &trace.GetColumnExtractConfigResponse{}, nil
 	}
 
 	return &trace.GetColumnExtractConfigResponse{
-		Columns: tconv.ColumnExtractRulesDO2DTO(confResp.Columns),
+		Columns: tconv.ColumnExtractRulesDO2DTO(config.Columns),
 	}, nil
 }
 

@@ -325,7 +325,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
-			mockRepo := mocks.NewMockITraceRepo(ctrl)
+			mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
 
 			if tt.dbConfigReturns != nil {
 				mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
@@ -336,7 +336,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			}
 
 			processor := &ClipProcessor{
-				traceRepo: mockRepo,
+				columnExtractConfigRepo: mockRepo,
 				settings: Settings{
 					WorkspaceId:  1,
 					PlatformType: loop_span.PlatformCozeLoop,
@@ -355,7 +355,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 
 func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	mockRepo := mocks.NewMockITraceRepo(ctrl)
+	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
 	mockRepo.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).
 		Return(nil, nil).Times(1)
 
@@ -367,7 +367,7 @@ func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 	})
 
 	processor := &ClipProcessor{
-		traceRepo: mockRepo,
+		columnExtractConfigRepo: mockRepo,
 		settings: Settings{
 			WorkspaceId:  1,
 			PlatformType: loop_span.PlatformCozeLoop,
@@ -386,7 +386,7 @@ func TestClipProcessor_NoRepoUsesDefault(t *testing.T) {
 	llmInput := `{"messages":[{"role":"system","content":"Hello world"}]}`
 
 	processor := &ClipProcessor{
-		traceRepo: nil,
+		columnExtractConfigRepo: nil,
 		settings: Settings{
 			SpanListType: loop_span.SpanListTypeLLMSpan,
 		},

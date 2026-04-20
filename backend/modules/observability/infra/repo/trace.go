@@ -76,11 +76,10 @@ func NewTraceRepoImpl(
 	spanRedisDao redis_dao.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
-	columnExtractConfDao mysql.IColumnExtractConfigDao,
 	idGenerator idgen.IIDGenerator,
 	opts ...TraceRepoOption,
 ) (repo.ITraceRepo, error) {
-	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, columnExtractConfDao, idGenerator, opts...)
+	impl, err := newTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +92,7 @@ func NewTraceMetricCKRepoImpl(
 	storageProvider storage.IStorageProvider,
 	opts ...TraceRepoOption,
 ) (metric_repo.IMetricRepo, error) {
-	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, nil, nil, idGenerator, opts...)
+	return newTraceRepoImpl(traceConfig, storageProvider, nil, nil, nil, idGenerator, opts...)
 }
 
 func newTraceRepoImpl(
@@ -102,20 +101,18 @@ func newTraceRepoImpl(
 	spanRedisDao redis_dao.ISpansRedisDao,
 	spanProducer mq.ISpanProducer,
 	trajectoryConfDao mysql.ITrajectoryConfigDao,
-	columnExtractConfDao mysql.IColumnExtractConfigDao,
 	idGenerator idgen.IIDGenerator,
 	opts ...TraceRepoOption,
 ) (*TraceRepoImpl, error) {
 	impl := &TraceRepoImpl{
-		traceConfig:          traceConfig,
-		storageProvider:      storageProvider,
-		spanDaos:             make(map[string]dao.ISpansDao),
-		annoDaos:             make(map[string]dao.IAnnotationDao),
-		spanRedisDao:         spanRedisDao,
-		spanProducer:         spanProducer,
-		trajectoryConfDao:    trajectoryConfDao,
-		columnExtractConfDao: columnExtractConfDao,
-		idGenerator:          idGenerator,
+		traceConfig:       traceConfig,
+		storageProvider:   storageProvider,
+		spanDaos:          make(map[string]dao.ISpansDao),
+		annoDaos:          make(map[string]dao.IAnnotationDao),
+		spanRedisDao:      spanRedisDao,
+		spanProducer:      spanProducer,
+		trajectoryConfDao: trajectoryConfDao,
+		idGenerator:       idGenerator,
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -133,7 +130,6 @@ type TraceRepoImpl struct {
 	spanRedisDao         redis_dao.ISpansRedisDao
 	spanProducer         mq.ISpanProducer
 	trajectoryConfDao    mysql.ITrajectoryConfigDao
-	columnExtractConfDao mysql.IColumnExtractConfigDao
 	idGenerator          idgen.IIDGenerator
 }
 
@@ -183,48 +179,6 @@ func (t *TraceRepoImpl) GetTrajectoryConfig(ctx context.Context, param repo.GetT
 	}
 
 	return convertor2.TrajectoryConfigPO2DO(trajectoryConfig), nil
-}
-
-func (t *TraceRepoImpl) UpsertColumnExtractConfig(ctx context.Context, param *repo.UpsertColumnExtractConfigParam) error {
-	existing, err := t.columnExtractConfDao.GetColumnExtractConfig(ctx, param.WorkspaceId, param.PlatformType, param.SpanListType, param.AgentName)
-	if err != nil {
-		return err
-	}
-
-	if existing == nil {
-		id, err := t.idGenerator.GenID(ctx)
-		if err != nil {
-			return err
-		}
-		po := &model2.ObservabilityColumnExtractConfig{
-			ID:           id,
-			WorkspaceID:  param.WorkspaceId,
-			PlatformType: param.PlatformType,
-			SpanListType: param.SpanListType,
-			AgentName:    param.AgentName,
-			Config:       &param.Config,
-			CreatedAt:    time.Now(),
-			CreatedBy:    param.UserID,
-			UpdatedAt:    time.Now(),
-			UpdatedBy:    param.UserID,
-		}
-		return t.columnExtractConfDao.CreateColumnExtractConfig(ctx, po)
-	}
-
-	existing.Config = &param.Config
-	existing.UpdatedAt = time.Now()
-	existing.UpdatedBy = param.UserID
-	existing.IsDeleted = false
-	return t.columnExtractConfDao.UpdateColumnExtractConfig(ctx, existing)
-}
-
-func (t *TraceRepoImpl) GetColumnExtractConfig(ctx context.Context, param repo.GetColumnExtractConfigParam) (*entity.ColumnExtractConfig, error) {
-	po, err := t.columnExtractConfDao.GetColumnExtractConfig(ctx, param.WorkspaceId, param.PlatformType, param.SpanListType, param.AgentName)
-	if err != nil {
-		return nil, err
-	}
-
-	return convertor2.ColumnExtractConfigPO2DO(po), nil
 }
 
 func (t *TraceRepoImpl) InsertSpans(ctx context.Context, param *repo.InsertTraceParam) error {

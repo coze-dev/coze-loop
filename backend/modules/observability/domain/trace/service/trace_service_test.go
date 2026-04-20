@@ -5932,207 +5932,6 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 	})
 }
 
-func TestTraceServiceImpl_UpsertColumnExtractConfig(t *testing.T) {
-	type fields struct {
-		traceRepo repo.ITraceRepo
-	}
-	type args struct {
-		ctx context.Context
-		req *UpsertColumnExtractConfigRequest
-	}
-	tests := []struct {
-		name         string
-		fieldsGetter func(ctrl *gomock.Controller) fields
-		args         args
-		wantErr      bool
-	}{
-		{
-			name: "upsert column extract config successfully",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil)
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &UpsertColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-					Columns: []entity.ColumnExtractRule{
-						{Column: "input", JSONPath: "$.messages[0].content"},
-						{Column: "output", JSONPath: "$.choices[0].message.content"},
-					},
-					UserID: "user-1",
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "upsert column extract config failed due to repo error",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().UpsertColumnExtractConfig(gomock.Any(), gomock.Any()).Return(fmt.Errorf("repo error"))
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &UpsertColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-					Columns: []entity.ColumnExtractRule{
-						{Column: "input", JSONPath: "$.messages[0].content"},
-					},
-					UserID: "user-1",
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			fields := tt.fieldsGetter(ctrl)
-			r := &TraceServiceImpl{
-				traceRepo: fields.traceRepo,
-			}
-			err := r.UpsertColumnExtractConfig(tt.args.ctx, tt.args.req)
-			assert.Equal(t, tt.wantErr, err != nil)
-		})
-	}
-}
-
-func TestTraceServiceImpl_GetColumnExtractConfig(t *testing.T) {
-	type fields struct {
-		traceRepo repo.ITraceRepo
-	}
-	type args struct {
-		ctx context.Context
-		req *GetColumnExtractConfigRequest
-	}
-	tests := []struct {
-		name         string
-		fieldsGetter func(ctrl *gomock.Controller) fields
-		args         args
-		want         *GetColumnExtractConfigResponse
-		wantErr      bool
-	}{
-		{
-			name: "get column extract config successfully",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetColumnExtractConfig(gomock.Any(), repo.GetColumnExtractConfigParam{
-					WorkspaceId:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-				}).Return(&entity.ColumnExtractConfig{
-					Columns: []entity.ColumnExtractRule{
-						{Column: "input", JSONPath: "$.messages[0].content"},
-						{Column: "output", JSONPath: "$.choices[0].message.content"},
-					},
-				}, nil)
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &GetColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-				},
-			},
-			want: &GetColumnExtractConfigResponse{
-				Columns: []entity.ColumnExtractRule{
-					{Column: "input", JSONPath: "$.messages[0].content"},
-					{Column: "output", JSONPath: "$.choices[0].message.content"},
-				},
-			},
-			wantErr: false,
-		},
-		{
-			name: "get column extract config returns nil config",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, nil)
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &GetColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-				},
-			},
-			want:    &GetColumnExtractConfigResponse{},
-			wantErr: false,
-		},
-		{
-			name: "get column extract config returns empty columns",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(&entity.ColumnExtractConfig{
-					Columns: []entity.ColumnExtractRule{},
-				}, nil)
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &GetColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-				},
-			},
-			want:    &GetColumnExtractConfigResponse{},
-			wantErr: false,
-		},
-		{
-			name: "get column extract config failed due to repo error",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				repoMock := repomocks.NewMockITraceRepo(ctrl)
-				repoMock.EXPECT().GetColumnExtractConfig(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
-				return fields{traceRepo: repoMock}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &GetColumnExtractConfigRequest{
-					WorkspaceID:  1,
-					PlatformType: "coze_loop",
-					SpanListType: "all_span",
-					AgentName:    "test-agent",
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			fields := tt.fieldsGetter(ctrl)
-			r := &TraceServiceImpl{
-				traceRepo: fields.traceRepo,
-			}
-			got, err := r.GetColumnExtractConfig(tt.args.ctx, tt.args.req)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.want, got)
-			}
-		})
-	}
-}
-
 func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 	type fields struct {
 		traceRepo      repo.ITraceRepo
@@ -6151,7 +5950,7 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "get agent metadata successfully with agent.name",
+			name: "get agent metadata successfully with agent_name",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -6161,13 +5960,13 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						{
 							SpanID: "span-1",
 							TagsString: map[string]string{
-								"agent.name": "my-agent",
+								"agent_name": "my-agent",
 							},
 						},
 						{
 							SpanID: "span-2",
 							TagsString: map[string]string{
-								"gen_ai.agent.name": "another-agent",
+								"agent_name": "another-agent",
 							},
 						},
 					},
@@ -6198,19 +5997,19 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						{
 							SpanID: "span-1",
 							TagsString: map[string]string{
-								"agent.name": "agent-a",
+								"agent_name": "agent-a",
 							},
 						},
 						{
 							SpanID: "span-2",
 							TagsString: map[string]string{
-								"agent.name": "agent-a",
+								"agent_name": "agent-a",
 							},
 						},
 						{
 							SpanID: "span-3",
 							TagsString: map[string]string{
-								"gen_ai.agent.name": "agent-b",
+								"agent_name": "agent-b",
 							},
 						},
 					},
@@ -6335,32 +6134,13 @@ func Test_extractAgentName(t *testing.T) {
 		want string
 	}{
 		{
-			name: "agent.name present",
+			name: "agent_name present",
 			span: &loop_span.Span{
 				TagsString: map[string]string{
-					"agent.name": "my-agent",
+					"agent_name": "my-agent",
 				},
 			},
 			want: "my-agent",
-		},
-		{
-			name: "gen_ai.agent.name present",
-			span: &loop_span.Span{
-				TagsString: map[string]string{
-					"gen_ai.agent.name": "gen-agent",
-				},
-			},
-			want: "gen-agent",
-		},
-		{
-			name: "agent.name takes priority over gen_ai.agent.name",
-			span: &loop_span.Span{
-				TagsString: map[string]string{
-					"agent.name":        "primary",
-					"gen_ai.agent.name": "fallback",
-				},
-			},
-			want: "primary",
 		},
 		{
 			name: "no agent name",
@@ -6377,14 +6157,13 @@ func Test_extractAgentName(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "empty agent.name falls back to gen_ai.agent.name",
+			name: "empty agent_name",
 			span: &loop_span.Span{
 				TagsString: map[string]string{
-					"agent.name":        "",
-					"gen_ai.agent.name": "fallback",
+					"agent_name": "",
 				},
 			},
-			want: "fallback",
+			want: "",
 		},
 	}
 	for _, tt := range tests {
@@ -6407,28 +6186,16 @@ func Test_extractAgentNameFromFilters(t *testing.T) {
 			want:    "",
 		},
 		{
-			name: "filters with agent.name",
+			name: "filters with agent_name",
 			filters: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
 					{
-						FieldName: "agent.name",
+						FieldName: "agent_name",
 						Values:    []string{"my-agent"},
 					},
 				},
 			},
 			want: "my-agent",
-		},
-		{
-			name: "filters with gen_ai.agent.name",
-			filters: &loop_span.FilterFields{
-				FilterFields: []*loop_span.FilterField{
-					{
-						FieldName: "gen_ai.agent.name",
-						Values:    []string{"gen-agent"},
-					},
-				},
-			},
-			want: "gen-agent",
 		},
 		{
 			name: "filters without agent name",
@@ -6447,7 +6214,7 @@ func Test_extractAgentNameFromFilters(t *testing.T) {
 			filters: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
 					{
-						FieldName: "agent.name",
+						FieldName: "agent_name",
 						Values:    []string{},
 					},
 				},

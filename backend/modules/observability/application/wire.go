@@ -122,6 +122,7 @@ var (
 	traceSet = wire.NewSet(
 		NewTraceApplication,
 		obrepo.NewViewRepoImpl,
+		obrepo.NewColumnExtractConfigRepoImpl,
 		mysqldao.NewViewDaoImpl,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
@@ -180,14 +181,13 @@ func provideTraceRepo(
 	ckProvider ck.Provider,
 	spanProducer mq3.ISpanProducer,
 	trajectoryConfDao mysqldao.ITrajectoryConfigDao,
-	columnExtractConfDao mysqldao.IColumnExtractConfigDao,
 	idGenerator idgen.IIDGenerator,
 ) (repo.ITraceRepo, error) {
 	options, err := buildTraceRepoOptions(ckProvider)
 	if err != nil {
 		return nil, err
 	}
-	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, columnExtractConfDao, idGenerator, options...)
+	return obrepo.NewTraceRepoImpl(traceConfig, storageProvider, spanRedisDao, spanProducer, trajectoryConfDao, idGenerator, options...)
 }
 
 func provideTraceMetricRepo(

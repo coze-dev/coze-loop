@@ -51,7 +51,7 @@ func TestTraceRepoImpl_UpsertTrajectoryConfig(t *testing.T) {
 	// 创建新配置
 	{
 		trajStub := &trajectoryDaoStub{getResp: nil, createErr: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		err = repoImpl.UpsertTrajectoryConfig(context.Background(), &repo.UpsertTrajectoryConfigParam{WorkspaceId: 1, Filters: "{}", UserID: "u"})
 		assert.NoError(t, err)
@@ -69,7 +69,7 @@ func TestTraceRepoImpl_UpsertTrajectoryConfig(t *testing.T) {
 	{
 		orig := &model2.ObservabilityTrajectoryConfig{ID: 10, WorkspaceID: 2, Filter: nil, IsDeleted: true}
 		trajStub := &trajectoryDaoStub{getResp: orig, updateErr: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		err = repoImpl.UpsertTrajectoryConfig(context.Background(), &repo.UpsertTrajectoryConfigParam{WorkspaceId: 2, Filters: "{\"a\":1}", UserID: "u2"})
 		assert.NoError(t, err)
@@ -84,7 +84,7 @@ func TestTraceRepoImpl_UpsertTrajectoryConfig(t *testing.T) {
 	// GetTrajectoryConfig 返回错误
 	{
 		trajStub := &trajectoryDaoStub{getErr: assert.AnError}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		err = repoImpl.UpsertTrajectoryConfig(context.Background(), &repo.UpsertTrajectoryConfigParam{WorkspaceId: 3, Filters: "{}", UserID: "u"})
 		assert.Error(t, err)
@@ -92,7 +92,7 @@ func TestTraceRepoImpl_UpsertTrajectoryConfig(t *testing.T) {
 	// CreateTrajectoryConfig 返回错误
 	{
 		trajStub := &trajectoryDaoStub{getResp: nil, createErr: errors.New("dup")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		err = repoImpl.UpsertTrajectoryConfig(context.Background(), &repo.UpsertTrajectoryConfigParam{WorkspaceId: 4, Filters: "{}", UserID: "u"})
 		assert.Error(t, err)
@@ -101,7 +101,7 @@ func TestTraceRepoImpl_UpsertTrajectoryConfig(t *testing.T) {
 	{
 		orig := &model2.ObservabilityTrajectoryConfig{ID: 10, WorkspaceID: 5}
 		trajStub := &trajectoryDaoStub{getResp: orig, updateErr: errors.New("update err")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		err = repoImpl.UpsertTrajectoryConfig(context.Background(), &repo.UpsertTrajectoryConfigParam{WorkspaceId: 5, Filters: "{}", UserID: "u5"})
 		assert.Error(t, err)
@@ -112,7 +112,7 @@ func TestTraceRepoImpl_GetTrajectoryConfig(t *testing.T) {
 	// dao 返回 nil
 	{
 		trajStub := &trajectoryDaoStub{getResp: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		got, err := repoImpl.GetTrajectoryConfig(context.Background(), repo.GetTrajectoryConfigParam{WorkspaceId: 1})
 		assert.NoError(t, err)
@@ -122,7 +122,7 @@ func TestTraceRepoImpl_GetTrajectoryConfig(t *testing.T) {
 	{
 		filter := "{}"
 		trajStub := &trajectoryDaoStub{getResp: &model2.ObservabilityTrajectoryConfig{ID: 11, WorkspaceID: 2, Filter: &filter, CreatedAt: time.Now(), UpdatedAt: time.Now(), CreatedBy: "u", UpdatedBy: "u"}}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		got, err := repoImpl.GetTrajectoryConfig(context.Background(), repo.GetTrajectoryConfigParam{WorkspaceId: 2})
 		assert.NoError(t, err)
@@ -136,7 +136,7 @@ func TestTraceRepoImpl_GetTrajectoryConfig(t *testing.T) {
 	{
 		filter := "not-json"
 		trajStub := &trajectoryDaoStub{getResp: &model2.ObservabilityTrajectoryConfig{ID: 12, WorkspaceID: 3, Filter: &filter}}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		got, err := repoImpl.GetTrajectoryConfig(context.Background(), repo.GetTrajectoryConfigParam{WorkspaceId: 3})
 		assert.NoError(t, err)
@@ -148,7 +148,7 @@ func TestTraceRepoImpl_GetTrajectoryConfig(t *testing.T) {
 	// dao error
 	{
 		trajStub := &trajectoryDaoStub{getErr: errors.New("db err")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, nil, idGenStub{})
+		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, trajStub, idGenStub{})
 		assert.NoError(t, err)
 		got, err := repoImpl.GetTrajectoryConfig(context.Background(), repo.GetTrajectoryConfigParam{WorkspaceId: 9})
 		assert.Error(t, err)
