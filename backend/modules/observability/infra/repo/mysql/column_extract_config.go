@@ -19,6 +19,7 @@ type IColumnExtractConfigDao interface {
 	GetColumnExtractConfig(ctx context.Context, workspaceID int64, platformType, spanListType, agentName string) (*model.ObservabilityColumnExtractConfig, error)
 	UpdateColumnExtractConfig(ctx context.Context, po *model.ObservabilityColumnExtractConfig) error
 	CreateColumnExtractConfig(ctx context.Context, po *model.ObservabilityColumnExtractConfig) error
+	ListColumnExtractConfigs(ctx context.Context, platformType, spanListType string) ([]*model.ObservabilityColumnExtractConfig, error)
 }
 
 func NewColumnExtractConfigDaoImpl(db db.Provider) IColumnExtractConfigDao {
@@ -69,4 +70,17 @@ func (t ColumnExtractConfigDaoImpl) GetColumnExtractConfig(ctx context.Context, 
 	}
 
 	return &po, nil
+}
+
+func (t ColumnExtractConfigDaoImpl) ListColumnExtractConfigs(ctx context.Context, platformType, spanListType string) ([]*model.ObservabilityColumnExtractConfig, error) {
+	var pos []*model.ObservabilityColumnExtractConfig
+	err := t.dbMgr.NewSession(ctx).WithContext(ctx).
+		Where("platform_type = ?", platformType).
+		Where("span_list_type = ?", spanListType).
+		Where("is_deleted = ?", false).
+		Find(&pos).Error
+	if err != nil {
+		return nil, errorx.WrapByCode(err, obErrorx.CommonMySqlErrorCode)
+	}
+	return pos, nil
 }

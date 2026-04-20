@@ -36,6 +36,13 @@ func (c *columnExtractDaoStub) CreateColumnExtractConfig(ctx context.Context, po
 	return c.createErr
 }
 
+func (c *columnExtractDaoStub) ListColumnExtractConfigs(ctx context.Context, platformType, spanListType string) ([]*model2.ObservabilityColumnExtractConfig, error) {
+	if c.getResp != nil {
+		return []*model2.ObservabilityColumnExtractConfig{c.getResp}, c.getErr
+	}
+	return nil, c.getErr
+}
+
 func TestColumnExtractConfigRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 	{
 		stub := &columnExtractDaoStub{getResp: nil, createErr: nil}

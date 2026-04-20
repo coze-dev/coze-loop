@@ -70,3 +70,18 @@ func (mr *MockIColumnExtractConfigRepoMockRecorder) GetColumnExtractConfig(arg0,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetColumnExtractConfig", reflect.TypeOf((*MockIColumnExtractConfigRepo)(nil).GetColumnExtractConfig), arg0, arg1)
 }
+
+// ListColumnExtractConfigs mocks base method.
+func (m *MockIColumnExtractConfigRepo) ListColumnExtractConfigs(arg0 context.Context, arg1 repo.ListColumnExtractConfigParam) ([]*entity.ColumnExtractConfig, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListColumnExtractConfigs", arg0, arg1)
+	ret0, _ := ret[0].([]*entity.ColumnExtractConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListColumnExtractConfigs indicates an expected call of ListColumnExtractConfigs.
+func (mr *MockIColumnExtractConfigRepoMockRecorder) ListColumnExtractConfigs(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListColumnExtractConfigs", reflect.TypeOf((*MockIColumnExtractConfigRepo)(nil).ListColumnExtractConfigs), arg0, arg1)
+}
