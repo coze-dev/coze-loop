@@ -2478,7 +2478,7 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 					{
 						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
 						Operator: &operator,
-						Value:    []string{"1"},
+						Value:    gptr.Of("1"),
 					},
 				},
 			},
@@ -2501,7 +2501,7 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 					{
 						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
 						Operator: &operator,
-						Value:    []string{"1"},
+						Value:    gptr.Of("1"),
 					},
 				},
 			},
@@ -2523,7 +2523,7 @@ func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
 					{
 						Field:    &openapiExperiment.FilterField{FieldType: &badType},
 						Operator: &operator,
-						Value:    []string{"1"},
+						Value:    gptr.Of("1"),
 					},
 				},
 			},
@@ -2634,7 +2634,7 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		ft := domainExpt.FieldType_TurnRunState
 		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
-				{Field: &domainExpt.FilterField{FieldType: &ft}},
+				{Field: &domainExpt.FilterField{FieldType: ft}},
 			},
 		}))
 	})
@@ -2643,7 +2643,7 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		ft := domainExpt.FieldType_EvaluatorScore
 		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
-				{Field: &domainExpt.FilterField{FieldType: &ft}},
+				{Field: &domainExpt.FilterField{FieldType: ft}},
 			},
 		}))
 	})
@@ -2653,8 +2653,8 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		ft2 := domainExpt.FieldType_EvaluatorScore
 		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
-				{Field: &domainExpt.FilterField{FieldType: &ft1}},
-				{Field: &domainExpt.FilterField{FieldType: &ft2}},
+				{Field: &domainExpt.FilterField{FieldType: ft1}},
+				{Field: &domainExpt.FilterField{FieldType: ft2}},
 			},
 		}))
 	})
@@ -2663,7 +2663,7 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		ft := domainExpt.FieldType_ActualOutput
 		assert.True(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
-				{Field: &domainExpt.FilterField{FieldType: &ft}},
+				{Field: &domainExpt.FilterField{FieldType: ft}},
 			},
 		}))
 	})
@@ -2673,8 +2673,8 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		ft2 := domainExpt.FieldType_EvalSetColumn
 		assert.True(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
-				{Field: &domainExpt.FilterField{FieldType: &ft1}},
-				{Field: &domainExpt.FilterField{FieldType: &ft2}},
+				{Field: &domainExpt.FilterField{FieldType: ft1}},
+				{Field: &domainExpt.FilterField{FieldType: ft2}},
 			},
 		}))
 	})
@@ -2684,7 +2684,7 @@ func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
 		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
 			FilterConditions: []*domainExpt.FilterCondition{
 				nil,
-				{Field: &domainExpt.FilterField{FieldType: &ft}},
+				{Field: &domainExpt.FilterField{FieldType: ft}},
 			},
 		}))
 	})
