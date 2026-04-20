@@ -423,6 +423,7 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	}
 	return s.getAnnotationValue(fieldName)
 }
+
 func (s *Span) getPredefinedMetadata(fieldName string) (any, bool) {
 	switch fieldName {
 	case SpanFieldStartTime:
@@ -462,6 +463,7 @@ func (s *Span) getPredefinedMetadata(fieldName string) (any, bool) {
 	}
 	return nil, false
 }
+
 func (s *Span) GetMetaDataValue(fieldName string) any {
 	if value, ok := s.getPredefinedMetadata(fieldName); ok {
 		return value
