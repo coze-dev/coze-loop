@@ -68,8 +68,10 @@ func (e *EvalTargetServiceImpl) CreateEvalTarget(ctx context.Context, spaceID in
 
 	srcID := strings.TrimSpace(sourceTargetID)
 	srcVer := strings.TrimSpace(sourceTargetVersion)
-	// 仅记录型（*Online）：允许不传 source_target_id / source_target_version，落库占位对象供模板等引用
-	if targetType.IsRecordOnlyType() && srcID == "" && srcVer == "" {
+	// 仅记录型（*Online）：无业务 source 时落库占位对象。版本为空或与在线实验默认占位版本一致时均走此路径（避免 CreateExpt 注入 0.0.1 后误走 BuildBySource）
+	recordOnlyPlaceholder := targetType.IsRecordOnlyType() && srcID == "" &&
+		(srcVer == "" || srcVer == consts.DefaultSourceTargetVersion)
+	if recordOnlyPlaceholder {
 		do := e.newRecordOnlyEvalTargetWithoutSource(ctx, spaceID, targetType)
 		if do == nil {
 			return 0, 0, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
