@@ -14,8 +14,8 @@ import (
 )
 
 type ClipProcessor struct {
-	traceRepo repo.ITraceRepo
-	settings  Settings
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo
+	settings                Settings
 }
 
 const (
@@ -33,8 +33,8 @@ var defaultExtractRules = map[loop_span.SpanListType][]entity.ColumnExtractRule{
 
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
 	var rules []entity.ColumnExtractRule
-	if c.traceRepo != nil && c.settings.WorkspaceId > 0 {
-		cfg, err := c.traceRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
+	if c.columnExtractConfigRepo != nil && c.settings.WorkspaceId > 0 {
+		cfg, err := c.columnExtractConfigRepo.GetColumnExtractConfig(ctx, repo.GetColumnExtractConfigParam{
 			WorkspaceId:  c.settings.WorkspaceId,
 			PlatformType: string(c.settings.PlatformType),
 			SpanListType: string(c.settings.SpanListType),
@@ -64,7 +64,7 @@ func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 }
 
 type ClipProcessorFactory struct {
-	traceRepo repo.ITraceRepo
+	columnExtractConfigRepo repo.IColumnExtractConfigRepo
 }
 
 func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
@@ -72,8 +72,8 @@ func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings
 		return &NoOpProcessor{}, nil
 	}
 	return &ClipProcessor{
-		traceRepo: c.traceRepo,
-		settings:  set,
+		columnExtractConfigRepo: c.columnExtractConfigRepo,
+		settings:                set,
 	}, nil
 }
 
@@ -84,8 +84,8 @@ func (n *NoOpProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 	return spans, nil
 }
 
-func NewClipProcessorFactory(traceRepo repo.ITraceRepo) Factory {
-	return &ClipProcessorFactory{traceRepo: traceRepo}
+func NewClipProcessorFactory(columnExtractConfigRepo repo.IColumnExtractConfigRepo) Factory {
+	return &ClipProcessorFactory{columnExtractConfigRepo: columnExtractConfigRepo}
 }
 
 func clipSpanField(content string) string {

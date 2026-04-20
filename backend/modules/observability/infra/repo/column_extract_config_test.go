@@ -36,12 +36,11 @@ func (c *columnExtractDaoStub) CreateColumnExtractConfig(ctx context.Context, po
 	return c.createErr
 }
 
-func TestTraceRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
+func TestColumnExtractConfigRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 	{
 		stub := &columnExtractDaoStub{getResp: nil, createErr: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
-		err = repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		err := repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
 			WorkspaceId:  1,
 			PlatformType: "coze_loop",
 			SpanListType: "llm_span",
@@ -73,9 +72,8 @@ func TestTraceRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 			IsDeleted:    true,
 		}
 		stub := &columnExtractDaoStub{getResp: existing, updateErr: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
-		err = repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		err := repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
 			WorkspaceId:  2,
 			PlatformType: "coze_loop",
 			SpanListType: "llm_span",
@@ -93,18 +91,16 @@ func TestTraceRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 	}
 	{
 		stub := &columnExtractDaoStub{getErr: assert.AnError}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
-		err = repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		err := repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
 			WorkspaceId: 3, PlatformType: "coze_loop", SpanListType: "all_span", Config: "{}", UserID: "u",
 		})
 		assert.Error(t, err)
 	}
 	{
 		stub := &columnExtractDaoStub{getResp: nil, createErr: errors.New("dup")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
-		err = repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		err := repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
 			WorkspaceId: 4, PlatformType: "coze_loop", SpanListType: "all_span", Config: "{}", UserID: "u",
 		})
 		assert.Error(t, err)
@@ -112,20 +108,18 @@ func TestTraceRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 	{
 		existing := &model2.ObservabilityColumnExtractConfig{ID: 10, WorkspaceID: 5}
 		stub := &columnExtractDaoStub{getResp: existing, updateErr: errors.New("update err")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
-		err = repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		err := repoImpl.UpsertColumnExtractConfig(context.Background(), &repo.UpsertColumnExtractConfigParam{
 			WorkspaceId: 5, PlatformType: "coze_loop", SpanListType: "all_span", Config: "{}", UserID: "u5",
 		})
 		assert.Error(t, err)
 	}
 }
 
-func TestTraceRepoImpl_GetColumnExtractConfig(t *testing.T) {
+func TestColumnExtractConfigRepoImpl_GetColumnExtractConfig(t *testing.T) {
 	{
 		stub := &columnExtractDaoStub{getResp: nil}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
 		got, err := repoImpl.GetColumnExtractConfig(context.Background(), repo.GetColumnExtractConfigParam{
 			WorkspaceId: 1, PlatformType: "coze_loop", SpanListType: "llm_span",
 		})
@@ -137,8 +131,7 @@ func TestTraceRepoImpl_GetColumnExtractConfig(t *testing.T) {
 		stub := &columnExtractDaoStub{getResp: &model2.ObservabilityColumnExtractConfig{
 			ID: 11, WorkspaceID: 2, PlatformType: "coze_loop", SpanListType: "llm_span", AgentName: "agent-1", Config: &config,
 		}}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
 		got, err := repoImpl.GetColumnExtractConfig(context.Background(), repo.GetColumnExtractConfigParam{
 			WorkspaceId: 2, PlatformType: "coze_loop", SpanListType: "llm_span", AgentName: "agent-1",
 		})
@@ -155,8 +148,7 @@ func TestTraceRepoImpl_GetColumnExtractConfig(t *testing.T) {
 	}
 	{
 		stub := &columnExtractDaoStub{getErr: errors.New("db err")}
-		repoImpl, err := NewTraceRepoImpl(nil, nil, nil, nil, nil, stub, idGenStub{})
-		assert.NoError(t, err)
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
 		got, err := repoImpl.GetColumnExtractConfig(context.Background(), repo.GetColumnExtractConfigParam{
 			WorkspaceId: 9, PlatformType: "coze_loop", SpanListType: "all_span",
 		})

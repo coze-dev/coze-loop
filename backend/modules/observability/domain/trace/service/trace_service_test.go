@@ -6867,6 +6867,7 @@ func TestTraceServiceImpl_GetColumnExtractConfig(t *testing.T) {
 	}
 }
 
+
 func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 	type fields struct {
 		traceRepo      repo.ITraceRepo
@@ -6885,7 +6886,7 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 		wantErr      bool
 	}{
 		{
-			name: "get agent metadata successfully with agent.name",
+			name: "get agent metadata successfully with agent_name",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
 				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
@@ -6895,13 +6896,13 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						{
 							SpanID: "span-1",
 							TagsString: map[string]string{
-								"agent.name": "my-agent",
+								"agent_name": "my-agent",
 							},
 						},
 						{
 							SpanID: "span-2",
 							TagsString: map[string]string{
-								"gen_ai.agent.name": "another-agent",
+								"agent_name": "another-agent",
 							},
 						},
 					},
@@ -6932,19 +6933,19 @@ func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
 						{
 							SpanID: "span-1",
 							TagsString: map[string]string{
-								"agent.name": "agent-a",
+								"agent_name": "agent-a",
 							},
 						},
 						{
 							SpanID: "span-2",
 							TagsString: map[string]string{
-								"agent.name": "agent-a",
+								"agent_name": "agent-a",
 							},
 						},
 						{
 							SpanID: "span-3",
 							TagsString: map[string]string{
-								"gen_ai.agent.name": "agent-b",
+								"agent_name": "agent-b",
 							},
 						},
 					},
@@ -7069,32 +7070,13 @@ func Test_extractAgentName(t *testing.T) {
 		want string
 	}{
 		{
-			name: "agent.name present",
+			name: "agent_name present",
 			span: &loop_span.Span{
 				TagsString: map[string]string{
-					"agent.name": "my-agent",
+					"agent_name": "my-agent",
 				},
 			},
 			want: "my-agent",
-		},
-		{
-			name: "gen_ai.agent.name present",
-			span: &loop_span.Span{
-				TagsString: map[string]string{
-					"gen_ai.agent.name": "gen-agent",
-				},
-			},
-			want: "gen-agent",
-		},
-		{
-			name: "agent.name takes priority over gen_ai.agent.name",
-			span: &loop_span.Span{
-				TagsString: map[string]string{
-					"agent.name":        "primary",
-					"gen_ai.agent.name": "fallback",
-				},
-			},
-			want: "primary",
 		},
 		{
 			name: "no agent name",
@@ -7111,14 +7093,13 @@ func Test_extractAgentName(t *testing.T) {
 			want: "",
 		},
 		{
-			name: "empty agent.name falls back to gen_ai.agent.name",
+			name: "empty agent_name",
 			span: &loop_span.Span{
 				TagsString: map[string]string{
-					"agent.name":        "",
-					"gen_ai.agent.name": "fallback",
+					"agent_name": "",
 				},
 			},
-			want: "fallback",
+			want: "",
 		},
 	}
 	for _, tt := range tests {
@@ -7141,28 +7122,16 @@ func Test_extractAgentNameFromFilters(t *testing.T) {
 			want:    "",
 		},
 		{
-			name: "filters with agent.name",
+			name: "filters with agent_name",
 			filters: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
 					{
-						FieldName: "agent.name",
+						FieldName: "agent_name",
 						Values:    []string{"my-agent"},
 					},
 				},
 			},
 			want: "my-agent",
-		},
-		{
-			name: "filters with gen_ai.agent.name",
-			filters: &loop_span.FilterFields{
-				FilterFields: []*loop_span.FilterField{
-					{
-						FieldName: "gen_ai.agent.name",
-						Values:    []string{"gen-agent"},
-					},
-				},
-			},
-			want: "gen-agent",
 		},
 		{
 			name: "filters without agent name",
@@ -7181,7 +7150,7 @@ func Test_extractAgentNameFromFilters(t *testing.T) {
 			filters: &loop_span.FilterFields{
 				FilterFields: []*loop_span.FilterField{
 					{
-						FieldName: "agent.name",
+						FieldName: "agent_name",
 						Values:    []string{},
 					},
 				},
