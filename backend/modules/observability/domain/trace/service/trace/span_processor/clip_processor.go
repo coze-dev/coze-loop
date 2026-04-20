@@ -195,11 +195,16 @@ func extractAndClip(content string, column string, rule *entity.ColumnExtractRul
 }
 
 func normalizeJSONPath(column, jsonPath string) string {
-	jsonPath = strings.TrimPrefix(jsonPath, column+".")
-	if !strings.HasPrefix(jsonPath, "$") {
-		jsonPath = "$." + jsonPath
+	if strings.HasPrefix(jsonPath, "$") {
+		return jsonPath
 	}
-	return jsonPath
+	// strip column prefix: "input.xxx" -> "xxx", "input[0]" -> "[0]"
+	stripped := strings.TrimPrefix(jsonPath, column)
+	stripped = strings.TrimPrefix(stripped, ".")
+	if strings.HasPrefix(stripped, "[") {
+		return "$" + stripped
+	}
+	return "$." + stripped
 }
 
 func extractByJSONPath(content, jsonPath string) string {

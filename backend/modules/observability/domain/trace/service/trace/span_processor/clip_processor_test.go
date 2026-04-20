@@ -435,6 +435,24 @@ func TestNormalizeJSONPath(t *testing.T) {
 			jsonPath: "output.stream[0].content",
 			want:     "$.output.stream[0].content",
 		},
+		{
+			name:     "column with bracket index",
+			column:   "input",
+			jsonPath: "input[0].content",
+			want:     "$[0].content",
+		},
+		{
+			name:     "output with bracket index",
+			column:   "output",
+			jsonPath: "output[0].content",
+			want:     "$[0].content",
+		},
+		{
+			name:     "bare bracket index no prefix",
+			column:   "input",
+			jsonPath: "[0].content",
+			want:     "$[0].content",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
