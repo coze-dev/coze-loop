@@ -48,6 +48,7 @@ export enum ContentType {
   /** 空间 */
   Image = "Image",
   Audio = "Audio",
+  Video = "Video",
   MultiPart = "MultiPart",
 }
 export interface Session {

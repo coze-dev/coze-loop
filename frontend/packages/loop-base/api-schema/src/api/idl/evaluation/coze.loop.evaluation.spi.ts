@@ -62,6 +62,10 @@ export enum InvokeEvalTargetStatus {
 /** 新增 */
 export interface InvokeEvalTargetOutput {
   actual_output?: Content,
+  /** 额外输出，用户可自定义评测对象的输出字段和结构 */
+  ext_output?: {
+    [key: string | number]: Content
+  },
   /** 扩展字段，用户如果想返回一些额外信息可以塞在这个字段 */
   ext?: {
     [key: string | number]: string
@@ -76,15 +80,25 @@ export interface Content {
   image?: Image,
   /** 当content_type=multi_part，则从此字段遍历获取多模态的值 */
   multi_part?: Content[],
+  audio?: Audio,
+  video?: Video,
 }
 export enum ContentType {
   Text = "text",
   /** 文本类型：string、integer、float、boolean、object、array都属于文本类型 */
   Image = "image",
+  Audio = "audio",
+  Video = "video",
   MultiPart = "multi_part",
 }
 /** 多模态，例如图+文 */
 export interface Image {
+  url?: string
+}
+export interface Video {
+  url?: string
+}
+export interface Audio {
   url?: string
 }
 export interface InvokeEvalTargetUsage {
@@ -138,6 +152,7 @@ export interface InvokeEvaluatorOutputData {
   evaluator_result?: InvokeEvaluatorResult,
   evaluator_usage?: InvokeEvaluatorUsage,
   evaluator_run_error?: InvokeEvaluatorRunError,
+  extra_output?: EvaluatorExtraOutputContent,
 }
 /** the result data structure for custom evaluator */
 export interface InvokeEvaluatorResult {
@@ -153,6 +168,15 @@ export interface InvokeEvaluatorUsage {
 export interface InvokeEvaluatorRunError {
   code?: number,
   message?: string,
+}
+export enum EvaluatorExtraOutputType {
+  HTML = "html",
+  Markdown = "markdown",
+}
+export interface EvaluatorExtraOutputContent {
+  output_type?: EvaluatorExtraOutputType,
+  uri?: string,
+  url?: string,
 }
 /** invoke custom evaluator request */
 export interface InvokeEvaluatorRequest {

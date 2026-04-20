@@ -27,6 +27,20 @@ func TestConvertBoxType(t *testing.T) {
 	assert.Equal(t, "Black", convertBoxTypeDO2DTO(evaluatordo.EvaluatorBoxTypeBlack))
 }
 
+func TestConvertSourceTypeDTO2DO(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, evaluatordo.EvaluatorSourceType_IntelligentGen, convertSourceTypeDTO2DO(evaluatordto.EvaluatorSourceTypeIntelligentGen))
+	assert.Equal(t, evaluatordo.EvaluatorSourceType(0), convertSourceTypeDTO2DO(""))
+	assert.Equal(t, evaluatordo.EvaluatorSourceType(0), convertSourceTypeDTO2DO("unknown_type"))
+}
+
+func TestConvertSourceTypeDO2DTO(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, evaluatordto.EvaluatorSourceTypeIntelligentGen, convertSourceTypeDO2DTO(evaluatordo.EvaluatorSourceType_IntelligentGen))
+	assert.Equal(t, evaluatordto.EvaluatorSourceType(""), convertSourceTypeDO2DTO(0))
+	assert.Equal(t, evaluatordto.EvaluatorSourceType(""), convertSourceTypeDO2DTO(999))
+}
+
 func TestNormalizeLanguageType(t *testing.T) {
 	t.Parallel()
 	assert.Equal(t, evaluatordo.LanguageTypePython, normalizeLanguageType(evaluatordo.LanguageType("python")))

@@ -108,6 +108,7 @@ func OutputDO2DTO(src *entity.EvalTargetOutputData) *eval_target.EvalTargetOutpu
 	}
 	return &eval_target.EvalTargetOutputData{
 		OutputFields:       ContentDOToDTOs(src.OutputFields),
+		Ext:                src.Ext,
 		EvalTargetUsage:    UsageDO2DTO(src.EvalTargetUsage),
 		EvalTargetRunError: RunErrorDO2DTO(src.EvalTargetRunError),
 		TimeConsumingMs:    src.TimeConsumingMS,
@@ -132,6 +133,7 @@ func OutputDTO2ToDO(src *eval_target.EvalTargetOutputData) *entity.EvalTargetOut
 	}
 	return &entity.EvalTargetOutputData{
 		OutputFields:       ContentDTO2DOs(src.OutputFields),
+		Ext:                src.Ext,
 		EvalTargetUsage:    UsageDTO2DO(src.EvalTargetUsage),
 		EvalTargetRunError: RunErrorDTO2DO(src.EvalTargetRunError),
 		TimeConsumingMS:    src.TimeConsumingMs,
@@ -375,6 +377,7 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 	case spi.InvokeEvalTargetStatus_SUCCESS:
 		return &entity.EvalTargetOutputData{
 			OutputFields:       outputFields,
+			Ext:                output.Ext,
 			EvalTargetUsage:    evalTargetUsage,
 			EvalTargetRunError: nil,
 		}
@@ -388,7 +391,12 @@ func ToInvokeOutputDataDO(req *openapi.ReportEvalTargetInvokeResultRequest) *ent
 				Message: errorMessage,
 			}
 		}
+		var ext map[string]string
+		if output := req.GetOutput(); output != nil {
+			ext = output.Ext
+		}
 		return &entity.EvalTargetOutputData{
+			Ext:                ext,
 			OutputFields:       outputFields,
 			EvalTargetUsage:    evalTargetUsage,
 			EvalTargetRunError: evalTargetRunError,

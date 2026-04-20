@@ -25,6 +25,13 @@ const SpanType SpanType_VectorRetriever= "vector_retriever"
 const SpanType SpanType_Agent = "agent"
 const SpanType SpanType_LLMCall = "LLMCall"
 
+typedef string MetadataValueType (ts.enum="true")
+const MetadataValueType ValueType_String = "string"
+const MetadataValueType ValueType_Byte = "byte"
+const MetadataValueType ValueType_Long = "long"
+const MetadataValueType ValueType_Double = "double"
+const MetadataValueType ValueType_Bool = "bool"
+
 struct AttrTos {
     1: optional string input_data_url
     2: optional string output_data_url

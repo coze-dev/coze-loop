@@ -50,6 +50,7 @@ const (
 
 	AnnotationOpenAPIFeedbackFieldPrefix = "feedback_openapi_"
 	AnnotationManualFeedbackFieldPrefix  = "manual_feedback_"
+	AnnotationAutoEvaluateFieldPrefix    = "auto_evaluate_"
 )
 
 type AnnotationValue struct {
@@ -72,6 +73,8 @@ type AutoEvaluateMetadata struct {
 	TaskID             int64 `json:"task_id"`
 	EvaluatorRecordID  int64 `json:"evaluator_record_id"`
 	EvaluatorVersionID int64 `json:"evaluator_version_id"`
+	ExptID             int64 `json:"expt_id"`
+	ExptTemplateID     int64 `json:"expt_template_id"`
 }
 
 type AnnotationManualFeedback struct {

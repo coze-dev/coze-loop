@@ -363,7 +363,7 @@ func NewRecordEvalMode(
 	idgen idgen.IIDGenerator,
 ) (RecordEvalMode, error) {
 	switch event.ExptRunMode {
-	case entity.EvaluationModeSubmit, entity.EvaluationModeAppend:
+	case entity.EvaluationModeSubmit, entity.EvaluationModeAppend, entity.EvaluationModeTrialRun:
 		return &ExptRecordEvalModeSubmit{
 			exptItemResultRepo: exptItemResultRepo,
 			exptTurnResultRepo: exptTurnResultRepo,

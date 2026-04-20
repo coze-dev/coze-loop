@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import * as common from './common';
 export { common };
-import * as dataset from './../../data/domain/dataset';
-export { dataset };
+import * as data_dataset from './../../data/domain/dataset';
+export { data_dataset };
 export enum ExportType {
   Append = "append",
   Overwrite = "overwrite",
@@ -27,9 +27,9 @@ export interface FieldSchema {
   /** 类型，如 文本，图片，etc. */
   content_type?: common.ContentType,
   /** 默认渲染格式，如 code, json, etc. */
-  default_format?: dataset.FieldDisplayFormat,
+  default_format?: data_dataset.FieldDisplayFormat,
   /** 对应的内置 schema */
-  schema_key?: dataset.SchemaKey,
+  schema_key?: data_dataset.SchemaKey,
   /**
    * [20,50) 内容格式限制相关
    * 文本内容格式限制，格式为 JSON schema，协议参考 https://json-schema.org/specification
@@ -62,7 +62,7 @@ export interface Image {
   url?: string,
 }
 export interface ItemError {
-  type?: dataset.ItemErrorType,
+  type?: data_dataset.ItemErrorType,
   /** 有错误的字段名，非必填 */
   field_names?: string[],
 }

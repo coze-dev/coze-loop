@@ -13,10 +13,36 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_set"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"strings"
 )
 
 const (
+	VisibilityHidden = "hidden"
+
+	Manual = "manual"
+
+	OpenAPI = "openapi"
+
+	Schedule = "schedule"
+
+	FrequencyEveryday = "every_day"
+
+	FrequencyMonday = "monday"
+
+	FrequencyTuesday = "tuesday"
+
+	FrequencyWednesday = "wednesday"
+
+	FrequencyThursday = "thursday"
+
+	FrequencyFriday = "friday"
+
+	FrequencySaturday = "saturday"
+
+	FrequencySunday = "sunday"
+
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
 	ColumnEvalTargetNameActualOutput = "actual_output"
@@ -202,6 +228,9 @@ type SourceType int64
 const (
 	SourceType_Evaluation SourceType = 1
 	SourceType_AutoTask   SourceType = 2
+	SourceType_Workflow   SourceType = 3
+	// 智能生成
+	SourceType_IntelligentGen SourceType = 4
 )
 
 func (p SourceType) String() string {
@@ -210,6 +239,10 @@ func (p SourceType) String() string {
 		return "Evaluation"
 	case SourceType_AutoTask:
 		return "AutoTask"
+	case SourceType_Workflow:
+		return "Workflow"
+	case SourceType_IntelligentGen:
+		return "IntelligentGen"
 	}
 	return "<UNSET>"
 }
@@ -220,6 +253,10 @@ func SourceTypeFromString(s string) (SourceType, error) {
 		return SourceType_Evaluation, nil
 	case "AutoTask":
 		return SourceType_AutoTask, nil
+	case "Workflow":
+		return SourceType_Workflow, nil
+	case "IntelligentGen":
+		return SourceType_IntelligentGen, nil
 	}
 	return SourceType(0), fmt.Errorf("not a valid SourceType string")
 }
@@ -516,6 +553,8 @@ const (
 	FieldType_ExperimentTemplateID   FieldType = 70
 	FieldType_EvaluatorWeightedScore FieldType = 71
 	FieldType_UpdatedBy              FieldType = 72
+	FieldType_CronActivate           FieldType = 73
+	FieldType_TriggerType            FieldType = 74
 )
 
 func (p FieldType) String() string {
@@ -588,6 +627,10 @@ func (p FieldType) String() string {
 		return "EvaluatorWeightedScore"
 	case FieldType_UpdatedBy:
 		return "UpdatedBy"
+	case FieldType_CronActivate:
+		return "CronActivate"
+	case FieldType_TriggerType:
+		return "TriggerType"
 	}
 	return "<UNSET>"
 }
@@ -662,6 +705,10 @@ func FieldTypeFromString(s string) (FieldType, error) {
 		return FieldType_EvaluatorWeightedScore, nil
 	case "UpdatedBy":
 		return FieldType_UpdatedBy, nil
+	case "CronActivate":
+		return FieldType_CronActivate, nil
+	case "TriggerType":
+		return FieldType_TriggerType, nil
 	}
 	return FieldType(0), fmt.Errorf("not a valid FieldType string")
 }
@@ -948,6 +995,12 @@ func (p *DataType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+type Visibility = string
+
+type ExptTriggerType = string
+
+type Frequency = string
+
 type ExptResultExportType = string
 
 type CSVExportStatus = string
@@ -962,15 +1015,17 @@ type InsightAnalysisReportVoteType = string
 type FeedbackActionType = string
 
 type Experiment struct {
-	ID                    *int64                   `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
-	Name                  *string                  `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
-	Desc                  *string                  `thrift:"desc,3,optional" frugal:"3,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
-	CreatorBy             *string                  `thrift:"creator_by,4,optional" frugal:"4,optional,string" form:"creator_by" json:"creator_by,omitempty" query:"creator_by"`
-	Status                *ExptStatus              `thrift:"status,5,optional" frugal:"5,optional,ExptStatus" form:"status" json:"status,omitempty" query:"status"`
-	StatusMessage         *string                  `thrift:"status_message,6,optional" frugal:"6,optional,string" form:"status_message" json:"status_message,omitempty" query:"status_message"`
-	StartTime             *int64                   `thrift:"start_time,7,optional" frugal:"7,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
-	EndTime               *int64                   `thrift:"end_time,8,optional" frugal:"8,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
-	ItemConcurNum         *int32                   `thrift:"item_concur_num,9,optional" frugal:"9,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+	ID            *int64      `thrift:"id,1,optional" frugal:"1,optional,i64" json:"id" form:"id" query:"id"`
+	Name          *string     `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	Desc          *string     `thrift:"desc,3,optional" frugal:"3,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
+	CreatorBy     *string     `thrift:"creator_by,4,optional" frugal:"4,optional,string" form:"creator_by" json:"creator_by,omitempty" query:"creator_by"`
+	Status        *ExptStatus `thrift:"status,5,optional" frugal:"5,optional,ExptStatus" form:"status" json:"status,omitempty" query:"status"`
+	StatusMessage *string     `thrift:"status_message,6,optional" frugal:"6,optional,string" form:"status_message" json:"status_message,omitempty" query:"status_message"`
+	StartTime     *int64      `thrift:"start_time,7,optional" frugal:"7,optional,i64" json:"start_time" form:"start_time" query:"start_time"`
+	EndTime       *int64      `thrift:"end_time,8,optional" frugal:"8,optional,i64" json:"end_time" form:"end_time" query:"end_time"`
+	ItemConcurNum *int32      `thrift:"item_concur_num,9,optional" frugal:"9,optional,i32" form:"item_concur_num" json:"item_concur_num,omitempty" query:"item_concur_num"`
+	// 实验可见性，默认为空，可见
+	Visibility            *Visibility              `thrift:"visibility,10,optional" frugal:"10,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
 	EvalSetVersionID      *int64                   `thrift:"eval_set_version_id,21,optional" frugal:"21,optional,i64" json:"eval_set_version_id" form:"eval_set_version_id" query:"eval_set_version_id"`
 	TargetVersionID       *int64                   `thrift:"target_version_id,22,optional" frugal:"22,optional,i64" json:"target_version_id" form:"target_version_id" query:"target_version_id"`
 	EvaluatorVersionIds   []int64                  `thrift:"evaluator_version_ids,23,optional" frugal:"23,optional,list<i64>" json:"evaluator_version_ids" form:"evaluator_version_ids" query:"evaluator_version_ids"`
@@ -993,9 +1048,15 @@ type Experiment struct {
 	EvaluatorIDVersionList []*evaluator.EvaluatorIDVersionItem `thrift:"evaluator_id_version_list,51,optional" frugal:"51,optional,list<evaluator.EvaluatorIDVersionItem>" form:"evaluator_id_version_list" json:"evaluator_id_version_list,omitempty" query:"evaluator_id_version_list"`
 	ExptTemplateMeta       *ExptTemplateMeta                   `thrift:"expt_template_meta,60,optional" frugal:"60,optional,ExptTemplateMeta" form:"expt_template_meta" json:"expt_template_meta,omitempty" query:"expt_template_meta"`
 	// 评估器得分加权配置
-	ScoreWeightConfig   *ExptScoreWeight  `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
-	EnableWeightedScore *bool             `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
-	Ext                 map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	ScoreWeightConfig   *ExptScoreWeight `thrift:"score_weight_config,61,optional" frugal:"61,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
+	EnableWeightedScore *bool            `thrift:"enable_weighted_score,62,optional" frugal:"62,optional,bool" form:"enable_weighted_score" json:"enable_weighted_score,omitempty" query:"enable_weighted_score"`
+	// 智能评测相关
+	ThreadID                *string `thrift:"thread_id,63,optional" frugal:"63,optional,string" form:"thread_id" json:"thread_id,omitempty" query:"thread_id"`
+	EnableExtractTrajectory *bool   `thrift:"enable_extract_trajectory,64,optional" frugal:"64,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
+	// 触发方式
+	TriggerType *ExptTriggerType  `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	ExptSource  *ExptSource       `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
+	Ext         map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewExperiment() *Experiment {
@@ -1111,6 +1172,18 @@ func (p *Experiment) GetItemConcurNum() (v int32) {
 		return Experiment_ItemConcurNum_DEFAULT
 	}
 	return *p.ItemConcurNum
+}
+
+var Experiment_Visibility_DEFAULT Visibility
+
+func (p *Experiment) GetVisibility() (v Visibility) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVisibility() {
+		return Experiment_Visibility_DEFAULT
+	}
+	return *p.Visibility
 }
 
 var Experiment_EvalSetVersionID_DEFAULT int64
@@ -1377,6 +1450,54 @@ func (p *Experiment) GetEnableWeightedScore() (v bool) {
 	return *p.EnableWeightedScore
 }
 
+var Experiment_ThreadID_DEFAULT string
+
+func (p *Experiment) GetThreadID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetThreadID() {
+		return Experiment_ThreadID_DEFAULT
+	}
+	return *p.ThreadID
+}
+
+var Experiment_EnableExtractTrajectory_DEFAULT bool
+
+func (p *Experiment) GetEnableExtractTrajectory() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableExtractTrajectory() {
+		return Experiment_EnableExtractTrajectory_DEFAULT
+	}
+	return *p.EnableExtractTrajectory
+}
+
+var Experiment_TriggerType_DEFAULT ExptTriggerType
+
+func (p *Experiment) GetTriggerType() (v ExptTriggerType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerType() {
+		return Experiment_TriggerType_DEFAULT
+	}
+	return *p.TriggerType
+}
+
+var Experiment_ExptSource_DEFAULT *ExptSource
+
+func (p *Experiment) GetExptSource() (v *ExptSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptSource() {
+		return Experiment_ExptSource_DEFAULT
+	}
+	return p.ExptSource
+}
+
 var Experiment_Ext_DEFAULT map[string]string
 
 func (p *Experiment) GetExt() (v map[string]string) {
@@ -1414,6 +1535,9 @@ func (p *Experiment) SetEndTime(val *int64) {
 }
 func (p *Experiment) SetItemConcurNum(val *int32) {
 	p.ItemConcurNum = val
+}
+func (p *Experiment) SetVisibility(val *Visibility) {
+	p.Visibility = val
 }
 func (p *Experiment) SetEvalSetVersionID(val *int64) {
 	p.EvalSetVersionID = val
@@ -1481,6 +1605,18 @@ func (p *Experiment) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *Experiment) SetEnableWeightedScore(val *bool) {
 	p.EnableWeightedScore = val
 }
+func (p *Experiment) SetThreadID(val *string) {
+	p.ThreadID = val
+}
+func (p *Experiment) SetEnableExtractTrajectory(val *bool) {
+	p.EnableExtractTrajectory = val
+}
+func (p *Experiment) SetTriggerType(val *ExptTriggerType) {
+	p.TriggerType = val
+}
+func (p *Experiment) SetExptSource(val *ExptSource) {
+	p.ExptSource = val
+}
 func (p *Experiment) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -1495,6 +1631,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	7:   "start_time",
 	8:   "end_time",
 	9:   "item_concur_num",
+	10:  "visibility",
 	21:  "eval_set_version_id",
 	22:  "target_version_id",
 	23:  "evaluator_version_ids",
@@ -1517,6 +1654,10 @@ var fieldIDToName_Experiment = map[int16]string{
 	60:  "expt_template_meta",
 	61:  "score_weight_config",
 	62:  "enable_weighted_score",
+	63:  "thread_id",
+	64:  "enable_extract_trajectory",
+	70:  "trigger_type",
+	71:  "expt_source",
 	100: "ext",
 }
 
@@ -1554,6 +1695,10 @@ func (p *Experiment) IsSetEndTime() bool {
 
 func (p *Experiment) IsSetItemConcurNum() bool {
 	return p.ItemConcurNum != nil
+}
+
+func (p *Experiment) IsSetVisibility() bool {
+	return p.Visibility != nil
 }
 
 func (p *Experiment) IsSetEvalSetVersionID() bool {
@@ -1642,6 +1787,22 @@ func (p *Experiment) IsSetScoreWeightConfig() bool {
 
 func (p *Experiment) IsSetEnableWeightedScore() bool {
 	return p.EnableWeightedScore != nil
+}
+
+func (p *Experiment) IsSetThreadID() bool {
+	return p.ThreadID != nil
+}
+
+func (p *Experiment) IsSetEnableExtractTrajectory() bool {
+	return p.EnableExtractTrajectory != nil
+}
+
+func (p *Experiment) IsSetTriggerType() bool {
+	return p.TriggerType != nil
+}
+
+func (p *Experiment) IsSetExptSource() bool {
+	return p.ExptSource != nil
 }
 
 func (p *Experiment) IsSetExt() bool {
@@ -1733,6 +1894,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1914,6 +2083,38 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
+		case 63:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField63(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 64:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField64(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 70:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField70(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 71:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField71(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
@@ -2049,6 +2250,17 @@ func (p *Experiment) ReadField9(iprot thrift.TProtocol) error {
 		_field = &v
 	}
 	p.ItemConcurNum = _field
+	return nil
+}
+func (p *Experiment) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *Visibility
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Visibility = _field
 	return nil
 }
 func (p *Experiment) ReadField21(iprot thrift.TProtocol) error {
@@ -2319,6 +2531,47 @@ func (p *Experiment) ReadField62(iprot thrift.TProtocol) error {
 	p.EnableWeightedScore = _field
 	return nil
 }
+func (p *Experiment) ReadField63(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ThreadID = _field
+	return nil
+}
+func (p *Experiment) ReadField64(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return nil
+}
+func (p *Experiment) ReadField70(iprot thrift.TProtocol) error {
+
+	var _field *ExptTriggerType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerType = _field
+	return nil
+}
+func (p *Experiment) ReadField71(iprot thrift.TProtocol) error {
+	_field := NewExptSource()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptSource = _field
+	return nil
+}
 func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -2389,6 +2642,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField21(oprot); err != nil {
@@ -2477,6 +2734,22 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField62(oprot); err != nil {
 			fieldId = 62
+			goto WriteFieldError
+		}
+		if err = p.writeField63(oprot); err != nil {
+			fieldId = 63
+			goto WriteFieldError
+		}
+		if err = p.writeField64(oprot); err != nil {
+			fieldId = 64
+			goto WriteFieldError
+		}
+		if err = p.writeField70(oprot); err != nil {
+			fieldId = 70
+			goto WriteFieldError
+		}
+		if err = p.writeField71(oprot); err != nil {
+			fieldId = 71
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -2662,6 +2935,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *Experiment) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibility() {
+		if err = oprot.WriteFieldBegin("visibility", thrift.STRING, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Visibility); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
 func (p *Experiment) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetEvalSetVersionID() {
@@ -3091,6 +3382,78 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 62 end error: ", p), err)
 }
+func (p *Experiment) writeField63(oprot thrift.TProtocol) (err error) {
+	if p.IsSetThreadID() {
+		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 63); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ThreadID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 63 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 63 end error: ", p), err)
+}
+func (p *Experiment) writeField64(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableExtractTrajectory() {
+		if err = oprot.WriteFieldBegin("enable_extract_trajectory", thrift.BOOL, 64); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableExtractTrajectory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 64 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 64 end error: ", p), err)
+}
+func (p *Experiment) writeField70(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerType() {
+		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 70); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.TriggerType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
+}
+func (p *Experiment) writeField71(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptSource() {
+		if err = oprot.WriteFieldBegin("expt_source", thrift.STRUCT, 71); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptSource.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 71 end error: ", p), err)
+}
 func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -3162,6 +3525,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 	if !p.Field9DeepEqual(ano.ItemConcurNum) {
 		return false
 	}
+	if !p.Field10DeepEqual(ano.Visibility) {
+		return false
+	}
 	if !p.Field21DeepEqual(ano.EvalSetVersionID) {
 		return false
 	}
@@ -3226,6 +3592,18 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field62DeepEqual(ano.EnableWeightedScore) {
+		return false
+	}
+	if !p.Field63DeepEqual(ano.ThreadID) {
+		return false
+	}
+	if !p.Field64DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field70DeepEqual(ano.TriggerType) {
+		return false
+	}
+	if !p.Field71DeepEqual(ano.ExptSource) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -3338,6 +3716,18 @@ func (p *Experiment) Field9DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.ItemConcurNum != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field10DeepEqual(src *Visibility) bool {
+
+	if p.Visibility == src {
+		return true
+	} else if p.Visibility == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Visibility, *src) != 0 {
 		return false
 	}
 	return true
@@ -3570,6 +3960,49 @@ func (p *Experiment) Field62DeepEqual(src *bool) bool {
 	}
 	return true
 }
+func (p *Experiment) Field63DeepEqual(src *string) bool {
+
+	if p.ThreadID == src {
+		return true
+	} else if p.ThreadID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.ThreadID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field64DeepEqual(src *bool) bool {
+
+	if p.EnableExtractTrajectory == src {
+		return true
+	} else if p.EnableExtractTrajectory == nil || src == nil {
+		return false
+	}
+	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field70DeepEqual(src *ExptTriggerType) bool {
+
+	if p.TriggerType == src {
+		return true
+	} else if p.TriggerType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.TriggerType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field71DeepEqual(src *ExptSource) bool {
+
+	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
 func (p *Experiment) Field100DeepEqual(src map[string]string) bool {
 
 	if len(p.Ext) != len(src) {
@@ -3592,6 +4025,8 @@ type ExptTemplateMeta struct {
 	Desc        *string `thrift:"desc,4,optional" frugal:"4,optional,string" form:"desc" json:"desc,omitempty" query:"desc"`
 	// 模板对应的实验类型，当前主要为 Offline
 	ExptType *ExptType `thrift:"expt_type,5,optional" frugal:"5,optional,ExptType" form:"expt_type" json:"expt_type,omitempty" query:"expt_type"`
+	// 实验模板可见性，默认为空，可见
+	Visibility *Visibility `thrift:"visibility,6,optional" frugal:"6,optional,string" form:"visibility" json:"visibility,omitempty" query:"visibility"`
 }
 
 func NewExptTemplateMeta() *ExptTemplateMeta {
@@ -3660,6 +4095,18 @@ func (p *ExptTemplateMeta) GetExptType() (v ExptType) {
 	}
 	return *p.ExptType
 }
+
+var ExptTemplateMeta_Visibility_DEFAULT Visibility
+
+func (p *ExptTemplateMeta) GetVisibility() (v Visibility) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVisibility() {
+		return ExptTemplateMeta_Visibility_DEFAULT
+	}
+	return *p.Visibility
+}
 func (p *ExptTemplateMeta) SetID(val *int64) {
 	p.ID = val
 }
@@ -3675,6 +4122,9 @@ func (p *ExptTemplateMeta) SetDesc(val *string) {
 func (p *ExptTemplateMeta) SetExptType(val *ExptType) {
 	p.ExptType = val
 }
+func (p *ExptTemplateMeta) SetVisibility(val *Visibility) {
+	p.Visibility = val
+}
 
 var fieldIDToName_ExptTemplateMeta = map[int16]string{
 	1: "id",
@@ -3682,6 +4132,7 @@ var fieldIDToName_ExptTemplateMeta = map[int16]string{
 	3: "name",
 	4: "desc",
 	5: "expt_type",
+	6: "visibility",
 }
 
 func (p *ExptTemplateMeta) IsSetID() bool {
@@ -3702,6 +4153,10 @@ func (p *ExptTemplateMeta) IsSetDesc() bool {
 
 func (p *ExptTemplateMeta) IsSetExptType() bool {
 	return p.ExptType != nil
+}
+
+func (p *ExptTemplateMeta) IsSetVisibility() bool {
+	return p.Visibility != nil
 }
 
 func (p *ExptTemplateMeta) Read(iprot thrift.TProtocol) (err error) {
@@ -3757,6 +4212,14 @@ func (p *ExptTemplateMeta) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3847,6 +4310,17 @@ func (p *ExptTemplateMeta) ReadField5(iprot thrift.TProtocol) error {
 	p.ExptType = _field
 	return nil
 }
+func (p *ExptTemplateMeta) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *Visibility
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Visibility = _field
+	return nil
+}
 
 func (p *ExptTemplateMeta) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3872,6 +4346,10 @@ func (p *ExptTemplateMeta) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -3982,6 +4460,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExptTemplateMeta) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVisibility() {
+		if err = oprot.WriteFieldBegin("visibility", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Visibility); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *ExptTemplateMeta) String() string {
 	if p == nil {
@@ -4010,6 +4506,9 @@ func (p *ExptTemplateMeta) DeepEqual(ano *ExptTemplateMeta) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.ExptType) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Visibility) {
 		return false
 	}
 	return true
@@ -4071,6 +4570,18 @@ func (p *ExptTemplateMeta) Field5DeepEqual(src *ExptType) bool {
 		return false
 	}
 	if *p.ExptType != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplateMeta) Field6DeepEqual(src *Visibility) bool {
+
+	if p.Visibility == src {
+		return true
+	} else if p.Visibility == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Visibility, *src) != 0 {
 		return false
 	}
 	return true
@@ -5608,12 +6119,14 @@ func (p *ExptScoreWeight) Field2DeepEqual(src map[int64]float64) bool {
 }
 
 type ExptTemplate struct {
-	Meta               *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
-	TripleConfig       *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
-	FieldMappingConfig *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
-	ScoreWeightConfig  *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
-	ExptInfo           *ExptInfo         `thrift:"expt_info,5,optional" frugal:"5,optional,ExptInfo" form:"expt_info" json:"expt_info,omitempty" query:"expt_info"`
-	BaseInfo           *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	Meta                    *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	TripleConfig            *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
+	FieldMappingConfig      *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
+	ScoreWeightConfig       *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" form:"score_weight_config" json:"score_weight_config,omitempty" query:"score_weight_config"`
+	ExptInfo                *ExptInfo         `thrift:"expt_info,5,optional" frugal:"5,optional,ExptInfo" form:"expt_info" json:"expt_info,omitempty" query:"expt_info"`
+	ExptSource              *ExptSource       `thrift:"expt_source,6,optional" frugal:"6,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
+	EnableExtractTrajectory *bool             `thrift:"enable_extract_trajectory,7,optional" frugal:"7,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
+	BaseInfo                *common.BaseInfo  `thrift:"base_info,255,optional" frugal:"255,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewExptTemplate() *ExptTemplate {
@@ -5683,6 +6196,30 @@ func (p *ExptTemplate) GetExptInfo() (v *ExptInfo) {
 	return p.ExptInfo
 }
 
+var ExptTemplate_ExptSource_DEFAULT *ExptSource
+
+func (p *ExptTemplate) GetExptSource() (v *ExptSource) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptSource() {
+		return ExptTemplate_ExptSource_DEFAULT
+	}
+	return p.ExptSource
+}
+
+var ExptTemplate_EnableExtractTrajectory_DEFAULT bool
+
+func (p *ExptTemplate) GetEnableExtractTrajectory() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableExtractTrajectory() {
+		return ExptTemplate_EnableExtractTrajectory_DEFAULT
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
@@ -5709,6 +6246,12 @@ func (p *ExptTemplate) SetScoreWeightConfig(val *ExptScoreWeight) {
 func (p *ExptTemplate) SetExptInfo(val *ExptInfo) {
 	p.ExptInfo = val
 }
+func (p *ExptTemplate) SetExptSource(val *ExptSource) {
+	p.ExptSource = val
+}
+func (p *ExptTemplate) SetEnableExtractTrajectory(val *bool) {
+	p.EnableExtractTrajectory = val
+}
 func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -5719,6 +6262,8 @@ var fieldIDToName_ExptTemplate = map[int16]string{
 	3:   "field_mapping_config",
 	4:   "score_weight_config",
 	5:   "expt_info",
+	6:   "expt_source",
+	7:   "enable_extract_trajectory",
 	255: "base_info",
 }
 
@@ -5740,6 +6285,14 @@ func (p *ExptTemplate) IsSetScoreWeightConfig() bool {
 
 func (p *ExptTemplate) IsSetExptInfo() bool {
 	return p.ExptInfo != nil
+}
+
+func (p *ExptTemplate) IsSetExptSource() bool {
+	return p.ExptSource != nil
+}
+
+func (p *ExptTemplate) IsSetEnableExtractTrajectory() bool {
+	return p.EnableExtractTrajectory != nil
 }
 
 func (p *ExptTemplate) IsSetBaseInfo() bool {
@@ -5799,6 +6352,22 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -5881,6 +6450,25 @@ func (p *ExptTemplate) ReadField5(iprot thrift.TProtocol) error {
 	p.ExptInfo = _field
 	return nil
 }
+func (p *ExptTemplate) ReadField6(iprot thrift.TProtocol) error {
+	_field := NewExptSource()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ExptSource = _field
+	return nil
+}
+func (p *ExptTemplate) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return nil
+}
 func (p *ExptTemplate) ReadField255(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -5914,6 +6502,14 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -6028,6 +6624,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *ExptTemplate) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptSource() {
+		if err = oprot.WriteFieldBegin("expt_source", thrift.STRUCT, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ExptSource.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *ExptTemplate) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableExtractTrajectory() {
+		if err = oprot.WriteFieldBegin("enable_extract_trajectory", thrift.BOOL, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableExtractTrajectory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
 func (p *ExptTemplate) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 255); err != nil {
@@ -6076,6 +6708,12 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	if !p.Field5DeepEqual(ano.ExptInfo) {
 		return false
 	}
+	if !p.Field6DeepEqual(ano.ExptSource) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
 	if !p.Field255DeepEqual(ano.BaseInfo) {
 		return false
 	}
@@ -6117,9 +6755,1319 @@ func (p *ExptTemplate) Field5DeepEqual(src *ExptInfo) bool {
 	}
 	return true
 }
+func (p *ExptTemplate) Field6DeepEqual(src *ExptSource) bool {
+
+	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplate) Field7DeepEqual(src *bool) bool {
+
+	if p.EnableExtractTrajectory == src {
+		return true
+	} else if p.EnableExtractTrajectory == nil || src == nil {
+		return false
+	}
+	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
 func (p *ExptTemplate) Field255DeepEqual(src *common.BaseInfo) bool {
 
 	if !p.BaseInfo.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type TaskTimeRange struct {
+	// 生效开始时间（时间戳，毫秒）
+	StartTime *int64 `thrift:"start_time,1,optional" frugal:"1,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
+	// 生效结束时间（时间戳，毫秒）
+	EndTime *int64 `thrift:"end_time,2,optional" frugal:"2,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
+}
+
+func NewTaskTimeRange() *TaskTimeRange {
+	return &TaskTimeRange{}
+}
+
+func (p *TaskTimeRange) InitDefault() {
+}
+
+var TaskTimeRange_StartTime_DEFAULT int64
+
+func (p *TaskTimeRange) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return TaskTimeRange_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var TaskTimeRange_EndTime_DEFAULT int64
+
+func (p *TaskTimeRange) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return TaskTimeRange_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+func (p *TaskTimeRange) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *TaskTimeRange) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+
+var fieldIDToName_TaskTimeRange = map[int16]string{
+	1: "start_time",
+	2: "end_time",
+}
+
+func (p *TaskTimeRange) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *TaskTimeRange) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *TaskTimeRange) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TaskTimeRange[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *TaskTimeRange) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *TaskTimeRange) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
+
+func (p *TaskTimeRange) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("TaskTimeRange"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *TaskTimeRange) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *TaskTimeRange) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *TaskTimeRange) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("TaskTimeRange(%+v)", *p)
+
+}
+
+func (p *TaskTimeRange) DeepEqual(ano *TaskTimeRange) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.EndTime) {
+		return false
+	}
+	return true
+}
+
+func (p *TaskTimeRange) Field1DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *TaskTimeRange) Field2DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
+		return false
+	}
+	return true
+}
+
+type ExptSource struct {
+	SourceType *SourceType `thrift:"source_type,1,optional" frugal:"1,optional,SourceType" form:"source_type" json:"source_type,omitempty" query:"source_type"`
+	SourceID   *string     `thrift:"source_id,2,optional" frugal:"2,optional,string" form:"source_id" json:"source_id,omitempty" query:"source_id"`
+	// 不同source里的源数据结构
+	SpanFilterFields *filter.SpanFilterFields `thrift:"span_filter_fields,100,optional" frugal:"100,optional,filter.SpanFilterFields" form:"span_filter_fields" json:"span_filter_fields,omitempty" query:"span_filter_fields"`
+	Scheduler        *Scheduler               `thrift:"scheduler,101,optional" frugal:"101,optional,Scheduler" form:"scheduler" json:"scheduler,omitempty" query:"scheduler"`
+	// 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
+	Sampler   *task.Sampler  `thrift:"sampler,102,optional" frugal:"102,optional,task.Sampler" form:"sampler" json:"sampler,omitempty" query:"sampler"`
+	TimeRange *TaskTimeRange `thrift:"time_range,103,optional" frugal:"103,optional,TaskTimeRange" form:"time_range" json:"time_range,omitempty" query:"time_range"`
+}
+
+func NewExptSource() *ExptSource {
+	return &ExptSource{}
+}
+
+func (p *ExptSource) InitDefault() {
+}
+
+var ExptSource_SourceType_DEFAULT SourceType
+
+func (p *ExptSource) GetSourceType() (v SourceType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceType() {
+		return ExptSource_SourceType_DEFAULT
+	}
+	return *p.SourceType
+}
+
+var ExptSource_SourceID_DEFAULT string
+
+func (p *ExptSource) GetSourceID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSourceID() {
+		return ExptSource_SourceID_DEFAULT
+	}
+	return *p.SourceID
+}
+
+var ExptSource_SpanFilterFields_DEFAULT *filter.SpanFilterFields
+
+func (p *ExptSource) GetSpanFilterFields() (v *filter.SpanFilterFields) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSpanFilterFields() {
+		return ExptSource_SpanFilterFields_DEFAULT
+	}
+	return p.SpanFilterFields
+}
+
+var ExptSource_Scheduler_DEFAULT *Scheduler
+
+func (p *ExptSource) GetScheduler() (v *Scheduler) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetScheduler() {
+		return ExptSource_Scheduler_DEFAULT
+	}
+	return p.Scheduler
+}
+
+var ExptSource_Sampler_DEFAULT *task.Sampler
+
+func (p *ExptSource) GetSampler() (v *task.Sampler) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSampler() {
+		return ExptSource_Sampler_DEFAULT
+	}
+	return p.Sampler
+}
+
+var ExptSource_TimeRange_DEFAULT *TaskTimeRange
+
+func (p *ExptSource) GetTimeRange() (v *TaskTimeRange) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTimeRange() {
+		return ExptSource_TimeRange_DEFAULT
+	}
+	return p.TimeRange
+}
+func (p *ExptSource) SetSourceType(val *SourceType) {
+	p.SourceType = val
+}
+func (p *ExptSource) SetSourceID(val *string) {
+	p.SourceID = val
+}
+func (p *ExptSource) SetSpanFilterFields(val *filter.SpanFilterFields) {
+	p.SpanFilterFields = val
+}
+func (p *ExptSource) SetScheduler(val *Scheduler) {
+	p.Scheduler = val
+}
+func (p *ExptSource) SetSampler(val *task.Sampler) {
+	p.Sampler = val
+}
+func (p *ExptSource) SetTimeRange(val *TaskTimeRange) {
+	p.TimeRange = val
+}
+
+var fieldIDToName_ExptSource = map[int16]string{
+	1:   "source_type",
+	2:   "source_id",
+	100: "span_filter_fields",
+	101: "scheduler",
+	102: "sampler",
+	103: "time_range",
+}
+
+func (p *ExptSource) IsSetSourceType() bool {
+	return p.SourceType != nil
+}
+
+func (p *ExptSource) IsSetSourceID() bool {
+	return p.SourceID != nil
+}
+
+func (p *ExptSource) IsSetSpanFilterFields() bool {
+	return p.SpanFilterFields != nil
+}
+
+func (p *ExptSource) IsSetScheduler() bool {
+	return p.Scheduler != nil
+}
+
+func (p *ExptSource) IsSetSampler() bool {
+	return p.Sampler != nil
+}
+
+func (p *ExptSource) IsSetTimeRange() bool {
+	return p.TimeRange != nil
+}
+
+func (p *ExptSource) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField102(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 103:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField103(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptSource[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ExptSource) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *SourceType
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := SourceType(v)
+		_field = &tmp
+	}
+	p.SourceType = _field
+	return nil
+}
+func (p *ExptSource) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SourceID = _field
+	return nil
+}
+func (p *ExptSource) ReadField100(iprot thrift.TProtocol) error {
+	_field := filter.NewSpanFilterFields()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SpanFilterFields = _field
+	return nil
+}
+func (p *ExptSource) ReadField101(iprot thrift.TProtocol) error {
+	_field := NewScheduler()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Scheduler = _field
+	return nil
+}
+func (p *ExptSource) ReadField102(iprot thrift.TProtocol) error {
+	_field := task.NewSampler()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Sampler = _field
+	return nil
+}
+func (p *ExptSource) ReadField103(iprot thrift.TProtocol) error {
+	_field := NewTaskTimeRange()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TimeRange = _field
+	return nil
+}
+
+func (p *ExptSource) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ExptSource"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
+			goto WriteFieldError
+		}
+		if err = p.writeField103(oprot); err != nil {
+			fieldId = 103
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ExptSource) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceType() {
+		if err = oprot.WriteFieldBegin("source_type", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.SourceType)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ExptSource) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSourceID() {
+		if err = oprot.WriteFieldBegin("source_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SourceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ExptSource) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSpanFilterFields() {
+		if err = oprot.WriteFieldBegin("span_filter_fields", thrift.STRUCT, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SpanFilterFields.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
+func (p *ExptSource) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetScheduler() {
+		if err = oprot.WriteFieldBegin("scheduler", thrift.STRUCT, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Scheduler.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
+func (p *ExptSource) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSampler() {
+		if err = oprot.WriteFieldBegin("sampler", thrift.STRUCT, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Sampler.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
+func (p *ExptSource) writeField103(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTimeRange() {
+		if err = oprot.WriteFieldBegin("time_range", thrift.STRUCT, 103); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TimeRange.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 103 end error: ", p), err)
+}
+
+func (p *ExptSource) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExptSource(%+v)", *p)
+
+}
+
+func (p *ExptSource) DeepEqual(ano *ExptSource) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SourceType) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SourceID) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.SpanFilterFields) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.Scheduler) {
+		return false
+	}
+	if !p.Field102DeepEqual(ano.Sampler) {
+		return false
+	}
+	if !p.Field103DeepEqual(ano.TimeRange) {
+		return false
+	}
+	return true
+}
+
+func (p *ExptSource) Field1DeepEqual(src *SourceType) bool {
+
+	if p.SourceType == src {
+		return true
+	} else if p.SourceType == nil || src == nil {
+		return false
+	}
+	if *p.SourceType != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field2DeepEqual(src *string) bool {
+
+	if p.SourceID == src {
+		return true
+	} else if p.SourceID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SourceID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field100DeepEqual(src *filter.SpanFilterFields) bool {
+
+	if !p.SpanFilterFields.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field101DeepEqual(src *Scheduler) bool {
+
+	if !p.Scheduler.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field102DeepEqual(src *task.Sampler) bool {
+
+	if !p.Sampler.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptSource) Field103DeepEqual(src *TaskTimeRange) bool {
+
+	if !p.TimeRange.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type Scheduler struct {
+	// 定时触发器开关，默认关闭
+	Enabled *bool `thrift:"enabled,1,optional" frugal:"1,optional,bool" form:"enabled" json:"enabled,omitempty" query:"enabled"`
+	// 触发频次
+	Frequency *Frequency `thrift:"frequency,2,optional" frugal:"2,optional,string" form:"frequency" json:"frequency,omitempty" query:"frequency"`
+	// 触发时间（时间戳，秒。只使用时间，不使用日期）
+	TriggerAt *int64 `thrift:"trigger_at,3,optional" frugal:"3,optional,i64" form:"trigger_at" json:"trigger_at,omitempty" query:"trigger_at"`
+	// 生效开始时间（时间戳，秒）
+	StartTime *int64 `thrift:"start_time,4,optional" frugal:"4,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
+	// 生效结束时间（时间戳，秒）
+	EndTime *int64 `thrift:"end_time,5,optional" frugal:"5,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
+}
+
+func NewScheduler() *Scheduler {
+	return &Scheduler{}
+}
+
+func (p *Scheduler) InitDefault() {
+}
+
+var Scheduler_Enabled_DEFAULT bool
+
+func (p *Scheduler) GetEnabled() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnabled() {
+		return Scheduler_Enabled_DEFAULT
+	}
+	return *p.Enabled
+}
+
+var Scheduler_Frequency_DEFAULT Frequency
+
+func (p *Scheduler) GetFrequency() (v Frequency) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFrequency() {
+		return Scheduler_Frequency_DEFAULT
+	}
+	return *p.Frequency
+}
+
+var Scheduler_TriggerAt_DEFAULT int64
+
+func (p *Scheduler) GetTriggerAt() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerAt() {
+		return Scheduler_TriggerAt_DEFAULT
+	}
+	return *p.TriggerAt
+}
+
+var Scheduler_StartTime_DEFAULT int64
+
+func (p *Scheduler) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return Scheduler_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var Scheduler_EndTime_DEFAULT int64
+
+func (p *Scheduler) GetEndTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEndTime() {
+		return Scheduler_EndTime_DEFAULT
+	}
+	return *p.EndTime
+}
+func (p *Scheduler) SetEnabled(val *bool) {
+	p.Enabled = val
+}
+func (p *Scheduler) SetFrequency(val *Frequency) {
+	p.Frequency = val
+}
+func (p *Scheduler) SetTriggerAt(val *int64) {
+	p.TriggerAt = val
+}
+func (p *Scheduler) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *Scheduler) SetEndTime(val *int64) {
+	p.EndTime = val
+}
+
+var fieldIDToName_Scheduler = map[int16]string{
+	1: "enabled",
+	2: "frequency",
+	3: "trigger_at",
+	4: "start_time",
+	5: "end_time",
+}
+
+func (p *Scheduler) IsSetEnabled() bool {
+	return p.Enabled != nil
+}
+
+func (p *Scheduler) IsSetFrequency() bool {
+	return p.Frequency != nil
+}
+
+func (p *Scheduler) IsSetTriggerAt() bool {
+	return p.TriggerAt != nil
+}
+
+func (p *Scheduler) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *Scheduler) IsSetEndTime() bool {
+	return p.EndTime != nil
+}
+
+func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_Scheduler[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *Scheduler) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Enabled = _field
+	return nil
+}
+func (p *Scheduler) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *Frequency
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Frequency = _field
+	return nil
+}
+func (p *Scheduler) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerAt = _field
+	return nil
+}
+func (p *Scheduler) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *Scheduler) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EndTime = _field
+	return nil
+}
+
+func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("Scheduler"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *Scheduler) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnabled() {
+		if err = oprot.WriteFieldBegin("enabled", thrift.BOOL, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.Enabled); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *Scheduler) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFrequency() {
+		if err = oprot.WriteFieldBegin("frequency", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Frequency); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *Scheduler) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerAt() {
+		if err = oprot.WriteFieldBegin("trigger_at", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.TriggerAt); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *Scheduler) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *Scheduler) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEndTime() {
+		if err = oprot.WriteFieldBegin("end_time", thrift.I64, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.EndTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+
+func (p *Scheduler) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("Scheduler(%+v)", *p)
+
+}
+
+func (p *Scheduler) DeepEqual(ano *Scheduler) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Enabled) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Frequency) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.TriggerAt) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.EndTime) {
+		return false
+	}
+	return true
+}
+
+func (p *Scheduler) Field1DeepEqual(src *bool) bool {
+
+	if p.Enabled == src {
+		return true
+	} else if p.Enabled == nil || src == nil {
+		return false
+	}
+	if *p.Enabled != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field2DeepEqual(src *Frequency) bool {
+
+	if p.Frequency == src {
+		return true
+	} else if p.Frequency == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Frequency, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field3DeepEqual(src *int64) bool {
+
+	if p.TriggerAt == src {
+		return true
+	} else if p.TriggerAt == nil || src == nil {
+		return false
+	}
+	if *p.TriggerAt != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field4DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field5DeepEqual(src *int64) bool {
+
+	if p.EndTime == src {
+		return true
+	} else if p.EndTime == nil || src == nil {
+		return false
+	}
+	if *p.EndTime != *src {
 		return false
 	}
 	return true
@@ -6129,6 +8077,10 @@ type ExptInfo struct {
 	CreatedExptCount *int64      `thrift:"created_expt_count,1,optional" frugal:"1,optional,i64" form:"created_expt_count" json:"created_expt_count,omitempty" query:"created_expt_count"`
 	LatestExptID     *int64      `thrift:"latest_expt_id,2,optional" frugal:"2,optional,i64" json:"latest_expt_id" form:"latest_expt_id" query:"latest_expt_id"`
 	LatestExptStatus *ExptStatus `thrift:"latest_expt_status,3,optional" frugal:"3,optional,ExptStatus" form:"latest_expt_status" json:"latest_expt_status,omitempty" query:"latest_expt_status"`
+	// 最新实验开始时间（时间戳，毫秒）
+	LatestExptStartTime *int64 `thrift:"latest_expt_start_time,4,optional" frugal:"4,optional,i64" form:"latest_expt_start_time" json:"latest_expt_start_time,omitempty" query:"latest_expt_start_time"`
+	// 是否开启定时触发
+	CronActivate *bool `thrift:"cron_activate,5,optional" frugal:"5,optional,bool" json:"cron_activate" form:"cron_activate" query:"cron_activate"`
 }
 
 func NewExptInfo() *ExptInfo {
@@ -6173,6 +8125,30 @@ func (p *ExptInfo) GetLatestExptStatus() (v ExptStatus) {
 	}
 	return *p.LatestExptStatus
 }
+
+var ExptInfo_LatestExptStartTime_DEFAULT int64
+
+func (p *ExptInfo) GetLatestExptStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLatestExptStartTime() {
+		return ExptInfo_LatestExptStartTime_DEFAULT
+	}
+	return *p.LatestExptStartTime
+}
+
+var ExptInfo_CronActivate_DEFAULT bool
+
+func (p *ExptInfo) GetCronActivate() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCronActivate() {
+		return ExptInfo_CronActivate_DEFAULT
+	}
+	return *p.CronActivate
+}
 func (p *ExptInfo) SetCreatedExptCount(val *int64) {
 	p.CreatedExptCount = val
 }
@@ -6182,11 +8158,19 @@ func (p *ExptInfo) SetLatestExptID(val *int64) {
 func (p *ExptInfo) SetLatestExptStatus(val *ExptStatus) {
 	p.LatestExptStatus = val
 }
+func (p *ExptInfo) SetLatestExptStartTime(val *int64) {
+	p.LatestExptStartTime = val
+}
+func (p *ExptInfo) SetCronActivate(val *bool) {
+	p.CronActivate = val
+}
 
 var fieldIDToName_ExptInfo = map[int16]string{
 	1: "created_expt_count",
 	2: "latest_expt_id",
 	3: "latest_expt_status",
+	4: "latest_expt_start_time",
+	5: "cron_activate",
 }
 
 func (p *ExptInfo) IsSetCreatedExptCount() bool {
@@ -6199,6 +8183,14 @@ func (p *ExptInfo) IsSetLatestExptID() bool {
 
 func (p *ExptInfo) IsSetLatestExptStatus() bool {
 	return p.LatestExptStatus != nil
+}
+
+func (p *ExptInfo) IsSetLatestExptStartTime() bool {
+	return p.LatestExptStartTime != nil
+}
+
+func (p *ExptInfo) IsSetCronActivate() bool {
+	return p.CronActivate != nil
 }
 
 func (p *ExptInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -6238,6 +8230,22 @@ func (p *ExptInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6306,6 +8314,28 @@ func (p *ExptInfo) ReadField3(iprot thrift.TProtocol) error {
 	p.LatestExptStatus = _field
 	return nil
 }
+func (p *ExptInfo) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LatestExptStartTime = _field
+	return nil
+}
+func (p *ExptInfo) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CronActivate = _field
+	return nil
+}
 
 func (p *ExptInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -6323,6 +8353,14 @@ func (p *ExptInfo) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -6397,6 +8435,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *ExptInfo) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLatestExptStartTime() {
+		if err = oprot.WriteFieldBegin("latest_expt_start_time", thrift.I64, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.LatestExptStartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ExptInfo) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCronActivate() {
+		if err = oprot.WriteFieldBegin("cron_activate", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.CronActivate); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *ExptInfo) String() string {
 	if p == nil {
@@ -6419,6 +8493,12 @@ func (p *ExptInfo) DeepEqual(ano *ExptInfo) bool {
 		return false
 	}
 	if !p.Field3DeepEqual(ano.LatestExptStatus) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.LatestExptStartTime) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.CronActivate) {
 		return false
 	}
 	return true
@@ -6456,6 +8536,30 @@ func (p *ExptInfo) Field3DeepEqual(src *ExptStatus) bool {
 		return false
 	}
 	if *p.LatestExptStatus != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptInfo) Field4DeepEqual(src *int64) bool {
+
+	if p.LatestExptStartTime == src {
+		return true
+	} else if p.LatestExptStartTime == nil || src == nil {
+		return false
+	}
+	if *p.LatestExptStartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ExptInfo) Field5DeepEqual(src *bool) bool {
+
+	if p.CronActivate == src {
+		return true
+	} else if p.CronActivate == nil || src == nil {
+		return false
+	}
+	if *p.CronActivate != *src {
 		return false
 	}
 	return true

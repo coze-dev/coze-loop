@@ -5,6 +5,7 @@
   "homepage": "",
   "license": "Apache-2.0",
   "author": "fanwenjie.fe@bytedance.com",
+  "main": "./src/index.ts",
   "bin": {
     "idl2ts": "./src/cli.js"
   },
@@ -29,7 +30,7 @@
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
-    "@types/node": "^18",
+    "@types/node": "^24",
     "@vitest/coverage-v8": "~3.0.5",
     "sucrase": "^3.32.0",
     "tsx": "^4.19.2",

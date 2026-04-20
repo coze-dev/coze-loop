@@ -62,6 +62,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"GetSourceEvalTargetVersion": kitex.NewMethodInfo(
+		getSourceEvalTargetVersionHandler,
+		newEvalTargetServiceGetSourceEvalTargetVersionArgs,
+		newEvalTargetServiceGetSourceEvalTargetVersionResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"SearchCustomEvalTarget": kitex.NewMethodInfo(
 		searchCustomEvalTargetHandler,
 		newEvalTargetServiceSearchCustomEvalTargetArgs,
@@ -289,6 +296,25 @@ func newEvalTargetServiceBatchGetSourceEvalTargetsArgs() interface{} {
 
 func newEvalTargetServiceBatchGetSourceEvalTargetsResult() interface{} {
 	return eval_target.NewEvalTargetServiceBatchGetSourceEvalTargetsResult()
+}
+
+func getSourceEvalTargetVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*eval_target.EvalTargetServiceGetSourceEvalTargetVersionArgs)
+	realResult := result.(*eval_target.EvalTargetServiceGetSourceEvalTargetVersionResult)
+	success, err := handler.(eval_target.EvalTargetService).GetSourceEvalTargetVersion(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvalTargetServiceGetSourceEvalTargetVersionArgs() interface{} {
+	return eval_target.NewEvalTargetServiceGetSourceEvalTargetVersionArgs()
+}
+
+func newEvalTargetServiceGetSourceEvalTargetVersionResult() interface{} {
+	return eval_target.NewEvalTargetServiceGetSourceEvalTargetVersionResult()
 }
 
 func searchCustomEvalTargetHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -539,6 +565,16 @@ func (p *kClient) BatchGetSourceEvalTargets(ctx context.Context, request *eval_t
 	_args.Request = request
 	var _result eval_target.EvalTargetServiceBatchGetSourceEvalTargetsResult
 	if err = p.c.Call(ctx, "BatchGetSourceEvalTargets", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetSourceEvalTargetVersion(ctx context.Context, request *eval_target.GetSourceEvalTargetVersionRequest) (r *eval_target.GetSourceEvalTargetVersionResponse, err error) {
+	var _args eval_target.EvalTargetServiceGetSourceEvalTargetVersionArgs
+	_args.Request = request
+	var _result eval_target.EvalTargetServiceGetSourceEvalTargetVersionResult
+	if err = p.c.Call(ctx, "GetSourceEvalTargetVersion", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

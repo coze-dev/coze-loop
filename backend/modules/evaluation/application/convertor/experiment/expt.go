@@ -4,6 +4,8 @@
 package experiment
 
 import (
+	"strings"
+
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
@@ -58,6 +60,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	}
 	if cer.GetItemRetryNum() > 0 {
 		ec.ItemRetryNum = gptr.Of(int(cer.GetItemRetryNum()))
+	}
+	if cer.IsSetEnableExtractTrajectory() {
+		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
 	}
 	return ec, nil
 }
@@ -128,7 +133,7 @@ func toEvaluatorConfDO(mapping []*domain_expt.EvaluatorFieldMapping, runConfigMa
 				if item.IsSetVersion() {
 					version = item.GetVersion()
 				}
-				if item.IsSetEvaluatorVersionID() {
+				if item.IsSetEvaluatorVersionID() && item.GetEvaluatorVersionID() > 0 {
 					evaluatorVersionID = item.GetEvaluatorVersionID()
 				}
 			}
@@ -356,6 +361,16 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		TargetRuntimeParam:     trtp,
 		EvaluatorIDVersionList: evaluatorIDVersionList,
 	}
+	if experiment.Visibility == entity.Visibility_Hidden {
+		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
+	}
+	if experiment.ThreadID != nil {
+		res.ThreadID = experiment.ThreadID
+	}
+	if experiment.TriggerType != "" {
+		tt := experiment.TriggerType
+		res.TriggerType = &tt
+	}
 
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
 
@@ -374,6 +389,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		} else {
 			res.ItemRetryNum = gptr.Of(int32(0))
 		}
+		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 		res.Ext = experiment.EvalConf.Ext
 	}
 
@@ -390,14 +406,17 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 	}
 
-	// 关联的实验模板（仅在查询时按需填充基础信息）
-	if experiment.ExptTemplateMeta != nil {
+	// 关联的实验模板（仅在查询时按需填充基础信息）；在线实验不对外返回模板信息
+	if experiment.ExptType != entity.ExptType_Online && experiment.ExptTemplateMeta != nil {
 		res.ExptTemplateMeta = &domain_expt.ExptTemplateMeta{
 			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
 			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
 			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
 			Desc:        gptr.Of(experiment.ExptTemplateMeta.Desc),
 			ExptType:    gptr.Of(domain_expt.ExptType(experiment.ExptTemplateMeta.ExptType)),
+		}
+		if experiment.ExptTemplateMeta.Visibility == entity.Visibility_Hidden {
+			res.ExptTemplateMeta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 		}
 	}
 
@@ -409,6 +428,22 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	for _, evaluatorDO := range experiment.Evaluators {
 		res.Evaluators = append(res.Evaluators, evaluator.ConvertEvaluatorDO2DTO(evaluatorDO))
 	}
+
+	// expt_source：查询路径下由 manager 填充（Workflow 时含 span_filter_fields / scheduler / sampler）；否则用一级 source 字段构造
+	if es := ExptSourceDO2DTO(experiment.ExptSource); es != nil {
+		res.SetExptSource(es)
+	} else {
+		st := domain_expt.SourceType(experiment.SourceType)
+		fallback := &domain_expt.ExptSource{
+			SourceType: &st,
+			SourceID:   gptr.Of(experiment.SourceID),
+		}
+		if experiment.EvalConf != nil && experiment.EvalConf.TimeRange != nil {
+			fallback.TimeRange = taskTimeRangeDO2DTO(experiment.EvalConf.TimeRange)
+		}
+		res.SetExptSource(fallback)
+	}
+
 	return res
 }
 
@@ -445,11 +480,12 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	}
 
 	res := &entity.CreateEvalTargetParam{
-		SourceTargetID:      param.SourceTargetID,
-		SourceTargetVersion: param.SourceTargetVersion,
-		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
+		SourceTargetID:       param.SourceTargetID,
+		SourceTargetVersion:  param.SourceTargetVersion,
+		BotPublishVersion:    param.BotPublishVersion,
+		Region:               param.Region,
+		Env:                  param.Env,
+		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
@@ -468,8 +504,11 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 	return res
 }
 
-func ExptType2EvalMode(exptType domain_expt.ExptType) entity.ExptRunMode {
+func ExptType2EvalMode(exptType domain_expt.ExptType, trialRunItemCount *int64) entity.ExptRunMode {
 	exptMode := entity.EvaluationModeSubmit
+	if trialRunItemCount != nil && *trialRunItemCount > 0 {
+		return entity.EvaluationModeTrialRun
+	}
 	if exptType == domain_expt.ExptType_Online {
 		exptMode = entity.EvaluationModeAppend
 	}
@@ -491,7 +530,18 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		MaxAliveTime:          cer.GetMaxAliveTime(),
 		SourceType:            entity.SourceType(cer.GetSourceType()),
 		SourceID:              cer.GetSourceID(),
+		TrialRunItemCount:     cer.GetTrialRunItemCount(),
 		ExptConf:              nil,
+	}
+	if cer.IsSetVisibility() {
+		if cer.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
+	if cer.IsSetThreadID() {
+		param.ThreadID = cer.ThreadID
 	}
 	evaluationConfiguration, err := NewEvalConfConvert().ConvertToEntity(cer, evaluatorVersionRunConfigs)
 	if err != nil {
@@ -501,6 +551,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 
 	if cer.IsSetExptTemplateID() {
 		param.ExptTemplateID = cer.GetExptTemplateID()
+	}
+	if cer.IsSetTriggerType() {
+		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	return param, nil
 }

@@ -58,6 +58,29 @@ export interface EvalTargetContent {
   volcengine_agent?: VolcengineAgent,
   /** EvalTargetType=6 时，传参此字段。 评测对象为 CustomRPCServer 时, 需要设置 CustomRPCServer 信息 */
   custom_rpc_server?: CustomRPCServer,
+  /** EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息 */
+  web_agent?: WebAgent,
+}
+export interface WebAgent {
+  /** 应用ID */
+  id?: number,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  /** agent config */
+  agent_config?: common.AgentConfig,
+  /** agent prompt config for agent */
+  prompt_config?: WebAgentTargetPromptConfig,
+}
+export interface WebAgentTargetPromptConfig {
+  /** 通过messge list的方式描述target的操作说明 */
+  message_list?: common.Message[],
+  /** 输出规则 */
+  output_rule?: WebAgentTargetPromptConfigOutputRule,
+}
+export interface WebAgentTargetPromptConfigOutputRule {
+  message?: common.Message
 }
 export enum EvalTargetType {
   /** CozeBot */
@@ -71,6 +94,22 @@ export enum EvalTargetType {
   VolcengineAgent = 5,
   /** 自定义RPC服务 for内场 */
   CustomRPCServer = 6,
+  /** 火山智能体Agentkit */
+  VolcengineAgentAgentkit = 7,
+  /** Web智能体 */
+  WebAgent = 8,
+  /** CozeBot在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeBotOnline = 11,
+  /** Prompt在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeLoopPromptOnline = 12,
+  /** CozeWorkflow在线(评测过程中不执行对象，仅用于展示对象) */
+  CozeWorkflowOnline = 13,
+  /** 火山智能体在线(评测过程中不执行对象，仅用于展示对象) */
+  VolcengineAgentOnline = 14,
+  /** 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象) */
+  CustomRPCServerOnline = 15,
+  /** 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象) */
+  VolcengineAgentAgentkitOnline = 16,
 }
 /** Agent协议类型 */
 export enum VolcengineAgentProtocol {
@@ -160,6 +199,7 @@ export interface VolcengineAgent {
   volcengine_agent_endpoints?: VolcengineAgentEndpoint[],
   /** 注册协议 */
   protocol?: VolcengineAgentProtocol,
+  runtime_id?: string,
   base_info?: common.BaseInfo,
 }
 export interface VolcengineAgentEndpoint {
@@ -287,6 +327,10 @@ export interface EvalTargetOutputData {
   eval_target_run_error?: EvalTargetRunError,
   /** 运行耗时 */
   time_consuming_ms?: string,
+  /** 平台扩展字段 */
+  ext?: {
+    [key: string | number]: string
+  },
 }
 export interface EvalTargetUsage {
   input_tokens: string,

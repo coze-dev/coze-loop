@@ -12914,6 +12914,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 46:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField46(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				l, err = p.FastReadField100(buf[offset:])
@@ -13142,6 +13156,20 @@ func (p *SubmitExperimentOApiRequest) FastReadField45(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField46(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -13208,6 +13236,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField45(buf[offset:], w)
+		offset += p.fastWriteField46(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -13238,6 +13267,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field20Length()
 		l += p.field22Length()
 		l += p.field45Length()
+		l += p.field46Length()
 		l += p.field100Length()
 		l += p.field254Length()
 		l += p.field255Length()
@@ -13355,6 +13385,15 @@ func (p *SubmitExperimentOApiRequest) fastWriteField45(buf []byte, w thrift.Noco
 	if p.IsSetItemRetryNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 45)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.ItemRetryNum)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField46(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableExtractTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 46)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
 	}
 	return offset
 }
@@ -13501,6 +13540,15 @@ func (p *SubmitExperimentOApiRequest) field45Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field46Length() int {
+	l := 0
+	if p.IsSetEnableExtractTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -13635,6 +13683,11 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 	if src.ItemRetryNum != nil {
 		tmp := *src.ItemRetryNum
 		p.ItemRetryNum = &tmp
+	}
+
+	if src.EnableExtractTrajectory != nil {
+		tmp := *src.EnableExtractTrajectory
+		p.EnableExtractTrajectory = &tmp
 	}
 
 	if src.Ext != nil {
@@ -28607,6 +28660,20 @@ func (p *CreateExptTemplateOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -28729,6 +28796,20 @@ func (p *CreateExptTemplateOApiRequest) FastReadField21(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *CreateExptTemplateOApiRequest) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return offset, nil
+}
+
 func (p *CreateExptTemplateOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -28762,6 +28843,7 @@ func (p *CreateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -28782,6 +28864,7 @@ func (p *CreateExptTemplateOApiRequest) BLength() int {
 		l += p.field4Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -28839,6 +28922,15 @@ func (p *CreateExptTemplateOApiRequest) fastWriteField21(buf []byte, w thrift.No
 	if p.IsSetDefaultEvaluatorsConcurNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 21)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.DefaultEvaluatorsConcurNum)
+	}
+	return offset
+}
+
+func (p *CreateExptTemplateOApiRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableExtractTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 22)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
 	}
 	return offset
 }
@@ -28915,6 +29007,15 @@ func (p *CreateExptTemplateOApiRequest) field21Length() int {
 	return l
 }
 
+func (p *CreateExptTemplateOApiRequest) field22Length() int {
+	l := 0
+	if p.IsSetEnableExtractTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *CreateExptTemplateOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -28983,6 +29084,11 @@ func (p *CreateExptTemplateOApiRequest) DeepCopy(s interface{}) error {
 	if src.DefaultEvaluatorsConcurNum != nil {
 		tmp := *src.DefaultEvaluatorsConcurNum
 		p.DefaultEvaluatorsConcurNum = &tmp
+	}
+
+	if src.EnableExtractTrajectory != nil {
+		tmp := *src.EnableExtractTrajectory
+		p.EnableExtractTrajectory = &tmp
 	}
 
 	var _extra *extra.Extra
@@ -30983,6 +31089,20 @@ func (p *UpdateExptTemplateOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 22:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField22(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -31119,6 +31239,20 @@ func (p *UpdateExptTemplateOApiRequest) FastReadField21(buf []byte) (int, error)
 	return offset, nil
 }
 
+func (p *UpdateExptTemplateOApiRequest) FastReadField22(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return offset, nil
+}
+
 func (p *UpdateExptTemplateOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -31153,6 +31287,7 @@ func (p *UpdateExptTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift.Noc
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField22(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
@@ -31174,6 +31309,7 @@ func (p *UpdateExptTemplateOApiRequest) BLength() int {
 		l += p.field5Length()
 		l += p.field20Length()
 		l += p.field21Length()
+		l += p.field22Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -31240,6 +31376,15 @@ func (p *UpdateExptTemplateOApiRequest) fastWriteField21(buf []byte, w thrift.No
 	if p.IsSetDefaultEvaluatorsConcurNum() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 21)
 		offset += thrift.Binary.WriteI32(buf[offset:], *p.DefaultEvaluatorsConcurNum)
+	}
+	return offset
+}
+
+func (p *UpdateExptTemplateOApiRequest) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnableExtractTrajectory() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 22)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
 	}
 	return offset
 }
@@ -31325,6 +31470,15 @@ func (p *UpdateExptTemplateOApiRequest) field21Length() int {
 	return l
 }
 
+func (p *UpdateExptTemplateOApiRequest) field22Length() int {
+	l := 0
+	if p.IsSetEnableExtractTrajectory() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *UpdateExptTemplateOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -31398,6 +31552,11 @@ func (p *UpdateExptTemplateOApiRequest) DeepCopy(s interface{}) error {
 	if src.DefaultEvaluatorsConcurNum != nil {
 		tmp := *src.DefaultEvaluatorsConcurNum
 		p.DefaultEvaluatorsConcurNum = &tmp
+	}
+
+	if src.EnableExtractTrajectory != nil {
+		tmp := *src.EnableExtractTrajectory
+		p.EnableExtractTrajectory = &tmp
 	}
 
 	var _extra *extra.Extra

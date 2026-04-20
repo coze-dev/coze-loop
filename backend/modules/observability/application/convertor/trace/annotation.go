@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/bytedance/gg/gptr"
+
 	annodto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/annotation"
 	commdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
@@ -111,6 +113,8 @@ func AnnotationDO2DTO(
 			ret.AutoEvaluate.EvaluatorVersionID = meta.EvaluatorVersionID
 			ret.AutoEvaluate.TaskID = strconv.FormatInt(meta.TaskID, 10)
 			ret.AutoEvaluate.RecordID = meta.EvaluatorRecordID
+			ret.AutoEvaluate.ExptID = gptr.Of(meta.ExptID)
+			ret.AutoEvaluate.ExptTemplateID = gptr.Of(meta.ExptTemplateID)
 			ret.AutoEvaluate.EvaluatorResult_ = annodto.NewEvaluatorResult_()
 			ret.AutoEvaluate.EvaluatorResult_.Score = ptr.Of(a.Value.FloatValue)
 			ret.AutoEvaluate.EvaluatorResult_.Reasoning = ptr.Of(a.Reasoning)
@@ -187,4 +191,28 @@ func AnnotationListDO2DTO(
 		}
 	}
 	return ret
+}
+
+func AnnotationListKeyConv(annos []*annodto.Annotation) {
+	for _, anno := range annos {
+		if anno == nil || anno.Type == nil {
+			continue
+		}
+		switch *anno.Type {
+		case annodto.AnnotationTypeAutoEvaluate:
+			if anno.AutoEvaluate != nil {
+				anno.Key = gptr.Of(anno.AutoEvaluate.EvaluatorName)
+			}
+		case annodto.AnnotationTypeManualFeedback:
+			if anno.ManualFeedback != nil {
+				anno.Key = gptr.Of(anno.ManualFeedback.TagKeyName)
+			}
+		case annodto.AnnotationTypeCozeFeedback:
+			continue
+		case annodto.AnnotationTypeOpenAPIFeedback:
+			continue
+		default:
+			continue
+		}
+	}
 }

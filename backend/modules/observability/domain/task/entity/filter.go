@@ -39,14 +39,14 @@ const (
 	FieldTypeDouble FieldType = "double"
 	FieldTypeBool   FieldType = "bool"
 
-	TaskFieldNameTaskStatus TaskFieldName = "task_status"
-	TaskFieldNameTaskName   TaskFieldName = "task_name"
-	TaskFieldNameTaskType   TaskFieldName = "task_type"
-	TaskFieldNameSampleRate TaskFieldName = "sample_rate"
-	TaskFieldNameCreatedBy  TaskFieldName = "created_by"
-	TaskFieldNameTaskSource TaskFieldName = "task_source"
-
-	TaskSourceUser TaskSourceValue = "user"
+	TaskFieldNameTaskStatus TaskFieldName   = "task_status"
+	TaskFieldNameTaskName   TaskFieldName   = "task_name"
+	TaskFieldNameTaskType   TaskFieldName   = "task_type"
+	TaskFieldNameSampleRate TaskFieldName   = "sample_rate"
+	TaskFieldNameCreatedBy  TaskFieldName   = "created_by"
+	TaskFieldNameTaskSource TaskFieldName   = "task_source"
+	TaskFieldNameUpdatedBy  TaskFieldName   = "updated_by"
+	TaskSourceUser          TaskSourceValue = "user"
 )
 
 // TaskFilterFields aggregates multiple TaskFilterField expressions.

@@ -42,13 +42,14 @@ func (m *MockISourceEvalTargetOperateService) EXPECT() *MockISourceEvalTargetOpe
 }
 
 // AsyncExecute mocks base method.
-func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (int64, string, error) {
+func (m *MockISourceEvalTargetOperateService) AsyncExecute(ctx context.Context, spaceID int64, param *entity.ExecuteEvalTargetParam) (int64, string, map[string]string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AsyncExecute", ctx, spaceID, param)
 	ret0, _ := ret[0].(int64)
 	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
+	ret2, _ := ret[2].(map[string]string)
+	ret3, _ := ret[3].(error)
+	return ret0, ret1, ret2, ret3
 }
 
 // AsyncExecute indicates an expected call of AsyncExecute.

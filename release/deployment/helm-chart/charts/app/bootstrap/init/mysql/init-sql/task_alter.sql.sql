@@ -1,0 +1,1 @@
+ALTER TABLE task ADD COLUMN `workflow_id` bigint unsigned NOT NULL DEFAULT '0' COMMENT '相关工作流 ID';

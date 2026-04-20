@@ -2280,6 +2280,7 @@ func TestToExptDTO_BuildEvaluatorIDVersionItemsFromVersionRef(t *testing.T) {
 func TestToExptDTO_FillExptTemplateMeta(t *testing.T) {
 	t.Run("填充ExptTemplateMeta", func(t *testing.T) {
 		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Offline,
 			ExptTemplateMeta: &entity.ExptTemplateMeta{
 				ID:          100,
 				WorkspaceID: 200,
@@ -2302,6 +2303,23 @@ func TestToExptDTO_FillExptTemplateMeta(t *testing.T) {
 	t.Run("ExptTemplateMeta为nil，不填充", func(t *testing.T) {
 		experiment := &entity.Experiment{
 			ExptTemplateMeta: nil,
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.ExptTemplateMeta)
+	})
+
+	t.Run("在线实验不返回ExptTemplateMeta", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Online,
+			ExptTemplateMeta: &entity.ExptTemplateMeta{
+				ID:          100,
+				WorkspaceID: 200,
+				Name:        "template_name",
+				Desc:        "template_desc",
+				ExptType:    entity.ExptType_Offline,
+			},
 		}
 
 		result := ToExptDTO(experiment)
@@ -2368,6 +2386,65 @@ func TestToTargetFieldMappingDOForTemplate_RuntimeParam(t *testing.T) {
 		assert.NotNil(t, result)
 		assert.Nil(t, result.CustomConf)
 	})
+}
+
+func TestExptType2EvalMode(t *testing.T) {
+	tests := []struct {
+		name              string
+		exptType          domain_expt.ExptType
+		trialRunItemCount *int64
+		want              entity.ExptRunMode
+	}{
+		{
+			name:              "trial run with positive count",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(10)),
+			want:              entity.EvaluationModeTrialRun,
+		},
+		{
+			name:              "trial run with count 1",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: gptr.Of(int64(1)),
+			want:              entity.EvaluationModeTrialRun,
+		},
+		{
+			name:              "trial run with zero count falls through",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(0)),
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "trial run with negative count falls through",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: gptr.Of(int64(-1)),
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "nil trial run count with online type",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: nil,
+			want:              entity.EvaluationModeAppend,
+		},
+		{
+			name:              "nil trial run count with offline type",
+			exptType:          domain_expt.ExptType_Offline,
+			trialRunItemCount: nil,
+			want:              entity.EvaluationModeSubmit,
+		},
+		{
+			name:              "zero trial run count with online type",
+			exptType:          domain_expt.ExptType_Online,
+			trialRunItemCount: gptr.Of(int64(0)),
+			want:              entity.EvaluationModeAppend,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExptType2EvalMode(tt.exptType, tt.trialRunItemCount)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 func TestToEvaluatorFieldMappingDoForTemplate_Complete(t *testing.T) {

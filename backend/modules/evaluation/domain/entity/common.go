@@ -164,10 +164,11 @@ type VariableVal struct {
 
 // ArgsSchema 参数模式结构体
 type ArgsSchema struct {
-	Key                 *string       `json:"key,omitempty"`
-	SupportContentTypes []ContentType `json:"support_content_types,omitempty"`
-	JsonSchema          *string       `json:"json_schema,omitempty"`
-	DefaultValue        *Content      `json:"default_value,omitempty"`
+	Key                  *string       `json:"key,omitempty"`
+	SupportContentTypes  []ContentType `json:"support_content_types,omitempty"`
+	JsonSchema           *string       `json:"json_schema,omitempty"`
+	DefaultValue         *Content      `json:"default_value,omitempty"`
+	OperationInstruction *string       `json:"operation_instruction,omitempty"` // 操作说明
 }
 
 // UserInfo 用户信息结构体

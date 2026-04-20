@@ -315,6 +315,18 @@ func (e *EvalTargetRepoImpl) GetEvalTargetRecordByIDAndSpaceID(ctx context.Conte
 	return do, nil
 }
 
+func (e *EvalTargetRepoImpl) GetEvalTargetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	recordPO, err := e.evalTargetRecordDao.GetByRunIDItemIDTurnID(ctx, spaceID, runID, itemID, turnID)
+	if err != nil {
+		return nil, err
+	}
+	do, err := convertor.EvalTargetRecordPO2DO(recordPO)
+	if err != nil {
+		return nil, errorx.WrapByCode(err, errno.CommonInternalErrorCode)
+	}
+	return do, nil
+}
+
 func (e *EvalTargetRepoImpl) ListEvalTargetRecordByIDsAndSpaceID(ctx context.Context, spaceID int64, recordIDs []int64) ([]*entity.EvalTargetRecord, error) {
 	recordPOList, err := e.evalTargetRecordDao.ListByIDsAndSpaceID(ctx, recordIDs, spaceID)
 	if err != nil {

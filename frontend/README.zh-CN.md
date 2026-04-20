@@ -19,16 +19,16 @@ _____________________________________
 
 环境要求:
 
-* Node.js 18+ (推荐 lts/iron 版本)
-* pnpm 8.15.8
-* Rush 5.147.1
+* Node.js 24+ (推荐 lts/krypton 版本)
+* pnpm 10.27.0
+* Rush 5.172.1
 
 ### 1. 安装 Node.js 18+
 
 ``` bash
-nvm install lts/iron
-nvm alias default lts/iron # 设置默认 Node 版本
-nvm use lts/iron
+nvm install lts/krypton
+nvm alias default lts/krypton # 设置默认 Node 版本
+nvm use lts/krypton
 ```
 
 ### 2. 检出 Git 仓库并切换到 `frontend` 目录
@@ -44,7 +44,7 @@ cd frontend
 ### 3. 安装全局依赖
 
 ```bash
-npm i -g pnpm@8.15.8 @microsoft/rush@5.147.1
+npm i -g pnpm@10.27.0 @microsoft/rush@5.172.1
 ```
 
 ### 4. 安装/更新项目依赖

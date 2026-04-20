@@ -16,8 +16,8 @@ import * as common from './domain/common';
 export { common };
 import * as span from './domain/span';
 export { span };
-import * as dataset from './../data/domain/dataset';
-export { dataset };
+import * as data_dataset from './../data/domain/dataset';
+export { data_dataset };
 import * as base from './../../../base';
 export { base };
 import { createAPI } from './../../config';
@@ -193,10 +193,19 @@ export interface ListAnnotationsRequest {
 export interface ListAnnotationsResponse {
   annotations: annotation.Annotation[]
 }
+export interface ListWorkspaceAnnotationsRequest {
+  workspace_id: string,
+  platform_type?: common.PlatformType,
+  annotation_type?: annotation.AnnotationType,
+  span_list_type?: common.SpanListType,
+}
+export interface ListWorkspaceAnnotationsResponse {
+  simple_annotation_list: annotation.SimpleAnnotationInfo[]
+}
 export interface ExportTracesToDatasetRequest {
   workspace_id: string,
   span_ids: SpanID[],
-  category: dataset.DatasetCategory,
+  category: data_dataset.DatasetCategory,
   config: DatasetConfig,
   start_time: string,
   end_time: string,
@@ -223,7 +232,7 @@ export interface ExportTracesToDatasetResponse {
   /** 成功导入的数量 */
   success_count?: number,
   /** 错误信息 */
-  errors?: dataset.ItemErrorGroup[],
+  errors?: data_dataset.ItemErrorGroup[],
   /** 数据集id */
   dataset_id?: string,
   /** 数据集名称 */
@@ -236,7 +245,7 @@ export interface ExportTracesToDatasetResponse {
 export interface PreviewExportTracesToDatasetRequest {
   workspace_id: string,
   span_ids: SpanID[],
-  category: dataset.DatasetCategory,
+  category: data_dataset.DatasetCategory,
   config: DatasetConfig,
   start_time: string,
   end_time: string,
@@ -244,12 +253,14 @@ export interface PreviewExportTracesToDatasetRequest {
   /** 导入方式，不填默认为追加 */
   export_type: export_dataset.ExportType,
   field_mappings?: export_dataset.FieldMapping[],
+  span_filters?: filter.SpanFilterFields,
+  limit?: string,
 }
 export interface PreviewExportTracesToDatasetResponse {
   /** 预览数据 */
   items?: export_dataset.Item[],
   /** 概要错误信息 */
-  errors?: dataset.ItemErrorGroup[],
+  errors?: data_dataset.ItemErrorGroup[],
   /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
   code?: number,
   /** 仅供http请求使用; 内部RPC不予使用，统一通过BaseResp获取Code和Msg */
@@ -310,6 +321,18 @@ export interface ListTrajectoryRequest {
 }
 export interface ListTrajectoryResponse {
   trajectories?: trajectory.Trajectory[]
+}
+export interface ListMetadataRequest {
+  workspace_id: string,
+  platform_type?: common.PlatformType,
+  span_list_type?: common.SpanListType,
+}
+export interface MetadataItemInfo {
+  key: string,
+  value_type: span.MetadataValueType,
+}
+export interface ListMetadataResponse {
+  metadataItemList: MetadataItemInfo[]
 }
 export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansResponse>({
   "url": "/api/observability/v1/spans/list",
@@ -484,6 +507,18 @@ export const ListAnnotations = /*#__PURE__*/createAPI<ListAnnotationsRequest, Li
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });
+export const ListWorkspaceAnnotations = /*#__PURE__*/createAPI<ListWorkspaceAnnotationsRequest, ListWorkspaceAnnotationsResponse>({
+  "url": "/api/observability/v1/annotations/list_by_workspace",
+  "method": "POST",
+  "name": "ListWorkspaceAnnotations",
+  "reqType": "ListWorkspaceAnnotationsRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "platform_type", "annotation_type", "span_list_type"]
+  },
+  "resType": "ListWorkspaceAnnotationsResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
 export const ExportTracesToDataset = /*#__PURE__*/createAPI<ExportTracesToDatasetRequest, ExportTracesToDatasetResponse>({
   "url": "/api/observability/v1/traces/export_to_dataset",
   "method": "POST",
@@ -502,7 +537,7 @@ export const PreviewExportTracesToDataset = /*#__PURE__*/createAPI<PreviewExport
   "name": "PreviewExportTracesToDataset",
   "reqType": "PreviewExportTracesToDatasetRequest",
   "reqMapping": {
-    "body": ["workspace_id", "span_ids", "category", "config", "start_time", "end_time", "platform_type", "export_type", "field_mappings"]
+    "body": ["workspace_id", "span_ids", "category", "config", "start_time", "end_time", "platform_type", "export_type", "field_mappings", "span_filters", "limit"]
   },
   "resType": "PreviewExportTracesToDatasetResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
@@ -577,6 +612,18 @@ export const ListTrajectory = /*#__PURE__*/createAPI<ListTrajectoryRequest, List
     "body": ["platform_type", "workspace_id", "trace_ids", "start_time"]
   },
   "resType": "ListTrajectoryResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListMetadata = /*#__PURE__*/createAPI<ListMetadataRequest, ListMetadataResponse>({
+  "url": "/api/observability/v1/traces/metadata/list",
+  "method": "POST",
+  "name": "ListMetadata",
+  "reqType": "ListMetadataRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "platform_type", "span_list_type"]
+  },
+  "resType": "ListMetadataResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });

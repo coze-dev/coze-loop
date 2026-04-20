@@ -11,11 +11,11 @@
   "dependencies": {
     "@commitlint/cli": "^17.2.0",
     "@commitlint/config-conventional": "^17.2.0",
-    "@rushstack/rush-sdk": "5.147.2",
+    "@rushstack/rush-sdk": "5.172.1",
     "commitizen": "^4.2.6",
     "cz-customizable": "^7.2.1"
   },
   "devDependencies": {
-    "@types/node": "^18.11.9"
+    "@types/node": "^24"
   }
 }

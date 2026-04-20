@@ -303,6 +303,21 @@ func (mr *MockIEvalTargetServiceMockRecorder) GetRecordByID(ctx, spaceID, record
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordByID", reflect.TypeOf((*MockIEvalTargetService)(nil).GetRecordByID), ctx, spaceID, recordID)
 }
 
+// GetRecordByRunItemTurn mocks base method.
+func (m *MockIEvalTargetService) GetRecordByRunItemTurn(ctx context.Context, spaceID, runID, itemID, turnID int64) (*entity.EvalTargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRecordByRunItemTurn", ctx, spaceID, runID, itemID, turnID)
+	ret0, _ := ret[0].(*entity.EvalTargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRecordByRunItemTurn indicates an expected call of GetRecordByRunItemTurn.
+func (mr *MockIEvalTargetServiceMockRecorder) GetRecordByRunItemTurn(ctx, spaceID, runID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRecordByRunItemTurn", reflect.TypeOf((*MockIEvalTargetService)(nil).GetRecordByRunItemTurn), ctx, spaceID, runID, itemID, turnID)
+}
+
 // LoadRecordFullData mocks base method.
 func (m *MockIEvalTargetService) LoadRecordFullData(ctx context.Context, record *entity.EvalTargetRecord) error {
 	m.ctrl.T.Helper()

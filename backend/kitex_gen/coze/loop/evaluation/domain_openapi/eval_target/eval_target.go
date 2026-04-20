@@ -3017,6 +3017,8 @@ type EvalTargetOutputData struct {
 	EvalTargetRunError *EvalTargetRunError `thrift:"eval_target_run_error,3,optional" frugal:"3,optional,EvalTargetRunError" form:"eval_target_run_error" json:"eval_target_run_error,omitempty" query:"eval_target_run_error"`
 	// 运行耗时
 	TimeConsumingMs *int64 `thrift:"time_consuming_ms,4,optional" frugal:"4,optional,i64" json:"time_consuming_ms" form:"time_consuming_ms" query:"time_consuming_ms"`
+	// 平台扩展字段
+	Ext map[string]string `thrift:"ext,20,optional" frugal:"20,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
 }
 
 func NewEvalTargetOutputData() *EvalTargetOutputData {
@@ -3073,6 +3075,18 @@ func (p *EvalTargetOutputData) GetTimeConsumingMs() (v int64) {
 	}
 	return *p.TimeConsumingMs
 }
+
+var EvalTargetOutputData_Ext_DEFAULT map[string]string
+
+func (p *EvalTargetOutputData) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return EvalTargetOutputData_Ext_DEFAULT
+	}
+	return p.Ext
+}
 func (p *EvalTargetOutputData) SetOutputFields(val map[string]*common.Content) {
 	p.OutputFields = val
 }
@@ -3085,12 +3099,16 @@ func (p *EvalTargetOutputData) SetEvalTargetRunError(val *EvalTargetRunError) {
 func (p *EvalTargetOutputData) SetTimeConsumingMs(val *int64) {
 	p.TimeConsumingMs = val
 }
+func (p *EvalTargetOutputData) SetExt(val map[string]string) {
+	p.Ext = val
+}
 
 var fieldIDToName_EvalTargetOutputData = map[int16]string{
-	1: "output_fields",
-	2: "eval_target_usage",
-	3: "eval_target_run_error",
-	4: "time_consuming_ms",
+	1:  "output_fields",
+	2:  "eval_target_usage",
+	3:  "eval_target_run_error",
+	4:  "time_consuming_ms",
+	20: "ext",
 }
 
 func (p *EvalTargetOutputData) IsSetOutputFields() bool {
@@ -3107,6 +3125,10 @@ func (p *EvalTargetOutputData) IsSetEvalTargetRunError() bool {
 
 func (p *EvalTargetOutputData) IsSetTimeConsumingMs() bool {
 	return p.TimeConsumingMs != nil
+}
+
+func (p *EvalTargetOutputData) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *EvalTargetOutputData) Read(iprot thrift.TProtocol) (err error) {
@@ -3154,6 +3176,14 @@ func (p *EvalTargetOutputData) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -3244,6 +3274,35 @@ func (p *EvalTargetOutputData) ReadField4(iprot thrift.TProtocol) error {
 	p.TimeConsumingMs = _field
 	return nil
 }
+func (p *EvalTargetOutputData) ReadField20(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 
 func (p *EvalTargetOutputData) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -3265,6 +3324,10 @@ func (p *EvalTargetOutputData) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 	}
@@ -3368,6 +3431,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *EvalTargetOutputData) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 
 func (p *EvalTargetOutputData) String() string {
 	if p == nil {
@@ -3393,6 +3485,9 @@ func (p *EvalTargetOutputData) DeepEqual(ano *EvalTargetOutputData) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.TimeConsumingMs) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.Ext) {
 		return false
 	}
 	return true
@@ -3434,6 +3529,19 @@ func (p *EvalTargetOutputData) Field4DeepEqual(src *int64) bool {
 	}
 	if *p.TimeConsumingMs != *src {
 		return false
+	}
+	return true
+}
+func (p *EvalTargetOutputData) Field20DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

@@ -9,11 +9,15 @@ import (
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
 
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	common_eval "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	evaluatorpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/evaluator"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/eval_target"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
+
+	// common_obs kept for historical imports; no direct use
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
+	taskpkg "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluation_set"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/evaluator"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/target"
@@ -38,6 +42,11 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 	evaluatorConfs := buildEvaluatorConfsFromItems(param.EvaluatorIDVersionItems, evaluatorFieldMapping)
 	applyScoreWeightsToEvaluatorConfs(evaluatorScoreWeights, evaluatorConfs)
 
+	// 须在 buildTemplateConfForCreate 之前设置：ExptSource 会写入 template_conf（expt_source）
+	if req.ExptSource != nil {
+		param.ExptSource = exptSourceDTO2DO(req.ExptSource)
+	}
+
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
 	return param, nil
@@ -52,6 +61,16 @@ func fillCreateTemplateMeta(param *entity.CreateExptTemplateParam, req *expt.Cre
 	param.Name = meta.GetName()
 	param.Description = meta.GetDesc()
 	param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
+	if meta.IsSetVisibility() {
+		if meta.GetVisibility() == domain_expt.VisibilityHidden {
+			param.Visibility = gptr.Of(entity.Visibility_Hidden)
+		} else {
+			param.Visibility = gptr.Of(entity.Visibility(0))
+		}
+	}
+	if req.GetExptInfo() != nil && req.GetExptInfo().IsSetCronActivate() {
+		param.CronActivate = req.GetExptInfo().GetCronActivate()
+	}
 }
 
 // 拆分的子函数：从 triple_config 中提取三元组配置
@@ -101,7 +120,7 @@ func buildTemplateFieldMappingsForCreate(
 	}
 
 	fieldMappingConfig := req.FieldMappingConfig
-	// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+	// 将 common_eval.RuntimeParam 转换为 entity.RuntimeParam
 	var entityRuntimeParam *entity.RuntimeParam
 	if fieldMappingConfig.TargetRuntimeParam != nil {
 		entityRuntimeParam = &entity.RuntimeParam{
@@ -235,8 +254,15 @@ func buildTemplateConfForCreate(
 		EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 		ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
 	}
+	if req.IsSetEnableExtractTrajectory() {
+		templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
+	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
+		// 即使没有字段映射，也需要设置 ExptSource
+		if param.ExptSource != nil {
+			templateConf.ExptSource = param.ExptSource
+		}
 		return templateConf
 	}
 
@@ -251,6 +277,11 @@ func buildTemplateConfForCreate(
 		templateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{
 			EvaluatorConf: evaluatorConfs,
 		}
+	}
+
+	// 设置 ExptSource
+	if param.ExptSource != nil {
+		templateConf.ExptSource = param.ExptSource
 	}
 
 	return templateConf
@@ -360,6 +391,24 @@ func toEvaluatorFieldMappingDoForTemplate(mapping []*domain_expt.EvaluatorFieldM
 	return result
 }
 
+// patchTemplateEvalTargetTypeFromTriple 出参前用三元组上的 TargetType 补齐 Target/Version 的 EvalTargetType，
+// 避免仅 DB 列有 target_type 时 DTO 走不到对应 EvalTargetContent 分支。
+func patchTemplateEvalTargetTypeFromTriple(template *entity.ExptTemplate) {
+	if template == nil || template.TripleConfig == nil || template.Target == nil {
+		return
+	}
+	if template.Target.EvalTargetType == 0 && template.TripleConfig.TargetType != 0 {
+		template.Target.EvalTargetType = template.TripleConfig.TargetType
+	}
+	if template.Target.EvalTargetVersion != nil && template.Target.EvalTargetVersion.EvalTargetType == 0 {
+		if template.Target.EvalTargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.Target.EvalTargetType
+		} else if template.TripleConfig.TargetType != 0 {
+			template.Target.EvalTargetVersion.EvalTargetType = template.TripleConfig.TargetType
+		}
+	}
+}
+
 // ToExptTemplateDTO 转换实验模板实体为DTO
 func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate {
 	if template == nil {
@@ -372,9 +421,13 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.TripleConfig = buildTemplateTripleConfigDTO(template)
 	dto.FieldMappingConfig = buildTemplateFieldMappingDTO(template)
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
+	if template.TemplateConf != nil {
+		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
 	if dto.TripleConfig != nil {
+		patchTemplateEvalTargetTypeFromTriple(template)
 		dto.TripleConfig.EvalTarget = target.EvalTargetDO2DTO(template.Target)
 		if template.Meta != nil && template.Meta.ExptType != entity.ExptType_Online {
 			dto.TripleConfig.EvalSet = evaluation_set.EvaluationSetDO2DTO(template.EvalSet)
@@ -389,18 +442,18 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充 BaseInfo
 	if template.BaseInfo != nil {
-		dto.BaseInfo = &common.BaseInfo{
+		dto.BaseInfo = &common_eval.BaseInfo{
 			CreatedAt: template.BaseInfo.CreatedAt,
 			UpdatedAt: template.BaseInfo.UpdatedAt,
 			DeletedAt: template.BaseInfo.DeletedAt,
 		}
 		if template.BaseInfo.CreatedBy != nil {
-			dto.BaseInfo.CreatedBy = &common.UserInfo{
+			dto.BaseInfo.CreatedBy = &common_eval.UserInfo{
 				UserID: template.BaseInfo.CreatedBy.UserID,
 			}
 		}
 		if template.BaseInfo.UpdatedBy != nil {
-			dto.BaseInfo.UpdatedBy = &common.UserInfo{
+			dto.BaseInfo.UpdatedBy = &common_eval.UserInfo{
 				UserID: template.BaseInfo.UpdatedBy.UserID,
 			}
 		}
@@ -408,15 +461,192 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 
 	// 填充 ExptInfo
 	if template.ExptInfo != nil {
+		// 历史数据无 LatestExptStartTime 时返回 nil，不填充默认值，避免干扰
+		var latestExptStartTime *int64
+		if template.ExptInfo.LatestExptStartTime > 0 {
+			latestExptStartTime = gptr.Of(template.ExptInfo.LatestExptStartTime)
+		}
 		exptInfo := &domain_expt.ExptInfo{
-			CreatedExptCount: gptr.Of(template.ExptInfo.CreatedExptCount),
-			LatestExptID:     gptr.Of(template.ExptInfo.LatestExptID),
-			LatestExptStatus: gptr.Of(domain_expt.ExptStatus(template.ExptInfo.LatestExptStatus)),
+			CreatedExptCount:    gptr.Of(template.ExptInfo.CreatedExptCount),
+			LatestExptID:        gptr.Of(template.ExptInfo.LatestExptID),
+			LatestExptStatus:    gptr.Of(domain_expt.ExptStatus(template.ExptInfo.LatestExptStatus)),
+			LatestExptStartTime: latestExptStartTime,
+			CronActivate:        gptr.Of(template.ExptInfo.CronActivate),
 		}
 		dto.SetExptInfo(exptInfo)
 	}
 
+	// 填充 ExptSource
+	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
+		dto.SetExptSource(es)
+	}
+
 	return dto
+}
+
+// ExptSourceDO2DTO 将 entity.ExptSource 转为领域 DTO（实验模板与 Experiment 查询共用）
+func ExptSourceDO2DTO(src *entity.ExptSource) *domain_expt.ExptSource {
+	if src == nil {
+		return nil
+	}
+	exptSource := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType(src.SourceType)),
+		SourceID:   gptr.Of(src.SourceID),
+	}
+	if src.SpanFilterFields != nil {
+		exptSource.SpanFilterFields = spanFilterFieldsDO2DTO(src.SpanFilterFields)
+	}
+	if src.Scheduler != nil {
+		exptSource.Scheduler = exptSchedulerDO2DTO(src.Scheduler)
+	}
+	if src.Sampler != nil {
+		exptSource.Sampler = exptSamplerDO2DTO(src.Sampler)
+	}
+	if src.TimeRange != nil {
+		exptSource.TimeRange = taskTimeRangeDO2DTO(src.TimeRange)
+	}
+	return exptSource
+}
+
+// exptSamplerDO2DTO 将 entity.ExptSamplerDO 转为 task.Sampler
+func exptSamplerDO2DTO(do *entity.ExptSamplerDO) *taskpkg.Sampler {
+	if do == nil {
+		return nil
+	}
+	dto := taskpkg.NewSampler()
+	dto.SampleRate = do.SampleRate
+	dto.SampleSize = do.SampleSize
+	dto.IsCycle = do.IsCycle
+	dto.CycleCount = do.CycleCount
+	dto.CycleInterval = do.CycleInterval
+	if do.CycleTimeUnit != nil {
+		dto.CycleTimeUnit = do.CycleTimeUnit
+	}
+	return dto
+}
+
+// spanFilterFieldsDO2DTO 将 entity.SpanFilterFieldsDO 转为 filter.SpanFilterFields
+func spanFilterFieldsDO2DTO(do *entity.SpanFilterFieldsDO) *filter.SpanFilterFields {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewSpanFilterFields()
+	if do.Filters != nil {
+		dto.Filters = filterFieldsDO2DTO(do.Filters)
+	}
+	if do.PlatformType != nil {
+		dto.PlatformType = do.PlatformType
+	}
+	if do.SpanListType != nil {
+		dto.SpanListType = do.SpanListType
+	}
+	return dto
+}
+
+// filterFieldsDO2DTO 将 entity.FilterFieldsDO 转为 filter.FilterFields
+func filterFieldsDO2DTO(do *entity.FilterFieldsDO) *filter.FilterFields {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewFilterFields()
+	if do.QueryAndOr != nil {
+		qao := *do.QueryAndOr
+		dto.QueryAndOr = &qao
+	}
+	if len(do.FilterFields) > 0 {
+		ff := make([]*filter.FilterField, 0, len(do.FilterFields))
+		for _, f := range do.FilterFields {
+			if converted := filterFieldDO2DTO(f); converted != nil {
+				ff = append(ff, converted)
+			}
+		}
+		dto.FilterFields = ff
+	}
+	return dto
+}
+
+// filterFieldDO2DTO 将 entity.FilterFieldDO 转为 filter.FilterField
+func filterFieldDO2DTO(do *entity.FilterFieldDO) *filter.FilterField {
+	if do == nil {
+		return nil
+	}
+	dto := filter.NewFilterField()
+	dto.FieldName = do.FieldName
+	if do.FieldType != nil {
+		ft := *do.FieldType
+		dto.FieldType = &ft
+	}
+	dto.Values = do.Values
+	if do.QueryType != nil {
+		qt := *do.QueryType
+		dto.QueryType = &qt
+	}
+	if do.QueryAndOr != nil {
+		qao := *do.QueryAndOr
+		dto.QueryAndOr = &qao
+	}
+	if do.IsCustom != nil {
+		dto.IsCustom = do.IsCustom
+	}
+	if len(do.ExtraInfo) > 0 {
+		extraInfo := make(map[string]string, len(do.ExtraInfo))
+		for k, v := range do.ExtraInfo {
+			extraInfo[k] = v
+		}
+		dto.ExtraInfo = extraInfo
+	}
+	if do.SubFilter != nil {
+		dto.SubFilter = filterFieldsDO2DTO(do.SubFilter)
+	}
+	return dto
+}
+
+// exptSchedulerDO2DTO 将 entity.ExptSchedulerDO 转为 domain_expt.Scheduler
+func exptSchedulerDO2DTO(do *entity.ExptSchedulerDO) *domain_expt.Scheduler {
+	if do == nil {
+		return nil
+	}
+	dto := domain_expt.NewScheduler()
+	dto.Enabled = do.Enabled
+	if do.Frequency != nil {
+		f := *do.Frequency
+		dto.Frequency = &f
+	}
+	dto.TriggerAt = do.TriggerAt
+	dto.StartTime = do.StartTime
+	dto.EndTime = do.EndTime
+	return dto
+}
+
+func taskTimeRangeDO2DTO(do *entity.TaskTimeRangeDO) *domain_expt.TaskTimeRange {
+	if do == nil {
+		return nil
+	}
+	dto := domain_expt.NewTaskTimeRange()
+	dto.StartTime = do.StartTime
+	dto.EndTime = do.EndTime
+	return dto
+}
+
+func taskTimeRangeDTO2DO(dto *domain_expt.TaskTimeRange) *entity.TaskTimeRangeDO {
+	if dto == nil {
+		return nil
+	}
+	return &entity.TaskTimeRangeDO{
+		StartTime: dto.StartTime,
+		EndTime:   dto.EndTime,
+	}
+}
+
+func exptSourceDTO2DO(dto *domain_expt.ExptSource) *entity.ExptSource {
+	if dto == nil {
+		return nil
+	}
+	return &entity.ExptSource{
+		SourceType: entity.SourceType(gptr.Indirect(dto.SourceType)),
+		SourceID:   gptr.Indirect(dto.SourceID),
+		TimeRange:  taskTimeRangeDTO2DO(dto.TimeRange),
+	}
 }
 
 // ConvertUpdateExptTemplateMetaReq 转换更新实验模板 Meta 请求为实体参数
@@ -438,6 +668,13 @@ func ConvertUpdateExptTemplateMetaReq(req *expt.UpdateExperimentTemplateMetaRequ
 		if meta.IsSetExptType() {
 			param.ExptType = entity.ExptType(meta.GetExptType())
 		}
+		if meta.IsSetVisibility() {
+			if meta.GetVisibility() == domain_expt.VisibilityHidden {
+				param.Visibility = gptr.Of(entity.Visibility_Hidden)
+			} else {
+				param.Visibility = gptr.Of(entity.Visibility(0))
+			}
+		}
 	}
 
 	return param, nil
@@ -454,6 +691,9 @@ func fillTemplateMetaDTO(template *entity.ExptTemplate, dto *domain_expt.ExptTem
 		Name:        gptr.Of(template.Meta.Name),
 		Desc:        gptr.Of(template.Meta.Desc),
 		ExptType:    gptr.Of(domain_expt.ExptType(template.Meta.ExptType)),
+	}
+	if template.Meta.Visibility == entity.Visibility_Hidden {
+		dto.Meta.Visibility = gptr.Of(domain_expt.VisibilityHidden)
 	}
 }
 
@@ -510,7 +750,7 @@ func buildEvaluatorIDVersionItemsDTO(template *entity.ExptTemplate) []*evaluator
 			runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 			runCfg.Env = rc.Env
 			if rc.EvaluatorRuntimeParam != nil {
-				runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+				runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 					JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 				}
 			}
@@ -683,7 +923,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 				runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 				runCfg.Env = rc.Env
 				if rc.EvaluatorRuntimeParam != nil {
-					runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+					runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 						JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 					}
 				}
@@ -740,7 +980,7 @@ func buildTemplateFieldMappingDTO(template *entity.ExptTemplate) *domain_expt.Ex
 	}
 
 	if template.FieldMappingConfig.TargetRuntimeParam != nil {
-		fieldMapping.TargetRuntimeParam = &common.RuntimeParam{
+		fieldMapping.TargetRuntimeParam = &common_eval.RuntimeParam{
 			JSONValue: template.FieldMappingConfig.TargetRuntimeParam.JSONValue,
 		}
 	}
@@ -837,6 +1077,10 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EnableWeightedScore = gptr.Of(true)
 	}
 
+	if template.TemplateConf != nil && template.TemplateConf.EnableExtractTrajectory != nil {
+		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
 	return req
 }
 
@@ -848,7 +1092,8 @@ func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]
 
 	var evaluatorScoreWeights map[int64]float64
 	for _, ec := range template.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
-		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight < 0 {
+		// 非正数视为未配置有效权重，以便回退到 TripleConfig；与「仅填 0」时走兼容逻辑一致
+		if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
 			continue
 		}
 		if evaluatorScoreWeights == nil {
@@ -860,10 +1105,10 @@ func buildScoreWeightsFromTemplateConf(template *entity.ExptTemplate) map[int64]
 }
 
 // convertTemplateConfToDTO 转换模板配置为DTO
-func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common.RuntimeParam) {
+func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_expt.TargetFieldMapping, []*domain_expt.EvaluatorFieldMapping, *common_eval.RuntimeParam) {
 	var targetMapping *domain_expt.TargetFieldMapping
 	var evaluatorMappings []*domain_expt.EvaluatorFieldMapping
-	var runtimeParam *common.RuntimeParam
+	var runtimeParam *common_eval.RuntimeParam
 
 	if conf.ConnectorConf.TargetConf != nil && conf.ConnectorConf.TargetConf.IngressConf != nil {
 		ingressConf := conf.ConnectorConf.TargetConf.IngressConf
@@ -882,7 +1127,7 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 		if ingressConf.CustomConf != nil {
 			for _, fc := range ingressConf.CustomConf.FieldConfs {
 				if fc.FieldName == consts.FieldAdapterBuiltinFieldNameRuntimeParam {
-					runtimeParam = &common.RuntimeParam{
+					runtimeParam = &common_eval.RuntimeParam{
 						JSONValue: gptr.Of(fc.Value),
 					}
 					break
@@ -922,7 +1167,7 @@ func convertTemplateConfToDTO(conf *entity.ExptTemplateConfiguration) (*domain_e
 					runCfg := evaluatorpkg.NewEvaluatorRunConfig()
 					runCfg.Env = rc.Env
 					if rc.EvaluatorRuntimeParam != nil {
-						runCfg.EvaluatorRuntimeParam = &common.RuntimeParam{
+						runCfg.EvaluatorRuntimeParam = &common_eval.RuntimeParam{
 							JSONValue: rc.EvaluatorRuntimeParam.JSONValue,
 						}
 					}
@@ -962,11 +1207,12 @@ func CreateEvalTargetParamDTO2DOForTemplate(param *eval_target.CreateEvalTargetP
 	}
 
 	res := &entity.CreateEvalTargetParam{
-		SourceTargetID:      param.SourceTargetID,
-		SourceTargetVersion: param.SourceTargetVersion,
-		BotPublishVersion:   param.BotPublishVersion,
-		Region:              param.Region,
-		Env:                 param.Env,
+		SourceTargetID:       param.SourceTargetID,
+		SourceTargetVersion:  param.SourceTargetVersion,
+		BotPublishVersion:    param.BotPublishVersion,
+		Region:               param.Region,
+		Env:                  param.Env,
+		OperationInstruction: param.OperationInstruction,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))
@@ -1012,10 +1258,14 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 		param.Description = meta.GetDesc()
 		param.ExptType = entity.ExptType(gptr.Indirect(meta.ExptType))
 	}
+	if req.GetExptInfo() != nil && req.GetExptInfo().IsSetCronActivate() {
+		param.CronActivate = gptr.Of(req.GetExptInfo().GetCronActivate())
+	}
 
 	// 从 triple_config 中提取三元组配置（注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置）
 	if req.GetTripleConfig() != nil {
 		tripleConfig := req.GetTripleConfig()
+		param.EvalSetID = tripleConfig.GetEvalSetID()
 		param.EvalSetVersionID = tripleConfig.GetEvalSetVersionID()
 		param.TargetVersionID = tripleConfig.GetTargetVersionID()
 		// 从 EvaluatorIDVersionItems 构建 entity 层的 EvaluatorIDVersionItems
@@ -1046,7 +1296,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	var itemConcurNum *int32
 	if req.GetFieldMappingConfig() != nil {
 		fieldMappingConfig := req.GetFieldMappingConfig()
-		// 将 common.RuntimeParam 转换为 entity.RuntimeParam
+		// 将 common_eval.RuntimeParam 转换为 entity.RuntimeParam
 		var entityRuntimeParam *entity.RuntimeParam
 		if fieldMappingConfig.TargetRuntimeParam != nil {
 			entityRuntimeParam = &entity.RuntimeParam{
@@ -1069,12 +1319,16 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	hasFieldMapping := targetFieldMapping != nil || len(evaluatorFieldMapping) > 0
 	hasScoreWeight := len(evaluatorScoreWeights) > 0
 	hasConcurNum := itemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil
+	hasEnableExtractTrajectory := req.IsSetEnableExtractTrajectory()
 
-	if hasFieldMapping || hasScoreWeight || hasConcurNum {
+	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory {
 		templateConf := &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 			ItemRetryNum:        gcond.If(req.GetFieldMappingConfig().GetItemRetryNum() > 0, gptr.Of(int(req.GetFieldMappingConfig().GetItemRetryNum())), nil),
+		}
+		if req.IsSetEnableExtractTrajectory() {
+			templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
 		}
 
 		// 构建 ConnectorConf

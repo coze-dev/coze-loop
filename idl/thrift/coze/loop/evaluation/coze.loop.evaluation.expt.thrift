@@ -17,6 +17,7 @@ struct CreateExperimentRequest {
     6: optional string desc (api.body='desc')
     7: optional i64 eval_set_id (api.body='eval_set_id', api.js_conv='true', go.tag='json:"eval_set_id"')
     8: optional i64 target_id (api.body='target_id', api.js_conv='true', go.tag='json:"target_id"')
+    9: optional expt.Visibility visibility (api.body='visibility')  // 实验模板可见性，默认为空，可见
 
     20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
@@ -37,6 +38,13 @@ struct CreateExperimentRequest {
     42: optional map<i64, double> evaluator_score_weights (api.body = 'evaluator_score_weights', go.tag='json:"evaluator_score_weights"')
     43: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+    46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
+    47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+
+    60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
+
+    50: optional expt.ExptTriggerType trigger_type
+
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -60,6 +68,7 @@ struct SubmitExperimentRequest {
     6: optional string desc (api.body='desc')
     7: optional i64 eval_set_id (api.body='eval_set_id',api.js_conv='true', go.tag='json:"eval_set_id"')
     8: optional i64 target_id (api.body='target_id',api.js_conv='true', go.tag='json:"target_id"')
+    9: optional expt.Visibility visibility (api.body = 'visibility')  // 实验模板可见性，默认为空，可见
 
     20: optional expt.TargetFieldMapping target_field_mapping (api.body = 'target_field_mapping')
     21: optional list<expt.EvaluatorFieldMapping> evaluator_field_mapping (api.body = 'evaluator_field_mapping')
@@ -78,6 +87,14 @@ struct SubmitExperimentRequest {
     41: optional bool enable_weighted_score (api.body = 'enable_weighted_score', go.tag='json:"enable_weighted_score"')
     42: optional i64 expt_template_id (api.body='expt_template_id',api.js_conv='true', go.tag='json:"expt_template_id"')
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
+    46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
+    47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+
+    50: optional expt.ExptTriggerType trigger_type
+    51: optional expt.TaskTimeRange time_range (api.body = 'time_range')
+
+    // 智能评测相关
+    60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -167,6 +184,7 @@ struct RunExperimentRequest {
     3: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
     10: optional expt.ExptType expt_type (api.body = 'expt_type')
     11: optional i32 item_retry_num (api.body = 'item_retry_num')
+    12: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -377,6 +395,12 @@ struct CreateExperimentTemplateRequest {
     21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
+    // 模板运行态信息（如是否开启定时触发）；创建时可只填 cron_activate
+    23: optional expt.ExptInfo expt_info (api.body = 'expt_info')
+    24: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+
+    30: optional expt.ExptSource expt_source (api.body = 'expt_source')
+
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -434,6 +458,8 @@ struct UpdateExperimentTemplateRequest {
     21: optional i32 default_evaluators_concur_num (api.body = 'default_evaluators_concur_num')
     // 调度配置（不在 ExptTemplate 结构中，保留在顶层）
     22: optional string schedule_cron (api.body = 'schedule_cron')
+    23: optional expt.ExptInfo expt_info (api.body = 'expt_info')
+    24: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
     255: optional base.Base Base
 }

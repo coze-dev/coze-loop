@@ -78,6 +78,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.TimeRange != nil {
+		if err := p.TimeRange.IsValid(); err != nil {
+			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -426,6 +431,16 @@ func (p *CreateExperimentTemplateRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.ExptInfo != nil {
+		if err := p.ExptInfo.IsValid(); err != nil {
+			return fmt.Errorf("field ExptInfo not valid, %w", err)
+		}
+	}
+	if p.ExptSource != nil {
+		if err := p.ExptSource.IsValid(); err != nil {
+			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -512,6 +527,11 @@ func (p *UpdateExperimentTemplateRequest) IsValid() error {
 	if p.CreateEvalTargetParam != nil {
 		if err := p.CreateEvalTargetParam.IsValid(); err != nil {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
+		}
+	}
+	if p.ExptInfo != nil {
+		if err := p.ExptInfo.IsValid(); err != nil {
+			return fmt.Errorf("field ExptInfo not valid, %w", err)
 		}
 	}
 	if p.Base != nil {

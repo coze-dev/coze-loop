@@ -2391,6 +2391,212 @@ func TestEvalTargetApplicationImpl_BatchGetEvalTargetRecords(t *testing.T) {
 	}
 }
 
+func TestEvalTargetApplicationImpl_GetSourceEvalTargetVersion(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockTypedOperator := mocks.NewMockISourceEvalTargetOperateService(ctrl)
+
+	app := &EvalTargetApplicationImpl{
+		auth: mockAuth,
+		typedOperators: map[entity.EvalTargetType]service.ISourceEvalTargetOperateService{
+			1: mockTypedOperator,
+		},
+	}
+
+	validSpaceID := int64(123)
+	validSourceTargetID := "source-123"
+	validSourceTargetVersion := "v1.0"
+	validEvalTargetType := domain_eval_target.EvalTargetType(1)
+	unsupportedEvalTargetType := domain_eval_target.EvalTargetType(99)
+	validEvalTarget := &entity.EvalTarget{
+		ID:             1,
+		SpaceID:        validSpaceID,
+		SourceTargetID: validSourceTargetID,
+		EvalTargetType: 1,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  10,
+			SpaceID:             validSpaceID,
+			TargetID:            1,
+			SourceTargetVersion: validSourceTargetVersion,
+		},
+	}
+
+	tests := []struct {
+		name        string
+		req         *evaltargetapi.GetSourceEvalTargetVersionRequest
+		mockSetup   func()
+		wantResp    *evaltargetapi.GetSourceEvalTargetVersionResponse
+		wantErr     bool
+		wantErrCode int32
+	}{
+		{
+			name: "success - normal request",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:         validSpaceID,
+				SourceTargetID:      &validSourceTargetID,
+				SourceTargetVersion: &validSourceTargetVersion,
+				TargetType:          &validEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), &rpc.AuthorizationParam{
+					ObjectID:      strconv.FormatInt(validSpaceID, 10),
+					SpaceID:       validSpaceID,
+					ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+				}).Return(nil)
+
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, validSourceTargetID, validSourceTargetVersion).
+					Return(validEvalTarget, nil)
+
+				mockTypedOperator.EXPECT().
+					PackSourceVersionInfo(gomock.Any(), validSpaceID, []*entity.EvalTarget{validEvalTarget}).
+					Return(nil)
+			},
+			wantResp: &evaltargetapi.GetSourceEvalTargetVersionResponse{
+				EvalTargetVersion: target.EvalTargetVersionDO2DTO(validEvalTarget.EvalTargetVersion),
+			},
+			wantErr: false,
+		},
+		{
+			name:        "error - nil request",
+			req:         nil,
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - nil target type",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:    validSpaceID,
+				SourceTargetID: &validSourceTargetID,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - empty source target id",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID: validSpaceID,
+				TargetType:  &validEvalTargetType,
+			},
+			mockSetup:   func() {},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - auth failed",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:    validSpaceID,
+				SourceTargetID: &validSourceTargetID,
+				TargetType:     &validEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "error - unsupported target type",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:    validSpaceID,
+				SourceTargetID: &validSourceTargetID,
+				TargetType:     &unsupportedEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "error - BuildBySource failure",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:         validSpaceID,
+				SourceTargetID:      &validSourceTargetID,
+				SourceTargetVersion: &validSourceTargetVersion,
+				TargetType:          &validEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, validSourceTargetID, validSourceTargetVersion).
+					Return(nil, errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+		{
+			name: "success - BuildBySource returns nil",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:         validSpaceID,
+				SourceTargetID:      &validSourceTargetID,
+				SourceTargetVersion: &validSourceTargetVersion,
+				TargetType:          &validEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, validSourceTargetID, validSourceTargetVersion).
+					Return(nil, nil)
+			},
+			wantResp: &evaltargetapi.GetSourceEvalTargetVersionResponse{},
+			wantErr:  false,
+		},
+		{
+			name: "error - PackSourceVersionInfo failure",
+			req: &evaltargetapi.GetSourceEvalTargetVersionRequest{
+				WorkspaceID:         validSpaceID,
+				SourceTargetID:      &validSourceTargetID,
+				SourceTargetVersion: &validSourceTargetVersion,
+				TargetType:          &validEvalTargetType,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockTypedOperator.EXPECT().
+					BuildBySource(gomock.Any(), validSpaceID, validSourceTargetID, validSourceTargetVersion).
+					Return(validEvalTarget, nil)
+				mockTypedOperator.EXPECT().
+					PackSourceVersionInfo(gomock.Any(), validSpaceID, []*entity.EvalTarget{validEvalTarget}).
+					Return(errorx.NewByCode(errno.CommonInternalErrorCode))
+			},
+			wantResp:    nil,
+			wantErr:     true,
+			wantErrCode: errno.CommonInternalErrorCode,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.mockSetup()
+
+			resp, err := app.GetSourceEvalTargetVersion(context.Background(), tt.req)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.wantErrCode != 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tt.wantErrCode, statusErr.Code())
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantResp, resp)
+			}
+		})
+	}
+}
+
 func TestEvalTargetApplicationImpl_GetEvalTargetOutputFieldContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

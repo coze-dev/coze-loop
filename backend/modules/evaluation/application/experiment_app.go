@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bytedance/gg/gptr"
@@ -402,9 +403,29 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 		}
 	}
 
-	orderBys := slices.Transform(req.GetOrderBys(), func(e *common.OrderBy, _ int) *entity.OrderBy {
-		return &entity.OrderBy{Field: gptr.Of(e.GetField()), IsAsc: gptr.Of(e.GetIsAsc())}
-	})
+	// 检查是否需要分流处理在线实验模板
+	needOnlineExptTemplates := false
+	if filters != nil && filters.Includes != nil && len(filters.Includes.ExptType) > 0 {
+		// 检查是否包含在线实验类型 (ExptType_Online = 2)
+		for _, exptType := range filters.Includes.ExptType {
+			if exptType == int64(entity.ExptType_Online) {
+				needOnlineExptTemplates = true
+				break
+			}
+		}
+	}
+
+	orderBys := make([]*entity.OrderBy, 0, len(req.GetOrderBys()))
+	for _, e := range req.GetOrderBys() {
+		if e == nil {
+			continue
+		}
+		f := e.GetField()
+		if _, ok := entity.OrderBySet[f]; !ok {
+			continue
+		}
+		orderBys = append(orderBys, &entity.OrderBy{Field: gptr.Of(f), IsAsc: gptr.Of(e.GetIsAsc())})
+	}
 	// 如果没有显式指定排序字段，默认按 updated_at 倒序
 	if len(orderBys) == 0 {
 		orderBys = []*entity.OrderBy{
@@ -414,9 +435,22 @@ func (e *experimentApplication) ListExperimentTemplates(ctx context.Context, req
 			},
 		}
 	}
-	templates, count, err := e.templateManager.List(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
-	if err != nil {
-		return nil, err
+
+	var templates []*entity.ExptTemplate
+	var count int64
+
+	if needOnlineExptTemplates {
+		// 在线实验模板：通过 Task 查询
+		templates, count, err = e.templateManager.ListOnline(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// 离线实验模板：使用原有逻辑
+		templates, count, err = e.templateManager.List(ctx, req.GetPageNumber(), req.GetPageSize(), req.GetWorkspaceID(), filters, orderBys, session)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	dtos := experiment.ToExptTemplateDTOs(templates)
@@ -445,6 +479,10 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	}
 
 	// 构建 CreateExperimentRequest，resolveEvaluatorVersionIDs 流程已在 CreateExperiment 中完成
+	triggerType := domain_expt.Manual
+	if req.IsSetTriggerType() && strings.TrimSpace(req.GetTriggerType()) != "" {
+		triggerType = strings.TrimSpace(req.GetTriggerType())
+	}
 	createReq := &expt.CreateExperimentRequest{
 		WorkspaceID:            req.GetWorkspaceID(),
 		EvalSetVersionID:       req.EvalSetVersionID,
@@ -454,6 +492,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EvaluatorVersionIds:    req.EvaluatorVersionIds,
 		Name:                   req.Name,
 		Desc:                   req.Desc,
+		Visibility:             req.Visibility,
 		TargetFieldMapping:     req.TargetFieldMapping,
 		EvaluatorFieldMapping:  req.EvaluatorFieldMapping,
 		ItemConcurNum:          req.ItemConcurNum,
@@ -465,27 +504,33 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		SourceID:               req.SourceID,
 		TargetRuntimeParam:     req.TargetRuntimeParam,
 		EvaluatorIDVersionList: req.EvaluatorIDVersionList,
+		ThreadID:               req.ThreadID,
 		Session:                req.Session,
 		EnableWeightedScore:    req.EnableWeightedScore,
 		// EvaluatorScoreWeights 会在 CreateExperiment 的 resolveEvaluatorVersionIDsFromCreateReq 中解析
-		ItemRetryNum: req.ItemRetryNum,
-		Ext:          req.Ext,
+		ItemRetryNum:            req.ItemRetryNum,
+		TrialRunItemCount:       req.TrialRunItemCount,
+		TriggerType:             gptr.Of(triggerType),
+		EnableExtractTrajectory: req.EnableExtractTrajectory,
+		Ext:                     req.Ext,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
+
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err
 	}
 
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
-		WorkspaceID:  gptr.Of(req.GetWorkspaceID()),
-		ExptID:       cresp.GetExperiment().ID,
-		ExptType:     req.ExptType,
-		ItemRetryNum: req.ItemRetryNum,
-		Session:      req.Session,
-		Ext:          req.Ext,
+		WorkspaceID:       gptr.Of(req.GetWorkspaceID()),
+		ExptID:            cresp.GetExperiment().ID,
+		ExptType:          req.ExptType,
+		ItemRetryNum:      req.ItemRetryNum,
+		TrialRunItemCount: req.TrialRunItemCount,
+		Session:           req.Session,
+		Ext:               req.Ext,
 	})
 	if err != nil {
 		return nil, err
@@ -495,11 +540,17 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if req.IsSetExptTemplateID() && req.GetExptTemplateID() > 0 {
 		exptID := gptr.Indirect(cresp.GetExperiment().ID)
 		exptStatus := entity.ExptStatus_Pending // Submit 时实验状态为 Pending
-		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1); err != nil {
+		latestExptStartTime := gptr.Of(time.Now().UnixMilli())
+		if err := e.templateManager.UpdateExptInfo(ctx, req.GetExptTemplateID(), req.GetWorkspaceID(), exptID, exptStatus, 1, latestExptStartTime); err != nil {
 			// 记录错误但不影响主流程
 			logs.CtxError(ctx, "[ExptEval] UpdateExptInfo failed after SubmitExperiment, template_id: %v, expt_id: %v, err: %v",
 				req.GetExptTemplateID(), exptID, err)
 		}
+	}
+
+	if req.TimeRange != nil && cresp.GetExperiment() != nil {
+		tr := &entity.TaskTimeRangeDO{StartTime: req.TimeRange.StartTime, EndTime: req.TimeRange.EndTime}
+		e.manager.InjectExptConfTimeRange(ctx, gptr.Indirect(cresp.GetExperiment().ID), tr)
 	}
 
 	return &expt.SubmitExperimentResponse{
@@ -854,7 +905,7 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
-	resp, err := e.manager.Get(contexts.WithCtxWriteDB(ctx), req.GetExptID(), req.GetWorkspaceID(), session)
+	resp, err := e.manager.GetDetail(contexts.WithCtxWriteDB(ctx), req.GetExptID(), req.GetWorkspaceID(), session)
 	if err != nil {
 		return nil, err
 	}
@@ -977,7 +1028,7 @@ func (e *experimentApplication) RunExperiment(ctx context.Context, req *expt.Run
 		return nil, err
 	}
 
-	evalMode := experiment.ExptType2EvalMode(req.GetExptType())
+	evalMode := experiment.ExptType2EvalMode(req.GetExptType(), req.TrialRunItemCount)
 
 	if err := e.manager.LogRun(ctx, req.GetExptID(), runID, evalMode, req.GetWorkspaceID(), nil, session); err != nil {
 		return nil, err

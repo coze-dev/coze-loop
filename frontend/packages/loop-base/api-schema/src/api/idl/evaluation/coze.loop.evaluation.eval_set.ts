@@ -1,9 +1,11 @@
 // Copyright (c) 2025 coze-dev Authors
 // SPDX-License-Identifier: Apache-2.0
-import * as dataset_job from './../data/domain/dataset_job';
-export { dataset_job };
-import * as dataset from './../data/domain/dataset';
-export { dataset };
+import * as data_filter from './../data/domain/filter';
+export { data_filter };
+import * as data_dataset_job from './../data/domain/dataset_job';
+export { data_dataset_job };
+import * as data_dataset from './../data/domain/dataset';
+export { data_dataset };
 import * as common from './domain/common';
 export { common };
 import * as eval_set from './domain/eval_set';
@@ -30,9 +32,10 @@ export interface CreateEvaluationSetWithImportRequest {
   evaluation_set_schema?: eval_set.EvaluationSetSchema,
   /** 业务分类 */
   biz_category?: eval_set.BizCategory,
-  source_type?: dataset_job.SourceType,
-  source: dataset_job.DatasetIOEndpoint,
-  fieldMappings?: dataset_job.FieldMapping[],
+  source_type?: data_dataset_job.SourceType,
+  source: data_dataset_job.DatasetIOEndpoint,
+  fieldMappings?: data_dataset_job.FieldMapping[],
+  option?: data_dataset_job.DatasetIOJobOption,
   session?: common.Session,
 }
 export interface CreateEvaluationSetWithImportResponse {
@@ -42,7 +45,7 @@ export interface CreateEvaluationSetWithImportResponse {
 export interface ParseImportSourceFileRequest {
   workspace_id: string,
   /** 如果 path 为文件夹，此处只默认解析当前路径级别下所有指定类型的文件，不嵌套解析 */
-  file?: dataset_job.DatasetIOFile,
+  file?: data_dataset_job.DatasetIOFile,
 }
 export interface ParseImportSourceFileResponse {
   /** 文件大小，单位为 byte */
@@ -53,6 +56,12 @@ export interface ParseImportSourceFileResponse {
   conflicts?: ConflictField[],
   /** 存在列定义不明确的文件（即一个列被定义为多个类型），当前仅 jsonl 文件会出现该状况 */
   files_with_ambiguous_column?: string[],
+  /** 无类型标记的 URL 列名列表（内容为文件中的列名） */
+  untyped_url_fields?: string[],
+  /** 返回至多前 10 行数据用于预校验，结果按列聚合。key: 文件中的列名，value: 对应单元格内的内容 */
+  precheck_data_by_field?: {
+    [key: string | number]: string[]
+  },
 }
 export interface ConflictField {
   /** 存在冲突的列名 */
@@ -167,14 +176,15 @@ export interface BatchCreateEvaluationSetItemsRequest {
   skip_invalid_items?: boolean,
   /** 批量写入 items 如果超出数据集容量限制，默认不会写入任何数据；设置 partialAdd=true 会写入不超出容量限制的前 N 条 */
   allow_partial_add?: boolean,
+  field_write_options?: data_dataset.FieldWriteOption[],
 }
 export interface BatchCreateEvaluationSetItemsResponse {
   /** key: item 在 items 中的索引 */
   added_items?: {
     [key: string | number]: string
   },
-  errors?: dataset.ItemErrorGroup[],
-  item_outputs?: dataset.CreateDatasetItemOutput[],
+  errors?: data_dataset.ItemErrorGroup[],
+  item_outputs?: data_dataset.CreateDatasetItemOutput[],
 }
 export interface UpdateEvaluationSetItemRequest {
   workspace_id: string,
@@ -182,6 +192,7 @@ export interface UpdateEvaluationSetItemRequest {
   item_id: string,
   /** 每轮对话 */
   turns?: eval_set.Turn[],
+  field_write_options?: data_dataset.FieldWriteOption[],
 }
 export interface UpdateEvaluationSetItemResponse {}
 export interface DeleteEvaluationSetItemRequest {
@@ -204,13 +215,17 @@ export interface ListEvaluationSetItemsRequest {
   /** 分页大小 (0, 200]，默认为 20 */
   page_size?: number,
   page_token?: string,
+  /** 排列顺序，默认按照 updated_at 顺序排列，目前仅支持按照一个字段排序，该字段必须是 field key 或 item 元信息中的 created_at 或 updated_at */
   order_bys?: common.OrderBy[],
   item_id_not_in?: string[],
+  /** item 过滤条件 */
+  filter?: data_filter.Filter,
 }
 export interface ListEvaluationSetItemsResponse {
   items?: eval_set.EvaluationSetItem[],
   total?: string,
   next_page_token?: string,
+  filter_total?: string,
 }
 export interface GetEvaluationSetItemRequest {
   workspace_id: string,
@@ -243,9 +258,48 @@ export interface GetEvaluationSetItemFieldRequest {
   field_name: string,
   /** 当 item 为多轮时，必须提供 */
   turn_id?: string,
+  /** 列的唯一键，用于精确查找；与 field_name 同时指定时，仅 field_key 生效 */
+  field_key?: string,
 }
 export interface GetEvaluationSetItemFieldResponse {
   field_data?: eval_set.FieldData
+}
+export interface UploadAttachmentDetail {
+  content_type?: data_dataset.ContentType,
+  /** 图片处理服务 id */
+  imagex_service_id?: string,
+  /**
+   * [20,50) 多模态信息. 根据 contentType 获取对应内容
+   * contentType=Image，原始图片
+  */
+  origin_image?: common.Image,
+  /** contentType=Image，上传后的图片 */
+  image?: common.Image,
+  /** contentType=Audio，原始音频 */
+  origin_audio?: common.Audio,
+  /** contentType=Audio. 上传后的音频 */
+  audio?: common.Audio,
+  /** contentType=Video，原始视频 */
+  origin_video?: common.Video,
+  /** contentType=Video. 上传后的视频 */
+  video?: common.Video,
+  /**
+   * 错误信息
+   * notice: 只返回图片相关的错误类型
+  */
+  error_type?: data_dataset.ItemErrorType,
+  err_msg?: string,
+}
+export interface ValidateEvaluationSetMultiPartDataRequest {
+  space_id: string,
+  /** 可以是包含特定格式的多模态数据或单一的 url 链接 */
+  preview_data?: string[],
+  /** 目前仅模态类型在当前接口有效 */
+  store_option?: data_dataset.MultiModalStoreOption,
+}
+export interface ValidateEvaluationSetMultiPartDataResponse {
+  /** 根据校验结果中是否包含错误，判断数据是否合法 */
+  attachment_urls_check_detail?: UploadAttachmentDetail[]
 }
 /** 基本信息管理 */
 export const CreateEvaluationSet = /*#__PURE__*/createAPI<CreateEvaluationSetRequest, CreateEvaluationSetResponse>({
@@ -317,7 +371,7 @@ export const CreateEvaluationSetWithImport = /*#__PURE__*/createAPI<CreateEvalua
   "name": "CreateEvaluationSetWithImport",
   "reqType": "CreateEvaluationSetWithImportRequest",
   "reqMapping": {
-    "body": ["workspace_id", "name", "description", "evaluation_set_schema", "biz_category", "source_type", "source", "fieldMappings", "session"]
+    "body": ["workspace_id", "name", "description", "evaluation_set_schema", "biz_category", "source_type", "source", "fieldMappings", "option", "session"]
   },
   "resType": "CreateEvaluationSetWithImportResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
@@ -408,7 +462,7 @@ export const BatchCreateEvaluationSetItems = /*#__PURE__*/createAPI<BatchCreateE
   "name": "BatchCreateEvaluationSetItems",
   "reqType": "BatchCreateEvaluationSetItemsRequest",
   "reqMapping": {
-    "body": ["workspace_id", "items", "skip_invalid_items", "allow_partial_add"],
+    "body": ["workspace_id", "items", "skip_invalid_items", "allow_partial_add", "field_write_options"],
     "path": ["evaluation_set_id"]
   },
   "resType": "BatchCreateEvaluationSetItemsResponse",
@@ -421,7 +475,7 @@ export const UpdateEvaluationSetItem = /*#__PURE__*/createAPI<UpdateEvaluationSe
   "name": "UpdateEvaluationSetItem",
   "reqType": "UpdateEvaluationSetItemRequest",
   "reqMapping": {
-    "body": ["workspace_id", "turns"],
+    "body": ["workspace_id", "turns", "field_write_options"],
     "path": ["evaluation_set_id", "item_id"]
   },
   "resType": "UpdateEvaluationSetItemResponse",
@@ -447,7 +501,7 @@ export const ListEvaluationSetItems = /*#__PURE__*/createAPI<ListEvaluationSetIt
   "name": "ListEvaluationSetItems",
   "reqType": "ListEvaluationSetItemsRequest",
   "reqMapping": {
-    "body": ["workspace_id", "version_id", "page_number", "page_size", "page_token", "order_bys", "item_id_not_in"],
+    "body": ["workspace_id", "version_id", "page_number", "page_size", "page_token", "order_bys", "item_id_not_in", "filter"],
     "path": ["evaluation_set_id"]
   },
   "resType": "ListEvaluationSetItemsResponse",
@@ -486,10 +540,22 @@ export const GetEvaluationSetItemField = /*#__PURE__*/createAPI<GetEvaluationSet
   "name": "GetEvaluationSetItemField",
   "reqType": "GetEvaluationSetItemFieldRequest",
   "reqMapping": {
-    "query": ["workspace_id", "field_name", "turn_id"],
+    "query": ["workspace_id", "field_name", "turn_id", "field_key"],
     "path": ["evaluation_set_id", "item_pk"]
   },
   "resType": "GetEvaluationSetItemFieldResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
+  "service": "evaluationEvalSet"
+});
+export const ValidateEvaluationSetMultiPartData = /*#__PURE__*/createAPI<ValidateEvaluationSetMultiPartDataRequest, ValidateEvaluationSetMultiPartDataResponse>({
+  "url": "/api/evaluation/v1/evaluation_sets/multi_part_data/validate",
+  "method": "POST",
+  "name": "ValidateEvaluationSetMultiPartData",
+  "reqType": "ValidateEvaluationSetMultiPartDataRequest",
+  "reqMapping": {
+    "body": ["space_id", "preview_data", "store_option"]
+  },
+  "resType": "ValidateEvaluationSetMultiPartDataResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.eval_set",
   "service": "evaluationEvalSet"
 });

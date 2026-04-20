@@ -110,8 +110,10 @@ func (d *exptDAOImpl) List(ctx context.Context, page, size int32, filter *entity
 		db = db.Model(&model.Experiment{}).
 			Joins("INNER JOIN expt_evaluator_ref ON experiment.id = expt_evaluator_ref.expt_id").
 			Where("experiment.space_id = ?", spaceID)
+		db = db.Where("experiment.visibility <> ?", int32(entity.Visibility_Hidden))
 	} else {
 		db = db.Model(&model.Experiment{}).Where("space_id = ?", spaceID)
+		db = db.Where("visibility <> ?", int32(entity.Visibility_Hidden))
 	}
 
 	conds, ok := d.toConditions(filter, orders)
@@ -230,6 +232,11 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 		if ffields != nil && len(ffields.SourceType) > 0 {
 			conds = append(conds, func(db *gorm.DB) *gorm.DB {
 				return db.Where(fmt.Sprintf("%ssource_type %s (?)", exptPrefix, scopeComparator), ffields.SourceType)
+			})
+		}
+		if ffields != nil && len(ffields.TriggerType) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%strigger_type %s (?)", exptPrefix, scopeComparator), ffields.TriggerType)
 			})
 		}
 
