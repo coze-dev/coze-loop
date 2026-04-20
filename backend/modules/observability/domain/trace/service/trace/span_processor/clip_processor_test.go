@@ -397,3 +397,49 @@ func TestClipProcessor_NoRepoUsesDefault(t *testing.T) {
 	require.Len(t, res, 1)
 	require.Equal(t, "Hello world", res[0].Input)
 }
+
+func TestNormalizeJSONPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		column   string
+		jsonPath string
+		want     string
+	}{
+		{
+			name:     "standard jsonpath unchanged",
+			column:   "input",
+			jsonPath: "$.messages[0].content",
+			want:     "$.messages[0].content",
+		},
+		{
+			name:     "strip input prefix and add $",
+			column:   "input",
+			jsonPath: "input.stream[0][0].content",
+			want:     "$.stream[0][0].content",
+		},
+		{
+			name:     "strip output prefix and add $",
+			column:   "output",
+			jsonPath: "output.choices[0].finish_reason",
+			want:     "$.choices[0].finish_reason",
+		},
+		{
+			name:     "no prefix but missing $",
+			column:   "input",
+			jsonPath: "messages[0].content",
+			want:     "$.messages[0].content",
+		},
+		{
+			name:     "column prefix not matched",
+			column:   "input",
+			jsonPath: "output.stream[0].content",
+			want:     "$.output.stream[0].content",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeJSONPath(tt.column, tt.jsonPath)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}

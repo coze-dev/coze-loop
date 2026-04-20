@@ -5,6 +5,7 @@ package span_processor
 
 import (
 	"context"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
@@ -57,8 +58,8 @@ func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 		if s == nil {
 			continue
 		}
-		s.Input = extractAndClip(s.Input, inputRule)
-		s.Output = extractAndClip(s.Output, outputRule)
+		s.Input = extractAndClip(s.Input, "input", inputRule)
+		s.Output = extractAndClip(s.Output, "output", outputRule)
 	}
 	return spans, nil
 }
@@ -183,13 +184,22 @@ func findExtractRules(rules []entity.ColumnExtractRule) (inputRule, outputRule *
 	return
 }
 
-func extractAndClip(content string, rule *entity.ColumnExtractRule) string {
+func extractAndClip(content string, column string, rule *entity.ColumnExtractRule) string {
 	if rule != nil {
-		if extracted := extractByJSONPath(content, rule.JSONPath); extracted != "" {
+		jsonPath := normalizeJSONPath(column, rule.JSONPath)
+		if extracted := extractByJSONPath(content, jsonPath); extracted != "" {
 			return clipSpanField(extracted)
 		}
 	}
 	return clipSpanField(content)
+}
+
+func normalizeJSONPath(column, jsonPath string) string {
+	jsonPath = strings.TrimPrefix(jsonPath, column+".")
+	if !strings.HasPrefix(jsonPath, "$") {
+		jsonPath = "$." + jsonPath
+	}
+	return jsonPath
 }
 
 func extractByJSONPath(content, jsonPath string) string {
