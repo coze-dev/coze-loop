@@ -978,6 +978,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
+		Ext:                     req.GetExt(),
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)

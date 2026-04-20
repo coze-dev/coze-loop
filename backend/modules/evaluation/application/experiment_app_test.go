@@ -2568,6 +2568,7 @@ func TestExperimentApplication_RetryExperiment(t *testing.T) {
 				nil, // evaluatorService
 				nil, // templateManager
 				nil, // fileProvider
+				nil, // lifecycleEventHandler
 			)
 
 			// 执行测试
@@ -2632,7 +2633,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止：允许在后台调用，不校验调用次数
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{
 				BaseResp: base.NewBaseResp(),
@@ -2674,7 +2675,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止：允许在后台调用，不校验调用次数
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{
 				BaseResp: base.NewBaseResp(),
@@ -2783,7 +2784,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 
 				// 异步终止
 				mockManager.EXPECT().CompleteRun(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+				mockManager.EXPECT().CompleteExpt(gomock.Any(), validExptID, gomock.Any(), validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
 					errorx.NewByCode(errno.CommonInternalErrorCode)).AnyTimes()
 			},
 			wantResp: &exptpb.KillExperimentResponse{BaseResp: base.NewBaseResp()},
@@ -2816,6 +2817,7 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // evaluatorService
 				nil, // templateManager
 				nil, // fileProvider
+				nil, // lifecycleEventHandler
 			)
 
 			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
@@ -2918,6 +2920,7 @@ func TestExperimentApplication_CreateExperimentTemplate(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 
 	resp, err := app.CreateExperimentTemplate(context.Background(), req)
@@ -3019,6 +3022,7 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				nil,                 // evaluatorService
 				mockTemplateManager, // templateManager
 				nil,                 // fileProvider
+				nil,                 // lifecycleEventHandler
 			)
 			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
@@ -3062,6 +3066,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
 		)
 		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
@@ -3131,6 +3136,7 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
 		)
 		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
@@ -3168,6 +3174,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
 		)
 		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
@@ -3234,6 +3241,7 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
 			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
 		)
 		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
@@ -3283,6 +3291,7 @@ func TestExperimentApplication_DeleteExperimentTemplate(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 	resp, err := app.DeleteExperimentTemplate(context.Background(), req)
 	assert.NoError(t, err)
@@ -3354,6 +3363,7 @@ func TestExperimentApplication_ListExperimentTemplates(t *testing.T) {
 		nil,                 // evaluatorService
 		mockTemplateManager, // templateManager
 		nil,                 // fileProvider
+		nil,                 // lifecycleEventHandler
 	)
 	resp, err := app.ListExperimentTemplates(context.Background(), req)
 	assert.NoError(t, err)
@@ -3396,6 +3406,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3423,6 +3434,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3453,6 +3465,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		_, err := app.ListExperimentTemplates(context.Background(), req)
 		assert.NoError(t, err)
@@ -3485,6 +3498,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 		app := NewExperimentApplication(
 			nil, nil, nil, nil, nil, nil, nil,
 			mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+			nil, // lifecycleEventHandler
 		)
 		// 这个测试主要验证 FilterOption 不为 nil 时会调用 Convert
 		// 具体的转换逻辑在 filter convertor 的测试中覆盖
@@ -6577,7 +6591,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -6709,6 +6723,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 	)
 
 	t.Run("auth error", func(t *testing.T) {

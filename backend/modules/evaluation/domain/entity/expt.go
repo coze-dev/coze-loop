@@ -225,6 +225,7 @@ type EvaluationConfiguration struct {
 	ItemRetryNum            *int
 	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
+	Ext                     map[string]string
 }
 
 type Connector struct {

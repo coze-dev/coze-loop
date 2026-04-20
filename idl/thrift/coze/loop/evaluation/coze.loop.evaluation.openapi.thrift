@@ -407,6 +407,8 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
+    100: optional map<string, string> ext (api.body = 'ext')    
+
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }

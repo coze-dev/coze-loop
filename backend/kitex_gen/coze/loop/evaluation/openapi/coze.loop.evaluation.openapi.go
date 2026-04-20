@@ -17798,6 +17798,7 @@ type SubmitExperimentOApiRequest struct {
 	TargetRuntimeParam      *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	ItemRetryNum            *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	EnableExtractTrajectory *bool                `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	Ext                     map[string]string    `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Extra                   *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base                    *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17953,6 +17954,18 @@ func (p *SubmitExperimentOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentOApiRequest_Ext_DEFAULT map[string]string
+
+func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return SubmitExperimentOApiRequest_Ext_DEFAULT
+	}
+	return p.Ext
+}
+
 var SubmitExperimentOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SubmitExperimentOApiRequest) GetExtra() (v *extra.Extra) {
@@ -18012,6 +18025,9 @@ func (p *SubmitExperimentOApiRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
+	p.Ext = val
+}
 func (p *SubmitExperimentOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -18032,6 +18048,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	22:  "target_runtime_param",
 	45:  "item_retry_num",
 	46:  "enable_extract_trajectory",
+	100: "ext",
 	254: "extra",
 	255: "Base",
 }
@@ -18082,6 +18099,10 @@ func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExtra() bool {
@@ -18201,6 +18222,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 46:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField46(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18395,6 +18424,35 @@ func (p *SubmitExperimentOApiRequest) ReadField46(iprot thrift.TProtocol) error 
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -18464,6 +18522,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField46(oprot); err != nil {
 			fieldId = 46
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -18724,6 +18786,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 46 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -18809,6 +18900,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field46DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -18943,6 +19037,19 @@ func (p *SubmitExperimentOApiRequest) Field46DeepEqual(src *bool) bool {
 	}
 	if *p.EnableExtractTrajectory != *src {
 		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }

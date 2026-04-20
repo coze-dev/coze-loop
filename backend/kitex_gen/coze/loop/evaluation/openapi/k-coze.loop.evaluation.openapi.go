@@ -12928,6 +12928,20 @@ func (p *SubmitExperimentOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				l, err = p.FastReadField100(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -13156,6 +13170,38 @@ func (p *SubmitExperimentOApiRequest) FastReadField46(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentOApiRequest) FastReadField100(buf []byte) (int, error) {
+	offset := 0
+
+	_, _, size, l, err := thrift.Binary.ReadMapBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_key = v
+		}
+
+		var _val string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	p.Ext = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -13199,6 +13245,7 @@ func (p *SubmitExperimentOApiRequest) FastWriteNocopy(buf []byte, w thrift.Nocop
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField22(buf[offset:], w)
+		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -13221,6 +13268,7 @@ func (p *SubmitExperimentOApiRequest) BLength() int {
 		l += p.field22Length()
 		l += p.field45Length()
 		l += p.field46Length()
+		l += p.field100Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -13346,6 +13394,23 @@ func (p *SubmitExperimentOApiRequest) fastWriteField46(buf []byte, w thrift.Noco
 	if p.IsSetEnableExtractTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 46)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
+	}
+	return offset
+}
+
+func (p *SubmitExperimentOApiRequest) fastWriteField100(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetExt() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.MAP, 100)
+		mapBeginOffset := offset
+		offset += thrift.Binary.MapBeginLength()
+		var length int
+		for k, v := range p.Ext {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, k)
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteMapBegin(buf[mapBeginOffset:], thrift.STRING, thrift.STRING, length)
 	}
 	return offset
 }
@@ -13484,6 +13549,21 @@ func (p *SubmitExperimentOApiRequest) field46Length() int {
 	return l
 }
 
+func (p *SubmitExperimentOApiRequest) field100Length() int {
+	l := 0
+	if p.IsSetExt() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.MapBeginLength()
+		for k, v := range p.Ext {
+			_, _ = k, v
+
+			l += thrift.Binary.StringLengthNocopy(k)
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
 func (p *SubmitExperimentOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -13608,6 +13688,23 @@ func (p *SubmitExperimentOApiRequest) DeepCopy(s interface{}) error {
 	if src.EnableExtractTrajectory != nil {
 		tmp := *src.EnableExtractTrajectory
 		p.EnableExtractTrajectory = &tmp
+	}
+
+	if src.Ext != nil {
+		p.Ext = make(map[string]string, len(src.Ext))
+		for key, val := range src.Ext {
+			var _key string
+			if key != "" {
+				_key = kutils.StringDeepCopy(key)
+			}
+
+			var _val string
+			if val != "" {
+				_val = kutils.StringDeepCopy(val)
+			}
+
+			p.Ext[_key] = _val
+		}
 	}
 
 	var _extra *extra.Extra

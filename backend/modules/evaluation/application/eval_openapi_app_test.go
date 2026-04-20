@@ -2355,6 +2355,7 @@ type fakeExperimentApp struct {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
+	service.ExptLifecycleEventHandler
 
 	submitResp *exptpb.SubmitExperimentResponse
 	submitErr  error
