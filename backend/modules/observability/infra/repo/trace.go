@@ -123,14 +123,14 @@ func newTraceRepoImpl(
 }
 
 type TraceRepoImpl struct {
-	traceConfig          config.ITraceConfig
-	storageProvider      storage.IStorageProvider
-	spanDaos             map[string]dao.ISpansDao
-	annoDaos             map[string]dao.IAnnotationDao
-	spanRedisDao         redis_dao.ISpansRedisDao
-	spanProducer         mq.ISpanProducer
-	trajectoryConfDao    mysql.ITrajectoryConfigDao
-	idGenerator          idgen.IIDGenerator
+	traceConfig       config.ITraceConfig
+	storageProvider   storage.IStorageProvider
+	spanDaos          map[string]dao.ISpansDao
+	annoDaos          map[string]dao.IAnnotationDao
+	spanRedisDao      redis_dao.ISpansRedisDao
+	spanProducer      mq.ISpanProducer
+	trajectoryConfDao mysql.ITrajectoryConfigDao
+	idGenerator       idgen.IIDGenerator
 }
 
 func (t *TraceRepoImpl) GetPreSpanIDs(ctx context.Context, param *repo.GetPreSpanIDsParam) (preSpanIDs, responseIDs []string, err error) {
