@@ -37,19 +37,22 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		return h.sendNotifyCard(ctx, expt)
+		return h.sendNotifyCard(ctx, event, expt)
 	default:
 		return nil
 	}
 }
 
-func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
+func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error {
+	if event.ToStatus != expt.Status {
+		return nil
+	}
 	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
 	if err != nil {
 		return err
 	}
 	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %s notify card without target email", expt.ID)
+		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
 		return nil
 	}
 	cardID, param := buildExptNotifyParam(expt)

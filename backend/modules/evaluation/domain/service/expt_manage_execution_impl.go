@@ -334,7 +334,7 @@ func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experi
 		return err
 	}
 	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %s notify card without target email", expt.ID)
+		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
 		return nil
 	}
 	cardID, param := buildExptNotifyParam(expt)
