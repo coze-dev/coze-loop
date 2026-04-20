@@ -2812,16 +2812,16 @@ func TestExperimentApplication_KillExperiment(t *testing.T) {
 				nil, // evaluationSetItemService
 				nil, // annotateService
 				nil, // tagRPCAdapter
-			nil, // exptResultExportService
-			nil, // exptInsightAnalysisService
-			nil, // evaluatorService
-			nil, // templateManager
-			nil, // fileProvider
-			nil, // lifecycleEventHandler
-		)
+				nil, // exptResultExportService
+				nil, // exptInsightAnalysisService
+				nil, // evaluatorService
+				nil, // templateManager
+				nil, // fileProvider
+				nil, // lifecycleEventHandler
+			)
 
-		// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
-		ctx := session.WithCtxUser(context.Background(), &session.User{
+			// 设置 context 中的 UserID，这样 entity.NewSession 才能获取到 UserID
+			ctx := session.WithCtxUser(context.Background(), &session.User{
 				ID: strconv.FormatInt(validUserID, 10),
 			})
 
@@ -3021,10 +3021,10 @@ func TestExperimentApplication_BatchGetExperimentTemplate(t *testing.T) {
 				nil,                 // exptInsightAnalysisService
 				nil,                 // evaluatorService
 				mockTemplateManager, // templateManager
-			nil,                 // fileProvider
-			nil,                 // lifecycleEventHandler
-		)
-		resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
+				nil,                 // fileProvider
+				nil,                 // lifecycleEventHandler
+			)
+			resp, err := app.BatchGetExperimentTemplate(context.Background(), tt.req)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -3065,10 +3065,10 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-		nil,                 // fileProvider
-		nil,                 // lifecycleEventHandler
-	)
-	_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+		)
+		_, err := app.UpdateExperimentTemplate(context.Background(), &exptpb.UpdateExperimentTemplateRequest{})
 		assert.Error(t, err)
 	})
 
@@ -3135,10 +3135,10 @@ func TestExperimentApplication_UpdateExperimentTemplate(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-		nil,                 // fileProvider
-		nil,                 // lifecycleEventHandler
-	)
-	resp, err := app.UpdateExperimentTemplate(context.Background(), req)
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+		)
+		resp, err := app.UpdateExperimentTemplate(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "new_name", resp.GetExperimentTemplate().GetMeta().GetName())
 	})
@@ -3173,10 +3173,10 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-		nil,                 // fileProvider
-		nil,                 // lifecycleEventHandler
-	)
-	_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+		)
+		_, err := app.UpdateExperimentTemplateMeta(context.Background(), &exptpb.UpdateExperimentTemplateMetaRequest{})
 		assert.Error(t, err)
 	})
 
@@ -3240,10 +3240,10 @@ func TestExperimentApplication_UpdateExperimentTemplateMeta(t *testing.T) {
 			nil,                 // exptInsightAnalysisService
 			nil,                 // evaluatorService
 			mockTemplateManager, // templateManager
-		nil,                 // fileProvider
-		nil,                 // lifecycleEventHandler
-	)
-	resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
+			nil,                 // fileProvider
+			nil,                 // lifecycleEventHandler
+		)
+		resp, err := app.UpdateExperimentTemplateMeta(context.Background(), req)
 		assert.NoError(t, err)
 		assert.Equal(t, "meta_name", resp.GetMeta().GetName())
 	})
@@ -6591,7 +6591,7 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 
 	app := NewExperimentApplication(
 		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
-		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	t.Run("auth fails", func(t *testing.T) {
@@ -6723,6 +6723,7 @@ func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T
 	app := NewExperimentApplication(
 		nil, nil, nil, nil, nil, nil, nil,
 		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+		nil,
 	)
 
 	t.Run("auth error", func(t *testing.T) {
