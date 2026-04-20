@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -2054,6 +2055,326 @@ func OpenAPIExptTemplateFilterDTO2DO(dto *openapiExperiment.ExperimentTemplateFi
 		return nil
 	}
 	return result
+}
+
+// OpenAPIExperimentFiltersDTO2Domain 将 OpenAPI 的 Filters（字符串枚举）转为 domain/expt.Filters，供实验结果筛选与 BatchGetExperimentResult 一致。
+func OpenAPIExperimentFiltersDTO2Domain(filters *openapiExperiment.Filters) (*domainExpt.Filters, error) {
+	if filters == nil || len(filters.GetFilterConditions()) == 0 {
+		return nil, nil
+	}
+	if filters.LogicOp != nil {
+		lo := strings.ToLower(strings.TrimSpace(*filters.LogicOp))
+		if lo != "" && lo != "and" {
+			return nil, fmt.Errorf("only logic_op 'and' is supported for experiment result filters")
+		}
+	}
+	out := &domainExpt.Filters{
+		LogicOp: domainExpt.FilterLogicOpPtr(domainExpt.FilterLogicOp_And),
+	}
+	for _, c := range filters.GetFilterConditions() {
+		if c == nil || c.GetField() == nil {
+			continue
+		}
+		ft, err := openAPIExperimentFilterFieldTypeToDomain(c.GetField().GetFieldType())
+		if err != nil {
+			return nil, err
+		}
+		op, err := openAPIExperimentFilterOperatorToDomain(c.GetOperator())
+		if err != nil {
+			return nil, err
+		}
+		var fieldKey *string
+		if c.GetField().FieldKey != nil {
+			fieldKey = gptr.Of(*c.GetField().FieldKey)
+		}
+		val := ""
+		if c.Value != nil {
+			val = *c.Value
+		}
+		sourceTarget, err := openAPISourceTargetDTO2Domain(c.SourceTarget)
+		if err != nil {
+			return nil, err
+		}
+		out.FilterConditions = append(out.FilterConditions, &domainExpt.FilterCondition{
+			Field: &domainExpt.FilterField{
+				FieldType: ft,
+				FieldKey:  fieldKey,
+			},
+			Operator:     op,
+			Value:        val,
+			SourceTarget: sourceTarget,
+		})
+	}
+	if len(out.FilterConditions) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+func openAPISourceTargetDTO2Domain(st *openapiExperiment.SourceTarget) (*domainExpt.SourceTarget, error) {
+	if st == nil {
+		return nil, nil
+	}
+	out := &domainExpt.SourceTarget{}
+	if st.EvalTargetType != nil {
+		switch *st.EvalTargetType {
+		case openapiEvalTarget.EvalTargetTypeCozeBot:
+			v := domaindoEvalTarget.EvalTargetType_CozeBot
+			out.EvalTargetType = &v
+		case openapiEvalTarget.EvalTargetTypeCozeLoopPrompt:
+			v := domaindoEvalTarget.EvalTargetType_CozeLoopPrompt
+			out.EvalTargetType = &v
+		case openapiEvalTarget.EvalTargetTypeTrace:
+			v := domaindoEvalTarget.EvalTargetType_Trace
+			out.EvalTargetType = &v
+		case openapiEvalTarget.EvalTargetTypeCozeWorkflow:
+			v := domaindoEvalTarget.EvalTargetType_CozeWorkflow
+			out.EvalTargetType = &v
+		case openapiEvalTarget.EvalTargetTypeVolcengineAgent:
+			v := domaindoEvalTarget.EvalTargetType_VolcengineAgent
+			out.EvalTargetType = &v
+		case openapiEvalTarget.EvalTargetTypeCustomRPCServer:
+			v := domaindoEvalTarget.EvalTargetType_CustomRPCServer
+			out.EvalTargetType = &v
+		default:
+			return nil, fmt.Errorf("unknown source_target.eval_target_type: %s", *st.EvalTargetType)
+		}
+	}
+	if len(st.SourceTargetIds) > 0 {
+		out.SourceTargetIds = append(out.SourceTargetIds, st.SourceTargetIds...)
+	}
+	if out.EvalTargetType == nil && len(out.SourceTargetIds) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+// OpenAPIExperimentFilterOptionDTO2Domain 将 OpenAPI 实验列表筛选转为 domain/expt.ExptFilterOption（与 ListExperiments 一致）。
+func OpenAPIExperimentFilterOptionDTO2Domain(opt *openapiExperiment.ExperimentFilterOption) (*domainExpt.ExptFilterOption, error) {
+	if opt == nil {
+		return nil, nil
+	}
+	domainFilters, err := OpenAPIExperimentFiltersDTO2Domain(opt.GetFilters())
+	if err != nil {
+		return nil, err
+	}
+	hasFuzzy := opt.IsSetFuzzyName() && strings.TrimSpace(opt.GetFuzzyName()) != ""
+	hasFilters := domainFilters != nil && len(domainFilters.FilterConditions) > 0
+	if !hasFuzzy && !hasFilters {
+		return nil, nil
+	}
+	out := domainExpt.NewExptFilterOption()
+	if hasFuzzy {
+		out.SetFuzzyName(gptr.Of(strings.TrimSpace(opt.GetFuzzyName())))
+	}
+	if hasFilters {
+		out.SetFilters(domainFilters)
+	}
+	return out, nil
+}
+
+// OpenAPIKeywordSearchDTO2Domain 将 OpenAPI 的 KeywordSearch 转为 domain/expt.KeywordSearch，供实验结果模糊搜索。
+// 返回 nil 表示入参无效或空（keyword 为空或没有任何合法的 filter_field）。
+func OpenAPIKeywordSearchDTO2Domain(ks *openapiExperiment.KeywordSearch) (*domainExpt.KeywordSearch, error) {
+	if ks == nil {
+		return nil, nil
+	}
+	keyword := strings.TrimSpace(ks.GetKeyword())
+	if keyword == "" {
+		return nil, nil
+	}
+	out := &domainExpt.KeywordSearch{
+		Keyword: gptr.Of(keyword),
+	}
+	for _, ff := range ks.GetFilterFields() {
+		if ff == nil {
+			continue
+		}
+		ft, err := openAPIExperimentFilterFieldTypeToDomain(ff.GetFieldType())
+		if err != nil {
+			return nil, err
+		}
+		var fieldKey *string
+		if ff.FieldKey != nil {
+			fieldKey = gptr.Of(*ff.FieldKey)
+		}
+		out.FilterFields = append(out.FilterFields, &domainExpt.FilterField{
+			FieldType: ft,
+			FieldKey:  fieldKey,
+		})
+	}
+	if len(out.FilterFields) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+// ExperimentResultDomainFiltersNeedAccelerator 与 BatchGetExperimentResult 一致：仅 TurnRunState / EvaluatorScore 可走 RDS；其余走 accelerator。
+func ExperimentResultDomainFiltersNeedAccelerator(f *domainExpt.Filters) bool {
+	if f == nil {
+		return false
+	}
+	for _, c := range f.FilterConditions {
+		if c == nil || c.GetField() == nil {
+			continue
+		}
+		switch c.GetField().GetFieldType() {
+		case domainExpt.FieldType_TurnRunState, domainExpt.FieldType_EvaluatorScore:
+			continue
+		default:
+			return true
+		}
+	}
+	return false
+}
+
+func openAPIExperimentFilterFieldTypeToDomain(ft openapiExperiment.FilterFieldType) (domainExpt.FieldType, error) {
+	s := strings.TrimSpace(ft)
+	if s == "" {
+		return 0, fmt.Errorf("empty field_type")
+	}
+	if v, err := domainExpt.FieldTypeFromString(s); err == nil {
+		return v, nil
+	}
+	low := strings.ToLower(s)
+	if n, err := strconv.ParseInt(low, 10, 64); err == nil {
+		return domainExpt.FieldType(n), nil
+	}
+	switch low {
+	case "evaluator_score":
+		return domainExpt.FieldType_EvaluatorScore, nil
+	case "creator_by":
+		return domainExpt.FieldType_CreatorBy, nil
+	case "updated_by":
+		return domainExpt.FieldType_UpdatedBy, nil
+	case "expt_status":
+		return domainExpt.FieldType_ExptStatus, nil
+	case "turn_run_state":
+		return domainExpt.FieldType_TurnRunState, nil
+	case "target_id":
+		return domainExpt.FieldType_TargetID, nil
+	case "eval_set_id":
+		return domainExpt.FieldType_EvalSetID, nil
+	case "evaluator_id":
+		return domainExpt.FieldType_EvaluatorID, nil
+	case "target_type":
+		return domainExpt.FieldType_TargetType, nil
+	case "source_target":
+		return domainExpt.FieldType_SourceTarget, nil
+	case "evaluator_version_id":
+		return domainExpt.FieldType_EvaluatorVersionID, nil
+	case "target_version_id":
+		return domainExpt.FieldType_TargetVersionID, nil
+	case "eval_set_version_id":
+		return domainExpt.FieldType_EvalSetVersionID, nil
+	case "expt_type":
+		return domainExpt.FieldType_ExptType, nil
+	case "source_type":
+		return domainExpt.FieldType_SourceType, nil
+	case "source_id":
+		return domainExpt.FieldType_SourceID, nil
+	case "keyword_search":
+		return domainExpt.FieldType_KeywordSearch, nil
+	case "eval_set_column":
+		return domainExpt.FieldType_EvalSetColumn, nil
+	case "annotation":
+		return domainExpt.FieldType_Annotation, nil
+	case "actual_output":
+		return domainExpt.FieldType_ActualOutput, nil
+	case "evaluator_score_corrected":
+		return domainExpt.FieldType_EvaluatorScoreCorrected, nil
+	case "evaluator":
+		return domainExpt.FieldType_Evaluator, nil
+	case "item_id":
+		return domainExpt.FieldType_ItemID, nil
+	case "item_run_state":
+		return domainExpt.FieldType_ItemRunState, nil
+	case "annotation_score":
+		return domainExpt.FieldType_AnnotationScore, nil
+	case "annotation_text":
+		return domainExpt.FieldType_AnnotationText, nil
+	case "annotation_categorical":
+		return domainExpt.FieldType_AnnotationCategorical, nil
+	case "total_latency":
+		return domainExpt.FieldType_TotalLatency, nil
+	case "input_tokens":
+		return domainExpt.FieldType_InputTokens, nil
+	case "output_tokens":
+		return domainExpt.FieldType_OutputTokens, nil
+	case "total_tokens":
+		return domainExpt.FieldType_TotalTokens, nil
+	case "experiment_template_id":
+		return domainExpt.FieldType_ExperimentTemplateID, nil
+	case "evaluator_weighted_score":
+		return domainExpt.FieldType_EvaluatorWeightedScore, nil
+	default:
+		return 0, fmt.Errorf("unknown field_type: %s", s)
+	}
+}
+
+func openAPIExperimentFilterOperatorToDomain(op openapiExperiment.FilterOperatorType) (domainExpt.FilterOperatorType, error) {
+	s := strings.TrimSpace(op)
+	if s == "" {
+		return 0, fmt.Errorf("empty operator")
+	}
+	if v, err := domainExpt.FilterOperatorTypeFromString(s); err == nil {
+		return v, nil
+	}
+	low := strings.ToLower(s)
+	if n, err := strconv.ParseInt(low, 10, 64); err == nil {
+		return domainExpt.FilterOperatorType(n), nil
+	}
+	// OpenAPI 使用 snake 小写，domain 使用 PascalCase
+	pascal := snakeToFilterOperatorPascal(low)
+	if pascal != "" {
+		if v, err := domainExpt.FilterOperatorTypeFromString(pascal); err == nil {
+			return v, nil
+		}
+	}
+	switch low {
+	case "equal", "eq", "=":
+		return domainExpt.FilterOperatorType_Equal, nil
+	case "not_equal", "ne", "!=":
+		return domainExpt.FilterOperatorType_NotEqual, nil
+	case "greater", "gt", ">":
+		return domainExpt.FilterOperatorType_Greater, nil
+	case "greater_or_equal", "gte", ">=":
+		return domainExpt.FilterOperatorType_GreaterOrEqual, nil
+	case "less", "lt", "<":
+		return domainExpt.FilterOperatorType_Less, nil
+	case "less_or_equal", "lte", "<=":
+		return domainExpt.FilterOperatorType_LessOrEqual, nil
+	case "in":
+		return domainExpt.FilterOperatorType_In, nil
+	case "not_in":
+		return domainExpt.FilterOperatorType_NotIn, nil
+	case "like":
+		return domainExpt.FilterOperatorType_Like, nil
+	case "not_like":
+		return domainExpt.FilterOperatorType_NotLike, nil
+	case "is_null":
+		return domainExpt.FilterOperatorType_IsNull, nil
+	case "is_not_null":
+		return domainExpt.FilterOperatorType_IsNotNull, nil
+	default:
+		return 0, fmt.Errorf("unknown operator: %s", s)
+	}
+}
+
+func snakeToFilterOperatorPascal(s string) string {
+	parts := strings.Split(s, "_")
+	for i, p := range parts {
+		if p == "" {
+			continue
+		}
+		r := []rune(p)
+		r[0] = unicode.ToUpper(r[0])
+		for j := 1; j < len(r); j++ {
+			r[j] = unicode.ToLower(r[j])
+		}
+		parts[i] = string(r)
+	}
+	return strings.Join(parts, "")
 }
 
 func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEvalTargetParam) *entity.CreateEvalTargetParam {

@@ -309,13 +309,41 @@ const FilterOperatorType FilterOperatorType_IsNotNull = "is_not_null"
 // 筛选字段类型（对应 domain/expt FieldType）
 typedef string FilterFieldType(ts.enum="true")
 const FilterFieldType FilterFieldType_Unknown = "unknown"
+const FilterFieldType FilterFieldType_EvaluatorScore = "evaluator_score"
 const FilterFieldType FilterFieldType_CreatorBy = "creator_by"
+const FilterFieldType FilterFieldType_ExptStatus = "expt_status"
+const FilterFieldType FilterFieldType_TurnRunState = "turn_run_state"
 const FilterFieldType FilterFieldType_UpdatedBy = "updated_by"
 const FilterFieldType FilterFieldType_EvalSetID = "eval_set_id"
 const FilterFieldType FilterFieldType_TargetID = "target_id"
 const FilterFieldType FilterFieldType_EvaluatorID = "evaluator_id"
 const FilterFieldType FilterFieldType_TargetType = "target_type"
+const FilterFieldType FilterFieldType_SourceTarget = "source_target"
+const FilterFieldType FilterFieldType_EvaluatorVersionID = "evaluator_version_id"
+const FilterFieldType FilterFieldType_TargetVersionID = "target_version_id"
+const FilterFieldType FilterFieldType_EvalSetVersionID = "eval_set_version_id"
 const FilterFieldType FilterFieldType_ExptType = "expt_type"
+const FilterFieldType FilterFieldType_SourceType = "source_type"
+const FilterFieldType FilterFieldType_SourceID = "source_id"
+const FilterFieldType FilterFieldType_KeywordSearch = "keyword_search"
+const FilterFieldType FilterFieldType_EvalSetColumn = "eval_set_column"
+const FilterFieldType FilterFieldType_Annotation = "annotation"
+const FilterFieldType FilterFieldType_ActualOutput = "actual_output"
+const FilterFieldType FilterFieldType_EvaluatorScoreCorrected = "evaluator_score_corrected"
+const FilterFieldType FilterFieldType_Evaluator = "evaluator"
+const FilterFieldType FilterFieldType_ItemID = "item_id"
+const FilterFieldType FilterFieldType_ItemRunState = "item_run_state"
+const FilterFieldType FilterFieldType_AnnotationScore = "annotation_score"
+const FilterFieldType FilterFieldType_AnnotationText = "annotation_text"
+const FilterFieldType FilterFieldType_AnnotationCategorical = "annotation_categorical"
+const FilterFieldType FilterFieldType_TotalLatency = "total_latency"
+const FilterFieldType FilterFieldType_InputTokens = "input_tokens"
+const FilterFieldType FilterFieldType_OutputTokens = "output_tokens"
+const FilterFieldType FilterFieldType_TotalTokens = "total_tokens"
+const FilterFieldType FilterFieldType_ExperimentTemplateID = "experiment_template_id"
+const FilterFieldType FilterFieldType_EvaluatorWeightedScore = "evaluator_weighted_score"
+const FilterFieldType FilterFieldType_CronActivate = "cron_activate"
+const FilterFieldType FilterFieldType_TriggerType = "trigger_type"
 const FilterFieldType FilterFieldType_Name = "name"  // 模板名称模糊搜索
 
 // 筛选字段（对应 domain/expt FilterField）
@@ -329,6 +357,14 @@ struct FilterCondition {
     1: optional FilterField field
     2: optional FilterOperatorType operator
     3: optional string value
+    // 与 domain/expt.SourceTarget 对齐，兼容 source_target 复合筛选入参（field_type=source_target）
+    4: optional SourceTarget source_target
+}
+
+// source_target 复合筛选参数（对应 domain/expt SourceTarget）
+struct SourceTarget {
+    1: optional eval_target.EvalTargetType eval_target_type
+    3: optional list<string> source_target_ids
 }
 
 // 关键词搜索（对应 domain/expt KeywordSearch）
@@ -345,6 +381,18 @@ struct Filters {
 
 // 实验模板筛选器（对应 domain/expt ExperimentTemplateFilter）
 struct ExperimentTemplateFilter {
+    1: optional Filters filters
+    2: optional KeywordSearch keyword_search
+}
+
+// 实验列表筛选（对应 domain/expt ExptFilterOption）
+struct ExperimentFilterOption {
+    1: optional string fuzzy_name
+    10: optional Filters filters
+}
+
+// 实验报告顶层筛选结构
+struct ExperimentResultFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
 }

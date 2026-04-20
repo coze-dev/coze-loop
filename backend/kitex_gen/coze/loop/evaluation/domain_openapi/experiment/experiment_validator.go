@@ -223,6 +223,14 @@ func (p *FilterCondition) IsValid() error {
 			return fmt.Errorf("field Field not valid, %w", err)
 		}
 	}
+	if p.SourceTarget != nil {
+		if err := p.SourceTarget.IsValid(); err != nil {
+			return fmt.Errorf("field SourceTarget not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SourceTarget) IsValid() error {
 	return nil
 }
 func (p *KeywordSearch) IsValid() error {
@@ -232,6 +240,27 @@ func (p *Filters) IsValid() error {
 	return nil
 }
 func (p *ExperimentTemplateFilter) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	if p.KeywordSearch != nil {
+		if err := p.KeywordSearch.IsValid(); err != nil {
+			return fmt.Errorf("field KeywordSearch not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExperimentFilterOption) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExperimentResultFilter) IsValid() error {
 	if p.Filters != nil {
 		if err := p.Filters.IsValid(); err != nil {
 			return fmt.Errorf("field Filters not valid, %w", err)

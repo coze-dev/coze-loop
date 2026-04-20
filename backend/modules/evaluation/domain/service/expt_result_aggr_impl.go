@@ -72,6 +72,21 @@ func NewExptAggrResultService(
 	}
 }
 
+// effectiveEvaluatorResultScoreForAggr 返回用于实验聚合统计的分数：Correction.Score 优先（非 nil 时），否则原始 Score。
+// 与 expt_result_impl.calculateWeightedScore、CorrectEvaluatorRecord 语义一致。
+func effectiveEvaluatorResultScoreForAggr(res *entity.EvaluatorResult) (float64, bool) {
+	if res == nil {
+		return 0, false
+	}
+	if res.Correction != nil && res.Correction.Score != nil {
+		return *res.Correction.Score, true
+	}
+	if res.Score != nil {
+		return *res.Score, true
+	}
+	return 0, false
+}
+
 func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, spaceID, experimentID int64) (err error) {
 	now := time.Now().Unix()
 	defer func() { e.metric.EmitCalculateExptAggrResult(spaceID, int64(entity.CreateAllFields), err != nil, now) }()
@@ -122,13 +137,14 @@ func (e *ExptAggrResultServiceImpl) CreateExptAggrResult(ctx context.Context, sp
 				if !ok || evalResult == nil {
 					continue
 				}
-				if evalResult.EvaluatorOutputData == nil ||
-					evalResult.EvaluatorOutputData.EvaluatorResult == nil ||
-					evalResult.EvaluatorOutputData.EvaluatorResult.Score == nil {
+				if evalResult.EvaluatorOutputData == nil {
 					continue
 				}
-
-				aggregatorGroup.Append(gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score))
+				score, hasScore := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
+				if !hasScore {
+					continue
+				}
+				aggregatorGroup.Append(score)
 			}
 		}
 	}
@@ -401,12 +417,12 @@ func (e *ExptAggrResultServiceImpl) UpdateExptAggrResult(ctx context.Context, pa
 
 	aggregatorGroup := NewAggregatorGroup(WithScoreDistributionAggregator())
 	for _, evalResult := range recordMap {
-		if evalResult.EvaluatorOutputData == nil || evalResult.EvaluatorOutputData.EvaluatorResult == nil {
+		if evalResult.EvaluatorOutputData == nil {
 			continue
 		}
-		score := gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Score)
-		if evalResult.EvaluatorOutputData.EvaluatorResult.Correction != nil {
-			score = gptr.Indirect(evalResult.EvaluatorOutputData.EvaluatorResult.Correction.Score)
+		score, ok := effectiveEvaluatorResultScoreForAggr(evalResult.EvaluatorOutputData.EvaluatorResult)
+		if !ok {
+			continue
 		}
 		aggregatorGroup.Append(score)
 	}

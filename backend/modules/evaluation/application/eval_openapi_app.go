@@ -14,6 +14,7 @@ import (
 
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
+	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -894,6 +895,81 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	return &openapi.ReportEvalTargetInvokeResultResponse{BaseResp: base.NewBaseResp()}, nil
 }
 
+func (e *EvalOpenAPIApplication) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetExperimentID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+	if req.GetItemID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_id is required"))
+	}
+	if len(req.GetFieldKeys()) == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("field_keys is required"))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Read), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	turnResults, err := e.resultSvc.GetExptItemTurnResults(ctx, req.GetExperimentID(), req.GetItemID(), req.GetWorkspaceID(), nil)
+	if err != nil {
+		return nil, err
+	}
+	if len(turnResults) == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("no turn result found for the given experiment_id and item_id"))
+	}
+
+	targetRecordID := turnResults[0].TargetResultID
+	if targetRecordID == 0 {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found for the given experiment result"))
+	}
+
+	record, err := e.targetSvc.GetRecordByID(ctx, req.GetWorkspaceID(), targetRecordID)
+	if err != nil {
+		return nil, err
+	}
+	if record == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("eval target record not found"))
+	}
+
+	if err := e.targetSvc.LoadRecordOutputFields(ctx, record, req.GetFieldKeys()); err != nil {
+		return nil, err
+	}
+
+	fieldContents := make(map[string]*openapiCommon.Content)
+	if record.EvalTargetOutputData != nil && record.EvalTargetOutputData.OutputFields != nil {
+		keySet := make(map[string]struct{}, len(req.GetFieldKeys()))
+		for _, k := range req.GetFieldKeys() {
+			keySet[k] = struct{}{}
+		}
+		for k, c := range record.EvalTargetOutputData.OutputFields {
+			if _, ok := keySet[k]; ok {
+				fieldContents[k] = common.OpenAPIContentDO2DTO(c)
+			}
+		}
+	}
+
+	return &openapi.GetEvalTargetOutputFieldContentOApiResponse{
+		Data: &openapi.GetEvalTargetOutputFieldContentOpenAPIData{
+			FieldContents: fieldContents,
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -933,7 +1009,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		SpaceID:         req.GetWorkspaceID(),
 		EvaluationSetID: req.GetEvalSetParam().GetEvalSetID(),
 		PageSize:        gptr.Of(int32(1)),
-		Versions:        []string{req.GetEvalSetParam().GetVersion()},
+		VersionLike:     req.GetEvalSetParam().Version,
 	})
 	if err != nil {
 		return nil, err
@@ -1024,7 +1100,63 @@ func (e *EvalOpenAPIApplication) GetExperimentsOApi(ctx context.Context, req *op
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest) (r *openapi.ListExperimentsOApiResponse, err error) {
+	logs.CtxInfo(ctx, "ListExperimentsOApi request: %v", json.Jsonify(req))
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if !req.IsSetWorkspaceID() || req.GetWorkspaceID() == 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	filterOpt, err := experiment_convertor.OpenAPIExperimentFilterOptionDTO2Domain(req.GetFilterOption())
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
+	innerReq := exptpb.NewListExperimentsRequest()
+	innerReq.WorkspaceID = req.GetWorkspaceID()
+	if req.IsSetPageNumber() {
+		innerReq.SetPageNumber(req.PageNumber)
+	}
+	if req.IsSetPageSize() {
+		innerReq.SetPageSize(req.PageSize)
+	}
+	if filterOpt != nil {
+		innerReq.SetFilterOption(filterOpt)
+	}
+	if orderBys := common.OpenAPIOrderBysToDomainCommonOrderBys(req.GetOrderBys()); len(orderBys) > 0 {
+		innerReq.SetOrderBys(orderBys)
+	}
+	logs.CtxInfo(ctx, "ListExperimentsOApi ListExperiments innerReq: %v", json.Jsonify(innerReq))
+	resp, err := e.experimentApp.ListExperiments(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	outExpts := make([]*experiment.Experiment, 0, len(resp.GetExperiments()))
+	for _, ex := range resp.GetExperiments() {
+		outExpts = append(outExpts, experiment_convertor.DomainExperimentDTO2OpenAPI(ex))
+	}
+
+	var total *int64
+	if resp.IsSetTotal() {
+		total = gptr.Of(int64(resp.GetTotal()))
+	}
+	return &openapi.ListExperimentsOApiResponse{
+		Data: &openapi.ListExperimentsOpenAPIData{
+			Experiments: outExpts,
+			Total:       total,
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest) (r *openapi.ListExperimentResultOApiResponse, err error) {
+	logs.CtxInfo(ctx, "ListExperimentResultOApi request: %v", json.Jsonify(req))
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
 		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
@@ -1044,7 +1176,54 @@ func (e *EvalOpenAPIApplication) ListExperimentResultOApi(ctx context.Context, r
 		Page:           entity.NewPage(int(req.GetPageNum()), int(req.GetPageSize())),
 		UseAccelerator: true,
 	}
-
+	exptID := req.GetExperimentID()
+	if req.IsSetFilter() && req.GetFilter() != nil {
+		openAPIFilter := req.GetFilter()
+		domainFilters, err := experiment_convertor.OpenAPIExperimentFiltersDTO2Domain(openAPIFilter.GetFilters())
+		if err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+		domainKeywordSearch, err := experiment_convertor.OpenAPIKeywordSearchDTO2Domain(openAPIFilter.GetKeywordSearch())
+		if err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+		hasFilters := domainFilters != nil && len(domainFilters.FilterConditions) > 0
+		hasKeywordSearch := domainKeywordSearch != nil && len(domainKeywordSearch.FilterFields) > 0
+		if hasFilters || hasKeywordSearch {
+			// keyword_search 必须走 accelerator；普通 filters 中若含 TurnRunState/EvaluatorScore 以外的字段也需 accelerator。
+			needAccelerator := hasKeywordSearch || experiment_convertor.ExperimentResultDomainFiltersNeedAccelerator(domainFilters)
+			if needAccelerator {
+				exptFilter := &domain_expt.ExperimentFilter{
+					Filters:       domainFilters,
+					KeywordSearch: domainKeywordSearch,
+				}
+				// accelerator 内部会校验 Filters.LogicOp==And，缺省场景下补齐，避免仅传 keyword_search 时校验失败。
+				if exptFilter.Filters == nil {
+					exptFilter.Filters = &domain_expt.Filters{
+						LogicOp: domain_expt.FilterLogicOpPtr(domain_expt.FilterLogicOp_And),
+					}
+				}
+				acc, err := experiment_convertor.ConvertExptTurnResultFilterAccelerator(exptFilter)
+				if err != nil {
+					return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+				}
+				param.FilterAccelerators = map[int64]*entity.ExptTurnResultFilterAccelerator{
+					exptID: acc,
+				}
+				param.UseAccelerator = true
+			} else {
+				f, err := experiment_convertor.ConvertExptTurnResultFilter(domainFilters)
+				if err != nil {
+					return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+				}
+				param.Filters = map[int64]*entity.ExptTurnResultFilter{
+					exptID: f,
+				}
+				param.UseAccelerator = false
+			}
+		}
+	}
+	logs.CtxInfo(ctx, "ListExperimentResultOApi MGetExperimentResult param: %v", json.Jsonify(param))
 	result, err := e.resultSvc.MGetExperimentResult(ctx, param)
 	if err != nil {
 		return nil, err

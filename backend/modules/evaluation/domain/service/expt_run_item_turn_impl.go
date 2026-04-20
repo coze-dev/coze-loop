@@ -520,6 +520,15 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 	res := &entity.EvaluatorInputData{InputFields: make(map[string]*entity.Content)}
 	switch evaluatorType {
 	case entity.EvaluatorTypeCode:
+		// Code 评估器兼容"不填字段映射"场景：
+		//   - eval_set 侧：未配置 mapping 时，把评测集该轮次全部字段透传到 evaluate_dataset_fields；
+		//   - target 侧：buildFieldsFromSource 内部已对 Code 类型短路透传全部 target 输出到 fromTarget。
+		if len(evalSetFieldConfs) == 0 {
+			fromEvalSet, err = e.getAllEvalSetFields(ctx, spaceID, evalSetTurn)
+			if err != nil {
+				return nil, err
+			}
+		}
 		res.EvaluateDatasetFields = fromEvalSet
 		res.EvaluateTargetOutputFields = fromTarget
 	case entity.EvaluatorTypeCustomRPC:
