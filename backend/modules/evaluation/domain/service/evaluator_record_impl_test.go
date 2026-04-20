@@ -458,13 +458,14 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 		assert.Error(t, err)
 	})
 
-	t.Run("实验未启用加权得分，直接返回", func(t *testing.T) {
+	t.Run("未启用配置权重时仍等权重算并回写", func(t *testing.T) {
 		rec := &entity.EvaluatorRecord{
-			ID:           evaluatorRecordID,
-			SpaceID:      spaceID,
-			ExperimentID: exptID,
-			ItemID:       itemID,
-			TurnID:       turnID,
+			ID:                 evaluatorRecordID,
+			SpaceID:            spaceID,
+			ExperimentID:       exptID,
+			ItemID:             itemID,
+			TurnID:             turnID,
+			EvaluatorVersionID: 201,
 		}
 
 		turnResult := &entity.ExptTurnResult{
@@ -487,20 +488,38 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 			},
 		}
 
+		refs := []*entity.ExptTurnEvaluatorResultRef{
+			{ExptTurnResultID: 1, EvaluatorResultID: evaluatorRecordID},
+		}
+		score := 0.75
+		records := []*entity.EvaluatorRecord{
+			{
+				ID:                 evaluatorRecordID,
+				EvaluatorVersionID: 201,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{Score: &score},
+				},
+			},
+		}
+
 		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
 		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return(refs, nil)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{evaluatorRecordID}, false, false).Return(records, nil)
+		mockExptTurnResultRepo.EXPECT().UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil)
 
 		err := s.recalculateWeightedScoreForTurn(ctx, rec)
 		assert.NoError(t, err)
 	})
 
-	t.Run("实验配置为nil，直接返回", func(t *testing.T) {
+	t.Run("实验EvalConf为nil时仍等权重算并回写", func(t *testing.T) {
 		rec := &entity.EvaluatorRecord{
-			ID:           evaluatorRecordID,
-			SpaceID:      spaceID,
-			ExperimentID: exptID,
-			ItemID:       itemID,
-			TurnID:       turnID,
+			ID:                 evaluatorRecordID,
+			SpaceID:            spaceID,
+			ExperimentID:       exptID,
+			ItemID:             itemID,
+			TurnID:             turnID,
+			EvaluatorVersionID: 201,
 		}
 
 		turnResult := &entity.ExptTurnResult{
@@ -517,8 +536,25 @@ func TestEvaluatorRecordServiceImpl_recalculateWeightedScoreForTurn(t *testing.T
 			EvalConf: nil,
 		}
 
+		refs := []*entity.ExptTurnEvaluatorResultRef{
+			{ExptTurnResultID: 1, EvaluatorResultID: evaluatorRecordID},
+		}
+		score := 0.66
+		records := []*entity.EvaluatorRecord{
+			{
+				ID:                 evaluatorRecordID,
+				EvaluatorVersionID: 201,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{Score: &score},
+				},
+			},
+		}
+
 		mockExptTurnResultRepo.EXPECT().Get(ctx, spaceID, exptID, itemID, turnID).Return(turnResult, nil)
 		mockExptRepo.EXPECT().GetByID(ctx, exptID, spaceID).Return(expt, nil)
+		mockExptTurnResultRepo.EXPECT().BatchGetTurnEvaluatorResultRef(ctx, spaceID, []int64{1}).Return(refs, nil)
+		mockEvaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(ctx, []int64{evaluatorRecordID}, false, false).Return(records, nil)
+		mockExptTurnResultRepo.EXPECT().UpdateTurnResults(ctx, exptID, gomock.Any(), spaceID, gomock.Any()).Return(nil)
 
 		err := s.recalculateWeightedScoreForTurn(ctx, rec)
 		assert.NoError(t, err)

@@ -233,6 +233,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EndedAt = dto.EndTime
 	result.ExptStats = DomainExperimentStatsDTO2OpenAPI(dto.ExptStats)
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
+	result.EnableExtractTrajectory = dto.EnableExtractTrajectory
 	return result
 }
 
@@ -423,6 +424,8 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		if evaluatorMappings := openAPIEvaluatorFieldMappingsDO2DTO(experiment.EvalConf.ConnectorConf.EvaluatorsConf, experiment.Evaluators); len(evaluatorMappings) > 0 {
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
+
+		result.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 	}
 
 	if experiment.Target != nil {
@@ -897,7 +900,10 @@ func openAPITargetOutputDataDO2DTO(data *entity.EvalTargetOutputData) *openapiEv
 	if data.TimeConsumingMS != nil {
 		res.TimeConsumingMs = data.TimeConsumingMS
 	}
-	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil {
+	if len(data.Ext) > 0 {
+		res.Ext = data.Ext
+	}
+	if len(res.OutputFields) == 0 && res.EvalTargetUsage == nil && res.EvalTargetRunError == nil && res.TimeConsumingMs == nil && len(res.Ext) == 0 {
 		return nil
 	}
 	return res
@@ -1221,15 +1227,20 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 		return nil
 	}
 
+	typ := targetDO.EvalTargetType
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
+	}
+
 	targetDTO := &openapiEvalTarget.EvalTarget{
 		ID:             gptr.Of(targetDO.ID),
 		SourceTargetID: gptr.Of(targetDO.SourceTargetID),
 	}
-	if targetDO.EvalTargetType != 0 {
-		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(targetDO.EvalTargetType))
+	if typ != 0 {
+		targetDTO.EvalTargetType = gptr.Of(convertEntityEvalTargetTypeToOpenAPI(typ))
 	}
 	if targetDO.EvalTargetVersion != nil {
-		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, targetDO.EvalTargetType)
+		targetDTO.EvalTargetVersion = OpenAPIEvalTargetVersionDO2DTO(targetDO.EvalTargetVersion, typ)
 	}
 	targetDTO.BaseInfo = common.OpenAPIBaseInfoDO2DTO(targetDO.BaseInfo)
 	return targetDTO
@@ -1238,6 +1249,11 @@ func OpenAPIEvalTargetDO2DTO(targetDO *entity.EvalTarget) *openapiEvalTarget.Eva
 func OpenAPIEvalTargetVersionDO2DTO(versionDO *entity.EvalTargetVersion, typ entity.EvalTargetType) *openapiEvalTarget.EvalTargetVersion {
 	if versionDO == nil {
 		return nil
+	}
+
+	// 与 Thrift 侧一致：仅记录型（*Online）按对应基础类型分支构建内容
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
 	}
 
 	versionDTO := &openapiEvalTarget.EvalTargetVersion{
@@ -1290,6 +1306,9 @@ func mapEntitySubmitStatusToOpenAPI(status entity.SubmitStatus) openapiEvalTarge
 }
 
 func convertEntityEvalTargetTypeToOpenAPI(typ entity.EvalTargetType) openapiEvalTarget.EvalTargetType {
+	if base, ok := typ.RecordOnlyTypeToBaseType(); ok {
+		typ = base
+	}
 	switch typ {
 	case entity.EvalTargetTypeCozeBot:
 		return openapiEvalTarget.EvalTargetTypeCozeBot
@@ -1362,14 +1381,15 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		return nil
 	}
 
+	metaDTO := &openapiExperiment.ExptTemplateMeta{
+		ID:          gptr.Of(template.Meta.ID),
+		WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
+		Name:        gptr.Of(template.Meta.Name),
+		Description: gptr.Of(template.Meta.Desc),
+		ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
+	}
 	dto := &openapiExperiment.ExptTemplate{
-		Meta: &openapiExperiment.ExptTemplateMeta{
-			ID:          gptr.Of(template.Meta.ID),
-			WorkspaceID: gptr.Of(template.Meta.WorkspaceID),
-			Name:        gptr.Of(template.Meta.Name),
-			Description: gptr.Of(template.Meta.Desc),
-			ExptType:    OpenAPIExptTypeDO2DTO(template.Meta.ExptType),
-		},
+		Meta:     metaDTO,
 		BaseInfo: common.OpenAPIBaseInfoDO2DTO(template.BaseInfo),
 	}
 
@@ -1480,6 +1500,10 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	}
 
 	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
+	if template.TemplateConf != nil {
+		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
 	return dto
 }
 
@@ -1680,6 +1704,9 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 				},
 			},
 		}
+		if req.IsSetEnableExtractTrajectory() {
+			param.TemplateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
+		}
 		tc := req.GetTripleConfig()
 		for i, em := range fmc.EvaluatorFieldMapping {
 			if em == nil {
@@ -1731,6 +1758,12 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 		}
 	}
 
+	if req.IsSetEnableExtractTrajectory() && param.TemplateConf == nil {
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			EnableExtractTrajectory: gptr.Of(req.GetEnableExtractTrajectory()),
+		}
+	}
+
 	return param, nil
 }
 
@@ -1773,6 +1806,9 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 					IngressConf:     toTargetFieldMappingDOForTemplateV2(fmc.TargetFieldMapping, rtp),
 				},
 			},
+		}
+		if req.IsSetEnableExtractTrajectory() {
+			param.TemplateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
 		}
 		tc := req.GetTripleConfig()
 		for i, em := range fmc.EvaluatorFieldMapping {
@@ -1822,6 +1858,12 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 				param.TemplateConf.ConnectorConf.EvaluatorsConf = &entity.EvaluatorsConf{}
 			}
 			param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf = append(param.TemplateConf.ConnectorConf.EvaluatorsConf.EvaluatorConf, ec)
+		}
+	}
+
+	if req.IsSetEnableExtractTrajectory() && param.TemplateConf == nil {
+		param.TemplateConf = &entity.ExptTemplateConfiguration{
+			EnableExtractTrajectory: gptr.Of(req.GetEnableExtractTrajectory()),
 		}
 	}
 

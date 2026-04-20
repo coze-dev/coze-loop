@@ -859,7 +859,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
-			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
+			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1), gomock.Any()).
 			Return(nil)
 
 		app := &experimentApplication{
@@ -895,7 +895,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		mockTemplateManager.EXPECT().
-			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1)).
+			UpdateExptInfo(gomock.Any(), templateID, workspaceID, exptID, entity.ExptStatus_Pending, int64(1), gomock.Any()).
 			Return(errors.New("update error"))
 
 		app := &experimentApplication{
@@ -931,7 +931,7 @@ func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 		mockManager.EXPECT().LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		// 不应该调用 UpdateExptInfo
-		mockTemplateManager.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+		mockTemplateManager.EXPECT().UpdateExptInfo(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 
 		app := &experimentApplication{
 			manager:            mockManager,
@@ -1631,7 +1631,7 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 						&entity.Session{},
 					).Return(nil)
 
-				// 模拟获取更新后的实验
+				// 模拟获取更新后的实验详情（写库读一致）
 				updatedExpt := &entity.Experiment{
 					ID:          validExptID,
 					SpaceID:     validWorkspaceID,
@@ -1641,7 +1641,7 @@ func TestExperimentApplication_UpdateExperiment(t *testing.T) {
 					CreatedBy:   validUserID,
 				}
 				mockManager.EXPECT().
-					Get(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
+					GetDetail(gomock.Any(), validExptID, validWorkspaceID, &entity.Session{}).
 					Return(updatedExpt, nil)
 
 				// 模拟填充用户信息
@@ -3434,7 +3434,8 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			PageNumber:  gptr.Of(int32(1)),
 			PageSize:    gptr.Of(int32(10)),
 			OrderBys: []*common.OrderBy{
-				{Field: gptr.Of("name"), IsAsc: gptr.Of(true)},
+				// 仅白名单字段会生效（entity.OrderBySet）；name 等未开放字段会被忽略并回落默认排序
+				{Field: gptr.Of(entity.OrderByCreatedAt), IsAsc: gptr.Of(true)},
 			},
 		}
 
@@ -3444,7 +3445,7 @@ func TestExperimentApplication_ListExperimentTemplates_FilterOptionAndDefaultSor
 			DoAndReturn(func(_ context.Context, page, size int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
 				// 验证使用指定的排序
 				assert.Len(t, orderBys, 1)
-				assert.Equal(t, "name", *orderBys[0].Field)
+				assert.Equal(t, entity.OrderByCreatedAt, *orderBys[0].Field)
 				assert.True(t, *orderBys[0].IsAsc)
 				return []*entity.ExptTemplate{}, int64(0), nil
 			})
@@ -6531,4 +6532,356 @@ func TestExperimentApplication_BatchGetExperimentResult_ExtraOutputURIErrorSwall
 			}
 		})
 	}
+}
+
+func Test_hasDuplicates(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []int64
+		want bool
+	}{
+		{name: "empty slice", in: []int64{}, want: false},
+		{name: "single element", in: []int64{1}, want: false},
+		{name: "no duplicates", in: []int64{1, 2, 3, 4}, want: false},
+		{name: "has duplicates", in: []int64{1, 2, 3, 2}, want: true},
+		{name: "all same", in: []int64{5, 5, 5}, want: true},
+		{name: "duplicate at start", in: []int64{1, 1, 2, 3}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, hasDuplicates(tt.in))
+		})
+	}
+}
+
+func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+
+	validWorkspaceID := int64(123)
+	validExptID := int64(456)
+	validUserID := int64(789)
+	validRunID := int64(999)
+	itemRetryNum := 0
+
+	baseExpt := &entity.Experiment{
+		ID:        validExptID,
+		SpaceID:   validWorkspaceID,
+		CreatedBy: strconv.FormatInt(validUserID, 10),
+		EvalConf:  &entity.EvaluationConfiguration{ItemRetryNum: &itemRetryNum},
+	}
+
+	app := NewExperimentApplication(
+		nil, nil, mockManager, nil, nil, mockIDGen, nil, mockAuth,
+		nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	t.Run("auth fails", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(errors.New("no permission"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("RetryItems mode - success", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRetryItemsRun(gomock.Any(), validExptID, entity.EvaluationModeRetryItems, validWorkspaceID, []int64{1, 2}, gomock.Any()).Return(validRunID, false, nil)
+		mockManager.EXPECT().RetryItems(gomock.Any(), validExptID, validRunID, validWorkspaceID, itemRetryNum, []int64{1, 2}, gomock.Any(), gomock.Any()).Return(nil)
+
+		resp, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryTargetItems),
+			ItemIds:     []int64{1, 2},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, validRunID, resp.GetRunID())
+	})
+
+	t.Run("RetryItems mode - already retried", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRetryItemsRun(gomock.Any(), validExptID, entity.EvaluationModeRetryItems, validWorkspaceID, []int64{1}, gomock.Any()).Return(validRunID, true, nil)
+		// RetryItems should NOT be called since retried=true
+
+		resp, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryTargetItems),
+			ItemIds:     []int64{1},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, validRunID, resp.GetRunID())
+	})
+
+	t.Run("RetryItems mode - LogRetryItemsRun error", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRetryItemsRun(gomock.Any(), validExptID, entity.EvaluationModeRetryItems, validWorkspaceID, gomock.Any(), gomock.Any()).Return(int64(0), false, errors.New("log error"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryTargetItems),
+			ItemIds:     []int64{1},
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("RetryItems mode - RetryItems error", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().LogRetryItemsRun(gomock.Any(), validExptID, entity.EvaluationModeRetryItems, validWorkspaceID, gomock.Any(), gomock.Any()).Return(validRunID, false, nil)
+		mockManager.EXPECT().RetryItems(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("retry error"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryTargetItems),
+			ItemIds:     []int64{1},
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("default mode - GenID error", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("gen id error"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryAll),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("default mode - LogRun error", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeRetryAll, validWorkspaceID, gomock.Any(), gomock.Any()).Return(errors.New("log run error"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryAll),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("default mode - Run error", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
+		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
+		mockIDGen.EXPECT().GenID(gomock.Any()).Return(validRunID, nil)
+		mockManager.EXPECT().LogRun(gomock.Any(), validExptID, validRunID, entity.EvaluationModeRetryAll, validWorkspaceID, gomock.Any(), gomock.Any()).Return(nil)
+		mockManager.EXPECT().Run(gomock.Any(), validExptID, validRunID, validWorkspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("run error"))
+
+		_, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
+			WorkspaceID: gptr.Of(validWorkspaceID),
+			ExptID:      gptr.Of(validExptID),
+			RetryMode:   expt.ExptRetryModePtr(expt.ExptRetryMode_RetryAll),
+		})
+		assert.Error(t, err)
+	})
+}
+
+func TestExperimentApplication_ListExperimentTemplates_MoreBranches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockTemplateManager := servicemocks.NewMockIExptTemplateManager(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockUserInfo := userinfomocks.NewMockUserInfoService(ctrl)
+	mockEvalTargetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+
+	workspaceID := int64(1001)
+
+	app := NewExperimentApplication(
+		nil, nil, nil, nil, nil, nil, nil,
+		mockAuth, mockUserInfo, mockEvalTargetSvc, nil, nil, nil, nil, nil, nil, mockTemplateManager, nil,
+	)
+
+	t.Run("auth error", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+
+		_, err := app.ListExperimentTemplates(context.Background(), &exptpb.ListExperimentTemplatesRequest{
+			WorkspaceID: workspaceID,
+			PageNumber:  gptr.Of(int32(1)),
+			PageSize:    gptr.Of(int32(10)),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("online expt template filter routes to ListOnline", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockTemplateManager.EXPECT().
+			ListOnline(gomock.Any(), int32(1), int32(10), workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, page, size int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+				return []*entity.ExptTemplate{}, int64(0), nil
+			})
+
+		// Build a filter that includes ExptType_Online to trigger the online branch
+		resp, err := app.ListExperimentTemplates(context.Background(), &exptpb.ListExperimentTemplatesRequest{
+			WorkspaceID: workspaceID,
+			PageNumber:  gptr.Of(int32(1)),
+			PageSize:    gptr.Of(int32(10)),
+			FilterOption: &expt.ExperimentTemplateFilter{
+				Filters: &expt.Filters{
+					LogicOp: gptr.Of(expt.FilterLogicOp_And),
+					FilterConditions: []*expt.FilterCondition{
+						{
+							Field:    &expt.FilterField{FieldType: expt.FieldType_ExptType},
+							Operator: expt.FilterOperatorType_In,
+							Value:    "2",
+						},
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, int32(0), resp.GetTotal())
+	})
+
+	t.Run("ListOnline error", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockTemplateManager.EXPECT().
+			ListOnline(gomock.Any(), gomock.Any(), gomock.Any(), workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), errors.New("list online error"))
+
+		_, err := app.ListExperimentTemplates(context.Background(), &exptpb.ListExperimentTemplatesRequest{
+			WorkspaceID: workspaceID,
+			PageNumber:  gptr.Of(int32(1)),
+			PageSize:    gptr.Of(int32(10)),
+			FilterOption: &expt.ExperimentTemplateFilter{
+				Filters: &expt.Filters{
+					LogicOp: gptr.Of(expt.FilterLogicOp_And),
+					FilterConditions: []*expt.FilterCondition{
+						{
+							Field:    &expt.FilterField{FieldType: expt.FieldType_ExptType},
+							Operator: expt.FilterOperatorType_In,
+							Value:    "2",
+						},
+					},
+				},
+			},
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("offline List error", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockTemplateManager.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(nil, int64(0), errors.New("list error"))
+
+		_, err := app.ListExperimentTemplates(context.Background(), &exptpb.ListExperimentTemplatesRequest{
+			WorkspaceID: workspaceID,
+			PageNumber:  gptr.Of(int32(1)),
+			PageSize:    gptr.Of(int32(10)),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("nil OrderBy in list is skipped", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockTemplateManager.EXPECT().
+			List(gomock.Any(), gomock.Any(), gomock.Any(), workspaceID, gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(_ context.Context, page, size int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
+				// nil OrderBy should be skipped, invalid field should be skipped, only default sort remains
+				assert.Len(t, orderBys, 1)
+				assert.Equal(t, entity.OrderByUpdatedAt, *orderBys[0].Field)
+				return []*entity.ExptTemplate{}, int64(0), nil
+			})
+
+		_, err := app.ListExperimentTemplates(context.Background(), &exptpb.ListExperimentTemplatesRequest{
+			WorkspaceID: workspaceID,
+			PageNumber:  gptr.Of(int32(1)),
+			PageSize:    gptr.Of(int32(10)),
+			OrderBys: []*common.OrderBy{
+				nil, // nil, should be skipped
+				{Field: gptr.Of("invalid_field"), IsAsc: gptr.Of(true)}, // invalid field, should be skipped
+			},
+		})
+		assert.NoError(t, err)
+	})
+}
+
+func TestExperimentApplication_BatchGetExperimentResult_MoreBranches(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+
+	validWorkspaceID := int64(123)
+	baselineExptID := int64(100)
+	baselineSpaceID := int64(999)
+
+	app := &experimentApplication{
+		resultSvc: mockResultSvc,
+		auth:      mockAuth,
+		manager:   mockManager,
+	}
+
+	t.Run("with BaselineExperimentID - uses baseline space for auth", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), baselineExptID, validWorkspaceID, gomock.Any()).Return(&entity.Experiment{
+			ID:      baselineExptID,
+			SpaceID: baselineSpaceID,
+		}, nil)
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, param *rpc.AuthorizationParam) error {
+			assert.Equal(t, strconv.FormatInt(baselineSpaceID, 10), param.ObjectID)
+			assert.Equal(t, baselineSpaceID, param.SpaceID)
+			return nil
+		})
+		mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{}, nil)
+
+		resp, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
+			WorkspaceID:          validWorkspaceID,
+			ExperimentIds:        []int64{baselineExptID},
+			BaselineExperimentID: gptr.Of(baselineExptID),
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
+	t.Run("with BaselineExperimentID - Get fails", func(t *testing.T) {
+		mockManager.EXPECT().Get(gomock.Any(), baselineExptID, validWorkspaceID, gomock.Any()).Return(nil, errors.New("not found"))
+
+		_, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
+			WorkspaceID:          validWorkspaceID,
+			BaselineExperimentID: gptr.Of(baselineExptID),
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("auth fails", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errors.New("forbidden"))
+
+		_, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
+			WorkspaceID: validWorkspaceID,
+		})
+		assert.Error(t, err)
+	})
+
+	t.Run("MGetExperimentResult fails", func(t *testing.T) {
+		mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+		mockResultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+
+		_, err := app.BatchGetExperimentResult_(context.Background(), &exptpb.BatchGetExperimentResultRequest{
+			WorkspaceID:   validWorkspaceID,
+			ExperimentIds: []int64{1},
+		})
+		assert.Error(t, err)
+	})
 }

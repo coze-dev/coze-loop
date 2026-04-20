@@ -30,6 +30,7 @@ func TaskDO2PO(task *entity.ObservabilityTask) *model.ObservabilityTask {
 		CreatedBy:             task.CreatedBy,
 		UpdatedBy:             task.UpdatedBy,
 		TaskSource:            task.TaskSource,
+		WorkflowID:            task.WorkflowID,
 	}
 }
 
@@ -52,6 +53,7 @@ func TaskPO2DO(task *model.ObservabilityTask) *entity.ObservabilityTask {
 		CreatedBy:             task.CreatedBy,
 		UpdatedBy:             task.UpdatedBy,
 		TaskSource:            task.TaskSource,
+		WorkflowID:            task.WorkflowID,
 	}
 }
 

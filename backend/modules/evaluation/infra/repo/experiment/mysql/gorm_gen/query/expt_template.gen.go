@@ -37,6 +37,7 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 	_exptTemplate.TargetType = field.NewInt64(tableName, "target_type")
 	_exptTemplate.TargetVersionID = field.NewInt64(tableName, "target_version_id")
 	_exptTemplate.ExptType = field.NewInt32(tableName, "expt_type")
+	_exptTemplate.CronActivate = field.NewBool(tableName, "cron_activate")
 	_exptTemplate.TemplateConf = field.NewBytes(tableName, "template_conf")
 	_exptTemplate.ExptInfo = field.NewBytes(tableName, "expt_info")
 	_exptTemplate.CreatedBy = field.NewString(tableName, "created_by")
@@ -44,6 +45,7 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 	_exptTemplate.CreatedAt = field.NewTime(tableName, "created_at")
 	_exptTemplate.UpdatedAt = field.NewTime(tableName, "updated_at")
 	_exptTemplate.DeletedAt = field.NewField(tableName, "deleted_at")
+	_exptTemplate.Visibility = field.NewInt32(tableName, "visibility")
 
 	_exptTemplate.fillFieldMap()
 
@@ -65,6 +67,7 @@ type exptTemplate struct {
 	TargetType       field.Int64  // 评估对象类型
 	TargetVersionID  field.Int64  // 评估对象默认版本 id
 	ExptType         field.Int32  // 实验类型，offline:1,online:2...
+	CronActivate     field.Bool   // 是否开启定时触发
 	TemplateConf     field.Bytes  // 实验模板配置，包含评估器列表、字段映射、加权配置、默认并发及调度等，json
 	ExptInfo         field.Bytes  // 实验运行状态，包含创建实验数量，最后一次实验执行状态，json
 	CreatedBy        field.String // 创建人
@@ -72,6 +75,7 @@ type exptTemplate struct {
 	CreatedAt        field.Time   // 创建时间
 	UpdatedAt        field.Time   // 更新时间
 	DeletedAt        field.Field  // 删除时间
+	Visibility       field.Int32  // 可见性，默认0-可见，1-隐藏
 
 	fieldMap map[string]field.Expr
 }
@@ -98,6 +102,7 @@ func (e *exptTemplate) updateTableName(table string) *exptTemplate {
 	e.TargetType = field.NewInt64(table, "target_type")
 	e.TargetVersionID = field.NewInt64(table, "target_version_id")
 	e.ExptType = field.NewInt32(table, "expt_type")
+	e.CronActivate = field.NewBool(table, "cron_activate")
 	e.TemplateConf = field.NewBytes(table, "template_conf")
 	e.ExptInfo = field.NewBytes(table, "expt_info")
 	e.CreatedBy = field.NewString(table, "created_by")
@@ -105,6 +110,7 @@ func (e *exptTemplate) updateTableName(table string) *exptTemplate {
 	e.CreatedAt = field.NewTime(table, "created_at")
 	e.UpdatedAt = field.NewTime(table, "updated_at")
 	e.DeletedAt = field.NewField(table, "deleted_at")
+	e.Visibility = field.NewInt32(table, "visibility")
 
 	e.fillFieldMap()
 
@@ -133,7 +139,7 @@ func (e *exptTemplate) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (e *exptTemplate) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 17)
+	e.fieldMap = make(map[string]field.Expr, 19)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["name"] = e.Name
@@ -144,6 +150,7 @@ func (e *exptTemplate) fillFieldMap() {
 	e.fieldMap["target_type"] = e.TargetType
 	e.fieldMap["target_version_id"] = e.TargetVersionID
 	e.fieldMap["expt_type"] = e.ExptType
+	e.fieldMap["cron_activate"] = e.CronActivate
 	e.fieldMap["template_conf"] = e.TemplateConf
 	e.fieldMap["expt_info"] = e.ExptInfo
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -151,6 +158,7 @@ func (e *exptTemplate) fillFieldMap() {
 	e.fieldMap["created_at"] = e.CreatedAt
 	e.fieldMap["updated_at"] = e.UpdatedAt
 	e.fieldMap["deleted_at"] = e.DeletedAt
+	e.fieldMap["visibility"] = e.Visibility
 }
 
 func (e exptTemplate) clone(db *gorm.DB) exptTemplate {

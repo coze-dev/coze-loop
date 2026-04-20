@@ -27,7 +27,9 @@ import {
   AutoFixPathPlugin,
   IgnoreStructFiledPlugin,
   AutoFixDuplicateIncludesPlugin,
+  AutoFixDuplicateNamespacePlugin,
   CommentFormatPlugin,
+  BannerPlugin,
 } from './plugin';
 import { type Contexts, HOOK } from './context';
 
@@ -41,6 +43,7 @@ export class ClientGenerator {
   private output: IGentsRes = new Map();
   static PLUGIN_PRIORITY = 0;
   private processFile = new Set<string>();
+
   constructor(options: Options) {
     this.entries = options.entries.map(i => path.resolve(options.idlRoot, i));
     this.options = options;
@@ -50,6 +53,8 @@ export class ClientGenerator {
       new AutoFixPathPlugin(),
       new CommentFormatPlugin(),
       new AutoFixDuplicateIncludesPlugin(),
+      new AutoFixDuplicateNamespacePlugin(),
+      new BannerPlugin({ banner: options.banner }),
       new AdapterPlugin(options),
       new MetaPlugin(options),
       new IgnoreStructFiledPlugin({ filter: ignoreField }),

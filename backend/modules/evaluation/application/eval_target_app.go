@@ -5,9 +5,13 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/bytedance/gg/gmap"
 	"github.com/bytedance/gg/gptr"
@@ -28,6 +32,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var _ evaluation.EvalTargetService = &EvalTargetApplicationImpl{}
@@ -61,6 +66,14 @@ func NewEvalTargetHandlerImpl(
 	return evalTargetHandler
 }
 
+// resolveOperatorType 仅记录型映射到 base 类型以复用 operator，其他类型原样返回
+func resolveOperatorType(targetType entity.EvalTargetType) entity.EvalTargetType {
+	if baseType, ok := targetType.RecordOnlyTypeToBaseType(); ok {
+		return baseType
+	}
+	return targetType
+}
+
 func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request *eval_target.CreateEvalTargetRequest) (r *eval_target.CreateEvalTargetResponse, err error) {
 	// 校验参数是否为空
 	if request == nil {
@@ -88,7 +101,8 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 	opts = append(opts, entity.WithCozeBotPublishVersion(request.Param.BotPublishVersion),
 		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())),
 		entity.WithRegion(request.Param.Region),
-		entity.WithEnv(request.Param.Env))
+		entity.WithEnv(request.Param.Env),
+		entity.WithOperationInstruction(request.Param.OperationInstruction))
 	if request.GetParam().CustomEvalTarget != nil {
 		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 			ID:        request.GetParam().GetCustomEvalTarget().ID,
@@ -242,10 +256,11 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargets(ctx context.Context, re
 		KeyWord:    request.Name,
 		TargetType: entity.EvalTargetType(request.GetTargetType()),
 	}
-	if e.typedOperators[param.TargetType] == nil {
+	opType := resolveOperatorType(param.TargetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, nextCursor, hasMore, err = e.typedOperators[param.TargetType].ListSource(ctx, param)
+	res, nextCursor, hasMore, err = e.typedOperators[opType].ListSource(ctx, param)
 	if err != nil {
 		return nil, err
 	}
@@ -288,10 +303,11 @@ func (e EvalTargetApplicationImpl) ListSourceEvalTargetVersions(ctx context.Cont
 		SourceTargetID: request.SourceTargetID,
 		TargetType:     entity.EvalTargetType(request.GetTargetType()),
 	}
-	if e.typedOperators[param.TargetType] == nil {
+	opType := resolveOperatorType(param.TargetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, nextCursor, hasMore, err = e.typedOperators[param.TargetType].ListSourceVersion(ctx, param)
+	res, nextCursor, hasMore, err = e.typedOperators[opType].ListSourceVersion(ctx, param)
 	if err != nil {
 		return nil, err
 	}
@@ -475,11 +491,12 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 	if err != nil {
 		return nil, err
 	}
-	var res []*entity.EvalTarget
-	if e.typedOperators[entity.EvalTargetType(request.GetTargetType())] == nil {
+	targetType := entity.EvalTargetType(request.GetTargetType())
+	opType := resolveOperatorType(targetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
-	res, err = e.typedOperators[entity.EvalTargetType(request.GetTargetType())].BatchGetSource(ctx, request.WorkspaceID, request.SourceTargetIds)
+	res, err := e.typedOperators[opType].BatchGetSource(ctx, request.WorkspaceID, request.SourceTargetIds)
 	if err != nil {
 		return nil, err
 	}
@@ -490,6 +507,45 @@ func (e EvalTargetApplicationImpl) BatchGetSourceEvalTargets(ctx context.Context
 	}
 	return &eval_target.BatchGetSourceEvalTargetsResponse{
 		EvalTargets: dtos,
+	}, nil
+}
+
+func (e EvalTargetApplicationImpl) GetSourceEvalTargetVersion(ctx context.Context, request *eval_target.GetSourceEvalTargetVersionRequest) (r *eval_target.GetSourceEvalTargetVersionResponse, err error) {
+	if request == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if request.TargetType == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type is nil"))
+	}
+	if strings.TrimSpace(request.GetSourceTargetID()) == "" {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("source target id is nil"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(request.WorkspaceID, 10),
+		SpaceID:       request.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationTarget"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	targetType := entity.EvalTargetType(request.GetTargetType())
+	typedOperator := e.typedOperators[targetType]
+	if typedOperator == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
+	}
+	evalTarget, err := typedOperator.BuildBySource(ctx, request.WorkspaceID, request.GetSourceTargetID(), request.GetSourceTargetVersion())
+	if err != nil {
+		return nil, err
+	}
+	if evalTarget == nil {
+		return &eval_target.GetSourceEvalTargetVersionResponse{}, nil
+	}
+	if err := typedOperator.PackSourceVersionInfo(ctx, request.WorkspaceID, []*entity.EvalTarget{evalTarget}); err != nil {
+		return nil, err
+	}
+	return &eval_target.GetSourceEvalTargetVersionResponse{
+		EvalTargetVersion: target.EvalTargetVersionDO2DTO(evalTarget.EvalTargetVersion),
 	}, nil
 }
 
@@ -545,15 +601,16 @@ func (e EvalTargetApplicationImpl) MockEvalTargetOutput(ctx context.Context, req
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("request is nil"))
 	}
 
-	// 验证targetType是否支持
+	// 验证targetType是否支持（仅记录型复用 base 的 operator）
 	targetType := entity.EvalTargetType(request.TargetType)
-	if e.typedOperators[targetType] == nil {
+	opType := resolveOperatorType(targetType)
+	if e.typedOperators[opType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
 
 	// 使用BuildBySource构建target实体（不保存）
 	sourceTargetID := strconv.FormatInt(request.SourceTargetID, 10)
-	evalTarget, err := e.typedOperators[targetType].BuildBySource(ctx, request.WorkspaceID, sourceTargetID, request.EvalTargetVersion)
+	evalTarget, err := e.typedOperators[opType].BuildBySource(ctx, request.WorkspaceID, sourceTargetID, request.EvalTargetVersion)
 	if err != nil {
 		return nil, err
 	}
@@ -598,9 +655,11 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 	//	return nil, err
 	// }
 
+	logID := logs.GetLogID(ctx)
+
 	inputFields := make(map[string]*spi.Content)
 	if err := json.Unmarshal([]byte(request.GetParam()), &inputFields); err != nil {
-		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("param json unmarshal fail"))
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(fmt.Sprintf("logid: %s, param json unmarshal fail", logID)))
 	}
 
 	switch request.GetEvalTargetType() {
@@ -626,14 +685,19 @@ func (e EvalTargetApplicationImpl) DebugEvalTarget(ctx context.Context, request 
 			},
 		})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, fmt.Sprintf("logid: %s", logID))
+		}
+		if record != nil && record.Status != nil && *record.Status == entity.EvalTargetRunStatusFail {
+			if record.EvalTargetOutputData != nil && record.EvalTargetOutputData.EvalTargetRunError != nil {
+				record.EvalTargetOutputData.EvalTargetRunError.Message = fmt.Sprintf("logid: %s, %s", logID, record.EvalTargetOutputData.EvalTargetRunError.Message)
+			}
 		}
 		return &eval_target.DebugEvalTargetResponse{
 			EvalTargetRecord: target.EvalTargetRecordDO2DTO(record),
 			BaseResp:         base.NewBaseResp(),
 		}, err
 	default:
-		return nil, errorx.New("unsupported eval target type %v", request.GetEvalTargetType())
+		return nil, errorx.New("logid: %s, unsupported eval target type %v", logID, request.GetEvalTargetType())
 	}
 }
 

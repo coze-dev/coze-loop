@@ -2,6 +2,7 @@
 
 const path = require('path');
 
+/** @type {import('@coze-arch/idl2ts-cli').ApiConfig[] } */
 const config = [
   {
     // idl 根目录
@@ -10,6 +11,8 @@ const config = [
       'node_modules/.cache/coze-loop-idl/thrift/coze/loop',
     ),
     genMock: false,
+    banner: `// Copyright (c) 2025 coze-dev Authors
+// SPDX-License-Identifier: Apache-2.0`,
     entries: {
       promptDebug: './prompt/coze.loop.prompt.debug.thrift',
       promptManage: './prompt/coze.loop.prompt.manage.thrift',

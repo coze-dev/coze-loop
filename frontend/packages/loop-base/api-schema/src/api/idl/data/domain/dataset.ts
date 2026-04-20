@@ -6,6 +6,7 @@ export enum StorageProvider {
   HDFS = 3,
   ImageX = 4,
   S3 = 5,
+  ExternalUrl = 6,
   /** 后端内部使用 */
   Abase = 100,
   RDS = 101,
@@ -221,12 +222,20 @@ export interface FieldTransformationConfig {
 export interface MultiModalSpec {
   /** 文件数量上限 */
   max_file_count?: string,
-  /** 文件大小上限 */
+  /** 文件大小上限，用于兜底，优先级低于 max_file_size_by_type */
   max_file_size?: string,
   /** 文件格式 */
   supported_formats?: string[],
   /** 多模态节点总数上限 */
   max_part_count?: number,
+  /** 按照类型区分的文件类型 */
+  supported_formats_by_type?: {
+    [key: string | number]: string[]
+  },
+  /** 按照类型区分的文件类型 */
+  max_file_size_by_type?: {
+    [key: string | number]: string
+  },
 }
 /** DatasetItem 数据内容 */
 export interface DatasetItem {
@@ -275,6 +284,8 @@ export interface FieldData {
   format?: FieldDisplayFormat,
   /** 图文混排时，图文内容 */
   parts?: FieldData[],
+  /** 关联的 trace ID */
+  trace_id?: string,
 }
 export interface ObjectStorage {
   provider?: StorageProvider,
@@ -341,6 +352,10 @@ export interface ItemErrorDetail {
   /** [startIndex, endIndex] 表示区间错误范围, 如 ExceedDatasetCapacity 错误时 */
   start_index?: number,
   end_index?: number,
+  /** ItemErrorType=MismatchSchema, key 为 FieldSchema.name, value 为错误信息 */
+  messages_by_field?: {
+    [key: string | number]: string
+  },
 }
 export interface ItemErrorGroup {
   type?: ItemErrorType,
@@ -357,4 +372,45 @@ export interface CreateDatasetItemOutput {
   item_id?: string,
   /** 是否是新的 Item。提供 itemKey 时，如果 itemKey 在数据集中已存在数据，则不算做「新 Item」，该字段为 false。 */
   is_new_item?: boolean,
+}
+export enum MultiModalStoreStrategy {
+  Passthrough = "passthrough",
+  /** 保留用户的外链 */
+  Store = "store",
+}
+/** 转存用户的 url 到平台内 */
+export interface FieldWriteOption {
+  /** 写入时设置 field name 即可，自动根据草稿态的 schema 填充下方的 field key */
+  field_name?: string,
+  field_key?: string,
+  multi_modal_store_opt?: MultiModalStoreOption,
+}
+export interface MultiModalStoreOption {
+  multi_modal_store_strategy?: MultiModalStoreStrategy,
+  /** 手动标记当前列本次导入的多模态类型，仅 image/video/audio 有效 */
+  content_type?: ContentType,
+}
+export interface Video {
+  name?: string,
+  url?: string,
+  uri?: string,
+  thumb_url?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: StorageProvider,
+}
+export interface Audio {
+  format?: string,
+  url?: string,
+  name?: string,
+  uri?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: StorageProvider,
+}
+export interface Image {
+  name?: string,
+  url?: string,
+  uri?: string,
+  thumb_url?: string,
+  /** 当前多模态附件存储的 provider. 如果为空，则会从对应的 url 下载文件并上传到默认的存储中，并填充uri */
+  storage_provider?: StorageProvider,
 }

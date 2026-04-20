@@ -37,6 +37,9 @@ enum EvaluatorRunStatus { // 运行状态, 异步下状态流转, 同步下只�
     AsyncInvoking = 3
 }
 
+typedef string EvaluatorSourceType(ts.enum="true")
+const EvaluatorSourceType EvaluatorSourceType_IntelligentGen = "intelligent_gen" // 智能生成
+
 typedef string EvaluatorTagType(ts.enum="true")
 const EvaluatorTagType EvaluatorTagType_Evaluator = "Evaluator"
 const EvaluatorTagType EvaluatorTagType_Template = "Template"
@@ -177,6 +180,7 @@ struct Evaluator {
     21: optional EvaluatorInfo evaluator_info (go.tag = 'json:"evaluator_info"')
     22: optional string builtin_visible_version (go.tag = 'json:"builtin_visible_version"')
     23: optional EvaluatorBoxType box_type (go.tag = 'json:"box_type"') // 默认白盒
+    24: optional EvaluatorSourceType source_type  // 来源
 
     100: optional map<EvaluatorTagLangType, map<EvaluatorTagKey, list<string>>> tags (go.tag = 'json:"tags"')
 }

@@ -34,6 +34,8 @@ export interface AutoEvaluate {
   evaluator_result?: EvaluatorResult,
   record_id: string,
   task_id: string,
+  expt_id?: string,
+  expt_template_id?: string,
 }
 export interface ManualFeedback {
   tag_key_id: string,
@@ -61,4 +63,9 @@ export interface AnnotationEvaluator {
   evaluator_version_id: number,
   evaluator_name: string,
   evaluator_version: string,
+}
+export interface SimpleAnnotationInfo {
+  key: string,
+  annotation_type?: AnnotationType,
+  original_key?: string,
 }

@@ -14,6 +14,49 @@ export interface Model {
     [key: string | number]: ScenarioConfig
   },
   param_config?: ParamConfig,
+  /** 模型表示 (name, endpoint) */
+  identification?: string,
+  /** 模型 */
+  series?: Series,
+  visibility?: Visibility,
+  /** 模型图标 */
+  icon?: string,
+  /** 模型标签 */
+  tags?: string[],
+  /** 模型状态 */
+  status?: ModelStatus,
+  /** 模型跳转链接 */
+  original_model_url?: string,
+  /** 是否为预置模型 */
+  preset_model?: boolean,
+  created_by?: string,
+  created_at?: number,
+  updated_by?: string,
+  updated_at?: number,
+}
+export interface Series {
+  /** series name */
+  name?: string,
+  /** series icon url */
+  icon?: string,
+  /** family name */
+  family?: Family,
+}
+export interface Visibility {
+  mode?: VisibleMode,
+  /** Mode为Specified有效，配置为除模型所属空间外的其他空间 */
+  spaceIDs?: number[],
+}
+export interface ProviderInfo {
+  maas_info?: MaaSInfo
+}
+export interface MaaSInfo {
+  host?: string,
+  region?: string,
+  /** v3 sdk */
+  baseURL?: string,
+  /** 精调模型任务的 ID */
+  customizationJobsID?: string,
 }
 export interface Ability {
   max_context_tokens?: string,
@@ -23,10 +66,13 @@ export interface Ability {
   json_mode?: boolean,
   multi_modal?: boolean,
   ability_multi_modal?: AbilityMultiModal,
+  interface_category?: InterfaceCategory,
 }
 export interface AbilityMultiModal {
+  /** 图片 */
   image?: boolean,
   ability_image?: AbilityImage,
+  /** 视频 */
   video?: boolean,
   ability_video?: AbilityVideo,
 }
@@ -137,6 +183,17 @@ export interface ParamSchema {
   max?: string,
   default_value?: string,
   options?: ParamOption[],
+  properties?: ParamSchema[],
+  /** 依赖参数 */
+  reaction?: Reaction,
+  /** 赋值路径 */
+  jsonpath?: string,
+}
+export interface Reaction {
+  /** 依赖的字段 */
+  dependency?: string,
+  /** 可见性表达式 */
+  visible?: string,
 }
 export interface ParamOption {
   /** 实际值 */
@@ -164,6 +221,73 @@ export enum ParamType {
   param_type_int = "int",
   param_type_boolean = "boolean",
   param_type_string = "string",
+  param_type_void = "void",
+  param_type_object = "object",
+}
+export enum Family {
+  family_undefined = "undefined",
+  family_gpt = "gpt",
+  family_seed = "seed",
+  family_gemini = "gemini",
+  family_claude = "claude",
+  family_ernie = "ernie",
+  family_baichuan = "baichuan",
+  family_qwen = "qwen",
+  family_glm = "glm",
+  family_skylark = "skylark",
+  family_moonshot = "moonshot",
+  family_minimax = "minimax",
+  family_doubao = "doubao",
+  family_baichuan2 = "baichuan2",
+  family_deepseekv2 = "deepseekv2",
+  family_deepseek_coder_v2 = "deepseek_coder_v2",
+  family_deepseek_coder = "deepseek_coder",
+  family_internalm25 = "internalm2_5",
+  family_qwen2 = "qwen2",
+  family_qwen25 = "qwen2.5",
+  family_qwen25_coder = "qwen2.5_coder",
+  family_mini_cpm = "mini_cpm",
+  family_mini_cpm3 = "mini_cpm_3",
+  family_chat_glm3 = "chat_glm_3",
+  family_mistra = "mistral",
+  family_gemma = "gemma",
+  family_gemma_2 = "gemma_2",
+  family_intern_vl2 = "intern_vl2",
+  family_intern_vl25 = "intern_vl2.5",
+  family_deepseek_v3 = "deepseek_v3",
+  family_deepseek_r1 = "deepseek_r1",
+  family_kimi = "kimi",
+  family_seedream = "seedream",
+  family_intern_vl3 = "intern_vl3",
+  family_deepseek = "deepseek",
+}
+export enum Provider {
+  provider_undefined = "undefined",
+  provider_maas = "maas",
+}
+export enum VisibleMode {
+  visible_mode_default = "default",
+  visible_mode_specified = "specified",
+  visible_mode_undefined = "undefined",
+  visible_mode_all = "all",
+}
+export enum ModelStatus {
+  model_status_undefined = "undefined",
+  model_status_available = "available",
+  /** 可用 */
+  model_status_unavailable = "unavailable",
+}
+/** 不可用 */
+export enum InterfaceCategory {
+  interface_category_undefined = "undefined",
+  interface_category_chat_completion_api = "chat_completion_api",
+  interface_category_response_api = "response_api",
+}
+export enum AbilityEnum {
+  ability_undefined = "undefined",
+  ability_json_mode = "json_mode",
+  ability_function_call = "function_call",
+  ability_multi_modal = "multi_modal",
 }
 export enum VideoFormat {
   video_format_undefined = "undefined",

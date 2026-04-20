@@ -6,12 +6,8 @@
   "author": "fanwenjie.fe@bytedance.com",
   "maintainers": [],
   "exports": {
-    ".": [
-      "./src/index.ts"
-    ],
-    "./observation": [
-      "./src/api/observability/index.ts"
-    ],
+    ".": "./src/index.ts",
+    "./observation": "./src/api/observability/index.ts",
     "./evaluation": "./src/api/evaluation/index.ts",
     "./data": "./src/api/data/index.ts",
     "./llm-manage": "./src/api/llm-manage/index.ts",
@@ -50,8 +46,8 @@
     "dist"
   ],
   "scripts": {
-    "build-sdk": "node build-with-transform.js",
     "build:direct": "rslib build",
+    "build-sdk": "node build-with-transform.js",
     "lint": "eslint ./ --cache",
     "test": "vitest --run --passWithNoTests",
     "test:cov": "npm run test -- --coverage",
@@ -66,13 +62,12 @@
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/idl2ts-cli": "workspace:*",
     "@coze-arch/idl2ts-runtime": "workspace:*",
-    "@coze-arch/logger": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
     "@microsoft/api-extractor": "7.43.0",
     "@rsbuild/core": "~1.1.0",
     "@rslib/core": "~0.11.0",
-    "@types/node": "^18",
+    "@types/node": "^24",
     "@vitest/coverage-v8": "~3.0.5",
     "sucrase": "^3.32.0",
     "vitest": "~3.0.5"
@@ -136,4 +131,3 @@
     }
   }
 }
-

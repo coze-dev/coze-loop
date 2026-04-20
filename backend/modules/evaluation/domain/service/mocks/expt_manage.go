@@ -90,6 +90,18 @@ func (mr *MockIExptManagerMockRecorder) Clone(ctx, exptID, spaceID, session any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockIExptManager)(nil).Clone), ctx, exptID, spaceID, session)
 }
 
+// InjectExptConfTimeRange mocks base method.
+func (m *MockIExptManager) InjectExptConfTimeRange(ctx context.Context, exptID int64, timeRange *entity.TaskTimeRangeDO) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InjectExptConfTimeRange", ctx, exptID, timeRange)
+}
+
+// InjectExptConfTimeRange indicates an expected call of InjectExptConfTimeRange.
+func (mr *MockIExptManagerMockRecorder) InjectExptConfTimeRange(ctx, exptID, timeRange any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectExptConfTimeRange", reflect.TypeOf((*MockIExptManager)(nil).InjectExptConfTimeRange), ctx, exptID, timeRange)
+}
+
 // CompleteExpt mocks base method.
 func (m *MockIExptManager) CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	m.ctrl.T.Helper()
@@ -370,37 +382,18 @@ func (mr *MockIExptManagerMockRecorder) MGetDetail(ctx, exptIDs, spaceID, sessio
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MGetDetail", reflect.TypeOf((*MockIExptManager)(nil).MGetDetail), ctx, exptIDs, spaceID, session)
 }
 
-// PendExpt mocks base method.
-func (m *MockIExptManager) PendExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+// RecordExptData mocks base method.
+func (m *MockIExptManager) RecordExptData(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, exptID, spaceID, session}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "PendExpt", varargs...)
+	ret := m.ctrl.Call(m, "RecordExptData", ctx, exptID, exptRunID, spaceID, session)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// PendExpt indicates an expected call of PendExpt.
-func (mr *MockIExptManagerMockRecorder) PendExpt(ctx, exptID, spaceID, session any, opts ...any) *gomock.Call {
+// RecordExptData indicates an expected call of RecordExptData.
+func (mr *MockIExptManagerMockRecorder) RecordExptData(ctx, exptID, exptRunID, spaceID, session any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, exptID, spaceID, session}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendExpt", reflect.TypeOf((*MockIExptManager)(nil).PendExpt), varargs...)
-}
-
-// PendRun mocks base method.
-func (m *MockIExptManager) PendRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PendRun", ctx, exptID, exptRunID, spaceID, session)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PendRun indicates an expected call of PendRun.
-func (mr *MockIExptManagerMockRecorder) PendRun(ctx, exptID, exptRunID, spaceID, session any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PendRun", reflect.TypeOf((*MockIExptManager)(nil).PendRun), ctx, exptID, exptRunID, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordExptData", reflect.TypeOf((*MockIExptManager)(nil).RecordExptData), ctx, exptID, exptRunID, spaceID, session)
 }
 
 // RetryItems mocks base method.

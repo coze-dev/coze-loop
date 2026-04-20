@@ -105,6 +105,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_eval_targets.POST("/batch_get_by_source", append(_batchgetevaltargetsbysourceMw(handler), apis.BatchGetEvalTargetsBySource)...)
 				_eval_targets.POST("/batch_get_source", append(_batchgetsourceevaltargetsMw(handler), apis.BatchGetSourceEvalTargets)...)
 				_eval_targets.POST("/debug", append(_debugevaltargetMw(handler), apis.DebugEvalTarget)...)
+				_eval_targets.GET("/get_source_version", append(_getsourceevaltargetversionMw(handler), apis.GetSourceEvalTargetVersion)...)
 				_eval_targets.POST("/list_source", append(_listsourceevaltargetsMw(handler), apis.ListSourceEvalTargets)...)
 				_eval_targets.POST("/list_source_version", append(_listsourceevaltargetversionsMw(handler), apis.ListSourceEvalTargetVersions)...)
 				_eval_targets.POST("/mock_output", append(_mockevaltargetoutputMw(handler), apis.MockEvalTargetOutput)...)
@@ -329,6 +330,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_annotations.DELETE("/:annotation_id", append(_deletemanualannotationMw(handler), apis.DeleteManualAnnotation)...)
 				_annotations.PUT("/:annotation_id", append(_updatemanualannotationMw(handler), apis.UpdateManualAnnotation)...)
 				_annotations.POST("/list", append(_listannotationsMw(handler), apis.ListAnnotations)...)
+				_annotations.POST("/list_by_workspace", append(_listworkspaceannotationsMw(handler), apis.ListWorkspaceAnnotations)...)
 				_v14.POST("/tasks", append(_tasksMw(handler), apis.CreateTask)...)
 				_tasks := _v14.Group("/tasks", _tasksMw(handler)...)
 				_tasks.POST("/list", append(_listtasksMw(handler), apis.ListTasks)...)
@@ -373,6 +375,10 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 					_traces.POST("/trajectory", append(_listtrajectoryMw(handler), apis.ListTrajectory)...)
 					_traces.GET("/trajectory_config", append(_gettrajectoryconfigMw(handler), apis.GetTrajectoryConfig)...)
 					_traces.POST("/trajectory_config", append(_upserttrajectoryconfigMw(handler), apis.UpsertTrajectoryConfig)...)
+					{
+						_metadata := _traces.Group("/metadata", _metadataMw(handler)...)
+						_metadata.POST("/list", append(_listmetadataMw(handler), apis.ListMetadata)...)
+					}
 				}
 			}
 		}

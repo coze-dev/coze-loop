@@ -124,6 +124,51 @@ var TimeTagSlice = []string{
 	SpanFieldLogicDeleteDate,
 }
 
+var SpanStructFieldKeys = []string{
+	SpanFieldStartTime,
+	SpanFieldSpanId,
+	SpanFieldParentID,
+	SpanFieldTraceId,
+	SpanFieldDuration,
+	SpanFieldCallType,
+	SpanFieldPSM,
+	SpanFieldLogID,
+	SpanFieldSpaceId,
+	SpanFieldSpanName,
+	SpanFieldSpanType,
+	SpanFieldMethod,
+	SpanFieldStatusCode,
+	SpanFieldInput,
+	SpanFieldOutput,
+	SpanFieldObjectStorage,
+}
+
+const (
+	MetadataValueTypeString = "string"
+	MetadataValueTypeLong   = "long"
+	MetadataValueTypeDouble = "double"
+	MetadataValueTypeBool   = "bool"
+)
+
+var SpanStructFieldValueTypes = map[string]string{
+	SpanFieldStartTime:     MetadataValueTypeLong,
+	SpanFieldSpanId:        MetadataValueTypeString,
+	SpanFieldParentID:      MetadataValueTypeString,
+	SpanFieldTraceId:       MetadataValueTypeString,
+	SpanFieldDuration:      MetadataValueTypeLong,
+	SpanFieldCallType:      MetadataValueTypeString,
+	SpanFieldPSM:           MetadataValueTypeString,
+	SpanFieldLogID:         MetadataValueTypeString,
+	SpanFieldSpaceId:       MetadataValueTypeString,
+	SpanFieldSpanName:      MetadataValueTypeString,
+	SpanFieldSpanType:      MetadataValueTypeString,
+	SpanFieldMethod:        MetadataValueTypeString,
+	SpanFieldStatusCode:    MetadataValueTypeLong,
+	SpanFieldInput:         MetadataValueTypeString,
+	SpanFieldOutput:        MetadataValueTypeString,
+	SpanFieldObjectStorage: MetadataValueTypeString,
+}
+
 type SpanList []*Span
 
 type Span struct {
@@ -431,6 +476,10 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 	} else if val, ok := s.TagsByte[fieldName]; ok {
 		return val
 	}
+	return s.getAnnotationValue(fieldName)
+}
+
+func (s *Span) getAnnotationValue(fieldName string) any {
 	annotationMap := make(map[string]AnnotationValue)
 	for _, annotation := range s.Annotations {
 		var prefix string
@@ -439,6 +488,8 @@ func (s *Span) GetFieldValue(fieldName string, isSystem, isCustom bool) any {
 			prefix = AnnotationOpenAPIFeedbackFieldPrefix
 		case AnnotationTypeManualFeedback:
 			prefix = AnnotationManualFeedbackFieldPrefix
+		case AnnotationTypeAutoEvaluate:
+			prefix = AnnotationAutoEvaluateFieldPrefix
 		default:
 			continue
 		}
@@ -586,7 +637,7 @@ func (s *Span) AddManualDatasetAnnotation(datasetID int64, userID string, annota
 	return a, nil
 }
 
-func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string) (*Annotation, error) {
+func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID int64, score float64, reasoning, userID string, exptID int64, exptTemplateID int64) (*Annotation, error) {
 	a := &Annotation{}
 	a.SpanID = s.SpanID
 	a.TraceID = s.TraceID
@@ -600,6 +651,8 @@ func (s *Span) AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersion
 		TaskID:             taskID,
 		EvaluatorRecordID:  evaluatorRecordID,
 		EvaluatorVersionID: evaluatorVersionID,
+		ExptID:             exptID,
+		ExptTemplateID:     exptTemplateID,
 	}
 	a.Status = AnnotationStatusNormal
 	a.CreatedAt = time.Now()
@@ -645,6 +698,35 @@ func (s *Span) extractByJsonpath(ctx context.Context, key string, jsonpath strin
 			}
 		}
 		data = conv.ToString(tag)
+	} else if strings.HasPrefix(key, "Metadata.") {
+		key = strings.TrimPrefix(key, "Metadata.")
+		metadata := s.GetFieldValue(key, true, false)
+		checkKey := key
+		if checkKey == SpanFieldStartTime || checkKey == SpanFieldDuration || checkKey == SpanFieldLogicDeleteDate ||
+			slices.Contains(TimeTagSlice, checkKey) {
+			if integer, ok := metadata.(int64); ok {
+				metadata = time_util.MicroSec2MillSec(integer)
+			}
+		}
+		data = conv.ToString(metadata)
+	} else if strings.HasPrefix(key, "Feedback.") {
+		key = strings.TrimPrefix(key, "Feedback.")
+		feedback := s.getAnnotationValue(key)
+		checkKey := key
+		if strings.HasPrefix(checkKey, AnnotationManualFeedbackFieldPrefix) {
+			checkKey = strings.TrimPrefix(checkKey, AnnotationManualFeedbackFieldPrefix)
+		} else if strings.HasPrefix(checkKey, AnnotationOpenAPIFeedbackFieldPrefix) {
+			checkKey = strings.TrimPrefix(checkKey, AnnotationOpenAPIFeedbackFieldPrefix)
+		} else if strings.HasPrefix(checkKey, AnnotationAutoEvaluateFieldPrefix) {
+			checkKey = strings.TrimPrefix(checkKey, AnnotationAutoEvaluateFieldPrefix)
+		}
+		if checkKey == SpanFieldStartTime || checkKey == SpanFieldDuration || checkKey == SpanFieldLogicDeleteDate ||
+			slices.Contains(TimeTagSlice, checkKey) {
+			if integer, ok := feedback.(int64); ok {
+				feedback = time_util.MicroSec2MillSec(integer)
+			}
+		}
+		data = conv.ToString(feedback)
 	} else {
 		return "", errors.Errorf("unsupported mapping key: %s", key)
 	}

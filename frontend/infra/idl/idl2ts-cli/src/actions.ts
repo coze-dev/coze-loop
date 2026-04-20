@@ -24,6 +24,7 @@ export const gen = (projectRoot: string, options: GenOptions) => {
       commonCodePath,
       aggregationExport,
       formatter,
+      banner,
     } = config;
     const aliasMap = new Map();
     const idlRoot = path.resolve(projectRoot, config.idlRoot);
@@ -53,6 +54,7 @@ export const gen = (projectRoot: string, options: GenOptions) => {
         new LocalConfigPlugin({ outputDir: output, projectRoot, idlRoot }),
         ...plugins,
       ],
+      banner,
       entryName: aggregationExport || 'index',
       outputDir: output,
       commonCodePath,

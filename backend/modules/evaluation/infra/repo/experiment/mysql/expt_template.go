@@ -133,10 +133,12 @@ func (d *exptTemplateDAOImpl) List(ctx context.Context, page, size int32, filter
 			Joins("INNER JOIN expt_template_evaluator_ref ON expt_template.id = expt_template_evaluator_ref.expt_template_id").
 			Where("expt_template.space_id = ?", spaceID).
 			Where("expt_template.deleted_at IS NULL")
+		db = db.Where("expt_template.visibility <> ?", int32(entity.Visibility_Hidden))
 	} else {
 		db = db.Model(&model.ExptTemplate{}).
 			Where("space_id = ?", spaceID).
 			Where("deleted_at IS NULL")
+		db = db.Where("expt_template.visibility <> ?", int32(entity.Visibility_Hidden))
 	}
 
 	conds, ok := d.toConditions(filter, orders)
@@ -240,6 +242,11 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 				return db.Where(fmt.Sprintf("%sexpt_type %s (?)", templatePrefix, scopeComparator), ffields.ExptType)
 			})
 		}
+		if len(ffields.CronActivate) > 0 {
+			conds = append(conds, func(db *gorm.DB) *gorm.DB {
+				return db.Where(fmt.Sprintf("%scron_activate %s (?)", templatePrefix, scopeComparator), ffields.CronActivate)
+			})
+		}
 
 		return conds
 	}
@@ -259,6 +266,10 @@ func (d *exptTemplateDAOImpl) toConditions(f *entity.ExptTemplateListFilter, ord
 	for _, orderBy := range orders {
 		column := gptr.Indirect(orderBy.Field)
 		if len(column) == 0 {
+			continue
+		}
+		// 仅允许白名单列名，禁止将用户输入直接拼入 ORDER BY（防止 SQL 注入）
+		if _, ok := entity.OrderBySet[column]; !ok {
 			continue
 		}
 

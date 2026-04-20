@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bytedance/gg/gptr"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/stretchr/testify/assert"
@@ -67,6 +68,7 @@ func TestNewDataset(t *testing.T) {
 					},
 				},
 				DatasetCategory: DatasetCategory_General,
+				Visibility:      dataset.DatasetVisibility_Space,
 			},
 		},
 		{
@@ -90,12 +92,13 @@ func TestNewDataset(t *testing.T) {
 					},
 				},
 				DatasetCategory: DatasetCategory_Evaluation,
+				Visibility:      dataset.DatasetVisibility_Space,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewDataset(tt.args.id, tt.args.spaceID, tt.args.name, tt.args.category, tt.args.schema, nil, nil)
+			got := NewDataset(tt.args.id, tt.args.spaceID, tt.args.name, tt.args.category, tt.args.schema, nil, nil, false, 0)
 			assert.Equal(t, tt.want, got)
 		})
 	}

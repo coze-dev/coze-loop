@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 export * as promptDebug from './prompt/coze.loop.prompt.debug';
 export * as promptManage from './prompt/coze.loop.prompt.manage';
+export * as toolManage from './prompt/coze.loop.prompt.tool_manage';
 export * as observabilityTrace from './observability/coze.loop.observability.trace';
 export * as observabilityTask from './observability/coze.loop.observability.task';
 export * as observabilityMetric from './observability/coze.loop.observability.metric';

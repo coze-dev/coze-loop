@@ -25,12 +25,22 @@ export enum SpanType {
   Agent = "agent",
   LLMCall = "LLMCall",
 }
+export enum MetadataValueType {
+  ValueType_String = "string",
+  ValueType_Byte = "byte",
+  ValueType_Long = "long",
+  ValueType_Double = "double",
+  ValueType_Bool = "bool",
+}
 export interface AttrTos {
   input_data_url?: string,
   output_data_url?: string,
   multimodal_data?: {
     [key: string | number]: string
   },
+}
+export interface EncryptionInfo {
+  workflow?: string
 }
 export interface OutputSpan {
   trace_id: string,
@@ -81,6 +91,7 @@ export interface OutputSpan {
     [key: string | number]: string
   },
   annotations?: annotation.Annotation[],
+  encryption?: EncryptionInfo,
 }
 export interface InputSpan {
   started_at_micros: string,

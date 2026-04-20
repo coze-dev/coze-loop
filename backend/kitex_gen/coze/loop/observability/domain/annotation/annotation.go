@@ -698,6 +698,8 @@ type AutoEvaluate struct {
 	EvaluatorResult_   *EvaluatorResult_ `thrift:"evaluator_result,4,optional" frugal:"4,optional,EvaluatorResult_" form:"evaluator_result" json:"evaluator_result,omitempty" query:"evaluator_result"`
 	RecordID           int64             `thrift:"record_id,5,required" frugal:"5,required,i64" json:"record_id" form:"record_id,required" query:"record_id,required"`
 	TaskID             string            `thrift:"task_id,6,required" frugal:"6,required,string" form:"task_id,required" json:"task_id,required" query:"task_id,required"`
+	ExptID             *int64            `thrift:"expt_id,7,optional" frugal:"7,optional,i64" json:"expt_id" form:"expt_id" query:"expt_id"`
+	ExptTemplateID     *int64            `thrift:"expt_template_id,8,optional" frugal:"8,optional,i64" json:"expt_template_id" form:"expt_template_id" query:"expt_template_id"`
 }
 
 func NewAutoEvaluate() *AutoEvaluate {
@@ -753,6 +755,30 @@ func (p *AutoEvaluate) GetTaskID() (v string) {
 	}
 	return
 }
+
+var AutoEvaluate_ExptID_DEFAULT int64
+
+func (p *AutoEvaluate) GetExptID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptID() {
+		return AutoEvaluate_ExptID_DEFAULT
+	}
+	return *p.ExptID
+}
+
+var AutoEvaluate_ExptTemplateID_DEFAULT int64
+
+func (p *AutoEvaluate) GetExptTemplateID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExptTemplateID() {
+		return AutoEvaluate_ExptTemplateID_DEFAULT
+	}
+	return *p.ExptTemplateID
+}
 func (p *AutoEvaluate) SetEvaluatorVersionID(val int64) {
 	p.EvaluatorVersionID = val
 }
@@ -771,6 +797,12 @@ func (p *AutoEvaluate) SetRecordID(val int64) {
 func (p *AutoEvaluate) SetTaskID(val string) {
 	p.TaskID = val
 }
+func (p *AutoEvaluate) SetExptID(val *int64) {
+	p.ExptID = val
+}
+func (p *AutoEvaluate) SetExptTemplateID(val *int64) {
+	p.ExptTemplateID = val
+}
 
 var fieldIDToName_AutoEvaluate = map[int16]string{
 	1: "evaluator_version_id",
@@ -779,10 +811,20 @@ var fieldIDToName_AutoEvaluate = map[int16]string{
 	4: "evaluator_result",
 	5: "record_id",
 	6: "task_id",
+	7: "expt_id",
+	8: "expt_template_id",
 }
 
 func (p *AutoEvaluate) IsSetEvaluatorResult_() bool {
 	return p.EvaluatorResult_ != nil
+}
+
+func (p *AutoEvaluate) IsSetExptID() bool {
+	return p.ExptID != nil
+}
+
+func (p *AutoEvaluate) IsSetExptTemplateID() bool {
+	return p.ExptTemplateID != nil
 }
 
 func (p *AutoEvaluate) Read(iprot thrift.TProtocol) (err error) {
@@ -858,6 +900,22 @@ func (p *AutoEvaluate) Read(iprot thrift.TProtocol) (err error) {
 					goto ReadFieldError
 				}
 				issetTaskID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
@@ -979,6 +1037,28 @@ func (p *AutoEvaluate) ReadField6(iprot thrift.TProtocol) error {
 	p.TaskID = _field
 	return nil
 }
+func (p *AutoEvaluate) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptID = _field
+	return nil
+}
+func (p *AutoEvaluate) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExptTemplateID = _field
+	return nil
+}
 
 func (p *AutoEvaluate) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1008,6 +1088,14 @@ func (p *AutoEvaluate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField6(oprot); err != nil {
 			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
 			goto WriteFieldError
 		}
 	}
@@ -1126,6 +1214,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
 }
+func (p *AutoEvaluate) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptID() {
+		if err = oprot.WriteFieldBegin("expt_id", thrift.I64, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *AutoEvaluate) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExptTemplateID() {
+		if err = oprot.WriteFieldBegin("expt_template_id", thrift.I64, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExptTemplateID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
 
 func (p *AutoEvaluate) String() string {
 	if p == nil {
@@ -1157,6 +1281,12 @@ func (p *AutoEvaluate) DeepEqual(ano *AutoEvaluate) bool {
 		return false
 	}
 	if !p.Field6DeepEqual(ano.TaskID) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.ExptID) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.ExptTemplateID) {
 		return false
 	}
 	return true
@@ -1200,6 +1330,30 @@ func (p *AutoEvaluate) Field5DeepEqual(src int64) bool {
 func (p *AutoEvaluate) Field6DeepEqual(src string) bool {
 
 	if strings.Compare(p.TaskID, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluate) Field7DeepEqual(src *int64) bool {
+
+	if p.ExptID == src {
+		return true
+	} else if p.ExptID == nil || src == nil {
+		return false
+	}
+	if *p.ExptID != *src {
+		return false
+	}
+	return true
+}
+func (p *AutoEvaluate) Field8DeepEqual(src *int64) bool {
+
+	if p.ExptTemplateID == src {
+		return true
+	} else if p.ExptTemplateID == nil || src == nil {
+		return false
+	}
+	if *p.ExptTemplateID != *src {
 		return false
 	}
 	return true
@@ -3062,6 +3216,333 @@ func (p *AnnotationEvaluator) Field2DeepEqual(src string) bool {
 func (p *AnnotationEvaluator) Field3DeepEqual(src string) bool {
 
 	if strings.Compare(p.EvaluatorVersion, src) != 0 {
+		return false
+	}
+	return true
+}
+
+type SimpleAnnotationInfo struct {
+	Key            string          `thrift:"key,1,required" frugal:"1,required,string" form:"key,required" json:"key,required" query:"key,required"`
+	AnnotationType *AnnotationType `thrift:"annotation_type,2,optional" frugal:"2,optional,string" form:"annotation_type" json:"annotation_type,omitempty" query:"annotation_type"`
+	OriginalKey    *string         `thrift:"original_key,3,optional" frugal:"3,optional,string" form:"original_key" json:"original_key,omitempty" query:"original_key"`
+}
+
+func NewSimpleAnnotationInfo() *SimpleAnnotationInfo {
+	return &SimpleAnnotationInfo{}
+}
+
+func (p *SimpleAnnotationInfo) InitDefault() {
+}
+
+func (p *SimpleAnnotationInfo) GetKey() (v string) {
+	if p != nil {
+		return p.Key
+	}
+	return
+}
+
+var SimpleAnnotationInfo_AnnotationType_DEFAULT AnnotationType
+
+func (p *SimpleAnnotationInfo) GetAnnotationType() (v AnnotationType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAnnotationType() {
+		return SimpleAnnotationInfo_AnnotationType_DEFAULT
+	}
+	return *p.AnnotationType
+}
+
+var SimpleAnnotationInfo_OriginalKey_DEFAULT string
+
+func (p *SimpleAnnotationInfo) GetOriginalKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOriginalKey() {
+		return SimpleAnnotationInfo_OriginalKey_DEFAULT
+	}
+	return *p.OriginalKey
+}
+func (p *SimpleAnnotationInfo) SetKey(val string) {
+	p.Key = val
+}
+func (p *SimpleAnnotationInfo) SetAnnotationType(val *AnnotationType) {
+	p.AnnotationType = val
+}
+func (p *SimpleAnnotationInfo) SetOriginalKey(val *string) {
+	p.OriginalKey = val
+}
+
+var fieldIDToName_SimpleAnnotationInfo = map[int16]string{
+	1: "key",
+	2: "annotation_type",
+	3: "original_key",
+}
+
+func (p *SimpleAnnotationInfo) IsSetAnnotationType() bool {
+	return p.AnnotationType != nil
+}
+
+func (p *SimpleAnnotationInfo) IsSetOriginalKey() bool {
+	return p.OriginalKey != nil
+}
+
+func (p *SimpleAnnotationInfo) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetKey bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetKey = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetKey {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SimpleAnnotationInfo[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_SimpleAnnotationInfo[fieldId]))
+}
+
+func (p *SimpleAnnotationInfo) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.Key = _field
+	return nil
+}
+func (p *SimpleAnnotationInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *AnnotationType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.AnnotationType = _field
+	return nil
+}
+func (p *SimpleAnnotationInfo) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.OriginalKey = _field
+	return nil
+}
+
+func (p *SimpleAnnotationInfo) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SimpleAnnotationInfo"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SimpleAnnotationInfo) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("key", thrift.STRING, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteString(p.Key); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SimpleAnnotationInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAnnotationType() {
+		if err = oprot.WriteFieldBegin("annotation_type", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.AnnotationType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SimpleAnnotationInfo) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOriginalKey() {
+		if err = oprot.WriteFieldBegin("original_key", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.OriginalKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *SimpleAnnotationInfo) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SimpleAnnotationInfo(%+v)", *p)
+
+}
+
+func (p *SimpleAnnotationInfo) DeepEqual(ano *SimpleAnnotationInfo) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Key) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.AnnotationType) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.OriginalKey) {
+		return false
+	}
+	return true
+}
+
+func (p *SimpleAnnotationInfo) Field1DeepEqual(src string) bool {
+
+	if strings.Compare(p.Key, src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SimpleAnnotationInfo) Field2DeepEqual(src *AnnotationType) bool {
+
+	if p.AnnotationType == src {
+		return true
+	} else if p.AnnotationType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.AnnotationType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SimpleAnnotationInfo) Field3DeepEqual(src *string) bool {
+
+	if p.OriginalKey == src {
+		return true
+	} else if p.OriginalKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.OriginalKey, *src) != 0 {
 		return false
 	}
 	return true

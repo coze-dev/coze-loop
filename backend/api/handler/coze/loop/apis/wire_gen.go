@@ -30,6 +30,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/foundation/user/userservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/llm/runtime/llmruntimeservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/observabilitytraceservice"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task/taskservice"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/prompt/promptmanageservice"
 	"github.com/coze-dev/coze-loop/backend/loop_gen/coze/loop/foundation/loauth"
 	application5 "github.com/coze-dev/coze-loop/backend/modules/data/application"
@@ -43,6 +44,7 @@ import (
 	application3 "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -124,7 +126,7 @@ func InitLLMHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provi
 	return llmHandler, nil
 }
 
-func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, ckDb ck.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, tracerFactory func() observabilitytraceservice.Client) (*EvaluationHandler, error) {
+func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 db.Provider, ckDb ck.Provider, cmdable redis.Cmdable, configFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory, client datasetservice.Client, promptClient promptmanageservice.Client, pec promptexecuteservice.Client, authClient authservice.Client, meter metrics.Meter, auditClient audit.IAuditService, llmClient llmruntimeservice.Client, userClient userservice.Client, benefitSvc benefit.IBenefitService, limiterFactory limiter.IRateLimiterFactory, fileClient fileservice.Client, tagClient tagservice.Client, objectStorage fileserver.ObjectStorage, batchObjectStorage fileserver.BatchObjectStorage, plainLimiterFactory limiter.IPlainRateLimiterFactory, tracerFactory func() observabilitytraceservice.Client, taskClientFactory func() taskservice.Client) (*EvaluationHandler, error) {
 	evaluationSetService := application4.InitEvaluationSetApplication(client, authClient, meter, userClient)
 	evaluatorService, err := application4.InitEvaluatorApplication(ctx, idgen2, authClient, db2, configFactory, mqFactory, llmClient, meter, userClient, auditClient, cmdable, benefitSvc, limiterFactory, fileClient, plainLimiterFactory, ckDb, tagClient, promptClient, pec, client, tracerFactory, batchObjectStorage)
 	if err != nil {
@@ -135,11 +137,12 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 	if err != nil {
 		return nil, err
 	}
-	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient)
+	taskserviceClient := provideTaskClient(taskClientFactory)
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient)
 	if err != nil {
 		return nil, err
 	}
-	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +181,7 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable)
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, taskhook.NewNoopTaskHookProvider())
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +206,7 @@ var (
 		NewPromptHandler, application2.InitPromptManageApplication, application2.InitToolManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
 	)
 	evaluationSet = wire.NewSet(
-		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication,
+		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication, provideTaskClient,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,
@@ -212,3 +215,8 @@ var (
 		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication, application6.InitMetricApplication,
 	)
 )
+
+// provideTaskClient converts a function factory to taskservice.Client
+func provideTaskClient(factory func() taskservice.Client) taskservice.Client {
+	return factory()
+}

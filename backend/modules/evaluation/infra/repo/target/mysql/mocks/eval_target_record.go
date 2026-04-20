@@ -71,6 +71,21 @@ func (mr *MockEvalTargetRecordDAOMockRecorder) GetByIDAndSpaceID(ctx, recordID, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDAndSpaceID", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).GetByIDAndSpaceID), ctx, recordID, spaceID)
 }
 
+// GetByRunIDItemIDTurnID mocks base method.
+func (m *MockEvalTargetRecordDAO) GetByRunIDItemIDTurnID(ctx context.Context, spaceID, runID, itemID, turnID int64) (*model.TargetRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByRunIDItemIDTurnID", ctx, spaceID, runID, itemID, turnID)
+	ret0, _ := ret[0].(*model.TargetRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByRunIDItemIDTurnID indicates an expected call of GetByRunIDItemIDTurnID.
+func (mr *MockEvalTargetRecordDAOMockRecorder) GetByRunIDItemIDTurnID(ctx, spaceID, runID, itemID, turnID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByRunIDItemIDTurnID", reflect.TypeOf((*MockEvalTargetRecordDAO)(nil).GetByRunIDItemIDTurnID), ctx, spaceID, runID, itemID, turnID)
+}
+
 // ListByIDsAndSpaceID mocks base method.
 func (m *MockEvalTargetRecordDAO) ListByIDsAndSpaceID(ctx context.Context, recordIDs []int64, spaceID int64) ([]*model.TargetRecord, error) {
 	m.ctrl.T.Helper()

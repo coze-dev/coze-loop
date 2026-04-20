@@ -18,10 +18,17 @@ export interface PromptBasic {
   updated_at?: string,
   latest_committed_at?: string,
   prompt_type?: PromptType,
+  security_level?: SecurityLevel,
 }
 export enum PromptType {
   Normal = "normal",
   Snippet = "snippet",
+}
+export enum SecurityLevel {
+  L1 = "L1",
+  L2 = "L2",
+  L3 = "L3",
+  L4 = "L4",
 }
 export interface PromptCommit {
   detail?: PromptDetail,
@@ -50,9 +57,21 @@ export interface PromptDetail {
   tools?: Tool[],
   tool_call_config?: ToolCallConfig,
   model_config?: ModelConfig,
+  mcp_config?: McpConfig,
   ext_infos?: {
     [key: string | number]: string
   },
+}
+export interface McpConfig {
+  is_mcp_call_auto_retry?: boolean,
+  mcp_servers?: McpServerCombine[],
+}
+export interface McpServerCombine {
+  mcp_server_id?: string,
+  access_point_id?: string,
+  disabled_tools?: string[],
+  enabled_tools?: string[],
+  is_enabled_tools?: boolean,
 }
 export interface PromptTemplate {
   template_type?: TemplateType,
@@ -106,7 +125,26 @@ export interface ModelConfig {
   frequency_penalty?: number,
   json_mode?: boolean,
   extra?: string,
+  thinking?: ThinkingConfig,
   param_config_values?: ParamConfigValue[],
+}
+export interface ThinkingConfig {
+  /** thinking内容的最大输出token */
+  budget_tokens?: string,
+  thinking_option?: ThinkingOption,
+  /** 思考长度 */
+  reasoning_effort?: ReasoningEffort,
+}
+export enum ReasoningEffort {
+  Minimal = "minimal",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
+}
+export enum ThinkingOption {
+  Disabled = "disabled",
+  Enabled = "enabled",
+  Auto = "auto",
 }
 export interface ParamConfigValue {
   /** 传给下游模型的key，与ParamSchema.name对齐 */
@@ -129,6 +167,10 @@ export interface Message {
   parts?: ContentPart[],
   tool_call_id?: string,
   tool_calls?: ToolCall[],
+  /** 是否跳过渲染 */
+  skip_render?: boolean,
+  /** gemini3 thought_signature */
+  signature?: string,
   metadata?: {
     [key: string | number]: string
   },
@@ -146,6 +188,8 @@ export interface ContentPart {
   image_url?: ImageURL,
   video_url?: VideoURL,
   media_config?: MediaConfig,
+  /** gemini3 thought_signature */
+  signature?: string,
 }
 export enum ContentType {
   Text = "text",
@@ -169,6 +213,8 @@ export interface ToolCall {
   id?: string,
   type?: ToolType,
   function_call?: FunctionCall,
+  /** gemini3 thought_signature */
+  signature?: string,
 }
 export interface FunctionCall {
   name?: string,
@@ -231,6 +277,8 @@ export interface DebugMessage {
   parts?: ContentPart[],
   tool_call_id?: string,
   tool_calls?: DebugToolCall[],
+  /** gemini3 thought_signature */
+  signature?: string,
   debug_id?: string,
   input_tokens?: string,
   output_tokens?: string,

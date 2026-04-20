@@ -6,6 +6,8 @@ include "evaluator.thrift"
 include "eval_set.thrift"
 include "../../data/domain/tag.thrift"
 include "../../data/domain/dataset.thrift"
+include "../../observability/domain/filter.thrift"
+include "../../observability/domain/task.thrift"
 
 enum ExptStatus {
     Unknown = 0
@@ -30,7 +32,18 @@ enum ExptType {
 enum SourceType {
     Evaluation = 1
     AutoTask = 2
+    Workflow = 3
+    IntelligentGen =4    // 智能生成
 }
+
+typedef string Visibility(ts.enum="true")
+const Visibility Visibility_Hidden = "hidden"
+
+
+typedef string ExptTriggerType (ts.enum="true")
+const ExptTriggerType Manual = "manual"
+const ExptTriggerType OpenAPI = "openapi"
+const ExptTriggerType Schedule = "schedule"
 
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
@@ -42,6 +55,7 @@ struct Experiment {
     7: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
     8: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
     9: optional i32 item_concur_num
+    10: optional Visibility visibility  // 实验可见性，默认为空，可见
 
     21: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
     22: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
@@ -70,6 +84,14 @@ struct Experiment {
     // 评估器得分加权配置
     61: optional ExptScoreWeight score_weight_config
     62: optional bool enable_weighted_score
+
+    // 智能评测相关
+    63: optional string thread_id// 关联的智能评测会话ID
+    64: optional bool enable_extract_trajectory
+
+    // 触发方式
+    70: optional ExptTriggerType trigger_type
+    71: optional ExptSource expt_source
 }
 
 // 实验模板基础信息
@@ -79,6 +101,7 @@ struct ExptTemplateMeta {
     3: optional string name
     4: optional string desc
     5: optional ExptType expt_type   // 模板对应的实验类型，当前主要为 Offline
+    6: optional Visibility visibility  // 实验模板可见性，默认为空，可见
 }
 
 // 实验三元组配置
@@ -114,14 +137,53 @@ struct ExptTemplate {
     3: optional ExptFieldMapping field_mapping_config
     4: optional ExptScoreWeight score_weight_config
     5: optional ExptInfo expt_info
+    6: optional ExptSource expt_source
+    7: optional bool enable_extract_trajectory
 
     255: optional common.BaseInfo base_info
+}
+
+struct TaskTimeRange {
+    1: optional i64 start_time (agw.js_conv = "str") // 生效开始时间（时间戳，毫秒）
+    2: optional i64 end_time (agw.js_conv = "str") // 生效结束时间（时间戳，毫秒）
+}
+
+struct ExptSource {
+    1: optional SourceType source_type
+    2: optional string source_id
+
+    // 不同source里的源数据结构
+    100: optional filter.SpanFilterFields span_filter_fields
+    101: optional Scheduler scheduler
+    // 采样配置，与 pipeline 节点 task.rule.sampler（见 pipeline.json）及 task.Sampler 对齐
+    102: optional task.Sampler sampler
+    103: optional TaskTimeRange time_range
+}
+
+typedef string Frequency (ts.enum="true")
+const Frequency FrequencyEveryday = "every_day"
+const Frequency FrequencyMonday = "monday"
+const Frequency FrequencyTuesday = "tuesday"
+const Frequency FrequencyWednesday = "wednesday"
+const Frequency FrequencyThursday = "thursday"
+const Frequency FrequencyFriday = "friday"
+const Frequency FrequencySaturday = "saturday"
+const Frequency FrequencySunday = "sunday"
+
+struct Scheduler {
+    1: optional bool enabled              // 定时触发器开关，默认关闭
+    2: optional Frequency frequency       // 触发频次
+    3: optional i64 trigger_at (agw.js_conv = "str")    // 触发时间（时间戳，秒。只使用时间，不使用日期）
+    4: optional i64 start_time (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
+    5: optional i64 end_time (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
 }
 
 struct ExptInfo {
     1: optional i64 created_expt_count
     2: optional i64 latest_expt_id (api.js_conv='true', go.tag='json:"latest_expt_id"')
     3: optional ExptStatus latest_expt_status
+    4: optional i64 latest_expt_start_time (agw.js_conv = "str") // 最新实验开始时间（时间戳，毫秒）
+    5: optional bool cron_activate (go.tag='json:"cron_activate"') // 是否开启定时触发
 }
 
 struct TokenUsage {
@@ -403,6 +465,8 @@ enum FieldType {
     ExperimentTemplateID = 70
     EvaluatorWeightedScore = 71
     UpdatedBy = 72
+    CronActivate = 73
+    TriggerType = 74
 }
 
 // 字段过滤器

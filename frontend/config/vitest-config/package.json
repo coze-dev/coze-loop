@@ -15,7 +15,7 @@
   "devDependencies": {
     "@coze-arch/eslint-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
-    "@types/node": "^18",
+    "@types/node": "^24",
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "~3.0.5",
     "happy-dom": "^20.0.10",

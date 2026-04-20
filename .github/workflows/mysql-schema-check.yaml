@@ -1,0 +1,47 @@
+name: CI@mysql-schema-check
+
+on:
+  push:
+    branches: ["main", "release/**"]
+    paths:
+      - 'release/deployment/docker-compose/bootstrap/mysql-init/**'
+      - 'release/deployment/helm-chart/charts/app/bootstrap/init/mysql/**'
+      - '.github/scripts/check-mysql-schema.sh'
+      - '.github/workflows/mysql-schema-check.yaml'
+  pull_request:
+    branches: ["main", "release/**"]
+    paths:
+      - 'release/deployment/docker-compose/bootstrap/mysql-init/**'
+      - 'release/deployment/helm-chart/charts/app/bootstrap/init/mysql/**'
+      - '.github/scripts/check-mysql-schema.sh'
+      - '.github/workflows/mysql-schema-check.yaml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  mysql-schema-check:
+    name: MySQL Schema Consistency Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24.0"
+
+      - name: Install schemadiff
+        run: |
+          go install github.com/planetscale/schemadiff/cmd/schemadiff@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Run MySQL Schema Check
+        env:
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/check-mysql-schema.sh

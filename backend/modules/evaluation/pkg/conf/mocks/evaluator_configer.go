@@ -57,6 +57,20 @@ func (mr *MockIConfigerMockRecorder) CheckAgentEvaluatorWritable(ctx any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckAgentEvaluatorWritable", reflect.TypeOf((*MockIConfiger)(nil).CheckAgentEvaluatorWritable), ctx)
 }
 
+// CheckURIEnabled mocks base method.
+func (m *MockIConfiger) CheckURIEnabled(ctx context.Context) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckURIEnabled", ctx)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// CheckURIEnabled indicates an expected call of CheckURIEnabled.
+func (mr *MockIConfigerMockRecorder) CheckURIEnabled(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckURIEnabled", reflect.TypeOf((*MockIConfiger)(nil).CheckURIEnabled), ctx)
+}
+
 // CheckCustomRPCEvaluatorWritable mocks base method.
 func (m *MockIConfiger) CheckCustomRPCEvaluatorWritable(ctx context.Context, spaceID string, builtinSpaceIDs []string) (bool, error) {
 	m.ctrl.T.Helper()

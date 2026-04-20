@@ -148,6 +148,8 @@ struct Experiment {
     // 统计信息
     50: optional ExperimentStatistics expt_stats
 
+    60: optional bool enable_extract_trajectory
+
     100: optional common.BaseInfo base_info
 }
 
@@ -273,6 +275,7 @@ struct ExptTemplate {
     2: optional ExptTuple triple_config
     3: optional ExptFieldMapping field_mapping_config
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
+    5: optional bool enable_extract_trajectory
 
     100: optional common.BaseInfo base_info
 }

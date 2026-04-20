@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 
 	domaincommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
+	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application/convertor/common"
@@ -871,11 +872,12 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
-		SpaceID:    req.GetWorkspaceID(),
-		RecordID:   req.GetInvokeID(),
-		OutputData: outputData,
-		Status:     target.ToTargetRunStatsDO(req.GetStatus()),
-		Session:    actx.Session,
+		SpaceID:                 req.GetWorkspaceID(),
+		RecordID:                req.GetInvokeID(),
+		OutputData:              outputData,
+		Status:                  target.ToTargetRunStatsDO(req.GetStatus()),
+		Session:                 actx.Session,
+		EnableExtractTrajectory: actx.EnableExtractTrajectory,
 	}); err != nil {
 		return nil, err
 	}
@@ -961,19 +963,21 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 	}
 
 	createReq := &exptpb.SubmitExperimentRequest{
-		WorkspaceID:            req.GetWorkspaceID(),
-		EvalSetVersionID:       gptr.Of(versions[0].ID),
-		EvalSetID:              req.GetEvalSetParam().EvalSetID,
-		EvaluatorVersionIds:    evaluatorVersionIDs,
-		Name:                   req.Name,
-		Desc:                   req.Description,
-		TargetFieldMapping:     experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
-		EvaluatorFieldMapping:  experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
-		ItemConcurNum:          req.ItemConcurNum,
-		TargetRuntimeParam:     experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
-		CreateEvalTargetParam:  experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
-		EvaluatorIDVersionList: experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
-		ItemRetryNum:           req.ItemRetryNum,
+		WorkspaceID:             req.GetWorkspaceID(),
+		EvalSetVersionID:        gptr.Of(versions[0].ID),
+		EvalSetID:               req.GetEvalSetParam().EvalSetID,
+		EvaluatorVersionIds:     evaluatorVersionIDs,
+		Name:                    req.Name,
+		Desc:                    req.Description,
+		TargetFieldMapping:      experiment_convertor.OpenAPITargetFieldMappingDTO2Domain(req.TargetFieldMapping),
+		EvaluatorFieldMapping:   experiment_convertor.OpenAPIEvaluatorFieldMappingDTO2Domain(req.EvaluatorFieldMapping, evaluatorMap),
+		ItemConcurNum:           req.ItemConcurNum,
+		TargetRuntimeParam:      experiment_convertor.OpenAPIRuntimeParamDTO2Domain(req.TargetRuntimeParam),
+		CreateEvalTargetParam:   experiment_convertor.OpenAPICreateEvalTargetParamDTO2Domain(req.EvalTargetParam),
+		EvaluatorIDVersionList:  experiment_convertor.OpenAPIEvaluatorParamsDTO2Domain(req.EvaluatorParams),
+		ItemRetryNum:            req.ItemRetryNum,
+		TriggerType:             gptr.Of(domain_expt.OpenAPI),
+		EnableExtractTrajectory: req.EnableExtractTrajectory,
 	}
 
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
@@ -1928,15 +1932,16 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateMetaOApi(ctx context.Context,
 		return nil, err
 	}
 
+	metaOut := &experiment.ExptTemplateMeta{
+		ID:          gptr.Of(do.Meta.ID),
+		WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
+		Name:        gptr.Of(do.Meta.Name),
+		Description: gptr.Of(do.Meta.Desc),
+		ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
+	}
 	return &openapi.UpdateExptTemplateMetaOApiResponse{
 		Data: &openapi.UpdateExptTemplateMetaOpenAPIData{
-			Meta: &experiment.ExptTemplateMeta{
-				ID:          gptr.Of(do.Meta.ID),
-				WorkspaceID: gptr.Of(do.Meta.WorkspaceID),
-				Name:        gptr.Of(do.Meta.Name),
-				Description: gptr.Of(do.Meta.Desc),
-				ExptType:    experiment_convertor.OpenAPIExptTypeDO2DTO(do.Meta.ExptType),
-			},
+			Meta: metaOut,
 		},
 	}, nil
 }

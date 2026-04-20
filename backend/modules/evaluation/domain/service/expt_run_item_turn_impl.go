@@ -144,11 +144,22 @@ func (e *DefaultExptTurnEvaluationImpl) validateEvalTargetCtx(etec *entity.ExptT
 
 // skipTargetNode Whether target is called is determined by the target info bound in expt;
 // ConnectorConf.TargetConf serves as the config info for executing the target, and CheckConnector completes the validity check when creating experiment.
+// 仅记录型（*Online）不需要执行对象，跳过 target 节点
 func (e *DefaultExptTurnEvaluationImpl) skipTargetNode(expt *entity.Experiment) bool {
 	if expt.TargetVersionID == 0 {
 		return true
 	}
 	if expt.ExptType == entity.ExptType_Online {
+		return true
+	}
+	targetType := expt.TargetType
+	if targetType == 0 && expt.Target != nil {
+		targetType = expt.Target.EvalTargetType
+		if targetType == 0 && expt.Target.EvalTargetVersion != nil {
+			targetType = expt.Target.EvalTargetVersion.EvalTargetType
+		}
+	}
+	if targetType.IsRecordOnlyType() {
 		return true
 	}
 	return false
@@ -194,7 +205,7 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 			return nil, nil
 		}
 		switch etec.Expt.Target.EvalTargetType {
-		case entity.EvalTargetTypeCustomRPCServer:
+		case entity.EvalTargetTypeCustomRPCServer, entity.EvalTargetTypeWebAgent:
 			fields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
 			for _, field := range turn.FieldDataList {
 				if field.Content != nil && field.Content.IsContentOmitted() {
@@ -239,6 +250,9 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 		ItemID:          etec.EvalSetItem.ItemID,
 		TurnID:          etec.Turn.ID,
 	}
+	if etec.Expt.EvalConf != nil {
+		etc.EnableExtractTrajectory = etec.Expt.EvalConf.EnableExtractTrajectory
+	}
 	etid := &entity.EvalTargetInputData{
 		HistoryMessages: history,
 		InputFields:     inputFields,
@@ -256,11 +270,12 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 	}
 
 	if err := e.evalAsyncRepo.SetEvalAsyncCtx(ctx, strconv.FormatInt(targetRecord.ID, 10), &entity.EvalAsyncCtx{
-		Event:       etec.Event,
-		RecordID:    targetRecord.ID,
-		AsyncUnixMS: ts.UnixMilli(),
-		Session:     etec.Event.Session,
-		Callee:      callee,
+		Event:                   etec.Event,
+		RecordID:                targetRecord.ID,
+		AsyncUnixMS:             ts.UnixMilli(),
+		Session:                 etec.Event.Session,
+		Callee:                  callee,
+		EnableExtractTrajectory: etc.EnableExtractTrajectory,
 	}); err != nil {
 		return nil, err
 	}

@@ -45,6 +45,7 @@ export interface GetEvaluatorResponse {
 }
 export interface CreateEvaluatorRequest {
   evaluator: evaluator.Evaluator,
+  workspace_id?: string,
   cid?: string,
 }
 export interface CreateEvaluatorResponse {
@@ -117,6 +118,19 @@ export interface BatchGetEvaluatorVersionsRequest {
 export interface BatchGetEvaluatorVersionsResponse {
   evaluators?: evaluator.Evaluator[]
 }
+/** EvaluatorID 与版本号组成的对，用于 BatchGetEvaluatorVersionIDs（仅 RPC，无 HTTP 路由） */
+export interface EvaluatorIDVersionPair {
+  evaluator_id: number,
+  version: string,
+}
+export interface BatchGetEvaluatorVersionIDsRequest {
+  workspace_id: number,
+  evaluator_id_version_pairs?: EvaluatorIDVersionPair[],
+}
+export interface BatchGetEvaluatorVersionIDsResponse {
+  /** 与请求 evaluator_id_version_pairs 顺序一致；evaluator_version_id 为解析结果，未找到对应版本时可不填或为 0 */
+  id_version_items?: evaluator.EvaluatorIDVersionItem[]
+}
 export interface SubmitEvaluatorVersionRequest {
   workspace_id: string,
   evaluator_id: string,
@@ -164,6 +178,28 @@ export interface RunEvaluatorRequest {
 export interface RunEvaluatorResponse {
   record: evaluator.EvaluatorRecord
 }
+export interface AsyncRunEvaluatorRequest {
+  /** 空间 id */
+  workspace_id: string,
+  /** 评测规则 id */
+  evaluator_version_id: string,
+  /** 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace */
+  input_data: evaluator.EvaluatorInputData,
+  /** experiment id */
+  experiment_id?: string,
+  /** experiment run id */
+  experiment_run_id?: string,
+  item_id?: string,
+  turn_id?: string,
+  /** 评估器运行配置参数 */
+  evaluator_run_conf?: evaluator.EvaluatorRunConfig,
+  ext?: {
+    [key: string | number]: string
+  },
+}
+export interface AsyncRunEvaluatorResponse {
+  invoke_id?: string
+}
 export interface DebugEvaluatorRequest {
   /** 空间 id */
   workspace_id: string,
@@ -178,6 +214,20 @@ export interface DebugEvaluatorRequest {
 export interface DebugEvaluatorResponse {
   /** 输出数据 */
   evaluator_output_data?: evaluator.EvaluatorOutputData
+}
+export interface AsyncDebugEvaluatorRequest {
+  /** 空间 id */
+  workspace_id: string,
+  /** 待调试评估器内容 */
+  evaluator_content: evaluator.EvaluatorContent,
+  /** 评测数据输入: 数据集行内容 + 评测目标输出内容与历史记录 + 评测目标的 trace */
+  input_data: evaluator.EvaluatorInputData,
+  evaluator_type: evaluator.EvaluatorType,
+  /** 评估器运行配置参数 */
+  evaluator_run_conf?: evaluator.EvaluatorRunConfig,
+}
+export interface AsyncDebugEvaluatorResponse {
+  invoke_id?: string
 }
 export interface BatchDebugEvaluatorRequest {
   /** 空间 id */
@@ -328,10 +378,7 @@ export interface ListEvaluatorTagsResponse {
     [key: string | number]: string[]
   }
 }
-/**
- * 评估器
- * 按查询条件查询evaluator
-*/
+/** 评估器 */
 export const ListEvaluators = /*#__PURE__*/createAPI<ListEvaluatorsRequest, ListEvaluatorsResponse>({
   "url": "/api/evaluation/v1/evaluators/list",
   "method": "POST",
@@ -344,7 +391,7 @@ export const ListEvaluators = /*#__PURE__*/createAPI<ListEvaluatorsRequest, List
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按id批量查询evaluator */
+/** 按查询条件查询evaluator */
 export const BatchGetEvaluators = /*#__PURE__*/createAPI<BatchGetEvaluatorsRequest, BatchGetEvaluatorsResponse>({
   "url": "/api/evaluation/v1/evaluators/batch_get",
   "method": "POST",
@@ -357,7 +404,7 @@ export const BatchGetEvaluators = /*#__PURE__*/createAPI<BatchGetEvaluatorsReque
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按id单个查询evaluator */
+/** 按id批量查询evaluator */
 export const GetEvaluator = /*#__PURE__*/createAPI<GetEvaluatorRequest, GetEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id",
   "method": "GET",
@@ -371,20 +418,20 @@ export const GetEvaluator = /*#__PURE__*/createAPI<GetEvaluatorRequest, GetEvalu
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 创建evaluator */
+/** 按id单个查询evaluator */
 export const CreateEvaluator = /*#__PURE__*/createAPI<CreateEvaluatorRequest, CreateEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators",
   "method": "POST",
   "name": "CreateEvaluator",
   "reqType": "CreateEvaluatorRequest",
   "reqMapping": {
-    "body": ["evaluator", "cid"]
+    "body": ["evaluator", "workspace_id", "cid"]
   },
   "resType": "CreateEvaluatorResponse",
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 修改evaluator元信息 */
+/** 创建evaluator */
 export const UpdateEvaluator = /*#__PURE__*/createAPI<UpdateEvaluatorRequest, UpdateEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id",
   "method": "PATCH",
@@ -398,7 +445,7 @@ export const UpdateEvaluator = /*#__PURE__*/createAPI<UpdateEvaluatorRequest, Up
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 修改evaluator草稿 */
+/** 修改evaluator元信息 */
 export const UpdateEvaluatorDraft = /*#__PURE__*/createAPI<UpdateEvaluatorDraftRequest, UpdateEvaluatorDraftResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id/update_draft",
   "method": "PATCH",
@@ -412,7 +459,7 @@ export const UpdateEvaluatorDraft = /*#__PURE__*/createAPI<UpdateEvaluatorDraftR
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 批量删除evaluator */
+/** 修改evaluator草稿 */
 export const DeleteEvaluator = /*#__PURE__*/createAPI<DeleteEvaluatorRequest, DeleteEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id",
   "method": "DELETE",
@@ -426,7 +473,7 @@ export const DeleteEvaluator = /*#__PURE__*/createAPI<DeleteEvaluatorRequest, De
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 校验evaluator名称是否重复 */
+/** 批量删除evaluator */
 export const CheckEvaluatorName = /*#__PURE__*/createAPI<CheckEvaluatorNameRequest, CheckEvaluatorNameResponse>({
   "url": "/api/evaluation/v1/evaluators/check_name",
   "method": "POST",
@@ -440,8 +487,8 @@ export const CheckEvaluatorName = /*#__PURE__*/createAPI<CheckEvaluatorNameReque
   "service": "evaluationEvaluator"
 });
 /**
+ * 校验evaluator名称是否重复
  * 评估器版本
- * 按evaluator id查询evaluator version
 */
 export const ListEvaluatorVersions = /*#__PURE__*/createAPI<ListEvaluatorVersionsRequest, ListEvaluatorVersionsResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id/versions/list",
@@ -456,7 +503,7 @@ export const ListEvaluatorVersions = /*#__PURE__*/createAPI<ListEvaluatorVersion
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按版本id单个查询evaluator version */
+/** 按evaluator id查询evaluator version */
 export const GetEvaluatorVersion = /*#__PURE__*/createAPI<GetEvaluatorVersionRequest, GetEvaluatorVersionResponse>({
   "url": "/api/evaluation/v1/evaluators_versions/:evaluator_version_id",
   "method": "GET",
@@ -470,7 +517,7 @@ export const GetEvaluatorVersion = /*#__PURE__*/createAPI<GetEvaluatorVersionReq
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按版本id批量查询evaluator version */
+/** 按版本id单个查询evaluator version */
 export const BatchGetEvaluatorVersions = /*#__PURE__*/createAPI<BatchGetEvaluatorVersionsRequest, BatchGetEvaluatorVersionsResponse>({
   "url": "/api/evaluation/v1/evaluators_versions/batch_get",
   "method": "POST",
@@ -483,7 +530,6 @@ export const BatchGetEvaluatorVersions = /*#__PURE__*/createAPI<BatchGetEvaluato
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 提交evaluator版本 */
 export const SubmitEvaluatorVersion = /*#__PURE__*/createAPI<SubmitEvaluatorVersionRequest, SubmitEvaluatorVersionResponse>({
   "url": "/api/evaluation/v1/evaluators/:evaluator_id/submit_version",
   "method": "POST",
@@ -498,8 +544,8 @@ export const SubmitEvaluatorVersion = /*#__PURE__*/createAPI<SubmitEvaluatorVers
   "service": "evaluationEvaluator"
 });
 /**
+ * 提交evaluator版本
  * 评估器预置模版
- * 获取内置评估器模板列表（不含具体内容）
 */
 export const ListTemplates = /*#__PURE__*/createAPI<ListTemplatesRequest, ListTemplatesResponse>({
   "url": "/api/evaluation/v1/evaluators/list_template",
@@ -513,7 +559,7 @@ export const ListTemplates = /*#__PURE__*/createAPI<ListTemplatesRequest, ListTe
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 按key单个查询内置评估器模板详情 */
+/** 获取内置评估器模板列表（不含具体内容） */
 export const GetTemplateInfo = /*#__PURE__*/createAPI<GetTemplateInfoRequest, GetTemplateInfoResponse>({
   "url": "/api/evaluation/v1/evaluators/get_template_info",
   "method": "POST",
@@ -526,7 +572,7 @@ export const GetTemplateInfo = /*#__PURE__*/createAPI<GetTemplateInfoRequest, Ge
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 获取prompt evaluator tools配置 */
+/** 按key单个查询内置评估器模板详情 */
 export const GetDefaultPromptEvaluatorTools = /*#__PURE__*/createAPI<GetDefaultPromptEvaluatorToolsRequest, GetDefaultPromptEvaluatorToolsResponse>({
   "url": "/api/evaluation/v1/evaluators/default_prompt_evaluator_tools",
   "method": "POST",
@@ -538,8 +584,8 @@ export const GetDefaultPromptEvaluatorTools = /*#__PURE__*/createAPI<GetDefaultP
   "service": "evaluationEvaluator"
 });
 /**
+ * 获取prompt evaluator tools配置
  * 评估器执行
- * evaluator 运行
 */
 export const RunEvaluator = /*#__PURE__*/createAPI<RunEvaluatorRequest, RunEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators_versions/:evaluator_version_id/run",
@@ -554,7 +600,7 @@ export const RunEvaluator = /*#__PURE__*/createAPI<RunEvaluatorRequest, RunEvalu
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** evaluator 调试 */
+/** evaluator 运行 */
 export const DebugEvaluator = /*#__PURE__*/createAPI<DebugEvaluatorRequest, DebugEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/debug",
   "method": "POST",
@@ -580,9 +626,36 @@ export const BatchDebugEvaluator = /*#__PURE__*/createAPI<BatchDebugEvaluatorReq
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
+/** evaluator 调试 */
+export const AsyncRunEvaluator = /*#__PURE__*/createAPI<AsyncRunEvaluatorRequest, AsyncRunEvaluatorResponse>({
+  "url": "/api/evaluation/v1/evaluators_versions/:evaluator_version_id/async_run",
+  "method": "POST",
+  "name": "AsyncRunEvaluator",
+  "reqType": "AsyncRunEvaluatorRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "input_data", "experiment_id", "experiment_run_id", "item_id", "turn_id", "evaluator_run_conf", "ext"],
+    "path": ["evaluator_version_id"]
+  },
+  "resType": "AsyncRunEvaluatorResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** evaluator 异步运行 */
+export const AsyncDebugEvaluator = /*#__PURE__*/createAPI<AsyncDebugEvaluatorRequest, AsyncDebugEvaluatorResponse>({
+  "url": "/api/evaluation/v1/evaluators/async_debug",
+  "method": "POST",
+  "name": "AsyncDebugEvaluator",
+  "reqType": "AsyncDebugEvaluatorRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "evaluator_content", "input_data", "evaluator_type", "evaluator_run_conf"]
+  },
+  "resType": "AsyncDebugEvaluatorResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
 /**
+ * evaluator 异步调试
  * 评估器执行结果
- * 修正evaluator运行分数
 */
 export const UpdateEvaluatorRecord = /*#__PURE__*/createAPI<UpdateEvaluatorRecordRequest, UpdateEvaluatorRecordResponse>({
   "url": "/api/evaluation/v1/evaluator_records/:evaluator_record_id",
@@ -597,7 +670,37 @@ export const UpdateEvaluatorRecord = /*#__PURE__*/createAPI<UpdateEvaluatorRecor
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/** 评估器验证 */
+/** 修正evaluator运行分数 */
+export const GetEvaluatorRecord = /*#__PURE__*/createAPI<GetEvaluatorRecordRequest, GetEvaluatorRecordResponse>({
+  "url": "/api/evaluation/v1/evaluator_records/:evaluator_record_id",
+  "method": "GET",
+  "name": "GetEvaluatorRecord",
+  "reqType": "GetEvaluatorRecordRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "include_deleted"],
+    "path": ["evaluator_record_id"]
+  },
+  "resType": "GetEvaluatorRecordResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/** 获取evaluator运行记录详情 */
+export const BatchGetEvaluatorRecords = /*#__PURE__*/createAPI<BatchGetEvaluatorRecordsRequest, BatchGetEvaluatorRecordsResponse>({
+  "url": "/api/evaluation/v1/evaluator_records/batch_get",
+  "method": "POST",
+  "name": "BatchGetEvaluatorRecords",
+  "reqType": "BatchGetEvaluatorRecordsRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "evaluator_record_ids", "include_deleted"]
+  },
+  "resType": "BatchGetEvaluatorRecordsResponse",
+  "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
+  "service": "evaluationEvaluator"
+});
+/**
+ * 按id批量查询evaluator运行记录详情
+ * 评估器验证
+*/
 export const ValidateEvaluator = /*#__PURE__*/createAPI<ValidateEvaluatorRequest, ValidateEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/validate",
   "method": "POST",
@@ -676,10 +779,7 @@ export const DeleteEvaluatorTemplate = /*#__PURE__*/createAPI<DeleteEvaluatorTem
   "schemaRoot": "api://schemas/evaluation_coze.loop.evaluation.evaluator",
   "service": "evaluationEvaluator"
 });
-/**
- * 调试预置评估器
- * 调试预置评估器
-*/
+/** 调试预置评估器 */
 export const DebugBuiltinEvaluator = /*#__PURE__*/createAPI<DebugBuiltinEvaluatorRequest, DebugBuiltinEvaluatorResponse>({
   "url": "/api/evaluation/v1/evaluators/debug_builtin",
   "method": "POST",

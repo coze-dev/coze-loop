@@ -4120,8 +4120,9 @@ type Experiment struct {
 	EvalSet               *eval_set.EvaluationSet  `thrift:"eval_set,33,optional" frugal:"33,optional,eval_set.EvaluationSet" form:"eval_set" json:"eval_set,omitempty" query:"eval_set"`
 	EvalTarget            *eval_target.EvalTarget  `thrift:"eval_target,34,optional" frugal:"34,optional,eval_target.EvalTarget" form:"eval_target" json:"eval_target,omitempty" query:"eval_target"`
 	// 统计信息
-	ExptStats *ExperimentStatistics `thrift:"expt_stats,50,optional" frugal:"50,optional,ExperimentStatistics" form:"expt_stats" json:"expt_stats,omitempty" query:"expt_stats"`
-	BaseInfo  *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	ExptStats               *ExperimentStatistics `thrift:"expt_stats,50,optional" frugal:"50,optional,ExperimentStatistics" form:"expt_stats" json:"expt_stats,omitempty" query:"expt_stats"`
+	EnableExtractTrajectory *bool                 `thrift:"enable_extract_trajectory,60,optional" frugal:"60,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
+	BaseInfo                *common.BaseInfo      `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewExperiment() *Experiment {
@@ -4287,6 +4288,18 @@ func (p *Experiment) GetExptStats() (v *ExperimentStatistics) {
 	return p.ExptStats
 }
 
+var Experiment_EnableExtractTrajectory_DEFAULT bool
+
+func (p *Experiment) GetEnableExtractTrajectory() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableExtractTrajectory() {
+		return Experiment_EnableExtractTrajectory_DEFAULT
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var Experiment_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *Experiment) GetBaseInfo() (v *common.BaseInfo) {
@@ -4337,6 +4350,9 @@ func (p *Experiment) SetEvalTarget(val *eval_target.EvalTarget) {
 func (p *Experiment) SetExptStats(val *ExperimentStatistics) {
 	p.ExptStats = val
 }
+func (p *Experiment) SetEnableExtractTrajectory(val *bool) {
+	p.EnableExtractTrajectory = val
+}
 func (p *Experiment) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -4355,6 +4371,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	33:  "eval_set",
 	34:  "eval_target",
 	50:  "expt_stats",
+	60:  "enable_extract_trajectory",
 	100: "base_info",
 }
 
@@ -4408,6 +4425,10 @@ func (p *Experiment) IsSetEvalTarget() bool {
 
 func (p *Experiment) IsSetExptStats() bool {
 	return p.ExptStats != nil
+}
+
+func (p *Experiment) IsSetEnableExtractTrajectory() bool {
+	return p.EnableExtractTrajectory != nil
 }
 
 func (p *Experiment) IsSetBaseInfo() bool {
@@ -4531,6 +4552,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 50:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField50(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 60:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField60(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4713,6 +4742,17 @@ func (p *Experiment) ReadField50(iprot thrift.TProtocol) error {
 	p.ExptStats = _field
 	return nil
 }
+func (p *Experiment) ReadField60(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return nil
+}
 func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -4778,6 +4818,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField50(oprot); err != nil {
 			fieldId = 50
+			goto WriteFieldError
+		}
+		if err = p.writeField60(oprot); err != nil {
+			fieldId = 60
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -5044,6 +5088,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 50 end error: ", p), err)
 }
+func (p *Experiment) writeField60(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableExtractTrajectory() {
+		if err = oprot.WriteFieldBegin("enable_extract_trajectory", thrift.BOOL, 60); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableExtractTrajectory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
+}
 func (p *Experiment) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -5114,6 +5176,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.ExptStats) {
+		return false
+	}
+	if !p.Field60DeepEqual(ano.EnableExtractTrajectory) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
@@ -5250,6 +5315,18 @@ func (p *Experiment) Field34DeepEqual(src *eval_target.EvalTarget) bool {
 func (p *Experiment) Field50DeepEqual(src *ExperimentStatistics) bool {
 
 	if !p.ExptStats.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *Experiment) Field60DeepEqual(src *bool) bool {
+
+	if p.EnableExtractTrajectory == src {
+		return true
+	} else if p.EnableExtractTrajectory == nil || src == nil {
+		return false
+	}
+	if *p.EnableExtractTrajectory != *src {
 		return false
 	}
 	return true
@@ -10725,11 +10802,12 @@ func (p *ExptScoreWeight) Field2DeepEqual(src map[int64]float64) bool {
 
 // 实验模板
 type ExptTemplate struct {
-	Meta               *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
-	TripleConfig       *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
-	FieldMappingConfig *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
-	ScoreWeightConfig  *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" json:"score_weight_config" form:"score_weight_config" query:"score_weight_config"`
-	BaseInfo           *common.BaseInfo  `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
+	Meta                    *ExptTemplateMeta `thrift:"meta,1,optional" frugal:"1,optional,ExptTemplateMeta" form:"meta" json:"meta,omitempty" query:"meta"`
+	TripleConfig            *ExptTuple        `thrift:"triple_config,2,optional" frugal:"2,optional,ExptTuple" form:"triple_config" json:"triple_config,omitempty" query:"triple_config"`
+	FieldMappingConfig      *ExptFieldMapping `thrift:"field_mapping_config,3,optional" frugal:"3,optional,ExptFieldMapping" form:"field_mapping_config" json:"field_mapping_config,omitempty" query:"field_mapping_config"`
+	ScoreWeightConfig       *ExptScoreWeight  `thrift:"score_weight_config,4,optional" frugal:"4,optional,ExptScoreWeight" json:"score_weight_config" form:"score_weight_config" query:"score_weight_config"`
+	EnableExtractTrajectory *bool             `thrift:"enable_extract_trajectory,5,optional" frugal:"5,optional,bool" form:"enable_extract_trajectory" json:"enable_extract_trajectory,omitempty" query:"enable_extract_trajectory"`
+	BaseInfo                *common.BaseInfo  `thrift:"base_info,100,optional" frugal:"100,optional,common.BaseInfo" form:"base_info" json:"base_info,omitempty" query:"base_info"`
 }
 
 func NewExptTemplate() *ExptTemplate {
@@ -10787,6 +10865,18 @@ func (p *ExptTemplate) GetScoreWeightConfig() (v *ExptScoreWeight) {
 	return p.ScoreWeightConfig
 }
 
+var ExptTemplate_EnableExtractTrajectory_DEFAULT bool
+
+func (p *ExptTemplate) GetEnableExtractTrajectory() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetEnableExtractTrajectory() {
+		return ExptTemplate_EnableExtractTrajectory_DEFAULT
+	}
+	return *p.EnableExtractTrajectory
+}
+
 var ExptTemplate_BaseInfo_DEFAULT *common.BaseInfo
 
 func (p *ExptTemplate) GetBaseInfo() (v *common.BaseInfo) {
@@ -10810,6 +10900,9 @@ func (p *ExptTemplate) SetFieldMappingConfig(val *ExptFieldMapping) {
 func (p *ExptTemplate) SetScoreWeightConfig(val *ExptScoreWeight) {
 	p.ScoreWeightConfig = val
 }
+func (p *ExptTemplate) SetEnableExtractTrajectory(val *bool) {
+	p.EnableExtractTrajectory = val
+}
 func (p *ExptTemplate) SetBaseInfo(val *common.BaseInfo) {
 	p.BaseInfo = val
 }
@@ -10819,6 +10912,7 @@ var fieldIDToName_ExptTemplate = map[int16]string{
 	2:   "triple_config",
 	3:   "field_mapping_config",
 	4:   "score_weight_config",
+	5:   "enable_extract_trajectory",
 	100: "base_info",
 }
 
@@ -10836,6 +10930,10 @@ func (p *ExptTemplate) IsSetFieldMappingConfig() bool {
 
 func (p *ExptTemplate) IsSetScoreWeightConfig() bool {
 	return p.ScoreWeightConfig != nil
+}
+
+func (p *ExptTemplate) IsSetEnableExtractTrajectory() bool {
+	return p.EnableExtractTrajectory != nil
 }
 
 func (p *ExptTemplate) IsSetBaseInfo() bool {
@@ -10887,6 +10985,14 @@ func (p *ExptTemplate) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -10961,6 +11067,17 @@ func (p *ExptTemplate) ReadField4(iprot thrift.TProtocol) error {
 	p.ScoreWeightConfig = _field
 	return nil
 }
+func (p *ExptTemplate) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.EnableExtractTrajectory = _field
+	return nil
+}
 func (p *ExptTemplate) ReadField100(iprot thrift.TProtocol) error {
 	_field := common.NewBaseInfo()
 	if err := _field.Read(iprot); err != nil {
@@ -10990,6 +11107,10 @@ func (p *ExptTemplate) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -11086,6 +11207,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *ExptTemplate) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetEnableExtractTrajectory() {
+		if err = oprot.WriteFieldBegin("enable_extract_trajectory", thrift.BOOL, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.EnableExtractTrajectory); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 func (p *ExptTemplate) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBaseInfo() {
 		if err = oprot.WriteFieldBegin("base_info", thrift.STRUCT, 100); err != nil {
@@ -11131,6 +11270,9 @@ func (p *ExptTemplate) DeepEqual(ano *ExptTemplate) bool {
 	if !p.Field4DeepEqual(ano.ScoreWeightConfig) {
 		return false
 	}
+	if !p.Field5DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
 	if !p.Field100DeepEqual(ano.BaseInfo) {
 		return false
 	}
@@ -11161,6 +11303,18 @@ func (p *ExptTemplate) Field3DeepEqual(src *ExptFieldMapping) bool {
 func (p *ExptTemplate) Field4DeepEqual(src *ExptScoreWeight) bool {
 
 	if !p.ScoreWeightConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ExptTemplate) Field5DeepEqual(src *bool) bool {
+
+	if p.EnableExtractTrajectory == src {
+		return true
+	} else if p.EnableExtractTrajectory == nil || src == nil {
+		return false
+	}
+	if *p.EnableExtractTrajectory != *src {
 		return false
 	}
 	return true

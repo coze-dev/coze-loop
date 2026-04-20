@@ -90,6 +90,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"BatchGetEvaluatorVersionIDs": kitex.NewMethodInfo(
+		batchGetEvaluatorVersionIDsHandler,
+		newEvaluatorServiceBatchGetEvaluatorVersionIDsArgs,
+		newEvaluatorServiceBatchGetEvaluatorVersionIDsResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"SubmitEvaluatorVersion": kitex.NewMethodInfo(
 		submitEvaluatorVersionHandler,
 		newEvaluatorServiceSubmitEvaluatorVersionArgs,
@@ -477,6 +484,25 @@ func newEvaluatorServiceBatchGetEvaluatorVersionsArgs() interface{} {
 
 func newEvaluatorServiceBatchGetEvaluatorVersionsResult() interface{} {
 	return evaluator.NewEvaluatorServiceBatchGetEvaluatorVersionsResult()
+}
+
+func batchGetEvaluatorVersionIDsHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsArgs)
+	realResult := result.(*evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsResult)
+	success, err := handler.(evaluator.EvaluatorService).BatchGetEvaluatorVersionIDs(ctx, realArg.Request)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluatorServiceBatchGetEvaluatorVersionIDsArgs() interface{} {
+	return evaluator.NewEvaluatorServiceBatchGetEvaluatorVersionIDsArgs()
+}
+
+func newEvaluatorServiceBatchGetEvaluatorVersionIDsResult() interface{} {
+	return evaluator.NewEvaluatorServiceBatchGetEvaluatorVersionIDsResult()
 }
 
 func submitEvaluatorVersionHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -995,6 +1021,16 @@ func (p *kClient) BatchGetEvaluatorVersions(ctx context.Context, request *evalua
 	_args.Request = request
 	var _result evaluator.EvaluatorServiceBatchGetEvaluatorVersionsResult
 	if err = p.c.Call(ctx, "BatchGetEvaluatorVersions", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) BatchGetEvaluatorVersionIDs(ctx context.Context, request *evaluator.BatchGetEvaluatorVersionIDsRequest) (r *evaluator.BatchGetEvaluatorVersionIDsResponse, err error) {
+	var _args evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsArgs
+	_args.Request = request
+	var _result evaluator.EvaluatorServiceBatchGetEvaluatorVersionIDsResult
+	if err = p.c.Call(ctx, "BatchGetEvaluatorVersionIDs", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

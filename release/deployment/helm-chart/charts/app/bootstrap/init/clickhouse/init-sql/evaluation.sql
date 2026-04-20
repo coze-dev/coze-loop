@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS expt_turn_result_filter
     `annotation_bool` Map(String, Int8),
     `annotation_string` Map(String, String),
     `evaluator_score_corrected` Int32,
+    `eval_set_id` String,
     `eval_set_version_id` String,
     `created_date` Date,
     `created_at` DateTime,
@@ -37,3 +38,6 @@ AFTER `updated_at`;
 ALTER TABLE expt_turn_result_filter
 ADD COLUMN IF NOT EXISTS `evaluator_weighted_score` Float64
 AFTER `eval_target_metrics`;
+ALTER TABLE expt_turn_result_filter
+ADD COLUMN IF NOT EXISTS `eval_set_id` String
+AFTER `evaluator_score_corrected`;

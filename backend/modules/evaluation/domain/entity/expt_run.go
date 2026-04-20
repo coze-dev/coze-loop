@@ -32,6 +32,8 @@ const (
 
 	EvaluationModeRetryAll   ExptRunMode = 4
 	EvaluationModeRetryItems ExptRunMode = 5
+	// EvaluationModeTrialRun 试运行模式
+	EvaluationModeTrialRun ExptRunMode = 6
 )
 
 type ItemRunState int64
@@ -524,7 +526,6 @@ type ExptSchedulerMode interface {
 	ScanEvalItems(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) (toSubmit, incomplete, complete []*ExptEvalItem, err error)
 	ExptEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) (nextTick bool, err error)
 	ScheduleStart(ctx context.Context, event *ExptScheduleEvent, expt *Experiment) error
-	ScheduleEnd(ctx context.Context, event *ExptScheduleEvent, expt *Experiment, toSubmit, incomplete int) error
 	NextTick(ctx context.Context, event *ExptScheduleEvent, nextTick bool) error
 	PublishResult(ctx context.Context, turnEvaluatorRefs []*ExptTurnEvaluatorResultRef, event *ExptScheduleEvent) error
 }
@@ -535,10 +536,11 @@ type CKDBConfig struct {
 }
 
 type EvalAsyncCtx struct {
-	Event              *ExptItemEvalEvent
-	RecordID           int64
-	AsyncUnixMS        int64 // async call time with unix ms ts
-	Session            *Session
-	Callee             string
-	EvaluatorVersionID int64 // evaluator version id, used for evaluator async scenario
+	Event                   *ExptItemEvalEvent
+	RecordID                int64
+	AsyncUnixMS             int64 // async call time with unix ms ts
+	Session                 *Session
+	Callee                  string
+	EvaluatorVersionID      int64 // evaluator version id, used for evaluator async scenario
+	EnableExtractTrajectory *bool
 }

@@ -32,6 +32,9 @@ export const TaskFieldName_TaskName = "task_name";
 export const TaskFieldName_TaskType = "task_type";
 export const TaskFieldName_SampleRate = "sample_rate";
 export const TaskFieldName_CreatedBy = "created_by";
+export const TaskFieldName_TaskID = "task_id";
+export const TaskFieldName_WorkflowID = "workflow_id";
+export const TaskFieldName_UpdatedBy = "updated_by";
 export interface FilterFields {
   query_and_or?: QueryRelation,
   filter_fields: FilterField[],
