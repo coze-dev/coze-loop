@@ -221,6 +221,48 @@ func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithoutSource(t *testi
 	assert.Equal(t, int64(902), vid)
 }
 
+// 在线 CreateExpt 会为无版本场景注入 DefaultSourceTargetVersion；仅记录型无 source 时须仍走占位落库，不得调用 BuildBySource
+func TestEvalTargetServiceImpl_CreateEvalTarget_RecordOnlyWithInjectedDefaultVersionUsesPlaceholder(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	deps := &evalTargetServiceTestDeps{
+		repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+		idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+		metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+		configer: componentmocks.NewMockIConfiger(ctrl),
+	}
+
+	deps.metric.EXPECT().EmitCreate(int64(7), gomock.Any()).Times(1)
+	deps.repo.EXPECT().CreateEvalTarget(ctx, gomock.AssignableToTypeOf(&entity.EvalTarget{})).DoAndReturn(
+		func(ctx context.Context, do *entity.EvalTarget) (int64, int64, error) {
+			assert.Equal(t, entity.EvalTargetTypeCustomRPCServerOnline, do.EvalTargetType)
+			assert.Equal(t, "", do.SourceTargetID)
+			require.NotNil(t, do.EvalTargetVersion)
+			assert.Equal(t, consts.DefaultSourceTargetVersion, do.EvalTargetVersion.SourceTargetVersion)
+			return 801, 802, nil
+		},
+	)
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo: deps.repo,
+		idgen:          deps.idgen,
+		metric:         deps.metric,
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			entity.EvalTargetTypeCustomRPCServer: deps.operator,
+		},
+	}
+
+	id, vid, err := svc.CreateEvalTarget(ctx, 7, "", consts.DefaultSourceTargetVersion, entity.EvalTargetTypeCustomRPCServerOnline)
+	require.NoError(t, err)
+	assert.Equal(t, int64(801), id)
+	assert.Equal(t, int64(802), vid)
+}
+
 func TestEvalTargetServiceImpl_GetEvalTargetVersion(t *testing.T) {
 	t.Parallel()
 

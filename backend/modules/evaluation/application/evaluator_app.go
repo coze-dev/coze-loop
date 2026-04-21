@@ -588,6 +588,15 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorVersions(ctx context.Context, reques
 	if err != nil {
 		return nil, err
 	}
+	// 校验 evaluator 归属：鉴权只覆盖 workspace 维度，这里要求 evaluator_id 必须属于该 workspace，
+	// 否则攻击者可在自己有权限的空间上通过跨空间的 evaluator_id 拉取他人版本列表。
+	evaluatorDO, err := e.evaluatorService.GetEvaluator(ctx, request.GetWorkspaceID(), request.GetEvaluatorID(), false)
+	if err != nil {
+		return nil, err
+	}
+	if evaluatorDO == nil {
+		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+	}
 	evaluatorDOList, total, err := e.evaluatorService.ListEvaluatorVersion(ctx, buildListEvaluatorVersionRequest(request))
 	if err != nil {
 		return nil, err
@@ -1311,14 +1320,23 @@ func (e *EvaluatorHandlerImpl) BatchGetEvaluatorRecords(ctx context.Context, req
 	if len(evaluatorRecords) == 0 {
 		return &evaluatorservice.BatchGetEvaluatorRecordsResponse{}, nil
 	}
-	// 鉴权
-	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
-		ObjectID:      strconv.FormatInt(evaluatorRecords[0].SpaceID, 10),
-		SpaceID:       evaluatorRecords[0].SpaceID,
-		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
-	})
-	if err != nil {
-		return nil, err
+	// 鉴权：按实际结果涉及的所有 SpaceID 逐一校验，避免只用首条记录的 SpaceID 鉴权导致跨空间越权。
+	checkedSpaceIDs := make(map[int64]struct{}, len(evaluatorRecords))
+	for _, record := range evaluatorRecords {
+		if record == nil {
+			continue
+		}
+		if _, ok := checkedSpaceIDs[record.SpaceID]; ok {
+			continue
+		}
+		checkedSpaceIDs[record.SpaceID] = struct{}{}
+		if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+			ObjectID:      strconv.FormatInt(record.SpaceID, 10),
+			SpaceID:       record.SpaceID,
+			ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluator"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+		}); err != nil {
+			return nil, err
+		}
 	}
 	dtoList := make([]*evaluatordto.EvaluatorRecord, 0, len(evaluatorRecords))
 	for _, evaluatorRecord := range evaluatorRecords {

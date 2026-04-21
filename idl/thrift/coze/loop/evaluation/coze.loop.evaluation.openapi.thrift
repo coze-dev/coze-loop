@@ -340,6 +340,29 @@ struct ReportEvalTargetInvokeResultResponse {
     255: base.BaseResp BaseResp
 }
 
+// 按需查询评测对象输出中大对象的完整内容
+struct GetEvalTargetOutputFieldContentOApiRequest {
+    1: optional i64 workspace_id (api.body='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.body='experiment_id', api.js_conv="true", go.tag='json:"experiment_id"')
+    3: optional i64 item_id (api.body='item_id', api.js_conv="true", go.tag='json:"item_id"')
+    4: optional list<string> field_keys (api.body='field_keys', go.tag='json:"field_keys"')
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetEvalTargetOutputFieldContentOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetEvalTargetOutputFieldContentOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetEvalTargetOutputFieldContentOpenAPIData {
+    1: optional map<string, common.Content> field_contents (go.tag='json:"field_contents"')
+}
+
 struct ImportEvaluationSetOpenAPIData {
     1: optional i64 job_id (api.js_conv="true", go.tag='json:"job_id"')
 }
@@ -471,13 +494,41 @@ struct GetExperimentsOpenAPIDataData {
     255: base.BaseResp BaseResp
 }
 
-// 3.3 获取评测实验结果
+// 3.3 查询评测实验列表
+struct ListExperimentsOApiRequest {
+    1: optional i64 workspace_id (api.body='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i32 page_number (api.body='page_number')
+    3: optional i32 page_size (api.body='page_size')
+
+    20: optional experiment.ExperimentFilterOption filter_option (api.body='filter_option')
+    21: optional list<common.OrderBy> order_bys (api.body='order_bys')
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ListExperimentsOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ListExperimentsOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ListExperimentsOpenAPIData {
+    1: optional list<experiment.Experiment> experiments
+    2: optional i64 total (api.js_conv="true", go.tag='json:"total"')
+}
+
+// 3.4 获取评测实验结果
 struct ListExperimentResultOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
 
     100: optional i32 page_num (api.body = 'page_num')
     101: optional i32 page_size (api.body = 'page_size')
+
+    102: optional experiment.ExperimentResultFilter filter (api.body = 'filter')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -500,7 +551,7 @@ struct ListExperimentResultOpenAPIData {
     100: optional i64 total
 }
 
-// 3.4 获取聚合结果
+// 3.5 获取聚合结果
 struct GetExperimentAggrResultOApiRequest {
     1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
@@ -1054,12 +1105,16 @@ service EvaluationOpenAPIService {
 
     // 评测目标调用结果上报接口
     ReportEvalTargetInvokeResultResponse ReportEvalTargetInvokeResult(1: ReportEvalTargetInvokeResultRequest req) (api.category="openapi", api.post = "/v1/loop/eval_targets/result")
+    // 按需查询评测对象输出中大对象的完整内容
+    GetEvalTargetOutputFieldContentOApiResponse GetEvalTargetOutputFieldContentOApi(1: GetEvalTargetOutputFieldContentOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/eval_target_records/output_fields")
 
     // 评测实验接口
     // 创建评测实验
     SubmitExperimentOApiResponse SubmitExperimentOApi(1: SubmitExperimentOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments")
     // 获取评测实验
     GetExperimentsOApiResponse GetExperimentsOApi(1: GetExperimentsOApiRequest req) (api.category="openapi", api.get = '/v1/loop/evaluation/experiments/:experiment_id')
+    // 查询评测实验列表
+    ListExperimentsOApiResponse ListExperimentsOApi(1: ListExperimentsOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/list")
     // 查询评测实验结果
     ListExperimentResultOApiResponse ListExperimentResultOApi(1: ListExperimentResultOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results")
     // 获取聚合结果

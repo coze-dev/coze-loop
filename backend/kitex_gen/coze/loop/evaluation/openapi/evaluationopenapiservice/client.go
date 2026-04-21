@@ -27,8 +27,10 @@ type Client interface {
 	GetEvaluationSetJobOApi(ctx context.Context, req *openapi.GetEvaluationSetIOJobOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvaluationSetIOJobOApiResponse, err error)
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *openapi.UpdateEvaluationSetSchemaOApiRequest, callOptions ...callopt.Option) (r *openapi.UpdateEvaluationSetSchemaOApiResponse, err error)
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *openapi.ReportEvalTargetInvokeResultRequest, callOptions ...callopt.Option) (r *openapi.ReportEvalTargetInvokeResultResponse, err error)
+	GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error)
 	SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExperimentOApiResponse, err error)
 	GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentsOApiResponse, err error)
+	ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentsOApiResponse, err error)
 	ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error)
 	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
 	ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluatorsOApiResponse, err error)
@@ -163,6 +165,11 @@ func (p *kEvaluationOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx cont
 	return p.kClient.ReportEvalTargetInvokeResult_(ctx, req)
 }
 
+func (p *kEvaluationOpenAPIServiceClient) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (r *openapi.GetEvalTargetOutputFieldContentOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetEvalTargetOutputFieldContentOApi(ctx, req)
+}
+
 func (p *kEvaluationOpenAPIServiceClient) SubmitExperimentOApi(ctx context.Context, req *openapi.SubmitExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.SubmitExperimentOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.SubmitExperimentOApi(ctx, req)
@@ -171,6 +178,11 @@ func (p *kEvaluationOpenAPIServiceClient) SubmitExperimentOApi(ctx context.Conte
 func (p *kEvaluationOpenAPIServiceClient) GetExperimentsOApi(ctx context.Context, req *openapi.GetExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentsOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetExperimentsOApi(ctx, req)
+}
+
+func (p *kEvaluationOpenAPIServiceClient) ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentsOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListExperimentsOApi(ctx, req)
 }
 
 func (p *kEvaluationOpenAPIServiceClient) ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error) {
