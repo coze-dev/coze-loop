@@ -5755,6 +5755,7 @@ func (p *DeletePromptOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
 type GetPromptOApiRequest struct {
 	PromptID      *int64       `thrift:"prompt_id,1,optional" frugal:"1,optional,i64" json:"prompt_id" path:"prompt_id" `
 	WorkspaceID   *int64       `thrift:"workspace_id,2,optional" frugal:"2,optional,i64" json:"workspace_id" query:"workspace_id" `
+	PromptKey     *string      `thrift:"prompt_key,3,optional" frugal:"3,optional,string" json:"prompt_key,omitempty" query:"prompt_key"`
 	WithCommit    *bool        `thrift:"with_commit,11,optional" frugal:"11,optional,bool" json:"with_commit,omitempty" query:"with_commit"`
 	CommitVersion *string      `thrift:"commit_version,12,optional" frugal:"12,optional,string" json:"commit_version,omitempty" query:"commit_version"`
 	WithDraft     *bool        `thrift:"with_draft,21,optional" frugal:"21,optional,bool" json:"with_draft,omitempty" query:"with_draft"`
@@ -5791,6 +5792,18 @@ func (p *GetPromptOApiRequest) GetWorkspaceID() (v int64) {
 		return GetPromptOApiRequest_WorkspaceID_DEFAULT
 	}
 	return *p.WorkspaceID
+}
+
+var GetPromptOApiRequest_PromptKey_DEFAULT string
+
+func (p *GetPromptOApiRequest) GetPromptKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPromptKey() {
+		return GetPromptOApiRequest_PromptKey_DEFAULT
+	}
+	return *p.PromptKey
 }
 
 var GetPromptOApiRequest_WithCommit_DEFAULT bool
@@ -5858,6 +5871,9 @@ func (p *GetPromptOApiRequest) SetPromptID(val *int64) {
 func (p *GetPromptOApiRequest) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
+func (p *GetPromptOApiRequest) SetPromptKey(val *string) {
+	p.PromptKey = val
+}
 func (p *GetPromptOApiRequest) SetWithCommit(val *bool) {
 	p.WithCommit = val
 }
@@ -5877,6 +5893,7 @@ func (p *GetPromptOApiRequest) SetBase(val *base.Base) {
 var fieldIDToName_GetPromptOApiRequest = map[int16]string{
 	1:   "prompt_id",
 	2:   "workspace_id",
+	3:   "prompt_key",
 	11:  "with_commit",
 	12:  "commit_version",
 	21:  "with_draft",
@@ -5890,6 +5907,10 @@ func (p *GetPromptOApiRequest) IsSetPromptID() bool {
 
 func (p *GetPromptOApiRequest) IsSetWorkspaceID() bool {
 	return p.WorkspaceID != nil
+}
+
+func (p *GetPromptOApiRequest) IsSetPromptKey() bool {
+	return p.PromptKey != nil
 }
 
 func (p *GetPromptOApiRequest) IsSetWithCommit() bool {
@@ -5941,6 +5962,14 @@ func (p *GetPromptOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -6037,6 +6066,17 @@ func (p *GetPromptOApiRequest) ReadField2(iprot thrift.TProtocol) error {
 	p.WorkspaceID = _field
 	return nil
 }
+func (p *GetPromptOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PromptKey = _field
+	return nil
+}
 func (p *GetPromptOApiRequest) ReadField11(iprot thrift.TProtocol) error {
 
 	var _field *bool
@@ -6099,6 +6139,10 @@ func (p *GetPromptOApiRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 		if err = p.writeField11(oprot); err != nil {
@@ -6174,6 +6218,24 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetPromptOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPromptKey() {
+		if err = oprot.WriteFieldBegin("prompt_key", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PromptKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
 func (p *GetPromptOApiRequest) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWithCommit() {
@@ -6286,6 +6348,9 @@ func (p *GetPromptOApiRequest) DeepEqual(ano *GetPromptOApiRequest) bool {
 	if !p.Field2DeepEqual(ano.WorkspaceID) {
 		return false
 	}
+	if !p.Field3DeepEqual(ano.PromptKey) {
+		return false
+	}
 	if !p.Field11DeepEqual(ano.WithCommit) {
 		return false
 	}
@@ -6324,6 +6389,18 @@ func (p *GetPromptOApiRequest) Field2DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetPromptOApiRequest) Field3DeepEqual(src *string) bool {
+
+	if p.PromptKey == src {
+		return true
+	} else if p.PromptKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PromptKey, *src) != 0 {
 		return false
 	}
 	return true
