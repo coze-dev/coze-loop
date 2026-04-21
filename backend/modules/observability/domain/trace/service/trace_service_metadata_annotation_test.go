@@ -55,6 +55,26 @@ func TestTraceServiceImpl_ListMetadata(t *testing.T) {
 		PlatformType: loop_span.PlatformCozeLoop,
 	}
 
+	t.Run("ListMetadata passes NotQueryAnnotation true to repo", func(t *testing.T) {
+		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
+		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
+		tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), req.PlatformType).Return([]string{"tenant1"}, nil)
+
+		traceRepoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+				assert.True(t, param.NotQueryAnnotation)
+				return &repo.ListSpansResult{
+					Spans: loop_span.SpanList{{SpanID: "span1"}},
+				}, nil
+			})
+		metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+		buildHelperMock.EXPECT().BuildListSpansProcessors(gomock.Any(), gomock.Any()).Return([]span_processor.Processor{}, nil)
+
+		resp, err := svc.ListMetadata(ctx, req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+	})
+
 	t.Run("dedup by key and sort by frequency desc", func(t *testing.T) {
 		buildHelperMock.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), req.PlatformType).Return(filterMock, nil)
 		filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return(nil, true, nil)
