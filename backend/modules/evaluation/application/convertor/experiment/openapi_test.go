@@ -2747,7 +2747,7 @@ func Test_openAPIExperimentFilterFieldTypeToDomain(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
-		t.Run(string(tt.input), func(t *testing.T) {
+		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
 			got, err := openAPIExperimentFilterFieldTypeToDomain(tt.input)
 			if tt.wantErr {
@@ -2800,7 +2800,7 @@ func Test_openAPIExperimentFilterOperatorToDomain(t *testing.T) {
 
 	for _, tt := range tests {
 		tt := tt
-		t.Run(string(tt.input), func(t *testing.T) {
+		t.Run(tt.input, func(t *testing.T) {
 			t.Parallel()
 			got, err := openAPIExperimentFilterOperatorToDomain(tt.input)
 			if tt.wantErr {

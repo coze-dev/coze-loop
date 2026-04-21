@@ -5913,9 +5913,10 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 		check   func(t *testing.T, resp *openapi.GetEvalTargetOutputFieldContentOApiResponse)
 	}{
 		{
-			name:    "nil request",
-			req:     nil,
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {},
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -5925,7 +5926,8 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 				ItemID:       gptr.Of(int64(1)),
 				FieldKeys:    []string{"k"},
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -5935,7 +5937,8 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 				ItemID:      gptr.Of(int64(1)),
 				FieldKeys:   []string{"k"},
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -5945,7 +5948,8 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 				ExperimentID: gptr.Of(int64(1)),
 				FieldKeys:    []string{"k"},
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -5955,7 +5959,8 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 				ExperimentID: gptr.Of(int64(1)),
 				ItemID:       gptr.Of(int64(1)),
 			},
-			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
 			wantErr: errno.CommonInvalidParamCode,
 		},
 		{
@@ -6082,8 +6087,8 @@ func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T
 					EvalTargetOutputData: &entity.EvalTargetOutputData{
 						OutputFields: map[string]*entity.Content{
 							"actual_output": {Text: gptr.Of("hello")},
-						"trajectory":    {Text: gptr.Of("step1")},
-						"extra_field":   {Text: gptr.Of("ignored")},
+							"trajectory":    {Text: gptr.Of("step1")},
+							"extra_field":   {Text: gptr.Of("ignored")},
 						},
 					},
 				}
