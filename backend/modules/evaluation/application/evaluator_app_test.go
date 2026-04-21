@@ -1273,15 +1273,18 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 
 	app := &EvaluatorHandlerImpl{
 		auth:             mockAuth,
 		evaluatorService: mockEvaluatorService,
 		userInfoService:  mockUserInfoService,
+		configer:         mockConfiger,
 	}
 
 	workspaceID := int64(100)
 	evaluatorID := int64(200)
+	builtinSpaceID := int64(999)
 	evaluators := []*entity.Evaluator{
 		{
 			ID:            evaluatorID,
@@ -1293,6 +1296,12 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 				Version:     "1.0.0",
 			},
 		},
+	}
+	builtinEvaluator := &entity.Evaluator{
+		ID:            evaluatorID,
+		SpaceID:       builtinSpaceID,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		Builtin:       true,
 	}
 
 	tests := []struct {
@@ -1332,7 +1341,7 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 			wantErrCode: errno.CommonNoPermissionCode,
 		},
 		{
-			name: "evaluator_not_in_workspace",
+			name: "evaluator_not_in_workspace_and_not_builtin",
 			req: &evaluatorservice.ListEvaluatorVersionsRequest{
 				WorkspaceID: workspaceID,
 				EvaluatorID: &evaluatorID,
@@ -1342,9 +1351,68 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 				// GetEvaluator 在 evaluator 不属于该 workspace 时返回 (nil, nil)
 				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
 					Return(nil, nil)
+				// 不是预置评估器时，GetBuiltinEvaluator 返回 (nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(nil, nil)
 			},
 			wantErr:     true,
 			wantErrCode: errno.EvaluatorNotExistCode,
+		},
+		{
+			name: "builtin_evaluator_success",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// 当前 workspace 下查不到
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				// 命中预置评估器
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+				// authBuiltinManagement 通过
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(builtinSpaceID, 10)})
+				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
+					Return(evaluators, int64(1), nil)
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "builtin_evaluator_auth_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+				// builtin 空间不在允许列表中，authBuiltinManagement 会失败
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{})
+			},
+			wantErr: true,
+		},
+		{
+			name: "get_builtin_evaluator_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
 		},
 		{
 			name: "get_evaluator_failed",

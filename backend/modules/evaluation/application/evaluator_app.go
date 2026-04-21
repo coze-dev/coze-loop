@@ -595,7 +595,18 @@ func (e *EvaluatorHandlerImpl) ListEvaluatorVersions(ctx context.Context, reques
 		return nil, err
 	}
 	if evaluatorDO == nil {
-		return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+		// 兼容预置评估器：预置评估器归属于 builtin 管理空间，用户当前 workspace 下查不到，
+		// 此时判断是否为预置评估器；若是，则走 builtin 管理空间鉴权后放行。
+		builtinEvaluatorDO, err := e.evaluatorService.GetBuiltinEvaluator(ctx, request.GetEvaluatorID())
+		if err != nil {
+			return nil, err
+		}
+		if builtinEvaluatorDO == nil {
+			return nil, errorx.NewByCode(errno.EvaluatorNotExistCode)
+		}
+		if err := e.authBuiltinManagement(ctx, builtinEvaluatorDO.SpaceID, spaceTypeBuiltin, false); err != nil {
+			return nil, err
+		}
 	}
 	evaluatorDOList, total, err := e.evaluatorService.ListEvaluatorVersion(ctx, buildListEvaluatorVersionRequest(request))
 	if err != nil {
