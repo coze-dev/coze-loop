@@ -36,7 +36,7 @@ func (c *columnExtractDaoStub) CreateColumnExtractConfig(ctx context.Context, po
 	return c.createErr
 }
 
-func (c *columnExtractDaoStub) ListColumnExtractConfigs(ctx context.Context, platformType, spanListType string) ([]*model2.ObservabilityColumnExtractConfig, error) {
+func (c *columnExtractDaoStub) ListColumnExtractConfigs(ctx context.Context, workspaceID int64, platformType, spanListType string) ([]*model2.ObservabilityColumnExtractConfig, error) {
 	if c.getResp != nil {
 		return []*model2.ObservabilityColumnExtractConfig{c.getResp}, c.getErr
 	}
@@ -122,6 +122,49 @@ func TestColumnExtractConfigRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 		assert.Error(t, err)
 	}
 }
+
+func TestColumnExtractConfigRepoImpl_ListColumnExtractConfigs(t *testing.T) {
+	{
+		config := `[{"Column":"input","JSONPath":"$.messages[0].content"}]`
+		stub := &columnExtractDaoStub{getResp: &model2.ObservabilityColumnExtractConfig{
+			ID: 1, WorkspaceID: 1, PlatformType: "coze_loop", SpanListType: "llm_span", AgentName: "agent-1", Config: &config,
+		}}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			WorkspaceID:  1,
+			PlatformType: "coze_loop",
+			SpanListType: "llm_span",
+		})
+		assert.NoError(t, err)
+		assert.Len(t, got, 1)
+		assert.Equal(t, int64(1), got[0].WorkspaceID)
+		assert.Equal(t, "agent-1", got[0].AgentName)
+		assert.Len(t, got[0].Columns, 1)
+	}
+	{
+		stub := &columnExtractDaoStub{getResp: nil}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			WorkspaceID:  1,
+			PlatformType: "coze_loop",
+			SpanListType: "llm_span",
+		})
+		assert.NoError(t, err)
+		assert.Empty(t, got)
+	}
+	{
+		stub := &columnExtractDaoStub{getErr: errors.New("db err")}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			WorkspaceID:  2,
+			PlatformType: "coze_loop",
+			SpanListType: "all_span",
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	}
+}
+
 
 func TestColumnExtractConfigRepoImpl_GetColumnExtractConfig(t *testing.T) {
 	{

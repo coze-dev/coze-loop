@@ -18,3 +18,11 @@ CREATE TABLE IF NOT EXISTS `observability_column_extract_config`
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_general_ci COMMENT ='列提取配置';
+
+-- 默认提取配置 (workspace_id=0 表示全局默认, '*' 表示通配)
+INSERT INTO `observability_column_extract_config` (`id`, `workspace_id`, `platform_type`, `span_list_type`, `agent_name`, `config`, `created_by`, `updated_by`)
+VALUES
+    (1, 0, '*', 'llm_span', '', '[{"Column":"input","JSONPath":"$.messages[-1:].content"},{"Column":"output","JSONPath":"$.choices[0].message.content"}]', 'system', 'system'),
+    (2, 0, 'prompt', '*', '', '[{"Column":"input","JSONPath":"$.query.Content"},{"Column":"output","JSONPath":"$.choices[0].message.content"}]', 'system', 'system'),
+    (3, 0, '*', '*', '', '[{"Column":"input","JSONPath":"$..content"},{"Column":"output","JSONPath":"$..content"}]', 'system', 'system')
+ON DUPLICATE KEY UPDATE `id` = `id`;
