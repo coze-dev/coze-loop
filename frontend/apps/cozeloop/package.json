@@ -8,6 +8,7 @@
   "author": "qihai@bytedance.com",
   "maintainers": [],
   "sideEffects": false,
+  "type": "module",
   "scripts": {
     "analyze": "cross-env BUNDLE_ANALYZE=true rsbuild build",
     "build": "cross-env REGION=cn npm run build:prod",
@@ -60,7 +61,7 @@
     "@coze-arch/vitest-config": "workspace:*",
     "@cozeloop/rsbuild-config": "workspace:*",
     "@cozeloop/tailwind-config": "workspace:*",
-    "@rsbuild/core": "~1.1.0",
+    "@rsbuild/core": "^1.7.5",
     "@types/node": "^24",
     "@types/react": "18.2.37",
     "@types/react-dom": "18.2.15",
@@ -71,3 +72,4 @@
     "vitest": "~3.0.5"
   }
 }
+
