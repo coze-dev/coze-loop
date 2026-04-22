@@ -997,14 +997,19 @@ func TTLFromInteger(i int64) TTL {
 }
 
 var SystemTagKeys = map[string]bool{
-	"dc":           true,
-	"pod_name":     true,
-	"cluster":      true,
-	"deploy_stage": true,
-	"env":          true,
-	"language":     true,
-	"runtime":      true,
-	"cut_off":      true,
+	"dc":                       true,
+	"pod_name":                 true,
+	"cluster":                  true,
+	"deploy_stage":             true,
+	"env":                      true,
+	"language":                 true,
+	"runtime":                  true,
+	"cut_off":                  true,
+	"report_source":            true,
+	"tool_input_tokens":        true,
+	"tool_output_tokens":       true,
+	"model_system_tokens":      true,
+	"model_tool_choice_tokens": true,
 }
 
 func SizeofSpans(spans SpanList) int {
