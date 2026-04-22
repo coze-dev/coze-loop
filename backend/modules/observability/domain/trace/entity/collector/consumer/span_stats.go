@@ -16,30 +16,10 @@ type SpanStatsEntry struct {
 	spanStatsLock sync.Mutex
 }
 
-func (e *SpanStatsEntry) TotalFiltered() int {
+func (e *SpanStatsEntry) GetFilteredCount(scene string) int {
 	e.spanStatsLock.Lock()
 	defer e.spanStatsLock.Unlock()
-	total := 0
-	for _, c := range e.FilteredCount {
-		total += c
-	}
-	return total
-}
-
-func (e *SpanStatsEntry) GetFiltered(node string) int {
-	e.spanStatsLock.Lock()
-	defer e.spanStatsLock.Unlock()
-	return e.FilteredCount[node]
-}
-
-func (e *SpanStatsEntry) TotalOutCount() int {
-	e.spanStatsLock.Lock()
-	defer e.spanStatsLock.Unlock()
-	total := 0
-	for _, c := range e.OutCount {
-		total += c
-	}
-	return total
+	return e.FilteredCount[scene]
 }
 
 func (e *SpanStatsEntry) GetOutCount(scene string) int {

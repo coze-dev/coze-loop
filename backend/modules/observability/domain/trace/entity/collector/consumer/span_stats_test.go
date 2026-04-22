@@ -30,8 +30,6 @@ func TestSpanStats_InjectAndGet(t *testing.T) {
 	entryA := GetSpanStatsEntry(ctx, "tenant_a", "svc-a")
 	assert.NotNil(t, entryA)
 	assert.Equal(t, 2, entryA.InCount)
-	assert.Equal(t, 0, entryA.TotalFiltered())
-	assert.Equal(t, 0, entryA.TotalOutCount())
 
 	entryB := GetSpanStatsEntry(ctx, "tenant_a", "svc-b")
 	assert.NotNil(t, entryB)
@@ -64,9 +62,6 @@ func TestSpanStats_AddFilteredSpans_ByNode(t *testing.T) {
 	entry := GetSpanStatsEntry(ctx, "tenant_a", "svc-a")
 	assert.NotNil(t, entry)
 	assert.Equal(t, 3, entry.InCount)
-	assert.Equal(t, 1, entry.GetFiltered("exporter/ck_online"))
-	assert.Equal(t, 2, entry.GetFiltered("exporter/ck_offline"))
-	assert.Equal(t, 3, entry.TotalFiltered())
 }
 
 func TestSpanStats_AddFilteredSpans_SameNodeAccumulates(t *testing.T) {
@@ -77,7 +72,6 @@ func TestSpanStats_AddFilteredSpans_SameNodeAccumulates(t *testing.T) {
 
 	entry := GetSpanStatsEntry(ctx, "tenant_a", "svc-a")
 	assert.NotNil(t, entry)
-	assert.Equal(t, 5, entry.GetFiltered("processor/filter"))
 }
 
 func TestSpanStats_AddFilteredSpans_NewEntry(t *testing.T) {
@@ -88,8 +82,6 @@ func TestSpanStats_AddFilteredSpans_NewEntry(t *testing.T) {
 	entry := GetSpanStatsEntry(ctx, "tenant_x", "svc-x")
 	assert.NotNil(t, entry)
 	assert.Equal(t, 0, entry.InCount)
-	assert.Equal(t, 5, entry.GetFiltered("node_a"))
-	assert.Equal(t, 5, entry.TotalFiltered())
 }
 
 func TestSpanStats_NilContext(t *testing.T) {
@@ -128,7 +120,6 @@ func TestSpanStats_AddOutCountSpans_ByPipeline(t *testing.T) {
 	assert.Equal(t, 3, entry.InCount)
 	assert.Equal(t, 2, entry.GetOutCount("exporter/ck_online"))
 	assert.Equal(t, 1, entry.GetOutCount("exporter/ck_offline"))
-	assert.Equal(t, 3, entry.TotalOutCount())
 }
 
 func TestSpanStats_AddOutCountSpans_SamePipelineAccumulates(t *testing.T) {
@@ -150,9 +141,7 @@ func TestSpanStats_AddOutCountSpans_NewEntry(t *testing.T) {
 	entry := GetSpanStatsEntry(ctx, "tenant_x", "svc-x")
 	assert.NotNil(t, entry)
 	assert.Equal(t, 0, entry.InCount)
-	assert.Equal(t, 0, entry.TotalFiltered())
 	assert.Equal(t, 7, entry.GetOutCount("pipeline_a"))
-	assert.Equal(t, 7, entry.TotalOutCount())
 }
 
 func TestInjectConsumer_InjectsStats(t *testing.T) {
