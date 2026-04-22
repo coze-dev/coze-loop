@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createRsbuildConfig } from '@cozeloop/rsbuild-config';
 
-export type RsbuildConfig = ReturnType<typeof createRsbuildConfig>;
-
 const port = 8090;
 
 export default createRsbuildConfig({
@@ -22,4 +20,4 @@ export default createRsbuildConfig({
     favicon: './src/assets/images/coze.svg',
     crossorigin: 'anonymous',
   },
-}) as RsbuildConfig;
+});
