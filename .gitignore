@@ -57,6 +57,7 @@ release/deployment/helm-chart/umbrella/Chart.lock
 CLAUDE.md
 AGENTS.md
 backend/script/errorx/.env
+backend/bin/
 .cursor/
 .specify/
 specs/

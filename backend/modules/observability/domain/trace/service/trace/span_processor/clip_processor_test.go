@@ -365,6 +365,31 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 	}
 }
 
+func TestClipProcessor_PlatformPromptDefault(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
+	mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
+		Return(nil, nil).Times(1)
+
+	promptInput := `{"query":{"Content":"测试问题","ID":0}}`
+	promptOutput := `{"choices":[{"message":{"role":"assistant","content":"回答内容"}}]}`
+
+	processor := &ClipProcessor{
+		columnExtractConfigRepo: mockRepo,
+		settings: Settings{
+			WorkspaceId:  1,
+			PlatformType: loop_span.PlatformPrompt,
+			SpanListType: loop_span.SpanListType("custom_span"),
+		},
+	}
+	spans := loop_span.SpanList{{Input: promptInput, Output: promptOutput}}
+	res, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, "测试问题", res[0].Input)
+	require.Equal(t, "回答内容", res[0].Output)
+}
+
 func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
