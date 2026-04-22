@@ -1487,6 +1487,103 @@ func TestTraceServiceImpl_ListSpans(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "list spans with NotQueryAnnotation passes flag to repo",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						assert.True(t, param.NotQueryAnnotation)
+						return &repo.ListSpansResult{
+							Spans: loop_span.SpanList{{
+								TraceID: "123",
+								SpanID:  "234",
+							}},
+						}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterMock := filtermocks.NewMockFilter(ctrl)
+				filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+				filterMock.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(filterMock, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansReq{
+					PlatformType:       loop_span.PlatformCozeLoop,
+					Limit:              10,
+					SpanListType:       loop_span.SpanListTypeAllSpan,
+					NotQueryAnnotation: true,
+				},
+			},
+			want: &ListSpansResp{
+				Spans: loop_span.SpanList{{
+					TraceID: "123",
+					SpanID:  "234",
+				}},
+			},
+		},
+		{
+			name: "list spans without NotQueryAnnotation defaults to false",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, param *repo.ListSpansParam) (*repo.ListSpansResult, error) {
+						assert.False(t, param.NotQueryAnnotation)
+						return &repo.ListSpansResult{
+							Spans: loop_span.SpanList{{
+								TraceID: "456",
+								SpanID:  "789",
+							}},
+						}, nil
+					})
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				filterMock := filtermocks.NewMockFilter(ctrl)
+				filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{{}}, false, nil)
+				filterMock.EXPECT().BuildALLSpanFilter(gomock.Any(), gomock.Any()).Return(nil, nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(filterMock, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitListSpans(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &ListSpansReq{
+					PlatformType: loop_span.PlatformCozeLoop,
+					Limit:        10,
+					SpanListType: loop_span.SpanListTypeAllSpan,
+				},
+			},
+			want: &ListSpansResp{
+				Spans: loop_span.SpanList{{
+					TraceID: "456",
+					SpanID:  "789",
+				}},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

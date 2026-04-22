@@ -60,6 +60,7 @@ type ListSpansReq struct {
 	SelectColumns         []string
 	OmitColumns           []string
 	Scene                 entity.ProcessorScene
+	NotQueryAnnotation    bool
 }
 
 type ListSpansResp struct {
@@ -1116,16 +1117,17 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 	}
 	st := time.Now()
 	tRes, err := r.traceRepo.ListSpans(ctx, &repo.ListSpansParam{
-		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:         tenants,
-		Filters:         filters,
-		StartAt:         req.StartTime,
-		EndAt:           req.EndTime,
-		Limit:           req.Limit,
-		DescByStartTime: req.DescByStartTime,
-		PageToken:       req.PageToken,
-		SelectColumns:   req.SelectColumns,
-		OmitColumns:     req.OmitColumns,
+		WorkSpaceID:        strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:            tenants,
+		Filters:            filters,
+		StartAt:            req.StartTime,
+		EndAt:              req.EndTime,
+		Limit:              req.Limit,
+		DescByStartTime:    req.DescByStartTime,
+		PageToken:          req.PageToken,
+		SelectColumns:      req.SelectColumns,
+		OmitColumns:        req.OmitColumns,
+		NotQueryAnnotation: req.NotQueryAnnotation,
 	})
 	r.metrics.EmitListSpans(req.WorkspaceID, string(req.SpanListType), st, err != nil)
 	if err != nil {
@@ -1499,7 +1501,8 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 			"input",
 			"output",
 		},
-		DescByStartTime: true,
+		DescByStartTime:    true,
+		NotQueryAnnotation: true,
 	})
 	if err != nil {
 		return nil, err

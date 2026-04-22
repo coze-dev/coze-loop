@@ -1781,3 +1781,244 @@ func TestTraceRepoImpl_ListWorkspaceAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func Test_spanTimeRange(t *testing.T) {
+	tests := []struct {
+		name      string
+		spans     []*dao.Span
+		wantStart int64
+		wantEnd   int64
+	}{
+		{
+			name: "single span",
+			spans: []*dao.Span{
+				{StartTime: 1000},
+			},
+			wantStart: 1000,
+			wantEnd:   1000,
+		},
+		{
+			name: "multiple spans ascending",
+			spans: []*dao.Span{
+				{StartTime: 1000},
+				{StartTime: 2000},
+				{StartTime: 3000},
+			},
+			wantStart: 1000,
+			wantEnd:   3000,
+		},
+		{
+			name: "multiple spans descending",
+			spans: []*dao.Span{
+				{StartTime: 3000},
+				{StartTime: 2000},
+				{StartTime: 1000},
+			},
+			wantStart: 1000,
+			wantEnd:   3000,
+		},
+		{
+			name: "multiple spans same time",
+			spans: []*dao.Span{
+				{StartTime: 5000},
+				{StartTime: 5000},
+			},
+			wantStart: 5000,
+			wantEnd:   5000,
+		},
+		{
+			name: "multiple spans unordered",
+			spans: []*dao.Span{
+				{StartTime: 3000},
+				{StartTime: 1000},
+				{StartTime: 5000},
+				{StartTime: 2000},
+			},
+			wantStart: 1000,
+			wantEnd:   5000,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotStart, gotEnd := spanTimeRange(tt.spans)
+			assert.Equal(t, tt.wantStart, gotStart)
+			assert.Equal(t, tt.wantEnd, gotEnd)
+		})
+	}
+}
+
+func TestTraceRepoImpl_ListSpans_EmptySpans_SkipsAnnotationQuery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	spansDaoMock := daomock.NewMockISpansDao(ctrl)
+	spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{}, nil)
+	annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+		TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+			"test": {
+				loop_span.TTL3d: {
+					SpanTable: "spans",
+					AnnoTable: "annotations",
+				},
+			},
+		},
+		TenantsSupportAnnotation: map[string]bool{
+			"test": true,
+		},
+	}, nil)
+
+	r, err := NewTraceRepoImpl(
+		traceConfigMock,
+		&mockStorageProvider{},
+		nil, nil, nil, nil,
+		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+	)
+	assert.NoError(t, err)
+	got, err := r.ListSpans(context.Background(), &repo.ListSpansParam{
+		Tenants: []string{"test"},
+		Limit:   10,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Empty(t, got.Spans)
+}
+
+func TestTraceRepoImpl_ListSpans_AnnotationUsesSpanTimeRange(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	spansDaoMock := daomock.NewMockISpansDao(ctrl)
+	spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{
+		{SpanID: "s1", StartTime: 5000},
+		{SpanID: "s2", StartTime: 3000},
+		{SpanID: "s3", StartTime: 8000},
+	}, nil)
+	annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+	annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, param *dao.ListAnnotationsParam) ([]*dao.Annotation, error) {
+			assert.Equal(t, int64(3000), param.StartTime)
+			assert.Equal(t, int64(8000), param.EndTime)
+			return []*dao.Annotation{}, nil
+		})
+	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+		TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+			"test": {
+				loop_span.TTL3d: {
+					SpanTable: "spans",
+					AnnoTable: "annotations",
+				},
+			},
+		},
+		TenantsSupportAnnotation: map[string]bool{
+			"test": true,
+		},
+	}, nil)
+
+	r, err := NewTraceRepoImpl(
+		traceConfigMock,
+		&mockStorageProvider{},
+		nil, nil, nil, nil,
+		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+	)
+	assert.NoError(t, err)
+	got, err := r.ListSpans(context.Background(), &repo.ListSpansParam{
+		Tenants: []string{"test"},
+		Limit:   10,
+		StartAt: 1000,
+		EndAt:   100000,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+}
+
+func TestTraceRepoImpl_GetTrace_EmptySpans_SkipsAnnotationQuery(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	spansDaoMock := daomock.NewMockISpansDao(ctrl)
+	spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{}, nil)
+	annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+		TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+			"test": {
+				loop_span.TTL3d: {
+					SpanTable: "spans",
+					AnnoTable: "annotations",
+				},
+			},
+		},
+		TenantsSupportAnnotation: map[string]bool{
+			"test": true,
+		},
+	}, nil)
+
+	r, err := NewTraceRepoImpl(
+		traceConfigMock,
+		&mockStorageProvider{},
+		nil, nil, nil, nil,
+		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+	)
+	assert.NoError(t, err)
+	got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+		TraceID: "trace1",
+		Tenants: []string{"test"},
+		Limit:   1000,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+	assert.Empty(t, got.Spans)
+}
+
+func TestTraceRepoImpl_GetTrace_AnnotationUsesSpanTimeRange(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	spansDaoMock := daomock.NewMockISpansDao(ctrl)
+	spansDaoMock.EXPECT().Get(gomock.Any(), gomock.Any()).Return([]*dao.Span{
+		{SpanID: "s1", StartTime: 2000},
+		{SpanID: "s2", StartTime: 9000},
+		{SpanID: "s3", StartTime: 4000},
+	}, nil)
+	annoDaoMock := daomock.NewMockIAnnotationDao(ctrl)
+	annoDaoMock.EXPECT().List(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(ctx context.Context, param *dao.ListAnnotationsParam) ([]*dao.Annotation, error) {
+			assert.Equal(t, int64(2000), param.StartTime)
+			assert.Equal(t, int64(9000), param.EndTime)
+			return []*dao.Annotation{}, nil
+		})
+	traceConfigMock := confmocks.NewMockITraceConfig(ctrl)
+	traceConfigMock.EXPECT().GetTenantConfig(gomock.Any()).Return(&config.TenantCfg{
+		TenantTables: map[string]map[loop_span.TTL]config.TableCfg{
+			"test": {
+				loop_span.TTL3d: {
+					SpanTable: "spans",
+					AnnoTable: "annotations",
+				},
+			},
+		},
+		TenantsSupportAnnotation: map[string]bool{
+			"test": true,
+		},
+	}, nil)
+
+	r, err := NewTraceRepoImpl(
+		traceConfigMock,
+		&mockStorageProvider{},
+		nil, nil, nil, nil,
+		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
+	)
+	assert.NoError(t, err)
+	got, err := r.GetTrace(context.Background(), &repo.GetTraceParam{
+		TraceID: "trace1",
+		Tenants: []string{"test"},
+		Limit:   1000,
+		StartAt: 1000,
+		EndAt:   100000,
+	})
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+}
