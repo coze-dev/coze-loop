@@ -26,6 +26,7 @@ type GetColumnExtractConfigParam struct {
 }
 
 type ListColumnExtractConfigParam struct {
+	WorkspaceID  int64
 	PlatformType string
 	SpanListType string
 }

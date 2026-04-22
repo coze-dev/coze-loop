@@ -5,13 +5,13 @@ package span_processor
 
 import (
 	"context"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type ClipProcessor struct {
@@ -25,96 +25,37 @@ const (
 	clipProcessorSuffix             = "..."
 )
 
-var defaultExtractRules = map[loop_span.SpanListType][]entity.ColumnExtractRule{
-	loop_span.SpanListTypeLLMSpan: {
-		{Column: "input", JSONPath: "$.messages[-1:].content"},
-		{Column: "output", JSONPath: "$.choices[0].message.content"},
-	},
-}
-
-var defaultPlatformExtractRules = map[loop_span.PlatformType][]entity.ColumnExtractRule{
-	loop_span.PlatformPrompt: {
-		{Column: "input", JSONPath: "$.query.Content"},
-		{Column: "output", JSONPath: "$.choices[0].message.content"},
-	},
-}
-
-var fallbackExtractRules = []entity.ColumnExtractRule{
-	{Column: "input", JSONPath: "$..content"},
-	{Column: "output", JSONPath: "$..content"},
-}
-
 func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
-	var rules []entity.ColumnExtractRule
+	var cfg *entity.ColumnExtractConfig
 	if c.columnExtractConfigRepo != nil {
 		configs, err := c.columnExtractConfigRepo.ListColumnExtractConfigs(ctx, repo.ListColumnExtractConfigParam{
+			WorkspaceID:  c.settings.WorkspaceId,
 			PlatformType: string(c.settings.PlatformType),
 			SpanListType: string(c.settings.SpanListType),
 		})
-		if err == nil && len(configs) > 0 {
-			cfg := selectBestConfig(configs, c.settings.WorkspaceId, c.settings.AgentName)
-			if cfg != nil {
-				rules = cfg.Columns
-			}
+		if err != nil {
+			logs.CtxWarn(ctx, "fail to list column extract configs, err: %v", err)
+		} else if len(configs) > 0 {
+			cfg = entity.ColumnExtractConfigs(configs).SelectBest(c.settings.WorkspaceId, c.settings.AgentName, string(c.settings.PlatformType), string(c.settings.SpanListType))
 		}
 	}
-
-	// fallback chain: SpanListType defaults -> PlatformType defaults -> recursive $..content
-	if len(rules) == 0 {
-		if defaults, ok := defaultExtractRules[c.settings.SpanListType]; ok {
-			rules = defaults
-		} else if defaults, ok := defaultPlatformExtractRules[c.settings.PlatformType]; ok {
-			rules = defaults
-		} else {
-			rules = fallbackExtractRules
-		}
-	}
-
-	inputRule, outputRule := findExtractRules(rules)
 
 	for _, s := range spans {
 		if s == nil {
 			continue
 		}
-		s.Input = extractAndClip(s.Input, "input", inputRule)
-		s.Output = extractAndClip(s.Output, "output", outputRule)
+		if cfg != nil {
+			if extracted := cfg.Extract(s.Input, "input"); extracted != "" {
+				s.Input = extracted
+			}
+			if extracted := cfg.Extract(s.Output, "output"); extracted != "" {
+				s.Output = extracted
+			}
+		}
+		s.Input = clipSpanField(s.Input)
+		s.Output = clipSpanField(s.Output)
 	}
 	return spans, nil
-}
-
-// selectBestConfig selects the best matching config from a list using fallback strategy.
-// Priority: workspace+agent > workspace+no_agent > any_workspace+agent > any_workspace+no_agent
-func selectBestConfig(configs []*entity.ColumnExtractConfig, workspaceId int64, agentName string) *entity.ColumnExtractConfig {
-	var (
-		wsNoAgent  *entity.ColumnExtractConfig // workspace match + agent empty
-		anyAgent   *entity.ColumnExtractConfig // any workspace + agent match
-		anyNoAgent *entity.ColumnExtractConfig // any workspace + agent empty
-	)
-
-	for _, cfg := range configs {
-		wsMatch := cfg.WorkspaceID == workspaceId
-		agentMatch := agentName != "" && cfg.AgentName == agentName
-		agentEmpty := cfg.AgentName == ""
-
-		switch {
-		case wsMatch && agentMatch:
-			return cfg // highest priority, return immediately
-		case wsMatch && agentEmpty && wsNoAgent == nil:
-			wsNoAgent = cfg
-		case !wsMatch && agentMatch && anyAgent == nil:
-			anyAgent = cfg
-		case !wsMatch && agentEmpty && anyNoAgent == nil:
-			anyNoAgent = cfg
-		}
-	}
-
-	if wsNoAgent != nil {
-		return wsNoAgent
-	}
-	if anyAgent != nil {
-		return anyAgent
-	}
-	return anyNoAgent
 }
 
 type ClipProcessorFactory struct {
@@ -223,47 +164,4 @@ func clipJSONValue(value interface{}) (interface{}, bool) {
 	default:
 		return val, false
 	}
-}
-
-func findExtractRules(rules []entity.ColumnExtractRule) (inputRule, outputRule *entity.ColumnExtractRule) {
-	for i := range rules {
-		switch rules[i].Column {
-		case "input":
-			inputRule = &rules[i]
-		case "output":
-			outputRule = &rules[i]
-		}
-	}
-	return
-}
-
-func extractAndClip(content string, column string, rule *entity.ColumnExtractRule) string {
-	if rule != nil {
-		if extracted := extractByJSONPath(content, rule.JSONPath); extracted != "" {
-			return clipSpanField(extracted)
-		}
-	}
-	return clipSpanField(content)
-}
-
-func extractByJSONPath(content, jsonPath string) string {
-	if content == "" || jsonPath == "" {
-		return ""
-	}
-	if !json.Valid([]byte(content)) {
-		return ""
-	}
-	// For recursive descent queries ($..field), take the last match
-	if strings.Contains(jsonPath, "..") {
-		result, err := json.GetLastStringByJSONPath(content, jsonPath)
-		if err != nil {
-			return ""
-		}
-		return result
-	}
-	result, err := json.GetStringByJSONPathRecursively(content, jsonPath)
-	if err != nil {
-		return ""
-	}
-	return result
 }

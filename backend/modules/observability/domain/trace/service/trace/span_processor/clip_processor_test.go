@@ -257,13 +257,12 @@ func TestClipJSONValue_DefaultBranch(t *testing.T) {
 	require.False(t, changed)
 }
 
-func TestClipProcessor_DefaultExtractRules(t *testing.T) {
+func TestClipProcessor_WithDBConfig(t *testing.T) {
 	llmInput := `{"messages":[{"role":"system","content":"You are a helpful assistant."},{"role":"user","content":"Hello"}]}`
 	llmOutput := `{"choices":[{"message":{"role":"assistant","content":"Hi there!"}}]}`
 
 	tests := []struct {
 		name            string
-		spanListType    loop_span.SpanListType
 		input           string
 		output          string
 		expectedInput   string
@@ -271,34 +270,25 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 		dbConfigReturns []*entity.ColumnExtractConfig
 	}{
 		{
-			name:            "LLMSpan uses default JSONPath when no DB config",
-			spanListType:    loop_span.SpanListTypeLLMSpan,
-			input:           llmInput,
-			output:          llmOutput,
-			expectedInput:   "Hello",
-			expectedOutput:  "Hi there!",
-			dbConfigReturns: nil,
-		},
-		{
-			name:           "LLMSpan DB config overrides default",
-			spanListType:   loop_span.SpanListTypeLLMSpan,
+			name:           "DB config extracts input and output",
 			input:          llmInput,
-			output:         `{"messages":[{"role":"assistant","content":"Hi there!"},{"role":"user","content":"Bye"}]}`,
+			output:         llmOutput,
 			expectedInput:  "Hello",
-			expectedOutput: "Bye",
+			expectedOutput: "Hi there!",
 			dbConfigReturns: []*entity.ColumnExtractConfig{
 				{
-					WorkspaceID: 1,
+					WorkspaceID:  1,
+					PlatformType: string(loop_span.PlatformCozeLoop),
+					SpanListType: string(loop_span.SpanListTypeLLMSpan),
 					Columns: []entity.ColumnExtractRule{
-						{Column: "input", JSONPath: "$.messages[1].content"},
-						{Column: "output", JSONPath: "$.messages[1].content"},
+						{Column: "input", JSONPath: "$.messages[-1:].content"},
+						{Column: "output", JSONPath: "$.choices[0].message.content"},
 					},
 				},
 			},
 		},
 		{
-			name:            "RootSpan has no default, clips original JSON",
-			spanListType:    loop_span.SpanListTypeRootSpan,
+			name:            "No DB config clips original content",
 			input:           `{"key":"value"}`,
 			output:          `{"key":"value"}`,
 			expectedInput:   `{"key":"value"}`,
@@ -306,8 +296,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			dbConfigReturns: nil,
 		},
 		{
-			name:            "AllSpan has no default, clips original JSON",
-			spanListType:    loop_span.SpanListTypeAllSpan,
+			name:            "No DB config with plain text",
 			input:           "plain text content",
 			output:          "plain text output",
 			expectedInput:   "plain text content",
@@ -315,22 +304,40 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 			dbConfigReturns: nil,
 		},
 		{
-			name:            "LLMSpan default with non-JSON input falls back to clip",
-			spanListType:    loop_span.SpanListTypeLLMSpan,
-			input:           "not json",
-			output:          "not json either",
-			expectedInput:   "not json",
-			expectedOutput:  "not json either",
-			dbConfigReturns: nil,
+			name:           "DB config with recursive descent",
+			input:          `{"stream":[[{"role":"user","content":"你好"}]]}`,
+			output:         `{"role":"assistant","content":"世界你好","extra":{"id":"123"}}`,
+			expectedInput:  "你好",
+			expectedOutput: "世界你好",
+			dbConfigReturns: []*entity.ColumnExtractConfig{
+				{
+					WorkspaceID:  0,
+					PlatformType: "*",
+					SpanListType: "*",
+					Columns: []entity.ColumnExtractRule{
+						{Column: "input", JSONPath: "$..content"},
+						{Column: "output", JSONPath: "$..content"},
+					},
+				},
+			},
 		},
 		{
-			name:            "RootSpan default extracts last content via recursive descent",
-			spanListType:    loop_span.SpanListTypeRootSpan,
-			input:           `{"stream":[[{"role":"user","content":"你好"}]]}`,
-			output:          `{"role":"assistant","content":"世界你好","extra":{"id":"123"}}`,
-			expectedInput:   "你好",
-			expectedOutput:  "世界你好",
-			dbConfigReturns: nil,
+			name:           "DB config extraction fails, falls back to clip",
+			input:          "not json",
+			output:         "not json either",
+			expectedInput:  "not json",
+			expectedOutput: "not json either",
+			dbConfigReturns: []*entity.ColumnExtractConfig{
+				{
+					WorkspaceID:  1,
+					PlatformType: string(loop_span.PlatformCozeLoop),
+					SpanListType: string(loop_span.SpanListTypeLLMSpan),
+					Columns: []entity.ColumnExtractRule{
+						{Column: "input", JSONPath: "$.messages[0].content"},
+						{Column: "output", JSONPath: "$.choices[0].message.content"},
+					},
+				},
+			},
 		},
 	}
 
@@ -352,7 +359,7 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 				settings: Settings{
 					WorkspaceId:  1,
 					PlatformType: loop_span.PlatformCozeLoop,
-					SpanListType: tt.spanListType,
+					SpanListType: loop_span.SpanListTypeLLMSpan,
 				},
 			}
 			spans := loop_span.SpanList{{Input: tt.input, Output: tt.output}}
@@ -365,36 +372,9 @@ func TestClipProcessor_DefaultExtractRules(t *testing.T) {
 	}
 }
 
-func TestClipProcessor_PlatformPromptDefault(t *testing.T) {
+func TestClipProcessor_WithDBConfigLongContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
-	mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
-		Return(nil, nil).Times(1)
-
-	promptInput := `{"query":{"Content":"测试问题","ID":0}}`
-	promptOutput := `{"choices":[{"message":{"role":"assistant","content":"回答内容"}}]}`
-
-	processor := &ClipProcessor{
-		columnExtractConfigRepo: mockRepo,
-		settings: Settings{
-			WorkspaceId:  1,
-			PlatformType: loop_span.PlatformPrompt,
-			SpanListType: loop_span.SpanListType("custom_span"),
-		},
-	}
-	spans := loop_span.SpanList{{Input: promptInput, Output: promptOutput}}
-	res, err := processor.Transform(context.Background(), spans)
-	require.NoError(t, err)
-	require.Len(t, res, 1)
-	require.Equal(t, "测试问题", res[0].Input)
-	require.Equal(t, "回答内容", res[0].Output)
-}
-
-func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
-	mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
-		Return(nil, nil).Times(1)
 
 	longContent := strings.Repeat("a", clipProcessorPlainTextMaxLength+100)
 	llmInput, _ := json.MarshalString(map[string]interface{}{
@@ -402,6 +382,18 @@ func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 			map[string]interface{}{"role": "user", "content": longContent},
 		},
 	})
+
+	mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
+		Return([]*entity.ColumnExtractConfig{
+			{
+				WorkspaceID:  0,
+				PlatformType: "*",
+				SpanListType: "*",
+				Columns: []entity.ColumnExtractRule{
+					{Column: "input", JSONPath: "$.messages[0].content"},
+				},
+			},
+		}, nil).Times(1)
 
 	processor := &ClipProcessor{
 		columnExtractConfigRepo: mockRepo,
@@ -419,110 +411,116 @@ func TestClipProcessor_DefaultExtractRulesWithLongContent(t *testing.T) {
 	require.True(t, len(res[0].Input) <= clipProcessorPlainTextMaxLength+len(clipProcessorSuffix))
 }
 
-func TestClipProcessor_NoRepoUsesDefault(t *testing.T) {
-	llmInput := `{"messages":[{"role":"system","content":"Hello world"}]}`
+func TestClipProcessor_DefaultConfigSelection(t *testing.T) {
+	llmInput := `{"messages":[{"role":"system","content":"You are a helper."},{"role":"user","content":"Hello from user"}]}`
+	llmOutput := `{"choices":[{"message":{"role":"assistant","content":"Hi from assistant"}}]}`
 
-	processor := &ClipProcessor{
-		columnExtractConfigRepo: nil,
-		settings: Settings{
-			SpanListType: loop_span.SpanListTypeLLMSpan,
+	// Mock: DB returns both default (wsID=0) and workspace-specific configs
+	defaultConfig := &entity.ColumnExtractConfig{
+		WorkspaceID:  0,
+		AgentName:    "",
+		PlatformType: "*",
+		SpanListType: "*",
+		Columns: []entity.ColumnExtractRule{
+			{Column: "input", JSONPath: "$..content"},
+			{Column: "output", JSONPath: "$..content"},
 		},
 	}
-	spans := loop_span.SpanList{{Input: llmInput}}
-	res, err := processor.Transform(context.Background(), spans)
-	require.NoError(t, err)
-	require.Len(t, res, 1)
-	require.Equal(t, "Hello world", res[0].Input)
-}
-
-func TestSelectBestConfig(t *testing.T) {
-	makeConfig := func(wsID int64, agentName string) *entity.ColumnExtractConfig {
-		return &entity.ColumnExtractConfig{
-			WorkspaceID: wsID,
-			AgentName:   agentName,
-			Columns: []entity.ColumnExtractRule{
-				{Column: "input", JSONPath: "$.test"},
-			},
-		}
+	wsConfig := &entity.ColumnExtractConfig{
+		WorkspaceID:  42,
+		AgentName:    "",
+		PlatformType: string(loop_span.PlatformCozeLoop),
+		SpanListType: string(loop_span.SpanListTypeLLMSpan),
+		Columns: []entity.ColumnExtractRule{
+			{Column: "input", JSONPath: "$.messages[-1:].content"},
+			{Column: "output", JSONPath: "$.choices[0].message.content"},
+		},
+	}
+	wsAgentConfig := &entity.ColumnExtractConfig{
+		WorkspaceID:  42,
+		AgentName:    "my_bot",
+		PlatformType: string(loop_span.PlatformCozeLoop),
+		SpanListType: string(loop_span.SpanListTypeLLMSpan),
+		Columns: []entity.ColumnExtractRule{
+			{Column: "input", JSONPath: "$.messages[0].content"},
+			{Column: "output", JSONPath: "$.choices[0].message.content"},
+		},
 	}
 
-	allConfigs := []*entity.ColumnExtractConfig{
-		makeConfig(100, "bot_a"),
-		makeConfig(100, ""),
-		makeConfig(200, "bot_a"),
-		makeConfig(200, ""),
-		makeConfig(0, "bot_a"),
-		makeConfig(0, ""),
-	}
+	allConfigs := []*entity.ColumnExtractConfig{defaultConfig, wsConfig, wsAgentConfig}
 
 	tests := []struct {
-		name        string
-		configs     []*entity.ColumnExtractConfig
-		workspaceId int64
-		agentName   string
-		wantWsID    int64
-		wantAgent   string
-		wantNil     bool
+		name           string
+		workspaceId    int64
+		agentName      string
+		expectedInput  string
+		expectedOutput string
 	}{
 		{
-			name:        "exact match: workspace + agent",
-			configs:     allConfigs,
-			workspaceId: 100,
-			agentName:   "bot_a",
-			wantWsID:    100,
-			wantAgent:   "bot_a",
+			name:           "workspace+agent exact match uses wsAgentConfig",
+			workspaceId:    42,
+			agentName:      "my_bot",
+			expectedInput:  "You are a helper.", // $.messages[0].content
+			expectedOutput: "Hi from assistant", // $.choices[0].message.content
 		},
 		{
-			name:        "fallback: workspace match + no agent config",
-			configs:     allConfigs,
-			workspaceId: 100,
-			agentName:   "bot_b",
-			wantWsID:    100,
-			wantAgent:   "",
+			name:           "workspace match, no agent match, uses wsConfig",
+			workspaceId:    42,
+			agentName:      "other_bot",
+			expectedInput:  "Hello from user",   // $.messages[-1:].content
+			expectedOutput: "Hi from assistant", // $.choices[0].message.content
 		},
 		{
-			name:        "fallback: no workspace + agent match",
-			configs:     allConfigs,
-			workspaceId: 999,
-			agentName:   "bot_a",
-			wantWsID:    100,
-			wantAgent:   "bot_a",
+			name:           "no workspace match, falls back to default(wsID=0)",
+			workspaceId:    999,
+			agentName:      "any_bot",
+			expectedInput:  "Hello from user",   // $..content returns last
+			expectedOutput: "Hi from assistant", // $..content returns last
 		},
 		{
-			name:        "fallback: no workspace + no agent -> first non-ws match",
-			configs:     allConfigs,
-			workspaceId: 999,
-			agentName:   "bot_b",
-			wantWsID:    100,
-			wantAgent:   "",
-		},
-		{
-			name:        "workspace match + empty agent query",
-			configs:     allConfigs,
-			workspaceId: 100,
-			agentName:   "",
-			wantWsID:    100,
-			wantAgent:   "",
-		},
-		{
-			name:        "empty configs returns nil",
-			configs:     nil,
-			workspaceId: 100,
-			agentName:   "bot_a",
-			wantNil:     true,
+			name:           "workspace match, empty agent, uses wsConfig",
+			workspaceId:    42,
+			agentName:      "",
+			expectedInput:  "Hello from user", // $.messages[-1:].content
+			expectedOutput: "Hi from assistant",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := selectBestConfig(tt.configs, tt.workspaceId, tt.agentName)
-			if tt.wantNil {
-				require.Nil(t, got)
-				return
+			ctrl := gomock.NewController(t)
+			mockRepo := mocks.NewMockIColumnExtractConfigRepo(ctrl)
+			mockRepo.EXPECT().ListColumnExtractConfigs(gomock.Any(), gomock.Any()).
+				Return(allConfigs, nil).Times(1)
+
+			processor := &ClipProcessor{
+				columnExtractConfigRepo: mockRepo,
+				settings: Settings{
+					WorkspaceId:  tt.workspaceId,
+					AgentName:    tt.agentName,
+					PlatformType: loop_span.PlatformCozeLoop,
+					SpanListType: loop_span.SpanListTypeLLMSpan,
+				},
 			}
-			require.NotNil(t, got)
-			require.Equal(t, tt.wantWsID, got.WorkspaceID)
-			require.Equal(t, tt.wantAgent, got.AgentName)
+			spans := loop_span.SpanList{{Input: llmInput, Output: llmOutput}}
+			res, err := processor.Transform(context.Background(), spans)
+			require.NoError(t, err)
+			require.Len(t, res, 1)
+			require.Equal(t, tt.expectedInput, res[0].Input)
+			require.Equal(t, tt.expectedOutput, res[0].Output)
 		})
 	}
+}
+
+func TestClipProcessor_NoRepoClipsOnly(t *testing.T) {
+	processor := &ClipProcessor{
+		columnExtractConfigRepo: nil,
+		settings:                Settings{},
+	}
+	spans := loop_span.SpanList{{Input: `{"key":"value"}`, Output: "plain text"}}
+	res, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, res, 1)
+	require.Equal(t, `{"key":"value"}`, res[0].Input)
+	require.Equal(t, "plain text", res[0].Output)
 }

@@ -70,7 +70,7 @@ func (r *ColumnExtractConfigRepoImpl) GetColumnExtractConfig(ctx context.Context
 }
 
 func (r *ColumnExtractConfigRepoImpl) ListColumnExtractConfigs(ctx context.Context, param repo.ListColumnExtractConfigParam) ([]*entity.ColumnExtractConfig, error) {
-	pos, err := r.dao.ListColumnExtractConfigs(ctx, param.PlatformType, param.SpanListType)
+	pos, err := r.dao.ListColumnExtractConfigs(ctx, param.WorkspaceID, param.PlatformType, param.SpanListType)
 	if err != nil {
 		return nil, err
 	}
