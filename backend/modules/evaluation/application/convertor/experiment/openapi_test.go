@@ -10,6 +10,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	openapiEvalTarget "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/eval_target"
@@ -2373,4 +2374,466 @@ func TestOpenAPIExptTemplateFilterDTO2DO_InvalidAndUnknown(t *testing.T) {
 			assert.Empty(t, got.Includes.EvalSetIDs)
 		}
 	})
+}
+
+func TestOpenAPIExperimentFiltersDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	t.Run("convert source_target condition", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeSourceTarget
+		operator := openapiExperiment.FilterOperatorTypeIn
+		value := ""
+		targetType := openapiEvalTarget.EvalTargetTypeCozeLoopPrompt
+
+		got, err := OpenAPIExperimentFiltersDTO2Domain(&openapiExperiment.Filters{
+			LogicOp: &logicAnd,
+			FilterConditions: []*openapiExperiment.FilterCondition{
+				{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType, FieldKey: gptr.Of("eval_target")},
+					Operator: &operator,
+					Value:    &value,
+					SourceTarget: &openapiExperiment.SourceTarget{
+						EvalTargetType:  &targetType,
+						SourceTargetIds: []string{"7590066786411379970"},
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		if assert.NotNil(t, got) && assert.Len(t, got.FilterConditions, 1) {
+			cond := got.FilterConditions[0]
+			assert.Equal(t, domainExpt.FieldType_SourceTarget, cond.Field.FieldType)
+			assert.Equal(t, "eval_target", gptr.Indirect(cond.Field.FieldKey))
+			if assert.NotNil(t, cond.SourceTarget) {
+				assert.Equal(t, domaindoEvalTarget.EvalTargetType_CozeLoopPrompt, *cond.SourceTarget.EvalTargetType)
+				assert.Equal(t, []string{"7590066786411379970"}, cond.SourceTarget.SourceTargetIds)
+			}
+		}
+	})
+
+	t.Run("invalid source_target type returns error", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeSourceTarget
+		operator := openapiExperiment.FilterOperatorTypeIn
+		invalidType := openapiEvalTarget.EvalTargetType("invalid")
+
+		got, err := OpenAPIExperimentFiltersDTO2Domain(&openapiExperiment.Filters{
+			LogicOp: &logicAnd,
+			FilterConditions: []*openapiExperiment.FilterCondition{
+				{
+					Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+					Operator: &operator,
+					SourceTarget: &openapiExperiment.SourceTarget{
+						EvalTargetType: &invalidType,
+					},
+				},
+			},
+		})
+		assert.Nil(t, got)
+		assert.Error(t, err)
+	})
+}
+
+func TestOpenAPIExperimentFilterOptionDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil returns nil", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(nil)
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty option returns nil", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("fuzzy name only", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("test"),
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "test", got.GetFuzzyName())
+	})
+
+	t.Run("fuzzy name whitespace only returns nil", func(t *testing.T) {
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("   "),
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("filters only", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeExptStatus
+		operator := openapiExperiment.FilterOperatorTypeEqual
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    gptr.Of("1"),
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.NotNil(t, got.GetFilters())
+		assert.Len(t, got.GetFilters().FilterConditions, 1)
+	})
+
+	t.Run("fuzzy name and filters", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		fieldType := openapiExperiment.FilterFieldTypeExptStatus
+		operator := openapiExperiment.FilterOperatorTypeEqual
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			FuzzyName: gptr.Of("search"),
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+						Operator: &operator,
+						Value:    gptr.Of("1"),
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "search", got.GetFuzzyName())
+		require.NotNil(t, got.GetFilters())
+	})
+
+	t.Run("invalid filter returns error", func(t *testing.T) {
+		logicAnd := openapiExperiment.FilterLogicOpAnd
+		badType := openapiExperiment.FilterFieldType("unknown_bad")
+		operator := openapiExperiment.FilterOperatorTypeEqual
+		got, err := OpenAPIExperimentFilterOptionDTO2Domain(&openapiExperiment.ExperimentFilterOption{
+			Filters: &openapiExperiment.Filters{
+				LogicOp: &logicAnd,
+				FilterConditions: []*openapiExperiment.FilterCondition{
+					{
+						Field:    &openapiExperiment.FilterField{FieldType: &badType},
+						Operator: &operator,
+						Value:    gptr.Of("1"),
+					},
+				},
+			},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+}
+
+func TestOpenAPIKeywordSearchDTO2Domain(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil returns nil", func(t *testing.T) {
+		got, err := OpenAPIKeywordSearchDTO2Domain(nil)
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("empty keyword returns nil", func(t *testing.T) {
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of(""),
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("whitespace keyword returns nil", func(t *testing.T) {
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of("   "),
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("keyword with no filter fields returns nil", func(t *testing.T) {
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of("hello"),
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("keyword with nil filter field skipped", func(t *testing.T) {
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword:      gptr.Of("hello"),
+			FilterFields: []*openapiExperiment.FilterField{nil},
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("keyword with valid filter fields", func(t *testing.T) {
+		ft := openapiExperiment.FilterFieldTypeActualOutput
+		fk := "custom_key"
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of(" hello "),
+			FilterFields: []*openapiExperiment.FilterField{
+				{FieldType: &ft, FieldKey: &fk},
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		assert.Equal(t, "hello", got.GetKeyword())
+		require.Len(t, got.FilterFields, 1)
+		assert.Equal(t, domainExpt.FieldType_ActualOutput, got.FilterFields[0].GetFieldType())
+		assert.Equal(t, fk, got.FilterFields[0].GetFieldKey())
+	})
+
+	t.Run("keyword with invalid field type returns error", func(t *testing.T) {
+		badFt := openapiExperiment.FilterFieldType("bad_field")
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of("hello"),
+			FilterFields: []*openapiExperiment.FilterField{
+				{FieldType: &badFt},
+			},
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	})
+
+	t.Run("keyword with field without field_key", func(t *testing.T) {
+		ft := openapiExperiment.FilterFieldTypeEvalSetColumn
+		got, err := OpenAPIKeywordSearchDTO2Domain(&openapiExperiment.KeywordSearch{
+			Keyword: gptr.Of("search"),
+			FilterFields: []*openapiExperiment.FilterField{
+				{FieldType: &ft},
+			},
+		})
+		assert.NoError(t, err)
+		require.NotNil(t, got)
+		require.Len(t, got.FilterFields, 1)
+		assert.Nil(t, got.FilterFields[0].FieldKey)
+	})
+}
+
+func TestExperimentResultDomainFiltersNeedAccelerator(t *testing.T) {
+	t.Parallel()
+
+	t.Run("nil returns false", func(t *testing.T) {
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(nil))
+	})
+
+	t.Run("empty conditions returns false", func(t *testing.T) {
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{}))
+	})
+
+	t.Run("only TurnRunState returns false", func(t *testing.T) {
+		ft := domainExpt.FieldType_TurnRunState
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: &domainExpt.FilterField{FieldType: ft}},
+			},
+		}))
+	})
+
+	t.Run("only EvaluatorScore returns false", func(t *testing.T) {
+		ft := domainExpt.FieldType_EvaluatorScore
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: &domainExpt.FilterField{FieldType: ft}},
+			},
+		}))
+	})
+
+	t.Run("TurnRunState + EvaluatorScore returns false", func(t *testing.T) {
+		ft1 := domainExpt.FieldType_TurnRunState
+		ft2 := domainExpt.FieldType_EvaluatorScore
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: &domainExpt.FilterField{FieldType: ft1}},
+				{Field: &domainExpt.FilterField{FieldType: ft2}},
+			},
+		}))
+	})
+
+	t.Run("other field type returns true", func(t *testing.T) {
+		ft := domainExpt.FieldType_ActualOutput
+		assert.True(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: &domainExpt.FilterField{FieldType: ft}},
+			},
+		}))
+	})
+
+	t.Run("mixed with accelerator-needing field returns true", func(t *testing.T) {
+		ft1 := domainExpt.FieldType_TurnRunState
+		ft2 := domainExpt.FieldType_EvalSetColumn
+		assert.True(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: &domainExpt.FilterField{FieldType: ft1}},
+				{Field: &domainExpt.FilterField{FieldType: ft2}},
+			},
+		}))
+	})
+
+	t.Run("nil condition skipped", func(t *testing.T) {
+		ft := domainExpt.FieldType_TurnRunState
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				nil,
+				{Field: &domainExpt.FilterField{FieldType: ft}},
+			},
+		}))
+	})
+
+	t.Run("condition with nil field skipped", func(t *testing.T) {
+		assert.False(t, ExperimentResultDomainFiltersNeedAccelerator(&domainExpt.Filters{
+			FilterConditions: []*domainExpt.FilterCondition{
+				{Field: nil},
+			},
+		}))
+	})
+}
+
+func Test_openAPIExperimentFilterFieldTypeToDomain(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input   openapiExperiment.FilterFieldType
+		want    domainExpt.FieldType
+		wantErr bool
+	}{
+		{"", 0, true},
+		{"evaluator_score", domainExpt.FieldType_EvaluatorScore, false},
+		{"creator_by", domainExpt.FieldType_CreatorBy, false},
+		{"updated_by", domainExpt.FieldType_UpdatedBy, false},
+		{"expt_status", domainExpt.FieldType_ExptStatus, false},
+		{"turn_run_state", domainExpt.FieldType_TurnRunState, false},
+		{"target_id", domainExpt.FieldType_TargetID, false},
+		{"eval_set_id", domainExpt.FieldType_EvalSetID, false},
+		{"evaluator_id", domainExpt.FieldType_EvaluatorID, false},
+		{"target_type", domainExpt.FieldType_TargetType, false},
+		{"source_target", domainExpt.FieldType_SourceTarget, false},
+		{"evaluator_version_id", domainExpt.FieldType_EvaluatorVersionID, false},
+		{"target_version_id", domainExpt.FieldType_TargetVersionID, false},
+		{"eval_set_version_id", domainExpt.FieldType_EvalSetVersionID, false},
+		{"expt_type", domainExpt.FieldType_ExptType, false},
+		{"source_type", domainExpt.FieldType_SourceType, false},
+		{"source_id", domainExpt.FieldType_SourceID, false},
+		{"keyword_search", domainExpt.FieldType_KeywordSearch, false},
+		{"eval_set_column", domainExpt.FieldType_EvalSetColumn, false},
+		{"annotation", domainExpt.FieldType_Annotation, false},
+		{"actual_output", domainExpt.FieldType_ActualOutput, false},
+		{"evaluator_score_corrected", domainExpt.FieldType_EvaluatorScoreCorrected, false},
+		{"evaluator", domainExpt.FieldType_Evaluator, false},
+		{"item_id", domainExpt.FieldType_ItemID, false},
+		{"item_run_state", domainExpt.FieldType_ItemRunState, false},
+		{"annotation_score", domainExpt.FieldType_AnnotationScore, false},
+		{"annotation_text", domainExpt.FieldType_AnnotationText, false},
+		{"annotation_categorical", domainExpt.FieldType_AnnotationCategorical, false},
+		{"total_latency", domainExpt.FieldType_TotalLatency, false},
+		{"input_tokens", domainExpt.FieldType_InputTokens, false},
+		{"output_tokens", domainExpt.FieldType_OutputTokens, false},
+		{"total_tokens", domainExpt.FieldType_TotalTokens, false},
+		{"experiment_template_id", domainExpt.FieldType_ExperimentTemplateID, false},
+		{"evaluator_weighted_score", domainExpt.FieldType_EvaluatorWeightedScore, false},
+		{"unknown_bad_field", 0, true},
+		{" evaluator_score ", domainExpt.FieldType_EvaluatorScore, false},
+		{strconv.FormatInt(int64(domainExpt.FieldType_EvaluatorScore), 10), domainExpt.FieldType_EvaluatorScore, false},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+			got, err := openAPIExperimentFilterFieldTypeToDomain(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_openAPIExperimentFilterOperatorToDomain(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input   openapiExperiment.FilterOperatorType
+		want    domainExpt.FilterOperatorType
+		wantErr bool
+	}{
+		{"", 0, true},
+		{"equal", domainExpt.FilterOperatorType_Equal, false},
+		{"eq", domainExpt.FilterOperatorType_Equal, false},
+		{"=", domainExpt.FilterOperatorType_Equal, false},
+		{"not_equal", domainExpt.FilterOperatorType_NotEqual, false},
+		{"ne", domainExpt.FilterOperatorType_NotEqual, false},
+		{"!=", domainExpt.FilterOperatorType_NotEqual, false},
+		{"greater", domainExpt.FilterOperatorType_Greater, false},
+		{"gt", domainExpt.FilterOperatorType_Greater, false},
+		{">", domainExpt.FilterOperatorType_Greater, false},
+		{"greater_or_equal", domainExpt.FilterOperatorType_GreaterOrEqual, false},
+		{"gte", domainExpt.FilterOperatorType_GreaterOrEqual, false},
+		{">=", domainExpt.FilterOperatorType_GreaterOrEqual, false},
+		{"less", domainExpt.FilterOperatorType_Less, false},
+		{"lt", domainExpt.FilterOperatorType_Less, false},
+		{"<", domainExpt.FilterOperatorType_Less, false},
+		{"less_or_equal", domainExpt.FilterOperatorType_LessOrEqual, false},
+		{"lte", domainExpt.FilterOperatorType_LessOrEqual, false},
+		{"<=", domainExpt.FilterOperatorType_LessOrEqual, false},
+		{"in", domainExpt.FilterOperatorType_In, false},
+		{"not_in", domainExpt.FilterOperatorType_NotIn, false},
+		{"like", domainExpt.FilterOperatorType_Like, false},
+		{"not_like", domainExpt.FilterOperatorType_NotLike, false},
+		{"is_null", domainExpt.FilterOperatorType_IsNull, false},
+		{"is_not_null", domainExpt.FilterOperatorType_IsNotNull, false},
+		{"unknown_op", 0, true},
+		{" equal ", domainExpt.FilterOperatorType_Equal, false},
+		{strconv.FormatInt(int64(domainExpt.FilterOperatorType_Equal), 10), domainExpt.FilterOperatorType_Equal, false},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+			got, err := openAPIExperimentFilterOperatorToDomain(tt.input)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_snakeToFilterOperatorPascal(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"equal", "Equal"},
+		{"not_equal", "NotEqual"},
+		{"greater_or_equal", "GreaterOrEqual"},
+		{"is_not_null", "IsNotNull"},
+		{"", ""},
+		{"a", "A"},
+		{"a_b_c", "ABC"},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.input, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, snakeToFilterOperatorPascal(tt.input))
+		})
+	}
 }

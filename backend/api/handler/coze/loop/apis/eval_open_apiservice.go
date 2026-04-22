@@ -9,8 +9,8 @@ import (
 	"context"
 
 	"github.com/cloudwego/hertz/pkg/app"
-
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/evalopenapiservice"
 	openapi0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 )
@@ -93,6 +93,12 @@ func SubmitExperimentOApi(ctx context.Context, c *app.RequestContext) {
 // @router /api/evaluation/v1/experiments/:experiment_id [GET]
 func GetExperimentsOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentsOApi)
+}
+
+// ListExperimentsOApi .
+// @router /v1/loop/evaluation/experiments/list [POST]
+func ListExperimentsOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ListExperimentsOApi)
 }
 
 // ListExperimentResultOApi .
@@ -271,4 +277,10 @@ func GetEvaluationSetJobOApi(ctx context.Context, c *app.RequestContext) {
 // @router /v1/loop/evaluation/evaluators/builtin/run [POST]
 func RunBuiltinEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.RunBuiltinEvaluatorOApi)
+}
+
+// GetEvalTargetOutputFieldContentOApi .
+// @router /v1/loop/evaluation/eval_target_records/output_fields [POST]
+func GetEvalTargetOutputFieldContentOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetOutputFieldContentOApi)
 }

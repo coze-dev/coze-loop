@@ -24,6 +24,7 @@ import (
 	lockMocks "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	lwtMocks "github.com/coze-dev/coze-loop/backend/infra/platestwrite/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	idemMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem/mocks"
 	metricsMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics/mocks"
 	componentMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
@@ -325,6 +326,176 @@ func TestExptMangerImpl_CreateExpt(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestExptMangerImpl_CreateExpt_OnlineSourceTargetVersionInjection 覆盖 expt_manage_impl.go:704-718
+// 中对 Online 实验的 SourceTargetVersion 默认值注入分支：
+//   - PromptOnline：允许空版本，由 Prompt 侧解析最新提交
+//   - RecordOnly 且 source_target_id 为空：不注入，交由 CreateEvalTarget 统一占位
+//   - 其它 Online 类型且版本缺省：注入默认占位版本
+//   - 显式版本或非 Online 实验：保持原值
+func TestExptMangerImpl_CreateExpt_OnlineSourceTargetVersionInjection(t *testing.T) {
+	tests := []struct {
+		name            string
+		exptType        entity.ExptType
+		evalTargetType  entity.EvalTargetType
+		sourceTargetID  *string
+		sourceTargetVer *string
+		wantVersionArg  string
+	}{
+		{
+			name:            "Offline实验：不注入默认版本",
+			exptType:        entity.ExptType_Offline,
+			evalTargetType:  entity.EvalTargetTypeLoopPrompt,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: nil,
+			wantVersionArg:  "",
+		},
+		{
+			name:            "Online+PromptOnline+版本nil：保持空，不注入",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeLoopPromptOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: nil,
+			wantVersionArg:  "",
+		},
+		{
+			name:            "Online+PromptOnline+版本为空白字符：保持空，不注入",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeLoopPromptOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: gptr.Of("   "),
+			wantVersionArg:  "   ",
+		},
+		{
+			name:            "Online+PromptOnline+显式版本：保留原值",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeLoopPromptOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: gptr.Of("v2"),
+			wantVersionArg:  "v2",
+		},
+		{
+			name:            "Online+RecordOnly(CozeWorkflowOnline)+srcID为空：跳过注入",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeWorkflowOnline,
+			sourceTargetID:  gptr.Of(""),
+			sourceTargetVer: nil,
+			wantVersionArg:  "",
+		},
+		{
+			name:            "Online+RecordOnly(CozeWorkflowOnline)+srcID非空+版本缺省：注入默认版本",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeWorkflowOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: nil,
+			wantVersionArg:  consts.DefaultSourceTargetVersion,
+		},
+		{
+			name:            "Online+RecordOnly(CozeWorkflowOnline)+srcID非空+版本空字符串：注入默认版本",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeWorkflowOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: gptr.Of(""),
+			wantVersionArg:  consts.DefaultSourceTargetVersion,
+		},
+		{
+			name:            "Online+RecordOnly(CozeWorkflowOnline)+显式版本：保留原值",
+			exptType:        entity.ExptType_Online,
+			evalTargetType:  entity.EvalTargetTypeCozeWorkflowOnline,
+			sourceTargetID:  gptr.Of("100"),
+			sourceTargetVer: gptr.Of("1.2.3"),
+			wantVersionArg:  "1.2.3",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mgr := newTestExptManager(ctrl)
+			ctx := context.Background()
+			session := &entity.Session{UserID: "1"}
+
+			var gotVersion string
+			var createCalled bool
+			mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+				EXPECT().
+				CreateEvalTarget(ctx, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int64, _ string, ver string, _ entity.EvalTargetType, _ ...entity.Option) (int64, int64, error) {
+					createCalled = true
+					gotVersion = ver
+					return int64(100), int64(101), nil
+				}).AnyTimes()
+
+			// 下列 mock 用 AnyTimes()，与 TestExptMangerImpl_CreateExpt 保持一致，覆盖后续流程；
+			// 即便后续分支 err，CreateEvalTarget 的入参已在此前被捕获。
+			mgr.evalTargetService.(*svcMocks.MockIEvalTargetService).
+				EXPECT().
+				GetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(&entity.EvalTarget{
+					ID:             100,
+					EvalTargetType: tt.evalTargetType,
+					EvalTargetVersion: &entity.EvalTargetVersion{
+						OutputSchema: []*entity.ArgsSchema{},
+					},
+				}, nil).AnyTimes()
+			mgr.evaluationSetVersionService.(*svcMocks.MockEvaluationSetVersionService).
+				EXPECT().
+				GetEvaluationSetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil, &entity.EvaluationSet{
+					EvaluationSetVersion: &entity.EvaluationSetVersion{
+						EvaluationSetSchema: &entity.EvaluationSetSchema{
+							FieldSchemas: []*entity.FieldSchema{},
+						},
+					},
+				}, nil).AnyTimes()
+			mgr.evaluatorService.(*svcMocks.MockEvaluatorService).
+				EXPECT().
+				BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				Return([]*entity.Evaluator{{
+					ID:                     10,
+					EvaluatorType:          entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{EvaluatorID: 10},
+				}}, nil).AnyTimes()
+			mgr.idgenerator.(*idgenMocks.MockIIDGenerator).EXPECT().GenMultiIDs(ctx, 2).Return([]int64{1, 2}, nil).AnyTimes()
+			mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().CreateStats(ctx, gomock.Any(), session).Return(nil).AnyTimes()
+			mgr.exptResultService.(*svcMocks.MockExptResultService).EXPECT().InsertExptTurnResultFilterKeyMappings(ctx, gomock.Any()).Return(nil).AnyTimes()
+			mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			mgr.lwt.(*lwtMocks.MockILatestWriteTracker).EXPECT().SetWriteFlag(ctx, gomock.Any(), gomock.Any()).Return().AnyTimes()
+			mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().GetByName(ctx, gomock.Any(), gomock.Any()).Return(nil, true, nil).AnyTimes()
+			mgr.audit.(*auditMocks.MockIAuditService).
+				EXPECT().
+				Audit(gomock.Any(), gomock.Any()).
+				Return(audit.AuditRecord{AuditStatus: audit.AuditStatus_Approved}, nil).AnyTimes()
+			mgr.benefitService.(*benefitMocks.MockIBenefitService).
+				EXPECT().
+				CheckAndDeductEvalBenefit(ctx, gomock.Any()).
+				Return(&benefit.CheckAndDeductEvalBenefitResult{
+					IsFreeEvaluate: gptr.Of(true),
+				}, nil).AnyTimes()
+			mgr.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().Update(ctx, gomock.Any()).Return(nil).AnyTimes()
+
+			param := &entity.CreateExptParam{
+				WorkspaceID:      1,
+				Name:             fmt.Sprintf("expt_%s", tt.name),
+				EvalSetID:        2,
+				EvalSetVersionID: 3,
+				ExptType:         tt.exptType,
+				CreateEvalTargetParam: &entity.CreateEvalTargetParam{
+					EvalTargetType:      gptr.Of(tt.evalTargetType),
+					SourceTargetID:      tt.sourceTargetID,
+					SourceTargetVersion: tt.sourceTargetVer,
+				},
+				EvaluatorVersionIds: []int64{10},
+			}
+			_, _ = mgr.CreateExpt(ctx, param, session)
+
+			require.True(t, createCalled, "CreateEvalTarget should have been invoked")
+			assert.Equal(t, tt.wantVersionArg, gotVersion, "SourceTargetVersion argument to CreateEvalTarget mismatch")
+		})
+	}
 }
 
 func TestExptMangerImpl_CreateExpt_WithExistingTarget(t *testing.T) {

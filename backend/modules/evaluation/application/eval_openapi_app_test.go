@@ -12,6 +12,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset_job"
@@ -2355,10 +2356,14 @@ type fakeExperimentApp struct {
 	service.ExptAggrResultService
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
+	service.ExptLifecycleEventHandler
 
 	submitResp *exptpb.SubmitExperimentResponse
 	submitErr  error
 	lastReq    *exptpb.SubmitExperimentRequest
+
+	listExperimentsResp *exptpb.ListExperimentsResponse
+	listExperimentsErr  error
 }
 
 func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.SubmitExperimentRequest) (*exptpb.SubmitExperimentResponse, error) {
@@ -2367,6 +2372,16 @@ func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.Su
 		return f.submitResp, f.submitErr
 	}
 	return &exptpb.SubmitExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) ListExperiments(_ context.Context, _ *exptpb.ListExperimentsRequest) (*exptpb.ListExperimentsResponse, error) {
+	if f.listExperimentsErr != nil {
+		return nil, f.listExperimentsErr
+	}
+	if f.listExperimentsResp != nil {
+		return f.listExperimentsResp, nil
+	}
+	return &exptpb.ListExperimentsResponse{}, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)
@@ -5882,6 +5897,658 @@ func TestEvalOpenAPIApplication_GetEvaluationSetJobOApi(t *testing.T) {
 				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) && assert.NotNil(t, resp.Data.Job) {
 					assert.Equal(t, tc.wantID, resp.Data.Job.ID)
 				}
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_GetEvalTargetOutputFieldContentOApi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.GetEvalTargetOutputFieldContentOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.GetEvalTargetOutputFieldContentOApiResponse)
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing workspace_id",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				ExperimentID: gptr.Of(int64(1)),
+				ItemID:       gptr.Of(int64(1)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing experiment_id",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+				ItemID:      gptr.Of(int64(1)),
+				FieldKeys:   []string{"k"},
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing item_id",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(1)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "missing field_keys",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(1)),
+				ItemID:       gptr.Of(int64(1)),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth failed",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(1)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "GetExptItemTurnResults error",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), int64(100), int64(10), int64(1), gomock.Nil()).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "empty turn results",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{}, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "target record id is 0",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, _ *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 0}}, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "GetRecordByID error",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 999}}, nil)
+				targetSvc.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(999)).Return(nil, errors.New("record error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "record is nil",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 999}}, nil)
+				targetSvc.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "LoadRecordOutputFields error",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 999}}, nil)
+				targetSvc.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 999}, nil)
+				targetSvc.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{"k"}).Return(errors.New("load error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success with output fields",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"actual_output", "trajectory"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 999}}, nil)
+				record := &entity.EvalTargetRecord{
+					ID: 999,
+					EvalTargetOutputData: &entity.EvalTargetOutputData{
+						OutputFields: map[string]*entity.Content{
+							"actual_output": {Text: gptr.Of("hello")},
+							"trajectory":    {Text: gptr.Of("step1")},
+							"extra_field":   {Text: gptr.Of("ignored")},
+						},
+					},
+				}
+				targetSvc.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(record, nil)
+				targetSvc.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			check: func(t *testing.T, resp *openapi.GetEvalTargetOutputFieldContentOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				require.Len(t, resp.Data.FieldContents, 2)
+				assert.Contains(t, resp.Data.FieldContents, "actual_output")
+				assert.Contains(t, resp.Data.FieldContents, "trajectory")
+				assert.NotContains(t, resp.Data.FieldContents, "extra_field")
+			},
+		},
+		{
+			name: "success with nil output data",
+			req: &openapi.GetEvalTargetOutputFieldContentOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				ItemID:       gptr.Of(int64(10)),
+				FieldKeys:    []string{"k"},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService, targetSvc *servicemocks.MockIEvalTargetService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().GetExptItemTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Nil()).
+					Return([]*entity.ExptTurnResult{{TargetResultID: 999}}, nil)
+				targetSvc.EXPECT().GetRecordByID(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.EvalTargetRecord{ID: 999}, nil)
+				targetSvc.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+			},
+			check: func(t *testing.T, resp *openapi.GetEvalTargetOutputFieldContentOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Empty(t, resp.Data.FieldContents)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			resultSvc := servicemocks.NewMockExptResultService(ctrl)
+			targetSvc := servicemocks.NewMockIEvalTargetService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:      auth,
+				resultSvc: resultSvc,
+				targetSvc: targetSvc,
+				metric:    metric,
+			}
+
+			if tc.setup != nil {
+				tc.setup(auth, resultSvc, targetSvc)
+			}
+
+			resp, err := app.GetEvalTargetOutputFieldContentOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ListExperimentsOApi(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.ListExperimentsOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.ListExperimentsOApiResponse)
+	}{
+		{
+			name:    "nil request",
+			req:     nil,
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name:    "missing workspace_id",
+			req:     &openapi.ListExperimentsOApiRequest{},
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "ListExperiments error",
+			req: &openapi.ListExperimentsOApiRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				fakeApp.listExperimentsErr = errors.New("list error")
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success empty list",
+			req: &openapi.ListExperimentsOApiRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				fakeApp.listExperimentsResp = &exptpb.ListExperimentsResponse{}
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentsOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Empty(t, resp.Data.Experiments)
+			},
+		},
+		{
+			name: "success with experiments",
+			req: &openapi.ListExperimentsOApiRequest{
+				WorkspaceID: gptr.Of(int64(1)),
+				PageNumber:  gptr.Of(int32(1)),
+				PageSize:    gptr.Of(int32(10)),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				total := int32(1)
+				fakeApp.listExperimentsResp = &exptpb.ListExperimentsResponse{
+					Experiments: []*domainexpt.Experiment{{ID: gptr.Of(int64(42))}},
+					Total:       &total,
+				}
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentsOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				require.Len(t, resp.Data.Experiments, 1)
+				assert.NotNil(t, resp.Data.Total)
+			},
+		},
+		{
+			name: "invalid filter option returns error",
+			req: func() *openapi.ListExperimentsOApiRequest {
+				logicAnd := openapiExperiment.FilterLogicOpAnd
+				badType := openapiExperiment.FilterFieldType("unknown_bad")
+				operator := openapiExperiment.FilterOperatorTypeEqual
+				return &openapi.ListExperimentsOApiRequest{
+					WorkspaceID: gptr.Of(int64(1)),
+					FilterOption: &openapiExperiment.ExperimentFilterOption{
+						Filters: &openapiExperiment.Filters{
+							LogicOp: &logicAnd,
+							FilterConditions: []*openapiExperiment.FilterCondition{
+								{
+									Field:    &openapiExperiment.FilterField{FieldType: &badType},
+									Operator: &operator,
+									Value:    gptr.Of("1"),
+								},
+							},
+						},
+					},
+				}
+			}(),
+			setup:   func(_ *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			metric := &fakeOpenAPIMetric{}
+			fakeApp := &fakeExperimentApp{}
+
+			app := &EvalOpenAPIApplication{
+				auth:          auth,
+				experimentApp: fakeApp,
+				metric:        metric,
+			}
+
+			if tc.setup != nil {
+				tc.setup(auth, fakeApp)
+			}
+
+			resp, err := app.ListExperimentsOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_ListExperimentResultOApi_FilterBranches(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		req     *openapi.ListExperimentResultOApiRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService)
+		wantErr int32
+		check   func(t *testing.T, resp *openapi.ListExperimentResultOApiResponse)
+	}{
+		{
+			name: "auth failed",
+			req: &openapi.ListExperimentResultOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "MGetExperimentResult error",
+			req: &openapi.ListExperimentResultOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "success without filter",
+			req: &openapi.ListExperimentResultOApiRequest{
+				WorkspaceID:  gptr.Of(int64(1)),
+				ExperimentID: gptr.Of(int64(100)),
+				PageNum:      gptr.Of(int32(1)),
+				PageSize:     gptr.Of(int32(20)),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).Return(&entity.MGetExperimentReportResult{
+					Total: 0,
+				}, nil)
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentResultOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Equal(t, int64(0), *resp.Data.Total)
+			},
+		},
+		{
+			name: "invalid filter returns error",
+			req: func() *openapi.ListExperimentResultOApiRequest {
+				logicAnd := openapiExperiment.FilterLogicOpAnd
+				badType := openapiExperiment.FilterFieldType("bad_field")
+				operator := openapiExperiment.FilterOperatorTypeEqual
+				return &openapi.ListExperimentResultOApiRequest{
+					WorkspaceID:  gptr.Of(int64(1)),
+					ExperimentID: gptr.Of(int64(100)),
+					Filter: &openapiExperiment.ExperimentResultFilter{
+						Filters: &openapiExperiment.Filters{
+							LogicOp: &logicAnd,
+							FilterConditions: []*openapiExperiment.FilterCondition{
+								{
+									Field:    &openapiExperiment.FilterField{FieldType: &badType},
+									Operator: &operator,
+									Value:    gptr.Of("1"),
+								},
+							},
+						},
+					},
+				}
+			}(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "filter with RDS-only fields uses non-accelerator",
+			req: func() *openapi.ListExperimentResultOApiRequest {
+				logicAnd := openapiExperiment.FilterLogicOpAnd
+				ft := openapiExperiment.FilterFieldTypeTurnRunState
+				op := openapiExperiment.FilterOperatorTypeIn
+				return &openapi.ListExperimentResultOApiRequest{
+					WorkspaceID:  gptr.Of(int64(1)),
+					ExperimentID: gptr.Of(int64(100)),
+					Filter: &openapiExperiment.ExperimentResultFilter{
+						Filters: &openapiExperiment.Filters{
+							LogicOp: &logicAnd,
+							FilterConditions: []*openapiExperiment.FilterCondition{
+								{
+									Field:    &openapiExperiment.FilterField{FieldType: &ft},
+									Operator: &op,
+									Value:    gptr.Of("3"),
+								},
+							},
+						},
+					},
+				}
+			}(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
+						assert.False(t, param.UseAccelerator)
+						assert.NotNil(t, param.Filters)
+						assert.Nil(t, param.FilterAccelerators)
+						return &entity.MGetExperimentReportResult{Total: 5}, nil
+					},
+				)
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentResultOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Equal(t, int64(5), *resp.Data.Total)
+			},
+		},
+		{
+			name: "filter with accelerator-needing fields uses accelerator",
+			req: func() *openapi.ListExperimentResultOApiRequest {
+				logicAnd := openapiExperiment.FilterLogicOpAnd
+				ft := openapiExperiment.FilterFieldTypeActualOutput
+				op := openapiExperiment.FilterOperatorTypeLike
+				return &openapi.ListExperimentResultOApiRequest{
+					WorkspaceID:  gptr.Of(int64(1)),
+					ExperimentID: gptr.Of(int64(100)),
+					Filter: &openapiExperiment.ExperimentResultFilter{
+						Filters: &openapiExperiment.Filters{
+							LogicOp: &logicAnd,
+							FilterConditions: []*openapiExperiment.FilterCondition{
+								{
+									Field:    &openapiExperiment.FilterField{FieldType: &ft},
+									Operator: &op,
+									Value:    gptr.Of("hello"),
+								},
+							},
+						},
+					},
+				}
+			}(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
+						assert.True(t, param.UseAccelerator)
+						assert.NotNil(t, param.FilterAccelerators)
+						return &entity.MGetExperimentReportResult{Total: 3}, nil
+					},
+				)
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentResultOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Equal(t, int64(3), *resp.Data.Total)
+			},
+		},
+		{
+			name: "keyword search uses accelerator",
+			req: func() *openapi.ListExperimentResultOApiRequest {
+				ft := openapiExperiment.FilterFieldTypeActualOutput
+				return &openapi.ListExperimentResultOApiRequest{
+					WorkspaceID:  gptr.Of(int64(1)),
+					ExperimentID: gptr.Of(int64(100)),
+					Filter: &openapiExperiment.ExperimentResultFilter{
+						KeywordSearch: &openapiExperiment.KeywordSearch{
+							Keyword:      gptr.Of("search_term"),
+							FilterFields: []*openapiExperiment.FilterField{{FieldType: &ft}},
+						},
+					},
+				}
+			}(),
+			setup: func(auth *rpcmocks.MockIAuthProvider, resultSvc *servicemocks.MockExptResultService) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				resultSvc.EXPECT().MGetExperimentResult(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error) {
+						assert.True(t, param.UseAccelerator)
+						assert.NotNil(t, param.FilterAccelerators)
+						return &entity.MGetExperimentReportResult{Total: 2}, nil
+					},
+				)
+			},
+			check: func(t *testing.T, resp *openapi.ListExperimentResultOApiResponse) {
+				require.NotNil(t, resp)
+				require.NotNil(t, resp.Data)
+				assert.Equal(t, int64(2), *resp.Data.Total)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			resultSvc := servicemocks.NewMockExptResultService(ctrl)
+			metric := &fakeOpenAPIMetric{}
+
+			app := &EvalOpenAPIApplication{
+				auth:      auth,
+				resultSvc: resultSvc,
+				metric:    metric,
+			}
+
+			if tc.setup != nil {
+				tc.setup(auth, resultSvc)
+			}
+
+			resp, err := app.ListExperimentResultOApi(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tc.check != nil {
+					tc.check(t, resp)
+				}
+			}
+
+			if tc.req != nil {
+				assert.True(t, metric.called)
 			}
 		})
 	}

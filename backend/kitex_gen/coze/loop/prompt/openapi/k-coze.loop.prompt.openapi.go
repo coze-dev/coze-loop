@@ -4230,6 +4230,20 @@ func (p *GetPromptOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 11:
 			if fieldTypeId == thrift.BOOL {
 				l, err = p.FastReadField11(buf[offset:])
@@ -4346,6 +4360,20 @@ func (p *GetPromptOApiRequest) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *GetPromptOApiRequest) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.PromptKey = _field
+	return offset, nil
+}
+
 func (p *GetPromptOApiRequest) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 
@@ -4423,6 +4451,7 @@ func (p *GetPromptOApiRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField11(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField12(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
@@ -4436,6 +4465,7 @@ func (p *GetPromptOApiRequest) BLength() int {
 	if p != nil {
 		l += p.field1Length()
 		l += p.field2Length()
+		l += p.field3Length()
 		l += p.field11Length()
 		l += p.field12Length()
 		l += p.field21Length()
@@ -4460,6 +4490,15 @@ func (p *GetPromptOApiRequest) fastWriteField2(buf []byte, w thrift.NocopyWriter
 	if p.IsSetWorkspaceID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
 		offset += thrift.Binary.WriteI64(buf[offset:], *p.WorkspaceID)
+	}
+	return offset
+}
+
+func (p *GetPromptOApiRequest) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetPromptKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.PromptKey)
 	}
 	return offset
 }
@@ -4527,6 +4566,15 @@ func (p *GetPromptOApiRequest) field2Length() int {
 	return l
 }
 
+func (p *GetPromptOApiRequest) field3Length() int {
+	l := 0
+	if p.IsSetPromptKey() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.PromptKey)
+	}
+	return l
+}
+
 func (p *GetPromptOApiRequest) field11Length() int {
 	l := 0
 	if p.IsSetWithCommit() {
@@ -4586,6 +4634,14 @@ func (p *GetPromptOApiRequest) DeepCopy(s interface{}) error {
 	if src.WorkspaceID != nil {
 		tmp := *src.WorkspaceID
 		p.WorkspaceID = &tmp
+	}
+
+	if src.PromptKey != nil {
+		var tmp string
+		if *src.PromptKey != "" {
+			tmp = kutils.StringDeepCopy(*src.PromptKey)
+		}
+		p.PromptKey = &tmp
 	}
 
 	if src.WithCommit != nil {

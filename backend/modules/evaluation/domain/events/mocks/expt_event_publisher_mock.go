@@ -84,6 +84,20 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptExportCSVEvent(ctx, eve
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptExportCSVEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptExportCSVEvent), ctx, events, duration)
 }
 
+// PublishExptLifecycleEvent mocks base method.
+func (m *MockExptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptLifecycleEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptLifecycleEvent indicates an expected call of PublishExptLifecycleEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration)
+}
+
 // PublishExptOnlineEvalResult mocks base method.
 func (m *MockExptEventPublisher) PublishExptOnlineEvalResult(ctx context.Context, events *entity.OnlineExptEvalResultEvent, duration *time.Duration) error {
 	m.ctrl.T.Helper()

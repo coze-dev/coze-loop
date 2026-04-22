@@ -123,6 +123,45 @@ func TestColumnExtractConfigRepoImpl_UpsertColumnExtractConfig(t *testing.T) {
 	}
 }
 
+func TestColumnExtractConfigRepoImpl_ListColumnExtractConfigs(t *testing.T) {
+	{
+		config := `[{"Column":"input","JSONPath":"$.messages[0].content"}]`
+		stub := &columnExtractDaoStub{getResp: &model2.ObservabilityColumnExtractConfig{
+			ID: 1, WorkspaceID: 1, PlatformType: "coze_loop", SpanListType: "llm_span", AgentName: "agent-1", Config: &config,
+		}}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			PlatformType: "coze_loop",
+			SpanListType: "llm_span",
+		})
+		assert.NoError(t, err)
+		assert.Len(t, got, 1)
+		assert.Equal(t, int64(1), got[0].WorkspaceID)
+		assert.Equal(t, "agent-1", got[0].AgentName)
+		assert.Len(t, got[0].Columns, 1)
+	}
+	{
+		stub := &columnExtractDaoStub{getResp: nil}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			PlatformType: "coze_loop",
+			SpanListType: "llm_span",
+		})
+		assert.NoError(t, err)
+		assert.Empty(t, got)
+	}
+	{
+		stub := &columnExtractDaoStub{getErr: errors.New("db err")}
+		repoImpl := NewColumnExtractConfigRepoImpl(stub, idGenStub{})
+		got, err := repoImpl.ListColumnExtractConfigs(context.Background(), repo.ListColumnExtractConfigParam{
+			PlatformType: "coze_loop",
+			SpanListType: "all_span",
+		})
+		assert.Error(t, err)
+		assert.Nil(t, got)
+	}
+}
+
 func TestColumnExtractConfigRepoImpl_GetColumnExtractConfig(t *testing.T) {
 	{
 		stub := &columnExtractDaoStub{getResp: nil}

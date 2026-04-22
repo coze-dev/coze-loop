@@ -92,6 +92,8 @@ struct Experiment {
     // 触发方式
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
+
+    100: optional map<string, string> ext
 }
 
 // 实验模板基础信息

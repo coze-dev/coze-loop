@@ -46,6 +46,8 @@ struct CreateExperimentRequest {
     50: optional expt.ExptTriggerType trigger_type
 
 
+    100: optional map<string, string> ext (api.body = 'ext')
+
     200: optional common.Session session
 
     255: optional base.Base Base

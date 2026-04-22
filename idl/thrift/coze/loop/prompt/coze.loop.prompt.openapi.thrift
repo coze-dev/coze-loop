@@ -126,8 +126,9 @@ struct DeletePromptOApiResponse {
 }
 
 struct GetPromptOApiRequest {
-    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', vt.not_nil='true', vt.gt='0', go.tag='json:"prompt_id"')
+    1: optional i64 prompt_id (api.path='prompt_id', api.js_conv='true', go.tag='json:"prompt_id"')
     2: optional i64 workspace_id (api.query="workspace_id", api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional string prompt_key (api.query="prompt_key")
 
     11: optional bool with_commit (api.query="with_commit")
     12: optional string commit_version (api.query="commit_version")

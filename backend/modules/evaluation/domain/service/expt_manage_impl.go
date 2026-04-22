@@ -702,13 +702,19 @@ func (e *ExptMangerImpl) packTupleID(ctx context.Context, expt *entity.Experimen
 func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptParam, session *entity.Session) (*entity.Experiment, error) {
 	if req.ExptType == entity.ExptType_Online && req.CreateEvalTargetParam != nil {
 		et := gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType)
+		srcID := ""
+		if req.CreateEvalTargetParam.SourceTargetID != nil {
+			srcID = strings.TrimSpace(*req.CreateEvalTargetParam.SourceTargetID)
+		}
 		srcVer := ""
 		if req.CreateEvalTargetParam.SourceTargetVersion != nil {
 			srcVer = strings.TrimSpace(*req.CreateEvalTargetParam.SourceTargetVersion)
 		}
+		// 仅记录型且无业务 source：不注入默认版本，与「双空占位」语义一致，由 CreateEvalTarget 统一落库占位
+		skipInjectDefaultSourceVersion := et.IsRecordOnlyType() && srcID == ""
 		// PromptOnline：允许仅传 source_target_id，版本由 Prompt 侧解析为最新提交；其它在线类型仍用占位默认版本
 		if et != entity.EvalTargetTypeCozeLoopPromptOnline || srcVer != "" {
-			if req.CreateEvalTargetParam.SourceTargetVersion == nil || srcVer == "" {
+			if !skipInjectDefaultSourceVersion && (req.CreateEvalTargetParam.SourceTargetVersion == nil || srcVer == "") {
 				req.CreateEvalTargetParam.SourceTargetVersion = gptr.Of(consts.DefaultSourceTargetVersion)
 			}
 		}
