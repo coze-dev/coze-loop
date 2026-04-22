@@ -1,6 +1,9 @@
 package consumer
 
-import "context"
+import (
+	"context"
+	"sync"
+)
 
 type spanStatsKey struct{}
 
@@ -10,9 +13,12 @@ type SpanStatsEntry struct {
 	InCount       int
 	FilteredCount map[string]int
 	OutCount      map[string]int
+	spanStatsLock sync.Mutex
 }
 
 func (e *SpanStatsEntry) TotalFiltered() int {
+	e.spanStatsLock.Lock()
+	defer e.spanStatsLock.Unlock()
 	total := 0
 	for _, c := range e.FilteredCount {
 		total += c
@@ -21,10 +27,14 @@ func (e *SpanStatsEntry) TotalFiltered() int {
 }
 
 func (e *SpanStatsEntry) GetFiltered(node string) int {
+	e.spanStatsLock.Lock()
+	defer e.spanStatsLock.Unlock()
 	return e.FilteredCount[node]
 }
 
 func (e *SpanStatsEntry) TotalOutCount() int {
+	e.spanStatsLock.Lock()
+	defer e.spanStatsLock.Unlock()
 	total := 0
 	for _, c := range e.OutCount {
 		total += c
@@ -33,11 +43,14 @@ func (e *SpanStatsEntry) TotalOutCount() int {
 }
 
 func (e *SpanStatsEntry) GetOutCount(pipeline string) int {
+	e.spanStatsLock.Lock()
+	defer e.spanStatsLock.Unlock()
 	return e.OutCount[pipeline]
 }
 
 type SpanStats struct {
 	entries map[string]*SpanStatsEntry
+	lock    sync.Mutex
 }
 
 func newSpanStats() *SpanStats {
@@ -64,6 +77,8 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 	if stats == nil {
 		return
 	}
+	stats.lock.Lock()
+	defer stats.lock.Unlock()
 	for _, trace := range tds.TraceData {
 		for _, span := range trace.SpanList {
 			key := statsKey(tds.Tenant, span.PSM)
@@ -77,7 +92,9 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 				}
 				stats.entries[key] = entry
 			}
+			entry.spanStatsLock.Lock()
 			entry.InCount++
+			entry.spanStatsLock.Unlock()
 		}
 	}
 }
@@ -89,6 +106,7 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count i
 		return
 	}
 	key := statsKey(tenant, psm)
+	stats.lock.Lock()
 	entry, ok := stats.entries[key]
 	if !ok {
 		entry = &SpanStatsEntry{
@@ -99,7 +117,10 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count i
 		}
 		stats.entries[key] = entry
 	}
+	stats.lock.Unlock()
+	entry.spanStatsLock.Lock()
 	entry.FilteredCount[pipeline] += count
+	entry.spanStatsLock.Unlock()
 }
 
 func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count int) {
@@ -108,6 +129,7 @@ func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count i
 		return
 	}
 	key := statsKey(tenant, psm)
+	stats.lock.Lock()
 	entry, ok := stats.entries[key]
 	if !ok {
 		entry = &SpanStatsEntry{
@@ -118,7 +140,10 @@ func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count i
 		}
 		stats.entries[key] = entry
 	}
+	stats.lock.Unlock()
+	entry.spanStatsLock.Lock()
 	entry.OutCount[pipeline] += count
+	entry.spanStatsLock.Unlock()
 }
 
 func GetSpanStatsEntries(ctx context.Context) []*SpanStatsEntry {
@@ -126,6 +151,8 @@ func GetSpanStatsEntries(ctx context.Context) []*SpanStatsEntry {
 	if stats == nil {
 		return nil
 	}
+	stats.lock.Lock()
+	defer stats.lock.Unlock()
 	result := make([]*SpanStatsEntry, 0, len(stats.entries))
 	for _, entry := range stats.entries {
 		result = append(result, entry)
@@ -138,5 +165,7 @@ func GetSpanStatsEntry(ctx context.Context, tenant, psm string) *SpanStatsEntry 
 	if stats == nil {
 		return nil
 	}
+	stats.lock.Lock()
+	defer stats.lock.Unlock()
 	return stats.entries[statsKey(tenant, psm)]
 }
