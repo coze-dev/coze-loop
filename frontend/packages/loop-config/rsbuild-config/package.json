@@ -20,7 +20,6 @@
     "@coze-arch/pkg-root-webpack-plugin": "workspace:*",
     "@coze-arch/postcss-plugin": "workspace:*",
     "@coze-arch/semi-theme-hand01": "0.0.6-alpha.346d77",
-    "@coze-arch/subspace-resolve-plugin": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",
     "@douyinfe/semi-rspack-plugin": "2.90.10",
@@ -40,4 +39,3 @@
     "webpack": "~5.91.0"
   }
 }
-

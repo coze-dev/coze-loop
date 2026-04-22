@@ -3193,9 +3193,6 @@ importers:
       '@coze-arch/semi-theme-hand01':
         specifier: 0.0.6-alpha.346d77
         version: 0.0.6-alpha.346d77
-      '@coze-arch/subspace-resolve-plugin':
-        specifier: workspace:*
-        version: link:../../../infra/plugins/subspace-resolve-plugin
       '@coze-arch/ts-config':
         specifier: workspace:*
         version: link:../../../config/ts-config

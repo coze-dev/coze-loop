@@ -10,7 +10,6 @@ import { pluginLess } from '@rsbuild/plugin-less';
 import { type RsbuildConfig, mergeRsbuildConfig } from '@rsbuild/core';
 import { SemiRspackPlugin } from '@douyinfe/semi-rspack-plugin';
 import { GLOBAL_ENVS } from '@coze-studio/bot-env-adapter';
-import SubspaceResolvePlugin from '@coze-arch/subspace-resolve-plugin';
 import PkgRootWebpackPlugin from '@coze-arch/pkg-root-webpack-plugin';
 
 import { formatDefineVars, getLatestGitCommitHash } from './utils';
@@ -93,7 +92,6 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
 
         appendPlugins([
           new PkgRootWebpackPlugin({}),
-          new SubspaceResolvePlugin({ currSubspace: 'default' }),
           new SemiRspackPlugin({ theme: '@coze-arch/semi-theme-hand01' }),
         ]);
 
