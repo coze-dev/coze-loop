@@ -687,7 +687,7 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 		}
 	}()
 
-	if req.GetStartTime() == 0 && req.GetEndTime() == 0 {
+	if req != nil && req.GetStartTime() == 0 && req.GetEndTime() == 0 && o.timeRange != nil {
 		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", req.GetTraceID(), 1000*60*60*24)
 		if st != nil && et != nil {
 			req.StartTime = st
