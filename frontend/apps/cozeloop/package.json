@@ -61,7 +61,7 @@
     "@coze-arch/vitest-config": "workspace:*",
     "@cozeloop/rsbuild-config": "workspace:*",
     "@cozeloop/tailwind-config": "workspace:*",
-    "@rsbuild/core": "^1.7.5",
+    "@rsbuild/core": "^2.0.0",
     "@types/node": "^24",
     "@types/react": "18.2.37",
     "@types/react-dom": "18.2.15",
@@ -72,4 +72,3 @@
     "vitest": "~3.0.5"
   }
 }
-
