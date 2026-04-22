@@ -12,7 +12,7 @@ import (
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/observabilitytraceservice"
-	trace "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
 )
 
 var observabilityClient observabilitytraceservice.Client
@@ -194,47 +194,17 @@ func ListMetadata(ctx context.Context, c *app.RequestContext) {
 // ListTraceChat .
 // @router /api/observability/v1/traces/chat/list [POST]
 func ListTraceChat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.ListTraceChatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.ListTraceChatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.ListTraceChat)
 }
 
 // ListThreadChat .
 // @router /api/observability/v1/threads/chat/list [POST]
 func ListThreadChat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.ListThreadChatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.ListThreadChatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.ListThreadChat)
 }
 
 // GetThreadStat .
 // @router /api/observability/v1/threads/stat [POST]
 func GetThreadStat(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req trace.GetThreadStatRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
-
-	resp := new(trace.GetThreadStatResponse)
-
-	c.JSON(consts.StatusOK, resp)
+	invokeAndRender(ctx, c, observabilityClient.GetThreadStat)
 }
