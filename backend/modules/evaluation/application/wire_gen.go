@@ -175,7 +175,8 @@ func InitExperimentApplication(ctx context.Context, idgen2 idgen.IIDGenerator, d
 	iExptInsightAnalysisRecordRepo := experiment.NewExptInsightAnalysisRecordRepo(iExptInsightAnalysisRecordDAO, iExptInsightAnalysisFeedbackCommentDAO, iExptInsightAnalysisFeedbackVoteDAO, idgen2, iLatestWriteTracker)
 	iAgentAdapter := agent.NewAgentAdapter()
 	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService, iNotifyRPCAdapter, iUserProvider, iExperimentRepo, iEvalTargetRepo)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider)
+	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider)
+	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, componentIConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, serviceEvaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
 	return iExperimentApplication, nil
 }
 
@@ -406,7 +407,8 @@ func InitEvalOpenAPIApplication(ctx context.Context, configFactory conf.IConfigL
 	iExptInsightAnalysisRecordRepo := experiment.NewExptInsightAnalysisRecordRepo(iExptInsightAnalysisRecordDAO, iExptInsightAnalysisFeedbackCommentDAO, iExptInsightAnalysisFeedbackVoteDAO, idgen2, iLatestWriteTracker)
 	iAgentAdapter := agent.NewAgentAdapter()
 	iExptInsightAnalysisService := service.NewInsightAnalysisService(iExptInsightAnalysisRecordRepo, exptEventPublisher, objectStorage, iAgentAdapter, iExptResultExportService, iNotifyRPCAdapter, iUserProvider, iExperimentRepo, iEvalTargetRepo)
-	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider)
+	exptLifecycleEventHandler := service.NewExptLifecycleEventHandler(iExperimentRepo, iNotifyRPCAdapter, iUserProvider)
+	iExperimentApplication := NewExperimentApplication(exptAggrResultService, exptResultService, iExptManager, exptSchedulerEvent, exptItemEvalEvent, idgen2, iConfiger, iAuthProvider, userInfoService, iEvalTargetService, evaluationSetItemService, iExptAnnotateService, iTagRPCAdapter, iExptResultExportService, iExptInsightAnalysisService, evaluatorService, iExptTemplateManager, iFileProvider, exptLifecycleEventHandler)
 	v3 := NewEvalOpenAPIApplication(iEvalAsyncRepo, exptEventPublisher, iEvalTargetService, iAuthProvider, iEvaluationSetService, evaluationSetVersionService, evaluationSetItemService, evaluationSetSchemaService, openAPIEvaluationMetrics, userInfoService, iExperimentApplication, iExptManager, exptResultService, exptAggrResultService, evaluatorService, evaluatorRecordService, iExptTemplateManager, iConfiger)
 	return v3, nil
 }

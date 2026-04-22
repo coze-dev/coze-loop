@@ -103,9 +103,9 @@ func (mr *MockIExptManagerMockRecorder) InjectExptConfTimeRange(ctx, exptID, tim
 }
 
 // CompleteExpt mocks base method.
-func (m *MockIExptManager) CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
+func (m *MockIExptManager) CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, exptID, spaceID, session}
+	varargs := []any{ctx, exptID, exptRunID, spaceID, session}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -115,9 +115,9 @@ func (m *MockIExptManager) CompleteExpt(ctx context.Context, exptID, spaceID int
 }
 
 // CompleteExpt indicates an expected call of CompleteExpt.
-func (mr *MockIExptManagerMockRecorder) CompleteExpt(ctx, exptID, spaceID, session any, opts ...any) *gomock.Call {
+func (mr *MockIExptManagerMockRecorder) CompleteExpt(ctx, exptID, exptRunID, spaceID, session any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, exptID, spaceID, session}, opts...)
+	varargs := append([]any{ctx, exptID, exptRunID, spaceID, session}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteExpt", reflect.TypeOf((*MockIExptManager)(nil).CompleteExpt), varargs...)
 }
 

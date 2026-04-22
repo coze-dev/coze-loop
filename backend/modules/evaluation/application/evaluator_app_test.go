@@ -1273,15 +1273,18 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
 	mockEvaluatorService := mocks.NewMockEvaluatorService(ctrl)
 	mockUserInfoService := userinfomocks.NewMockUserInfoService(ctrl)
+	mockConfiger := confmocks.NewMockIConfiger(ctrl)
 
 	app := &EvaluatorHandlerImpl{
 		auth:             mockAuth,
 		evaluatorService: mockEvaluatorService,
 		userInfoService:  mockUserInfoService,
+		configer:         mockConfiger,
 	}
 
 	workspaceID := int64(100)
 	evaluatorID := int64(200)
+	builtinSpaceID := int64(999)
 	evaluators := []*entity.Evaluator{
 		{
 			ID:            evaluatorID,
@@ -1293,6 +1296,12 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 				Version:     "1.0.0",
 			},
 		},
+	}
+	builtinEvaluator := &entity.Evaluator{
+		ID:            evaluatorID,
+		SpaceID:       builtinSpaceID,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+		Builtin:       true,
 	}
 
 	tests := []struct {
@@ -1310,6 +1319,8 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluators[0], nil)
 				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
 					Return(evaluators, int64(1), nil)
 				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
@@ -1330,6 +1341,93 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 			wantErrCode: errno.CommonNoPermissionCode,
 		},
 		{
+			name: "evaluator_not_in_workspace_and_not_builtin",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// GetEvaluator 在 evaluator 不属于该 workspace 时返回 (nil, nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				// 不是预置评估器时，GetBuiltinEvaluator 返回 (nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(nil, nil)
+			},
+			wantErr:     true,
+			wantErrCode: errno.EvaluatorNotExistCode,
+		},
+		{
+			name: "builtin_evaluator_success",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				// 当前 workspace 下查不到
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				// 命中预置评估器
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+				// authBuiltinManagement 通过
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{strconv.FormatInt(builtinSpaceID, 10)})
+				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
+					Return(evaluators, int64(1), nil)
+				mockUserInfoService.EXPECT().PackUserInfo(gomock.Any(), gomock.Any()).Return()
+			},
+			wantErr: false,
+		},
+		{
+			name: "builtin_evaluator_auth_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(builtinEvaluator, nil)
+				// builtin 空间不在允许列表中，authBuiltinManagement 会失败
+				mockConfiger.EXPECT().GetBuiltinEvaluatorSpaceConf(gomock.Any()).
+					Return([]string{})
+			},
+			wantErr: true,
+		},
+		{
+			name: "get_builtin_evaluator_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, nil)
+				mockEvaluatorService.EXPECT().GetBuiltinEvaluator(gomock.Any(), evaluatorID).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
+			name: "get_evaluator_failed",
+			req: &evaluatorservice.ListEvaluatorVersionsRequest{
+				WorkspaceID: workspaceID,
+				EvaluatorID: &evaluatorID,
+			},
+			mockSetup: func() {
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(nil, errors.New("db error"))
+			},
+			wantErr: true,
+		},
+		{
 			name: "service_failed",
 			req: &evaluatorservice.ListEvaluatorVersionsRequest{
 				WorkspaceID: workspaceID,
@@ -1337,6 +1435,8 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluators[0], nil)
 				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
 					Return(nil, int64(0), errors.New("db error"))
 			},
@@ -1355,6 +1455,8 @@ func TestEvaluatorHandlerImpl_ListEvaluatorVersions(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				mockEvaluatorService.EXPECT().GetEvaluator(gomock.Any(), workspaceID, evaluatorID, false).
+					Return(evaluators[0], nil)
 				mockEvaluatorService.EXPECT().ListEvaluatorVersion(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(ctx context.Context, req *entity.ListEvaluatorVersionRequest) ([]*entity.Evaluator, int64, error) {
 						assert.Equal(t, int32(10), req.PageSize)
@@ -2188,6 +2290,59 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "mixed_spaces_auth_each",
+			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+				EvaluatorRecordIds: []int64{10, 11, 12},
+			},
+			mockSetup: func() {
+				crossSpaceRecords := []*entity.EvaluatorRecord{
+					{ID: 10, SpaceID: 100},
+					{ID: 11, SpaceID: 100},
+					{ID: 12, SpaceID: 200},
+				}
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{10, 11, 12}, false, false).
+					Return(crossSpaceRecords, nil)
+				// 两个不同空间应当分别鉴权
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationParam) error {
+						assert.Equal(t, int64(100), p.SpaceID)
+						return nil
+					})
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationParam) error {
+						assert.Equal(t, int64(200), p.SpaceID)
+						return nil
+					})
+			},
+			wantErr: false,
+		},
+		{
+			name: "mixed_spaces_second_space_denied",
+			req: &evaluatorservice.BatchGetEvaluatorRecordsRequest{
+				EvaluatorRecordIds: []int64{10, 12},
+			},
+			mockSetup: func() {
+				crossSpaceRecords := []*entity.EvaluatorRecord{
+					{ID: 10, SpaceID: 100},
+					{ID: 12, SpaceID: 200},
+				}
+				mockEvaluatorRecordService.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), []int64{10, 12}, false, false).
+					Return(crossSpaceRecords, nil)
+				// 第一个空间有权限，第二个空间无权限 → 整体应失败
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationParam) error {
+						assert.Equal(t, int64(100), p.SpaceID)
+						return nil
+					})
+				mockAuth.EXPECT().Authorization(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, p *rpc.AuthorizationParam) error {
+						assert.Equal(t, int64(200), p.SpaceID)
+						return errorx.NewByCode(errno.CommonNoPermissionCode)
+					})
+			},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -2199,9 +2354,12 @@ func TestEvaluatorHandlerImpl_BatchGetEvaluatorRecords(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, resp)
-				if tt.name == "success" {
+				switch tt.name {
+				case "success":
 					assert.Len(t, resp.Records, 2)
-				} else {
+				case "mixed_spaces_auth_each":
+					assert.Len(t, resp.Records, 3)
+				default:
 					assert.Len(t, resp.Records, 0)
 				}
 			}

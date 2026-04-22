@@ -82,6 +82,7 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 	}
 }
 
+// pipeline 整体再看下名字
 func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count int) {
 	stats := getSpanStats(ctx)
 	if stats == nil {

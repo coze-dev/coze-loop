@@ -94,7 +94,7 @@ func TestExptSubmitExec_ExptEnd(t *testing.T) {
 			mockSetup: func(f *exptSubmitExecFields) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{ZombieIntervalSecond: 1})
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 			},
@@ -131,7 +131,7 @@ func TestExptSubmitExec_ExptEnd(t *testing.T) {
 			mockSetup: func(f *exptSubmitExecFields) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("exptrerr"))
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("exptrerr"))
 			},
 			event:     &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3, ExptRunMode: 1, Session: &entity.Session{UserID: "u1"}},
 			expt:      &entity.Experiment{},
@@ -1164,8 +1164,7 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
@@ -1285,8 +1284,7 @@ func TestExptFailRetryExec_ExptEnd(t *testing.T) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				// CompleteRun: ctx, exptID, exptRunID, spaceID, session, WithCID, WithCompleteInterval (7个参数)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				// CompleteExpt: ctx, exptID, spaceID, session, WithCID, WithCompleteInterval (6个参数)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("complete expt error")).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("complete expt error")).Times(1)
 			},
 			wantNextTick: false,
 			wantErr:      true,
@@ -1723,7 +1721,7 @@ func TestExptAppendExec_ExptEnd(t *testing.T) {
 				f.exptItemResultRepo.EXPECT().ScanItemRunLogs(gomock.Any(), args.event.ExptID, args.event.ExptRunID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResultRunLog{}, int64(0), nil).Times(1)
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
 			wantNextTick: false,
@@ -3719,7 +3717,7 @@ func TestExptRetryAllExec_ExptEnd(t *testing.T) {
 			prepareMock: func(f *exptRetryAllExecFields, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 			},
@@ -3838,7 +3836,7 @@ func TestExptRetryAllExec_ExptEnd(t *testing.T) {
 			prepareMock: func(f *exptRetryAllExecFields, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("complete expt error")).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(errors.New("complete expt error")).Times(1)
 			},
 			wantNextTick: false,
 			wantErr:      true,
@@ -4578,7 +4576,7 @@ func TestExptRetryItemsExec_ExptEnd(t *testing.T) {
 				}, nil).Times(1)
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
 				f.manager.EXPECT().CompleteRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
+				f.manager.EXPECT().CompleteExpt(gomock.Any(), args.event.ExptID, gomock.Any(), args.event.SpaceID, args.event.Session, gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.configer.EXPECT().GetExptExecConf(gomock.Any(), args.event.SpaceID).Return(&entity.ExptExecConf{ZombieIntervalSecond: 100}).Times(1)
 				f.idem.EXPECT().Set(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.manager.EXPECT().UnlockCompletingRun(gomock.Any(), args.event.ExptID, args.event.ExptRunID, args.event.SpaceID, args.event.Session).Return(nil).Times(1)

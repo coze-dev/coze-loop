@@ -15950,6 +15950,1183 @@ func (p *ReportEvalTargetInvokeResultResponse) Field255DeepEqual(src *base.BaseR
 	return true
 }
 
+// 按需查询评测对象输出中大对象的完整内容
+type GetEvalTargetOutputFieldContentOApiRequest struct {
+	WorkspaceID  *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	ExperimentID *int64       `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" form:"experiment_id" `
+	ItemID       *int64       `thrift:"item_id,3,optional" frugal:"3,optional,i64" json:"item_id" form:"item_id" `
+	FieldKeys    []string     `thrift:"field_keys,4,optional" frugal:"4,optional,list<string>" json:"field_keys" form:"field_keys" `
+	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewGetEvalTargetOutputFieldContentOApiRequest() *GetEvalTargetOutputFieldContentOApiRequest {
+	return &GetEvalTargetOutputFieldContentOApiRequest{}
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) InitDefault() {
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_WorkspaceID_DEFAULT int64
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return GetEvalTargetOutputFieldContentOApiRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_ExperimentID_DEFAULT int64
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetExperimentID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperimentID() {
+		return GetEvalTargetOutputFieldContentOApiRequest_ExperimentID_DEFAULT
+	}
+	return *p.ExperimentID
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_ItemID_DEFAULT int64
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetItemID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemID() {
+		return GetEvalTargetOutputFieldContentOApiRequest_ItemID_DEFAULT
+	}
+	return *p.ItemID
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_FieldKeys_DEFAULT []string
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetFieldKeys() (v []string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldKeys() {
+		return GetEvalTargetOutputFieldContentOApiRequest_FieldKeys_DEFAULT
+	}
+	return p.FieldKeys
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return GetEvalTargetOutputFieldContentOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var GetEvalTargetOutputFieldContentOApiRequest_Base_DEFAULT *base.Base
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return GetEvalTargetOutputFieldContentOApiRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetExperimentID(val *int64) {
+	p.ExperimentID = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetItemID(val *int64) {
+	p.ItemID = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetFieldKeys(val []string) {
+	p.FieldKeys = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_GetEvalTargetOutputFieldContentOApiRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "experiment_id",
+	3:   "item_id",
+	4:   "field_keys",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetExperimentID() bool {
+	return p.ExperimentID != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetItemID() bool {
+	return p.ItemID != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetFieldKeys() bool {
+	return p.FieldKeys != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvalTargetOutputFieldContentOApiRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ExperimentID = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ItemID = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.FieldKeys = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetEvalTargetOutputFieldContentOApiRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperimentID() {
+		if err = oprot.WriteFieldBegin("experiment_id", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ExperimentID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemID() {
+		if err = oprot.WriteFieldBegin("item_id", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ItemID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldKeys() {
+		if err = oprot.WriteFieldBegin("field_keys", thrift.LIST, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRING, len(p.FieldKeys)); err != nil {
+			return err
+		}
+		for _, v := range p.FieldKeys {
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetEvalTargetOutputFieldContentOApiRequest(%+v)", *p)
+
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) DeepEqual(ano *GetEvalTargetOutputFieldContentOApiRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.ExperimentID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.ItemID) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.FieldKeys) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field2DeepEqual(src *int64) bool {
+
+	if p.ExperimentID == src {
+		return true
+	} else if p.ExperimentID == nil || src == nil {
+		return false
+	}
+	if *p.ExperimentID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field3DeepEqual(src *int64) bool {
+
+	if p.ItemID == src {
+		return true
+	} else if p.ItemID == nil || src == nil {
+		return false
+	}
+	if *p.ItemID != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field4DeepEqual(src []string) bool {
+
+	if len(p.FieldKeys) != len(src) {
+		return false
+	}
+	for i, v := range p.FieldKeys {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetEvalTargetOutputFieldContentOApiResponse struct {
+	Code     *int32                                      `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
+	Msg      *string                                     `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
+	Data     *GetEvalTargetOutputFieldContentOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,GetEvalTargetOutputFieldContentOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
+	BaseResp *base.BaseResp                              `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewGetEvalTargetOutputFieldContentOApiResponse() *GetEvalTargetOutputFieldContentOApiResponse {
+	return &GetEvalTargetOutputFieldContentOApiResponse{}
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) InitDefault() {
+}
+
+var GetEvalTargetOutputFieldContentOApiResponse_Code_DEFAULT int32
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) GetCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCode() {
+		return GetEvalTargetOutputFieldContentOApiResponse_Code_DEFAULT
+	}
+	return *p.Code
+}
+
+var GetEvalTargetOutputFieldContentOApiResponse_Msg_DEFAULT string
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) GetMsg() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMsg() {
+		return GetEvalTargetOutputFieldContentOApiResponse_Msg_DEFAULT
+	}
+	return *p.Msg
+}
+
+var GetEvalTargetOutputFieldContentOApiResponse_Data_DEFAULT *GetEvalTargetOutputFieldContentOpenAPIData
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) GetData() (v *GetEvalTargetOutputFieldContentOpenAPIData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetData() {
+		return GetEvalTargetOutputFieldContentOApiResponse_Data_DEFAULT
+	}
+	return p.Data
+}
+
+var GetEvalTargetOutputFieldContentOApiResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return GetEvalTargetOutputFieldContentOApiResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) SetCode(val *int32) {
+	p.Code = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) SetMsg(val *string) {
+	p.Msg = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) SetData(val *GetEvalTargetOutputFieldContentOpenAPIData) {
+	p.Data = val
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_GetEvalTargetOutputFieldContentOApiResponse = map[int16]string{
+	1:   "code",
+	2:   "msg",
+	3:   "data",
+	255: "BaseResp",
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) IsSetCode() bool {
+	return p.Code != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) IsSetMsg() bool {
+	return p.Msg != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) IsSetData() bool {
+	return p.Data != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvalTargetOutputFieldContentOApiResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Code = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Msg = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewGetEvalTargetOutputFieldContentOpenAPIData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Data = _field
+	return nil
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetEvalTargetOutputFieldContentOApiResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCode() {
+		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Code); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMsg() {
+		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Msg); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetData() {
+		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Data.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetEvalTargetOutputFieldContentOApiResponse(%+v)", *p)
+
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) DeepEqual(ano *GetEvalTargetOutputFieldContentOApiResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Code) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Msg) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Data) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Field1DeepEqual(src *int32) bool {
+
+	if p.Code == src {
+		return true
+	} else if p.Code == nil || src == nil {
+		return false
+	}
+	if *p.Code != *src {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Msg == src {
+		return true
+	} else if p.Msg == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Msg, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Field3DeepEqual(src *GetEvalTargetOutputFieldContentOpenAPIData) bool {
+
+	if !p.Data.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *GetEvalTargetOutputFieldContentOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type GetEvalTargetOutputFieldContentOpenAPIData struct {
+	FieldContents map[string]*common.Content `thrift:"field_contents,1,optional" frugal:"1,optional,map<string:common.Content>" json:"field_contents" form:"field_contents" query:"field_contents"`
+}
+
+func NewGetEvalTargetOutputFieldContentOpenAPIData() *GetEvalTargetOutputFieldContentOpenAPIData {
+	return &GetEvalTargetOutputFieldContentOpenAPIData{}
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) InitDefault() {
+}
+
+var GetEvalTargetOutputFieldContentOpenAPIData_FieldContents_DEFAULT map[string]*common.Content
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) GetFieldContents() (v map[string]*common.Content) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFieldContents() {
+		return GetEvalTargetOutputFieldContentOpenAPIData_FieldContents_DEFAULT
+	}
+	return p.FieldContents
+}
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) SetFieldContents(val map[string]*common.Content) {
+	p.FieldContents = val
+}
+
+var fieldIDToName_GetEvalTargetOutputFieldContentOpenAPIData = map[int16]string{
+	1: "field_contents",
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) IsSetFieldContents() bool {
+	return p.FieldContents != nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_GetEvalTargetOutputFieldContentOpenAPIData[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]*common.Content, size)
+	values := make([]common.Content, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		_val := &values[i]
+		_val.InitDefault()
+		if err := _val.Read(iprot); err != nil {
+			return err
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.FieldContents = _field
+	return nil
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetEvalTargetOutputFieldContentOpenAPIData"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFieldContents() {
+		if err = oprot.WriteFieldBegin("field_contents", thrift.MAP, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRUCT, len(p.FieldContents)); err != nil {
+			return err
+		}
+		for k, v := range p.FieldContents {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("GetEvalTargetOutputFieldContentOpenAPIData(%+v)", *p)
+
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) DeepEqual(ano *GetEvalTargetOutputFieldContentOpenAPIData) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.FieldContents) {
+		return false
+	}
+	return true
+}
+
+func (p *GetEvalTargetOutputFieldContentOpenAPIData) Field1DeepEqual(src map[string]*common.Content) bool {
+
+	if len(p.FieldContents) != len(src) {
+		return false
+	}
+	for k, v := range p.FieldContents {
+		_src := src[k]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+
 type ImportEvaluationSetOpenAPIData struct {
 	JobID *int64 `thrift:"job_id,1,optional" frugal:"1,optional,i64" json:"job_id" form:"job_id" query:"job_id"`
 }
@@ -17798,6 +18975,7 @@ type SubmitExperimentOApiRequest struct {
 	TargetRuntimeParam      *common.RuntimeParam `thrift:"target_runtime_param,22,optional" frugal:"22,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	ItemRetryNum            *int32               `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	EnableExtractTrajectory *bool                `thrift:"enable_extract_trajectory,46,optional" frugal:"46,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	Ext                     map[string]string    `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
 	Extra                   *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base                    *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
@@ -17953,6 +19131,18 @@ func (p *SubmitExperimentOApiRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentOApiRequest_Ext_DEFAULT map[string]string
+
+func (p *SubmitExperimentOApiRequest) GetExt() (v map[string]string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExt() {
+		return SubmitExperimentOApiRequest_Ext_DEFAULT
+	}
+	return p.Ext
+}
+
 var SubmitExperimentOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SubmitExperimentOApiRequest) GetExtra() (v *extra.Extra) {
@@ -18012,6 +19202,9 @@ func (p *SubmitExperimentOApiRequest) SetItemRetryNum(val *int32) {
 func (p *SubmitExperimentOApiRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentOApiRequest) SetExt(val map[string]string) {
+	p.Ext = val
+}
 func (p *SubmitExperimentOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -18032,6 +19225,7 @@ var fieldIDToName_SubmitExperimentOApiRequest = map[int16]string{
 	22:  "target_runtime_param",
 	45:  "item_retry_num",
 	46:  "enable_extract_trajectory",
+	100: "ext",
 	254: "extra",
 	255: "Base",
 }
@@ -18082,6 +19276,10 @@ func (p *SubmitExperimentOApiRequest) IsSetItemRetryNum() bool {
 
 func (p *SubmitExperimentOApiRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentOApiRequest) IsSetExt() bool {
+	return p.Ext != nil
 }
 
 func (p *SubmitExperimentOApiRequest) IsSetExtra() bool {
@@ -18201,6 +19399,14 @@ func (p *SubmitExperimentOApiRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 46:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField46(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 100:
+			if fieldTypeId == thrift.MAP {
+				if err = p.ReadField100(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18395,6 +19601,35 @@ func (p *SubmitExperimentOApiRequest) ReadField46(iprot thrift.TProtocol) error 
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentOApiRequest) ReadField100(iprot thrift.TProtocol) error {
+	_, _, size, err := iprot.ReadMapBegin()
+	if err != nil {
+		return err
+	}
+	_field := make(map[string]string, size)
+	for i := 0; i < size; i++ {
+		var _key string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_key = v
+		}
+
+		var _val string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_val = v
+		}
+
+		_field[_key] = _val
+	}
+	if err := iprot.ReadMapEnd(); err != nil {
+		return err
+	}
+	p.Ext = _field
+	return nil
+}
 func (p *SubmitExperimentOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -18464,6 +19699,10 @@ func (p *SubmitExperimentOApiRequest) Write(oprot thrift.TProtocol) (err error) 
 		}
 		if err = p.writeField46(oprot); err != nil {
 			fieldId = 46
+			goto WriteFieldError
+		}
+		if err = p.writeField100(oprot); err != nil {
+			fieldId = 100
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -18724,6 +19963,35 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 46 end error: ", p), err)
 }
+func (p *SubmitExperimentOApiRequest) writeField100(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExt() {
+		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteMapBegin(thrift.STRING, thrift.STRING, len(p.Ext)); err != nil {
+			return err
+		}
+		for k, v := range p.Ext {
+			if err := oprot.WriteString(k); err != nil {
+				return err
+			}
+			if err := oprot.WriteString(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteMapEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
+}
 func (p *SubmitExperimentOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -18809,6 +20077,9 @@ func (p *SubmitExperimentOApiRequest) DeepEqual(ano *SubmitExperimentOApiRequest
 		return false
 	}
 	if !p.Field46DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field100DeepEqual(ano.Ext) {
 		return false
 	}
 	if !p.Field254DeepEqual(ano.Extra) {
@@ -18943,6 +20214,19 @@ func (p *SubmitExperimentOApiRequest) Field46DeepEqual(src *bool) bool {
 	}
 	if *p.EnableExtractTrajectory != *src {
 		return false
+	}
+	return true
+}
+func (p *SubmitExperimentOApiRequest) Field100DeepEqual(src map[string]string) bool {
+
+	if len(p.Ext) != len(src) {
+		return false
+	}
+	for k, v := range p.Ext {
+		_src := src[k]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
 	}
 	return true
 }
@@ -21860,14 +23144,1329 @@ func (p *GetExperimentsOpenAPIDataData) Field255DeepEqual(src *base.BaseResp) bo
 	return true
 }
 
-// 3.3 获取评测实验结果
+// 3.3 查询评测实验列表
+type ListExperimentsOApiRequest struct {
+	WorkspaceID  *int64                             `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	PageNumber   *int32                             `thrift:"page_number,2,optional" frugal:"2,optional,i32" form:"page_number" json:"page_number,omitempty"`
+	PageSize     *int32                             `thrift:"page_size,3,optional" frugal:"3,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	FilterOption *experiment.ExperimentFilterOption `thrift:"filter_option,20,optional" frugal:"20,optional,experiment.ExperimentFilterOption" form:"filter_option" json:"filter_option,omitempty"`
+	OrderBys     []*common.OrderBy                  `thrift:"order_bys,21,optional" frugal:"21,optional,list<common.OrderBy>" form:"order_bys" json:"order_bys,omitempty"`
+	Extra        *extra.Extra                       `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListExperimentsOApiRequest() *ListExperimentsOApiRequest {
+	return &ListExperimentsOApiRequest{}
+}
+
+func (p *ListExperimentsOApiRequest) InitDefault() {
+}
+
+var ListExperimentsOApiRequest_WorkspaceID_DEFAULT int64
+
+func (p *ListExperimentsOApiRequest) GetWorkspaceID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWorkspaceID() {
+		return ListExperimentsOApiRequest_WorkspaceID_DEFAULT
+	}
+	return *p.WorkspaceID
+}
+
+var ListExperimentsOApiRequest_PageNumber_DEFAULT int32
+
+func (p *ListExperimentsOApiRequest) GetPageNumber() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageNumber() {
+		return ListExperimentsOApiRequest_PageNumber_DEFAULT
+	}
+	return *p.PageNumber
+}
+
+var ListExperimentsOApiRequest_PageSize_DEFAULT int32
+
+func (p *ListExperimentsOApiRequest) GetPageSize() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPageSize() {
+		return ListExperimentsOApiRequest_PageSize_DEFAULT
+	}
+	return *p.PageSize
+}
+
+var ListExperimentsOApiRequest_FilterOption_DEFAULT *experiment.ExperimentFilterOption
+
+func (p *ListExperimentsOApiRequest) GetFilterOption() (v *experiment.ExperimentFilterOption) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilterOption() {
+		return ListExperimentsOApiRequest_FilterOption_DEFAULT
+	}
+	return p.FilterOption
+}
+
+var ListExperimentsOApiRequest_OrderBys_DEFAULT []*common.OrderBy
+
+func (p *ListExperimentsOApiRequest) GetOrderBys() (v []*common.OrderBy) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOrderBys() {
+		return ListExperimentsOApiRequest_OrderBys_DEFAULT
+	}
+	return p.OrderBys
+}
+
+var ListExperimentsOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ListExperimentsOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ListExperimentsOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var ListExperimentsOApiRequest_Base_DEFAULT *base.Base
+
+func (p *ListExperimentsOApiRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListExperimentsOApiRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListExperimentsOApiRequest) SetWorkspaceID(val *int64) {
+	p.WorkspaceID = val
+}
+func (p *ListExperimentsOApiRequest) SetPageNumber(val *int32) {
+	p.PageNumber = val
+}
+func (p *ListExperimentsOApiRequest) SetPageSize(val *int32) {
+	p.PageSize = val
+}
+func (p *ListExperimentsOApiRequest) SetFilterOption(val *experiment.ExperimentFilterOption) {
+	p.FilterOption = val
+}
+func (p *ListExperimentsOApiRequest) SetOrderBys(val []*common.OrderBy) {
+	p.OrderBys = val
+}
+func (p *ListExperimentsOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *ListExperimentsOApiRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListExperimentsOApiRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "page_number",
+	3:   "page_size",
+	20:  "filter_option",
+	21:  "order_bys",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *ListExperimentsOApiRequest) IsSetWorkspaceID() bool {
+	return p.WorkspaceID != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetPageNumber() bool {
+	return p.PageNumber != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetPageSize() bool {
+	return p.PageSize != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetFilterOption() bool {
+	return p.FilterOption != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetOrderBys() bool {
+	return p.OrderBys != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *ListExperimentsOApiRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListExperimentsOApiRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField20(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 21:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField21(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExperimentsOApiRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageNumber = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PageSize = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField20(iprot thrift.TProtocol) error {
+	_field := experiment.NewExperimentFilterOption()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.FilterOption = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField21(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*common.OrderBy, 0, size)
+	values := make([]common.OrderBy, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.OrderBys = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *ListExperimentsOApiRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListExperimentsOApiRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExperimentsOApiRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
+			goto WriteFieldError
+		}
+		if err = p.writeField21(oprot); err != nil {
+			fieldId = 21
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWorkspaceID() {
+		if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.WorkspaceID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageNumber() {
+		if err = oprot.WriteFieldBegin("page_number", thrift.I32, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageNumber); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPageSize() {
+		if err = oprot.WriteFieldBegin("page_size", thrift.I32, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.PageSize); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilterOption() {
+		if err = oprot.WriteFieldBegin("filter_option", thrift.STRUCT, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.FilterOption.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField21(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOrderBys() {
+		if err = oprot.WriteFieldBegin("order_bys", thrift.LIST, 21); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.OrderBys)); err != nil {
+			return err
+		}
+		for _, v := range p.OrderBys {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *ListExperimentsOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExperimentsOApiRequest(%+v)", *p)
+
+}
+
+func (p *ListExperimentsOApiRequest) DeepEqual(ano *ListExperimentsOApiRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.PageNumber) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.PageSize) {
+		return false
+	}
+	if !p.Field20DeepEqual(ano.FilterOption) {
+		return false
+	}
+	if !p.Field21DeepEqual(ano.OrderBys) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExperimentsOApiRequest) Field1DeepEqual(src *int64) bool {
+
+	if p.WorkspaceID == src {
+		return true
+	} else if p.WorkspaceID == nil || src == nil {
+		return false
+	}
+	if *p.WorkspaceID != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field2DeepEqual(src *int32) bool {
+
+	if p.PageNumber == src {
+		return true
+	} else if p.PageNumber == nil || src == nil {
+		return false
+	}
+	if *p.PageNumber != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field3DeepEqual(src *int32) bool {
+
+	if p.PageSize == src {
+		return true
+	} else if p.PageSize == nil || src == nil {
+		return false
+	}
+	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field20DeepEqual(src *experiment.ExperimentFilterOption) bool {
+
+	if !p.FilterOption.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field21DeepEqual(src []*common.OrderBy) bool {
+
+	if len(p.OrderBys) != len(src) {
+		return false
+	}
+	for i, v := range p.OrderBys {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExperimentsOApiResponse struct {
+	Code     *int32                      `thrift:"code,1,optional" frugal:"1,optional,i32" form:"code" json:"code,omitempty" query:"code"`
+	Msg      *string                     `thrift:"msg,2,optional" frugal:"2,optional,string" form:"msg" json:"msg,omitempty" query:"msg"`
+	Data     *ListExperimentsOpenAPIData `thrift:"data,3,optional" frugal:"3,optional,ListExperimentsOpenAPIData" form:"data" json:"data,omitempty" query:"data"`
+	BaseResp *base.BaseResp              `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
+}
+
+func NewListExperimentsOApiResponse() *ListExperimentsOApiResponse {
+	return &ListExperimentsOApiResponse{}
+}
+
+func (p *ListExperimentsOApiResponse) InitDefault() {
+}
+
+var ListExperimentsOApiResponse_Code_DEFAULT int32
+
+func (p *ListExperimentsOApiResponse) GetCode() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCode() {
+		return ListExperimentsOApiResponse_Code_DEFAULT
+	}
+	return *p.Code
+}
+
+var ListExperimentsOApiResponse_Msg_DEFAULT string
+
+func (p *ListExperimentsOApiResponse) GetMsg() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMsg() {
+		return ListExperimentsOApiResponse_Msg_DEFAULT
+	}
+	return *p.Msg
+}
+
+var ListExperimentsOApiResponse_Data_DEFAULT *ListExperimentsOpenAPIData
+
+func (p *ListExperimentsOApiResponse) GetData() (v *ListExperimentsOpenAPIData) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetData() {
+		return ListExperimentsOApiResponse_Data_DEFAULT
+	}
+	return p.Data
+}
+
+var ListExperimentsOApiResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListExperimentsOApiResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListExperimentsOApiResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListExperimentsOApiResponse) SetCode(val *int32) {
+	p.Code = val
+}
+func (p *ListExperimentsOApiResponse) SetMsg(val *string) {
+	p.Msg = val
+}
+func (p *ListExperimentsOApiResponse) SetData(val *ListExperimentsOpenAPIData) {
+	p.Data = val
+}
+func (p *ListExperimentsOApiResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListExperimentsOApiResponse = map[int16]string{
+	1:   "code",
+	2:   "msg",
+	3:   "data",
+	255: "BaseResp",
+}
+
+func (p *ListExperimentsOApiResponse) IsSetCode() bool {
+	return p.Code != nil
+}
+
+func (p *ListExperimentsOApiResponse) IsSetMsg() bool {
+	return p.Msg != nil
+}
+
+func (p *ListExperimentsOApiResponse) IsSetData() bool {
+	return p.Data != nil
+}
+
+func (p *ListExperimentsOApiResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListExperimentsOApiResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExperimentsOApiResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiResponse) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Code = _field
+	return nil
+}
+func (p *ListExperimentsOApiResponse) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Msg = _field
+	return nil
+}
+func (p *ListExperimentsOApiResponse) ReadField3(iprot thrift.TProtocol) error {
+	_field := NewListExperimentsOpenAPIData()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Data = _field
+	return nil
+}
+func (p *ListExperimentsOApiResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListExperimentsOApiResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExperimentsOApiResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCode() {
+		if err = oprot.WriteFieldBegin("code", thrift.I32, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.Code); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExperimentsOApiResponse) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMsg() {
+		if err = oprot.WriteFieldBegin("msg", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Msg); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListExperimentsOApiResponse) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetData() {
+		if err = oprot.WriteFieldBegin("data", thrift.STRUCT, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Data.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListExperimentsOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.BaseResp.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListExperimentsOApiResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExperimentsOApiResponse(%+v)", *p)
+
+}
+
+func (p *ListExperimentsOApiResponse) DeepEqual(ano *ListExperimentsOApiResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Code) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Msg) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Data) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExperimentsOApiResponse) Field1DeepEqual(src *int32) bool {
+
+	if p.Code == src {
+		return true
+	} else if p.Code == nil || src == nil {
+		return false
+	}
+	if *p.Code != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiResponse) Field2DeepEqual(src *string) bool {
+
+	if p.Msg == src {
+		return true
+	} else if p.Msg == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Msg, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiResponse) Field3DeepEqual(src *ListExperimentsOpenAPIData) bool {
+
+	if !p.Data.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentsOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListExperimentsOpenAPIData struct {
+	Experiments []*experiment.Experiment `thrift:"experiments,1,optional" frugal:"1,optional,list<experiment.Experiment>" form:"experiments" json:"experiments,omitempty" query:"experiments"`
+	Total       *int64                   `thrift:"total,2,optional" frugal:"2,optional,i64" json:"total" form:"total" query:"total"`
+}
+
+func NewListExperimentsOpenAPIData() *ListExperimentsOpenAPIData {
+	return &ListExperimentsOpenAPIData{}
+}
+
+func (p *ListExperimentsOpenAPIData) InitDefault() {
+}
+
+var ListExperimentsOpenAPIData_Experiments_DEFAULT []*experiment.Experiment
+
+func (p *ListExperimentsOpenAPIData) GetExperiments() (v []*experiment.Experiment) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExperiments() {
+		return ListExperimentsOpenAPIData_Experiments_DEFAULT
+	}
+	return p.Experiments
+}
+
+var ListExperimentsOpenAPIData_Total_DEFAULT int64
+
+func (p *ListExperimentsOpenAPIData) GetTotal() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTotal() {
+		return ListExperimentsOpenAPIData_Total_DEFAULT
+	}
+	return *p.Total
+}
+func (p *ListExperimentsOpenAPIData) SetExperiments(val []*experiment.Experiment) {
+	p.Experiments = val
+}
+func (p *ListExperimentsOpenAPIData) SetTotal(val *int64) {
+	p.Total = val
+}
+
+var fieldIDToName_ListExperimentsOpenAPIData = map[int16]string{
+	1: "experiments",
+	2: "total",
+}
+
+func (p *ListExperimentsOpenAPIData) IsSetExperiments() bool {
+	return p.Experiments != nil
+}
+
+func (p *ListExperimentsOpenAPIData) IsSetTotal() bool {
+	return p.Total != nil
+}
+
+func (p *ListExperimentsOpenAPIData) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListExperimentsOpenAPIData[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOpenAPIData) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*experiment.Experiment, 0, size)
+	values := make([]experiment.Experiment, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Experiments = _field
+	return nil
+}
+func (p *ListExperimentsOpenAPIData) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Total = _field
+	return nil
+}
+
+func (p *ListExperimentsOpenAPIData) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExperimentsOpenAPIData"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListExperimentsOpenAPIData) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExperiments() {
+		if err = oprot.WriteFieldBegin("experiments", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Experiments)); err != nil {
+			return err
+		}
+		for _, v := range p.Experiments {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListExperimentsOpenAPIData) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTotal() {
+		if err = oprot.WriteFieldBegin("total", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Total); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *ListExperimentsOpenAPIData) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListExperimentsOpenAPIData(%+v)", *p)
+
+}
+
+func (p *ListExperimentsOpenAPIData) DeepEqual(ano *ListExperimentsOpenAPIData) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Experiments) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Total) {
+		return false
+	}
+	return true
+}
+
+func (p *ListExperimentsOpenAPIData) Field1DeepEqual(src []*experiment.Experiment) bool {
+
+	if len(p.Experiments) != len(src) {
+		return false
+	}
+	for i, v := range p.Experiments {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListExperimentsOpenAPIData) Field2DeepEqual(src *int64) bool {
+
+	if p.Total == src {
+		return true
+	} else if p.Total == nil || src == nil {
+		return false
+	}
+	if *p.Total != *src {
+		return false
+	}
+	return true
+}
+
+// 3.4 获取评测实验结果
 type ListExperimentResultOApiRequest struct {
-	WorkspaceID  *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	ExperimentID *int64       `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" path:"experiment_id" `
-	PageNum      *int32       `thrift:"page_num,100,optional" frugal:"100,optional,i32" form:"page_num" json:"page_num,omitempty"`
-	PageSize     *int32       `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
-	Extra        *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base         *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID  *int64                             `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	ExperimentID *int64                             `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" path:"experiment_id" `
+	PageNum      *int32                             `thrift:"page_num,100,optional" frugal:"100,optional,i32" form:"page_num" json:"page_num,omitempty"`
+	PageSize     *int32                             `thrift:"page_size,101,optional" frugal:"101,optional,i32" form:"page_size" json:"page_size,omitempty"`
+	Filter       *experiment.ExperimentResultFilter `thrift:"filter,102,optional" frugal:"102,optional,experiment.ExperimentResultFilter" form:"filter" json:"filter,omitempty"`
+	Extra        *extra.Extra                       `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base                         `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewListExperimentResultOApiRequest() *ListExperimentResultOApiRequest {
@@ -21925,6 +24524,18 @@ func (p *ListExperimentResultOApiRequest) GetPageSize() (v int32) {
 	return *p.PageSize
 }
 
+var ListExperimentResultOApiRequest_Filter_DEFAULT *experiment.ExperimentResultFilter
+
+func (p *ListExperimentResultOApiRequest) GetFilter() (v *experiment.ExperimentResultFilter) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetFilter() {
+		return ListExperimentResultOApiRequest_Filter_DEFAULT
+	}
+	return p.Filter
+}
+
 var ListExperimentResultOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *ListExperimentResultOApiRequest) GetExtra() (v *extra.Extra) {
@@ -21960,6 +24571,9 @@ func (p *ListExperimentResultOApiRequest) SetPageNum(val *int32) {
 func (p *ListExperimentResultOApiRequest) SetPageSize(val *int32) {
 	p.PageSize = val
 }
+func (p *ListExperimentResultOApiRequest) SetFilter(val *experiment.ExperimentResultFilter) {
+	p.Filter = val
+}
 func (p *ListExperimentResultOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -21972,6 +24586,7 @@ var fieldIDToName_ListExperimentResultOApiRequest = map[int16]string{
 	2:   "experiment_id",
 	100: "page_num",
 	101: "page_size",
+	102: "filter",
 	254: "extra",
 	255: "Base",
 }
@@ -21990,6 +24605,10 @@ func (p *ListExperimentResultOApiRequest) IsSetPageNum() bool {
 
 func (p *ListExperimentResultOApiRequest) IsSetPageSize() bool {
 	return p.PageSize != nil
+}
+
+func (p *ListExperimentResultOApiRequest) IsSetFilter() bool {
+	return p.Filter != nil
 }
 
 func (p *ListExperimentResultOApiRequest) IsSetExtra() bool {
@@ -22045,6 +24664,14 @@ func (p *ListExperimentResultOApiRequest) Read(iprot thrift.TProtocol) (err erro
 		case 101:
 			if fieldTypeId == thrift.I32 {
 				if err = p.ReadField101(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 102:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField102(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -22139,6 +24766,14 @@ func (p *ListExperimentResultOApiRequest) ReadField101(iprot thrift.TProtocol) e
 	p.PageSize = _field
 	return nil
 }
+func (p *ListExperimentResultOApiRequest) ReadField102(iprot thrift.TProtocol) error {
+	_field := experiment.NewExperimentResultFilter()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Filter = _field
+	return nil
+}
 func (p *ListExperimentResultOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -22176,6 +24811,10 @@ func (p *ListExperimentResultOApiRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField101(oprot); err != nil {
 			fieldId = 101
+			goto WriteFieldError
+		}
+		if err = p.writeField102(oprot); err != nil {
+			fieldId = 102
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -22276,6 +24915,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
 }
+func (p *ListExperimentResultOApiRequest) writeField102(oprot thrift.TProtocol) (err error) {
+	if p.IsSetFilter() {
+		if err = oprot.WriteFieldBegin("filter", thrift.STRUCT, 102); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Filter.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 102 end error: ", p), err)
+}
 func (p *ListExperimentResultOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -22339,6 +24996,9 @@ func (p *ListExperimentResultOApiRequest) DeepEqual(ano *ListExperimentResultOAp
 	if !p.Field101DeepEqual(ano.PageSize) {
 		return false
 	}
+	if !p.Field102DeepEqual(ano.Filter) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -22392,6 +25052,13 @@ func (p *ListExperimentResultOApiRequest) Field101DeepEqual(src *int32) bool {
 		return false
 	}
 	if *p.PageSize != *src {
+		return false
+	}
+	return true
+}
+func (p *ListExperimentResultOApiRequest) Field102DeepEqual(src *experiment.ExperimentResultFilter) bool {
+
+	if !p.Filter.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -23381,7 +26048,7 @@ func (p *ListExperimentResultOpenAPIData) Field100DeepEqual(src *int64) bool {
 	return true
 }
 
-// 3.4 获取聚合结果
+// 3.5 获取聚合结果
 type GetExperimentAggrResultOApiRequest struct {
 	WorkspaceID  *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	ExperimentID *int64       `thrift:"experiment_id,2,optional" frugal:"2,optional,i64" json:"experiment_id" path:"experiment_id" `
@@ -48423,11 +51090,15 @@ type EvaluationOpenAPIService interface {
 	UpdateEvaluationSetSchemaOApi(ctx context.Context, req *UpdateEvaluationSetSchemaOApiRequest) (r *UpdateEvaluationSetSchemaOApiResponse, err error)
 	// 评测目标调用结果上报接口
 	ReportEvalTargetInvokeResult_(ctx context.Context, req *ReportEvalTargetInvokeResultRequest) (r *ReportEvalTargetInvokeResultResponse, err error)
+	// 按需查询评测对象输出中大对象的完整内容
+	GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *GetEvalTargetOutputFieldContentOApiRequest) (r *GetEvalTargetOutputFieldContentOApiResponse, err error)
 	// 评测实验接口
 	// 创建评测实验
 	SubmitExperimentOApi(ctx context.Context, req *SubmitExperimentOApiRequest) (r *SubmitExperimentOApiResponse, err error)
 	// 获取评测实验
 	GetExperimentsOApi(ctx context.Context, req *GetExperimentsOApiRequest) (r *GetExperimentsOApiResponse, err error)
+	// 查询评测实验列表
+	ListExperimentsOApi(ctx context.Context, req *ListExperimentsOApiRequest) (r *ListExperimentsOApiResponse, err error)
 	// 查询评测实验结果
 	ListExperimentResultOApi(ctx context.Context, req *ListExperimentResultOApiRequest) (r *ListExperimentResultOApiResponse, err error)
 	// 获取聚合结果
@@ -48649,6 +51320,15 @@ func (p *EvaluationOpenAPIServiceClient) ReportEvalTargetInvokeResult_(ctx conte
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *EvaluationOpenAPIServiceClient) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *GetEvalTargetOutputFieldContentOApiRequest) (r *GetEvalTargetOutputFieldContentOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult
+	if err = p.Client_().Call(ctx, "GetEvalTargetOutputFieldContentOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *EvaluationOpenAPIServiceClient) SubmitExperimentOApi(ctx context.Context, req *SubmitExperimentOApiRequest) (r *SubmitExperimentOApiResponse, err error) {
 	var _args EvaluationOpenAPIServiceSubmitExperimentOApiArgs
 	_args.Req = req
@@ -48663,6 +51343,15 @@ func (p *EvaluationOpenAPIServiceClient) GetExperimentsOApi(ctx context.Context,
 	_args.Req = req
 	var _result EvaluationOpenAPIServiceGetExperimentsOApiResult
 	if err = p.Client_().Call(ctx, "GetExperimentsOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+func (p *EvaluationOpenAPIServiceClient) ListExperimentsOApi(ctx context.Context, req *ListExperimentsOApiRequest) (r *ListExperimentsOApiResponse, err error) {
+	var _args EvaluationOpenAPIServiceListExperimentsOApiArgs
+	_args.Req = req
+	var _result EvaluationOpenAPIServiceListExperimentsOApiResult
+	if err = p.Client_().Call(ctx, "ListExperimentsOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
@@ -48911,8 +51600,10 @@ func NewEvaluationOpenAPIServiceProcessor(handler EvaluationOpenAPIService) *Eva
 	self.AddToProcessorMap("GetEvaluationSetJobOApi", &evaluationOpenAPIServiceProcessorGetEvaluationSetJobOApi{handler: handler})
 	self.AddToProcessorMap("UpdateEvaluationSetSchemaOApi", &evaluationOpenAPIServiceProcessorUpdateEvaluationSetSchemaOApi{handler: handler})
 	self.AddToProcessorMap("ReportEvalTargetInvokeResult", &evaluationOpenAPIServiceProcessorReportEvalTargetInvokeResult_{handler: handler})
+	self.AddToProcessorMap("GetEvalTargetOutputFieldContentOApi", &evaluationOpenAPIServiceProcessorGetEvalTargetOutputFieldContentOApi{handler: handler})
 	self.AddToProcessorMap("SubmitExperimentOApi", &evaluationOpenAPIServiceProcessorSubmitExperimentOApi{handler: handler})
 	self.AddToProcessorMap("GetExperimentsOApi", &evaluationOpenAPIServiceProcessorGetExperimentsOApi{handler: handler})
+	self.AddToProcessorMap("ListExperimentsOApi", &evaluationOpenAPIServiceProcessorListExperimentsOApi{handler: handler})
 	self.AddToProcessorMap("ListExperimentResultOApi", &evaluationOpenAPIServiceProcessorListExperimentResultOApi{handler: handler})
 	self.AddToProcessorMap("GetExperimentAggrResultOApi", &evaluationOpenAPIServiceProcessorGetExperimentAggrResultOApi{handler: handler})
 	self.AddToProcessorMap("ListEvaluatorsOApi", &evaluationOpenAPIServiceProcessorListEvaluatorsOApi{handler: handler})
@@ -49724,6 +52415,54 @@ func (p *evaluationOpenAPIServiceProcessorReportEvalTargetInvokeResult_) Process
 	return true, err
 }
 
+type evaluationOpenAPIServiceProcessorGetEvalTargetOutputFieldContentOApi struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorGetEvalTargetOutputFieldContentOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("GetEvalTargetOutputFieldContentOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult{}
+	var retval *GetEvalTargetOutputFieldContentOApiResponse
+	if retval, err2 = p.handler.GetEvalTargetOutputFieldContentOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing GetEvalTargetOutputFieldContentOApi: "+err2.Error())
+		oprot.WriteMessageBegin("GetEvalTargetOutputFieldContentOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("GetEvalTargetOutputFieldContentOApi", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 type evaluationOpenAPIServiceProcessorSubmitExperimentOApi struct {
 	handler EvaluationOpenAPIService
 }
@@ -49803,6 +52542,54 @@ func (p *evaluationOpenAPIServiceProcessorGetExperimentsOApi) Process(ctx contex
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("GetExperimentsOApi", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type evaluationOpenAPIServiceProcessorListExperimentsOApi struct {
+	handler EvaluationOpenAPIService
+}
+
+func (p *evaluationOpenAPIServiceProcessorListExperimentsOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := EvaluationOpenAPIServiceListExperimentsOApiArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListExperimentsOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := EvaluationOpenAPIServiceListExperimentsOApiResult{}
+	var retval *ListExperimentsOApiResponse
+	if retval, err2 = p.handler.ListExperimentsOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListExperimentsOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ListExperimentsOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListExperimentsOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -56428,6 +59215,350 @@ func (p *EvaluationOpenAPIServiceReportEvalTargetInvokeResultResult) Field0DeepE
 	return true
 }
 
+type EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs struct {
+	Req *GetEvalTargetOutputFieldContentOApiRequest `thrift:"req,1" frugal:"1,default,GetEvalTargetOutputFieldContentOApiRequest"`
+}
+
+func NewEvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs() *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs {
+	return &EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs_Req_DEFAULT *GetEvalTargetOutputFieldContentOApiRequest
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) GetReq() (v *GetEvalTargetOutputFieldContentOApiRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) SetReq(val *GetEvalTargetOutputFieldContentOApiRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewGetEvalTargetOutputFieldContentOApiRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetEvalTargetOutputFieldContentOApi_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs) Field1DeepEqual(src *GetEvalTargetOutputFieldContentOApiRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult struct {
+	Success *GetEvalTargetOutputFieldContentOApiResponse `thrift:"success,0,optional" frugal:"0,optional,GetEvalTargetOutputFieldContentOApiResponse"`
+}
+
+func NewEvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult() *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult {
+	return &EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult{}
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult_Success_DEFAULT *GetEvalTargetOutputFieldContentOApiResponse
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) GetSuccess() (v *GetEvalTargetOutputFieldContentOApiResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*GetEvalTargetOutputFieldContentOApiResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewGetEvalTargetOutputFieldContentOApiResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("GetEvalTargetOutputFieldContentOApi_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult) Field0DeepEqual(src *GetEvalTargetOutputFieldContentOApiResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type EvaluationOpenAPIServiceSubmitExperimentOApiArgs struct {
 	Req *SubmitExperimentOApiRequest `thrift:"req,1" frugal:"1,default,SubmitExperimentOApiRequest"`
 }
@@ -57109,6 +60240,350 @@ func (p *EvaluationOpenAPIServiceGetExperimentsOApiResult) DeepEqual(ano *Evalua
 }
 
 func (p *EvaluationOpenAPIServiceGetExperimentsOApiResult) Field0DeepEqual(src *GetExperimentsOApiResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceListExperimentsOApiArgs struct {
+	Req *ListExperimentsOApiRequest `thrift:"req,1" frugal:"1,default,ListExperimentsOApiRequest"`
+}
+
+func NewEvaluationOpenAPIServiceListExperimentsOApiArgs() *EvaluationOpenAPIServiceListExperimentsOApiArgs {
+	return &EvaluationOpenAPIServiceListExperimentsOApiArgs{}
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceListExperimentsOApiArgs_Req_DEFAULT *ListExperimentsOApiRequest
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) GetReq() (v *ListExperimentsOApiRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return EvaluationOpenAPIServiceListExperimentsOApiArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) SetReq(val *ListExperimentsOApiRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceListExperimentsOApiArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListExperimentsOApiArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListExperimentsOApiRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExperimentsOApi_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceListExperimentsOApiArgs(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) DeepEqual(ano *EvaluationOpenAPIServiceListExperimentsOApiArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiArgs) Field1DeepEqual(src *ListExperimentsOApiRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type EvaluationOpenAPIServiceListExperimentsOApiResult struct {
+	Success *ListExperimentsOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ListExperimentsOApiResponse"`
+}
+
+func NewEvaluationOpenAPIServiceListExperimentsOApiResult() *EvaluationOpenAPIServiceListExperimentsOApiResult {
+	return &EvaluationOpenAPIServiceListExperimentsOApiResult{}
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) InitDefault() {
+}
+
+var EvaluationOpenAPIServiceListExperimentsOApiResult_Success_DEFAULT *ListExperimentsOApiResponse
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) GetSuccess() (v *ListExperimentsOApiResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return EvaluationOpenAPIServiceListExperimentsOApiResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListExperimentsOApiResponse)
+}
+
+var fieldIDToName_EvaluationOpenAPIServiceListExperimentsOApiResult = map[int16]string{
+	0: "success",
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_EvaluationOpenAPIServiceListExperimentsOApiResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListExperimentsOApiResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListExperimentsOApi_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("EvaluationOpenAPIServiceListExperimentsOApiResult(%+v)", *p)
+
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) DeepEqual(ano *EvaluationOpenAPIServiceListExperimentsOApiResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *EvaluationOpenAPIServiceListExperimentsOApiResult) Field0DeepEqual(src *ListExperimentsOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

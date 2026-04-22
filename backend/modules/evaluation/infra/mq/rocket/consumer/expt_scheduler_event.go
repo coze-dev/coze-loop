@@ -15,7 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
-func newExptSchedulerConsumer(scheduler service.ExptSchedulerEvent) mq.IConsumerHandler {
+func NewExptSchedulerConsumer(scheduler service.ExptSchedulerEvent) mq.IConsumerHandler {
 	return &ExptSchedulerConsumer{
 		scheduler: scheduler,
 	}

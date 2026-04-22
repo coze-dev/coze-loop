@@ -40,6 +40,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
+	NewExptLifecycleEventHandler,
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
 )

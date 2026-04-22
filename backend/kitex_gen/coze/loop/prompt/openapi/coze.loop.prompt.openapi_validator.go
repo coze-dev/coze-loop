@@ -211,12 +211,6 @@ func (p *DeletePromptOApiResponse) IsValid() error {
 	return nil
 }
 func (p *GetPromptOApiRequest) IsValid() error {
-	if p.PromptID == nil {
-		return fmt.Errorf("field PromptID not_nil rule failed")
-	}
-	if *p.PromptID <= int64(0) {
-		return fmt.Errorf("field PromptID gt rule failed, current value: %v", *p.PromptID)
-	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

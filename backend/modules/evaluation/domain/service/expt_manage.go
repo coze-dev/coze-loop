@@ -56,7 +56,7 @@ type IExptExecutionManager interface {
 	// UnlockCompletingRun releases the completing lock for the given run.
 	UnlockCompletingRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 	CompleteRun(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
-	CompleteExpt(ctx context.Context, exptID, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
+	CompleteExpt(ctx context.Context, exptID int64, exptRunID *int64, spaceID int64, session *entity.Session, opts ...entity.CompleteExptOptionFn) error
 	// SetExptTerminating Set experiment/run_log status to "terminating".
 	SetExptTerminating(ctx context.Context, exptID, exptRunID, spaceID int64, session *entity.Session) error
 

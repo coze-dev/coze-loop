@@ -33,6 +33,7 @@ type EvalConfConvert struct{}
 func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, evaluatorVersionRunConfigs map[int64]*evaluatordto.EvaluatorRunConfig) (*entity.EvaluationConfiguration, error) {
 	ec := &entity.EvaluationConfiguration{
 		ItemConcurNum: ptr.ConvIntPtr[int32, int](cer.ItemConcurNum),
+		Ext:           cer.Ext,
 	}
 
 	ec.ConnectorConf.TargetConf = &entity.TargetConf{
@@ -389,6 +390,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 			res.ItemRetryNum = gptr.Of(int32(0))
 		}
 		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
+		res.Ext = experiment.EvalConf.Ext
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）

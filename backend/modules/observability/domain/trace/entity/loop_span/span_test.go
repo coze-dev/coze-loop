@@ -1211,125 +1211,117 @@ func TestEncryptionInfo(t *testing.T) {
 	})
 }
 
-func TestCopySpans(t *testing.T) {
+func TestSpan_getPredefinedMetadata(t *testing.T) {
 	t.Parallel()
-	now := time.Now()
-	original := []*Span{
-		{
-			StartTime:      1,
-			SpanID:         "0000000000000001",
-			TraceID:        "00000000000000000000000000000001",
-			ParentID:       "0000000000000000",
-			DurationMicros: 2,
-			CallType:       "call_type",
-			PSM:            "psm",
-			LogID:          "logid",
-			WorkspaceID:    "space",
-			SpanName:       "name",
-			SpanType:       "type",
-			Method:         "method",
-			StatusCode:     1,
-			Input:          "input",
-			Output:         "output",
-			ObjectStorage:  "os",
-			SystemTagsString: map[string]string{
-				"s1": "v1",
-			},
-			SystemTagsLong: map[string]int64{
-				"s2": 2,
-			},
-			SystemTagsDouble: map[string]float64{
-				"s3": 3,
-			},
-			TagsString: map[string]string{
-				"k": "v",
-			},
-			TagsLong: map[string]int64{
-				"k2": 2,
-			},
-			TagsDouble: map[string]float64{
-				"k3": 3,
-			},
-			TagsBool: map[string]bool{
-				"k4": true,
-			},
-			TagsByte: map[string]string{
-				"k5": "b",
-			},
-			AttrTos: &AttrTos{
-				InputDataURL:  "in",
-				OutputDataURL: "out",
-				MultimodalData: map[string]string{
-					"m": "mv",
-				},
-			},
-			Annotations: AnnotationList{
-				{
-					ID:              "anno1",
-					SpanID:          "0000000000000001",
-					TraceID:         "00000000000000000000000000000001",
-					StartTime:       now,
-					WorkspaceID:     "space",
-					AnnotationType:  AnnotationTypeManualFeedback,
-					AnnotationIndex: []string{"i1"},
-					Key:             "key",
-					Value:           NewStringValue("val"),
-					Reasoning:       "r1",
-					Corrections: []AnnotationCorrection{
-						{
-							Reasoning: "cr1",
-							Value:     NewStringValue("cval"),
-							Type:      AnnotationCorrectionTypeManual,
-							UpdateAt:  now,
-							UpdatedBy: "u1",
-						},
-					},
-					Metadata:  &ManualDatasetMetadata{},
-					Status:    AnnotationStatusNormal,
-					CreatedAt: now,
-					CreatedBy: "c1",
-					UpdatedAt: now,
-					UpdatedBy: "u1",
-					IsDeleted: false,
-				},
-				nil,
-			},
-			Encryption: EncryptionInfo{NeedWorkflow: true},
-		},
+	span := &Span{
+		StartTime:      1000000,
+		DurationMicros: 12345,
+		SpanID:         "s1",
+		ParentID:       "p1",
+		CallType:       "Custom",
+		SpanType:       "model",
+		Input:          "in",
+		Output:         "out",
+		TraceID:        "t1",
+		SpanName:       "testSpan",
+		WorkspaceID:    "ws1",
+		PSM:            "psm1",
+		LogID:          "log1",
+		StatusCode:     0,
+		ObjectStorage:  "oss://bucket/key",
+		Method:         "POST",
 	}
 
-	copied := CopySpans(original)
-	assert.Len(t, copied, 1)
-	assert.NotSame(t, original[0], copied[0])
-
-	copied[0].TagsString["k"] = "changed"
-	assert.Equal(t, "v", original[0].TagsString["k"])
-
-	delete(copied[0].SystemTagsLong, "s2")
-	assert.Equal(t, int64(2), original[0].SystemTagsLong["s2"])
-
-	copied[0].AttrTos.MultimodalData["m"] = "changed"
-	assert.Equal(t, "mv", original[0].AttrTos.MultimodalData["m"])
-
-	assert.Len(t, copied[0].Annotations, 2)
-	assert.NotNil(t, copied[0].Annotations[0])
-	assert.NotSame(t, original[0].Annotations[0], copied[0].Annotations[0])
-	assert.Nil(t, copied[0].Annotations[1])
-
-	copied[0].Annotations[0].AnnotationIndex[0] = "changed"
-	assert.Equal(t, "i1", original[0].Annotations[0].AnnotationIndex[0])
-
-	copied[0].Annotations[0].Corrections[0].Reasoning = "changed"
-	assert.Equal(t, "cr1", original[0].Annotations[0].Corrections[0].Reasoning)
-
-	spanWithNilMaps := &Span{
-		SpanID:  "0000000000000002",
-		TraceID: "00000000000000000000000000000002",
+	tests := []struct {
+		field string
+		want  any
+	}{
+		{SpanFieldStartTime, int64(1000000)},
+		{SpanFieldDuration, int64(12345)},
+		{SpanFieldSpanId, "s1"},
+		{SpanFieldParentID, "p1"},
+		{SpanFieldCallType, "Custom"},
+		{SpanFieldSpanType, "model"},
+		{SpanFieldInput, "in"},
+		{SpanFieldOutput, "out"},
+		{SpanFieldTraceId, "t1"},
+		{SpanFieldSpanName, "testSpan"},
+		{SpanFieldSpaceId, "ws1"},
+		{SpanFieldPSM, "psm1"},
+		{SpanFieldLogID, "log1"},
+		{SpanFieldStatusCode, int32(0)},
+		{SpanFieldObjectStorage, "oss://bucket/key"},
+		{SpanFieldMethod, "POST"},
+		{SpanFieldStatus, "success"},
 	}
-	copiedNil := CopySpan(spanWithNilMaps)
-	assert.NotNil(t, copiedNil)
-	assert.Nil(t, copiedNil.TagsString)
-	assert.Nil(t, copiedNil.SystemTagsString)
-	assert.Nil(t, copiedNil.Annotations)
-	assert.Nil(t, copiedNil.AttrTos)
+
+	for _, tt := range tests {
+		t.Run(tt.field, func(t *testing.T) {
+			val, ok := span.getPredefinedMetadata(tt.field)
+			assert.True(t, ok)
+			assert.Equal(t, tt.want, val)
+		})
+	}
+
+	t.Run("unknown field returns false", func(t *testing.T) {
+		val, ok := span.getPredefinedMetadata("nonexistent")
+		assert.False(t, ok)
+		assert.Nil(t, val)
+	})
+}
+
+func TestSpan_GetMetaDataValue(t *testing.T) {
+	t.Parallel()
+	span := &Span{
+		SpanID:           "s1",
+		TraceID:          "t1",
+		TagsString:       map[string]string{"custom_str": "str_val"},
+		TagsLong:         map[string]int64{"custom_long": 42},
+		TagsDouble:       map[string]float64{"custom_double": 3.14},
+		TagsBool:         map[string]bool{"custom_bool": true},
+		TagsByte:         map[string]string{"custom_byte": "byte_val"},
+		SystemTagsString: map[string]string{"sys_str": "sys_val"},
+		SystemTagsLong:   map[string]int64{"sys_long": 99},
+		SystemTagsDouble: map[string]float64{"sys_double": 2.71},
+	}
+
+	t.Run("predefined field", func(t *testing.T) {
+		assert.Equal(t, "s1", span.GetMetaDataValue(SpanFieldSpanId))
+	})
+
+	t.Run("tags string", func(t *testing.T) {
+		assert.Equal(t, "str_val", span.GetMetaDataValue("custom_str"))
+	})
+
+	t.Run("tags long", func(t *testing.T) {
+		assert.Equal(t, int64(42), span.GetMetaDataValue("custom_long"))
+	})
+
+	t.Run("tags double", func(t *testing.T) {
+		assert.Equal(t, 3.14, span.GetMetaDataValue("custom_double"))
+	})
+
+	t.Run("tags bool", func(t *testing.T) {
+		assert.Equal(t, true, span.GetMetaDataValue("custom_bool"))
+	})
+
+	t.Run("tags byte", func(t *testing.T) {
+		assert.Equal(t, "byte_val", span.GetMetaDataValue("custom_byte"))
+	})
+
+	t.Run("system tags string", func(t *testing.T) {
+		assert.Equal(t, "sys_val", span.GetMetaDataValue("sys_str"))
+	})
+
+	t.Run("system tags long", func(t *testing.T) {
+		assert.Equal(t, int64(99), span.GetMetaDataValue("sys_long"))
+	})
+
+	t.Run("system tags double", func(t *testing.T) {
+		assert.Equal(t, 2.71, span.GetMetaDataValue("sys_double"))
+	})
+
+	t.Run("not found returns nil", func(t *testing.T) {
+		assert.Nil(t, span.GetMetaDataValue("nonexistent"))
+	})
 }

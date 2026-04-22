@@ -102,6 +102,10 @@ func TestExptMangerImpl_Run(t *testing.T) {
 					EXPECT().
 					PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 					Return(nil)
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), gomock.Any()).
+					Return([]*entity.UserInfo{}, nil)
 			},
 			wantErr: false,
 		},
@@ -421,18 +425,20 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
-		name    string
-		exptID  int64
-		spaceID int64
-		msg     string
-		setup   func()
-		wantErr bool
+		name      string
+		exptID    int64
+		exptRunID *int64
+		spaceID   int64
+		msg       string
+		setup     func()
+		wantErr   bool
 	}{
 		{
-			name:    "successful_kill",
-			exptID:  123,
-			spaceID: 789,
-			msg:     "user terminated",
+			name:      "successful_kill",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			msg:       "user terminated",
 			setup: func() {
 				// Mock CompleteExpt dependencies
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -503,11 +509,10 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
@@ -516,7 +521,7 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.Kill(ctx, tt.exptID, tt.spaceID, tt.msg, session)
+			err := mgr.Kill(ctx, tt.exptID, tt.exptRunID, tt.spaceID, tt.msg, session)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Kill() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -1566,18 +1571,20 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	session := &entity.Session{UserID: "test_user"}
 
 	tests := []struct {
-		name    string
-		exptID  int64
-		spaceID int64
-		opts    []entity.CompleteExptOptionFn
-		setup   func()
-		wantErr bool
+		name      string
+		exptID    int64
+		exptRunID *int64
+		spaceID   int64
+		opts      []entity.CompleteExptOptionFn
+		setup     func()
+		wantErr   bool
 	}{
 		{
-			name:    "successful_complete_expt_with_default_options",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "successful_complete_expt_with_default_options",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock idempotent check
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -1637,23 +1644,25 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_terminated_status",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_terminated_status",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithStatus(entity.ExptStatus_Terminated),
 			},
@@ -1752,23 +1761,25 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), int64(entity.ExptStatus_Terminated), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_no_aggr_calculate",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_no_aggr_calculate",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.NoAggrCalculate(),
 			},
@@ -1827,23 +1838,25 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 
 				// No aggregate calculation event should be published
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:    "successful_complete_expt_with_no_complete_item_turn",
-			exptID:  123,
-			spaceID: 789,
+			name:      "successful_complete_expt_with_no_complete_item_turn",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithStatus(entity.ExptStatus_Terminated),
 				entity.NoCompleteItemTurn(),
@@ -1901,23 +1914,25 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:    "complete_expt_with_interval",
-			exptID:  123,
-			spaceID: 789,
+			name:      "complete_expt_with_interval",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
 			opts: []entity.CompleteExptOptionFn{
 				entity.WithCompleteInterval(time.Millisecond * 200),
 			},
@@ -1980,24 +1995,26 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 					PublishExptAggrResultEvent(ctx, gomock.Any(), gomock.Any()).
 					Return(nil)
 
+				// Mock lifecycle event
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					Return(nil)
+
 				// Mock metrics emission
 				mgr.mtr.(*metricsMocks.MockExptMetric).
 					EXPECT().
 					EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).
 					AnyTimes()
-				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-					Return(nil)
-				mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-					{UserID: gptr.Of("test_user")},
-				}, nil)
 			},
 			wantErr: false,
 		},
 		{
-			name:    "experiment_not_found",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "experiment_not_found",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock experiment retrieval failure
 				mgr.exptRepo.(*repoMocks.MockIExperimentRepo).
@@ -2008,10 +2025,11 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "stats_calculation_error",
-			exptID:  123,
-			spaceID: 789,
-			opts:    []entity.CompleteExptOptionFn{},
+			name:      "stats_calculation_error",
+			exptID:    123,
+			exptRunID: gptr.Of[int64](456),
+			spaceID:   789,
+			opts:      []entity.CompleteExptOptionFn{},
 			setup: func() {
 				// Mock idempotent check
 				mgr.idem.(*idemMocks.MockIdempotentService).
@@ -2043,7 +2061,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setup()
-			err := mgr.CompleteExpt(ctx, tt.exptID, tt.spaceID, session, tt.opts...)
+			err := mgr.CompleteExpt(ctx, tt.exptID, tt.exptRunID, tt.spaceID, session, tt.opts...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CompleteExpt() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -2096,12 +2114,11 @@ func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t
 	mgr.mtr.(*metricsMocks.MockExptMetric).EXPECT().
 		EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).AnyTimes()
 
-	mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).EXPECT().SendMessageCard(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
-	mgr.userProvider.(*mocks.MockIUserProvider).EXPECT().MGetUserInfo(gomock.Any(), gomock.Any()).Return([]*entity.UserInfo{
-		{UserID: gptr.Of("test_user")},
-	}, nil)
+	mgr.publisher.(*eventsMocks.MockExptEventPublisher).EXPECT().
+		PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil)
 
-	err := mgr.CompleteExpt(ctx, 123, 789, session)
+	err := mgr.CompleteExpt(ctx, 123, nil, 789, session)
 	assert.NoError(t, err)
 }
 
@@ -3185,52 +3202,6 @@ func TestExptMangerImpl_fixTargetConf(t *testing.T) {
 	})
 }
 
-func TestExptMangerImpl_afterCompleteExpt(t *testing.T) {
-	t.Run("non_finished_status_returns_nil", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		mgr := newTestExptManager(ctrl)
-		ctx := context.Background()
-
-		expt := &entity.Experiment{
-			ID:      123,
-			SpaceID: 789,
-			Status:  entity.ExptStatus_Processing,
-		}
-		err := mgr.afterCompleteExpt(ctx, expt)
-		assert.NoError(t, err)
-	})
-
-	t.Run("finished_status_calls_sendExptNotify", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
-		defer ctrl.Finish()
-		mgr := newTestExptManager(ctrl)
-		ctx := context.Background()
-
-		expt := &entity.Experiment{
-			ID:        123,
-			SpaceID:   789,
-			Status:    entity.ExptStatus_Success,
-			CreatedBy: "test_user",
-			StartAt:   gptr.Of(time.Now()),
-			EndAt:     gptr.Of(time.Now()),
-		}
-		mgr.userProvider.(*mocks.MockIUserProvider).
-			EXPECT().
-			MGetUserInfo(ctx, []string{"test_user"}).
-			Return([]*entity.UserInfo{
-				{UserID: gptr.Of("test_user"), Email: gptr.Of("test@example.com")},
-			}, nil)
-		mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).
-			EXPECT().
-			SendMessageCard(ctx, "test@example.com", gomock.Any(), gomock.Any()).
-			Return(nil)
-
-		err := mgr.afterCompleteExpt(ctx, expt)
-		assert.NoError(t, err)
-	})
-}
-
 func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 	ctx := context.Background()
 	session := &entity.Session{UserID: "test_user"}
@@ -3375,6 +3346,10 @@ func TestExptMangerImpl_Run_OnlineExpt(t *testing.T) {
 			EXPECT().
 			PublishExptScheduleEvent(ctx, gomock.Any(), gptr.Of(time.Second*3)).
 			Return(nil)
+		mgr.userProvider.(*mocks.MockIUserProvider).
+			EXPECT().
+			MGetUserInfo(gomock.Any(), gomock.Any()).
+			Return([]*entity.UserInfo{}, nil)
 
 		err := mgr.Run(ctx, 123, 456, 789, 0, session, entity.EvaluationModeSubmit, nil)
 		assert.NoError(t, err)
@@ -3595,4 +3570,298 @@ func TestExptMangerImpl_RecordExptData(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "update stats error")
 	})
+}
+
+func TestBuildExptNotifyParam(t *testing.T) {
+	now := time.Date(2025, 1, 15, 10, 30, 0, 0, time.UTC)
+	later := time.Date(2025, 1, 15, 11, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name       string
+		expt       *entity.Experiment
+		wantCardID string
+		wantNil    bool
+		checkParam func(t *testing.T, param map[string]string)
+	}{
+		{
+			name: "success status",
+			expt: &entity.Experiment{
+				ID: 1, SpaceID: 100, Name: "expt1", Status: entity.ExptStatus_Success,
+				StartAt: &now, EndAt: &later,
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, "expt1", param["expt_name"])
+				assert.Equal(t, "100", param["space_id"])
+				assert.Equal(t, "1", param["expt_id"])
+				assert.Equal(t, now.Format(time.DateTime), param["start_time"])
+				assert.Equal(t, later.Format(time.DateTime), param["end_time"])
+				assert.Equal(t, consts.ExptEventNotifyTitleSuccess, param[consts.ExptEventNotifyTitle])
+				assert.Equal(t, consts.ExptEventNotifyTitleColorSuccess, param[consts.ExptEventNotifyTitleColor])
+			},
+		},
+		{
+			name: "failed status",
+			expt: &entity.Experiment{
+				ID: 2, SpaceID: 200, Name: "expt2", Status: entity.ExptStatus_Failed,
+				StartAt: &now,
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, consts.ExptEventNotifyTitleFailed, param[consts.ExptEventNotifyTitle])
+				assert.Equal(t, consts.ExptEventNotifyTitleColorFailed, param[consts.ExptEventNotifyTitleColor])
+				assert.Equal(t, "-", param["end_time"])
+			},
+		},
+		{
+			name: "terminated status",
+			expt: &entity.Experiment{
+				ID: 3, SpaceID: 300, Name: "expt3", Status: entity.ExptStatus_Terminated,
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, consts.ExptEventNotifyTitleTerminated, param[consts.ExptEventNotifyTitle])
+				assert.Equal(t, consts.ExptEventNotifyTitleColorTerminated, param[consts.ExptEventNotifyTitleColor])
+				assert.Equal(t, "-", param["start_time"])
+				assert.Equal(t, "-", param["end_time"])
+			},
+		},
+		{
+			name: "system terminated status",
+			expt: &entity.Experiment{
+				ID: 4, SpaceID: 400, Name: "expt4", Status: entity.ExptStatus_SystemTerminated,
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, consts.ExptEventNotifyTitleTerminated, param[consts.ExptEventNotifyTitle])
+				assert.Equal(t, consts.ExptEventNotifyTitleColorTerminated, param[consts.ExptEventNotifyTitleColor])
+			},
+		},
+		{
+			name: "pending status",
+			expt: &entity.Experiment{
+				ID: 5, SpaceID: 500, Name: "expt5", Status: entity.ExptStatus_Pending,
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, consts.ExptEventNotifyTitleStarting, param[consts.ExptEventNotifyTitle])
+				assert.Equal(t, consts.ExptEventNotifyTitleColorStarting, param[consts.ExptEventNotifyTitleColor])
+			},
+		},
+		{
+			name: "unknown status returns empty",
+			expt: &entity.Experiment{
+				ID: 6, SpaceID: 600, Name: "expt6", Status: entity.ExptStatus_Processing,
+			},
+			wantCardID: "",
+			wantNil:    true,
+		},
+		{
+			name: "intelligent gen source type includes thread_id",
+			expt: &entity.Experiment{
+				ID: 7, SpaceID: 700, Name: "expt7", Status: entity.ExptStatus_Success,
+				SourceType: entity.SourceType_IntelligentGen,
+				ThreadID:   gptr.Of("thread_123"),
+			},
+			wantCardID: consts.ExptEventNotifyCardID,
+			checkParam: func(t *testing.T, param map[string]string) {
+				assert.Equal(t, "thread_123", param["thread_id"])
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cardID, param := buildExptNotifyParam(tt.expt)
+			assert.Equal(t, tt.wantCardID, cardID)
+			if tt.wantNil {
+				assert.Nil(t, param)
+			} else if tt.checkParam != nil {
+				tt.checkParam(t, param)
+			}
+		})
+	}
+}
+
+func TestExptMangerImpl_sendNotifyCard(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupMock func(mgr *ExptMangerImpl)
+		expt      *entity.Experiment
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name: "MGetUserInfo error",
+			expt: &entity.Experiment{CreatedBy: "user1", Status: entity.ExptStatus_Success},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return(nil, errors.New("user error"))
+			},
+			wantErr: true,
+			errMsg:  "user error",
+		},
+		{
+			name: "empty user list returns nil",
+			expt: &entity.Experiment{CreatedBy: "user1", Status: entity.ExptStatus_Success},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return([]*entity.UserInfo{}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "nil user returns nil",
+			expt: &entity.Experiment{CreatedBy: "user1", Status: entity.ExptStatus_Success},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return([]*entity.UserInfo{nil}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "empty email returns nil",
+			expt: &entity.Experiment{CreatedBy: "user1", Status: entity.ExptStatus_Success},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return([]*entity.UserInfo{{Email: gptr.Of("")}}, nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "send card success",
+			expt: &entity.Experiment{
+				ID: 1, SpaceID: 100, Name: "test", CreatedBy: "user1",
+				Status: entity.ExptStatus_Success,
+			},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return([]*entity.UserInfo{{Email: gptr.Of("u@e.com")}}, nil)
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).
+					EXPECT().
+					SendMessageCard(gomock.Any(), "u@e.com", gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name: "send card error",
+			expt: &entity.Experiment{
+				ID: 1, SpaceID: 100, Name: "test", CreatedBy: "user1",
+				Status: entity.ExptStatus_Success,
+			},
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.userProvider.(*mocks.MockIUserProvider).
+					EXPECT().
+					MGetUserInfo(gomock.Any(), []string{"user1"}).
+					Return([]*entity.UserInfo{{Email: gptr.Of("u@e.com")}}, nil)
+				mgr.notifyRPCAdapter.(*mocks.MockINotifyRPCAdapter).
+					EXPECT().
+					SendMessageCard(gomock.Any(), "u@e.com", gomock.Any(), gomock.Any()).
+					Return(errors.New("card send fail"))
+			},
+			wantErr: true,
+			errMsg:  "card send fail",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mgr := newTestExptManager(ctrl)
+			tt.setupMock(mgr)
+			err := mgr.sendNotifyCard(context.Background(), tt.expt)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestExptMangerImpl_sendExptCompleteEvent(t *testing.T) {
+	tests := []struct {
+		name       string
+		expt       *entity.Experiment
+		exptRunID  *int64
+		fromStatus entity.ExptStatus
+		setupMock  func(mgr *ExptMangerImpl)
+		wantErr    bool
+	}{
+		{
+			name:       "not finished status returns nil without publishing",
+			expt:       &entity.Experiment{ID: 1, Status: entity.ExptStatus_Processing},
+			fromStatus: entity.ExptStatus_Pending,
+			setupMock:  func(mgr *ExptMangerImpl) {},
+			wantErr:    false,
+		},
+		{
+			name:       "finished status publishes event successfully",
+			expt:       &entity.Experiment{ID: 1, SpaceID: 100, Status: entity.ExptStatus_Success, ExptType: entity.ExptType_Offline, SourceType: entity.SourceType_Evaluation},
+			exptRunID:  gptr.Of(int64(10)),
+			fromStatus: entity.ExptStatus_Processing,
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+		{
+			name:       "publish fails but returns nil with warn log",
+			expt:       &entity.Experiment{ID: 2, SpaceID: 200, Status: entity.ExptStatus_Failed, ExptType: entity.ExptType_Online, SourceType: entity.SourceType_Trace},
+			exptRunID:  gptr.Of(int64(20)),
+			fromStatus: entity.ExptStatus_Processing,
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(errors.New("mq publish error")).
+					AnyTimes()
+			},
+			wantErr: false,
+		},
+		{
+			name:       "nil exptRunID publishes event successfully",
+			expt:       &entity.Experiment{ID: 3, SpaceID: 300, Status: entity.ExptStatus_Terminated},
+			exptRunID:  nil,
+			fromStatus: entity.ExptStatus_Terminating,
+			setupMock: func(mgr *ExptMangerImpl) {
+				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
+					EXPECT().
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					Return(nil)
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mgr := newTestExptManager(ctrl)
+			tt.setupMock(mgr)
+			err := mgr.sendExptCompleteEvent(context.Background(), tt.expt, tt.exptRunID, tt.fromStatus)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

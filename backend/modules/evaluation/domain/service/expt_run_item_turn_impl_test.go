@@ -2211,10 +2211,26 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				HistoryMessages:       nil,
-				InputFields:           make(map[string]*entity.Content),
-				EvaluateDatasetFields: map[string]*entity.Content{},
+				HistoryMessages: nil,
+				InputFields:     make(map[string]*entity.Content),
+				// Code 类型评估器支持空 mapping：eval_set 字段应透传为 evaluate_dataset_fields
+				EvaluateDatasetFields: turnFields,
 				// Code 类型评估器下，即使没有配置 FieldConfs，也应透传原始 targetFields
+				EvaluateTargetOutputFields: targetFields,
+				Ext:                        make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "Code evaluator - nil ingress conf 全透传",
+			evaluatorType: entity.EvaluatorTypeCode,
+			ec:            &entity.EvaluatorConf{},
+			turnFields:    turnFields,
+			targetFields:  targetFields,
+			wantInputData: &entity.EvaluatorInputData{
+				HistoryMessages:            nil,
+				InputFields:                make(map[string]*entity.Content),
+				EvaluateDatasetFields:      turnFields,
 				EvaluateTargetOutputFields: targetFields,
 				Ext:                        make(map[string]string),
 			},
@@ -3263,8 +3279,9 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData_EdgeCases(t *test
 			validateResult: func(t *testing.T, result *entity.EvaluatorInputData) {
 				assert.NotNil(t, result.EvaluateDatasetFields)
 				assert.NotNil(t, result.EvaluateTargetOutputFields)
+				// Code 评估器支持空 mapping：eval_set 字段应透传为 evaluate_dataset_fields
+				assert.Equal(t, turnFields, result.EvaluateDatasetFields)
 				// Code 类型评估器下，即使 FieldConfs 为空，buildFieldsFromSource 也会直接返回 sourceFields
-				assert.Empty(t, result.EvaluateDatasetFields)
 				assert.Equal(t, targetFields, result.EvaluateTargetOutputFields)
 			},
 		},

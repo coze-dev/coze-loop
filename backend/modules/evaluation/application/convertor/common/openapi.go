@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bytedance/gg/gptr"
+	commondto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/common"
 	openapiCommon "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/common"
 	commonentity "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 )
@@ -401,6 +402,24 @@ func OpenAPIOrderBysDTO2DO(dtos []*openapiCommon.OrderBy) []*commonentity.OrderB
 	res := make([]*commonentity.OrderBy, 0, len(dtos))
 	for _, dto := range dtos {
 		res = append(res, &commonentity.OrderBy{
+			Field: gptr.Of(dto.GetField()),
+			IsAsc: gptr.Of(dto.GetIsAsc()),
+		})
+	}
+	return res
+}
+
+// OpenAPIOrderBysToDomainCommonOrderBys OpenAPI common.OrderBy -> kitex domain/common.OrderBy（如 ListExperiments RPC 请求）
+func OpenAPIOrderBysToDomainCommonOrderBys(dtos []*openapiCommon.OrderBy) []*commondto.OrderBy {
+	if len(dtos) == 0 {
+		return nil
+	}
+	res := make([]*commondto.OrderBy, 0, len(dtos))
+	for _, dto := range dtos {
+		if dto == nil {
+			continue
+		}
+		res = append(res, &commondto.OrderBy{
 			Field: gptr.Of(dto.GetField()),
 			IsAsc: gptr.Of(dto.GetIsAsc()),
 		})

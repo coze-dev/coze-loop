@@ -391,6 +391,29 @@ func (l *LocalEvaluationOpenAPIService) ReportEvalTargetInvokeResult_(ctx contex
 	return result.GetSuccess(), nil
 }
 
+// GetEvalTargetOutputFieldContentOApi
+// 按需查询评测对象输出中大对象的完整内容
+func (l *LocalEvaluationOpenAPIService) GetEvalTargetOutputFieldContentOApi(ctx context.Context, req *openapi.GetEvalTargetOutputFieldContentOApiRequest, callOptions ...callopt.Option) (*openapi.GetEvalTargetOutputFieldContentOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult)
+		resp, err := l.impl.GetEvalTargetOutputFieldContentOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetEvalTargetOutputFieldContentOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetEvalTargetOutputFieldContentOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // SubmitExperimentOApi
 // 评测实验接口
 // 创建评测实验
@@ -432,6 +455,29 @@ func (l *LocalEvaluationOpenAPIService) GetExperimentsOApi(ctx context.Context, 
 	arg := &openapi.EvaluationOpenAPIServiceGetExperimentsOApiArgs{Req: req}
 	result := &openapi.EvaluationOpenAPIServiceGetExperimentsOApiResult{}
 	ctx = l.injectRPCInfo(ctx, "GetExperimentsOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// ListExperimentsOApi
+// 查询评测实验列表
+func (l *LocalEvaluationOpenAPIService) ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (*openapi.ListExperimentsOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceListExperimentsOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceListExperimentsOApiResult)
+		resp, err := l.impl.ListExperimentsOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceListExperimentsOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceListExperimentsOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ListExperimentsOApi")
 	if err := chain(ctx, arg, result); err != nil {
 		return nil, err
 	}
