@@ -42,10 +42,10 @@ func (e *SpanStatsEntry) TotalOutCount() int {
 	return total
 }
 
-func (e *SpanStatsEntry) GetOutCount(pipeline string) int {
+func (e *SpanStatsEntry) GetOutCount(scene string) int {
 	e.spanStatsLock.Lock()
 	defer e.spanStatsLock.Unlock()
-	return e.OutCount[pipeline]
+	return e.OutCount[scene]
 }
 
 type SpanStats struct {
@@ -99,8 +99,7 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 	}
 }
 
-// pipeline 整体再看下名字
-func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count int) {
+func AddFilteredSpans(ctx context.Context, tenant, psm, scene string, count int) {
 	stats := getSpanStats(ctx)
 	if stats == nil {
 		return
@@ -119,11 +118,11 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, pipeline string, count i
 	}
 	stats.lock.Unlock()
 	entry.spanStatsLock.Lock()
-	entry.FilteredCount[pipeline] += count
+	entry.FilteredCount[scene] += count
 	entry.spanStatsLock.Unlock()
 }
 
-func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count int) {
+func AddOutCountSpans(ctx context.Context, tenant, psm, scene string, count int) {
 	stats := getSpanStats(ctx)
 	if stats == nil {
 		return
@@ -142,7 +141,7 @@ func AddOutCountSpans(ctx context.Context, tenant, psm, pipeline string, count i
 	}
 	stats.lock.Unlock()
 	entry.spanStatsLock.Lock()
-	entry.OutCount[pipeline] += count
+	entry.OutCount[scene] += count
 	entry.spanStatsLock.Unlock()
 }
 
