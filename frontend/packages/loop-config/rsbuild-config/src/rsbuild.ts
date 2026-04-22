@@ -10,7 +10,6 @@ import { pluginLess } from '@rsbuild/plugin-less';
 import { type RsbuildConfig, mergeRsbuildConfig } from '@rsbuild/core';
 import { SemiRspackPlugin } from '@douyinfe/semi-rspack-plugin';
 import { GLOBAL_ENVS } from '@coze-studio/bot-env-adapter';
-import SubspaceResolvePlugin from '@coze-arch/subspace-resolve-plugin';
 import PkgRootWebpackPlugin from '@coze-arch/pkg-root-webpack-plugin';
 
 import { formatDefineVars, getLatestGitCommitHash } from './utils';
@@ -29,11 +28,10 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
         'process.env.SCM_BUILD_TYPE': process.env.BUILD_TYPE,
         ...GLOBAL_ENVS,
       }),
+    },
+    resolve: {
+      dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
       alias: {
-        'react-dom': require.resolve('react-dom'),
-        react: require.resolve('react'),
-        'react-router-dom': require.resolve('react-router-dom'),
-        'react-router': require.resolve('react-router'),
         // fix https://github.com/react-dnd/react-dnd/issues/3433
         'react/jsx-runtime.js': 'react/jsx-runtime',
         'react/jsx-dev-runtime.js': 'react/jsx-dev-runtime',
@@ -94,7 +92,6 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
 
         appendPlugins([
           new PkgRootWebpackPlugin({}),
-          new SubspaceResolvePlugin({ currSubspace: 'default' }),
           new SemiRspackPlugin({ theme: '@coze-arch/semi-theme-hand01' }),
         ]);
 
