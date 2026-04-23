@@ -871,31 +871,6 @@ importers:
         specifier: ~3.0.5
         version: 3.0.9(@types/debug@4.1.13)(@types/node@24.12.0)(happy-dom@20.8.9)(jiti@2.6.1)(jsdom@26.1.0)(less@4.6.4)(sass-embedded@1.98.0)(sass@1.98.0)(sugarss@2.0.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
-  ../../../frontend/infra/plugins/subspace-resolve-plugin:
-    dependencies:
-      webpack:
-        specifier: ~5.91.0
-        version: 5.91.0
-    devDependencies:
-      '@coze-arch/eslint-config':
-        specifier: workspace:*
-        version: link:../../../config/eslint-config
-      '@coze-arch/ts-config':
-        specifier: workspace:*
-        version: link:../../../config/ts-config
-      '@coze-arch/vitest-config':
-        specifier: workspace:*
-        version: link:../../../config/vitest-config
-      '@types/node':
-        specifier: ^24
-        version: 24.12.0
-      '@vitest/coverage-v8':
-        specifier: ~3.0.5
-        version: 3.0.9(vitest@3.0.9(@types/debug@4.1.13)(@types/node@24.12.0)(happy-dom@20.8.9)(jiti@2.6.1)(jsdom@26.1.0)(less@4.6.4)(sass-embedded@1.98.0)(sass@1.98.0)(sugarss@2.0.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
-      vitest:
-        specifier: ~3.0.5
-        version: 3.0.9(@types/debug@4.1.13)(@types/node@24.12.0)(happy-dom@20.8.9)(jiti@2.6.1)(jsdom@26.1.0)(less@4.6.4)(sass-embedded@1.98.0)(sass@1.98.0)(sugarss@2.0.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
-
   ../../../frontend/infra/utils/monorepo-kits:
     dependencies:
       '@rushstack/rush-sdk':
@@ -2555,9 +2530,6 @@ importers:
       '@coze-arch/stylelint-config':
         specifier: workspace:*
         version: link:../../../config/stylelint-config
-      '@coze-arch/subspace-resolve-plugin':
-        specifier: workspace:*
-        version: link:../../../infra/plugins/subspace-resolve-plugin
       '@coze-arch/tailwind-config':
         specifier: workspace:*
         version: link:../../../config/tailwind-config

@@ -74,7 +74,6 @@
     "@coze-arch/pkg-root-webpack-plugin": "workspace:*",
     "@coze-arch/postcss-plugin": "workspace:*",
     "@coze-arch/stylelint-config": "workspace:*",
-    "@coze-arch/subspace-resolve-plugin": "workspace:*",
     "@coze-arch/tailwind-config": "workspace:*",
     "@coze-arch/ts-config": "workspace:*",
     "@coze-arch/vitest-config": "workspace:*",

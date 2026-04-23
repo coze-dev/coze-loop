@@ -103,11 +103,6 @@
       "tags": ["infra", "level-1"]
     },
     {
-      "packageName": "@coze-arch/subspace-resolve-plugin",
-      "projectFolder": "frontend/infra/plugins/subspace-resolve-plugin",
-      "tags": ["infra", "level-1"]
-    },
-    {
       "packageName": "@coze-arch/monorepo-kits",
       "projectFolder": "frontend/infra/utils/monorepo-kits",
       "tags": ["infra", "level-1"]
