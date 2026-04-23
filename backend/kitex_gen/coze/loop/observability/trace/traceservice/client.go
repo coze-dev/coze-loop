@@ -36,6 +36,9 @@ type Client interface {
 	GetTrajectoryConfig(ctx context.Context, req *trace.GetTrajectoryConfigRequest, callOptions ...callopt.Option) (r *trace.GetTrajectoryConfigResponse, err error)
 	ListTrajectory(ctx context.Context, req *trace.ListTrajectoryRequest, callOptions ...callopt.Option) (r *trace.ListTrajectoryResponse, err error)
 	ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error)
+	ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error)
+	ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (r *trace.ListThreadChatResponse, err error)
+	GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -190,4 +193,19 @@ func (p *kTraceServiceClient) ListTrajectory(ctx context.Context, req *trace.Lis
 func (p *kTraceServiceClient) ListMetadata(ctx context.Context, req *trace.ListMetadataRequest, callOptions ...callopt.Option) (r *trace.ListMetadataResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListMetadata(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListTraceChat(ctx, req)
+}
+
+func (p *kTraceServiceClient) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest, callOptions ...callopt.Option) (r *trace.ListThreadChatResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ListThreadChat(ctx, req)
+}
+
+func (p *kTraceServiceClient) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetThreadStat(ctx, req)
 }

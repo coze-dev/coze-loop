@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	commdo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
@@ -67,6 +68,7 @@ func NewTraceApplication(
 	userService rpc.IUserProvider,
 	tagService rpc.ITagRPCAdapter,
 	workflowService rpc.IWorkflowProvider,
+	timeRangeProvider time_range.ITimeRangeProvider,
 ) (ITraceApplication, error) {
 	return &TraceApplication{
 		traceService:       traceService,
@@ -81,6 +83,7 @@ func NewTraceApplication(
 		userSvc:            userService,
 		tagSvc:             tagService,
 		workflowSvc:        workflowService,
+		timeRange:          timeRangeProvider,
 	}, nil
 }
 
@@ -97,6 +100,7 @@ type TraceApplication struct {
 	userSvc            rpc.IUserProvider
 	tagSvc             rpc.ITagRPCAdapter
 	workflowSvc        rpc.IWorkflowProvider
+	timeRange          time_range.ITimeRangeProvider
 }
 
 func (t *TraceApplication) ListPreSpan(ctx context.Context, req *trace.ListPreSpanRequest) (r *trace.ListPreSpanResponse, err error) {
@@ -1315,6 +1319,153 @@ func (t *TraceApplication) ListTrajectory(ctx context.Context, req *trace.ListTr
 
 	return &trace.ListTrajectoryResponse{
 		Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+	}, nil
+}
+
+func (t *TraceApplication) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest) (*trace.ListTraceChatResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	v := utils.DateValidator{
+		Start:        req.GetStartTime(),
+		End:          req.GetEndTime(),
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.ListTraceChat(ctx, &service.ListTraceChatRequest{
+		PlatformType:  platformType,
+		WorkspaceID:   req.GetWorkspaceID(),
+		TraceID:       req.GetTraceID(),
+		StartTime:     startTime,
+		EndTime:       endTime,
+		PageSize:      req.GetPageSize(),
+		PageToken:     req.GetPageToken(),
+		Filters:       tconv.FilterFieldsDTO2DO(req.Filters),
+		WithoutDetail: req.GetWithoutDetail(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.ListTraceChatResponse{
+		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
+		NextPageToken: sResp.NextPageToken,
+		HasMore:       sResp.HasMore,
+	}, nil
+}
+
+func (t *TraceApplication) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest) (*trace.ListThreadChatResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+	if startTime == 0 && endTime == 0 {
+		st, et := t.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", "", 0)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
+	v := utils.DateValidator{
+		Start:        startTime,
+		End:          endTime,
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.ListThreadChat(ctx, &service.ListThreadChatRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		ThreadID:     req.GetThreadID(),
+		StartTime:    startTime,
+		EndTime:      endTime,
+		PageSize:     req.GetPageSize(),
+		PageToken:    req.GetPageToken(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.ListThreadChatResponse{
+		Messages:      tconv.ChatMessagesDO2DTO(sResp.Messages),
+		NextPageToken: sResp.NextPageToken,
+		HasMore:       sResp.HasMore,
+	}, nil
+}
+
+func (t *TraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest) (*trace.GetThreadStatResponse, error) {
+	if err := t.authSvc.CheckWorkspacePermission(ctx,
+		rpc.AuthActionTraceRead,
+		strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		return nil, err
+	}
+
+	startTime := req.GetStartTime()
+	endTime := req.GetEndTime()
+	if startTime == 0 && endTime == 0 {
+		st, et := t.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", "", 0)
+		if st != nil && et != nil {
+			startTime = *st
+			endTime = *et
+		}
+	}
+	v := utils.DateValidator{
+		Start:        startTime,
+		End:          endTime,
+		EarliestDays: t.traceConfig.GetTraceDataMaxDurationDay(ctx, req.PlatformType),
+	}
+	startTime, endTime, err := v.CorrectDate()
+	if err != nil {
+		return nil, err
+	}
+
+	platformType := loop_span.PlatformType(req.GetPlatformType())
+	if req.PlatformType == nil {
+		platformType = loop_span.PlatformCozeLoop
+	}
+
+	sResp, err := t.traceService.GetThreadStat(ctx, &service.GetThreadStatRequest{
+		PlatformType: platformType,
+		WorkspaceID:  req.GetWorkspaceID(),
+		ThreadID:     req.GetThreadID(),
+		StartTime:    startTime,
+		EndTime:      endTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &trace.GetThreadStatResponse{
+		ThreadID:    sResp.ThreadID,
+		StartTime:   ptr.Of(timeutil.MicroSec2MillSec(sResp.StartTime)),
+		Duration:    ptr.Of(timeutil.MicroSec2MillSec(sResp.Duration)),
+		UserID:      &sResp.UserID,
+		TotalTokens: &sResp.TotalTokens,
+		UsedModels:  sResp.UsedModels,
 	}, nil
 }
 

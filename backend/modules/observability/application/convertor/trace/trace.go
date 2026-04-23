@@ -6,6 +6,7 @@ package trace
 import (
 	traced "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 )
 
@@ -44,6 +45,23 @@ func BatchAdvanceInfoDO2TraceDTO(infos []*loop_span.TraceAdvanceInfo) []*traced.
 	ret := make([]*traced.Trace, len(infos))
 	for i, info := range infos {
 		ret[i] = AdvanceInfoDO2TraceDTO(info)
+	}
+	return ret
+}
+
+func ChatMessagesDO2DTO(messages []*entity.ChatMessage) []*trace.ChatMessage {
+	if messages == nil {
+		return nil
+	}
+	ret := make([]*trace.ChatMessage, 0, len(messages))
+	for _, msg := range messages {
+		if msg == nil {
+			continue
+		}
+		ret = append(ret, &trace.ChatMessage{
+			Role: msg.Role,
+			Span: SpanDO2DTO(msg.Span, nil, nil, nil, nil, false),
+		})
 	}
 	return ret
 }
