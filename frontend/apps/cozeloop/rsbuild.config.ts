@@ -5,7 +5,12 @@ import { createRsbuildConfig } from '@cozeloop/rsbuild-config';
 const port = 8090;
 
 export default createRsbuildConfig({
-  server: { port },
+  server: {
+    port,
+    cors: {
+      origin: '*',
+    },
+  },
   dev: {
     assetPrefix: `http://localhost:${port}`,
     client: {
