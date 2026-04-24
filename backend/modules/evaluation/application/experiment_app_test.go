@@ -163,6 +163,19 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{10001}, false).Return([]*entity.Evaluator{
+					{
+						ID:            3,
+						SpaceID:       validWorkspaceID,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
+							ID:          10001,
+							EvaluatorID: 3,
+							Version:     "v1",
+						},
+					},
+				}, nil)
 				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1, 1}).Return([]*entity.Evaluator{
 					{
 						ID:            1,
@@ -178,8 +191,10 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
 					{
 						ID:            2,
+						SpaceID:       validWorkspaceID,
 						EvaluatorType: entity.EvaluatorTypePrompt,
 						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
 							ID:          20200,
 							EvaluatorID: 2,
 							Version:     "1.0.0",
@@ -235,6 +250,63 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "cross_workspace_evaluator_id_version_list_rejected",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+					{
+						ID:            2,
+						SpaceID:       validWorkspaceID + 1, // 其他空间
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						Builtin:       false,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID + 1,
+							ID:          20200,
+							EvaluatorID: 2,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+			},
+			wantErr:  true,
+			wantCode: errno.EvaluatorVersionNotFoundCode,
+		},
+		{
+			name: "cross_workspace_builtin_evaluator_id_version_list_allowed",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(9)), Version: gptr.Of("1.0.0")},
+				},
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+					{
+						ID:            9,
+						SpaceID:       validWorkspaceID + 2, // 预置评估器通常属于平台空间
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						Builtin:       true, // 预置评估器允许跨空间复用
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID + 2,
+							ID:          90900,
+							EvaluatorID: 9,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).Return(validExpt, nil)
+			},
+			wantErr: false,
+		},
+		{
 			name: "skip_missing_evaluators",
 			req: &exptpb.CreateExperimentRequest{
 				WorkspaceID:         validWorkspaceID,
@@ -248,6 +320,19 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{10001}, false).Return([]*entity.Evaluator{
+					{
+						ID:            3,
+						SpaceID:       validWorkspaceID,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
+							ID:          10001,
+							EvaluatorID: 3,
+							Version:     "v1",
+						},
+					},
+				}, nil)
 				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1}).Return([]*entity.Evaluator{
 					{
 						ID:            1,
