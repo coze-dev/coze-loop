@@ -83,7 +83,7 @@ enum EvalTargetType {
     WebAgent = 8 // Web智能体
 
     A2AAgent = 9 // A2A协议智能体
-    CustomAgent = 10 // 自定义智能体
+    CustomAgent = 10 // 自定义智能体 for内场,目前支持长链接方式访问
 
     CozeBotOnline = 11 // CozeBot在线(评测过程中不执行对象，仅用于展示对象)
     CozeLoopPromptOnline = 12 // Prompt在线(评测过程中不执行对象，仅用于展示对象)
