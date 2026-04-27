@@ -7,6 +7,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/apis/promptexecuteservice"
@@ -164,6 +166,7 @@ func (p PromptRPCAdapter) MGetPrompt(ctx context.Context, spaceID int64, promptQ
 	resp, err := p.client.BatchGetPrompt(ctx, &manage.BatchGetPromptRequest{
 		Queries: queries,
 	})
+	logs.CtxInfo(ctx, "MGetPrompt BatchGetPrompt req: %v, resp: %v", json.Jsonify(queries), json.Jsonify(resp))
 	if err != nil {
 		return nil, err
 	}
