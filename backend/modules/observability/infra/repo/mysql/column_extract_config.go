@@ -77,7 +77,7 @@ func (t ColumnExtractConfigDaoImpl) ListColumnExtractConfigs(ctx context.Context
 	err := t.dbMgr.NewSession(ctx).WithContext(ctx).
 		Where("workspace_id IN (?)", []int64{0, workspaceID}).
 		Where("platform_type IN (?, '*')", platformType).
-		Where("span_list_type IN (?, '*')", spanListType).
+		Where("span_list_type = ?", spanListType).
 		Where("is_deleted = ?", false).
 		Find(&pos).Error
 	if err != nil {
