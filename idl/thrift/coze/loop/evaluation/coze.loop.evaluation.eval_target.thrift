@@ -22,6 +22,8 @@ struct CreateEvalTargetParam {
     7: optional eval_target.Region region   // 有区域限制需要填充这个字段
     8: optional string env  // 有环境限制需要填充这个字段
     9: optional string operation_instruction // type=8时需填写，评测对象操作说明
+    10: optional string cluster // type=10时需填写，自定义智能体所属集群
+    11: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
 }
 
 struct CreateEvalTargetResponse {

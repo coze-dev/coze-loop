@@ -456,6 +456,8 @@ struct SubmitExperimentEvalTargetParam {
     6: optional eval_target.CustomEvalTarget custom_eval_target // type=6,并且有搜索对象，搜索结果信息通过这个字段透传
     7: optional eval_target.Region region   // 有区域限制需要填充这个字段
     8: optional string env  // 有环境限制需要填充这个字段
+    9: optional string cluster // type=10时需填写，自定义智能体所属集群
+    10: optional eval_target.AgentConnection agent_connection // type=10时需填写，自定义智能体连接信息
 }
 
 

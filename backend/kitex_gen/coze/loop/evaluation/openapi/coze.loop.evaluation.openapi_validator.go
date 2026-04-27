@@ -658,6 +658,11 @@ func (p *SubmitExperimentEvalTargetParam) IsValid() error {
 			return fmt.Errorf("field CustomEvalTarget not valid, %w", err)
 		}
 	}
+	if p.AgentConnection != nil {
+		if err := p.AgentConnection.IsValid(); err != nil {
+			return fmt.Errorf("field AgentConnection not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentOApiResponse) IsValid() error {

@@ -20843,6 +20843,10 @@ type SubmitExperimentEvalTargetParam struct {
 	Region *eval_target.Region `thrift:"region,7,optional" frugal:"7,optional,string" form:"region" json:"region,omitempty" query:"region"`
 	// 有环境限制需要填充这个字段
 	Env *string `thrift:"env,8,optional" frugal:"8,optional,string" form:"env" json:"env,omitempty" query:"env"`
+	// type=10时需填写，自定义智能体所属集群
+	Cluster *string `thrift:"cluster,9,optional" frugal:"9,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
+	// type=10时需填写，自定义智能体连接信息
+	AgentConnection *eval_target.AgentConnection `thrift:"agent_connection,10,optional" frugal:"10,optional,eval_target.AgentConnection" form:"agent_connection" json:"agent_connection,omitempty" query:"agent_connection"`
 }
 
 func NewSubmitExperimentEvalTargetParam() *SubmitExperimentEvalTargetParam {
@@ -20947,6 +20951,30 @@ func (p *SubmitExperimentEvalTargetParam) GetEnv() (v string) {
 	}
 	return *p.Env
 }
+
+var SubmitExperimentEvalTargetParam_Cluster_DEFAULT string
+
+func (p *SubmitExperimentEvalTargetParam) GetCluster() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCluster() {
+		return SubmitExperimentEvalTargetParam_Cluster_DEFAULT
+	}
+	return *p.Cluster
+}
+
+var SubmitExperimentEvalTargetParam_AgentConnection_DEFAULT *eval_target.AgentConnection
+
+func (p *SubmitExperimentEvalTargetParam) GetAgentConnection() (v *eval_target.AgentConnection) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetAgentConnection() {
+		return SubmitExperimentEvalTargetParam_AgentConnection_DEFAULT
+	}
+	return p.AgentConnection
+}
 func (p *SubmitExperimentEvalTargetParam) SetSourceTargetID(val *string) {
 	p.SourceTargetID = val
 }
@@ -20971,16 +20999,24 @@ func (p *SubmitExperimentEvalTargetParam) SetRegion(val *eval_target.Region) {
 func (p *SubmitExperimentEvalTargetParam) SetEnv(val *string) {
 	p.Env = val
 }
+func (p *SubmitExperimentEvalTargetParam) SetCluster(val *string) {
+	p.Cluster = val
+}
+func (p *SubmitExperimentEvalTargetParam) SetAgentConnection(val *eval_target.AgentConnection) {
+	p.AgentConnection = val
+}
 
 var fieldIDToName_SubmitExperimentEvalTargetParam = map[int16]string{
-	1: "source_target_id",
-	2: "source_target_version",
-	3: "eval_target_type",
-	4: "bot_info_type",
-	5: "bot_publish_version",
-	6: "custom_eval_target",
-	7: "region",
-	8: "env",
+	1:  "source_target_id",
+	2:  "source_target_version",
+	3:  "eval_target_type",
+	4:  "bot_info_type",
+	5:  "bot_publish_version",
+	6:  "custom_eval_target",
+	7:  "region",
+	8:  "env",
+	9:  "cluster",
+	10: "agent_connection",
 }
 
 func (p *SubmitExperimentEvalTargetParam) IsSetSourceTargetID() bool {
@@ -21013,6 +21049,14 @@ func (p *SubmitExperimentEvalTargetParam) IsSetRegion() bool {
 
 func (p *SubmitExperimentEvalTargetParam) IsSetEnv() bool {
 	return p.Env != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetCluster() bool {
+	return p.Cluster != nil
+}
+
+func (p *SubmitExperimentEvalTargetParam) IsSetAgentConnection() bool {
+	return p.AgentConnection != nil
 }
 
 func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err error) {
@@ -21092,6 +21136,22 @@ func (p *SubmitExperimentEvalTargetParam) Read(iprot thrift.TProtocol) (err erro
 		case 8:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -21211,6 +21271,25 @@ func (p *SubmitExperimentEvalTargetParam) ReadField8(iprot thrift.TProtocol) err
 	p.Env = _field
 	return nil
 }
+func (p *SubmitExperimentEvalTargetParam) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Cluster = _field
+	return nil
+}
+func (p *SubmitExperimentEvalTargetParam) ReadField10(iprot thrift.TProtocol) error {
+	_field := eval_target.NewAgentConnection()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.AgentConnection = _field
+	return nil
+}
 
 func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -21248,6 +21327,14 @@ func (p *SubmitExperimentEvalTargetParam) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField8(oprot); err != nil {
 			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 	}
@@ -21412,6 +21499,42 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
 }
+func (p *SubmitExperimentEvalTargetParam) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCluster() {
+		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Cluster); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *SubmitExperimentEvalTargetParam) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetAgentConnection() {
+		if err = oprot.WriteFieldBegin("agent_connection", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.AgentConnection.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 
 func (p *SubmitExperimentEvalTargetParam) String() string {
 	if p == nil {
@@ -21449,6 +21572,12 @@ func (p *SubmitExperimentEvalTargetParam) DeepEqual(ano *SubmitExperimentEvalTar
 		return false
 	}
 	if !p.Field8DeepEqual(ano.Env) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.Cluster) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.AgentConnection) {
 		return false
 	}
 	return true
@@ -21541,6 +21670,25 @@ func (p *SubmitExperimentEvalTargetParam) Field8DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Env, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field9DeepEqual(src *string) bool {
+
+	if p.Cluster == src {
+		return true
+	} else if p.Cluster == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Cluster, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentEvalTargetParam) Field10DeepEqual(src *eval_target.AgentConnection) bool {
+
+	if !p.AgentConnection.DeepEqual(src) {
 		return false
 	}
 	return true
