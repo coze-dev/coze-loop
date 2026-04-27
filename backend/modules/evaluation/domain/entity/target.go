@@ -31,6 +31,8 @@ type EvalTargetVersion struct {
 	VolcengineAgent *VolcengineAgent
 	CustomRPCServer *CustomRPCServer
 	WebAgent        *WebAgent
+	A2AAgent        *A2Agent
+	CustomAgent     *CustomAgent
 
 	InputSchema      []*ArgsSchema
 	OutputSchema     []*ArgsSchema
@@ -59,6 +61,11 @@ const (
 	EvalTargetTypeVolcengineAgentAgentkit EvalTargetType = 7
 	// Web智能体
 	EvalTargetTypeWebAgent EvalTargetType = 8
+
+	// A2A协议智能体
+	EvalTargetTypeA2AAgent EvalTargetType = 9
+	// 自定义智能体 for内场,目前支持长链接方式访问
+	EvalTargetTypeCustomAgent EvalTargetType = 10
 
 	// 以下为仅记录型：评测过程中不执行对象，仅用于记录对象类型和基本信息
 	EvalTargetTypeCozeBotOnline                 EvalTargetType = 11
@@ -151,6 +158,10 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgentKit"
 	case EvalTargetTypeWebAgent:
 		return "WebAgent"
+	case EvalTargetTypeA2AAgent:
+		return "A2AAgent"
+	case EvalTargetTypeCustomAgent:
+		return "CustomAgent"
 	case EvalTargetTypeCozeBotOnline:
 		return "CozeBotOnline"
 	case EvalTargetTypeCozeLoopPromptOnline:
@@ -169,7 +180,8 @@ func (p EvalTargetType) String() string {
 
 func (p EvalTargetType) SupptTrajectory() bool {
 	switch p {
-	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer, EvalTargetTypeLoopPrompt:
+	case EvalTargetTypeVolcengineAgent, EvalTargetTypeCustomRPCServer, EvalTargetTypeLoopPrompt,
+		EvalTargetTypeA2AAgent, EvalTargetTypeCustomAgent:
 		return true
 	default:
 		return false

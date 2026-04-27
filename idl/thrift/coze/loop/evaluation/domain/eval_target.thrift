@@ -235,8 +235,11 @@ enum ModelPlatform {
 }
 
 struct A2Agent {
-    1: optional string server_name
-    2: optional string url
+    1: optional i64 id    // 应用ID
+    2: optional string name    // DTO使用，不存数据库
+    3: optional string description // DTO使用，不存数据库
+    4: optional string server_name
+    5: optional string url
 
     20: optional Region exec_region // 执行区域
     21: optional string exec_env // 执行环境
@@ -244,6 +247,10 @@ struct A2Agent {
 }
 
 struct CustomAgent {
+    1: optional i64 id    // 应用ID
+    2: optional string name    // DTO使用，不存数据库
+    3: optional string description // DTO使用，不存数据库
+
     20: optional Region exec_region // 执行区域
     21: optional string exec_env // 执行环境
     22: optional string cluster // 执行集群

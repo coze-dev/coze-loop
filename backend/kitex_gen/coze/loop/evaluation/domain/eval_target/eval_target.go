@@ -57,7 +57,7 @@ const (
 	EvalTargetType_WebAgent EvalTargetType = 8
 	// A2A协议智能体
 	EvalTargetType_A2AAgent EvalTargetType = 9
-	// 自定义智能体
+	// 自定义智能体 for内场,目前支持长链接方式访问
 	EvalTargetType_CustomAgent EvalTargetType = 10
 	// CozeBot在线(评测过程中不执行对象，仅用于展示对象)
 	EvalTargetType_CozeBotOnline EvalTargetType = 11
@@ -8900,8 +8900,14 @@ func (p *ModelInfo) Field6DeepEqual(src *ModelPlatform) bool {
 }
 
 type A2Agent struct {
-	ServerName *string `thrift:"server_name,1,optional" frugal:"1,optional,string" form:"server_name" json:"server_name,omitempty" query:"server_name"`
-	URL        *string `thrift:"url,2,optional" frugal:"2,optional,string" form:"url" json:"url,omitempty" query:"url"`
+	// 应用ID
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	ServerName  *string `thrift:"server_name,4,optional" frugal:"4,optional,string" form:"server_name" json:"server_name,omitempty" query:"server_name"`
+	URL         *string `thrift:"url,5,optional" frugal:"5,optional,string" form:"url" json:"url,omitempty" query:"url"`
 	// 执行区域
 	ExecRegion *Region `thrift:"exec_region,20,optional" frugal:"20,optional,string" form:"exec_region" json:"exec_region,omitempty" query:"exec_region"`
 	// 执行环境
@@ -8915,6 +8921,42 @@ func NewA2Agent() *A2Agent {
 }
 
 func (p *A2Agent) InitDefault() {
+}
+
+var A2Agent_ID_DEFAULT int64
+
+func (p *A2Agent) GetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return A2Agent_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var A2Agent_Name_DEFAULT string
+
+func (p *A2Agent) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return A2Agent_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var A2Agent_Description_DEFAULT string
+
+func (p *A2Agent) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return A2Agent_Description_DEFAULT
+	}
+	return *p.Description
 }
 
 var A2Agent_ServerName_DEFAULT string
@@ -8976,6 +9018,15 @@ func (p *A2Agent) GetCluster() (v string) {
 	}
 	return *p.Cluster
 }
+func (p *A2Agent) SetID(val *int64) {
+	p.ID = val
+}
+func (p *A2Agent) SetName(val *string) {
+	p.Name = val
+}
+func (p *A2Agent) SetDescription(val *string) {
+	p.Description = val
+}
 func (p *A2Agent) SetServerName(val *string) {
 	p.ServerName = val
 }
@@ -8993,11 +9044,26 @@ func (p *A2Agent) SetCluster(val *string) {
 }
 
 var fieldIDToName_A2Agent = map[int16]string{
-	1:  "server_name",
-	2:  "url",
+	1:  "id",
+	2:  "name",
+	3:  "description",
+	4:  "server_name",
+	5:  "url",
 	20: "exec_region",
 	21: "exec_env",
 	22: "cluster",
+}
+
+func (p *A2Agent) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *A2Agent) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *A2Agent) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 func (p *A2Agent) IsSetServerName() bool {
@@ -9039,7 +9105,7 @@ func (p *A2Agent) Read(iprot thrift.TProtocol) (err error) {
 
 		switch fieldId {
 		case 1:
-			if fieldTypeId == thrift.STRING {
+			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField1(iprot); err != nil {
 					goto ReadFieldError
 				}
@@ -9049,6 +9115,30 @@ func (p *A2Agent) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9109,6 +9199,39 @@ ReadStructEndError:
 
 func (p *A2Agent) ReadField1(iprot thrift.TProtocol) error {
 
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *A2Agent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *A2Agent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *A2Agent) ReadField4(iprot thrift.TProtocol) error {
+
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
 		return err
@@ -9118,7 +9241,7 @@ func (p *A2Agent) ReadField1(iprot thrift.TProtocol) error {
 	p.ServerName = _field
 	return nil
 }
-func (p *A2Agent) ReadField2(iprot thrift.TProtocol) error {
+func (p *A2Agent) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9177,6 +9300,18 @@ func (p *A2Agent) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 2
 			goto WriteFieldError
 		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
 			goto WriteFieldError
@@ -9208,11 +9343,11 @@ WriteStructEndError:
 }
 
 func (p *A2Agent) writeField1(oprot thrift.TProtocol) (err error) {
-	if p.IsSetServerName() {
-		if err = oprot.WriteFieldBegin("server_name", thrift.STRING, 1); err != nil {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.ServerName); err != nil {
+		if err := oprot.WriteI64(*p.ID); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9226,11 +9361,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
 func (p *A2Agent) writeField2(oprot thrift.TProtocol) (err error) {
-	if p.IsSetURL() {
-		if err = oprot.WriteFieldBegin("url", thrift.STRING, 2); err != nil {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.URL); err != nil {
+		if err := oprot.WriteString(*p.Name); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -9242,6 +9377,60 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *A2Agent) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *A2Agent) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetServerName() {
+		if err = oprot.WriteFieldBegin("server_name", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.ServerName); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *A2Agent) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetURL() {
+		if err = oprot.WriteFieldBegin("url", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.URL); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
 func (p *A2Agent) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExecRegion() {
@@ -9312,10 +9501,19 @@ func (p *A2Agent) DeepEqual(ano *A2Agent) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
-	if !p.Field1DeepEqual(ano.ServerName) {
+	if !p.Field1DeepEqual(ano.ID) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.URL) {
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.ServerName) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.URL) {
 		return false
 	}
 	if !p.Field20DeepEqual(ano.ExecRegion) {
@@ -9330,7 +9528,43 @@ func (p *A2Agent) DeepEqual(ano *A2Agent) bool {
 	return true
 }
 
-func (p *A2Agent) Field1DeepEqual(src *string) bool {
+func (p *A2Agent) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *A2Agent) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *A2Agent) Field3DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *A2Agent) Field4DeepEqual(src *string) bool {
 
 	if p.ServerName == src {
 		return true
@@ -9342,7 +9576,7 @@ func (p *A2Agent) Field1DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field2DeepEqual(src *string) bool {
+func (p *A2Agent) Field5DeepEqual(src *string) bool {
 
 	if p.URL == src {
 		return true
@@ -9392,6 +9626,12 @@ func (p *A2Agent) Field22DeepEqual(src *string) bool {
 }
 
 type CustomAgent struct {
+	// 应用ID
+	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
+	// DTO使用，不存数据库
+	Name *string `thrift:"name,2,optional" frugal:"2,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// DTO使用，不存数据库
+	Description *string `thrift:"description,3,optional" frugal:"3,optional,string" form:"description" json:"description,omitempty" query:"description"`
 	// 执行区域
 	ExecRegion *Region `thrift:"exec_region,20,optional" frugal:"20,optional,string" form:"exec_region" json:"exec_region,omitempty" query:"exec_region"`
 	// 执行环境
@@ -9408,6 +9648,42 @@ func NewCustomAgent() *CustomAgent {
 }
 
 func (p *CustomAgent) InitDefault() {
+}
+
+var CustomAgent_ID_DEFAULT int64
+
+func (p *CustomAgent) GetID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetID() {
+		return CustomAgent_ID_DEFAULT
+	}
+	return *p.ID
+}
+
+var CustomAgent_Name_DEFAULT string
+
+func (p *CustomAgent) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return CustomAgent_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var CustomAgent_Description_DEFAULT string
+
+func (p *CustomAgent) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return CustomAgent_Description_DEFAULT
+	}
+	return *p.Description
 }
 
 var CustomAgent_ExecRegion_DEFAULT Region
@@ -9481,6 +9757,15 @@ func (p *CustomAgent) GetAgentConnection() (v *AgentConnection) {
 	}
 	return p.AgentConnection
 }
+func (p *CustomAgent) SetID(val *int64) {
+	p.ID = val
+}
+func (p *CustomAgent) SetName(val *string) {
+	p.Name = val
+}
+func (p *CustomAgent) SetDescription(val *string) {
+	p.Description = val
+}
 func (p *CustomAgent) SetExecRegion(val *Region) {
 	p.ExecRegion = val
 }
@@ -9501,12 +9786,27 @@ func (p *CustomAgent) SetAgentConnection(val *AgentConnection) {
 }
 
 var fieldIDToName_CustomAgent = map[int16]string{
+	1:  "id",
+	2:  "name",
+	3:  "description",
 	20: "exec_region",
 	21: "exec_env",
 	22: "cluster",
 	23: "timeout_ms",
 	24: "first_token_timeout_ms",
 	25: "AgentConnection",
+}
+
+func (p *CustomAgent) IsSetID() bool {
+	return p.ID != nil
+}
+
+func (p *CustomAgent) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *CustomAgent) IsSetDescription() bool {
+	return p.Description != nil
 }
 
 func (p *CustomAgent) IsSetExecRegion() bool {
@@ -9551,6 +9851,30 @@ func (p *CustomAgent) Read(iprot thrift.TProtocol) (err error) {
 		}
 
 		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
 		case 20:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField20(iprot); err != nil {
@@ -9628,6 +9952,39 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
+func (p *CustomAgent) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.ID = _field
+	return nil
+}
+func (p *CustomAgent) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *CustomAgent) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
 func (p *CustomAgent) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *Region
@@ -9698,6 +10055,18 @@ func (p *CustomAgent) Write(oprot thrift.TProtocol) (err error) {
 		goto WriteStructBeginError
 	}
 	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
 		if err = p.writeField20(oprot); err != nil {
 			fieldId = 20
 			goto WriteFieldError
@@ -9740,6 +10109,60 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
+func (p *CustomAgent) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetID() {
+		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.ID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *CustomAgent) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *CustomAgent) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 func (p *CustomAgent) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExecRegion() {
 		if err = oprot.WriteFieldBegin("exec_region", thrift.STRING, 20); err != nil {
@@ -9863,6 +10286,15 @@ func (p *CustomAgent) DeepEqual(ano *CustomAgent) bool {
 	} else if p == nil || ano == nil {
 		return false
 	}
+	if !p.Field1DeepEqual(ano.ID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Description) {
+		return false
+	}
 	if !p.Field20DeepEqual(ano.ExecRegion) {
 		return false
 	}
@@ -9884,6 +10316,42 @@ func (p *CustomAgent) DeepEqual(ano *CustomAgent) bool {
 	return true
 }
 
+func (p *CustomAgent) Field1DeepEqual(src *int64) bool {
+
+	if p.ID == src {
+		return true
+	} else if p.ID == nil || src == nil {
+		return false
+	}
+	if *p.ID != *src {
+		return false
+	}
+	return true
+}
+func (p *CustomAgent) Field2DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *CustomAgent) Field3DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
 func (p *CustomAgent) Field20DeepEqual(src *Region) bool {
 
 	if p.ExecRegion == src {
