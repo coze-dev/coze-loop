@@ -27,10 +27,9 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 		// workspace-specific configs
 		makeConfig(42, "my_bot", "coze_loop", "llm_span"),
 		makeConfig(42, "", "coze_loop", "llm_span"),
-		// default configs (wsID=0, with wildcards)
-		makeConfig(0, "", "*", "llm_span"), // all platform llm_span default
-		makeConfig(0, "", "prompt", "*"),   // prompt platform default
-		makeConfig(0, "", "*", "*"),        // universal fallback
+		// default configs (wsID=0)
+		makeConfig(0, "", "*", "llm_span"),       // all platform llm_span default
+		makeConfig(0, "", "prompt", "root_span"), // prompt root_span default
 	}
 
 	tests := []struct {
@@ -83,19 +82,19 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 			wantSpan:     "llm_span",
 		},
 		{
-			name:         "no ws match, prompt platform -> default prompt, *",
+			name:         "no ws match, prompt + root_span -> default prompt, root_span",
 			configs:      allConfigs,
 			workspaceId:  999,
 			agentName:    "",
 			platformType: "prompt",
-			spanListType: "all_span",
+			spanListType: "root_span",
 			wantWsID:     0,
 			wantAgent:    "",
 			wantPlatform: "prompt",
-			wantSpan:     "*",
+			wantSpan:     "root_span",
 		},
 		{
-			name:         "prompt + llm_span: spanList exact (*,llm_span) wins over platform exact (prompt,*)",
+			name:         "prompt + llm_span: spanList exact (*,llm_span) wins",
 			configs:      allConfigs,
 			workspaceId:  999,
 			agentName:    "",
@@ -105,19 +104,17 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 			wantAgent:    "",
 			wantPlatform: "*",
 			wantSpan:     "llm_span",
-			// score: (*,llm_span) = 0+0+2+0 = 2; (prompt,*) = 0+0+0+1 = 1 -> llm_span wins
 		},
 		{
-			name:         "unknown platform + unknown spanList -> universal fallback",
-			configs:      allConfigs,
+			name: "unknown platform + unknown spanList -> no match",
+			// DB query with platform_type IN ('custom','*') AND span_list_type IN ('custom_span','*')
+			// returns nothing since no universal fallback exists
+			configs:      ColumnExtractConfigs{},
 			workspaceId:  999,
 			agentName:    "",
 			platformType: "custom",
 			spanListType: "custom_span",
-			wantWsID:     0,
-			wantAgent:    "",
-			wantPlatform: "*",
-			wantSpan:     "*",
+			wantNil:      true,
 		},
 		{
 			name:         "empty configs returns nil",
@@ -177,10 +174,10 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 			wantNil:      true,
 		},
 		{
-			name: "ws match + spanList match but agent and platform mismatch -> fallback to universal",
+			name: "ws match + agent and platform mismatch -> fallback to default spanList match",
 			configs: ColumnExtractConfigs{
-				makeConfig(42, "bot_a", "prompt", "llm_span"), // agent mismatch, platform mismatch
-				makeConfig(0, "", "*", "*"),                   // universal fallback
+				makeConfig(42, "bot_a", "prompt", "llm_span"), // agent mismatch
+				makeConfig(0, "", "*", "llm_span"),            // default with spanList match
 			},
 			workspaceId:  42,
 			agentName:    "bot_x",
@@ -189,7 +186,122 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 			wantWsID:     0,
 			wantAgent:    "",
 			wantPlatform: "*",
-			wantSpan:     "*",
+			wantSpan:     "llm_span",
+		},
+		{
+			name: "exact agent wins over empty agent even when empty agent appears first",
+			configs: ColumnExtractConfigs{
+				makeConfig(42, "", "coze_loop", "llm_span"),
+				makeConfig(42, "my_bot", "coze_loop", "llm_span"),
+			},
+			workspaceId:  42,
+			agentName:    "my_bot",
+			platformType: "coze_loop",
+			spanListType: "llm_span",
+			wantWsID:     42,
+			wantAgent:    "my_bot",
+			wantPlatform: "coze_loop",
+			wantSpan:     "llm_span",
+		},
+		{
+			name: "ws match but spanList mismatch -> fallback to default",
+			configs: ColumnExtractConfigs{
+				makeConfig(42, "", "coze_loop", "llm_span"),
+				makeConfig(0, "", "*", "root_span"),
+			},
+			workspaceId:  42,
+			agentName:    "",
+			platformType: "coze_loop",
+			spanListType: "root_span",
+			wantWsID:     0,
+			wantAgent:    "",
+			wantPlatform: "*",
+			wantSpan:     "root_span",
+		},
+		{
+			name: "ws match but platform mismatch -> fallback to default wildcard platform",
+			configs: ColumnExtractConfigs{
+				makeConfig(42, "", "prompt", "llm_span"),
+				makeConfig(0, "", "*", "llm_span"),
+			},
+			workspaceId:  42,
+			agentName:    "",
+			platformType: "coze_loop",
+			spanListType: "llm_span",
+			wantWsID:     0,
+			wantAgent:    "",
+			wantPlatform: "*",
+			wantSpan:     "llm_span",
+		},
+		{
+			name: "fallback: first matching config wins (order dependent)",
+			configs: ColumnExtractConfigs{
+				makeConfig(0, "", "*", "root_span"),
+				makeConfig(0, "", "prompt", "root_span"),
+			},
+			workspaceId:  999,
+			agentName:    "",
+			platformType: "prompt",
+			spanListType: "root_span",
+			wantWsID:     0,
+			wantAgent:    "",
+			wantPlatform: "*",
+			wantSpan:     "root_span",
+		},
+		{
+			name: "fallback: exact platform wins when it appears first",
+			configs: ColumnExtractConfigs{
+				makeConfig(0, "", "prompt", "root_span"),
+				makeConfig(0, "", "*", "root_span"),
+			},
+			workspaceId:  999,
+			agentName:    "",
+			platformType: "prompt",
+			spanListType: "root_span",
+			wantWsID:     0,
+			wantAgent:    "",
+			wantPlatform: "prompt",
+			wantSpan:     "root_span",
+		},
+		{
+			name: "workspaceId=0 matches default configs directly",
+			configs: ColumnExtractConfigs{
+				makeConfig(0, "", "*", "llm_span"),
+				makeConfig(0, "", "prompt", "root_span"),
+			},
+			workspaceId:  0,
+			agentName:    "",
+			platformType: "coze_loop",
+			spanListType: "llm_span",
+			wantWsID:     0,
+			wantAgent:    "",
+			wantPlatform: "*",
+			wantSpan:     "llm_span",
+		},
+		{
+			name: "single config exact match",
+			configs: ColumnExtractConfigs{
+				makeConfig(42, "bot", "coze_loop", "llm_span"),
+			},
+			workspaceId:  42,
+			agentName:    "bot",
+			platformType: "coze_loop",
+			spanListType: "llm_span",
+			wantWsID:     42,
+			wantAgent:    "bot",
+			wantPlatform: "coze_loop",
+			wantSpan:     "llm_span",
+		},
+		{
+			name: "single config no match -> nil",
+			configs: ColumnExtractConfigs{
+				makeConfig(42, "", "coze_loop", "llm_span"),
+			},
+			workspaceId:  42,
+			agentName:    "",
+			platformType: "coze_loop",
+			spanListType: "root_span",
+			wantNil:      true,
 		},
 	}
 
@@ -207,44 +319,6 @@ func TestColumnExtractConfigs_SelectBest(t *testing.T) {
 			require.Equal(t, tt.wantSpan, got.SpanListType)
 		})
 	}
-}
-
-func TestConfigScore(t *testing.T) {
-	cfg := &ColumnExtractConfig{
-		WorkspaceID: 42, AgentName: "bot", PlatformType: "coze_loop", SpanListType: "llm_span",
-	}
-	// Full exact match = 8+4+2+1 = 15
-	require.Equal(t, 15, configScore(cfg, 42, "bot", "coze_loop", "llm_span"))
-
-	// Cross-workspace = -1
-	require.Equal(t, -1, configScore(cfg, 999, "bot", "coze_loop", "llm_span"))
-
-	// Agent mismatch (non-empty agent in config, different query agent) = -1
-	require.Equal(t, -1, configScore(cfg, 42, "other", "coze_loop", "llm_span"))
-
-	// Default ws=0, wildcard platform/span
-	defaultCfg := &ColumnExtractConfig{
-		WorkspaceID: 0, AgentName: "", PlatformType: "*", SpanListType: "*",
-	}
-	// score = 0 (default ws) + 0 (empty agent) + 0 (wildcard platform) + 0 (wildcard span) = 0
-	require.Equal(t, 0, configScore(defaultCfg, 42, "bot", "coze_loop", "llm_span"))
-
-	// Default ws=0, exact span
-	llmDefault := &ColumnExtractConfig{
-		WorkspaceID: 0, AgentName: "", PlatformType: "*", SpanListType: "llm_span",
-	}
-	// score = 0 + 0 + 2 + 0 = 2
-	require.Equal(t, 2, configScore(llmDefault, 42, "bot", "coze_loop", "llm_span"))
-
-	// Default ws=0, exact platform
-	promptDefault := &ColumnExtractConfig{
-		WorkspaceID: 0, AgentName: "", PlatformType: "prompt", SpanListType: "*",
-	}
-	// score = 0 + 0 + 0 + 1 = 1
-	require.Equal(t, 1, configScore(promptDefault, 42, "", "prompt", "all_span"))
-
-	// Platform mismatch, not wildcard = -1
-	require.Equal(t, -1, configScore(promptDefault, 42, "", "coze_loop", "llm_span"))
 }
 
 func TestColumnExtractConfig_Extract(t *testing.T) {

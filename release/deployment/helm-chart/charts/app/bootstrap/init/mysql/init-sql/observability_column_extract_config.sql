@@ -23,6 +23,5 @@ CREATE TABLE IF NOT EXISTS `observability_column_extract_config`
 INSERT INTO `observability_column_extract_config` (`id`, `workspace_id`, `platform_type`, `span_list_type`, `agent_name`, `config`, `created_by`, `updated_by`)
 VALUES
     (1, 0, '*', 'llm_span', '', '[{"Column":"input","JSONPath":"$.messages[-1:].content"},{"Column":"output","JSONPath":"$.choices[0].message.content"}]', 'system', 'system'),
-    (2, 0, 'prompt', '*', '', '[{"Column":"input","JSONPath":"$.query.Content"},{"Column":"output","JSONPath":"$.choices[0].message.content"}]', 'system', 'system'),
-    (3, 0, '*', '*', '', '[{"Column":"input","JSONPath":"$..content"},{"Column":"output","JSONPath":"$..content"}]', 'system', 'system')
+    (2, 0, 'prompt', 'root_span', '', '[{"Column":"input","JSONPath":"$.query.Content"},{"Column":"output","JSONPath":"$.choices[0].message.content"}]', 'system', 'system')
 ON DUPLICATE KEY UPDATE `id` = `id`;

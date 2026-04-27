@@ -338,7 +338,7 @@ func TestClipProcessor_WithDBConfig(t *testing.T) {
 				{
 					WorkspaceID:  0,
 					PlatformType: "*",
-					SpanListType: "*",
+					SpanListType: string(loop_span.SpanListTypeLLMSpan),
 					Columns: []entity.ColumnExtractRule{
 						{Column: "input", JSONPath: "$..content"},
 						{Column: "output", JSONPath: "$..content"},
@@ -413,7 +413,7 @@ func TestClipProcessor_WithDBConfigLongContent(t *testing.T) {
 			{
 				WorkspaceID:  0,
 				PlatformType: "*",
-				SpanListType: "*",
+				SpanListType: string(loop_span.SpanListTypeLLMSpan),
 				Columns: []entity.ColumnExtractRule{
 					{Column: "input", JSONPath: "$.messages[0].content"},
 				},
@@ -445,7 +445,7 @@ func TestClipProcessor_DefaultConfigSelection(t *testing.T) {
 		WorkspaceID:  0,
 		AgentName:    "",
 		PlatformType: "*",
-		SpanListType: "*",
+		SpanListType: string(loop_span.SpanListTypeLLMSpan),
 		Columns: []entity.ColumnExtractRule{
 			{Column: "input", JSONPath: "$..content"},
 			{Column: "output", JSONPath: "$..content"},
