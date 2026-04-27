@@ -55,9 +55,9 @@ const (
 	EvalTargetType_VolcengineAgentAgentkit EvalTargetType = 7
 	// Web智能体
 	EvalTargetType_WebAgent EvalTargetType = 8
-	// A2A智能体 for内场
-	EvalTargetType_A2Agent EvalTargetType = 9
-	// 自定义智能体 for内场，目前以长链接方式调用
+	// A2A协议智能体
+	EvalTargetType_A2AAgent EvalTargetType = 9
+	// 自定义智能体
 	EvalTargetType_CustomAgent EvalTargetType = 10
 	// CozeBot在线(评测过程中不执行对象，仅用于展示对象)
 	EvalTargetType_CozeBotOnline EvalTargetType = 11
@@ -91,8 +91,8 @@ func (p EvalTargetType) String() string {
 		return "VolcengineAgentAgentkit"
 	case EvalTargetType_WebAgent:
 		return "WebAgent"
-	case EvalTargetType_A2Agent:
-		return "A2Agent"
+	case EvalTargetType_A2AAgent:
+		return "A2AAgent"
 	case EvalTargetType_CustomAgent:
 		return "CustomAgent"
 	case EvalTargetType_CozeBotOnline:
@@ -129,8 +129,8 @@ func EvalTargetTypeFromString(s string) (EvalTargetType, error) {
 		return EvalTargetType_VolcengineAgentAgentkit, nil
 	case "WebAgent":
 		return EvalTargetType_WebAgent, nil
-	case "A2Agent":
-		return EvalTargetType_A2Agent, nil
+	case "A2AAgent":
+		return EvalTargetType_A2AAgent, nil
 	case "CustomAgent":
 		return EvalTargetType_CustomAgent, nil
 	case "CozeBotOnline":
@@ -1497,7 +1497,7 @@ type EvalTargetContent struct {
 	CustomRPCServer *CustomRPCServer `thrift:"custom_rpc_server,105,optional" frugal:"105,optional,CustomRPCServer" form:"custom_rpc_server" json:"custom_rpc_server,omitempty" query:"custom_rpc_server"`
 	// EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
 	WebAgent *WebAgent `thrift:"web_agent,106,optional" frugal:"106,optional,WebAgent" form:"web_agent" json:"web_agent,omitempty" query:"web_agent"`
-	// EvalTargetType=9 时，传参此字段。 评测对象为 A2Agent 时, 需要设置 A2Agent 信息
+	// EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息
 	A2aAgent *A2Agent `thrift:"a2a_agent,107,optional" frugal:"107,optional,A2Agent" form:"a2a_agent" json:"a2a_agent,omitempty" query:"a2a_agent"`
 	// EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
 	CustomAgent *CustomAgent `thrift:"custom_agent,108,optional" frugal:"108,optional,CustomAgent" form:"custom_agent" json:"custom_agent,omitempty" query:"custom_agent"`

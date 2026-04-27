@@ -46,7 +46,7 @@ struct EvalTargetContent {
     105: optional CustomRPCServer custom_rpc_server
     // EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
     106: optional WebAgent web_agent
-    // EvalTargetType=9 时，传参此字段。 评测对象为 A2Agent 时, 需要设置 A2Agent 信息
+    // EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息
     107: optional A2Agent a2a_agent
     // EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
     108: optional CustomAgent custom_agent
@@ -81,8 +81,9 @@ enum EvalTargetType {
 
     VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
     WebAgent = 8 // Web智能体
-    A2Agent = 9 // A2A智能体 for内场
-    CustomAgent = 10 // 自定义智能体 for内场，目前以长链接方式调用
+
+    A2AAgent = 9 // A2A协议智能体
+    CustomAgent = 10 // 自定义智能体
 
     CozeBotOnline = 11 // CozeBot在线(评测过程中不执行对象，仅用于展示对象)
     CozeLoopPromptOnline = 12 // Prompt在线(评测过程中不执行对象，仅用于展示对象)
@@ -90,7 +91,6 @@ enum EvalTargetType {
     VolcengineAgentOnline = 14 // 火山智能体在线(评测过程中不执行对象，仅用于展示对象)
     CustomRPCServerOnline = 15 // 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象)
     VolcengineAgentAgentkitOnline = 16 // 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象)
-
 }
 
 // Agent协议类型
@@ -275,7 +275,6 @@ struct AgentImpl {
     2: optional string framework    // Eino/Langchain
     3: optional string kind         // 用户agent的具体实体类型标识
 }
-
 
 struct EvalTargetRecord  {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')// 评估记录ID
