@@ -186,7 +186,7 @@ func (p *CozeBot) IsValid() error {
 func (p *ModelInfo) IsValid() error {
 	return nil
 }
-func (p *A2Agent) IsValid() error {
+func (p *A2AAgent) IsValid() error {
 	return nil
 }
 func (p *CustomAgent) IsValid() error {

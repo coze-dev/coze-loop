@@ -73,6 +73,12 @@ func EvalTargetVersionDTO2DO(targetVersionDTO *dto.EvalTargetVersion) (targetVer
 		if targetVersionDTO.GetEvalTargetContent().GetWebAgent() != nil {
 			targetVersionDO.WebAgent = WebAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetWebAgent())
 		}
+		if targetVersionDTO.GetEvalTargetContent().GetA2aAgent() != nil {
+			targetVersionDO.A2AAgent = A2AAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetA2aAgent())
+		}
+		if targetVersionDTO.GetEvalTargetContent().GetCustomAgent() != nil {
+			targetVersionDO.CustomAgent = CustomAgentDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomAgent())
+		}
 		targetVersionDO.CustomRPCServer = CustomRPCServerDTO2DO(targetVersionDTO.GetEvalTargetContent().GetCustomRPCServer())
 		targetVersionDO.RuntimeParamDemo = gptr.Of(targetVersionDTO.GetEvalTargetContent().GetRuntimeParamJSONDemo())
 	}
@@ -211,6 +217,22 @@ func EvalTargetVersionDO2DTO(targetVersionDO *do.EvalTargetVersion) (targetVersi
 		}
 		if targetVersionDO.WebAgent != nil {
 			targetVersionDTO.EvalTargetContent.WebAgent = WebAgentDO2DTO(targetVersionDO.WebAgent)
+		}
+	case do.EvalTargetTypeA2AAgent:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.A2AAgent != nil {
+			targetVersionDTO.EvalTargetContent.A2aAgent = A2AAgentDO2DTO(targetVersionDO.A2AAgent)
+		}
+	case do.EvalTargetTypeCustomAgent:
+		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
+			InputSchemas:  make([]*commondto.ArgsSchema, 0),
+			OutputSchemas: make([]*commondto.ArgsSchema, 0),
+		}
+		if targetVersionDO.CustomAgent != nil {
+			targetVersionDTO.EvalTargetContent.CustomAgent = CustomAgentDO2DTO(targetVersionDO.CustomAgent)
 		}
 	default:
 		targetVersionDTO.EvalTargetContent = &dto.EvalTargetContent{
@@ -424,4 +446,146 @@ func CustomEvalTargetDO2DTOs(customEvalTargetDOs []*do.CustomEvalTarget) (custom
 		customEvalTargetDTOs = append(customEvalTargetDTOs, CustomEvalTargetDO2DTO(customEvalTargetDO))
 	}
 	return customEvalTargetDTOs
+}
+
+func A2AAgentDTO2DO(dtoObj *dto.A2AAgent) *do.A2AAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.A2AAgent{
+		ID:          gptr.Indirect(dtoObj.ID),
+		Name:        gptr.Indirect(dtoObj.Name),
+		Description: gptr.Indirect(dtoObj.Description),
+		ServerName:  gptr.Indirect(dtoObj.ServerName),
+		URL:         gptr.Indirect(dtoObj.URL),
+		ExecRegion:  gptr.Indirect(dtoObj.ExecRegion),
+		ExecEnv:     dtoObj.ExecEnv,
+		Cluster:     dtoObj.Cluster,
+	}
+}
+
+func A2AAgentDO2DTO(doObj *do.A2AAgent) *dto.A2AAgent {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.A2AAgent{
+		ID:          gptr.Of(doObj.ID),
+		Name:        gptr.Of(doObj.Name),
+		Description: gptr.Of(doObj.Description),
+		ServerName:  gptr.Of(doObj.ServerName),
+		URL:         gptr.Of(doObj.URL),
+		ExecRegion:  gptr.Of(doObj.ExecRegion),
+		ExecEnv:     doObj.ExecEnv,
+		Cluster:     doObj.Cluster,
+	}
+}
+
+func CustomAgentDTO2DO(dtoObj *dto.CustomAgent) *do.CustomAgent {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.CustomAgent{
+		Name:                gptr.Indirect(dtoObj.Name),
+		Description:         gptr.Indirect(dtoObj.Description),
+		ExecRegion:          gptr.Indirect(dtoObj.ExecRegion),
+		ExecEnv:             dtoObj.ExecEnv,
+		Cluster:             dtoObj.Cluster,
+		TimeoutMs:           dtoObj.TimeoutMs,
+		FirstTokenTimeoutMs: dtoObj.FirstTokenTimeoutMs,
+		AgentConnection:     AgentConnectionDTO2DO(dtoObj.AgentConnection),
+	}
+}
+
+func CustomAgentDO2DTO(doObj *do.CustomAgent) *dto.CustomAgent {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.CustomAgent{
+		Name:                gptr.Of(doObj.Name),
+		Description:         gptr.Of(doObj.Description),
+		ExecRegion:          gptr.Of(doObj.ExecRegion),
+		ExecEnv:             doObj.ExecEnv,
+		Cluster:             doObj.Cluster,
+		TimeoutMs:           doObj.TimeoutMs,
+		FirstTokenTimeoutMs: doObj.FirstTokenTimeoutMs,
+		AgentConnection:     AgentConnectionDO2DTO(doObj.AgentConnection),
+	}
+}
+
+func AgentConnectionDTO2DO(dtoObj *dto.AgentConnection) *do.AgentConnection {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.AgentConnection{
+		FrontierInfo:    FrontierInfoDTO2DO(dtoObj.FrontierInfo),
+		IP:              gptr.Indirect(dtoObj.IP),
+		Region:          gptr.Indirect(dtoObj.Region),
+		IDC:             gptr.Indirect(dtoObj.Idc),
+		SDKVersion:      gptr.Indirect(dtoObj.SdkVersion),
+		ProtocolVersion: gptr.Indirect(dtoObj.ProtocolVersion),
+		PSM:             gptr.Indirect(dtoObj.Psm),
+		AgentImpl:       AgentImplDTO2DO(dtoObj.AgentImpl),
+	}
+}
+
+func AgentConnectionDO2DTO(doObj *do.AgentConnection) *dto.AgentConnection {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.AgentConnection{
+		FrontierInfo:    FrontierInfoDO2DTO(doObj.FrontierInfo),
+		IP:              gptr.Of(doObj.IP),
+		Region:          gptr.Of(doObj.Region),
+		Idc:             gptr.Of(doObj.IDC),
+		SdkVersion:      gptr.Of(doObj.SDKVersion),
+		ProtocolVersion: gptr.Of(doObj.ProtocolVersion),
+		Psm:             gptr.Of(doObj.PSM),
+		AgentImpl:       AgentImplDO2DTO(doObj.AgentImpl),
+	}
+}
+
+func FrontierInfoDTO2DO(dtoObj *dto.FrontierInfo) *do.FrontierInfo {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.FrontierInfo{
+		AppID:     gptr.Indirect(dtoObj.AppID),
+		ProductID: gptr.Indirect(dtoObj.ProductID),
+		UserID:    gptr.Indirect(dtoObj.UserID),
+		DeviceID:  gptr.Indirect(dtoObj.DeviceID),
+	}
+}
+
+func FrontierInfoDO2DTO(doObj *do.FrontierInfo) *dto.FrontierInfo {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.FrontierInfo{
+		AppID:     gptr.Of(doObj.AppID),
+		ProductID: gptr.Of(doObj.ProductID),
+		UserID:    gptr.Of(doObj.UserID),
+		DeviceID:  gptr.Of(doObj.DeviceID),
+	}
+}
+
+func AgentImplDTO2DO(dtoObj *dto.AgentImpl) *do.AgentImpl {
+	if dtoObj == nil {
+		return nil
+	}
+	return &do.AgentImpl{
+		Language:  gptr.Indirect(dtoObj.Language),
+		Framework: gptr.Indirect(dtoObj.Framework),
+		Kind:      gptr.Indirect(dtoObj.Kind),
+	}
+}
+
+func AgentImplDO2DTO(doObj *do.AgentImpl) *dto.AgentImpl {
+	if doObj == nil {
+		return nil
+	}
+	return &dto.AgentImpl{
+		Language:  gptr.Of(doObj.Language),
+		Framework: gptr.Of(doObj.Framework),
+		Kind:      gptr.Of(doObj.Kind),
+	}
 }

@@ -47,7 +47,7 @@ struct EvalTargetContent {
     // EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
     106: optional WebAgent web_agent
     // EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息
-    107: optional A2Agent a2a_agent
+    107: optional A2AAgent a2a_agent
     // EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
     108: optional CustomAgent custom_agent
 }
@@ -234,7 +234,7 @@ enum ModelPlatform {
     MAAS = 2;
 }
 
-struct A2Agent {
+struct A2AAgent {
     1: optional i64 id    // 应用ID
     2: optional string name    // DTO使用，不存数据库
     3: optional string description // DTO使用，不存数据库

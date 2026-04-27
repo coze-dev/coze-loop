@@ -102,7 +102,8 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 		entity.WithCozeBotInfoType(entity.CozeBotInfoType(request.Param.GetBotInfoType())),
 		entity.WithRegion(request.Param.Region),
 		entity.WithEnv(request.Param.Env),
-		entity.WithOperationInstruction(request.Param.OperationInstruction))
+		entity.WithOperationInstruction(request.Param.OperationInstruction),
+		entity.WithCluster(request.Param.Cluster))
 	if request.GetParam().CustomEvalTarget != nil {
 		opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 			ID:        request.GetParam().GetCustomEvalTarget().ID,
@@ -110,6 +111,9 @@ func (e EvalTargetApplicationImpl) CreateEvalTarget(ctx context.Context, request
 			AvatarURL: request.GetParam().GetCustomEvalTarget().AvatarURL,
 			Ext:       request.GetParam().GetCustomEvalTarget().Ext,
 		}))
+	}
+	if request.GetParam().AgentConnection != nil {
+		opts = append(opts, entity.WithAgentConnection(target.AgentConnectionDTO2DO(request.GetParam().AgentConnection)))
 	}
 	id, versionID, err := e.evalTargetService.CreateEvalTarget(ctx, request.WorkspaceID, request.Param.GetSourceTargetID(), request.Param.GetSourceTargetVersion(),
 		entity.EvalTargetType(request.Param.GetEvalTargetType()), opts...)

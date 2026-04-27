@@ -1498,7 +1498,7 @@ type EvalTargetContent struct {
 	// EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
 	WebAgent *WebAgent `thrift:"web_agent,106,optional" frugal:"106,optional,WebAgent" form:"web_agent" json:"web_agent,omitempty" query:"web_agent"`
 	// EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息
-	A2aAgent *A2Agent `thrift:"a2a_agent,107,optional" frugal:"107,optional,A2Agent" form:"a2a_agent" json:"a2a_agent,omitempty" query:"a2a_agent"`
+	A2aAgent *A2AAgent `thrift:"a2a_agent,107,optional" frugal:"107,optional,A2AAgent" form:"a2a_agent" json:"a2a_agent,omitempty" query:"a2a_agent"`
 	// EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
 	CustomAgent *CustomAgent `thrift:"custom_agent,108,optional" frugal:"108,optional,CustomAgent" form:"custom_agent" json:"custom_agent,omitempty" query:"custom_agent"`
 }
@@ -1618,9 +1618,9 @@ func (p *EvalTargetContent) GetWebAgent() (v *WebAgent) {
 	return p.WebAgent
 }
 
-var EvalTargetContent_A2aAgent_DEFAULT *A2Agent
+var EvalTargetContent_A2aAgent_DEFAULT *A2AAgent
 
-func (p *EvalTargetContent) GetA2aAgent() (v *A2Agent) {
+func (p *EvalTargetContent) GetA2aAgent() (v *A2AAgent) {
 	if p == nil {
 		return
 	}
@@ -1668,7 +1668,7 @@ func (p *EvalTargetContent) SetCustomRPCServer(val *CustomRPCServer) {
 func (p *EvalTargetContent) SetWebAgent(val *WebAgent) {
 	p.WebAgent = val
 }
-func (p *EvalTargetContent) SetA2aAgent(val *A2Agent) {
+func (p *EvalTargetContent) SetA2aAgent(val *A2AAgent) {
 	p.A2aAgent = val
 }
 func (p *EvalTargetContent) SetCustomAgent(val *CustomAgent) {
@@ -1974,7 +1974,7 @@ func (p *EvalTargetContent) ReadField106(iprot thrift.TProtocol) error {
 	return nil
 }
 func (p *EvalTargetContent) ReadField107(iprot thrift.TProtocol) error {
-	_field := NewA2Agent()
+	_field := NewA2AAgent()
 	if err := _field.Read(iprot); err != nil {
 		return err
 	}
@@ -2403,7 +2403,7 @@ func (p *EvalTargetContent) Field106DeepEqual(src *WebAgent) bool {
 	}
 	return true
 }
-func (p *EvalTargetContent) Field107DeepEqual(src *A2Agent) bool {
+func (p *EvalTargetContent) Field107DeepEqual(src *A2AAgent) bool {
 
 	if !p.A2aAgent.DeepEqual(src) {
 		return false
@@ -8899,7 +8899,7 @@ func (p *ModelInfo) Field6DeepEqual(src *ModelPlatform) bool {
 	return true
 }
 
-type A2Agent struct {
+type A2AAgent struct {
 	// 应用ID
 	ID *int64 `thrift:"id,1,optional" frugal:"1,optional,i64" form:"id" json:"id,omitempty" query:"id"`
 	// DTO使用，不存数据库
@@ -8916,134 +8916,134 @@ type A2Agent struct {
 	Cluster *string `thrift:"cluster,22,optional" frugal:"22,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 }
 
-func NewA2Agent() *A2Agent {
-	return &A2Agent{}
+func NewA2AAgent() *A2AAgent {
+	return &A2AAgent{}
 }
 
-func (p *A2Agent) InitDefault() {
+func (p *A2AAgent) InitDefault() {
 }
 
-var A2Agent_ID_DEFAULT int64
+var A2AAgent_ID_DEFAULT int64
 
-func (p *A2Agent) GetID() (v int64) {
+func (p *A2AAgent) GetID() (v int64) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetID() {
-		return A2Agent_ID_DEFAULT
+		return A2AAgent_ID_DEFAULT
 	}
 	return *p.ID
 }
 
-var A2Agent_Name_DEFAULT string
+var A2AAgent_Name_DEFAULT string
 
-func (p *A2Agent) GetName() (v string) {
+func (p *A2AAgent) GetName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetName() {
-		return A2Agent_Name_DEFAULT
+		return A2AAgent_Name_DEFAULT
 	}
 	return *p.Name
 }
 
-var A2Agent_Description_DEFAULT string
+var A2AAgent_Description_DEFAULT string
 
-func (p *A2Agent) GetDescription() (v string) {
+func (p *A2AAgent) GetDescription() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetDescription() {
-		return A2Agent_Description_DEFAULT
+		return A2AAgent_Description_DEFAULT
 	}
 	return *p.Description
 }
 
-var A2Agent_ServerName_DEFAULT string
+var A2AAgent_ServerName_DEFAULT string
 
-func (p *A2Agent) GetServerName() (v string) {
+func (p *A2AAgent) GetServerName() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetServerName() {
-		return A2Agent_ServerName_DEFAULT
+		return A2AAgent_ServerName_DEFAULT
 	}
 	return *p.ServerName
 }
 
-var A2Agent_URL_DEFAULT string
+var A2AAgent_URL_DEFAULT string
 
-func (p *A2Agent) GetURL() (v string) {
+func (p *A2AAgent) GetURL() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetURL() {
-		return A2Agent_URL_DEFAULT
+		return A2AAgent_URL_DEFAULT
 	}
 	return *p.URL
 }
 
-var A2Agent_ExecRegion_DEFAULT Region
+var A2AAgent_ExecRegion_DEFAULT Region
 
-func (p *A2Agent) GetExecRegion() (v Region) {
+func (p *A2AAgent) GetExecRegion() (v Region) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetExecRegion() {
-		return A2Agent_ExecRegion_DEFAULT
+		return A2AAgent_ExecRegion_DEFAULT
 	}
 	return *p.ExecRegion
 }
 
-var A2Agent_ExecEnv_DEFAULT string
+var A2AAgent_ExecEnv_DEFAULT string
 
-func (p *A2Agent) GetExecEnv() (v string) {
+func (p *A2AAgent) GetExecEnv() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetExecEnv() {
-		return A2Agent_ExecEnv_DEFAULT
+		return A2AAgent_ExecEnv_DEFAULT
 	}
 	return *p.ExecEnv
 }
 
-var A2Agent_Cluster_DEFAULT string
+var A2AAgent_Cluster_DEFAULT string
 
-func (p *A2Agent) GetCluster() (v string) {
+func (p *A2AAgent) GetCluster() (v string) {
 	if p == nil {
 		return
 	}
 	if !p.IsSetCluster() {
-		return A2Agent_Cluster_DEFAULT
+		return A2AAgent_Cluster_DEFAULT
 	}
 	return *p.Cluster
 }
-func (p *A2Agent) SetID(val *int64) {
+func (p *A2AAgent) SetID(val *int64) {
 	p.ID = val
 }
-func (p *A2Agent) SetName(val *string) {
+func (p *A2AAgent) SetName(val *string) {
 	p.Name = val
 }
-func (p *A2Agent) SetDescription(val *string) {
+func (p *A2AAgent) SetDescription(val *string) {
 	p.Description = val
 }
-func (p *A2Agent) SetServerName(val *string) {
+func (p *A2AAgent) SetServerName(val *string) {
 	p.ServerName = val
 }
-func (p *A2Agent) SetURL(val *string) {
+func (p *A2AAgent) SetURL(val *string) {
 	p.URL = val
 }
-func (p *A2Agent) SetExecRegion(val *Region) {
+func (p *A2AAgent) SetExecRegion(val *Region) {
 	p.ExecRegion = val
 }
-func (p *A2Agent) SetExecEnv(val *string) {
+func (p *A2AAgent) SetExecEnv(val *string) {
 	p.ExecEnv = val
 }
-func (p *A2Agent) SetCluster(val *string) {
+func (p *A2AAgent) SetCluster(val *string) {
 	p.Cluster = val
 }
 
-var fieldIDToName_A2Agent = map[int16]string{
+var fieldIDToName_A2AAgent = map[int16]string{
 	1:  "id",
 	2:  "name",
 	3:  "description",
@@ -9054,39 +9054,39 @@ var fieldIDToName_A2Agent = map[int16]string{
 	22: "cluster",
 }
 
-func (p *A2Agent) IsSetID() bool {
+func (p *A2AAgent) IsSetID() bool {
 	return p.ID != nil
 }
 
-func (p *A2Agent) IsSetName() bool {
+func (p *A2AAgent) IsSetName() bool {
 	return p.Name != nil
 }
 
-func (p *A2Agent) IsSetDescription() bool {
+func (p *A2AAgent) IsSetDescription() bool {
 	return p.Description != nil
 }
 
-func (p *A2Agent) IsSetServerName() bool {
+func (p *A2AAgent) IsSetServerName() bool {
 	return p.ServerName != nil
 }
 
-func (p *A2Agent) IsSetURL() bool {
+func (p *A2AAgent) IsSetURL() bool {
 	return p.URL != nil
 }
 
-func (p *A2Agent) IsSetExecRegion() bool {
+func (p *A2AAgent) IsSetExecRegion() bool {
 	return p.ExecRegion != nil
 }
 
-func (p *A2Agent) IsSetExecEnv() bool {
+func (p *A2AAgent) IsSetExecEnv() bool {
 	return p.ExecEnv != nil
 }
 
-func (p *A2Agent) IsSetCluster() bool {
+func (p *A2AAgent) IsSetCluster() bool {
 	return p.Cluster != nil
 }
 
-func (p *A2Agent) Read(iprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) Read(iprot thrift.TProtocol) (err error) {
 	var fieldTypeId thrift.TType
 	var fieldId int16
 
@@ -9187,7 +9187,7 @@ ReadStructBeginError:
 ReadFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_A2Agent[fieldId]), err)
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_A2AAgent[fieldId]), err)
 SkipFieldError:
 	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 
@@ -9197,7 +9197,7 @@ ReadStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
 }
 
-func (p *A2Agent) ReadField1(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField1(iprot thrift.TProtocol) error {
 
 	var _field *int64
 	if v, err := iprot.ReadI64(); err != nil {
@@ -9208,7 +9208,7 @@ func (p *A2Agent) ReadField1(iprot thrift.TProtocol) error {
 	p.ID = _field
 	return nil
 }
-func (p *A2Agent) ReadField2(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField2(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9219,7 +9219,7 @@ func (p *A2Agent) ReadField2(iprot thrift.TProtocol) error {
 	p.Name = _field
 	return nil
 }
-func (p *A2Agent) ReadField3(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField3(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9230,7 +9230,7 @@ func (p *A2Agent) ReadField3(iprot thrift.TProtocol) error {
 	p.Description = _field
 	return nil
 }
-func (p *A2Agent) ReadField4(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField4(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9241,7 +9241,7 @@ func (p *A2Agent) ReadField4(iprot thrift.TProtocol) error {
 	p.ServerName = _field
 	return nil
 }
-func (p *A2Agent) ReadField5(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField5(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9252,7 +9252,7 @@ func (p *A2Agent) ReadField5(iprot thrift.TProtocol) error {
 	p.URL = _field
 	return nil
 }
-func (p *A2Agent) ReadField20(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField20(iprot thrift.TProtocol) error {
 
 	var _field *Region
 	if v, err := iprot.ReadString(); err != nil {
@@ -9263,7 +9263,7 @@ func (p *A2Agent) ReadField20(iprot thrift.TProtocol) error {
 	p.ExecRegion = _field
 	return nil
 }
-func (p *A2Agent) ReadField21(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField21(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9274,7 +9274,7 @@ func (p *A2Agent) ReadField21(iprot thrift.TProtocol) error {
 	p.ExecEnv = _field
 	return nil
 }
-func (p *A2Agent) ReadField22(iprot thrift.TProtocol) error {
+func (p *A2AAgent) ReadField22(iprot thrift.TProtocol) error {
 
 	var _field *string
 	if v, err := iprot.ReadString(); err != nil {
@@ -9286,9 +9286,9 @@ func (p *A2Agent) ReadField22(iprot thrift.TProtocol) error {
 	return nil
 }
 
-func (p *A2Agent) Write(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
-	if err = oprot.WriteStructBegin("A2Agent"); err != nil {
+	if err = oprot.WriteStructBegin("A2AAgent"); err != nil {
 		goto WriteStructBeginError
 	}
 	if p != nil {
@@ -9342,7 +9342,7 @@ WriteStructEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
 }
 
-func (p *A2Agent) writeField1(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField1(oprot thrift.TProtocol) (err error) {
 	if p.IsSetID() {
 		if err = oprot.WriteFieldBegin("id", thrift.I64, 1); err != nil {
 			goto WriteFieldBeginError
@@ -9360,7 +9360,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *A2Agent) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField2(oprot thrift.TProtocol) (err error) {
 	if p.IsSetName() {
 		if err = oprot.WriteFieldBegin("name", thrift.STRING, 2); err != nil {
 			goto WriteFieldBeginError
@@ -9378,7 +9378,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *A2Agent) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField3(oprot thrift.TProtocol) (err error) {
 	if p.IsSetDescription() {
 		if err = oprot.WriteFieldBegin("description", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
@@ -9396,7 +9396,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
-func (p *A2Agent) writeField4(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField4(oprot thrift.TProtocol) (err error) {
 	if p.IsSetServerName() {
 		if err = oprot.WriteFieldBegin("server_name", thrift.STRING, 4); err != nil {
 			goto WriteFieldBeginError
@@ -9414,7 +9414,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
-func (p *A2Agent) writeField5(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField5(oprot thrift.TProtocol) (err error) {
 	if p.IsSetURL() {
 		if err = oprot.WriteFieldBegin("url", thrift.STRING, 5); err != nil {
 			goto WriteFieldBeginError
@@ -9432,7 +9432,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
-func (p *A2Agent) writeField20(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField20(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExecRegion() {
 		if err = oprot.WriteFieldBegin("exec_region", thrift.STRING, 20); err != nil {
 			goto WriteFieldBeginError
@@ -9450,7 +9450,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
 }
-func (p *A2Agent) writeField21(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField21(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExecEnv() {
 		if err = oprot.WriteFieldBegin("exec_env", thrift.STRING, 21); err != nil {
 			goto WriteFieldBeginError
@@ -9468,7 +9468,7 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
-func (p *A2Agent) writeField22(oprot thrift.TProtocol) (err error) {
+func (p *A2AAgent) writeField22(oprot thrift.TProtocol) (err error) {
 	if p.IsSetCluster() {
 		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 22); err != nil {
 			goto WriteFieldBeginError
@@ -9487,15 +9487,15 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
 }
 
-func (p *A2Agent) String() string {
+func (p *A2AAgent) String() string {
 	if p == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("A2Agent(%+v)", *p)
+	return fmt.Sprintf("A2AAgent(%+v)", *p)
 
 }
 
-func (p *A2Agent) DeepEqual(ano *A2Agent) bool {
+func (p *A2AAgent) DeepEqual(ano *A2AAgent) bool {
 	if p == ano {
 		return true
 	} else if p == nil || ano == nil {
@@ -9528,7 +9528,7 @@ func (p *A2Agent) DeepEqual(ano *A2Agent) bool {
 	return true
 }
 
-func (p *A2Agent) Field1DeepEqual(src *int64) bool {
+func (p *A2AAgent) Field1DeepEqual(src *int64) bool {
 
 	if p.ID == src {
 		return true
@@ -9540,7 +9540,7 @@ func (p *A2Agent) Field1DeepEqual(src *int64) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field2DeepEqual(src *string) bool {
+func (p *A2AAgent) Field2DeepEqual(src *string) bool {
 
 	if p.Name == src {
 		return true
@@ -9552,7 +9552,7 @@ func (p *A2Agent) Field2DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field3DeepEqual(src *string) bool {
+func (p *A2AAgent) Field3DeepEqual(src *string) bool {
 
 	if p.Description == src {
 		return true
@@ -9564,7 +9564,7 @@ func (p *A2Agent) Field3DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field4DeepEqual(src *string) bool {
+func (p *A2AAgent) Field4DeepEqual(src *string) bool {
 
 	if p.ServerName == src {
 		return true
@@ -9576,7 +9576,7 @@ func (p *A2Agent) Field4DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field5DeepEqual(src *string) bool {
+func (p *A2AAgent) Field5DeepEqual(src *string) bool {
 
 	if p.URL == src {
 		return true
@@ -9588,7 +9588,7 @@ func (p *A2Agent) Field5DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field20DeepEqual(src *Region) bool {
+func (p *A2AAgent) Field20DeepEqual(src *Region) bool {
 
 	if p.ExecRegion == src {
 		return true
@@ -9600,7 +9600,7 @@ func (p *A2Agent) Field20DeepEqual(src *Region) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field21DeepEqual(src *string) bool {
+func (p *A2AAgent) Field21DeepEqual(src *string) bool {
 
 	if p.ExecEnv == src {
 		return true
@@ -9612,7 +9612,7 @@ func (p *A2Agent) Field21DeepEqual(src *string) bool {
 	}
 	return true
 }
-func (p *A2Agent) Field22DeepEqual(src *string) bool {
+func (p *A2AAgent) Field22DeepEqual(src *string) bool {
 
 	if p.Cluster == src {
 		return true

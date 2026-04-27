@@ -1134,7 +1134,7 @@ func (p *EvalTargetContent) FastReadField106(buf []byte) (int, error) {
 
 func (p *EvalTargetContent) FastReadField107(buf []byte) (int, error) {
 	offset := 0
-	_field := NewA2Agent()
+	_field := NewA2AAgent()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
 		return offset, err
 	} else {
@@ -1516,9 +1516,9 @@ func (p *EvalTargetContent) DeepCopy(s interface{}) error {
 	}
 	p.WebAgent = _webAgent
 
-	var _a2aAgent *A2Agent
+	var _a2aAgent *A2AAgent
 	if src.A2aAgent != nil {
-		_a2aAgent = &A2Agent{}
+		_a2aAgent = &A2AAgent{}
 		if err := _a2aAgent.DeepCopy(src.A2aAgent); err != nil {
 			return err
 		}
@@ -6175,7 +6175,7 @@ func (p *ModelInfo) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *A2Agent) FastRead(buf []byte) (int, error) {
+func (p *A2AAgent) FastRead(buf []byte) (int, error) {
 
 	var err error
 	var offset int
@@ -6317,12 +6317,12 @@ func (p *A2Agent) FastRead(buf []byte) (int, error) {
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
 ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_A2Agent[fieldId]), err)
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_A2AAgent[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
 }
 
-func (p *A2Agent) FastReadField1(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *int64
@@ -6336,7 +6336,7 @@ func (p *A2Agent) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField2(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6350,7 +6350,7 @@ func (p *A2Agent) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField3(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6364,7 +6364,7 @@ func (p *A2Agent) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField4(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField4(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6378,7 +6378,7 @@ func (p *A2Agent) FastReadField4(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField5(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField5(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6392,7 +6392,7 @@ func (p *A2Agent) FastReadField5(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField20(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField20(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *Region
@@ -6406,7 +6406,7 @@ func (p *A2Agent) FastReadField20(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField21(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField21(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6420,7 +6420,7 @@ func (p *A2Agent) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastReadField22(buf []byte) (int, error) {
+func (p *A2AAgent) FastReadField22(buf []byte) (int, error) {
 	offset := 0
 
 	var _field *string
@@ -6434,11 +6434,11 @@ func (p *A2Agent) FastReadField22(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2Agent) FastWrite(buf []byte) int {
+func (p *A2AAgent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
 
-func (p *A2Agent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
@@ -6454,7 +6454,7 @@ func (p *A2Agent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) BLength() int {
+func (p *A2AAgent) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
@@ -6470,7 +6470,7 @@ func (p *A2Agent) BLength() int {
 	return l
 }
 
-func (p *A2Agent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetID() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
@@ -6479,7 +6479,7 @@ func (p *A2Agent) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
@@ -6488,7 +6488,7 @@ func (p *A2Agent) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetDescription() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
@@ -6497,7 +6497,7 @@ func (p *A2Agent) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetServerName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
@@ -6506,7 +6506,7 @@ func (p *A2Agent) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetURL() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
@@ -6515,7 +6515,7 @@ func (p *A2Agent) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetExecRegion() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 20)
@@ -6524,7 +6524,7 @@ func (p *A2Agent) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetExecEnv() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 21)
@@ -6533,7 +6533,7 @@ func (p *A2Agent) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
+func (p *A2AAgent) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetCluster() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
@@ -6542,7 +6542,7 @@ func (p *A2Agent) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2Agent) field1Length() int {
+func (p *A2AAgent) field1Length() int {
 	l := 0
 	if p.IsSetID() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6551,7 +6551,7 @@ func (p *A2Agent) field1Length() int {
 	return l
 }
 
-func (p *A2Agent) field2Length() int {
+func (p *A2AAgent) field2Length() int {
 	l := 0
 	if p.IsSetName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6560,7 +6560,7 @@ func (p *A2Agent) field2Length() int {
 	return l
 }
 
-func (p *A2Agent) field3Length() int {
+func (p *A2AAgent) field3Length() int {
 	l := 0
 	if p.IsSetDescription() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6569,7 +6569,7 @@ func (p *A2Agent) field3Length() int {
 	return l
 }
 
-func (p *A2Agent) field4Length() int {
+func (p *A2AAgent) field4Length() int {
 	l := 0
 	if p.IsSetServerName() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6578,7 +6578,7 @@ func (p *A2Agent) field4Length() int {
 	return l
 }
 
-func (p *A2Agent) field5Length() int {
+func (p *A2AAgent) field5Length() int {
 	l := 0
 	if p.IsSetURL() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6587,7 +6587,7 @@ func (p *A2Agent) field5Length() int {
 	return l
 }
 
-func (p *A2Agent) field20Length() int {
+func (p *A2AAgent) field20Length() int {
 	l := 0
 	if p.IsSetExecRegion() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6596,7 +6596,7 @@ func (p *A2Agent) field20Length() int {
 	return l
 }
 
-func (p *A2Agent) field21Length() int {
+func (p *A2AAgent) field21Length() int {
 	l := 0
 	if p.IsSetExecEnv() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6605,7 +6605,7 @@ func (p *A2Agent) field21Length() int {
 	return l
 }
 
-func (p *A2Agent) field22Length() int {
+func (p *A2AAgent) field22Length() int {
 	l := 0
 	if p.IsSetCluster() {
 		l += thrift.Binary.FieldBeginLength()
@@ -6614,8 +6614,8 @@ func (p *A2Agent) field22Length() int {
 	return l
 }
 
-func (p *A2Agent) DeepCopy(s interface{}) error {
-	src, ok := s.(*A2Agent)
+func (p *A2AAgent) DeepCopy(s interface{}) error {
+	src, ok := s.(*A2AAgent)
 	if !ok {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}

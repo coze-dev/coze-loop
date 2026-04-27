@@ -132,6 +132,8 @@ type Opt struct {
 	Region               *Region
 	Env                  *string
 	OperationInstruction *string
+	Cluster              *string
+	AgentConnection      *AgentConnection
 }
 
 func WithCozeBotPublishVersion(publishVersion *string) Option {
@@ -167,6 +169,18 @@ func WithEnv(env *string) Option {
 func WithOperationInstruction(operationInstruction *string) Option {
 	return func(option *Opt) {
 		option.OperationInstruction = operationInstruction
+	}
+}
+
+func WithCluster(cluster *string) Option {
+	return func(option *Opt) {
+		option.Cluster = cluster
+	}
+}
+
+func WithAgentConnection(agentConnection *AgentConnection) Option {
+	return func(option *Opt) {
+		option.AgentConnection = agentConnection
 	}
 }
 

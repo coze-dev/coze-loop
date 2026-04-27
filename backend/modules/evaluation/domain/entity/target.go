@@ -31,7 +31,7 @@ type EvalTargetVersion struct {
 	VolcengineAgent *VolcengineAgent
 	CustomRPCServer *CustomRPCServer
 	WebAgent        *WebAgent
-	A2AAgent        *A2Agent
+	A2AAgent        *A2AAgent
 	CustomAgent     *CustomAgent
 
 	InputSchema      []*ArgsSchema
