@@ -67,7 +67,7 @@ type EvaluatorRecordService interface {
 	// CorrectEvaluatorRecord 创建 evaluator_version 运行结果
 	CorrectEvaluatorRecord(ctx context.Context, evaluatorRecordDO *entity.EvaluatorRecord, correctionDO *entity.Correction) error
 	// GetEvaluatorRecord 按 id 查询单个 evaluator_version 运行结果
-	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error)
+	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error)
 	// BatchGetEvaluatorRecord 按 id 批量查询 evaluator_version 运行结果，withFullContent 为 true 时从 TOS 加载完整内容
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error)
 }
