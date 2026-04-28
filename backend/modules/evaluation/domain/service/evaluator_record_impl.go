@@ -229,8 +229,8 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 	return s.exptTurnResultRepo.UpdateTurnResults(ctx, rec.ExperimentID, itemTurnIDs, rec.SpaceID, updateFields)
 }
 
-func (s *EvaluatorRecordServiceImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
-	return s.evaluatorRecordRepo.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted, opts...)
+func (s *EvaluatorRecordServiceImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error) {
+	return s.evaluatorRecordRepo.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted)
 }
 
 func (s *EvaluatorRecordServiceImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {

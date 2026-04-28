@@ -77,7 +77,11 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 	return evaluatorRecord, nil
 }
 
-func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool, opts ...entity.GetEvaluatorRecordOptionFn) ([]*entity.EvaluatorRecord, error) {
+	opt := &entity.GetEvaluatorRecordOption{}
+	for _, fn := range opts {
+		fn(opt)
+	}
 	const batchSize = 50
 	totalIDs := len(evaluatorRecordIDs)
 	if totalIDs == 0 {
@@ -109,7 +113,7 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 		}
 	}
 
-	if withFullContent && r.recordDataStorage != nil {
+	if withFullContent && !opt.WithoutLoadStorageData && r.recordDataStorage != nil {
 		for _, record := range evaluatorRecords {
 			if record != nil {
 				if err := r.recordDataStorage.LoadEvaluatorRecordData(ctx, record); err != nil {

@@ -71,21 +71,16 @@ func (mr *MockEvaluatorRecordServiceMockRecorder) CorrectEvaluatorRecord(ctx, ev
 }
 
 // GetEvaluatorRecord mocks base method.
-func (m *MockEvaluatorRecordService) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
+func (m *MockEvaluatorRecordService) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{ctx, evaluatorRecordID, includeDeleted}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "GetEvaluatorRecord", varargs...)
+	ret := m.ctrl.Call(m, "GetEvaluatorRecord", ctx, evaluatorRecordID, includeDeleted)
 	ret0, _ := ret[0].(*entity.EvaluatorRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetEvaluatorRecord indicates an expected call of GetEvaluatorRecord.
-func (mr *MockEvaluatorRecordServiceMockRecorder) GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted any, opts ...any) *gomock.Call {
+func (mr *MockEvaluatorRecordServiceMockRecorder) GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, evaluatorRecordID, includeDeleted}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordService)(nil).GetEvaluatorRecord), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEvaluatorRecord", reflect.TypeOf((*MockEvaluatorRecordService)(nil).GetEvaluatorRecord), ctx, evaluatorRecordID, includeDeleted)
 }

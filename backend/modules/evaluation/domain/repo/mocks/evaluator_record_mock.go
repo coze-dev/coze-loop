@@ -42,18 +42,23 @@ func (m *MockIEvaluatorRecordRepo) EXPECT() *MockIEvaluatorRecordRepoMockRecorde
 }
 
 // BatchGetEvaluatorRecord mocks base method.
-func (m *MockIEvaluatorRecordRepo) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+func (m *MockIEvaluatorRecordRepo) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool, opts ...entity.GetEvaluatorRecordOptionFn) ([]*entity.EvaluatorRecord, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecord", ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
+	varargs := []any{ctx, evaluatorRecordIDs, includeDeleted, withFullContent}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "BatchGetEvaluatorRecord", varargs...)
 	ret0, _ := ret[0].([]*entity.EvaluatorRecord)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // BatchGetEvaluatorRecord indicates an expected call of BatchGetEvaluatorRecord.
-func (mr *MockIEvaluatorRecordRepoMockRecorder) BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent any) *gomock.Call {
+func (mr *MockIEvaluatorRecordRepoMockRecorder) BatchGetEvaluatorRecord(ctx, evaluatorRecordIDs, includeDeleted, withFullContent any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).BatchGetEvaluatorRecord), ctx, evaluatorRecordIDs, includeDeleted, withFullContent)
+	varargs := append([]any{ctx, evaluatorRecordIDs, includeDeleted, withFullContent}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BatchGetEvaluatorRecord", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).BatchGetEvaluatorRecord), varargs...)
 }
 
 // CorrectEvaluatorRecord mocks base method.
