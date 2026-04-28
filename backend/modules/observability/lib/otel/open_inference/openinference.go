@@ -247,13 +247,24 @@ func AddTools2ModelInput(input interface{}, tools interface{}) (interface{}, err
 			continue
 		}
 
-		var schema struct {
+		type toolSchema struct {
 			Name        string          `json:"name"`
 			Description string          `json:"description"`
 			Parameters  json.RawMessage `json:"parameters"`
 		}
+		var schema toolSchema
 		if err := json.Unmarshal([]byte(schemaStr), &schema); err != nil {
 			continue
+		}
+
+		// If json_schema has an extra "function" wrapper, unwrap it
+		if schema.Name == "" {
+			var wrapper struct {
+				Function toolSchema `json:"function"`
+			}
+			if err := json.Unmarshal([]byte(schemaStr), &wrapper); err == nil && wrapper.Function.Name != "" {
+				schema = wrapper.Function
+			}
 		}
 
 		modelTool := map[string]interface{}{

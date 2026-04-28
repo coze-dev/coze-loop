@@ -480,6 +480,43 @@ func TestAddTools2ModelInput(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "valid tools with function wrapper in json_schema",
+			input: map[string]interface{}{
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":    "user",
+						"content": "What's the weather?",
+					},
+				},
+			},
+			tools: []interface{}{
+				map[string]interface{}{
+					"tool": map[string]interface{}{
+						"json_schema": `{"function": {"name": "get_weather", "description": "Get weather info", "parameters": {"type": "object", "properties": {"location": {"type": "string"}}}}}`,
+					},
+				},
+			},
+			expected: map[string]interface{}{
+				"messages": []interface{}{
+					map[string]interface{}{
+						"role":    "user",
+						"content": "What's the weather?",
+					},
+				},
+				"tools": []interface{}{
+					map[string]interface{}{
+						"type": "function",
+						"function": map[string]interface{}{
+							"name":        "get_weather",
+							"description": "Get weather info",
+							"parameters":  json.RawMessage(`{"type": "object", "properties": {"location": {"type": "string"}}}`),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
 			name: "tool with invalid json schema",
 			input: map[string]interface{}{
 				"messages": []interface{}{
