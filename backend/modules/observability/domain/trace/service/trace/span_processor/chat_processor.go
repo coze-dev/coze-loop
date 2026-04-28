@@ -61,6 +61,10 @@ func (c *ChatProcessor) tryProcessStandardChat(ctx context.Context, inputMap map
 		return "", false
 	}
 	role, _ := lastMsg["role"].(string)
+	if role == "human" {
+		role = "user"
+		lastMsg["role"] = "user"
+	}
 	if role != "user" {
 		return "", true
 	}
@@ -100,6 +104,10 @@ func (c *ChatProcessor) processResponsesAPIMessages(ctx context.Context, inputMa
 	}
 
 	role, _ := lastItem["role"].(string)
+	if role == "human" {
+		role = "user"
+		lastItem["role"] = "user"
+	}
 	if role != "user" {
 		return "", true
 	}
