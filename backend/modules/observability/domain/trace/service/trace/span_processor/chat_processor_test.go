@@ -113,6 +113,21 @@ func TestChatProcessor_StandardChat(t *testing.T) {
 		assert.Equal(t, "", result[0].Input)
 	})
 
+	t.Run("last message is human - treated as user", func(t *testing.T) {
+		input := `{"messages":[{"role":"assistant","content":"Hi"},{"role":"human","content":"Hello from human"}]}`
+		spans := loop_span.SpanList{{SpanType: loop_span.SpanTypeModel, Input: input}}
+		result, err := p.Transform(ctx, spans)
+		require.NoError(t, err)
+
+		var parsed map[string]interface{}
+		require.NoError(t, sonic.UnmarshalString(result[0].Input, &parsed))
+		messages := parsed["messages"].([]interface{})
+		assert.Len(t, messages, 1)
+		msg := messages[0].(map[string]interface{})
+		assert.Equal(t, "user", msg["role"])
+		assert.Equal(t, "Hello from human", msg["content"])
+	})
+
 	t.Run("empty messages array - fallback no_query_parsed", func(t *testing.T) {
 		input := `{"messages":[]}`
 		spans := loop_span.SpanList{{SpanType: loop_span.SpanTypeModel, Input: input}}
@@ -165,6 +180,22 @@ func TestChatProcessor_ResponsesAPI(t *testing.T) {
 		result, err := p.Transform(ctx, spans)
 		require.NoError(t, err)
 		assert.Equal(t, "", result[0].Input)
+	})
+
+	t.Run("array input - last is human - treated as user", func(t *testing.T) {
+		input := `{"input":[{"type":"message","role":"assistant","content":"Prev"},{"type":"message","role":"human","content":"Query from human"}],"model":"gpt-4o"}`
+		spans := loop_span.SpanList{{SpanType: loop_span.SpanTypeModel, Input: input}}
+		result, err := p.Transform(ctx, spans)
+		require.NoError(t, err)
+
+		var parsed map[string]interface{}
+		require.NoError(t, sonic.UnmarshalString(result[0].Input, &parsed))
+		assert.Equal(t, "gpt-4o", parsed["model"])
+		items := parsed["input"].([]interface{})
+		assert.Len(t, items, 1)
+		item := items[0].(map[string]interface{})
+		assert.Equal(t, "user", item["role"])
+		assert.Equal(t, "Query from human", item["content"])
 	})
 
 	t.Run("array input - empty array - becomes empty", func(t *testing.T) {
