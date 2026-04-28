@@ -223,6 +223,8 @@ func (s *SpansCkDaoImpl) buildSql(ctx context.Context, param *dao.QueryParam) (*
 		sql := fmt.Sprintf("SELECT * FROM (%s)", strings.Join(queries, " UNION ALL "))
 		if param.OrderByStartTime {
 			sql += " ORDER BY start_time DESC, span_id DESC"
+		} else if param.AscByStartTime {
+			sql += " ORDER BY start_time ASC, span_id ASC"
 		}
 		if param.Limit >= 0 {
 			sql += fmt.Sprintf(" LIMIT %d", param.Limit)
@@ -250,6 +252,11 @@ func (s *SpansCkDaoImpl) buildSingleSql(ctx context.Context, param *buildSqlPara
 		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
 			{Column: clause.Column{Name: "start_time"}, Desc: true},
 			{Column: clause.Column{Name: "span_id"}, Desc: true},
+		}})
+	} else if param.queryParam.AscByStartTime {
+		sqlQuery = sqlQuery.Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+			{Column: clause.Column{Name: "start_time"}, Desc: false},
+			{Column: clause.Column{Name: "span_id"}, Desc: false},
 		}})
 	}
 	sqlQuery = sqlQuery.Limit(int(param.queryParam.Limit))

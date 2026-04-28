@@ -3,7 +3,6 @@
 
 package entity
 
-// ProcessorScene 定义处理器场景类型
 type ProcessorScene string
 
 const (
@@ -13,4 +12,7 @@ const (
 	SceneIngestTrace     ProcessorScene = "ingest_trace"
 	SceneSearchTraceOApi ProcessorScene = "search_trace_oapi"
 	SceneListSpansOApi   ProcessorScene = "list_spans_oapi"
+	SceneTraceChat       ProcessorScene = "trace_chat"
+	SceneThreadChat      ProcessorScene = "thread_chat"
+	SceneThreadStat      ProcessorScene = "thread_stat"
 )

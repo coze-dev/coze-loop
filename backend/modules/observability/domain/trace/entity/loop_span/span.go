@@ -38,6 +38,7 @@ const (
 	SpanFieldOutput                  = "output"
 	SpanFieldMethod                  = "method"
 	SpanFieldModelProvider           = "model_provider"
+	SpanFieldModelName               = "model_name"
 	SpanFieldInputTokens             = "input_tokens"
 	SpanFieldOutputTokens            = "output_tokens"
 	SpanFieldTokens                  = "tokens"
@@ -57,6 +58,8 @@ const (
 	SpanFieldTenant                  = "tenant"
 	SpanFieldKeyPreviousResponseID   = "previous_response_id"
 	SpanFieldKeyResponseID           = "response_id"
+	SpanFieldThreadId                = "thread_id"
+	SpanFieldError                   = "error"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"
@@ -72,6 +75,7 @@ const (
 	SpanTypeVectorStore     = "vector_store"
 	SpanTypeVectorRetriever = "vector_retriever"
 	SpanTypeAgent           = "agent"
+	SpanTypeTool            = "tool"
 	SpanTypeLLMCall         = "LLMCall"
 
 	SpanStatusSuccess = "success"
@@ -367,6 +371,10 @@ func (s *Span) MergeHistoryContext(ctx context.Context, historySpans []*Span) {
 
 func (s *Span) IsModelSpan() bool {
 	return s.SpanType == SpanTypeModel
+}
+
+func (s *Span) IsToolSpan() bool {
+	return s.SpanType == SpanTypeTool
 }
 
 func (s *Span) getTags() []*Tag {
