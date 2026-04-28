@@ -12,7 +12,7 @@ type SpanStatsEntry struct {
 	PSM           string
 	InCount       int
 	FilteredCount map[string]int
-	OutCount      map[string]int
+	OutCount      map[string]map[string]int
 	spanStatsLock sync.Mutex
 }
 
@@ -22,10 +22,13 @@ func (e *SpanStatsEntry) GetFilteredCount(scene string) int {
 	return e.FilteredCount[scene]
 }
 
-func (e *SpanStatsEntry) GetOutCount(scene string) int {
+func (e *SpanStatsEntry) GetOutCount(scene, step string) int {
 	e.spanStatsLock.Lock()
 	defer e.spanStatsLock.Unlock()
-	return e.OutCount[scene]
+	if e.OutCount[scene] == nil {
+		return 0
+	}
+	return e.OutCount[scene][step]
 }
 
 type SpanStats struct {
@@ -68,7 +71,7 @@ func InjectSpanCounts(ctx context.Context, tds Traces) {
 					Tenant:        tds.Tenant,
 					PSM:           span.PSM,
 					FilteredCount: make(map[string]int),
-					OutCount:      make(map[string]int),
+					OutCount:      make(map[string]map[string]int),
 				}
 				stats.entries[key] = entry
 			}
@@ -92,7 +95,7 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, scene string, count int)
 			Tenant:        tenant,
 			PSM:           psm,
 			FilteredCount: make(map[string]int),
-			OutCount:      make(map[string]int),
+			OutCount:      make(map[string]map[string]int),
 		}
 		stats.entries[key] = entry
 	}
@@ -102,7 +105,7 @@ func AddFilteredSpans(ctx context.Context, tenant, psm, scene string, count int)
 	entry.spanStatsLock.Unlock()
 }
 
-func AddOutCountSpans(ctx context.Context, tenant, psm, scene string, count int) {
+func AddOutCountSpans(ctx context.Context, tenant, psm, scene, step string, count int) {
 	stats := getSpanStats(ctx)
 	if stats == nil {
 		return
@@ -115,13 +118,16 @@ func AddOutCountSpans(ctx context.Context, tenant, psm, scene string, count int)
 			Tenant:        tenant,
 			PSM:           psm,
 			FilteredCount: make(map[string]int),
-			OutCount:      make(map[string]int),
+			OutCount:      make(map[string]map[string]int),
 		}
 		stats.entries[key] = entry
 	}
 	stats.lock.Unlock()
 	entry.spanStatsLock.Lock()
-	entry.OutCount[scene] += count
+	if entry.OutCount[scene] == nil {
+		entry.OutCount[scene] = make(map[string]int)
+	}
+	entry.OutCount[scene][step] += count
 	entry.spanStatsLock.Unlock()
 }
 
