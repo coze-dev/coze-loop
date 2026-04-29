@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/component"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -50,6 +51,7 @@ type Settings struct {
 	ProcessorBuilder *processor.Builder
 	ExporterBuilder  *exporter.Builder
 	PipelineConfig   *Config
+	ConsumeMetric    metrics.Metric
 }
 
 type Service struct {
