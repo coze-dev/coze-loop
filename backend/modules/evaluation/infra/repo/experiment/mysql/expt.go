@@ -249,8 +249,10 @@ func (d *exptDAOImpl) toConditions(f *entity.ExptListFilter, orders []*entity.Or
 		})
 	}
 
-	conditions = append(conditions, condFn("=", "IN", f.Includes)...)
-	conditions = append(conditions, condFn("!=", "NOT IN", f.Excludes)...)
+	if f != nil {
+		conditions = append(conditions, condFn("=", "IN", f.Includes)...)
+		conditions = append(conditions, condFn("!=", "NOT IN", f.Excludes)...)
+	}
 
 	ordered := false
 	for _, orderBy := range orders {
