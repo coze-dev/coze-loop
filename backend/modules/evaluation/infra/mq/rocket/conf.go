@@ -38,6 +38,9 @@ type RMQConf struct {
 
 	AccessKey    *string `json:"access_key" mapstructure:"access_key"`
 	AccessSecret *string `json:"access_secret" mapstructure:"access_secret"`
+
+	DisableConsume *bool `json:"disable_consume" mapstructure:"disable_consume"`
+	DisableProduce *bool `json:"disable_produce" mapstructure:"disable_produce"`
 }
 
 func (c *RMQConf) Valid() bool {
