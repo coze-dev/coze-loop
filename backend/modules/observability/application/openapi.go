@@ -687,6 +687,14 @@ func (o *OpenAPIApplication) SearchTraceTreeOApi(ctx context.Context, req *opena
 		}
 	}()
 
+	if req != nil && req.GetStartTime() == 0 && req.GetEndTime() == 0 && o.timeRange != nil {
+		st, et := o.timeRange.GetTimeRange(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), "", req.GetTraceID(), 1000*60*60*24)
+		if st != nil && et != nil {
+			req.StartTime = st
+			req.EndTime = et
+		}
+	}
+
 	if err = o.validateSearchTraceTreeOApiReq(ctx, req); err != nil {
 		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
 		return nil, err

@@ -176,6 +176,21 @@ func (mr *MockITraceApplicationMockRecorder) GetDisplayInfo(arg0, arg1 any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDisplayInfo", reflect.TypeOf((*MockITraceApplication)(nil).GetDisplayInfo), arg0, arg1)
 }
 
+// GetThreadStat mocks base method.
+func (m *MockITraceApplication) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest) (*trace.GetThreadStatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetThreadStat", ctx, req)
+	ret0, _ := ret[0].(*trace.GetThreadStatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetThreadStat indicates an expected call of GetThreadStat.
+func (mr *MockITraceApplicationMockRecorder) GetThreadStat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetThreadStat", reflect.TypeOf((*MockITraceApplication)(nil).GetThreadStat), ctx, req)
+}
+
 // GetTrace mocks base method.
 func (m *MockITraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequest) (*trace.GetTraceResponse, error) {
 	m.ctrl.T.Helper()
@@ -294,6 +309,36 @@ func (m *MockITraceApplication) ListSpans(ctx context.Context, req *trace.ListSp
 func (mr *MockITraceApplicationMockRecorder) ListSpans(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSpans", reflect.TypeOf((*MockITraceApplication)(nil).ListSpans), ctx, req)
+}
+
+// ListThreadChat mocks base method.
+func (m *MockITraceApplication) ListThreadChat(ctx context.Context, req *trace.ListThreadChatRequest) (*trace.ListThreadChatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListThreadChat", ctx, req)
+	ret0, _ := ret[0].(*trace.ListThreadChatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListThreadChat indicates an expected call of ListThreadChat.
+func (mr *MockITraceApplicationMockRecorder) ListThreadChat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListThreadChat", reflect.TypeOf((*MockITraceApplication)(nil).ListThreadChat), ctx, req)
+}
+
+// ListTraceChat mocks base method.
+func (m *MockITraceApplication) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest) (*trace.ListTraceChatResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListTraceChat", ctx, req)
+	ret0, _ := ret[0].(*trace.ListTraceChatResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListTraceChat indicates an expected call of ListTraceChat.
+func (mr *MockITraceApplicationMockRecorder) ListTraceChat(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTraceChat", reflect.TypeOf((*MockITraceApplication)(nil).ListTraceChat), ctx, req)
 }
 
 // ListTrajectory mocks base method.

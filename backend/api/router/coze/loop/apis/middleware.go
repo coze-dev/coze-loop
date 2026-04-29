@@ -2229,3 +2229,33 @@ func _getevaltargetoutputfieldcontentoapiMw(handler *apis.APIHandler) []app.Hand
 	// your code...
 	return nil
 }
+
+func _threadsMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _getthreadstatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _chatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listthreadchatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _chat0Mw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}
+
+func _listtracechatMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

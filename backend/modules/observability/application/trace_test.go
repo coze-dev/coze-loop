@@ -26,6 +26,8 @@ import (
 	rpcmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	tenantmock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
+	timerangemock "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	domaincommon "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/common"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
@@ -3742,6 +3744,435 @@ func TestTraceApplication_GetAgentMetadata(t *testing.T) {
 				assert.NotNil(t, got)
 				assert.Len(t, got.GetAgents(), tt.wantAgents)
 			}
+		})
+	}
+}
+
+func TestTraceApplication_ListTraceChat(t *testing.T) {
+	type fields struct {
+		traceSvc service.ITraceService
+		auth     rpc.IAuthProvider
+		traceCfg config.ITraceConfig
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ListTraceChatRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ListTraceChatResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListTraceChat(gomock.Any(), gomock.Any()).Return(&service.ListTraceChatResponse{
+					Messages: []*entity.ChatMessage{},
+					HasMore:  false,
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListTraceChatRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want: &trace.ListTraceChatResponse{
+				Messages: []*trace.ChatMessage{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("forbidden"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListTraceChatRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListTraceChat(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListTraceChatRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				traceConfig:  fields.traceCfg,
+			}
+			got, err := tr.ListTraceChat(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_ListThreadChat(t *testing.T) {
+	type fields struct {
+		traceSvc  service.ITraceService
+		auth      rpc.IAuthProvider
+		traceCfg  config.ITraceConfig
+		timeRange time_range.ITimeRangeProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.ListThreadChatRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.ListThreadChatResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListThreadChat(gomock.Any(), gomock.Any()).Return(&service.ListThreadChatResponse{
+					Messages: []*entity.ChatMessage{},
+					HasMore:  false,
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListThreadChatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "thread-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want: &trace.ListThreadChatResponse{
+				Messages: []*trace.ChatMessage{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("forbidden"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListThreadChatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "thread-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListThreadChat(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListThreadChatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "thread-123",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "success with zero times",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockTimeRange := timerangemock.NewMockITimeRangeProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				st := time.Now().Add(-time.Hour).UnixMilli()
+				et := time.Now().UnixMilli()
+				mockTimeRange.EXPECT().GetTimeRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&st, &et)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().ListThreadChat(gomock.Any(), gomock.Any()).Return(&service.ListThreadChatResponse{
+					Messages: []*entity.ChatMessage{},
+					HasMore:  false,
+				}, nil)
+				return fields{
+					traceSvc:  mockSvc,
+					auth:      mockAuth,
+					traceCfg:  mockCfg,
+					timeRange: mockTimeRange,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.ListThreadChatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "thread-123",
+				},
+			},
+			want: &trace.ListThreadChatResponse{
+				Messages: []*trace.ChatMessage{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				traceConfig:  fields.traceCfg,
+				timeRange:    fields.timeRange,
+			}
+			got, err := tr.ListThreadChat(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestTraceApplication_GetThreadStat(t *testing.T) {
+	type fields struct {
+		traceSvc  service.ITraceService
+		auth      rpc.IAuthProvider
+		traceCfg  config.ITraceConfig
+		timeRange time_range.ITimeRangeProvider
+	}
+	type args struct {
+		ctx context.Context
+		req *trace.GetThreadStatRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		want         *trace.GetThreadStatResponse
+		wantErr      bool
+	}{
+		{
+			name: "success case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().GetThreadStat(gomock.Any(), gomock.Any()).Return(&service.GetThreadStatResponse{
+					ThreadID:    "t1",
+					TotalTokens: 100,
+				}, nil)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetThreadStatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "t1",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want: &trace.GetThreadStatResponse{
+				ThreadID:    "t1",
+				StartTime:   ptr.Of(int64(0)),
+				Duration:    ptr.Of(int64(0)),
+				UserID:      ptr.Of(""),
+				TotalTokens: ptr.Of(int64(100)),
+				UsedModels:  nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "permission error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("forbidden"))
+				return fields{
+					auth: mockAuth,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetThreadStatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "t1",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "service error case",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().GetThreadStat(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetThreadStatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "t1",
+					StartTime:   ptr.Of(time.Now().Add(-time.Hour).UnixMilli()),
+					EndTime:     ptr.Of(time.Now().UnixMilli()),
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "success with zero times",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockTimeRange := timerangemock.NewMockITimeRangeProvider(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				st := time.Now().Add(-time.Hour).UnixMilli()
+				et := time.Now().UnixMilli()
+				mockTimeRange.EXPECT().GetTimeRange(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&st, &et)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				mockSvc.EXPECT().GetThreadStat(gomock.Any(), gomock.Any()).Return(&service.GetThreadStatResponse{
+					ThreadID:    "t1",
+					TotalTokens: 200,
+				}, nil)
+				return fields{
+					traceSvc:  mockSvc,
+					auth:      mockAuth,
+					traceCfg:  mockCfg,
+					timeRange: mockTimeRange,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetThreadStatRequest{
+					WorkspaceID: 12,
+					ThreadID:    "t1",
+				},
+			},
+			want: &trace.GetThreadStatResponse{
+				ThreadID:    "t1",
+				StartTime:   ptr.Of(int64(0)),
+				Duration:    ptr.Of(int64(0)),
+				UserID:      ptr.Of(""),
+				TotalTokens: ptr.Of(int64(200)),
+				UsedModels:  nil,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			tr := &TraceApplication{
+				traceService: fields.traceSvc,
+				authSvc:      fields.auth,
+				traceConfig:  fields.traceCfg,
+				timeRange:    fields.timeRange,
+			}
+			got, err := tr.GetThreadStat(tt.args.ctx, tt.args.req)
+			assert.Equal(t, tt.wantErr, err != nil)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
