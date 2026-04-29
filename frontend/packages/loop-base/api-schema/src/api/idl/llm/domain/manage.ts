@@ -101,6 +101,7 @@ export interface ProtocolConfig {
   protocol_config_qianfan?: ProtocolConfigQianfan,
   protocol_config_gemini?: ProtocolConfigGemini,
   protocol_config_arkbot?: ProtocolConfigArkbot,
+  protocol_config_minimax?: ProtocolConfigMiniMax,
 }
 export interface ProtocolConfigArk {
   /** Default: "cn-beijing" */
@@ -153,6 +154,9 @@ export interface ProtocolConfigQianfan {
   parallel_tool_calls?: boolean,
   response_format_type?: string,
   response_format_json_schema?: string,
+}
+export interface ProtocolConfigMiniMax {
+  response_format_type?: string,
 }
 export interface ProtocolConfigArkbot {
   /** Default: "cn-beijing" */
@@ -215,6 +219,7 @@ export enum Protocol {
   protocol_qwen = "qwen",
   protocol_qianfan = "qianfan",
   protocol_arkbot = "arkbot",
+  protocol_minimax = "minimax",
 }
 export enum ParamType {
   param_type_float = "float",
