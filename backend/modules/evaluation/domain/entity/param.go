@@ -377,6 +377,18 @@ func WithoutTupleDeleted() GetExptTupleOptionFn {
 	}
 }
 
+type GetEvaluatorRecordOption struct {
+	WithoutLoadStorageData bool
+}
+
+type GetEvaluatorRecordOptionFn func(*GetEvaluatorRecordOption)
+
+func WithoutLoadStorageData() GetEvaluatorRecordOptionFn {
+	return func(o *GetEvaluatorRecordOption) {
+		o.WithoutLoadStorageData = true
+	}
+}
+
 type BatchGetEvalTargetBySourceParam struct {
 	SpaceID        int64
 	SourceTargetID []string
