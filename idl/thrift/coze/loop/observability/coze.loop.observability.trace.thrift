@@ -451,10 +451,26 @@ struct MetadataItemInfo {
     1: required string key
     2: required span.MetadataValueType value_type
 }
+
 struct ListMetadataResponse {
     1: required list<MetadataItemInfo> metadataItemList ,
 
     255: optional base.BaseResp BaseResp
+}
+
+struct ColumnExtractRule {
+    1: required string column
+    2: required string json_path
+}
+
+struct UpsertColumnExtractConfigRequest {
+    1: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id")
+    2: required common.PlatformType platform_type (api.body="platform_type")
+    3: required common.SpanListType span_list_type (api.body="span_list_type")
+    4: optional string agent_name (api.body="agent_name")
+    5: required list<ColumnExtractRule> columns (api.body="columns")
+
+    255: optional base.Base Base
 }
 
 struct ListTraceChatRequest {
@@ -467,6 +483,19 @@ struct ListTraceChatRequest {
     7: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
     8: optional filter.FilterFields filters (api.body="filters")
     9: optional bool without_detail (go.tag='json:"without_detail,omitempty"', api.body="without_detail")
+
+    255: optional base.Base Base
+}
+
+struct UpsertColumnExtractConfigResponse {
+    255: optional base.BaseResp BaseResp
+}
+
+struct GetColumnExtractConfigRequest {
+    1: optional i64 workspace_id (api.js_conv='true', api.query='workspace_id')
+    2: required common.PlatformType platform_type (api.query='platform_type')
+    3: required common.SpanListType span_list_type (api.query='span_list_type')
+    4: optional string agent_name (api.query='agent_name')
 
     255: optional base.Base Base
 }
@@ -491,12 +520,29 @@ struct ListThreadChatRequest {
     255: optional base.Base Base
 }
 
+struct GetColumnExtractConfigResponse {
+    1: optional list<ColumnExtractRule> columns
+
+    255: optional base.BaseResp BaseResp
+}
+
 struct ListThreadChatResponse {
     1: required list<ChatMessage> messages (go.tag='json:"messages"')
     2: required string next_page_token (go.tag='json:"next_page_token"')
     3: required bool has_more (go.tag='json:"has_more"')
 
     255: optional base.BaseResp BaseResp
+}
+
+struct AgentMetadata {
+    1: required string agent_name
+}
+
+struct GetAgentMetadataRequest {
+    1: required i64 workspace_id (api.js_conv='true', api.query='workspace_id')
+    2: optional common.PlatformType platform_type (api.query='platform_type')
+
+    255: optional base.Base Base
 }
 
 struct GetThreadStatRequest {
@@ -507,6 +553,12 @@ struct GetThreadStatRequest {
     5: optional common.PlatformType platform_type (go.tag='json:"platform_type,omitempty"', api.body="platform_type")
 
     255: optional base.Base Base
+}
+
+struct GetAgentMetadataResponse {
+    1: optional list<AgentMetadata> agents
+
+    255: optional base.BaseResp BaseResp
 }
 
 struct GetThreadStatResponse {
@@ -551,6 +603,9 @@ service TraceService {
     GetTrajectoryConfigResponse GetTrajectoryConfig(1: GetTrajectoryConfigRequest req) (api.get = '/api/observability/v1/traces/trajectory_config')
     ListTrajectoryResponse ListTrajectory(1: ListTrajectoryRequest req) (api.post = '/api/observability/v1/traces/trajectory')
     ListMetadataResponse ListMetadata(1: ListMetadataRequest req) (api.post = '/api/observability/v1/traces/metadata/list')
+    UpsertColumnExtractConfigResponse UpsertColumnExtractConfig(1: UpsertColumnExtractConfigRequest req) (api.post = '/api/observability/v1/column_extract_config')
+    GetColumnExtractConfigResponse GetColumnExtractConfig(1: GetColumnExtractConfigRequest req) (api.get = '/api/observability/v1/column_extract_config')
+    GetAgentMetadataResponse GetAgentMetadata(1: GetAgentMetadataRequest req) (api.get = '/api/observability/v1/trace/agent/metadata')
     ListTraceChatResponse ListTraceChat(1: ListTraceChatRequest req) (api.post = '/api/observability/v1/traces/chat/list')
     ListThreadChatResponse ListThreadChat(1: ListThreadChatRequest req) (api.post = '/api/observability/v1/threads/chat/list')
     GetThreadStatResponse GetThreadStat(1: GetThreadStatRequest req) (api.post = '/api/observability/v1/threads/stat')

@@ -637,6 +637,17 @@ func (p *ListMetadataResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *ColumnExtractRule) IsValid() error {
+	return nil
+}
+func (p *UpsertColumnExtractConfigRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ListTraceChatRequest) IsValid() error {
 	if p.WorkspaceID <= int64(0) {
 		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
@@ -649,6 +660,22 @@ func (p *ListTraceChatRequest) IsValid() error {
 			return fmt.Errorf("field Filters not valid, %w", err)
 		}
 	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *UpsertColumnExtractConfigResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetColumnExtractConfigRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -678,10 +705,29 @@ func (p *ListThreadChatRequest) IsValid() error {
 	}
 	return nil
 }
+func (p *GetColumnExtractConfigResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *ListThreadChatResponse) IsValid() error {
 	if p.BaseResp != nil {
 		if err := p.BaseResp.IsValid(); err != nil {
 			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AgentMetadata) IsValid() error {
+	return nil
+}
+func (p *GetAgentMetadataRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
 		}
 	}
 	return nil
@@ -696,6 +742,14 @@ func (p *GetThreadStatRequest) IsValid() error {
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetAgentMetadataResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
 		}
 	}
 	return nil

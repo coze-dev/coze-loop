@@ -492,6 +492,85 @@ func TestGetJSONPathLevel(t *testing.T) {
 	}
 }
 
+func TestGetLastStringByJSONPath(t *testing.T) {
+	testCases := []struct {
+		name          string
+		data          string
+		jsonpath      string
+		expectedValue string
+		expectedError bool
+	}{
+		{
+			name:          "empty jsonpath returns data",
+			data:          `{"key":"value"}`,
+			jsonpath:      "",
+			expectedValue: `{"key":"value"}`,
+			expectedError: false,
+		},
+		{
+			name:          "recursive descent returns last match from array",
+			data:          `{"items":[{"content":"first"},{"content":"second"}]}`,
+			jsonpath:      "$..content",
+			expectedValue: "second",
+			expectedError: false,
+		},
+		{
+			name:          "single match returns that match",
+			data:          `{"content":"only"}`,
+			jsonpath:      "$..content",
+			expectedValue: "only",
+			expectedError: false,
+		},
+		{
+			name:          "no match returns empty",
+			data:          `{"key":"value"}`,
+			jsonpath:      "$..content",
+			expectedValue: "",
+			expectedError: false,
+		},
+		{
+			name:          "nested JSON string with recursive descent",
+			data:          `{"outer":"{\"content\":\"inner_value\"}"}`,
+			jsonpath:      "$..content",
+			expectedValue: "inner_value",
+			expectedError: false,
+		},
+		{
+			name:          "deeply nested returns last content",
+			data:          `{"messages":[{"content":"hello"},{"content":"world"}]}`,
+			jsonpath:      "$..content",
+			expectedValue: "world",
+			expectedError: false,
+		},
+		{
+			name:          "invalid JSON returns error",
+			data:          "not-json",
+			jsonpath:      "$..content",
+			expectedValue: "",
+			expectedError: true,
+		},
+		{
+			name:          "invalid jsonpath returns error",
+			data:          `{"key":"value"}`,
+			jsonpath:      "$.[invalid",
+			expectedValue: "",
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := GetLastStringByJSONPath(tc.data, tc.jsonpath)
+			if tc.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedValue, result)
+			}
+		})
+	}
+}
+
 func TestRemoveFirstJSONPathLevel(t *testing.T) {
 	cases := []struct {
 		name     string

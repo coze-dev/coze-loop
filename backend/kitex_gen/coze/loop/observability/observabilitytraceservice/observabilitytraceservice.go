@@ -189,6 +189,27 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"UpsertColumnExtractConfig": kitex.NewMethodInfo(
+		upsertColumnExtractConfigHandler,
+		newTraceServiceUpsertColumnExtractConfigArgs,
+		newTraceServiceUpsertColumnExtractConfigResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetColumnExtractConfig": kitex.NewMethodInfo(
+		getColumnExtractConfigHandler,
+		newTraceServiceGetColumnExtractConfigArgs,
+		newTraceServiceGetColumnExtractConfigResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetAgentMetadata": kitex.NewMethodInfo(
+		getAgentMetadataHandler,
+		newTraceServiceGetAgentMetadataArgs,
+		newTraceServiceGetAgentMetadataResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListTraceChat": kitex.NewMethodInfo(
 		listTraceChatHandler,
 		newTraceServiceListTraceChatArgs,
@@ -718,6 +739,63 @@ func newTraceServiceListMetadataResult() interface{} {
 	return trace.NewTraceServiceListMetadataResult()
 }
 
+func upsertColumnExtractConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceUpsertColumnExtractConfigArgs)
+	realResult := result.(*trace.TraceServiceUpsertColumnExtractConfigResult)
+	success, err := handler.(trace.TraceService).UpsertColumnExtractConfig(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceUpsertColumnExtractConfigArgs() interface{} {
+	return trace.NewTraceServiceUpsertColumnExtractConfigArgs()
+}
+
+func newTraceServiceUpsertColumnExtractConfigResult() interface{} {
+	return trace.NewTraceServiceUpsertColumnExtractConfigResult()
+}
+
+func getColumnExtractConfigHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetColumnExtractConfigArgs)
+	realResult := result.(*trace.TraceServiceGetColumnExtractConfigResult)
+	success, err := handler.(trace.TraceService).GetColumnExtractConfig(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetColumnExtractConfigArgs() interface{} {
+	return trace.NewTraceServiceGetColumnExtractConfigArgs()
+}
+
+func newTraceServiceGetColumnExtractConfigResult() interface{} {
+	return trace.NewTraceServiceGetColumnExtractConfigResult()
+}
+
+func getAgentMetadataHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*trace.TraceServiceGetAgentMetadataArgs)
+	realResult := result.(*trace.TraceServiceGetAgentMetadataResult)
+	success, err := handler.(trace.TraceService).GetAgentMetadata(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newTraceServiceGetAgentMetadataArgs() interface{} {
+	return trace.NewTraceServiceGetAgentMetadataArgs()
+}
+
+func newTraceServiceGetAgentMetadataResult() interface{} {
+	return trace.NewTraceServiceGetAgentMetadataResult()
+}
+
 func listTraceChatHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
 	realArg := arg.(*trace.TraceServiceListTraceChatArgs)
 	realResult := result.(*trace.TraceServiceListTraceChatResult)
@@ -1032,6 +1110,36 @@ func (p *kClient) ListMetadata(ctx context.Context, req *trace.ListMetadataReque
 	_args.Req = req
 	var _result trace.TraceServiceListMetadataResult
 	if err = p.c.Call(ctx, "ListMetadata", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest) (r *trace.UpsertColumnExtractConfigResponse, err error) {
+	var _args trace.TraceServiceUpsertColumnExtractConfigArgs
+	_args.Req = req
+	var _result trace.TraceServiceUpsertColumnExtractConfigResult
+	if err = p.c.Call(ctx, "UpsertColumnExtractConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest) (r *trace.GetColumnExtractConfigResponse, err error) {
+	var _args trace.TraceServiceGetColumnExtractConfigArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetColumnExtractConfigResult
+	if err = p.c.Call(ctx, "GetColumnExtractConfig", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest) (r *trace.GetAgentMetadataResponse, err error) {
+	var _args trace.TraceServiceGetAgentMetadataArgs
+	_args.Req = req
+	var _result trace.TraceServiceGetAgentMetadataResult
+	if err = p.c.Call(ctx, "GetAgentMetadata", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

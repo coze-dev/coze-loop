@@ -54,7 +54,7 @@ func GetStringByJSONPath(data, jsonpath string) (string, error) {
 	return ConvertToString(result)
 }
 
-// GetStringByJSONPath 通过 JSONPath 从 JSON 字符串中获取数据，并将结果转换为字符串。会递归解析data中的所有字符串
+// GetStringByJSONPathRecursively 通过 JSONPath 从 JSON 字符串中获取数据，并将结果转换为字符串。会递归解析data中的所有字符串
 func GetStringByJSONPathRecursively(data, jsonpath string) (string, error) {
 	result, err := GetByJSONPath(data, jsonpath, true)
 	if err != nil {
@@ -64,6 +64,31 @@ func GetStringByJSONPathRecursively(data, jsonpath string) (string, error) {
 		return "", nil
 	}
 	return ConvertToString(result)
+}
+
+// GetLastStringByJSONPath 通过 JSONPath 从 JSON 字符串中获取最后一个匹配结果，并将结果转换为字符串。
+// 适用于递归搜索语法（如 $..content）返回多个结果时取最后一个。
+func GetLastStringByJSONPath(data, jsonpath string) (string, error) {
+	if jsonpath == "" {
+		return data, nil
+	}
+
+	obj, err := oj.ParseString(data)
+	if err != nil {
+		return "", err
+	}
+
+	obj = recursiveUnmarshal(obj)
+
+	parser, err := jp.ParseString(jsonpath)
+	if err != nil {
+		return "", err
+	}
+	results := parser.Get(obj)
+	if len(results) == 0 {
+		return "", nil
+	}
+	return ConvertToString(results[len(results)-1])
 }
 
 // ConvertToString 将任意类型转换为字符串

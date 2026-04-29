@@ -35,6 +35,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	filtermocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
@@ -6161,6 +6162,304 @@ func TestTraceServiceImpl_MergeHistoryMessagesByRespIDBatch(t *testing.T) {
 		assert.Equal(t, "user", msg2["role"])
 		assert.Equal(t, "cur", msg2["content"])
 	})
+}
+
+func TestTraceServiceImpl_GetAgentMetadata(t *testing.T) {
+	type fields struct {
+		traceRepo      repo.ITraceRepo
+		tenantProvider tenant.ITenantProvider
+		buildHelper    TraceFilterProcessorBuilder
+	}
+	type args struct {
+		ctx context.Context
+		req *GetAgentMetadataRequest
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		args         args
+		wantAgents   []string
+		wantErr      bool
+	}{
+		{
+			name: "get agent metadata successfully with agent_name",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							SpanID: "span-1",
+							TagsString: map[string]string{
+								"agent_name": "my-agent",
+							},
+						},
+						{
+							SpanID: "span-2",
+							TagsString: map[string]string{
+								"agent_name": "another-agent",
+							},
+						},
+					},
+				}, nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetAgentMetadataRequest{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantAgents: []string{"my-agent", "another-agent"},
+			wantErr:    false,
+		},
+		{
+			name: "get agent metadata with dedup",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						{
+							SpanID: "span-1",
+							TagsString: map[string]string{
+								"agent_name": "agent-a",
+							},
+						},
+						{
+							SpanID: "span-2",
+							TagsString: map[string]string{
+								"agent_name": "agent-a",
+							},
+						},
+						{
+							SpanID: "span-3",
+							TagsString: map[string]string{
+								"agent_name": "agent-b",
+							},
+						},
+					},
+				}, nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetAgentMetadataRequest{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantAgents: []string{"agent-a", "agent-b"},
+			wantErr:    false,
+		},
+		{
+			name: "get agent metadata with nil spans and empty agent name",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(&repo.ListSpansResult{
+					Spans: []*loop_span.Span{
+						nil,
+						{
+							SpanID:     "span-1",
+							TagsString: map[string]string{},
+						},
+						{
+							SpanID:     "span-2",
+							TagsString: nil,
+						},
+					},
+				}, nil)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetAgentMetadataRequest{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantAgents: []string{},
+			wantErr:    false,
+		},
+		{
+			name: "get agent metadata failed due to tenant error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
+				return fields{tenantProvider: tenantProviderMock}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetAgentMetadataRequest{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "get agent metadata failed due to repo error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil)
+				repoMock.EXPECT().ListSpans(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("repo error"))
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				filterFactoryMock.EXPECT().GetFilter(gomock.Any(), gomock.Any()).Return(&span_filter.CozeLoopFilter{}, nil)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{})
+				return fields{traceRepo: repoMock, tenantProvider: tenantProviderMock, buildHelper: buildHelper}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetAgentMetadataRequest{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			r := &TraceServiceImpl{
+				traceRepo:      fields.traceRepo,
+				tenantProvider: fields.tenantProvider,
+				buildHelper:    fields.buildHelper,
+			}
+			got, err := r.GetAgentMetadata(tt.args.ctx, tt.args.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, got)
+				gotNames := make([]string, 0, len(got.Agents))
+				for _, a := range got.Agents {
+					gotNames = append(gotNames, a.AgentName)
+				}
+				assert.ElementsMatch(t, tt.wantAgents, gotNames)
+			}
+		})
+	}
+}
+
+func Test_extractAgentName(t *testing.T) {
+	tests := []struct {
+		name string
+		span *loop_span.Span
+		want string
+	}{
+		{
+			name: "agent_name present",
+			span: &loop_span.Span{
+				TagsString: map[string]string{
+					"agent_name": "my-agent",
+				},
+			},
+			want: "my-agent",
+		},
+		{
+			name: "no agent name",
+			span: &loop_span.Span{
+				TagsString: map[string]string{
+					"other_tag": "value",
+				},
+			},
+			want: "",
+		},
+		{
+			name: "nil tags",
+			span: &loop_span.Span{},
+			want: "",
+		},
+		{
+			name: "empty agent_name",
+			span: &loop_span.Span{
+				TagsString: map[string]string{
+					"agent_name": "",
+				},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractAgentName(tt.span)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func Test_extractAgentNameFromFilters(t *testing.T) {
+	tests := []struct {
+		name    string
+		filters *loop_span.FilterFields
+		want    string
+	}{
+		{
+			name:    "nil filters",
+			filters: nil,
+			want:    "",
+		},
+		{
+			name: "filters with agent_name",
+			filters: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "agent_name",
+						Values:    []string{"my-agent"},
+					},
+				},
+			},
+			want: "my-agent",
+		},
+		{
+			name: "filters without agent name",
+			filters: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "span_type",
+						Values:    []string{"model"},
+					},
+				},
+			},
+			want: "",
+		},
+		{
+			name: "filters with empty agent name values",
+			filters: &loop_span.FilterFields{
+				FilterFields: []*loop_span.FilterField{
+					{
+						FieldName: "agent_name",
+						Values:    []string{},
+					},
+				},
+			},
+			want: "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractAgentNameFromFilters(tt.filters)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 type errorProcessor struct {
