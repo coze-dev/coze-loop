@@ -61,7 +61,7 @@ func (c *RMQConf) ToProducerCfg() mq.ProducerConfig {
 
 func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 	nameSrvAddrs := []string{c.Addr}
-	return mq.ConsumerConfig{
+	cfg := mq.ConsumerConfig{
 		Addr:                 lo.Ternary(len(nameSrvAddrs) > 0, nameSrvAddrs, []string{c.Addr}),
 		Topic:                c.Topic,
 		ConsumerGroup:        c.ConsumerGroup,
@@ -70,4 +70,8 @@ func (c *RMQConf) ToConsumerCfg() mq.ConsumerConfig {
 		AccessKey:            c.AccessKey,
 		AccessSecret:         c.AccessSecret,
 	}
+	if gptr.Indirect(c.DisableConsume) {
+		cfg.IsEnabled = gptr.Of(false)
+	}
+	return cfg
 }
