@@ -308,7 +308,8 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
 			entity.WithEnv(param.CreateEvalTargetParam.Env),
-			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction),
+			entity.WithCluster(param.CreateEvalTargetParam.Cluster))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -316,6 +317,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
 				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
 			}))
+		}
+		if param.CreateEvalTargetParam.AgentConnection != nil {
+			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, sourceTargetID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
@@ -1809,7 +1813,8 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
 			entity.WithEnv(param.CreateEvalTargetParam.Env),
-			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction),
+			entity.WithCluster(param.CreateEvalTargetParam.Cluster))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -1817,6 +1822,9 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
 				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
 			}))
+		}
+		if param.CreateEvalTargetParam.AgentConnection != nil {
+			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
