@@ -144,7 +144,54 @@ func OpenAPICreateEvalTargetParamDTO2Domain(param *openapi.SubmitExperimentEvalT
 		result.CustomEvalTarget = customTarget
 	}
 
+	if param.Cluster != nil {
+		result.Cluster = param.Cluster
+	}
+
+	if param.AgentConnection != nil {
+		result.AgentConnection = openapiAgentConnectionDTO2Domain(param.AgentConnection)
+	}
+
 	return result
+}
+
+func openapiAgentConnectionDTO2Domain(dtoObj *openapiEvalTarget.AgentConnection) *domaindoEvalTarget.AgentConnection {
+	if dtoObj == nil {
+		return nil
+	}
+	return &domaindoEvalTarget.AgentConnection{
+		FrontierInfo:    openapiFrontierInfoDTO2Domain(dtoObj.FrontierInfo),
+		IP:              dtoObj.IP,
+		Region:          dtoObj.Region,
+		Idc:             dtoObj.Idc,
+		SdkVersion:      dtoObj.SdkVersion,
+		ProtocolVersion: dtoObj.ProtocolVersion,
+		Psm:             dtoObj.Psm,
+		AgentImpl:       openapiAgentImplDTO2Domain(dtoObj.AgentImpl),
+	}
+}
+
+func openapiFrontierInfoDTO2Domain(dtoObj *openapiEvalTarget.FrontierInfo) *domaindoEvalTarget.FrontierInfo {
+	if dtoObj == nil {
+		return nil
+	}
+	return &domaindoEvalTarget.FrontierInfo{
+		AppID:     dtoObj.AppID,
+		ProductID: dtoObj.ProductID,
+		UserID:    dtoObj.UserID,
+		DeviceID:  dtoObj.DeviceID,
+	}
+}
+
+func openapiAgentImplDTO2Domain(dtoObj *openapiEvalTarget.AgentImpl) *domaindoEvalTarget.AgentImpl {
+	if dtoObj == nil {
+		return nil
+	}
+	return &domaindoEvalTarget.AgentImpl{
+		Language:  dtoObj.Language,
+		Framework: dtoObj.Framework,
+		Kind:      dtoObj.Kind,
+	}
 }
 
 func ParseOpenAPIEvaluatorVersions(versions []string) ([]int64, error) {
@@ -2414,7 +2461,55 @@ func OpenAPICreateEvalTargetParamDTO2DomainV2(param *openapi.SubmitExperimentEva
 			Ext:       param.CustomEvalTarget.Ext,
 		}
 	}
+
+	if param.Cluster != nil {
+		res.Cluster = param.Cluster
+	}
+
+	if param.AgentConnection != nil {
+		res.AgentConnection = openapiAgentConnectionDTO2DO(param.AgentConnection)
+	}
+
 	return res
+}
+
+func openapiAgentConnectionDTO2DO(dtoObj *openapiEvalTarget.AgentConnection) *entity.AgentConnection {
+	if dtoObj == nil {
+		return nil
+	}
+	return &entity.AgentConnection{
+		FrontierInfo:    openapiFrontierInfoDTO2DO(dtoObj.FrontierInfo),
+		IP:              gptr.Indirect(dtoObj.IP),
+		Region:          gptr.Indirect(dtoObj.Region),
+		IDC:             gptr.Indirect(dtoObj.Idc),
+		SDKVersion:      gptr.Indirect(dtoObj.SdkVersion),
+		ProtocolVersion: gptr.Indirect(dtoObj.ProtocolVersion),
+		PSM:             gptr.Indirect(dtoObj.Psm),
+		AgentImpl:       openapiAgentImplDTO2DO(dtoObj.AgentImpl),
+	}
+}
+
+func openapiFrontierInfoDTO2DO(dtoObj *openapiEvalTarget.FrontierInfo) *entity.FrontierInfo {
+	if dtoObj == nil {
+		return nil
+	}
+	return &entity.FrontierInfo{
+		AppID:     gptr.Indirect(dtoObj.AppID),
+		ProductID: gptr.Indirect(dtoObj.ProductID),
+		UserID:    gptr.Indirect(dtoObj.UserID),
+		DeviceID:  gptr.Indirect(dtoObj.DeviceID),
+	}
+}
+
+func openapiAgentImplDTO2DO(dtoObj *openapiEvalTarget.AgentImpl) *entity.AgentImpl {
+	if dtoObj == nil {
+		return nil
+	}
+	return &entity.AgentImpl{
+		Language:  gptr.Indirect(dtoObj.Language),
+		Framework: gptr.Indirect(dtoObj.Framework),
+		Kind:      gptr.Indirect(dtoObj.Kind),
+	}
 }
 
 func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldMapping, rtp *entity.RuntimeParam) *entity.TargetIngressConf {
