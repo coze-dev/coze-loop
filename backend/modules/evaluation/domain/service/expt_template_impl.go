@@ -28,6 +28,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func NewExptTemplateManager(
@@ -41,6 +42,7 @@ func NewExptTemplateManager(
 	taskRPCAdapter rpc.ITaskRPCAdapter,
 	pipelineRPCAdapter rpc.IPipelineListAdapter,
 	exptRepo repo.IExperimentRepo,
+	scheduleAdapter rpc.IExptScheduleAdapter,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
 		templateRepo:                templateRepo,
@@ -53,6 +55,7 @@ func NewExptTemplateManager(
 		taskRPCAdapter:              taskRPCAdapter,
 		pipelineRPCAdapter:          pipelineRPCAdapter,
 		exptRepo:                    exptRepo,
+		scheduleAdapter:             scheduleAdapter,
 	}
 }
 
@@ -67,6 +70,9 @@ type ExptTemplateManagerImpl struct {
 	taskRPCAdapter              rpc.ITaskRPCAdapter
 	pipelineRPCAdapter          rpc.IPipelineListAdapter
 	exptRepo                    repo.IExperimentRepo
+	// scheduleAdapter SourceType=Evaluation 时通过该适配器把 Scheduler 配置投递到底层调度平台；
+	// 上游可能注入 noop 实现（无 ByteScheduler 依赖时）以便在创建/更新模板的主流程上保持一致语义。
+	scheduleAdapter rpc.IExptScheduleAdapter
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
@@ -188,6 +194,9 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		template.Target = exptTuples[0].Target
 		template.Evaluators = exptTuples[0].Evaluators
 	}
+
+	// 创建模板成功后同步底层调度任务（仅 SourceType=Evaluation 生效）
+	e.syncSchedulerForTemplate(ctx, template)
 
 	return template, nil
 }
@@ -464,6 +473,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		updatedTemplate.Evaluators = exptTuples[0].Evaluators
 	}
 
+	// 更新模板成功后同步底层调度任务，覆盖 Scheduler 启停 / 频率变更 / SourceType 切换等场景
+	e.syncSchedulerForTemplate(ctx, updatedTemplate)
+
 	return updatedTemplate, nil
 }
 
@@ -551,6 +563,11 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 		updatedTemplate.BaseInfo.UpdatedBy = &entity.UserInfo{UserID: gptr.Of(session.UserID)}
 	}
 
+	// CronActivate 翻转后需要同步底层调度任务
+	if param.CronActivate != nil {
+		e.syncSchedulerForTemplate(ctx, updatedTemplate)
+	}
+
 	return updatedTemplate, nil
 }
 
@@ -614,7 +631,16 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 }
 
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
-	return e.templateRepo.Delete(ctx, templateID, spaceID)
+	if err := e.templateRepo.Delete(ctx, templateID, spaceID); err != nil {
+		return err
+	}
+	// 删除模板时关闭底层定时任务，避免残留任务继续触发
+	if e.scheduleAdapter != nil {
+		if cerr := e.scheduleAdapter.CloseJob(ctx, buildScheduleBizKey(spaceID, templateID)); cerr != nil {
+			logs.CtxWarn(ctx, "[expt_template] close schedule job on delete failed, template_id=%d, err=%v", templateID, cerr)
+		}
+	}
+	return nil
 }
 
 func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {

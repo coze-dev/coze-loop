@@ -162,6 +162,7 @@ func InitExperimentApplication(
 	plainLimiterFactory limiter.IPlainRateLimiterFactory,
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	fileClient fileservice.Client,
+	scheduleAdapter rpc.IExptScheduleAdapter,
 ) (IExperimentApplication, error) {
 	wire.Build(
 		experimentSet,
@@ -255,6 +256,7 @@ func InitEvalOpenAPIApplication(
 	trajectoryAdapter rpc.ITrajectoryAdapter,
 	fileClient fileservice.Client,
 	taskClient taskservice.Client,
+	scheduleAdapter rpc.IExptScheduleAdapter,
 ) (IEvalOpenAPIApplication, error) {
 	wire.Build(
 		evalOpenAPISet,

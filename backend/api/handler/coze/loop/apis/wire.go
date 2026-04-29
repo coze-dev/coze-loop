@@ -42,11 +42,13 @@ import (
 	evaluationapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	foundationapp "github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	llmapp "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
+	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_processor "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	promptapp "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -82,6 +84,7 @@ var (
 		NewEvaluationHandler,
 		data.NewDatasetRPCAdapter,
 		prompt.NewPromptRPCAdapter,
+		schedule.ExptScheduleRPCSet,
 		trajectory.TrajectoryRPCSet,
 		evaluationapp.InitExperimentApplication,
 		evaluationapp.InitEvaluatorApplication,
@@ -104,6 +107,7 @@ var (
 		obapp.InitOpenAPIApplication,
 		obapp.InitTaskApplication,
 		obapp.InitMetricApplication,
+		taskhook.NewNoopTaskHookProvider,
 	)
 )
 

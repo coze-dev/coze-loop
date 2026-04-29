@@ -8,7 +8,6 @@ package apis
 
 import (
 	"context"
-
 	"github.com/cloudwego/kitex/pkg/endpoint"
 	"github.com/coze-dev/coze-loop/backend/infra/ck"
 	"github.com/coze-dev/coze-loop/backend/infra/db"
@@ -40,12 +39,13 @@ import (
 	application4 "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/data"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/schedule"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/foundation/application"
 	application3 "github.com/coze-dev/coze-loop/backend/modules/llm/application"
 	application6 "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/storage"
-	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	application2 "github.com/coze-dev/coze-loop/backend/modules/prompt/application"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -139,11 +139,12 @@ func InitEvaluationHandler(ctx context.Context, idgen2 idgen.IIDGenerator, db2 d
 		return nil, err
 	}
 	taskserviceClient := provideTaskClient(taskClientFactory)
-	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient)
+	iExptScheduleAdapter := schedule.NewNoopExptScheduleAdapter()
+	iExperimentApplication, err := application4.InitExperimentApplication(ctx, idgen2, db2, configFactory, mqFactory, cmdable, auditClient, meter, authClient, evaluationSetService, evaluatorService, evalTargetService, userClient, promptClient, pec, client, limiterFactory, llmClient, benefitSvc, ckDb, tagClient, taskserviceClient, objectStorage, batchObjectStorage, plainLimiterFactory, iTrajectoryAdapter, fileClient, iExptScheduleAdapter)
 	if err != nil {
 		return nil, err
 	}
-	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient)
+	evalOpenAPIService, err := application4.InitEvalOpenAPIApplication(ctx, configFactory, mqFactory, cmdable, idgen2, db2, promptClient, pec, authClient, meter, client, userClient, llmClient, tagClient, limiterFactory, objectStorage, batchObjectStorage, auditClient, benefitSvc, ckDb, plainLimiterFactory, iTrajectoryAdapter, fileClient, taskserviceClient, iExptScheduleAdapter)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +183,8 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, taskhook.NewNoopTaskHookProvider())
+	iWorkflowProvider := task.NewNoopTaskHookProvider()
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, iWorkflowProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -207,13 +209,13 @@ var (
 		NewPromptHandler, application2.InitPromptManageApplication, application2.InitToolManageApplication, application2.InitPromptDebugApplication, application2.InitPromptExecuteApplication, application2.InitPromptOpenAPIApplication,
 	)
 	evaluationSet = wire.NewSet(
-		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication, provideTaskClient,
+		NewEvaluationHandler, data.NewDatasetRPCAdapter, prompt.NewPromptRPCAdapter, schedule.ExptScheduleRPCSet, trajectory.TrajectoryRPCSet, application4.InitExperimentApplication, application4.InitEvaluatorApplication, application4.InitEvaluationSetApplication, application4.InitEvalTargetApplication, application4.InitEvalOpenAPIApplication, provideTaskClient,
 	)
 	dataSet = wire.NewSet(
 		NewDataHandler, application5.InitDatasetApplication, application5.InitTagApplication, foundation.NewAuthRPCProvider, conf2.NewConfigerFactory,
 	)
 	observabilitySet = wire.NewSet(
-		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication, application6.InitMetricApplication,
+		NewObservabilityHandler, application6.InitTraceApplication, application6.InitTraceIngestionApplication, application6.InitOpenAPIApplication, application6.InitTaskApplication, application6.InitMetricApplication, task.NewNoopTaskHookProvider,
 	)
 )
 

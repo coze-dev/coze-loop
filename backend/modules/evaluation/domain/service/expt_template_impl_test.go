@@ -97,6 +97,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	mockTaskRPCAdapter := mocks.NewMockITaskRPCAdapter(ctrl)
 	mockPipelineRPCAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
 	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
+	mockScheduleAdapter := mocks.NewMockIExptScheduleAdapter(ctrl)
 
 	mgr := NewExptTemplateManager(
 		mockRepo,
@@ -109,6 +110,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 		mockTaskRPCAdapter,
 		mockPipelineRPCAdapter,
 		mockExptRepo,
+		mockScheduleAdapter,
 	)
 
 	ctx := context.Background()
