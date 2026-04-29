@@ -1206,7 +1206,7 @@ func (e *experimentApplication) BatchGetExperimentResult_(ctx context.Context, r
 	if err := e.transformExtraOutputURIsToURLs(ctx, resp.ItemResults); err != nil {
 		logs.CtxError(ctx, "[BatchGetExperimentResult_] transformExtraOutputURIsToURLs fail, err: %v", err)
 	}
-
+	logs.CtxInfo(ctx, "[BatchGetExperimentResult_] resp: %v", json.Jsonify(resp))
 	return resp, nil
 }
 
