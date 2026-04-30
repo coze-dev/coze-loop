@@ -87,18 +87,18 @@ func (mr *MockIExptTemplateDAOMockRecorder) GetByID(ctx, id any) *gomock.Call {
 }
 
 // GetByName mocks base method.
-func (m *MockIExptTemplateDAO) GetByName(ctx context.Context, name string, spaceID int64) (*model.ExptTemplate, error) {
+func (m *MockIExptTemplateDAO) GetByName(ctx context.Context, name string, spaceID int64, exptType int32) (*model.ExptTemplate, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", ctx, name, spaceID)
+	ret := m.ctrl.Call(m, "GetByName", ctx, name, spaceID, exptType)
 	ret0, _ := ret[0].(*model.ExptTemplate)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByName indicates an expected call of GetByName.
-func (mr *MockIExptTemplateDAOMockRecorder) GetByName(ctx, name, spaceID any) *gomock.Call {
+func (mr *MockIExptTemplateDAOMockRecorder) GetByName(ctx, name, spaceID, exptType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptTemplateDAO)(nil).GetByName), ctx, name, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptTemplateDAO)(nil).GetByName), ctx, name, spaceID, exptType)
 }
 
 // List mocks base method.

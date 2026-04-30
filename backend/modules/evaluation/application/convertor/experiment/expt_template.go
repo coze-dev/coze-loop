@@ -642,11 +642,32 @@ func exptSourceDTO2DO(dto *domain_expt.ExptSource) *entity.ExptSource {
 	if dto == nil {
 		return nil
 	}
+	// 注意：SpanFilterFields / Sampler 由 service 层的 enrichExptSourceFromPipeline
+	// 从 Pipeline.Flow 反填，不应从用户请求 body 接受；此处仅承载 SourceType/SourceID/Scheduler/TimeRange。
 	return &entity.ExptSource{
 		SourceType: entity.SourceType(gptr.Indirect(dto.SourceType)),
 		SourceID:   gptr.Indirect(dto.SourceID),
+		Scheduler:  exptSchedulerDTO2DO(dto.Scheduler),
 		TimeRange:  taskTimeRangeDTO2DO(dto.TimeRange),
 	}
+}
+
+// exptSchedulerDTO2DO 将 domain_expt.Scheduler 转为 entity.ExptSchedulerDO
+func exptSchedulerDTO2DO(dto *domain_expt.Scheduler) *entity.ExptSchedulerDO {
+	if dto == nil {
+		return nil
+	}
+	do := &entity.ExptSchedulerDO{
+		Enabled:   dto.Enabled,
+		TriggerAt: dto.TriggerAt,
+		StartTime: dto.StartTime,
+		EndTime:   dto.EndTime,
+	}
+	if dto.Frequency != nil {
+		f := *dto.Frequency
+		do.Frequency = &f
+	}
+	return do
 }
 
 // ConvertUpdateExptTemplateMetaReq 转换更新实验模板 Meta 请求为实体参数
@@ -1260,6 +1281,10 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	}
 	if req.GetExptInfo() != nil && req.GetExptInfo().IsSetCronActivate() {
 		param.CronActivate = gptr.Of(req.GetExptInfo().GetCronActivate())
+	}
+	// 显式提供 expt_source 时才覆盖；nil 由 service 层保留 DB 中已有值（包括 Scheduler）
+	if req.IsSetExptSource() {
+		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
 	}
 
 	// 从 triple_config 中提取三元组配置（注意：eval_set_id / target_id 不允许修改，仅允许调整版本与配置）

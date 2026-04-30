@@ -814,23 +814,32 @@ func (e *experimentApplication) CheckExperimentTemplateName(ctx context.Context,
 
 	session := entity.NewSession(ctx)
 
-	// 如果传了 template_id，且名称与当前模板名称相同，则直接返回可用
+	// expt_type 用于在线/离线模板隔离判重，优先级：请求显式 -> 已有模板 -> 0（兼容）
+	exptType := entity.ExptType(req.GetExptType())
+
+	// 如果传了 template_id，且名称与当前模板名称相同，则直接返回可用；
+	// 同时用现有模板的 expt_type 兜底未显式传 expt_type 的场景
 	if req.IsSetTemplateID() && req.GetTemplateID() > 0 {
 		tpl, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
 		if err != nil {
 			return nil, err
 		}
-		if tpl != nil && tpl.Meta != nil && tpl.Meta.Name == req.GetName() {
-			isAvailable := true
-			return &expt.CheckExperimentTemplateNameResponse{
-				IsAvailable: &isAvailable,
-				BaseResp:    base.NewBaseResp(),
-			}, nil
+		if tpl != nil && tpl.Meta != nil {
+			if exptType == 0 {
+				exptType = tpl.Meta.ExptType
+			}
+			if tpl.Meta.Name == req.GetName() {
+				isAvailable := true
+				return &expt.CheckExperimentTemplateNameResponse{
+					IsAvailable: &isAvailable,
+					BaseResp:    base.NewBaseResp(),
+				}, nil
+			}
 		}
 	}
 
-	// 否则走正常的重名校验：模板名在该空间下是否已存在
-	pass, err := e.templateManager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
+	// 否则走正常的重名校验：模板名在该空间 + 同 expt_type 下是否已存在
+	pass, err := e.templateManager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), exptType, session)
 	if err != nil {
 		return nil, err
 	}

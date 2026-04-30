@@ -52,6 +52,48 @@ func TestConvertCreateExptTemplateReq_ExptSourceInTemplateConf(t *testing.T) {
 	}
 }
 
+// 回归：exptSourceDTO2DO 必须保留 Scheduler 字段，否则创建/更新接口响应里 Scheduler 会丢失。
+func TestExptSourceDTO2DO_PreservesScheduler(t *testing.T) {
+	t.Parallel()
+
+	dto := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType_Evaluation),
+		SourceID:   gptr.Of("pipe-9"),
+		Scheduler: &domain_expt.Scheduler{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of("every_day"),
+			TriggerAt: gptr.Of(int64(1777392000)),
+			StartTime: gptr.Of(int64(1777452450)),
+			EndTime:   gptr.Of(int64(1777538850)),
+		},
+	}
+
+	do := exptSourceDTO2DO(dto)
+	if assert.NotNil(t, do) && assert.NotNil(t, do.Scheduler) {
+		assert.Equal(t, true, gptr.Indirect(do.Scheduler.Enabled))
+		if assert.NotNil(t, do.Scheduler.Frequency) {
+			assert.Equal(t, "every_day", *do.Scheduler.Frequency)
+		}
+		assert.Equal(t, int64(1777392000), gptr.Indirect(do.Scheduler.TriggerAt))
+		assert.Equal(t, int64(1777452450), gptr.Indirect(do.Scheduler.StartTime))
+		assert.Equal(t, int64(1777538850), gptr.Indirect(do.Scheduler.EndTime))
+	}
+}
+
+// 回归：exptSourceDTO2DO 在 Scheduler 为 nil 时不能 panic 且不写入伪空对象。
+func TestExptSourceDTO2DO_NilScheduler(t *testing.T) {
+	t.Parallel()
+
+	dto := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType_Evaluation),
+		SourceID:   gptr.Of("pipe-9"),
+	}
+	do := exptSourceDTO2DO(dto)
+	if assert.NotNil(t, do) {
+		assert.Nil(t, do.Scheduler)
+	}
+}
+
 func TestBuildTemplateConfForCreate_WithExptSourceOnly(t *testing.T) {
 	t.Parallel()
 

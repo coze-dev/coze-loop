@@ -439,6 +439,8 @@ type UpdateExptTemplateParam struct {
 	ExptType                ExptType
 	CronActivate            *bool // nil 表示不修改
 	CreateEvalTargetParam   *CreateEvalTargetParam
+	// ExptSource 实验来源信息；nil 表示不修改，由 service 层保留 DB 已有值
+	ExptSource *ExptSource
 }
 
 // UpdateExptTemplateMetaParam 更新实验模板 Meta 参数

@@ -75,8 +75,8 @@ type ExptTemplateManagerImpl struct {
 	scheduleAdapter rpc.IExptScheduleAdapter
 }
 
-func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
-	_, exists, err := e.templateRepo.GetByName(ctx, name, spaceID)
+func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
+	_, exists, err := e.templateRepo.GetByName(ctx, name, spaceID, exptType)
 	if err != nil {
 		return false, err
 	}
@@ -84,8 +84,8 @@ func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, sp
 }
 
 func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
-	// 验证名称
-	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+	// 验证名称：按 expt_type 隔离，避免在线/离线模板互相判重
+	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, param.ExptType, session)
 	if !pass {
 		return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 	}
@@ -265,9 +265,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
 	}
 
-	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）
+	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
-		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
 		if !pass {
 			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}
@@ -436,6 +436,15 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		}
 	}
 
+	// 显式传入 expt_source（含 Scheduler 等）时覆盖到 TemplateConf；
+	// 当 templateConf 还未初始化（请求未带字段映射等），克隆现有再写入，避免污染其他字段。
+	if param.ExptSource != nil {
+		if updatedTemplate.TemplateConf == nil {
+			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
 	e.buildFieldMappingConfigAndEnableScoreWeight(updatedTemplate, updatedTemplate.TemplateConf)
 
@@ -489,9 +498,9 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
 	}
 
-	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）
+	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
-		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
 		if !pass {
 			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}

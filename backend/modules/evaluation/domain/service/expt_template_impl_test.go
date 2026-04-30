@@ -62,22 +62,22 @@ func TestExptTemplateManagerImpl_CheckName(t *testing.T) {
 	spaceID := int64(100)
 
 	t.Run("repo error", func(t *testing.T) {
-		mockRepo.EXPECT().GetByName(ctx, "tpl", spaceID).Return(nil, false, errors.New("dao err"))
-		pass, err := mgr.CheckName(ctx, "tpl", spaceID, &entity.Session{})
+		mockRepo.EXPECT().GetByName(ctx, "tpl", spaceID, gomock.Any()).Return(nil, false, errors.New("dao err"))
+		pass, err := mgr.CheckName(ctx, "tpl", spaceID, 0, &entity.Session{})
 		assert.Error(t, err)
 		assert.False(t, pass)
 	})
 
 	t.Run("exists", func(t *testing.T) {
-		mockRepo.EXPECT().GetByName(ctx, "tpl", spaceID).Return(&entity.ExptTemplate{}, true, nil)
-		pass, err := mgr.CheckName(ctx, "tpl", spaceID, &entity.Session{})
+		mockRepo.EXPECT().GetByName(ctx, "tpl", spaceID, gomock.Any()).Return(&entity.ExptTemplate{}, true, nil)
+		pass, err := mgr.CheckName(ctx, "tpl", spaceID, 0, &entity.Session{})
 		assert.NoError(t, err)
 		assert.False(t, pass)
 	})
 
 	t.Run("not exists", func(t *testing.T) {
-		mockRepo.EXPECT().GetByName(ctx, "tpl2", spaceID).Return(nil, false, nil)
-		pass, err := mgr.CheckName(ctx, "tpl2", spaceID, &entity.Session{})
+		mockRepo.EXPECT().GetByName(ctx, "tpl2", spaceID, gomock.Any()).Return(nil, false, nil)
+		pass, err := mgr.CheckName(ctx, "tpl2", spaceID, 0, &entity.Session{})
 		assert.NoError(t, err)
 		assert.True(t, pass)
 	})
@@ -118,7 +118,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	session := &entity.Session{UserID: "u1"}
 
 	// CheckName 返回已存在
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(&entity.ExptTemplate{}, true, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(&entity.ExptTemplate{}, true, nil)
 
 	got, err := mgr.Create(ctx, param, session)
 	assert.Error(t, err)
@@ -160,7 +160,7 @@ func TestExptTemplateManagerImpl_Create_Success(t *testing.T) {
 	session := &entity.Session{UserID: "u1"}
 
 	// CheckName
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	// idgen
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(10001), nil)
 	// mgetExptTupleByID 内部会调用 evaluationSetVersionService / evaluationSetService / evalTargetService / evaluatorService
@@ -535,7 +535,7 @@ func TestExptTemplateManagerImpl_Update_WithCreateEvalTarget(t *testing.T) {
 
 	// CheckName 通过
 	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 
 	// 解析 evaluator_version_id：TemplateConf 中的 EvaluatorConf 需要解析版本ID
 	// 测试数据中 EvaluatorConf 有 EvaluatorID: 1, Version: "v1"，需要返回对应的 evaluator
@@ -1375,7 +1375,7 @@ func TestExptTemplateManagerImpl_Update_NameCheck(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-		mockRepo.EXPECT().GetByName(ctx, "tpl-new", spaceID).Return(nil, true, nil)
+		mockRepo.EXPECT().GetByName(ctx, "tpl-new", spaceID, gomock.Any()).Return(nil, true, nil)
 
 		_, err := mgr.Update(ctx, param, session)
 		assert.Error(t, err)
@@ -1403,7 +1403,7 @@ func TestExptTemplateManagerImpl_Update_NameCheck(t *testing.T) {
 		// 当 GetByName 返回错误时，CheckName 返回 (false, err)
 		// Update 方法先检查 !pass，所以会返回名称已存在的错误，而不是原始错误
 		// 这是当前实现的行为：先检查 !pass，再检查 err
-		mockRepo.EXPECT().GetByName(ctx, "tpl-new", spaceID).Return(nil, false, errors.New("db error"))
+		mockRepo.EXPECT().GetByName(ctx, "tpl-new", spaceID, gomock.Any()).Return(nil, false, errors.New("db error"))
 
 		_, err := mgr.Update(ctx, param, session)
 		assert.Error(t, err)
@@ -1907,7 +1907,7 @@ func TestExptTemplateManagerImpl_UpdateMeta_NilTemplate(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-		mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(nil, true, nil) // 名称已存在
+		mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID, gomock.Any()).Return(nil, true, nil) // 名称已存在
 
 		_, err := mgr.UpdateMeta(ctx, param, session)
 		assert.Error(t, err)
@@ -5002,7 +5002,7 @@ func TestExptTemplateManagerImpl_Create_GenIDError(t *testing.T) {
 	param := newBasicCreateParam()
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(0), errors.New("gen id fail"))
 
 	got, err := mgr.Create(ctx, param, session)
@@ -5035,7 +5035,7 @@ func TestExptTemplateManagerImpl_Create_TemplateConfValidError(t *testing.T) {
 	}
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 
 	got, err := mgr.Create(ctx, param, session)
 	assert.Error(t, err)
@@ -5087,7 +5087,7 @@ func TestExptTemplateManagerImpl_Create_WithCreateEvalTargetParam(t *testing.T) 
 	}
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(10001), nil)
 	mockTargetSvc.EXPECT().CreateEvalTarget(gomock.Any(), param.SpaceID, "src-1", "v1", entity.EvalTargetTypeLoopPrompt, gomock.Any()).Return(int64(20), int64(21), nil)
 	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil)
@@ -5121,7 +5121,7 @@ func TestExptTemplateManagerImpl_Create_RepoCreateError(t *testing.T) {
 	param := newBasicCreateParam()
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(10001), nil)
 	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(errors.New("db error"))
 
@@ -5247,7 +5247,7 @@ func TestExptTemplateManagerImpl_UpdateMeta_WithCronActivate(t *testing.T) {
 		}
 
 		mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-		mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(nil, false, errors.New("db err"))
+		mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID, gomock.Any()).Return(nil, false, errors.New("db err"))
 
 		_, err := mgr.UpdateMeta(ctx, param, session)
 		assert.Error(t, err)
@@ -6912,7 +6912,7 @@ func TestExptTemplateManagerImpl_Create_WithVisibility(t *testing.T) {
 	param.Visibility = &vis
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(10002), nil)
 	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, tpl *entity.ExptTemplate, _ []*entity.ExptTemplateEvaluatorRef) error {
 		// Verify Visibility is set on the created template
@@ -7083,7 +7083,7 @@ func TestExptTemplateManagerImpl_Create_CheckNameError(t *testing.T) {
 	session := &entity.Session{UserID: "u1"}
 
 	// CheckName returns error
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, errors.New("db err"))
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, errors.New("db err"))
 
 	got, err := mgr.Create(ctx, param, session)
 	assert.Error(t, err)
@@ -7131,7 +7131,7 @@ func TestExptTemplateManagerImpl_Create_WithOperationInstruction(t *testing.T) {
 	}
 	session := &entity.Session{UserID: "u1"}
 
-	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID).Return(nil, false, nil)
+	mockRepo.EXPECT().GetByName(ctx, param.Name, param.SpaceID, gomock.Any()).Return(nil, false, nil)
 	mockIdgen.EXPECT().GenID(ctx).Return(int64(10003), nil)
 	mockTargetSvc.EXPECT().CreateEvalTarget(gomock.Any(), param.SpaceID, "src-1", "v1", entity.EvalTargetTypeWebAgent, gomock.Any()).Return(int64(30), int64(31), nil)
 	mockRepo.EXPECT().Create(ctx, gomock.Any(), gomock.Any()).Return(nil)
@@ -7294,7 +7294,7 @@ func TestExptTemplateManagerImpl_UpdateMeta_NameChange_Exists(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(&entity.ExptTemplate{}, true, nil)
+	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID, gomock.Any()).Return(&entity.ExptTemplate{}, true, nil)
 
 	got, err := mgr.UpdateMeta(ctx, param, session)
 	assert.Error(t, err)
@@ -7334,7 +7334,7 @@ func TestExptTemplateManagerImpl_UpdateMeta_NameCheckError(t *testing.T) {
 	}
 
 	mockRepo.EXPECT().GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).Return(existing, nil)
-	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID).Return(nil, false, errors.New("db err"))
+	mockRepo.EXPECT().GetByName(ctx, "new-name", spaceID, gomock.Any()).Return(nil, false, errors.New("db err"))
 
 	got, err := mgr.UpdateMeta(ctx, param, session)
 	assert.Error(t, err)

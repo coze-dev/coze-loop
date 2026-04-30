@@ -42,18 +42,18 @@ func (m *MockIExptTemplateManager) EXPECT() *MockIExptTemplateManagerMockRecorde
 }
 
 // CheckName mocks base method.
-func (m *MockIExptTemplateManager) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
+func (m *MockIExptTemplateManager) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckName", ctx, name, spaceID, session)
+	ret := m.ctrl.Call(m, "CheckName", ctx, name, spaceID, exptType, session)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CheckName indicates an expected call of CheckName.
-func (mr *MockIExptTemplateManagerMockRecorder) CheckName(ctx, name, spaceID, session any) *gomock.Call {
+func (mr *MockIExptTemplateManagerMockRecorder) CheckName(ctx, name, spaceID, exptType, session any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckName", reflect.TypeOf((*MockIExptTemplateManager)(nil).CheckName), ctx, name, spaceID, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckName", reflect.TypeOf((*MockIExptTemplateManager)(nil).CheckName), ctx, name, spaceID, exptType, session)
 }
 
 // Create mocks base method.

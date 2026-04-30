@@ -461,6 +461,9 @@ struct UpdateExperimentTemplateRequest {
     23: optional expt.ExptInfo expt_info (api.body = 'expt_info')
     24: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
+    // 实验来源（含 Scheduler 等配置）；nil 表示不修改，保留 DB 中已有值
+    30: optional expt.ExptSource expt_source (api.body = 'expt_source')
+
     255: optional base.Base Base
 }
 
@@ -503,6 +506,9 @@ struct CheckExperimentTemplateNameRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required string name (api.body='name')
     3: optional i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
+    // 实验类型；在线/离线模板独立判重，未指定时由后端基于 template_id 推导，
+    // 若两者均未提供则跨类型查询以兼容旧调用
+    4: optional expt.ExptType expt_type (api.body='expt_type')
 
     255: optional base.Base Base
 }

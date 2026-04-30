@@ -266,7 +266,7 @@ func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 		{
 			name: "success",
 			mockSetup: func() {
-				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Test Template", int64(100)).Return(&model.ExptTemplate{
+				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Test Template", int64(100), gomock.Any()).Return(&model.ExptTemplate{
 					ID:      1,
 					SpaceID: 100,
 					Name:    "Test Template",
@@ -282,7 +282,7 @@ func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 		{
 			name: "not_found",
 			mockSetup: func() {
-				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Not Found", int64(100)).Return(nil, nil)
+				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Not Found", int64(100), gomock.Any()).Return(nil, nil)
 			},
 			wantErr: false,
 			found:   false,
@@ -291,7 +291,7 @@ func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 		{
 			name: "fail_templateDAO",
 			mockSetup: func() {
-				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Error Template", int64(100)).Return(nil, errors.New("dao error"))
+				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Error Template", int64(100), gomock.Any()).Return(nil, errors.New("dao error"))
 			},
 			wantErr: true,
 			found:   false,
@@ -300,7 +300,7 @@ func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 		{
 			name: "fail_refDAO",
 			mockSetup: func() {
-				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Ref Error", int64(100)).Return(&model.ExptTemplate{
+				mockTemplateDAO.EXPECT().GetByName(gomock.Any(), "Ref Error", int64(100), gomock.Any()).Return(&model.ExptTemplate{
 					ID:      2,
 					SpaceID: 100,
 					Name:    "Ref Error",
@@ -329,7 +329,7 @@ func TestExptTemplateRepoImpl_GetByName(t *testing.T) {
 			default:
 				name = "Test Template"
 			}
-			got, found, err := repo.GetByName(context.Background(), name, tt.spaceID)
+			got, found, err := repo.GetByName(context.Background(), name, tt.spaceID, 0)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, got)

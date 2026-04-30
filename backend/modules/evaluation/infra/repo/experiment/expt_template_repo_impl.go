@@ -87,8 +87,8 @@ func (e *exptTemplateRepoImpl) GetByID(ctx context.Context, id int64, spaceID *i
 	return convert.NewExptTemplateConverter().PO2DO(po, refs)
 }
 
-func (e *exptTemplateRepoImpl) GetByName(ctx context.Context, name string, spaceID int64) (*entity.ExptTemplate, bool, error) {
-	po, err := e.templateDAO.GetByName(ctx, name, spaceID)
+func (e *exptTemplateRepoImpl) GetByName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType) (*entity.ExptTemplate, bool, error) {
+	po, err := e.templateDAO.GetByName(ctx, name, spaceID, int32(exptType))
 	if err != nil {
 		return nil, false, err
 	}
