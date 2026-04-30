@@ -41,6 +41,8 @@ const (
 
 	PlatformTypeTraceDetail = "trace_detail"
 
+	PlatformTypeCozeCoding = "coze_coding"
+
 	SpanListTypeRootSpan = "root_span"
 
 	SpanListTypeAllSpan = "all_span"
