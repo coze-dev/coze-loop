@@ -196,6 +196,10 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 	}
 
 	// 创建模板成功后同步底层调度任务（仅 SourceType=Evaluation 生效）
+	logs.CtxInfo(ctx, "[expt_template_sched] sync after Create, space_id=%d, template_id=%d, has_expt_source=%v, has_scheduler=%v",
+		template.GetSpaceID(), template.GetID(),
+		template.ExptSource != nil,
+		template.ExptSource != nil && template.ExptSource.Scheduler != nil)
 	e.syncSchedulerForTemplate(ctx, template)
 
 	return template, nil
@@ -483,6 +487,10 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	}
 
 	// 更新模板成功后同步底层调度任务，覆盖 Scheduler 启停 / 频率变更 / SourceType 切换等场景
+	logs.CtxInfo(ctx, "[expt_template_sched] sync after Update, space_id=%d, template_id=%d, has_expt_source=%v, has_scheduler=%v",
+		updatedTemplate.GetSpaceID(), updatedTemplate.GetID(),
+		updatedTemplate.ExptSource != nil,
+		updatedTemplate.ExptSource != nil && updatedTemplate.ExptSource.Scheduler != nil)
 	e.syncSchedulerForTemplate(ctx, updatedTemplate)
 
 	return updatedTemplate, nil
@@ -574,6 +582,8 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 
 	// CronActivate 翻转后需要同步底层调度任务
 	if param.CronActivate != nil {
+		logs.CtxInfo(ctx, "[expt_template_sched] sync after UpdateMeta (cron_activate flipped to %v), space_id=%d, template_id=%d",
+			*param.CronActivate, updatedTemplate.GetSpaceID(), updatedTemplate.GetID())
 		e.syncSchedulerForTemplate(ctx, updatedTemplate)
 	}
 
