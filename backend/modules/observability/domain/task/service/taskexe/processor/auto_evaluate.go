@@ -345,7 +345,6 @@ func (p *AutoEvaluateProcessor) OnTaskRunCreated(ctx context.Context, param task
 			if fieldMapping.FieldSchema == nil {
 				continue
 			}
-			logs.CtxInfo(ctx, "Data key fall back: %v", fieldMapping)
 			// 兼容老版 无 evalsetname
 			var evalsetName *string
 			if fieldMapping.EvalSetName == nil || *fieldMapping.EvalSetName == "" {

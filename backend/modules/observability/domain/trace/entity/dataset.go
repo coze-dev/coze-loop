@@ -485,7 +485,6 @@ func GetContentInfo(ctx context.Context, contentType ContentType, value string) 
 			Text:        value,
 		}
 	}
-	logs.CtxInfo(ctx, "Get content info success, content:%v", content)
 	return content, 0
 }
 
