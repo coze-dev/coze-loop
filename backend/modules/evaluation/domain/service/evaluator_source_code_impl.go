@@ -199,6 +199,11 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 	return entity.EvaluatorTypeCode
 }
 
+// ShouldSkip 判断Code评估器是否应跳过本次评估，默认不跳过
+func (c *EvaluatorSourceCodeServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool) {
+	return nil, false
+}
+
 // Run 执行Code评估器
 func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	logs.CtxInfo(ctx, "[Run] Run Code Evaluator input: %v", input)

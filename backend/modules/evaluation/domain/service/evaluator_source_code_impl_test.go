@@ -2582,8 +2582,56 @@ func TestEvaluatorSourceCodeServiceImpl_getMaliciousPatternsForLanguage(t *testi
 			if tt.expectGeneral {
 				for _, pattern := range patterns {
 					assert.Contains(t, pattern.Languages, "general", "General patterns should contain 'general' in languages")
-				}
 			}
+		}
+	})
+}
+}
+
+func TestEvaluatorSourceCodeServiceImpl_ShouldSkip(t *testing.T) {
+	service := &EvaluatorSourceCodeServiceImpl{}
+
+	tests := []struct {
+		name           string
+		evaluator      *entity.Evaluator
+		input          *entity.EvaluatorInputData
+		expectedRecord *entity.EvaluatorRecord
+		expectedSkip   bool
+	}{
+		{
+			name:           "默认不跳过_nil输入",
+			evaluator:      &entity.Evaluator{},
+			input:          nil,
+			expectedRecord: nil,
+			expectedSkip:   false,
+		},
+		{
+			name: "默认不跳过_有输入数据",
+			evaluator: &entity.Evaluator{
+				EvaluatorType: entity.EvaluatorTypeCode,
+			},
+			input: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"code_input": {Text: gptr.Of("print('hello')")},
+				},
+			},
+			expectedRecord: nil,
+			expectedSkip:   false,
+		},
+		{
+			name:           "默认不跳过_空输入数据",
+			evaluator:      &entity.Evaluator{},
+			input:          &entity.EvaluatorInputData{},
+			expectedRecord: nil,
+			expectedSkip:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			record, skip := service.ShouldSkip(context.Background(), tt.evaluator, tt.input)
+			assert.Equal(t, tt.expectedSkip, skip)
+			assert.Equal(t, tt.expectedRecord, record)
 		})
 	}
 }

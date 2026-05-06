@@ -717,6 +717,24 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 	}
 }
 
+// ShouldSkipEvaluator 判断评估器是否应跳过本次评估
+func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, evaluatorVersionID int64, input *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool, error) {
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{evaluatorVersionID}, false, false)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(evaluatorDOList) == 0 {
+		return nil, false, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
+	}
+	evaluatorDO := evaluatorDOList[0]
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
+	if !ok {
+		return nil, false, nil
+	}
+	record, skip := evaluatorSourceService.ShouldSkip(ctx, evaluatorDO, input)
+	return record, skip, nil
+}
+
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)

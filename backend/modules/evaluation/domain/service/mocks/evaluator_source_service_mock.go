@@ -132,6 +132,21 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, eva
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Run), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, disableTracing)
 }
 
+// ShouldSkip mocks base method.
+func (m *MockEvaluatorSourceService) ShouldSkip(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldSkip", ctx, evaluator, input)
+	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// ShouldSkip indicates an expected call of ShouldSkip.
+func (mr *MockEvaluatorSourceServiceMockRecorder) ShouldSkip(ctx, evaluator, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSkip", reflect.TypeOf((*MockEvaluatorSourceService)(nil).ShouldSkip), ctx, evaluator, input)
+}
+
 // Validate mocks base method.
 func (m *MockEvaluatorSourceService) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
 	m.ctrl.T.Helper()
