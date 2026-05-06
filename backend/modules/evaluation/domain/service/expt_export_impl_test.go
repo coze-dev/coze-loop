@@ -1242,6 +1242,13 @@ func Test_toContentStr(t *testing.T) {
 			expected: "图文混合\n<ref_image_url:https://example.com/pic.jpg>\n",
 		},
 		{
+			name: "nil_content_type_but_has_text",
+			input: &entity.Content{
+				Text: ptr.Of("仅有文本未带 ContentType"),
+			},
+			expected: "仅有文本未带 ContentType",
+		},
+		{
 			name: "unknown_content_type",
 			input: &entity.Content{
 				ContentType: ptr.Of(entity.ContentType("999")), // 未定义的内容类型

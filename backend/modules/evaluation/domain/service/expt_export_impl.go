@@ -728,7 +728,19 @@ func (e *exportCSVHelper) toContentStr(ctx context.Context, data *entity.Content
 		return "", nil
 	}
 
-	switch data.GetContentType() {
+	ct := data.GetContentType()
+	// 部分链路反序列化后未设置 ContentType，仅有 Text；此前会落入 default 导致 CSV 整列为空（与 UI 能展示不一致）
+	if ct == "" {
+		if data.Text != nil {
+			return *data.Text, nil
+		}
+		if len(data.MultiPart) > 0 {
+			return formatMultiPartData(data), nil
+		}
+		return "", nil
+	}
+
+	switch ct {
 	case entity.ContentTypeText:
 		return data.GetText(), nil
 	case entity.ContentTypeImage, entity.ContentTypeAudio:
