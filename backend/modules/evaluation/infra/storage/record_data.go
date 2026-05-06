@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"sort"
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/google/uuid"
@@ -115,6 +116,17 @@ func (s *RecordDataStorage) LoadEvalTargetOutputFields(ctx context.Context, reco
 	keySet := make(map[string]struct{}, len(fieldKeys))
 	for _, k := range fieldKeys {
 		keySet[k] = struct{}{}
+	}
+	var missingKeys []string
+	for k := range keySet {
+		if _, ok := record.EvalTargetOutputData.OutputFields[k]; !ok {
+			missingKeys = append(missingKeys, k)
+		}
+	}
+	if len(missingKeys) > 0 {
+		sort.Strings(missingKeys)
+		logs.CtxWarn(ctx, "LoadEvalTargetOutputFields: keys not present in OutputFields (no TOS/RDS payload for these names), record_id=%d missing=%v existing_keys_count=%d",
+			record.ID, missingKeys, len(record.EvalTargetOutputData.OutputFields))
 	}
 	for k, c := range record.EvalTargetOutputData.OutputFields {
 		if _, ok := keySet[k]; !ok {
