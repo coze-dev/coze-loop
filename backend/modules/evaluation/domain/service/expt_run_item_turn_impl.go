@@ -532,9 +532,23 @@ func (e *DefaultExptTurnEvaluationImpl) buildEvaluatorInputData(ctx context.Cont
 		res.EvaluateDatasetFields = fromEvalSet
 		res.EvaluateTargetOutputFields = fromTarget
 	case entity.EvaluatorTypeCustomRPC:
+		// 兼容未配置 eval_set / target 字段映射：与 Code 评估器类似，评测集侧透传该轮次全部字段，
+		// target 侧由 buildFieldsFromSource 在无 FieldConfs 时已透传全部输出。
+		if len(evalSetFieldConfs) == 0 {
+			fromEvalSet, err = e.getAllEvalSetFields(ctx, spaceID, evalSetTurn)
+			if err != nil {
+				return nil, err
+			}
+		}
 		if len(inputSchemas) == 0 { // 无input_schemas的自定义服务评估器
 			res.EvaluateDatasetFields = fromEvalSet
 			res.EvaluateTargetOutputFields = fromTarget
+			// RunEvaluator 侧按 input_fields 组装 RPC 请求，需同时填入以兼容未填 mapping / 旧调用方
+			for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
+				for key, content := range fieldCnt {
+					res.InputFields[key] = content
+				}
+			}
 		} else { // 有input_schemas的自定义服务评估器
 			for _, fieldCnt := range []map[string]*entity.Content{fromEvalSet, fromTarget} {
 				for key, content := range fieldCnt {
