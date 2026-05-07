@@ -129,6 +129,10 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
               name: 'lib-mathjax',
               test: /mathjax-full/,
             },
+            mermaid: {
+              name: 'lib-mermaid',
+              test: /mermaid/,
+            },
           },
         },
       },

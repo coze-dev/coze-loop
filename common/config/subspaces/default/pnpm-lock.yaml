@@ -2699,11 +2699,11 @@ importers:
         specifier: ^1.2.2
         version: 1.5.1
       '@shikijs/langs':
-        specifier: 3.3.0
-        version: 3.3.0
+        specifier: 3.23.0
+        version: 3.23.0
       '@shikijs/themes':
-        specifier: 3.3.0
-        version: 3.3.0
+        specifier: 3.23.0
+        version: 3.23.0
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=201dcc08fdbeeb84f5cd83ac08fbf502e9258a9098bc03a4b7b2c1efea29a345)(react@18.2.0)
@@ -2853,11 +2853,11 @@ importers:
         specifier: ^1.2.2
         version: 1.5.1
       '@shikijs/langs':
-        specifier: 3.3.0
-        version: 3.3.0
+        specifier: 3.23.0
+        version: 3.23.0
       '@shikijs/themes':
-        specifier: 3.3.0
-        version: 3.3.0
+        specifier: 3.23.0
+        version: 3.23.0
       ahooks:
         specifier: 3.7.8
         version: 3.7.8(patch_hash=201dcc08fdbeeb84f5cd83ac08fbf502e9258a9098bc03a4b7b2c1efea29a345)(react@18.2.0)
@@ -7749,20 +7749,11 @@ packages:
   '@shikijs/langs@3.23.0':
     resolution: {integrity: sha512-2Ep4W3Re5aB1/62RSYQInK9mM3HsLeB91cHqznAJMuylqjzNVAVCMnNWRHFtcNHXsoNRayP9z1qj4Sq3nMqYXg==}
 
-  '@shikijs/langs@3.3.0':
-    resolution: {integrity: sha512-zt6Kf/7XpBQKSI9eqku+arLkAcDQ3NHJO6zFjiChI8w0Oz6Jjjay7pToottjQGjSDCFk++R85643WbyINcuL+g==}
-
   '@shikijs/themes@3.23.0':
     resolution: {integrity: sha512-5qySYa1ZgAT18HR/ypENL9cUSGOeI2x+4IvYJu4JgVJdizn6kG4ia5Q1jDEOi7gTbN4RbuYtmHh0W3eccOrjMA==}
 
-  '@shikijs/themes@3.3.0':
-    resolution: {integrity: sha512-tXeCvLXBnqq34B0YZUEaAD1lD4lmN6TOHAhnHacj4Owh7Ptb/rf5XCDeROZt2rEOk5yuka3OOW2zLqClV7/SOg==}
-
   '@shikijs/types@3.23.0':
     resolution: {integrity: sha512-3JZ5HXOZfYjsYSk0yPwBrkupyYSLpAE26Qc0HLghhZNGTZg/SKxXIIgoxOpmmeQP0RRSDJTk1/vPfw9tbw+jSQ==}
-
-  '@shikijs/types@3.3.0':
-    resolution: {integrity: sha512-KPCGnHG6k06QG/2pnYGbFtFvpVJmC3uIpXrAiPrawETifujPBv0Se2oUxm5qYgjCvGJS9InKvjytOdN+bGuX+Q==}
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
@@ -21929,24 +21920,11 @@ snapshots:
     dependencies:
       '@shikijs/types': 3.23.0
 
-  '@shikijs/langs@3.3.0':
-    dependencies:
-      '@shikijs/types': 3.3.0
-
   '@shikijs/themes@3.23.0':
     dependencies:
       '@shikijs/types': 3.23.0
 
-  '@shikijs/themes@3.3.0':
-    dependencies:
-      '@shikijs/types': 3.3.0
-
   '@shikijs/types@3.23.0':
-    dependencies:
-      '@shikijs/vscode-textmate': 10.0.2
-      '@types/hast': 3.0.4
-
-  '@shikijs/types@3.3.0':
     dependencies:
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
@@ -23341,7 +23319,7 @@ snapshots:
   '@types/vfile@3.0.2':
     dependencies:
       '@types/node': 24.12.0
-      '@types/unist': 2.0.11
+      '@types/unist': 3.0.3
       '@types/vfile-message': 2.0.0
 
   '@types/whatwg-mimetype@3.0.2': {}

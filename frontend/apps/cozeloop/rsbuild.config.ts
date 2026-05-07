@@ -12,6 +12,7 @@ export default createRsbuildConfig({
     },
   },
   dev: {
+    lazyCompilation: false,
     assetPrefix: `http://localhost:${port}`,
     client: {
       port: `${port}`,
