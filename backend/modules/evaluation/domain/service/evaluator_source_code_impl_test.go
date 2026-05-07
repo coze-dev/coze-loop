@@ -2582,10 +2582,10 @@ func TestEvaluatorSourceCodeServiceImpl_getMaliciousPatternsForLanguage(t *testi
 			if tt.expectGeneral {
 				for _, pattern := range patterns {
 					assert.Contains(t, pattern.Languages, "general", "General patterns should contain 'general' in languages")
+				}
 			}
-		}
-	})
-}
+		})
+	}
 }
 
 func TestEvaluatorSourceCodeServiceImpl_ShouldSkip(t *testing.T) {
