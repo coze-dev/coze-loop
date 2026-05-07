@@ -1193,6 +1193,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "normal flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -1266,6 +1267,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "Agent evaluator flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), false)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -1326,6 +1328,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvalTargetService.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{"field1"}).Return(nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -1464,6 +1467,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "RunEvaluator error",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run evaluator failed"))
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -2787,6 +2791,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 			name: "Code evaluator builds input data",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 1, Status: entity.EvaluatorRunStatusSuccess}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -3799,6 +3804,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
@@ -3837,6 +3843,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
@@ -3875,6 +3882,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldSkipEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
