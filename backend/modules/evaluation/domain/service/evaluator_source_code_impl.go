@@ -200,7 +200,7 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 }
 
 // ShouldSkip 判断Code评估器是否应跳过本次评估，默认不跳过
-func (c *EvaluatorSourceCodeServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool) {
+func (c *EvaluatorSourceCodeServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
 	return nil, false
 }
 

@@ -133,10 +133,10 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, eva
 }
 
 // ShouldSkip mocks base method.
-func (m *MockEvaluatorSourceService) ShouldSkip(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool) {
+func (m *MockEvaluatorSourceService) ShouldSkip(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShouldSkip", ctx, evaluator, input)
-	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }

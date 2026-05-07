@@ -3988,12 +3988,16 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 
 	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
 	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
 
 	s := &EvaluatorServiceImpl{
 		evaluatorRepo: mockEvaluatorRepo,
 		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
 			entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
 		},
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
 	}
 
 	ctx := context.Background()
@@ -4004,29 +4008,36 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 		EvaluatorType: entity.EvaluatorTypePrompt,
 	}
 
-	defaultInput := &entity.EvaluatorInputData{
-		InputFields: map[string]*entity.Content{
-			"input": {Text: gptr.Of("test")},
+	defaultRequest := &entity.RunEvaluatorRequest{
+		SpaceID:            1,
+		EvaluatorVersionID: 101,
+		InputData: &entity.EvaluatorInputData{
+			InputFields: map[string]*entity.Content{
+				"input": {Text: gptr.Of("test")},
+			},
 		},
+		ExperimentID:    200,
+		ExperimentRunID: 300,
+		ItemID:          400,
+		TurnID:          500,
+		Ext:             map[string]string{"key": "value"},
 	}
 
 	testCases := []struct {
 		name           string
-		versionID      int64
-		input          *entity.EvaluatorInputData
+		request        *entity.RunEvaluatorRequest
 		setupMocks     func()
 		expectedRecord *entity.EvaluatorRecord
 		expectedSkip   bool
 		expectedErr    bool
 	}{
 		{
-			name:      "默认不跳过",
-			versionID: 101,
-			input:     defaultInput,
+			name:    "默认不跳过",
+			request: defaultRequest,
 			setupMocks: func() {
 				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
 					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
-				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultInput).
+				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
 					Return(nil, false)
 			},
 			expectedRecord: nil,
@@ -4034,32 +4045,44 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 			expectedErr:    false,
 		},
 		{
-			name:      "跳过并返回record",
-			versionID: 101,
-			input:     defaultInput,
+			name:    "跳过并创建记录",
+			request: defaultRequest,
 			setupMocks: func() {
-				skipRecord := &entity.EvaluatorRecord{
-					ID:                 999,
-					EvaluatorVersionID: 101,
-					Status:             entity.EvaluatorRunStatusSuccess,
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "input fields are empty, skipped",
+					},
 				}
 				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
 					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
-				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultInput).
-					Return(skipRecord, true)
+				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
 			},
 			expectedRecord: &entity.EvaluatorRecord{
-				ID:                 999,
+				ID:                 12345,
+				SpaceID:            1,
+				ExperimentID:       200,
+				ExperimentRunID:    300,
+				ItemID:             400,
+				TurnID:             500,
 				EvaluatorVersionID: 101,
-				Status:             entity.EvaluatorRunStatusSuccess,
+				EvaluatorInputData: defaultRequest.InputData,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "input fields are empty, skipped",
+					},
+				},
+				Status: entity.EvaluatorRunStatusSuccess,
+				Ext:    map[string]string{"key": "value"},
 			},
 			expectedSkip: true,
 			expectedErr:  false,
 		},
 		{
-			name:      "查询evaluator失败",
-			versionID: 101,
-			input:     defaultInput,
+			name:    "查询evaluator失败",
+			request: defaultRequest,
 			setupMocks: func() {
 				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
 					Return(nil, errors.New("db error"))
@@ -4069,11 +4092,10 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 			expectedErr:    true,
 		},
 		{
-			name:      "evaluator不存在",
-			versionID: 999,
-			input:     defaultInput,
+			name:    "evaluator不存在",
+			request: defaultRequest,
 			setupMocks: func() {
-				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{999}, false, false).
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
 					Return([]*entity.Evaluator{}, nil)
 			},
 			expectedRecord: nil,
@@ -4081,9 +4103,8 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 			expectedErr:    true,
 		},
 		{
-			name:      "evaluator类型无对应source service",
-			versionID: 101,
-			input:     defaultInput,
+			name:    "evaluator类型无对应source service",
+			request: defaultRequest,
 			setupMocks: func() {
 				agentEvaluator := &entity.Evaluator{
 					ID:            100,
@@ -4096,19 +4117,72 @@ func TestEvaluatorServiceImpl_ShouldSkipEvaluator(t *testing.T) {
 			expectedSkip:   false,
 			expectedErr:    false,
 		},
+		{
+			name:    "跳过但生成ID失败",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("id gen error"))
+			},
+			expectedRecord: nil,
+			expectedSkip:   true,
+			expectedErr:    true,
+		},
+		{
+			name:    "跳过但创建记录失败",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldSkip(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("create record error"))
+			},
+			expectedRecord: nil,
+			expectedSkip:   true,
+			expectedErr:    true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setupMocks()
-			record, skip, err := s.ShouldSkipEvaluator(ctx, tc.versionID, tc.input)
+			record, skip, err := s.ShouldSkipEvaluator(ctx, tc.request)
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tc.expectedSkip, skip)
-			assert.Equal(t, tc.expectedRecord, record)
+			if tc.expectedRecord != nil {
+				assert.NotNil(t, record)
+				assert.Equal(t, tc.expectedRecord.ID, record.ID)
+				assert.Equal(t, tc.expectedRecord.SpaceID, record.SpaceID)
+				assert.Equal(t, tc.expectedRecord.ExperimentID, record.ExperimentID)
+				assert.Equal(t, tc.expectedRecord.ExperimentRunID, record.ExperimentRunID)
+				assert.Equal(t, tc.expectedRecord.ItemID, record.ItemID)
+				assert.Equal(t, tc.expectedRecord.TurnID, record.TurnID)
+				assert.Equal(t, tc.expectedRecord.EvaluatorVersionID, record.EvaluatorVersionID)
+				assert.Equal(t, tc.expectedRecord.Status, record.Status)
+				assert.Equal(t, tc.expectedRecord.Ext, record.Ext)
+				assert.Equal(t, tc.expectedRecord.EvaluatorOutputData, record.EvaluatorOutputData)
+			} else {
+				assert.Nil(t, record)
+			}
 		})
 	}
 }

@@ -717,9 +717,9 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 	}
 }
 
-// ShouldSkipEvaluator 判断评估器是否应跳过本次评估
-func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, evaluatorVersionID int64, input *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool, error) {
-	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{evaluatorVersionID}, false, false)
+// ShouldSkipEvaluator 判断评估器是否应跳过本次评估，跳过时创建记录并返回
+func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
 		return nil, false, err
 	}
@@ -731,8 +731,41 @@ func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, evaluato
 	if !ok {
 		return nil, false, nil
 	}
-	record, skip := evaluatorSourceService.ShouldSkip(ctx, evaluatorDO, input)
-	return record, skip, nil
+	output, skip := evaluatorSourceService.ShouldSkip(ctx, evaluatorDO, request.InputData)
+	if !skip {
+		return nil, false, nil
+	}
+
+	// 跳过时创建评估记录
+	recordID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, true, err
+	}
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+	recordDO := &entity.EvaluatorRecord{
+		ID:                  recordID,
+		SpaceID:             request.SpaceID,
+		ExperimentID:        request.ExperimentID,
+		ExperimentRunID:     request.ExperimentRunID,
+		ItemID:              request.ItemID,
+		TurnID:              request.TurnID,
+		EvaluatorVersionID:  request.EvaluatorVersionID,
+		LogID:               logID,
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: output,
+		Status:              entity.EvaluatorRunStatusSuccess,
+		Ext:                 request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+		},
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		return nil, true, err
+	}
+	return recordDO, true, nil
 }
 
 // RunEvaluator evaluator_version 运行

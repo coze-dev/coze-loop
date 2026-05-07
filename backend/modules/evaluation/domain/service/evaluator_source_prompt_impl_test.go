@@ -1675,14 +1675,14 @@ func TestEvaluatorSourcePromptServiceImpl_ShouldSkip(t *testing.T) {
 		name           string
 		evaluator      *entity.Evaluator
 		input          *entity.EvaluatorInputData
-		expectedRecord *entity.EvaluatorRecord
+		expectedOutput *entity.EvaluatorOutputData
 		expectedSkip   bool
 	}{
 		{
 			name:           "默认不跳过_nil输入",
 			evaluator:      &entity.Evaluator{},
 			input:          nil,
-			expectedRecord: nil,
+			expectedOutput: nil,
 			expectedSkip:   false,
 		},
 		{
@@ -1695,23 +1695,23 @@ func TestEvaluatorSourcePromptServiceImpl_ShouldSkip(t *testing.T) {
 					"test": {Text: gptr.Of("hello")},
 				},
 			},
-			expectedRecord: nil,
+			expectedOutput: nil,
 			expectedSkip:   false,
 		},
 		{
 			name:           "默认不跳过_空输入数据",
 			evaluator:      &entity.Evaluator{},
 			input:          &entity.EvaluatorInputData{},
-			expectedRecord: nil,
+			expectedOutput: nil,
 			expectedSkip:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			record, skip := service.ShouldSkip(context.Background(), tt.evaluator, tt.input)
+			output, skip := service.ShouldSkip(context.Background(), tt.evaluator, tt.input)
 			assert.Equal(t, tt.expectedSkip, skip)
-			assert.Equal(t, tt.expectedRecord, record)
+			assert.Equal(t, tt.expectedOutput, output)
 		})
 	}
 }

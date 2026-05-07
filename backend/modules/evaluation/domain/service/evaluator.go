@@ -31,8 +31,8 @@ type EvaluatorService interface {
 	DeleteEvaluator(ctx context.Context, evaluatorIDs []int64, userID string) error
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
-	// ShouldSkipEvaluator 判断评估器是否应跳过本次评估
-	ShouldSkipEvaluator(ctx context.Context, evaluatorVersionID int64, input *entity.EvaluatorInputData) (record *entity.EvaluatorRecord, skip bool, err error)
+	// ShouldSkipEvaluator 判断评估器是否应跳过本次评估，跳过时创建记录并返回
+	ShouldSkipEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, skip bool, err error)
 	// AsyncRunEvaluator Agent evaluator_version 异步运行
 	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID

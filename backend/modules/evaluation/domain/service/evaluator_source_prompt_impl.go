@@ -71,7 +71,7 @@ func (p *EvaluatorSourcePromptServiceImpl) EvaluatorType() entity.EvaluatorType 
 }
 
 // ShouldSkip 判断Prompt评估器是否应跳过本次评估，默认不跳过
-func (p *EvaluatorSourcePromptServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool) {
+func (p *EvaluatorSourcePromptServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
 	return nil, false
 }
 

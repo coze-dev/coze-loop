@@ -415,7 +415,16 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		ecForCapture := ec
 
 		// 评估器跳过逻辑：根据输入数据前置判断是否需要跳过本次评估
-		if evaluatorRecord, skip, _ := e.evaluatorService.ShouldSkipEvaluator(ctx, evForCapture.GetEvaluatorVersionID(), inputDataForCapture); skip {
+		if evaluatorRecord, skip, _ := e.evaluatorService.ShouldSkipEvaluator(ctx, &entity.RunEvaluatorRequest{
+			SpaceID:            spaceID,
+			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
+			InputData:          inputDataForCapture,
+			ExperimentID:       etec.Event.ExptID,
+			ExperimentRunID:    etec.Event.ExptRunID,
+			ItemID:             item.ItemID,
+			TurnID:             turn.ID,
+			Ext:                etec.Ext,
+		}); skip {
 			if evaluatorRecord != nil {
 				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
 			}

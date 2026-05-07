@@ -15,8 +15,8 @@ import (
 type EvaluatorSourceService interface {
 	EvaluatorType() entity.EvaluatorType
 	// ShouldSkip 判断评估器是否应跳过本次评估。
-	// 返回值: record 为跳过时生成的评估记录(可为nil), skip 表示是否跳过。
-	ShouldSkip(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (record *entity.EvaluatorRecord, skip bool)
+	// 返回值: skip 表示是否跳过, output 为跳过时的输出数据(含跳过原因等，可为nil)。
+	ShouldSkip(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, skip bool)
 	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
 	AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) (ext map[string]string, traceID string, err error)
 	Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error)

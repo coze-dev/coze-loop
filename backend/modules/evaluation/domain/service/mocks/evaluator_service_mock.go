@@ -343,9 +343,9 @@ func (mr *MockEvaluatorServiceMockRecorder) RunEvaluator(ctx, request any) *gomo
 }
 
 // ShouldSkipEvaluator mocks base method.
-func (m *MockEvaluatorService) ShouldSkipEvaluator(ctx context.Context, evaluatorVersionID int64, input *entity.EvaluatorInputData) (*entity.EvaluatorRecord, bool, error) {
+func (m *MockEvaluatorService) ShouldSkipEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldSkipEvaluator", ctx, evaluatorVersionID, input)
+	ret := m.ctrl.Call(m, "ShouldSkipEvaluator", ctx, request)
 	ret0, _ := ret[0].(*entity.EvaluatorRecord)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -353,9 +353,9 @@ func (m *MockEvaluatorService) ShouldSkipEvaluator(ctx context.Context, evaluato
 }
 
 // ShouldSkipEvaluator indicates an expected call of ShouldSkipEvaluator.
-func (mr *MockEvaluatorServiceMockRecorder) ShouldSkipEvaluator(ctx, evaluatorVersionID, input any) *gomock.Call {
+func (mr *MockEvaluatorServiceMockRecorder) ShouldSkipEvaluator(ctx, request any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSkipEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).ShouldSkipEvaluator), ctx, evaluatorVersionID, input)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldSkipEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).ShouldSkipEvaluator), ctx, request)
 }
 
 // SubmitEvaluatorVersion mocks base method.
