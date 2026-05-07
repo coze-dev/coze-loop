@@ -460,7 +460,6 @@ func A2AAgentDTO2DO(dtoObj *dto.A2AAgent) *do.A2AAgent {
 		URL:         gptr.Indirect(dtoObj.URL),
 		ExecRegion:  gptr.Indirect(dtoObj.ExecRegion),
 		ExecEnv:     dtoObj.ExecEnv,
-		Cluster:     dtoObj.Cluster,
 	}
 }
 
@@ -476,7 +475,6 @@ func A2AAgentDO2DTO(doObj *do.A2AAgent) *dto.A2AAgent {
 		URL:         gptr.Of(doObj.URL),
 		ExecRegion:  gptr.Of(doObj.ExecRegion),
 		ExecEnv:     doObj.ExecEnv,
-		Cluster:     doObj.Cluster,
 	}
 }
 

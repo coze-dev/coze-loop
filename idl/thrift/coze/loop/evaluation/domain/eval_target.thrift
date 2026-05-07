@@ -243,7 +243,6 @@ struct A2AAgent {
 
     20: optional Region exec_region // 执行区域
     21: optional string exec_env // 执行环境
-    22: optional string cluster // 执行集群
 }
 
 struct CustomAgent {

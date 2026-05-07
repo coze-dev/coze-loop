@@ -16,5 +16,4 @@ type A2AAgent struct {
 
 	ExecRegion Region  // 执行区域
 	ExecEnv    *string // 执行环境
-	Cluster    *string // 执行集群
 }

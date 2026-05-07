@@ -6290,20 +6290,6 @@ func (p *A2AAgent) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				l, err = p.FastReadField22(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -6420,20 +6406,6 @@ func (p *A2AAgent) FastReadField21(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *A2AAgent) FastReadField22(buf []byte) (int, error) {
-	offset := 0
-
-	var _field *string
-	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-		_field = &v
-	}
-	p.Cluster = _field
-	return offset, nil
-}
-
 func (p *A2AAgent) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -6448,7 +6420,6 @@ func (p *A2AAgent) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField21(buf[offset:], w)
-		offset += p.fastWriteField22(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -6464,7 +6435,6 @@ func (p *A2AAgent) BLength() int {
 		l += p.field5Length()
 		l += p.field20Length()
 		l += p.field21Length()
-		l += p.field22Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -6533,15 +6503,6 @@ func (p *A2AAgent) fastWriteField21(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
-func (p *A2AAgent) fastWriteField22(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetCluster() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 22)
-		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Cluster)
-	}
-	return offset
-}
-
 func (p *A2AAgent) field1Length() int {
 	l := 0
 	if p.IsSetID() {
@@ -6605,15 +6566,6 @@ func (p *A2AAgent) field21Length() int {
 	return l
 }
 
-func (p *A2AAgent) field22Length() int {
-	l := 0
-	if p.IsSetCluster() {
-		l += thrift.Binary.FieldBeginLength()
-		l += thrift.Binary.StringLengthNocopy(*p.Cluster)
-	}
-	return l
-}
-
 func (p *A2AAgent) DeepCopy(s interface{}) error {
 	src, ok := s.(*A2AAgent)
 	if !ok {
@@ -6668,14 +6620,6 @@ func (p *A2AAgent) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.ExecEnv)
 		}
 		p.ExecEnv = &tmp
-	}
-
-	if src.Cluster != nil {
-		var tmp string
-		if *src.Cluster != "" {
-			tmp = kutils.StringDeepCopy(*src.Cluster)
-		}
-		p.Cluster = &tmp
 	}
 
 	return nil

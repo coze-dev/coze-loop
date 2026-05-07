@@ -8912,8 +8912,6 @@ type A2AAgent struct {
 	ExecRegion *Region `thrift:"exec_region,20,optional" frugal:"20,optional,string" form:"exec_region" json:"exec_region,omitempty" query:"exec_region"`
 	// 执行环境
 	ExecEnv *string `thrift:"exec_env,21,optional" frugal:"21,optional,string" form:"exec_env" json:"exec_env,omitempty" query:"exec_env"`
-	// 执行集群
-	Cluster *string `thrift:"cluster,22,optional" frugal:"22,optional,string" form:"cluster" json:"cluster,omitempty" query:"cluster"`
 }
 
 func NewA2AAgent() *A2AAgent {
@@ -9006,18 +9004,6 @@ func (p *A2AAgent) GetExecEnv() (v string) {
 	}
 	return *p.ExecEnv
 }
-
-var A2AAgent_Cluster_DEFAULT string
-
-func (p *A2AAgent) GetCluster() (v string) {
-	if p == nil {
-		return
-	}
-	if !p.IsSetCluster() {
-		return A2AAgent_Cluster_DEFAULT
-	}
-	return *p.Cluster
-}
 func (p *A2AAgent) SetID(val *int64) {
 	p.ID = val
 }
@@ -9039,9 +9025,6 @@ func (p *A2AAgent) SetExecRegion(val *Region) {
 func (p *A2AAgent) SetExecEnv(val *string) {
 	p.ExecEnv = val
 }
-func (p *A2AAgent) SetCluster(val *string) {
-	p.Cluster = val
-}
 
 var fieldIDToName_A2AAgent = map[int16]string{
 	1:  "id",
@@ -9051,7 +9034,6 @@ var fieldIDToName_A2AAgent = map[int16]string{
 	5:  "url",
 	20: "exec_region",
 	21: "exec_env",
-	22: "cluster",
 }
 
 func (p *A2AAgent) IsSetID() bool {
@@ -9080,10 +9062,6 @@ func (p *A2AAgent) IsSetExecRegion() bool {
 
 func (p *A2AAgent) IsSetExecEnv() bool {
 	return p.ExecEnv != nil
-}
-
-func (p *A2AAgent) IsSetCluster() bool {
-	return p.Cluster != nil
 }
 
 func (p *A2AAgent) Read(iprot thrift.TProtocol) (err error) {
@@ -9155,14 +9133,6 @@ func (p *A2AAgent) Read(iprot thrift.TProtocol) (err error) {
 		case 21:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField21(iprot); err != nil {
-					goto ReadFieldError
-				}
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
-		case 22:
-			if fieldTypeId == thrift.STRING {
-				if err = p.ReadField22(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -9274,17 +9244,6 @@ func (p *A2AAgent) ReadField21(iprot thrift.TProtocol) error {
 	p.ExecEnv = _field
 	return nil
 }
-func (p *A2AAgent) ReadField22(iprot thrift.TProtocol) error {
-
-	var _field *string
-	if v, err := iprot.ReadString(); err != nil {
-		return err
-	} else {
-		_field = &v
-	}
-	p.Cluster = _field
-	return nil
-}
 
 func (p *A2AAgent) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -9318,10 +9277,6 @@ func (p *A2AAgent) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField21(oprot); err != nil {
 			fieldId = 21
-			goto WriteFieldError
-		}
-		if err = p.writeField22(oprot); err != nil {
-			fieldId = 22
 			goto WriteFieldError
 		}
 	}
@@ -9468,24 +9423,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 21 end error: ", p), err)
 }
-func (p *A2AAgent) writeField22(oprot thrift.TProtocol) (err error) {
-	if p.IsSetCluster() {
-		if err = oprot.WriteFieldBegin("cluster", thrift.STRING, 22); err != nil {
-			goto WriteFieldBeginError
-		}
-		if err := oprot.WriteString(*p.Cluster); err != nil {
-			return err
-		}
-		if err = oprot.WriteFieldEnd(); err != nil {
-			goto WriteFieldEndError
-		}
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 22 end error: ", p), err)
-}
 
 func (p *A2AAgent) String() string {
 	if p == nil {
@@ -9520,9 +9457,6 @@ func (p *A2AAgent) DeepEqual(ano *A2AAgent) bool {
 		return false
 	}
 	if !p.Field21DeepEqual(ano.ExecEnv) {
-		return false
-	}
-	if !p.Field22DeepEqual(ano.Cluster) {
 		return false
 	}
 	return true
@@ -9608,18 +9542,6 @@ func (p *A2AAgent) Field21DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.ExecEnv, *src) != 0 {
-		return false
-	}
-	return true
-}
-func (p *A2AAgent) Field22DeepEqual(src *string) bool {
-
-	if p.Cluster == src {
-		return true
-	} else if p.Cluster == nil || src == nil {
-		return false
-	}
-	if strings.Compare(*p.Cluster, *src) != 0 {
 		return false
 	}
 	return true
