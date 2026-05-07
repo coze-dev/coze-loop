@@ -4,6 +4,8 @@
 package entity
 
 type CustomAgent struct {
+	// 应用ID
+	ID int64
 	// DTO使用，不存数据库
 	Name string `json:"-"`
 	// DTO使用，不存数据库

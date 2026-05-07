@@ -485,6 +485,7 @@ func CustomAgentDTO2DO(dtoObj *dto.CustomAgent) *do.CustomAgent {
 		return nil
 	}
 	return &do.CustomAgent{
+		ID:                  gptr.Indirect(dtoObj.ID),
 		Name:                gptr.Indirect(dtoObj.Name),
 		Description:         gptr.Indirect(dtoObj.Description),
 		ExecRegion:          gptr.Indirect(dtoObj.ExecRegion),
@@ -501,6 +502,7 @@ func CustomAgentDO2DTO(doObj *do.CustomAgent) *dto.CustomAgent {
 		return nil
 	}
 	return &dto.CustomAgent{
+		ID:                  gptr.Of(doObj.ID),
 		Name:                gptr.Of(doObj.Name),
 		Description:         gptr.Of(doObj.Description),
 		ExecRegion:          gptr.Of(doObj.ExecRegion),
