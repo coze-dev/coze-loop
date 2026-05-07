@@ -1232,6 +1232,47 @@ func Test_toContentStr(t *testing.T) {
 			expected: "仅有文本未带 ContentType",
 		},
 		{
+			// 覆盖 expt_export_impl.go 688-689 行：ContentType 缺失但 MultiPart 非空
+			name: "nil_content_type_but_has_multipart",
+			input: &entity.Content{
+				MultiPart: []*entity.Content{
+					{
+						ContentType: ptr.Of(entity.ContentTypeText),
+						Text:        ptr.Of("MP-Text-A"),
+					},
+					{
+						ContentType: ptr.Of(entity.ContentTypeImage),
+						Image: &entity.Image{
+							URL: ptr.Of("https://example.com/a.png"),
+						},
+					},
+				},
+			},
+			expected: "MP-Text-A\n<ref_image_url:https://example.com/a.png>\n",
+		},
+		{
+			// 覆盖 expt_export_impl.go 691 行：ContentType 缺失且 Text 与 MultiPart 都为空
+			name:     "nil_content_type_text_and_multipart_all_empty",
+			input:    &entity.Content{},
+			expected: "",
+		},
+		{
+			// 覆盖 expt_export_impl.go 691 行：ContentType 显式为 ""，且 Text 与 MultiPart 都为空
+			name: "explicit_empty_content_type_with_no_text_no_multipart",
+			input: &entity.Content{
+				ContentType: ptr.Of(entity.ContentType("")),
+			},
+			expected: "",
+		},
+		{
+			// 覆盖 expt_export_impl.go 690 行：ContentType 缺失且 MultiPart 为空切片
+			name: "nil_content_type_with_empty_multipart_slice",
+			input: &entity.Content{
+				MultiPart: []*entity.Content{},
+			},
+			expected: "",
+		},
+		{
 			name: "unknown_content_type",
 			input: &entity.Content{
 				ContentType: ptr.Of(entity.ContentType("999")), // 未定义的内容类型
