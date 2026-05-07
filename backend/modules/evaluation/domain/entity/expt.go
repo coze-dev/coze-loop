@@ -191,9 +191,6 @@ func (e *Experiment) AsyncCallTarget() bool {
 	if e.Target.EvalTargetVersion.WebAgent != nil {
 		return true
 	}
-	if e.Target.EvalTargetVersion.CustomAgent != nil {
-		return true
-	}
 	return false
 }
 
