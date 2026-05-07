@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -304,31 +303,22 @@ func (e ExptResultExportService) DoExportCSV(ctx context.Context, spaceID, exptI
 			baseTargetCols := pickEvalTargetColsForExpt(result, exptID)
 			targetColsFiltered := filterColumnsEvalTargetForExport(baseTargetCols, sel)
 			columnsEvalTarget := ensureTargetColumnsForExportWhitelist(exportColumnSpec, targetColsFiltered, sel)
-			if exptDO, exptErr := e.exptRepo.GetByID(ctx, exptID, spaceID); exptErr == nil && exptDO != nil {
-				if exptDO.ExptType == entity.ExptType_Online && sel != nil && sel.includeTargetColumnName(consts.ReportColumnNameEvalTargetActualOutput) {
-					logs.CtxWarn(ctx, "[exportCSV] Online 实验 builds 报告时不入库 Target 运行记录 linkage，CSV 中 actual_output 等 Target 列通常会整列为空。expt_id=%d space_id=%d",
-						exptID, spaceID)
-				}
-			} else if exptErr != nil {
-				logs.CtxInfo(ctx, "[exportCSV] GetByID for export hint skipped: %v", exptErr)
-			}
 			helper = &exportCSVHelper{
-				spaceID:                 spaceID,
-				exptID:                  exptID,
-				withLogID:               withLogID,
-				colSelection:            sel,
-				reportEvaluatorCount:    len(result.ColumnEvaluators),
-				colEvaluators:           filterColumnEvaluatorsForExport(result.ColumnEvaluators, sel),
-				colEvalSetFields:        filterColumnEvalSetFieldsForExport(result.ColumnEvalSetFields, sel),
-				colAnnotations:          filterColumnAnnotationsForExport(colAnnotation, sel),
-				columnsEvalTarget:       columnsEvalTarget,
-				diagTargetEmptyLogsLeft: 5,
-				exptRepo:                e.exptRepo,
-				exptTurnResultRepo:      e.exptTurnResultRepo,
-				exptPublisher:           e.exptPublisher,
-				exptResultService:       e.exptResultService,
-				fileClient:              e.fileClient,
-				evalSetItemSvc:          e.evalSetItemSvc,
+				spaceID:              spaceID,
+				exptID:               exptID,
+				withLogID:            withLogID,
+				colSelection:         sel,
+				reportEvaluatorCount: len(result.ColumnEvaluators),
+				colEvaluators:        filterColumnEvaluatorsForExport(result.ColumnEvaluators, sel),
+				colEvalSetFields:     filterColumnEvalSetFieldsForExport(result.ColumnEvalSetFields, sel),
+				colAnnotations:       filterColumnAnnotationsForExport(colAnnotation, sel),
+				columnsEvalTarget:    columnsEvalTarget,
+				exptRepo:             e.exptRepo,
+				exptTurnResultRepo:   e.exptTurnResultRepo,
+				exptPublisher:        e.exptPublisher,
+				exptResultService:    e.exptResultService,
+				fileClient:           e.fileClient,
+				evalSetItemSvc:       e.evalSetItemSvc,
 			}
 			columns, err := helper.buildColumns(ctx)
 			if err != nil {
@@ -381,9 +371,6 @@ type exportCSVHelper struct {
 	colAnnotations    []*entity.ColumnAnnotation
 	allItemResults    []*entity.ItemResult
 	columnsEvalTarget []*entity.ColumnEvalTarget
-
-	// diagTargetEmptyLogsLeft 导出任务内最多输出几条 Target 列诊断日志，避免刷屏
-	diagTargetEmptyLogsLeft int
 
 	exptRepo           repo.IExperimentRepo
 	exptTurnResultRepo repo.IExptTurnResultRepo
@@ -476,15 +463,6 @@ func (e *exportCSVHelper) wantWeightedScoreColumn() bool {
 	return e.colSelection.includeWeightedScore()
 }
 
-func (e *exportCSVHelper) exportIncludesActualOutputColumn() bool {
-	for _, col := range e.columnsEvalTarget {
-		if col != nil && col.Name == consts.ReportColumnNameEvalTargetActualOutput {
-			return true
-		}
-	}
-	return false
-}
-
 func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, columnName string, data *entity.EvalTargetOutputData) (string, error) {
 	if data == nil {
 		return "", nil
@@ -499,27 +477,7 @@ func (e *exportCSVHelper) buildColumnEvalTargetContent(ctx context.Context, colu
 	case consts.ReportColumnNameEvalTargetTotalTokens:
 		return strconv.FormatInt(data.EvalTargetUsage.GetTotalTokens(), 10), nil
 	default:
-		c := data.OutputFields[columnName]
-		s, err := e.toContentStr(ctx, c)
-		if err != nil {
-			return "", err
-		}
-		if columnName == consts.ReportColumnNameEvalTargetActualOutput && s == "" && e.diagTargetEmptyLogsLeft > 0 {
-			e.diagTargetEmptyLogsLeft--
-			keys := make([]string, 0, len(data.OutputFields))
-			for k := range data.OutputFields {
-				keys = append(keys, k)
-			}
-			sort.Strings(keys)
-			omitted, ct := false, ""
-			if c != nil {
-				omitted = c.IsContentOmitted()
-				ct = string(c.GetContentType())
-			}
-			logs.CtxWarn(ctx, "[exportCSV] actual_output 单元格为空且已有 EvalTargetOutputData: expt_id=%d field_nil=%v content_type=%q content_omitted=%v output_keys=%v",
-				e.exptID, c == nil, ct, omitted, keys)
-		}
-		return s, nil
+		return e.toContentStr(ctx, data.OutputFields[columnName])
 	}
 }
 
@@ -566,17 +524,10 @@ func (e *exportCSVHelper) buildRowsForItems(ctx context.Context, itemResults []*
 			}
 			rowData = append(rowData, datasetFields...)
 
-			hasTargetOut := payload.TargetOutput != nil &&
-				payload.TargetOutput.EvalTargetRecord != nil &&
-				payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil
-			if !hasTargetOut && e.diagTargetEmptyLogsLeft > 0 && e.exportIncludesActualOutputColumn() {
-				e.diagTargetEmptyLogsLeft--
-				logs.CtxWarn(ctx, "[exportCSV] 报告载荷中缺少评测对象运行结果链路（TargetOutput/EvalTargetRecord/OutputData 其一为空），Target 列导出为空。expt_id=%d item_id=%d turn_id=%d",
-					e.exptID, itemResult.ItemID, turnResult.TurnID)
-			}
-
 			for _, col := range e.columnsEvalTarget {
-				if hasTargetOut {
+				if payload.TargetOutput != nil &&
+					payload.TargetOutput.EvalTargetRecord != nil &&
+					payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData != nil {
 					cont, err := e.buildColumnEvalTargetContent(ctx, col.Name, payload.TargetOutput.EvalTargetRecord.EvalTargetOutputData)
 					if err != nil {
 						return nil, err

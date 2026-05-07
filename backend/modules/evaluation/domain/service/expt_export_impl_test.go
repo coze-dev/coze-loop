@@ -603,12 +603,6 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				// DoExportCSV 首轮会在列元数据就绪后再查一次实验（Online 告警等）
-				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
-					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(&entity.Experiment{ID: 123, SpaceID: 1, ExptType: entity.ExptType_Offline}, nil).
-					Times(1)
-
 				// MGetExperimentResult模拟调用
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
 				colEvalSetFields := []*entity.ColumnEvalSetField{{Name: ptr.Of("test_field")}}
@@ -724,11 +718,6 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
-					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(&entity.Experiment{ID: 123, SpaceID: 1, ExptType: entity.ExptType_Offline}, nil).
-					Times(1)
-
 				// 第一页数据
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
 				colEvalSetFields := []*entity.ColumnEvalSetField{{Name: ptr.Of("test_field")}}
@@ -772,11 +761,6 @@ func TestExptResultExportService_DoExportCSV(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
-					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(&entity.Experiment{ID: 123, SpaceID: 1, ExptType: entity.ExptType_Offline}, nil).
-					Times(1)
-
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
 				colEvalSetFields := []*entity.ColumnEvalSetField{{Name: ptr.Of("test_field")}}
 				colAnnotation := []*entity.ColumnAnnotation{{TagKeyID: 1, TagName: "test_tag"}}
@@ -879,12 +863,11 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				// Mock GetByID获取实验信息（HandleExportEvent 一次 + DoExportCSV 内一次）
-				expt := &entity.Experiment{ID: 123, Name: "test_expt", ExptType: entity.ExptType_Offline}
+				// Mock GetByID获取实验信息
+				expt := &entity.Experiment{ID: 123, Name: "test_expt"}
 				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil).
-					Times(2)
+					Return(expt, nil)
 
 				// Mock DoExportCSV成功
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
@@ -953,11 +936,11 @@ func TestExptResultExportService_HandleExportEvent(t *testing.T) {
 			exptID:   123,
 			exportID: 456,
 			setup: func(svc *ExptResultExportService) {
-				expt := &entity.Experiment{ID: 123, Name: "test_expt", ExptType: entity.ExptType_Offline}
+				// Mock GetByID获取实验信息
+				expt := &entity.Experiment{ID: 123, Name: "test_expt"}
 				svc.exptRepo.(*repoMocks.MockIExperimentRepo).EXPECT().
 					GetByID(gomock.Any(), int64(123), int64(1)).
-					Return(expt, nil).
-					Times(2)
+					Return(expt, nil)
 
 				// Mock DoExportCSV成功
 				colEvaluators := []*entity.ColumnEvaluator{{EvaluatorVersionID: 1, Name: ptr.Of("test_evaluator"), Version: ptr.Of("v1")}}
