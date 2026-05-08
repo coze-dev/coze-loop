@@ -53,7 +53,11 @@ func (r *EvaluatorRecordRepoImpl) CorrectEvaluatorRecord(ctx context.Context, ev
 	return r.evaluatorRecordDao.UpdateEvaluatorRecord(ctx, po)
 }
 
-func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool) (*entity.EvaluatorRecord, error) {
+func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...entity.GetEvaluatorRecordOptionFn) (*entity.EvaluatorRecord, error) {
+	opt := &entity.GetEvaluatorRecordOption{}
+	for _, fn := range opts {
+		fn(opt)
+	}
 	po, err := r.evaluatorRecordDao.GetEvaluatorRecord(ctx, evaluatorRecordID, includeDeleted)
 	if err != nil {
 		return nil, err
@@ -65,7 +69,7 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 	if err != nil {
 		return nil, err
 	}
-	if r.recordDataStorage != nil {
+	if !opt.WithoutLoadStorageData && r.recordDataStorage != nil {
 		if err := r.recordDataStorage.LoadEvaluatorRecordData(ctx, evaluatorRecord); err != nil {
 			return nil, err
 		}
@@ -73,7 +77,11 @@ func (r *EvaluatorRecordRepoImpl) GetEvaluatorRecord(ctx context.Context, evalua
 	return evaluatorRecord, nil
 }
 
-func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool) ([]*entity.EvaluatorRecord, error) {
+func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted, withFullContent bool, opts ...entity.GetEvaluatorRecordOptionFn) ([]*entity.EvaluatorRecord, error) {
+	opt := &entity.GetEvaluatorRecordOption{}
+	for _, fn := range opts {
+		fn(opt)
+	}
 	const batchSize = 50
 	totalIDs := len(evaluatorRecordIDs)
 	if totalIDs == 0 {
@@ -105,7 +113,7 @@ func (r *EvaluatorRecordRepoImpl) BatchGetEvaluatorRecord(ctx context.Context, e
 		}
 	}
 
-	if withFullContent && r.recordDataStorage != nil {
+	if withFullContent && !opt.WithoutLoadStorageData && r.recordDataStorage != nil {
 		for _, record := range evaluatorRecords {
 			if record != nil {
 				if err := r.recordDataStorage.LoadEvaluatorRecordData(ctx, record); err != nil {

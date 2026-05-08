@@ -165,13 +165,15 @@ func (m *MetricsService) traverseMetric(ctx context.Context, param *metricTraver
 	}
 	var mResp *QueryMetricsResp
 	err := backoff.RetryWithMaxTimes(ctx, 2, func() error {
+		reqCtx := ctx
 		if param.QueryTimeout > 0 {
 			iCtx, cancel := context.WithTimeout(ctx, param.QueryTimeout)
 			defer cancel()
-			ctx = iCtx
+			reqCtx = iCtx
 		}
-		resp, err := m.queryOnlineMetrics(ctx, qReq)
+		resp, err := m.queryOnlineMetrics(reqCtx, qReq)
 		if err != nil {
+			logs.CtxWarn(reqCtx, "queryOnlineMetrics failed for metric %s, err: %v", metricName, err)
 			return err
 		}
 		mResp = resp
