@@ -44,7 +44,7 @@ func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 
 	isErr := err != nil
 	if t.metric != nil {
-		logs.CtxInfo(ctx, "ObserveConsumer[%s] ConsumeTraces, self_duration=%s, is_err=%s, spans_count=%d", t.name, selfDuration, boolToStr(isErr), tds.SpansCount())
+		// logs.CtxInfo(ctx, "ObserveConsumer[%s] ConsumeTraces, self_duration=%s, is_err=%s, spans_count=%d", t.name, selfDuration, boolToStr(isErr), tds.SpansCount())
 		psmCounts := tds.SpansCountByPSM()
 		for psm, count := range psmCounts {
 			t.metric.Emit(
