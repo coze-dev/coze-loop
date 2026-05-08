@@ -2282,9 +2282,40 @@ func TestDefaultExptTurnEvaluationImpl_buildEvaluatorInputData(t *testing.T) {
 			turnFields:   turnFields,
 			targetFields: targetFields,
 			wantInputData: &entity.EvaluatorInputData{
-				InputFields:           make(map[string]*entity.Content),
+				InputFields: map[string]*entity.Content{
+					"eval_field":    mockContent1,
+					"target_field1": mockContent1,
+					"target_field2": mockContent2,
+				},
 				EvaluateDatasetFields: map[string]*entity.Content{"eval_field": mockContent1},
 				EvaluateTargetOutputFields: map[string]*entity.Content{
+					"target_field1": mockContent1,
+					"target_field2": mockContent2,
+				},
+				Ext: make(map[string]string),
+			},
+			wantErr: false,
+		},
+		{
+			name:          "CustomRPC evaluator - with input schemas, empty mapping",
+			evaluatorType: entity.EvaluatorTypeCustomRPC,
+			ec: &entity.EvaluatorConf{
+				IngressConf: &entity.EvaluatorIngressConf{
+					EvalSetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{},
+					},
+					TargetAdapter: &entity.FieldAdapter{
+						FieldConfs: []*entity.FieldConf{},
+					},
+				},
+			},
+			turnFields:   turnFields,
+			targetFields: targetFields,
+			inputSchemas: []*entity.ArgsSchema{{Key: gptr.Of("in1")}},
+			wantInputData: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"turn_field1":   mockContent1,
+					"turn_field2":   mockContent2,
 					"target_field1": mockContent1,
 					"target_field2": mockContent2,
 				},
