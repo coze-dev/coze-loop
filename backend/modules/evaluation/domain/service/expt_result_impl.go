@@ -429,6 +429,11 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		turnID    int64
 	}
 	turnLogIDByRunItemTurn := make(map[itemTurnKey]string)
+	type itemTurnKeyNoRun struct {
+		itemID int64
+		turnID int64
+	}
+	turnLogIDByItemTurn := make(map[itemTurnKeyNoRun]string)
 
 	// 将基准页内 turn_result 里的 expt_run_id 拆分出来，批量拉取对应的 run-log
 	runID2ItemIDSet := make(map[int64]map[int64]struct{})
@@ -482,6 +487,11 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 				itemID:    trl.ItemID,
 				turnID:    trl.TurnID,
 			}] = trl.LogID
+			// 兜底：同一分页里同一 item/turn 若出现多个 run_id，只保留第一个非空 logid 用于对外展示
+			k := itemTurnKeyNoRun{itemID: trl.ItemID, turnID: trl.TurnID}
+			if turnLogIDByItemTurn[k] == "" {
+				turnLogIDByItemTurn[k] = trl.LogID
+			}
 		}
 	}
 
@@ -516,6 +526,33 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// 写回 turn 级别 logid：若 turn_result 表未回写 log_id，则用 run-log 兜底
+	for _, item := range itemResults {
+		if item == nil {
+			continue
+		}
+		for _, turn := range item.TurnResults {
+			if turn == nil {
+				continue
+			}
+			for _, exptRes := range turn.ExperimentResults {
+				if exptRes == nil || exptRes.Payload == nil || exptRes.Payload.SystemInfo == nil {
+					continue
+				}
+				// 当前接口按 baseExpt 的 turn_result 拉取分页范围，这里只对 baseExpt 的系统信息做兜底即可
+				if exptRes.ExperimentID != baseExptID {
+					continue
+				}
+				if exptRes.Payload.SystemInfo.LogID != nil && *exptRes.Payload.SystemInfo.LogID != "" {
+					continue
+				}
+				if logID := turnLogIDByItemTurn[itemTurnKeyNoRun{itemID: item.ItemID, turnID: turn.TurnID}]; logID != "" {
+					exptRes.Payload.SystemInfo.LogID = gptr.Of(logID)
+				}
+			}
+		}
 	}
 
 	res.ItemResults = itemResults

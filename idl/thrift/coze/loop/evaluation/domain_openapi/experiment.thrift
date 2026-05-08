@@ -208,6 +208,7 @@ struct ResultPayload {
 
 struct TurnSystemInfo {
     1: optional TurnRunState turn_run_state
+    2: optional string log_id
 }
 
 // 轮次结果
@@ -226,6 +227,7 @@ struct ItemResult {
 
 struct ItemSystemInfo {
     1: optional ItemRunState run_state
+    2: optional string log_id
 }
 
 // ===============================
