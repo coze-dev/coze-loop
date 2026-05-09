@@ -248,6 +248,31 @@ func TestClipProcessorFactory(t *testing.T) {
 	require.IsType(t, &ClipProcessor{}, processor)
 }
 
+func TestClipProcessorFactory_WithoutClip(t *testing.T) {
+	factory := NewClipProcessorFactory()
+	processor, err := factory.CreateProcessor(context.Background(), Settings{WithoutClip: true})
+	require.NoError(t, err)
+	require.IsType(t, &NoOpProcessor{}, processor)
+}
+
+func TestNoOpProcessor_Transform(t *testing.T) {
+	processor := &NoOpProcessor{}
+	longInput := strings.Repeat("A", clipProcessorPlainTextMaxLength*2)
+	longOutput := strings.Repeat("B", clipProcessorPlainTextMaxLength*2)
+	spans := loop_span.SpanList{
+		{Input: longInput, Output: longOutput},
+		{Input: "short", Output: "short"},
+	}
+
+	result, err := processor.Transform(context.Background(), spans)
+	require.NoError(t, err)
+	require.Len(t, result, 2)
+	require.Equal(t, longInput, result[0].Input)
+	require.Equal(t, longOutput, result[0].Output)
+	require.Equal(t, "short", result[1].Input)
+	require.Equal(t, "short", result[1].Output)
+}
+
 func TestClipJSONValue_DefaultBranch(t *testing.T) {
 	res, changed := clipJSONValue(float64(123.456))
 	require.Equal(t, float64(123.456), res)
