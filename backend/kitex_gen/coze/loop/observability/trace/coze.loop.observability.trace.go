@@ -31,6 +31,7 @@ type ListSpansRequest struct {
 	PlatformType *common.PlatformType `thrift:"platform_type,8,optional" frugal:"8,optional,string" form:"platform_type" json:"platform_type,omitempty"`
 	// default root span
 	SpanListType *common.SpanListType `thrift:"span_list_type,9,optional" frugal:"9,optional,string" form:"span_list_type" json:"span_list_type,omitempty"`
+	WithoutClip  *bool                `thrift:"without_clip,10,optional" frugal:"10,optional,bool" form:"without_clip" json:"without_clip,omitempty"`
 	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
@@ -134,6 +135,18 @@ func (p *ListSpansRequest) GetSpanListType() (v common.SpanListType) {
 	return *p.SpanListType
 }
 
+var ListSpansRequest_WithoutClip_DEFAULT bool
+
+func (p *ListSpansRequest) GetWithoutClip() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetWithoutClip() {
+		return ListSpansRequest_WithoutClip_DEFAULT
+	}
+	return *p.WithoutClip
+}
+
 var ListSpansRequest_Base_DEFAULT *base.Base
 
 func (p *ListSpansRequest) GetBase() (v *base.Base) {
@@ -172,6 +185,9 @@ func (p *ListSpansRequest) SetPlatformType(val *common.PlatformType) {
 func (p *ListSpansRequest) SetSpanListType(val *common.SpanListType) {
 	p.SpanListType = val
 }
+func (p *ListSpansRequest) SetWithoutClip(val *bool) {
+	p.WithoutClip = val
+}
 func (p *ListSpansRequest) SetBase(val *base.Base) {
 	p.Base = val
 }
@@ -186,6 +202,7 @@ var fieldIDToName_ListSpansRequest = map[int16]string{
 	7:   "page_token",
 	8:   "platform_type",
 	9:   "span_list_type",
+	10:  "without_clip",
 	255: "Base",
 }
 
@@ -211,6 +228,10 @@ func (p *ListSpansRequest) IsSetPlatformType() bool {
 
 func (p *ListSpansRequest) IsSetSpanListType() bool {
 	return p.SpanListType != nil
+}
+
+func (p *ListSpansRequest) IsSetWithoutClip() bool {
+	return p.WithoutClip != nil
 }
 
 func (p *ListSpansRequest) IsSetBase() bool {
@@ -308,6 +329,14 @@ func (p *ListSpansRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 9:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -474,6 +503,17 @@ func (p *ListSpansRequest) ReadField9(iprot thrift.TProtocol) error {
 	p.SpanListType = _field
 	return nil
 }
+func (p *ListSpansRequest) ReadField10(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.WithoutClip = _field
+	return nil
+}
 func (p *ListSpansRequest) ReadField255(iprot thrift.TProtocol) error {
 	_field := base.NewBase()
 	if err := _field.Read(iprot); err != nil {
@@ -523,6 +563,10 @@ func (p *ListSpansRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField9(oprot); err != nil {
 			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
 		if err = p.writeField255(oprot); err != nil {
@@ -711,6 +755,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
 }
+func (p *ListSpansRequest) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetWithoutClip() {
+		if err = oprot.WriteFieldBegin("without_clip", thrift.BOOL, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.WithoutClip); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
 func (p *ListSpansRequest) writeField255(oprot thrift.TProtocol) (err error) {
 	if p.IsSetBase() {
 		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
@@ -769,6 +831,9 @@ func (p *ListSpansRequest) DeepEqual(ano *ListSpansRequest) bool {
 		return false
 	}
 	if !p.Field9DeepEqual(ano.SpanListType) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.WithoutClip) {
 		return false
 	}
 	if !p.Field255DeepEqual(ano.Base) {
@@ -862,6 +927,18 @@ func (p *ListSpansRequest) Field9DeepEqual(src *common.SpanListType) bool {
 		return false
 	}
 	if strings.Compare(*p.SpanListType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListSpansRequest) Field10DeepEqual(src *bool) bool {
+
+	if p.WithoutClip == src {
+		return true
+	} else if p.WithoutClip == nil || src == nil {
+		return false
+	}
+	if *p.WithoutClip != *src {
 		return false
 	}
 	return true

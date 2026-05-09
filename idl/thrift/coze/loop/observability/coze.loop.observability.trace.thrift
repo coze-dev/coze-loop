@@ -22,6 +22,7 @@ struct ListSpansRequest {
     7: optional string page_token (api.body="page_token")
     8: optional common.PlatformType platform_type (api.body="platform_type")
     9: optional common.SpanListType span_list_type (api.body="span_list_type") // default root span
+    10: optional bool without_clip (api.body="without_clip")
 
     255: optional base.Base Base
 }
