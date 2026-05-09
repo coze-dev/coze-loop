@@ -908,6 +908,8 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}
+	// ByteScheduler 模板周期回调经本接口提交，与 trigger_type=schedule 对齐
+	submitReq.TriggerType = gptr.Of(domain_expt.Schedule)
 	submitReq.Session = &common.Session{}
 	if session.UserID != "" {
 		if userID, parseErr := strconv.ParseInt(session.UserID, 10, 64); parseErr == nil {
