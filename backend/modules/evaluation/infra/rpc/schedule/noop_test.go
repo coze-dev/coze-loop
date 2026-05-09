@@ -37,6 +37,6 @@ func TestNoopExptScheduleAdapter(t *testing.T) {
 	})
 
 	t.Run("implements IExptScheduleAdapter interface", func(t *testing.T) {
-		var _ rpc.IExptScheduleAdapter = adapter
+		var _ rpc.IExptScheduleAdapter = (*noopExptScheduleAdapter)(nil)
 	})
 }

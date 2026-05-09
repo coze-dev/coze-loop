@@ -363,7 +363,7 @@ func (dao *EvaluatorTagDAOImpl) querySourceIDsForCondition(ctx context.Context, 
 			return nil, nil
 		}
 	}
-	if restrictTo == nil || len(restrictTo) <= sourceIDInChunkSize {
+	if len(restrictTo) <= sourceIDInChunkSize {
 		return dao.querySourceIDsForConditionOnce(ctx, tagType, langType, condition, restrictTo, opts...)
 	}
 	set := make(map[int64]struct{})
@@ -412,7 +412,7 @@ func (dao *EvaluatorTagDAOImpl) sourceIDsForNameLike(ctx context.Context, tagTyp
 			return nil, nil
 		}
 	}
-	if restrictTo == nil || len(restrictTo) <= sourceIDInChunkSize {
+	if len(restrictTo) <= sourceIDInChunkSize {
 		return dao.sourceIDsForNameLikeOnce(ctx, tagType, langType, kw, restrictTo, opts...)
 	}
 	set := make(map[int64]struct{})
