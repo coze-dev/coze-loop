@@ -1055,6 +1055,18 @@ func DefaultExperimentNameFromTemplate(template *entity.ExptTemplate, nowUnix in
 	return tplName + strconv.FormatInt(nowUnix, 10)
 }
 
+// SchedulerExperimentNameFromTemplate ByteScheduler 按模板定时创建实验、未自定义名称时：模板名称（Trim 后）+「-」+ 秒级时间戳；模板名为空时前缀「实验模板」。
+func SchedulerExperimentNameFromTemplate(template *entity.ExptTemplate, nowUnix int64) string {
+	tplName := ""
+	if template != nil && template.Meta != nil {
+		tplName = strings.TrimSpace(template.Meta.Name)
+	}
+	if tplName == "" {
+		tplName = "实验模板"
+	}
+	return tplName + "-" + strconv.FormatInt(nowUnix, 10)
+}
+
 // TemplateToSubmitExperimentRequest 将实验模板转换为 SubmitExperimentRequest，用于根据模板提交实验
 func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name string, workspaceID int64) *expt.SubmitExperimentRequest {
 	if template == nil {

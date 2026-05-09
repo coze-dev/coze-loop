@@ -893,7 +893,7 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 	}
 
 	if name == "" {
-		name = experiment.DefaultExperimentNameFromTemplate(template, time.Now().Unix())
+		name = experiment.SchedulerExperimentNameFromTemplate(template, time.Now().Unix())
 	}
 
 	pass, err := e.manager.CheckName(ctx, name, req.GetWorkspaceID(), session)

@@ -898,3 +898,12 @@ func TestDefaultExperimentNameFromTemplate(t *testing.T) {
 	assert.Equal(t, "实验模板1735689600", DefaultExperimentNameFromTemplate(&entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "   "}}, ts))
 	assert.Equal(t, "实验模板1735689600", DefaultExperimentNameFromTemplate(nil, ts))
 }
+
+func TestSchedulerExperimentNameFromTemplate(t *testing.T) {
+	t.Parallel()
+	const ts int64 = 1735689600
+	tpl := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "  离线评测  "}}
+	assert.Equal(t, "离线评测-1735689600", SchedulerExperimentNameFromTemplate(tpl, ts))
+	assert.Equal(t, "实验模板-1735689600", SchedulerExperimentNameFromTemplate(&entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "   "}}, ts))
+	assert.Equal(t, "实验模板-1735689600", SchedulerExperimentNameFromTemplate(nil, ts))
+}
