@@ -85,9 +85,9 @@ func (mr *MockIExptTemplateRepoMockRecorder) GetByID(ctx, id, spaceID any) *gomo
 }
 
 // GetByName mocks base method.
-func (m *MockIExptTemplateRepo) GetByName(ctx context.Context, name string, spaceID int64) (*entity.ExptTemplate, bool, error) {
+func (m *MockIExptTemplateRepo) GetByName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType) (*entity.ExptTemplate, bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", ctx, name, spaceID)
+	ret := m.ctrl.Call(m, "GetByName", ctx, name, spaceID, exptType)
 	ret0, _ := ret[0].(*entity.ExptTemplate)
 	ret1, _ := ret[1].(bool)
 	ret2, _ := ret[2].(error)
@@ -95,9 +95,9 @@ func (m *MockIExptTemplateRepo) GetByName(ctx context.Context, name string, spac
 }
 
 // GetByName indicates an expected call of GetByName.
-func (mr *MockIExptTemplateRepoMockRecorder) GetByName(ctx, name, spaceID any) *gomock.Call {
+func (mr *MockIExptTemplateRepoMockRecorder) GetByName(ctx, name, spaceID, exptType any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptTemplateRepo)(nil).GetByName), ctx, name, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockIExptTemplateRepo)(nil).GetByName), ctx, name, spaceID, exptType)
 }
 
 // List mocks base method.

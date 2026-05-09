@@ -1161,7 +1161,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1189,7 +1189,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(false, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1262,7 +1262,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 						},
 					}, nil)
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), "other_name", workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), "other_name", workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
