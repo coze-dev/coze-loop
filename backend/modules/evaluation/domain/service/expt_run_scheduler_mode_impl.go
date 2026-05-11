@@ -715,8 +715,7 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status":           int32(entity.TurnRunState_Queueing),
-			"target_result_id": int64(0),
+			"status": int32(entity.TurnRunState_Queueing),
 		}); err != nil {
 			return err
 		}
@@ -1326,7 +1325,8 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
 		}); err != nil {
 			return err
 		}
@@ -1613,7 +1613,8 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
 		}); err != nil {
 			return err
 		}

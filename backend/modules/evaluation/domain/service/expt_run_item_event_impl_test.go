@@ -653,6 +653,8 @@ func TestNewRecordEvalMode(t *testing.T) {
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvalTarget := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvaluatorRecord := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 	tests := []struct {
 		name    string
@@ -695,7 +697,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewRecordEvalMode(tt.event, mockExptItemResultRepo, mockExptTurnResultRepo, mockExptStatsRepo, mockExperimentRepo, mockMetric, mockResultSvc, mockIdgen)
+			got, err := NewRecordEvalMode(tt.event, mockExptItemResultRepo, mockExptTurnResultRepo, mockExptStatsRepo, mockExperimentRepo, mockMetric, mockResultSvc, mockIdgen, mockEvalTarget, mockEvaluatorRecord)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -848,6 +850,8 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 		resultSvc:          mockResultSvc,
 		exptTurnResultRepo: mockExptTurnResultRepo,
 		idgen:              mockIdgen,
+		evalTargetService:  nil,
+		evaluatorRecordSvc: nil,
 	}
 
 	mockTurnResults := []*entity.ExptTurnResult{

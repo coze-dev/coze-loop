@@ -260,6 +260,8 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		e.metric,
 		e.resultSvc,
 		e.idgen,
+		e.evaTargetService,
+		e.evaluatorRecordService,
 	)
 	if err != nil {
 		return err
@@ -361,6 +363,8 @@ func NewRecordEvalMode(
 	metric metrics.ExptMetric,
 	resultSvc ExptResultService,
 	idgen idgen.IIDGenerator,
+	evalTargetService IEvalTargetService,
+	evaluatorRecordService EvaluatorRecordService,
 ) (RecordEvalMode, error) {
 	switch event.ExptRunMode {
 	case entity.EvaluationModeSubmit, entity.EvaluationModeAppend, entity.EvaluationModeTrialRun:
@@ -379,6 +383,8 @@ func NewRecordEvalMode(
 			metric:             metric,
 			resultSvc:          resultSvc,
 			idgen:              idgen,
+			evalTargetService:  evalTargetService,
+			evaluatorRecordSvc: evaluatorRecordService,
 		}, nil
 	case entity.EvaluationModeRetryAll, entity.EvaluationModeRetryItems:
 		return &ExptRecordEvalModeRetryIgnoreResult{
@@ -470,6 +476,8 @@ type ExptRecordEvalModeFailRetry struct {
 	experimentRepo     repo.IExperimentRepo
 	metric             metrics.ExptMetric
 	idgen              idgen.IIDGenerator
+	evalTargetService  IEvalTargetService
+	evaluatorRecordSvc EvaluatorRecordService
 }
 
 func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
@@ -494,10 +502,9 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
 		runLog.ErrMsg = ""
-		// 新 run 的 turn run_log 不得沿用上一轮评测产生的 target / evaluator 引用（否则会写入旧 EvaluatorRecord id）。
-		// EvaluatorResults 来自 ref 表聚合，与 ToRunLogDO 一并拷贝；此处必须显式清空。
-		runLog.TargetResultID = 0
-		runLog.EvaluatorResultIds = nil
+		targetID, evalIDs := failRetrySelectTurnRunLogRefs(ctx, eiec.Event.SpaceID, tr, e.evalTargetService, e.evaluatorRecordSvc)
+		runLog.TargetResultID = targetID
+		runLog.EvaluatorResultIds = evalIDs
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
 	}
 
