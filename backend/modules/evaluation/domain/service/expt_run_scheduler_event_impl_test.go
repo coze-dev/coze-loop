@@ -878,7 +878,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 3},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{
@@ -1074,7 +1074,7 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(1),
 					int64(2),
 					[]int64{1, 2},
-					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{},

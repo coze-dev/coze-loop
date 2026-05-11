@@ -786,7 +786,7 @@ func TestExptFailRetryExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).AnyTimes()
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), gomock.Any(), map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), gomock.Any(), map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{
 					ExptID:            1,
@@ -3370,7 +3370,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(errors.New("batch create error")).Times(1)
 			},
 			wantErr: true,
@@ -3402,7 +3402,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("get stats error")).Times(1)
 			},
@@ -3435,7 +3435,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{
 					PendingItemCnt:    5,
@@ -3475,7 +3475,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{
 					PendingItemCnt:    5,
@@ -3516,7 +3516,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 				f.idgenerator.EXPECT().GenMultiIDs(gomock.Any(), gomock.Any()).Return([]int64{1, 2}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any()).Return(&entity.ExptStats{
 					PendingItemCnt:    5,
@@ -4270,7 +4270,7 @@ func TestExptRetryItemsExec_ExptStart(t *testing.T) {
 				}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(errors.New("batch create error")).Times(1)
 			},
 			wantErr: true,
@@ -4306,7 +4306,7 @@ func TestExptRetryItemsExec_ExptStart(t *testing.T) {
 				}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(errors.New("save stats error")).Times(1)
 			},
@@ -4343,7 +4343,7 @@ func TestExptRetryItemsExec_ExptStart(t *testing.T) {
 				}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(errors.New("update expt error")).Times(1)
@@ -4379,7 +4379,7 @@ func TestExptRetryItemsExec_ExptStart(t *testing.T) {
 				f.exptItemResultRepo.EXPECT().MGetItemResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return([]*entity.ExptItemResult{}, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemsResult(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptTurnResultRepo.EXPECT().UpdateTurnResults(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
-				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil}).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(gomock.Any(), int64(3), int64(1), int64(2), []int64{100}, map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()}).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().BatchCreateNXRunLogs(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptStatsRepo.EXPECT().Save(gomock.Any(), gomock.Any()).Return(nil).Times(1)
 				f.exptRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil).Times(1)

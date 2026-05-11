@@ -453,10 +453,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
-	if err := e.ExptTurnResultRepo.UpdateTurnRunLogWithItemIDs(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
-		"target_result_id":     int64(0),
-		"evaluator_result_ids": nil,
-	}); err != nil {
+	if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.ExptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs); err != nil {
 		return nil, nil, err
 	}
 

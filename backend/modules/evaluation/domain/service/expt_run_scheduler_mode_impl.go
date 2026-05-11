@@ -28,13 +28,20 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+// emptyEvaluatorResultIDsJSONForRunLogUpdate 返回写入 expt_turn_result_run_log.evaluator_result_ids 的空 JSON。
+// GORM Updates(map) 会忽略值为 nil 的键，传 nil 无法清空 blob 列，旧 EvalVerIDToResID 会残留。
+func emptyEvaluatorResultIDsJSONForRunLogUpdate() []byte {
+	b, _ := (&entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{}}).Serialize()
+	return b
+}
+
 func clearExptTurnRunLogResultRefsOnItems(ctx context.Context, turnResultRepo repo.IExptTurnResultRepo, spaceID, exptID, exptRunID int64, itemIDs []int64) error {
 	if len(itemIDs) == 0 {
 		return nil
 	}
 	return turnResultRepo.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, map[string]any{
 		"target_result_id":     int64(0),
-		"evaluator_result_ids": nil,
+		"evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate(),
 	})
 }
 
