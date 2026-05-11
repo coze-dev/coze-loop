@@ -885,6 +885,20 @@ func (mr *MockIExptTurnResultRepoMockRecorder) ScanTurnRunLogs(ctx, exptID, curs
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScanTurnRunLogs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).ScanTurnRunLogs), ctx, exptID, cursor, limit, spaceID)
 }
 
+// UpdateTurnRunLogWithItemIDs mocks base method.
+func (m *MockIExptTurnResultRepo) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTurnRunLogWithItemIDs", ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTurnRunLogWithItemIDs indicates an expected call of UpdateTurnRunLogWithItemIDs.
+func (mr *MockIExptTurnResultRepoMockRecorder) UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTurnRunLogWithItemIDs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).UpdateTurnRunLogWithItemIDs), ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
+}
+
 // UpdateTurnResults mocks base method.
 func (m *MockIExptTurnResultRepo) UpdateTurnResults(ctx context.Context, exptID int64, itemTurnIDs []*entity.ItemTurnID, spaceID int64, ufields map[string]any) error {
 	m.ctrl.T.Helper()

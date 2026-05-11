@@ -457,6 +457,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	exptRepo := mock_repo.NewMockIExperimentRepo(ctrl)
 	exptItemResultRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
 	exptTurnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
 	exptStatsRepo := mock_repo.NewMockIExptStatsRepo(ctrl)
 	exptRunLogRepo := mock_repo.NewMockIExptRunLogRepo(ctrl)
 	idem := idemmocks.NewMockIdempotentService(ctrl)
@@ -476,6 +477,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		exptRepo,
 		exptItemResultRepo,
 		exptTurnResultRepo,
+		evaluatorRecordRepo,
 		exptStatsRepo,
 		exptRunLogRepo,
 		idem,
@@ -498,6 +500,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	assert.Equal(t, exptRepo, impl.ExptRepo)
 	assert.Equal(t, exptItemResultRepo, impl.ExptItemResultRepo)
 	assert.Equal(t, exptTurnResultRepo, impl.ExptTurnResultRepo)
+	assert.Equal(t, evaluatorRecordRepo, impl.EvaluatorRecordRepo)
 	assert.Equal(t, exptStatsRepo, impl.ExptStatsRepo)
 	assert.Equal(t, exptRunLogRepo, impl.ExptRunLogRepo)
 	assert.Equal(t, idem, impl.Idem)
@@ -728,9 +731,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 	testUserID := "test_user_id_123"
 
 	type fields struct {
-		configer           *configmocks.MockIConfiger
-		exptItemResultRepo *mock_repo.MockIExptItemResultRepo
-		exptTurnResultRepo *mock_repo.MockIExptTurnResultRepo
+		configer              *configmocks.MockIConfiger
+		exptItemResultRepo    *mock_repo.MockIExptItemResultRepo
+		exptTurnResultRepo    *mock_repo.MockIExptTurnResultRepo
+		evaluatorRecordRepo   *mock_repo.MockIEvaluatorRecordRepo
 	}
 
 	type args struct {
@@ -849,6 +853,9 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
+					gomock.Any(), int64(3), int64(1), int64(2), []int64{1, 3}, nil,
+				).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -864,6 +871,14 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(2),
 					[]int64{1, 3},
 					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 3},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{
@@ -922,6 +937,9 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
+					gomock.Any(), int64(3), int64(1), int64(2), []int64{1}, nil,
+				).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -968,6 +986,9 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
+					gomock.Any(), int64(3), int64(1), int64(2), []int64{1}, nil,
+				).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -1028,6 +1049,9 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
+					gomock.Any(), int64(3), int64(1), int64(2), []int64{1, 2}, nil,
+				).Return(nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -1043,6 +1067,14 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(2),
 					[]int64{1, 2},
 					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 2},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": nil},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{},
@@ -1185,9 +1217,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 			defer ctrl.Finish()
 
 			f := &fields{
-				configer:           configmocks.NewMockIConfiger(ctrl),
-				exptItemResultRepo: mock_repo.NewMockIExptItemResultRepo(ctrl),
-				exptTurnResultRepo: mock_repo.NewMockIExptTurnResultRepo(ctrl),
+				configer:            configmocks.NewMockIConfiger(ctrl),
+				exptItemResultRepo:  mock_repo.NewMockIExptItemResultRepo(ctrl),
+				exptTurnResultRepo:  mock_repo.NewMockIExptTurnResultRepo(ctrl),
+				evaluatorRecordRepo: mock_repo.NewMockIEvaluatorRecordRepo(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -1195,9 +1228,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 			}
 
 			svc := &ExptSchedulerImpl{
-				Configer:           f.configer,
-				ExptItemResultRepo: f.exptItemResultRepo,
-				ExptTurnResultRepo: f.exptTurnResultRepo,
+				Configer:            f.configer,
+				ExptItemResultRepo:  f.exptItemResultRepo,
+				ExptTurnResultRepo:  f.exptTurnResultRepo,
+				EvaluatorRecordRepo: f.evaluatorRecordRepo,
 			}
 
 			alives, zombies, err := svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items, nil)

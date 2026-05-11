@@ -1007,6 +1007,12 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
 	}
 
+	if existingRecord.Status != entity.EvaluatorRunStatusAsyncInvoking {
+		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] skip stale callback, recordID: %d, dbStatus: %v, reportStatus: %v",
+			param.RecordID, existingRecord.Status, param.Status)
+		return nil
+	}
+
 	mergedOutputData := param.OutputData
 	if mergedOutputData == nil {
 		mergedOutputData = &entity.EvaluatorOutputData{}

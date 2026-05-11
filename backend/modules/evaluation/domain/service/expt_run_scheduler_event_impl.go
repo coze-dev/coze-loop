@@ -36,6 +36,7 @@ type ExptSchedulerImpl struct {
 	Publisher                events.ExptEventPublisher
 	ExptItemResultRepo       repo.IExptItemResultRepo
 	ExptTurnResultRepo       repo.IExptTurnResultRepo
+	EvaluatorRecordRepo      repo.IEvaluatorRecordRepo
 	ExptStatsRepo            repo.IExptStatsRepo
 	ExptRunLogRepo           repo.IExptRunLogRepo
 	Idem                     idem.IdempotentService
@@ -56,6 +57,7 @@ func NewExptSchedulerSvc(
 	exptRepo repo.IExperimentRepo,
 	exptItemResultRepo repo.IExptItemResultRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
+	evaluatorRecordRepo repo.IEvaluatorRecordRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	exptRunLogRepo repo.IExptRunLogRepo,
 	Idem idem.IdempotentService,
@@ -75,6 +77,7 @@ func NewExptSchedulerSvc(
 		ExptRepo:                 exptRepo,
 		ExptItemResultRepo:       exptItemResultRepo,
 		ExptTurnResultRepo:       exptTurnResultRepo,
+		EvaluatorRecordRepo:      evaluatorRecordRepo,
 		ExptStatsRepo:            exptStatsRepo,
 		ExptRunLogRepo:           exptRunLogRepo,
 		Idem:                     Idem,
@@ -415,7 +418,11 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 }
 
 func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
-	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(expt.AsyncExec())
+	asyncExec := false
+	if expt != nil {
+		asyncExec = expt.AsyncExec()
+	}
+	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(asyncExec)
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
@@ -434,11 +441,22 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 
 	logs.CtxWarn(ctx, "[ExptEval] found zombie items, set failure state, expt_id: %v, expt_run_id: %v, item_ids: %v, zombie_second: %v", event.ExptID, event.ExptRunID, zombieItemIDs, zombieSecond)
 
+	if err := e.EvaluatorRecordRepo.TerminateAsyncInvokingByExptRunItems(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, nil); err != nil {
+		return nil, nil, err
+	}
+
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}, event.SpaceID); err != nil {
 		return nil, nil, err
 	}
 
 	if err := e.ExptTurnResultRepo.CreateOrUpdateItemsTurnRunLogStatus(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, entity.TurnRunState_Fail); err != nil {
+		return nil, nil, err
+	}
+
+	if err := e.ExptTurnResultRepo.UpdateTurnRunLogWithItemIDs(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{
+		"target_result_id":     int64(0),
+		"evaluator_result_ids": nil,
+	}); err != nil {
 		return nil, nil, err
 	}
 

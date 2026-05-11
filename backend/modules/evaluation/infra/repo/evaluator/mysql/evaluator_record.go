@@ -8,6 +8,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"gorm.io/gorm"
 	"gorm.io/plugin/dbresolver"
 
@@ -23,6 +24,7 @@ type EvaluatorRecordDAO interface {
 	CreateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecord(ctx context.Context, evaluatorRecord *model.EvaluatorRecord, opts ...db.Option) error
 	UpdateEvaluatorRecordResult(ctx context.Context, recordID int64, status int8, score float64, outputData string, opts ...db.Option) error
+	TerminateAsyncInvokingByExptRunItems(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, outputData string, opts ...db.Option) error
 	GetEvaluatorRecord(ctx context.Context, evaluatorRecordID int64, includeDeleted bool, opts ...db.Option) (*model.EvaluatorRecord, error)
 	BatchGetEvaluatorRecord(ctx context.Context, evaluatorRecordIDs []int64, includeDeleted bool, opts ...db.Option) ([]*model.EvaluatorRecord, error)
 }
@@ -77,6 +79,22 @@ func (dao *EvaluatorRecordDAOImpl) UpdateEvaluatorRecordResult(ctx context.Conte
 		Updates(map[string]interface{}{
 			"status":      status,
 			"score":       score,
+			"output_data": outputData,
+		}).Error
+}
+
+func (dao *EvaluatorRecordDAOImpl) TerminateAsyncInvokingByExptRunItems(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, outputData string, opts ...db.Option) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	dbsession := dao.provider.NewSession(ctx, opts...)
+	return dbsession.WithContext(ctx).
+		Model(&model.EvaluatorRecord{}).
+		Where("space_id = ? AND experiment_id = ? AND experiment_run_id = ? AND item_id IN ? AND status = ? AND deleted_at IS NULL",
+			spaceID, exptID, exptRunID, itemIDs, int32(entity.EvaluatorRunStatusAsyncInvoking)).
+		Updates(map[string]interface{}{
+			"status":      int32(entity.EvaluatorRunStatusFail),
+			"score":       0,
 			"output_data": outputData,
 		}).Error
 }

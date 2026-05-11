@@ -3532,6 +3532,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 					&entity.EvaluatorRecord{
 						ID:      100,
 						SpaceID: 2,
+						Status:  entity.EvaluatorRunStatusAsyncInvoking,
 						EvaluatorOutputData: &entity.EvaluatorOutputData{
 							Ext: map[string]string{"old": "1"},
 						},
@@ -3571,6 +3572,23 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, SpaceID: 2}, nil)
 			},
 			expectedErrCode: int32(errno.CommonInvalidParamCode),
+		},
+		{
+			name: "忽略 - 记录已非 AsyncInvoking（迟回调不落库）",
+			param: &entity.ReportEvaluatorRecordParam{
+				SpaceID:  2,
+				RecordID: 100,
+				Status:   entity.EvaluatorRunStatusSuccess,
+			},
+			setupMocks: func() {
+				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(
+					&entity.EvaluatorRecord{
+						ID:      100,
+						SpaceID: 2,
+						Status:  entity.EvaluatorRunStatusFail,
+					}, nil)
+			},
+			expectedErrCode: 0,
 		},
 	}
 
@@ -3630,6 +3648,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_OutputDataNilOrExtNil(
 				&entity.EvaluatorRecord{
 					ID:      100,
 					SpaceID: 2,
+					Status:  entity.EvaluatorRunStatusAsyncInvoking,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
 						Ext: map[string]string{"old": "1"},
 					},

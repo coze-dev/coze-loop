@@ -122,3 +122,17 @@ func (mr *MockIEvaluatorRecordRepoMockRecorder) UpdateEvaluatorRecordResult(ctx,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).UpdateEvaluatorRecordResult), ctx, recordID, status, outputData)
 }
+
+// TerminateAsyncInvokingByExptRunItems mocks base method.
+func (m *MockIEvaluatorRecordRepo) TerminateAsyncInvokingByExptRunItems(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, failOutput *entity.EvaluatorOutputData) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TerminateAsyncInvokingByExptRunItems", ctx, spaceID, exptID, exptRunID, itemIDs, failOutput)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// TerminateAsyncInvokingByExptRunItems indicates an expected call of TerminateAsyncInvokingByExptRunItems.
+func (mr *MockIEvaluatorRecordRepoMockRecorder) TerminateAsyncInvokingByExptRunItems(ctx, spaceID, exptID, exptRunID, itemIDs, failOutput any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncInvokingByExptRunItems", reflect.TypeOf((*MockIEvaluatorRecordRepo)(nil).TerminateAsyncInvokingByExptRunItems), ctx, spaceID, exptID, exptRunID, itemIDs, failOutput)
+}

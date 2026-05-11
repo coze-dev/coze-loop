@@ -28,6 +28,16 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+func clearExptTurnRunLogResultRefsOnItems(ctx context.Context, turnResultRepo repo.IExptTurnResultRepo, spaceID, exptID, exptRunID int64, itemIDs []int64) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	return turnResultRepo.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, map[string]any{
+		"target_result_id":     int64(0),
+		"evaluator_result_ids": nil,
+	})
+}
+
 // SchedulerModeFactory 定义创建 ExptSchedulerMode 实例的接口
 type SchedulerModeFactory interface {
 	NewSchedulerMode(
@@ -703,6 +713,10 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })); err != nil {
+			return err
+		}
+
 		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
 			return err
 		}
@@ -1309,6 +1323,10 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })); err != nil {
+			return err
+		}
+
 		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
 			return err
 		}
@@ -1589,6 +1607,10 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
 			"status": int32(entity.TurnRunState_Queueing),
 		}); err != nil {
+			return err
+		}
+
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k })); err != nil {
 			return err
 		}
 
