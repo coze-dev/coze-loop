@@ -5,7 +5,6 @@ import { pluginLess } from '@rsbuild/plugin-less';
 import { pluginReact } from '@rsbuild/plugin-react';
 import { pluginSass } from '@rsbuild/plugin-sass';
 import { pluginSvgr } from '@rsbuild/plugin-svgr';
-import SubspaceResolvePlugin from '@coze-arch/subspace-resolve-plugin';
 import PkgRootWebpackPlugin from '@coze-arch/pkg-root-webpack-plugin';
 
 export default defineConfig({
@@ -40,8 +39,8 @@ export default defineConfig({
       config.module.parser.javascript.exportsPresence = false;
 
       appendPlugins([
+        // @ts-expect-error skip
         new PkgRootWebpackPlugin({}),
-        new SubspaceResolvePlugin({ currSubspace: 'default' }),
       ]);
 
       return mergeConfig(config, {
