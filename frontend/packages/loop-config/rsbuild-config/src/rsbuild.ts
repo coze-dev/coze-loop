@@ -91,7 +91,9 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
         config.module.parser.javascript.exportsPresence = false;
 
         appendPlugins([
+          // @ts-expect-error skip for rsbuild 2
           new PkgRootWebpackPlugin({}),
+          // @ts-expect-error skip for rsbuild 2
           new SemiRspackPlugin({ theme: '@coze-arch/semi-theme-hand01' }),
         ]);
 
@@ -126,6 +128,10 @@ export function createRsbuildConfig(rsbuildConfig: RsbuildConfig) {
             mathjax: {
               name: 'lib-mathjax',
               test: /mathjax-full/,
+            },
+            mermaid: {
+              name: 'lib-mermaid',
+              test: /mermaid/,
             },
           },
         },
