@@ -715,7 +715,8 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
 		}); err != nil {
 			return err
 		}

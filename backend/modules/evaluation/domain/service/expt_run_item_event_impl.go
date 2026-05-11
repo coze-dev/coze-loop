@@ -494,6 +494,10 @@ func (e *ExptRecordEvalModeFailRetry) PreEval(ctx context.Context, eiec *entity.
 		runLog.Status = entity.TurnRunState_Processing
 		runLog.ExptRunID = eiec.Event.ExptRunID
 		runLog.ErrMsg = ""
+		// 新 run 的 turn run_log 不得沿用上一轮评测产生的 target / evaluator 引用（否则会写入旧 EvaluatorRecord id）。
+		// EvaluatorResults 来自 ref 表聚合，与 ToRunLogDO 一并拷贝；此处必须显式清空。
+		runLog.TargetResultID = 0
+		runLog.EvaluatorResultIds = nil
 		turnRunLogDOs = append(turnRunLogDOs, runLog)
 	}
 
