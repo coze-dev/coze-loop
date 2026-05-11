@@ -27,6 +27,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
+	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -466,6 +467,53 @@ func (e *ExptRecordEvalModeSubmit) PreEval(ctx context.Context, eiec *entity.Exp
 
 func (e *ExptRecordEvalModeSubmit) PostEval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
 	return nil
+}
+
+// failRetrySelectTurnRunLogRefs 失败重试时为新建的 turn run_log 选择保留的 Target / 评估器引用：
+// - Target：仅当存在 target_result_id 且对应 Target 记录状态为 Success 时保留，否则清零并重跑 Target。
+// - 评估器：在 Target 已成功（或无 Target 需校验）时，仅保留状态为 Success 的 EvaluatorRecord；失败/异步等一律剔除以便重跑。
+func failRetrySelectTurnRunLogRefs(
+	ctx context.Context,
+	spaceID int64,
+	tr *entity.ExptTurnResult,
+	evalTarget IEvalTargetService,
+	evalRecord EvaluatorRecordService,
+) (targetResultID int64, evalResults *entity.EvaluatorResults) {
+	if tr == nil {
+		return 0, nil
+	}
+	if tr.TargetResultID > 0 {
+		if evalTarget == nil {
+			return 0, nil
+		}
+		targetRec, err := evalTarget.GetRecordByID(ctx, spaceID, tr.TargetResultID)
+		if err != nil || targetRec == nil || gptr.Indirect(targetRec.Status) != entity.EvalTargetRunStatusSuccess {
+			return 0, nil
+		}
+		return tr.TargetResultID, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
+	}
+	return 0, pruneSuccessfulEvaluatorRecords(ctx, evalRecord, tr)
+}
+
+func pruneSuccessfulEvaluatorRecords(ctx context.Context, evalRecord EvaluatorRecordService, tr *entity.ExptTurnResult) *entity.EvaluatorResults {
+	if evalRecord == nil || tr.EvaluatorResults == nil || len(tr.EvaluatorResults.EvalVerIDToResID) == 0 {
+		return nil
+	}
+	ids := maps.ToSlice(tr.EvaluatorResults.EvalVerIDToResID, func(_, resID int64) int64 { return resID })
+	records, err := evalRecord.BatchGetEvaluatorRecord(ctx, ids, false, false)
+	if err != nil || len(records) == 0 {
+		return nil
+	}
+	m := make(map[int64]int64)
+	for _, rec := range records {
+		if rec != nil && rec.Status == entity.EvaluatorRunStatusSuccess {
+			m[rec.EvaluatorVersionID] = rec.ID
+		}
+	}
+	if len(m) == 0 {
+		return nil
+	}
+	return &entity.EvaluatorResults{EvalVerIDToResID: m}
 }
 
 type ExptRecordEvalModeFailRetry struct {
