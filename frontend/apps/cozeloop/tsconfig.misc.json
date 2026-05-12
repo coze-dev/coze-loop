@@ -1,21 +1,6 @@
 {
-  "extends": "@coze-arch/ts-config/tsconfig.web.json",
   "$schema": "https://json.schemastore.org/tsconfig",
-  "include": [
-    "__tests__",
-    "cloud.config.ts",
-    "rsbuild.config.ts",
-    "tailwind.config.ts",
-    "vitest.config.ts",
-    "rsbuild.cloud.config.ts",
-    "scripts"
-  ],
-  "exclude": ["./dist"],
-  "references": [
-    {
-      "path": "./tsconfig.build.json"
-    }
-  ],
+  "extends": "@coze-arch/ts-config/tsconfig.web.json",
   "compilerOptions": {
     "jsx": "preserve",
     "paths": {
@@ -32,5 +17,20 @@
     "rootDir": "./",
     "outDir": "./dist",
     "strict": true
-  }
+  },
+  "include": [
+    "__tests__",
+    "cloud.config.ts",
+    "rsbuild.config.ts",
+    "tailwind.config.ts",
+    "vitest.config.ts",
+    "rsbuild.cloud.config.ts",
+    "scripts"
+  ],
+  "exclude": ["./dist"],
+  "references": [
+    {
+      "path": "./tsconfig.build.json"
+    }
+  ]
 }
