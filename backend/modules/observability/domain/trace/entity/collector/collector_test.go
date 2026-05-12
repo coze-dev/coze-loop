@@ -141,7 +141,9 @@ func TestCollector_Run(t *testing.T) {
 			}
 			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 			defer cancel()
-			err = c.RunInOne(ctx)
+			err = c.RunInOne(ctx, func() error {
+				return nil
+			})
 			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}
