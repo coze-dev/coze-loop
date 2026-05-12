@@ -74,6 +74,16 @@ func EvalTargetVersionDO2PO(do *entity.EvalTargetVersion) (po *model.TargetVersi
 		if err != nil {
 			return nil, err
 		}
+	case entity.EvalTargetTypeA2AAgent:
+		meta, err = json.Marshal(do.A2AAgent)
+		if err != nil {
+			return nil, err
+		}
+	case entity.EvalTargetTypeCustomAgent:
+		meta, err = json.Marshal(do.CustomAgent)
+		if err != nil {
+			return nil, err
+		}
 	default:
 	}
 	if do.InputSchema != nil {
