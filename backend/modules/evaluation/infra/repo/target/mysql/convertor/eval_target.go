@@ -223,6 +223,16 @@ func EvalTargetVersionPO2DO(targetVersionPO *model.TargetVersion, targetType ent
 			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
 				targetVersionDO.WebAgent = meta
 			}
+		case entity.EvalTargetTypeA2AAgent:
+			meta := &entity.A2AAgent{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.A2AAgent = meta
+			}
+		case entity.EvalTargetTypeCustomAgent:
+			meta := &entity.CustomAgent{}
+			if err := json.Unmarshal(*targetVersionPO.TargetMeta, meta); err == nil {
+				targetVersionDO.CustomAgent = meta
+			}
 		default:
 			// todo
 		}
