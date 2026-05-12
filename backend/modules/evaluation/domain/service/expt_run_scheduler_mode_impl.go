@@ -14,7 +14,6 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -1059,7 +1058,8 @@ func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *ent
 }
 
 func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experiment) int {
-	if val := gptr.Indirect(expt.EvalConf.ItemConcurNum); val > 0 && val <= consts.MaxItemConcurrentNum {
+	maxItemConcurNum := e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum()
+	if val := gptr.Indirect(expt.EvalConf.ItemConcurNum); val > 0 && val <= maxItemConcurNum {
 		return val
 	}
 	concurNum := e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetConcurNum()
