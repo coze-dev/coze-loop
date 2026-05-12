@@ -389,6 +389,8 @@ func mapOfflineExptAnalysisStatusDTO2OpenAPI(s *domainExpt.OfflineExptAnalysisSt
 		v = openapiExperiment.OfflineExptAnalysisStatusSuccess
 	case domainExpt.OfflineExptAnalysisStatus_Failed:
 		v = openapiExperiment.OfflineExptAnalysisStatusFailed
+	case domainExpt.OfflineExptAnalysisStatus_Superseded:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuperseded
 	default:
 		v = openapiExperiment.OfflineExptAnalysisStatusNotStarted
 	}
@@ -404,6 +406,8 @@ func openAPIOfflineExptAnalysisStatusDO2DTO(s entity.OfflineExptAnalysisStatus) 
 		v = openapiExperiment.OfflineExptAnalysisStatusSuccess
 	case entity.OfflineExptAnalysisStatus_Failed:
 		v = openapiExperiment.OfflineExptAnalysisStatusFailed
+	case entity.OfflineExptAnalysisStatus_Superseded:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuperseded
 	default:
 		v = openapiExperiment.OfflineExptAnalysisStatusNotStarted
 	}

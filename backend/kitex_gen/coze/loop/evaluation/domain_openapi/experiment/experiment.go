@@ -39,6 +39,8 @@ const (
 
 	OfflineExptAnalysisStatusFailed = "failed"
 
+	OfflineExptAnalysisStatusSuperseded = "superseded"
+
 	AggregatorTypeAverage = "average"
 
 	AggregatorTypeSum = "sum"

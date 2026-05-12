@@ -53,6 +53,7 @@ const (
 	OfflineExptAnalysisStatus_Processing OfflineExptAnalysisStatus = 1 // 进行中
 	OfflineExptAnalysisStatus_Success    OfflineExptAnalysisStatus = 2 // 成功
 	OfflineExptAnalysisStatus_Failed     OfflineExptAnalysisStatus = 3 // 失败
+	OfflineExptAnalysisStatus_Superseded OfflineExptAnalysisStatus = 4 // 已被新版本/新分析取代
 )
 
 const (

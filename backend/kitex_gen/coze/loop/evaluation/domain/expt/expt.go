@@ -235,6 +235,8 @@ const (
 	OfflineExptAnalysisStatus_Success OfflineExptAnalysisStatus = 2
 	// 失败
 	OfflineExptAnalysisStatus_Failed OfflineExptAnalysisStatus = 3
+	// 已被新版本/新分析取代
+	OfflineExptAnalysisStatus_Superseded OfflineExptAnalysisStatus = 4
 )
 
 func (p OfflineExptAnalysisStatus) String() string {
@@ -247,6 +249,8 @@ func (p OfflineExptAnalysisStatus) String() string {
 		return "Success"
 	case OfflineExptAnalysisStatus_Failed:
 		return "Failed"
+	case OfflineExptAnalysisStatus_Superseded:
+		return "Superseded"
 	}
 	return "<UNSET>"
 }
@@ -261,6 +265,8 @@ func OfflineExptAnalysisStatusFromString(s string) (OfflineExptAnalysisStatus, e
 		return OfflineExptAnalysisStatus_Success, nil
 	case "Failed":
 		return OfflineExptAnalysisStatus_Failed, nil
+	case "Superseded":
+		return OfflineExptAnalysisStatus_Superseded, nil
 	}
 	return OfflineExptAnalysisStatus(0), fmt.Errorf("not a valid OfflineExptAnalysisStatus string")
 }

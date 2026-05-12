@@ -35,6 +35,7 @@ enum OfflineExptAnalysisStatus {
     Processing = 1  // 进行中
     Success = 2    // 成功
     Failed = 3     // 失败
+    Superseded = 4 // 已被新版本/新分析取代
 }
 
 enum SourceType {

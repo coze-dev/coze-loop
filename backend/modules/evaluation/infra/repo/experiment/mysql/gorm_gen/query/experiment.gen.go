@@ -97,7 +97,7 @@ type experiment struct {
 	Visibility                field.Int32  // 可见性，默认0-可见，1-隐藏
 	ThreadID                  field.String // 智能生成会话ID
 	TrialRunItemCount         field.Int64  // 试运行行数
-	OfflineExptAnalysisStatus field.Int32  // 离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败
+	OfflineExptAnalysisStatus field.Int32  // 离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)
 
 	fieldMap map[string]field.Expr
 }

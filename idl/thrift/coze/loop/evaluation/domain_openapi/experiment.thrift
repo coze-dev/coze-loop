@@ -26,6 +26,7 @@ const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_NotStarted = "not_star
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Processing = "processing"
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Success = "success"
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Failed = "failed"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Superseded = "superseded"
 
 // 聚合器类型
 typedef string AggregatorType(ts.enum="true")
