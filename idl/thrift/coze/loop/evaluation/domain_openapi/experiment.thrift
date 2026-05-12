@@ -272,6 +272,7 @@ struct ExptFieldMapping {
     2: optional list<EvaluatorFieldMapping> evaluator_field_mapping
     3: optional common.RuntimeParam target_runtime_param
     4: optional i32 item_concur_num
+    5: optional i32 item_retry_num
 }
 
 // 实验评估器得分加权配置（evaluator_id -> weight）
