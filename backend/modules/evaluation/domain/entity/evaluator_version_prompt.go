@@ -126,7 +126,7 @@ func (do *PromptEvaluatorVersion) ValidateInput(input *EvaluatorInputData) error
 		// schema中不存在的字段无需校验
 		if argsSchema, ok := inputSchemaMap[fieldKey]; ok {
 			if !gslice.Contains(argsSchema.SupportContentTypes, gptr.Indirect(content.ContentType)) {
-				return errorx.NewByCode(errno.ContentTypeNotSupportedCode, errorx.WithExtraMsg(fmt.Sprintf("content type %v not supported", gptr.Indirect(content.ContentType))))
+				return errorx.NewByCode(errno.ContentTypeNotSupportedCode, errorx.WithExtraMsg(fmt.Sprintf("content type %v not supported", content.ContentType)))
 			}
 			if gptr.Indirect(content.ContentType) == ContentTypeText {
 				valid, err := json.ValidateJSONSchema(gptr.Indirect(argsSchema.JsonSchema), gptr.Indirect(content.Text))
