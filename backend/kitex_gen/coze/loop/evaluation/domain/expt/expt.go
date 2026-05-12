@@ -223,6 +223,63 @@ func (p *ExptType) Value() (driver.Value, error) {
 	return int64(*p), nil
 }
 
+// 离线实验分析状态（与表字段 offline_expt_analysis_status 一致）
+type OfflineExptAnalysisStatus int64
+
+const (
+	// 未开始
+	OfflineExptAnalysisStatus_NotStarted OfflineExptAnalysisStatus = 0
+	// 进行中
+	OfflineExptAnalysisStatus_Processing OfflineExptAnalysisStatus = 1
+	// 成功
+	OfflineExptAnalysisStatus_Success OfflineExptAnalysisStatus = 2
+	// 失败
+	OfflineExptAnalysisStatus_Failed OfflineExptAnalysisStatus = 3
+)
+
+func (p OfflineExptAnalysisStatus) String() string {
+	switch p {
+	case OfflineExptAnalysisStatus_NotStarted:
+		return "NotStarted"
+	case OfflineExptAnalysisStatus_Processing:
+		return "Processing"
+	case OfflineExptAnalysisStatus_Success:
+		return "Success"
+	case OfflineExptAnalysisStatus_Failed:
+		return "Failed"
+	}
+	return "<UNSET>"
+}
+
+func OfflineExptAnalysisStatusFromString(s string) (OfflineExptAnalysisStatus, error) {
+	switch s {
+	case "NotStarted":
+		return OfflineExptAnalysisStatus_NotStarted, nil
+	case "Processing":
+		return OfflineExptAnalysisStatus_Processing, nil
+	case "Success":
+		return OfflineExptAnalysisStatus_Success, nil
+	case "Failed":
+		return OfflineExptAnalysisStatus_Failed, nil
+	}
+	return OfflineExptAnalysisStatus(0), fmt.Errorf("not a valid OfflineExptAnalysisStatus string")
+}
+
+func OfflineExptAnalysisStatusPtr(v OfflineExptAnalysisStatus) *OfflineExptAnalysisStatus { return &v }
+func (p *OfflineExptAnalysisStatus) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = OfflineExptAnalysisStatus(result.Int64)
+	return
+}
+
+func (p *OfflineExptAnalysisStatus) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
 type SourceType int64
 
 const (
@@ -1057,6 +1114,8 @@ type Experiment struct {
 	TriggerType *ExptTriggerType  `thrift:"trigger_type,70,optional" frugal:"70,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	ExptSource  *ExptSource       `thrift:"expt_source,71,optional" frugal:"71,optional,ExptSource" form:"expt_source" json:"expt_source,omitempty" query:"expt_source"`
 	Ext         map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	// 离线实验分析状态
+	OfflineExptAnalysisStatus *OfflineExptAnalysisStatus `thrift:"offline_expt_analysis_status,101,optional" frugal:"101,optional,OfflineExptAnalysisStatus" form:"offline_expt_analysis_status" json:"offline_expt_analysis_status,omitempty" query:"offline_expt_analysis_status"`
 }
 
 func NewExperiment() *Experiment {
@@ -1509,6 +1568,18 @@ func (p *Experiment) GetExt() (v map[string]string) {
 	}
 	return p.Ext
 }
+
+var Experiment_OfflineExptAnalysisStatus_DEFAULT OfflineExptAnalysisStatus
+
+func (p *Experiment) GetOfflineExptAnalysisStatus() (v OfflineExptAnalysisStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOfflineExptAnalysisStatus() {
+		return Experiment_OfflineExptAnalysisStatus_DEFAULT
+	}
+	return *p.OfflineExptAnalysisStatus
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1620,6 +1691,9 @@ func (p *Experiment) SetExptSource(val *ExptSource) {
 func (p *Experiment) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *Experiment) SetOfflineExptAnalysisStatus(val *OfflineExptAnalysisStatus) {
+	p.OfflineExptAnalysisStatus = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -1659,6 +1733,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	70:  "trigger_type",
 	71:  "expt_source",
 	100: "ext",
+	101: "offline_expt_analysis_status",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1807,6 +1882,10 @@ func (p *Experiment) IsSetExptSource() bool {
 
 func (p *Experiment) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *Experiment) IsSetOfflineExptAnalysisStatus() bool {
+	return p.OfflineExptAnalysisStatus != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -2118,6 +2197,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2601,6 +2688,18 @@ func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *Experiment) ReadField101(iprot thrift.TProtocol) error {
+
+	var _field *OfflineExptAnalysisStatus
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := OfflineExptAnalysisStatus(v)
+		_field = &tmp
+	}
+	p.OfflineExptAnalysisStatus = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2754,6 +2853,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -3483,6 +3586,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *Experiment) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOfflineExptAnalysisStatus() {
+		if err = oprot.WriteFieldBegin("offline_expt_analysis_status", thrift.I32, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.OfflineExptAnalysisStatus)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3607,6 +3728,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.OfflineExptAnalysisStatus) {
 		return false
 	}
 	return true
@@ -4013,6 +4137,18 @@ func (p *Experiment) Field100DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *Experiment) Field101DeepEqual(src *OfflineExptAnalysisStatus) bool {
+
+	if p.OfflineExptAnalysisStatus == src {
+		return true
+	} else if p.OfflineExptAnalysisStatus == nil || src == nil {
+		return false
+	}
+	if *p.OfflineExptAnalysisStatus != *src {
+		return false
 	}
 	return true
 }

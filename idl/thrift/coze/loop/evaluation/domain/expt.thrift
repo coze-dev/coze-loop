@@ -29,6 +29,14 @@ enum ExptType {
     Online = 2
 }
 
+// 离线实验分析状态（与表字段 offline_expt_analysis_status 一致）
+enum OfflineExptAnalysisStatus {
+    NotStarted = 0  // 未开始
+    Processing = 1  // 进行中
+    Success = 2    // 成功
+    Failed = 3     // 失败
+}
+
 enum SourceType {
     Evaluation = 1
     AutoTask = 2
@@ -94,6 +102,8 @@ struct Experiment {
     71: optional ExptSource expt_source
 
     100: optional map<string, string> ext
+    // 离线实验分析状态
+    101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 }
 
 // 实验模板基础信息

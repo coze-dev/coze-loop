@@ -20,6 +20,13 @@ typedef string ExperimentType(ts.enum="true")
 const ExperimentType ExperimentType_Offline = "offline"
 const ExperimentType ExperimentType_Online = "online"
 
+// 离线实验分析状态（OpenAPI 字符串枚举，与 domain OfflineExptAnalysisStatus 对应）
+typedef string OfflineExptAnalysisStatus(ts.enum="true")
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_NotStarted = "not_started"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Processing = "processing"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Success = "success"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Failed = "failed"
+
 // 聚合器类型
 typedef string AggregatorType(ts.enum="true")
 const AggregatorType AggregatorType_Average = "average"
@@ -149,6 +156,9 @@ struct Experiment {
     50: optional ExperimentStatistics expt_stats
 
     60: optional bool enable_extract_trajectory
+
+    // 离线实验分析状态
+    61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
     100: optional common.BaseInfo base_info
 }
