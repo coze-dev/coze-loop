@@ -221,6 +221,104 @@ func TestIsSchedulerEnabled(t *testing.T) {
 	}
 }
 
+func TestSchedSourceTypeName(t *testing.T) {
+	cases := []struct {
+		name string
+		in   *entity.ExptSource
+		want string
+	}{
+		{"nil source", nil, "<nil_source>"},
+		{"valid source", &entity.ExptSource{SourceType: entity.SourceType_Evaluation}, "1"},
+		{"trace source", &entity.ExptSource{SourceType: entity.SourceType_Trace}, "2"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, schedSourceTypeName(c.in))
+		})
+	}
+}
+
+func TestSchedDescribeScheduler(t *testing.T) {
+	cases := []struct {
+		name string
+		in   *entity.ExptSource
+		want string
+	}{
+		{"nil source", nil, "<nil_scheduler>"},
+		{"nil scheduler", &entity.ExptSource{}, "<nil_scheduler>"},
+		{"full scheduler", &entity.ExptSource{
+			Scheduler: &entity.ExptSchedulerDO{
+				Enabled:   gptr.Of(true),
+				Frequency: gptr.Of(entity.FrequencyEveryDay),
+				TriggerAt: gptr.Of(int64(1000)),
+				StartTime: gptr.Of(int64(2000)),
+				EndTime:   gptr.Of(int64(3000)),
+			},
+		}, `{enabled=true,frequency="every_day",trigger_at=1000,start_time=2000,end_time=3000}`},
+		{"partial scheduler", &entity.ExptSource{
+			Scheduler: &entity.ExptSchedulerDO{
+				Enabled:   gptr.Of(false),
+				Frequency: nil,
+				TriggerAt: nil,
+			},
+		}, `{enabled=false,frequency="",trigger_at=0,start_time=0,end_time=0}`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, schedDescribeScheduler(c.in))
+		})
+	}
+}
+
+func TestSchedDisabledReason(t *testing.T) {
+	cases := []struct {
+		name         string
+		cronActivate bool
+		scheduler    *entity.ExptSchedulerDO
+		want         string
+	}{
+		{"cron_activate false", false, nil, "expt_info.cron_activate=false"},
+		{"scheduler nil", true, nil, "scheduler is nil (DTO 转换/落库链路没有保留 Scheduler？)"},
+		{"enabled nil", true, &entity.ExptSchedulerDO{
+			Frequency: gptr.Of(entity.FrequencyEveryDay),
+			TriggerAt: gptr.Of(int64(1)),
+		}, "scheduler.enabled=false"},
+		{"enabled false", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(false),
+			Frequency: gptr.Of(entity.FrequencyEveryDay),
+			TriggerAt: gptr.Of(int64(1)),
+		}, "scheduler.enabled=false"},
+		{"frequency nil", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(true),
+			TriggerAt: gptr.Of(int64(1)),
+		}, "scheduler.frequency is empty"},
+		{"frequency empty", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of(""),
+			TriggerAt: gptr.Of(int64(1)),
+		}, "scheduler.frequency is empty"},
+		{"trigger_at nil", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of(entity.FrequencyEveryDay),
+		}, "scheduler.trigger_at is empty"},
+		{"trigger_at zero", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of(entity.FrequencyEveryDay),
+			TriggerAt: gptr.Of(int64(0)),
+		}, "scheduler.trigger_at is empty"},
+		{"unknown", true, &entity.ExptSchedulerDO{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of(entity.FrequencyEveryDay),
+			TriggerAt: gptr.Of(int64(1)),
+		}, "unknown"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.Equal(t, c.want, schedDisabledReason(c.cronActivate, c.scheduler))
+		})
+	}
+}
+
 // ---------- syncSchedulerForTemplate 集成 ----------
 
 func newTemplateWithSchedule(spaceID, tplID int64, source *entity.ExptSource, cronActivate bool) *entity.ExptTemplate {
