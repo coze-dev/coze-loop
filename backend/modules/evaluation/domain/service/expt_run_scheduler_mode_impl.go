@@ -12,6 +12,7 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"gorm.io/gorm/clause"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
@@ -231,18 +232,23 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		logs.CtxInfo(ctx, "ExptTrialRunExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-			OrderBys: []*entity.OrderBy{{
-				Field: orderByField,
-				IsAsc: orderByDesc,
-			}},
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, _, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageNumber:      &page,
+				PageSize:        &pageSize,
+				OrderBys: []*entity.OrderBy{{
+					Field: orderByField,
+					IsAsc: orderByDesc,
+				}},
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
@@ -396,14 +402,19 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, _, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageNumber:      &page,
+				PageSize:        &pageSize,
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
@@ -1245,14 +1256,19 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		logs.CtxInfo(ctx, "ExptRetryAllExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
 			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, _, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageNumber:      &page,
+				PageSize:        &pageSize,
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
