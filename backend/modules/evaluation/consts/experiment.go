@@ -28,8 +28,6 @@ const (
 
 const (
 	MaxEvalSetItemLimit = 5000
-
-	MaxItemConcurrentNum = 50 // TODO(@liushengyang): value
 )
 
 const (
