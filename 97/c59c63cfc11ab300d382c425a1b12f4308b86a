@@ -1,0 +1,25 @@
+backend/modules/evaluation/domain/service/expt_template_schedule_test.go
+  76c825b4fbcb0e5f 224-321
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "97c59c63cfc11ab300d382c425a1b12f4308b86a",
+  "prompts": {
+    "76c825b4fbcb0e5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "69dc5e2f5bdaa9adc56f0313",
+        "model": "Seed-Dogfooding-2.0__dev"
+      },
+      "human_author": "tpfz <wangziqi.9425@bytedance.com>",
+      "messages": [],
+      "total_additions": 98,
+      "total_deletions": 0,
+      "accepted_lines": 98,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
