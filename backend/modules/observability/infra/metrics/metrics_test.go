@@ -472,3 +472,87 @@ func TestTraceQueryTagNames(t *testing.T) {
 	assert.Equal(t, expected, result)
 	assert.Len(t, result, 7)
 }
+
+func TestNewConsumeMetric(t *testing.T) {
+	type fields struct {
+		meter infraMetrics.Meter
+	}
+	tests := []struct {
+		name         string
+		fieldsGetter func(ctrl *gomock.Controller) fields
+		wantErr      bool
+	}{
+		{
+			name: "should return a valid instance when meter is not nil and no error occurs",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				meter := mocks.NewMockMeter(ctrl)
+				meter.EXPECT().NewMetric(gomock.Any(), gomock.Any(), gomock.Any()).Return(mocks.NewMockMetric(ctrl), nil)
+				return fields{
+					meter: meter,
+				}
+			},
+		},
+		{
+			name: "should return nil when meter is not nil and an error occurs",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				meter := mocks.NewMockMeter(ctrl)
+				meter.EXPECT().NewMetric(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("some error"))
+				return fields{
+					meter: meter,
+				}
+			},
+		},
+		{
+			name: "should return nil when meter is nil",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				return fields{
+					meter: nil,
+				}
+			},
+		},
+		{
+			name: "should return the same instance when called multiple times",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				meter := mocks.NewMockMeter(ctrl)
+				meter.EXPECT().NewMetric(gomock.Any(), gomock.Any(), gomock.Any()).Return(mocks.NewMockMetric(ctrl), nil).Times(1)
+				return fields{
+					meter: meter,
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Cleanup(func() {
+				singletonConsumeMetric = nil
+				consumeMetricOnce = sync.Once{}
+			})
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			fields := tt.fieldsGetter(ctrl)
+			got := NewConsumeMetric(fields.meter)
+
+			if tt.name == "should return nil when meter is nil" || tt.name == "should return nil when meter is not nil and an error occurs" {
+				assert.Nil(t, got)
+			} else {
+				assert.NotNil(t, got)
+			}
+
+			if tt.name == "should return the same instance when called multiple times" {
+				got2 := NewConsumeMetric(fields.meter)
+				assert.Same(t, got, got2)
+			}
+		})
+	}
+}
+
+func TestConsumeMetricConstants(t *testing.T) {
+	assert.Equal(t, "trace_consume", consumeMetricName)
+	assert.Equal(t, "node", ConsumeTagNode)
+	assert.Equal(t, "is_err", ConsumeTagIsErr)
+	assert.Equal(t, "psm", ConsumeTagPSM)
+	assert.Equal(t, "tenant", ConsumeTagTenant)
+	assert.Equal(t, "throughput", ConsumeSuffixThroughput)
+	assert.Equal(t, "latency", ConsumeSuffixLatency)
+	assert.Equal(t, "spans", ConsumeSuffixSpans)
+}

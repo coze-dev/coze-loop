@@ -5,6 +5,7 @@ package loop_span
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -991,6 +992,314 @@ func TestSizeOfString(t *testing.T) {
 }
 
 // TestSpan_GetFieldValue_AllFields tests GetFieldValue for all supported fields
+func TestGetDurationByTTL(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		ttl  TTL
+		want time.Duration
+	}{
+		{
+			name: "TTL3d",
+			ttl:  TTL3d,
+			want: time.Hour * 24 * 3,
+		},
+		{
+			name: "TTL7d",
+			ttl:  TTL7d,
+			want: time.Hour * 24 * 7,
+		},
+		{
+			name: "TTL30d",
+			ttl:  TTL30d,
+			want: time.Hour * 24 * 30,
+		},
+		{
+			name: "TTL90d",
+			ttl:  TTL90d,
+			want: time.Hour * 24 * 90,
+		},
+		{
+			name: "TTL180d",
+			ttl:  TTL180d,
+			want: time.Hour * 24 * 180,
+		},
+		{
+			name: "TTL365d",
+			ttl:  TTL365d,
+			want: time.Hour * 24 * 365,
+		},
+		{
+			name: "default TTL",
+			ttl:  TTL("unknown"),
+			want: time.Hour * 24 * 3,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := GetDurationByTTL(tt.ttl)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestCopySpan(t *testing.T) {
+	t.Parallel()
+
+	t.Run("copy nil span", func(t *testing.T) {
+		got := CopySpan(nil)
+		assert.Nil(t, got)
+	})
+
+	t.Run("copy span with all fields", func(t *testing.T) {
+		original := &Span{
+			StartTime:      1234567890,
+			SpanID:         "test-span-id",
+			ParentID:       "test-parent-id",
+			TraceID:        "test-trace-id",
+			DurationMicros: 1000,
+			CallType:       "test-call-type",
+			PSM:            "test-psm",
+			LogID:          "test-log-id",
+			WorkspaceID:    "test-workspace-id",
+			SpanName:       "test-span-name",
+			SpanType:       "test-span-type",
+			Method:         "test-method",
+			StatusCode:     200,
+			Input:          "test-input",
+			Output:         "test-output",
+			ObjectStorage:  "test-object-storage",
+			SystemTagsString: map[string]string{
+				"sys_tag1": "sys_value1",
+			},
+			SystemTagsLong: map[string]int64{
+				"sys_tag2": 123,
+			},
+			SystemTagsDouble: map[string]float64{
+				"sys_tag3": 3.14,
+			},
+			TagsString: map[string]string{
+				"tag1": "value1",
+			},
+			TagsLong: map[string]int64{
+				"tag2": 456,
+			},
+			TagsDouble: map[string]float64{
+				"tag3": 2.71,
+			},
+			TagsBool: map[string]bool{
+				"tag4": true,
+			},
+			TagsByte: map[string]string{
+				"tag5": "byte_value",
+			},
+			AttrTos: &AttrTos{
+				InputDataURL:  "input-url",
+				OutputDataURL: "output-url",
+				MultimodalData: map[string]string{
+					"key1": "value1",
+				},
+			},
+			LogicDeleteTime: 9876543210,
+			Annotations: []*Annotation{
+				{
+					ID:              "annotation-id",
+					SpanID:          "test-span-id",
+					TraceID:         "test-trace-id",
+					StartTime:       time.Now(),
+					WorkspaceID:     "test-workspace-id",
+					AnnotationType:  AnnotationTypeManualFeedback,
+					AnnotationIndex: []string{"index1", "index2"},
+					Key:             "test-key",
+					Value:           NewStringValue("test-value"),
+					Reasoning:       "test-reasoning",
+					Corrections:     []AnnotationCorrection{{Reasoning: "correction-reasoning", Value: NewStringValue("corrected-value")}},
+					Metadata:        map[string]interface{}{"meta": "data"},
+					Status:          AnnotationStatusNormal,
+					CreatedAt:       time.Now(),
+					CreatedBy:       "user1",
+					UpdatedAt:       time.Now(),
+					UpdatedBy:       "user2",
+					IsDeleted:       false,
+				},
+			},
+			Encryption: EncryptionInfo{
+				NeedWorkflow: true,
+			},
+		}
+
+		copied := CopySpan(original)
+
+		assert.NotNil(t, copied)
+		assert.Equal(t, original.StartTime, copied.StartTime)
+		assert.Equal(t, original.SpanID, copied.SpanID)
+		assert.Equal(t, original.ParentID, copied.ParentID)
+		assert.Equal(t, original.TraceID, copied.TraceID)
+		assert.Equal(t, original.DurationMicros, copied.DurationMicros)
+		assert.Equal(t, original.CallType, copied.CallType)
+		assert.Equal(t, original.PSM, copied.PSM)
+		assert.Equal(t, original.LogID, copied.LogID)
+		assert.Equal(t, original.WorkspaceID, copied.WorkspaceID)
+		assert.Equal(t, original.SpanName, copied.SpanName)
+		assert.Equal(t, original.SpanType, copied.SpanType)
+		assert.Equal(t, original.Method, copied.Method)
+		assert.Equal(t, original.StatusCode, copied.StatusCode)
+		assert.Equal(t, original.Input, copied.Input)
+		assert.Equal(t, original.Output, copied.Output)
+		assert.Equal(t, original.ObjectStorage, copied.ObjectStorage)
+		assert.Equal(t, original.LogicDeleteTime, copied.LogicDeleteTime)
+		assert.Equal(t, original.Encryption.NeedWorkflow, copied.Encryption.NeedWorkflow)
+
+		assert.Equal(t, original.SystemTagsString, copied.SystemTagsString)
+		copied.SystemTagsString["new_key"] = "new_value"
+		assert.NotEqual(t, original.SystemTagsString, copied.SystemTagsString)
+
+		assert.Equal(t, original.SystemTagsLong, copied.SystemTagsLong)
+		copied.SystemTagsLong["new_key"] = 999
+		assert.NotEqual(t, original.SystemTagsLong, copied.SystemTagsLong)
+
+		assert.Equal(t, original.SystemTagsDouble, copied.SystemTagsDouble)
+		copied.SystemTagsDouble["new_key"] = 9.99
+		assert.NotEqual(t, original.SystemTagsDouble, copied.SystemTagsDouble)
+
+		assert.Equal(t, original.TagsString, copied.TagsString)
+		copied.TagsString["new_key"] = "new_value"
+		assert.NotEqual(t, original.TagsString, copied.TagsString)
+
+		assert.Equal(t, original.TagsLong, copied.TagsLong)
+		copied.TagsLong["new_key"] = 999
+		assert.NotEqual(t, original.TagsLong, copied.TagsLong)
+
+		assert.Equal(t, original.TagsDouble, copied.TagsDouble)
+		copied.TagsDouble["new_key"] = 9.99
+		assert.NotEqual(t, original.TagsDouble, copied.TagsDouble)
+
+		assert.Equal(t, original.TagsBool, copied.TagsBool)
+		copied.TagsBool["new_key"] = false
+		assert.NotEqual(t, original.TagsBool, copied.TagsBool)
+
+		assert.Equal(t, original.TagsByte, copied.TagsByte)
+		copied.TagsByte["new_key"] = "new_value"
+		assert.NotEqual(t, original.TagsByte, copied.TagsByte)
+
+		assert.NotSame(t, original.AttrTos, copied.AttrTos)
+		assert.Equal(t, original.AttrTos.InputDataURL, copied.AttrTos.InputDataURL)
+		assert.Equal(t, original.AttrTos.OutputDataURL, copied.AttrTos.OutputDataURL)
+		assert.Equal(t, original.AttrTos.MultimodalData, copied.AttrTos.MultimodalData)
+		copied.AttrTos.MultimodalData["new_key"] = "new_value"
+		assert.NotEqual(t, original.AttrTos.MultimodalData, copied.AttrTos.MultimodalData)
+
+		assert.Equal(t, len(original.Annotations), len(copied.Annotations))
+		assert.Equal(t, original.Annotations[0].ID, copied.Annotations[0].ID)
+		assert.Equal(t, original.Annotations[0].AnnotationIndex, copied.Annotations[0].AnnotationIndex)
+		copied.Annotations[0].AnnotationIndex = append(copied.Annotations[0].AnnotationIndex, "new_index")
+		assert.NotEqual(t, original.Annotations[0].AnnotationIndex, copied.Annotations[0].AnnotationIndex)
+		assert.Equal(t, original.Annotations[0].Corrections, copied.Annotations[0].Corrections)
+		copied.Annotations[0].Corrections = append(copied.Annotations[0].Corrections, AnnotationCorrection{})
+		assert.NotEqual(t, original.Annotations[0].Corrections, copied.Annotations[0].Corrections)
+	})
+
+	t.Run("copy span with nil maps and slices", func(t *testing.T) {
+		original := &Span{
+			SpanID:  "test-span-id",
+			TraceID: "test-trace-id",
+		}
+
+		copied := CopySpan(original)
+
+		assert.NotNil(t, copied)
+		assert.Nil(t, copied.SystemTagsString)
+		assert.Nil(t, copied.SystemTagsLong)
+		assert.Nil(t, copied.SystemTagsDouble)
+		assert.Nil(t, copied.TagsString)
+		assert.Nil(t, copied.TagsLong)
+		assert.Nil(t, copied.TagsDouble)
+		assert.Nil(t, copied.TagsBool)
+		assert.Nil(t, copied.TagsByte)
+		assert.Nil(t, copied.AttrTos)
+		assert.Nil(t, copied.Annotations)
+	})
+}
+
+func TestCopySpans(t *testing.T) {
+	t.Parallel()
+
+	t.Run("copy empty span list", func(t *testing.T) {
+		got := CopySpans(nil)
+		assert.NotNil(t, got)
+		assert.Equal(t, 0, len(got))
+
+		got = CopySpans([]*Span{})
+		assert.NotNil(t, got)
+		assert.Equal(t, 0, len(got))
+	})
+
+	t.Run("copy span list with multiple spans", func(t *testing.T) {
+		original := []*Span{
+			{
+				SpanID:  "span1",
+				TraceID: "trace1",
+			},
+			{
+				SpanID:  "span2",
+				TraceID: "trace2",
+			},
+			nil,
+		}
+
+		copied := CopySpans(original)
+
+		assert.NotNil(t, copied)
+		assert.Equal(t, len(original), len(copied))
+		assert.Equal(t, original[0].SpanID, copied[0].SpanID)
+		assert.Equal(t, original[1].SpanID, copied[1].SpanID)
+		assert.Nil(t, copied[2])
+
+		copied[0].SpanID = "modified"
+		assert.NotEqual(t, original[0].SpanID, copied[0].SpanID)
+	})
+}
+
+func TestSpan_AddAutoEvalAnnotation_WithExptFields(t *testing.T) {
+	t.Parallel()
+	span := &Span{
+		SpanID:      "test-span-id",
+		TraceID:     "test-trace-id",
+		StartTime:   time.Now().UnixMicro(),
+		WorkspaceID: "test-workspace",
+	}
+
+	taskID := int64(1)
+	evaluatorRecordID := int64(2)
+	evaluatorVersionID := int64(3)
+	score := 0.85
+	reasoning := "test reasoning"
+	userID := "test-user"
+	exptID := int64(100)
+	exptTemplateID := int64(200)
+
+	annotation, err := span.AddAutoEvalAnnotation(taskID, evaluatorRecordID, evaluatorVersionID, score, reasoning, userID, exptID, exptTemplateID)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, annotation)
+	assert.Equal(t, AnnotationTypeAutoEvaluate, annotation.AnnotationType)
+	assert.Equal(t, fmt.Sprintf("%d:%d", taskID, evaluatorVersionID), annotation.Key)
+	assert.NotNil(t, annotation.Metadata)
+
+	metadata, ok := annotation.Metadata.(*AutoEvaluateMetadata)
+	assert.True(t, ok)
+	assert.Equal(t, taskID, metadata.TaskID)
+	assert.Equal(t, evaluatorRecordID, metadata.EvaluatorRecordID)
+	assert.Equal(t, evaluatorVersionID, metadata.EvaluatorVersionID)
+	assert.Equal(t, exptID, metadata.ExptID)
+	assert.Equal(t, exptTemplateID, metadata.ExptTemplateID)
+
+	assert.Equal(t, []string{strconv.FormatInt(evaluatorVersionID, 10)}, annotation.AnnotationIndex)
+	assert.Equal(t, 1, len(span.Annotations))
+	assert.Equal(t, annotation, span.Annotations[0])
+}
+
 func TestSpan_GetFieldValue_AllFields(t *testing.T) {
 	t.Parallel()
 	span := &Span{
