@@ -78,7 +78,7 @@ func (n *receiverNode) getConsumer() consumer.BaseConsumer {
 
 type processorNode struct {
 	nodeID
-	componentID      component.ID
+	componentID component.ID
 	component.Component
 	overrideConsumer consumer.Consumer
 }
@@ -111,7 +111,7 @@ func (n *processorNode) getConsumer() consumer.BaseConsumer {
 
 type exporterNode struct {
 	nodeID
-	componentID      component.ID
+	componentID component.ID
 	component.Component
 	overrideConsumer consumer.Consumer
 }
@@ -318,7 +318,7 @@ func (g *Graph) wrapSelfConsumer(c consumer.Consumer, name string, nextElapsed *
 	if g.consumeMetric == nil {
 		return nil
 	}
-	return consumer.NewObserveConsumer(name, c, nextElapsed, g.consumeMetric).(consumer.Consumer)
+	return consumer.NewObserveConsumer(name, c, nextElapsed, g.consumeMetric)
 }
 
 func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, nextElapsed *atomic.Int64) consumer.BaseConsumer {
