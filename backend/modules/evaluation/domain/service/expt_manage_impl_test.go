@@ -37,6 +37,14 @@ import (
 )
 
 func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
+	configer := componentMocks.NewMockIConfiger(ctrl)
+	configer.EXPECT().GetExptExecConf(gomock.Any(), gomock.Any()).Return(&entity.ExptExecConf{
+		ExptItemEvalConf: &entity.ExptItemEvalConf{
+			MaxItemConcurNum: 100,
+			ConcurNum:        3,
+		},
+	}).AnyTimes()
+
 	return &ExptMangerImpl{
 		exptResultService:           svcMocks.NewMockExptResultService(ctrl),
 		exptAggrResultService:       svcMocks.NewMockExptAggrResultService(ctrl),
@@ -45,7 +53,7 @@ func newTestExptManager(ctrl *gomock.Controller) *ExptMangerImpl {
 		statsRepo:                   repoMocks.NewMockIExptStatsRepo(ctrl),
 		itemResultRepo:              repoMocks.NewMockIExptItemResultRepo(ctrl),
 		turnResultRepo:              repoMocks.NewMockIExptTurnResultRepo(ctrl),
-		configer:                    componentMocks.NewMockIConfiger(ctrl),
+		configer:                    configer,
 		quotaRepo:                   repoMocks.NewMockQuotaRepo(ctrl),
 		mutex:                       lockMocks.NewMockILocker(ctrl),
 		idem:                        idemMocks.NewMockIdempotentService(ctrl),

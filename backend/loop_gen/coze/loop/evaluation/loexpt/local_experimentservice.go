@@ -882,6 +882,27 @@ func (l *LocalExperimentService) CheckExperimentTemplateName(ctx context.Context
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalExperimentService) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest, callOptions ...callopt.Option) (*expt.SubmitExptFromTemplateResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*expt.ExperimentServiceSubmitExptFromTemplateArgs)
+		result := out.(*expt.ExperimentServiceSubmitExptFromTemplateResult)
+		resp, err := l.impl.SubmitExptFromTemplate(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &expt.ExperimentServiceSubmitExptFromTemplateArgs{Req: req}
+	result := &expt.ExperimentServiceSubmitExptFromTemplateResult{}
+	ctx = l.injectRPCInfo(ctx, "SubmitExptFromTemplate")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalExperimentService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

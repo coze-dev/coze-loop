@@ -666,6 +666,9 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			res.SystemInfo = &openapiExperiment.ItemSystemInfo{
 				RunState: ItemRunStateDO2DTO(item.SystemInfo.RunState),
 			}
+			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
+				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
+			}
 		}
 		result = append(result, res)
 	}
@@ -816,6 +819,9 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 	if payload.SystemInfo != nil {
 		res.SystemInfo = &openapiExperiment.TurnSystemInfo{
 			TurnRunState: TurnRunStateDO2DTO(payload.SystemInfo.TurnRunState),
+		}
+		if payload.SystemInfo.LogID != nil && *payload.SystemInfo.LogID != "" {
+			res.SystemInfo.SetLogID(gptr.Of(*payload.SystemInfo.LogID))
 		}
 	}
 	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {

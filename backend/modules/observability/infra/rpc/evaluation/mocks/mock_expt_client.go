@@ -742,6 +742,26 @@ func (mr *MockClientMockRecorder) SubmitExperiment(ctx, req any, callOptions ...
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExperiment", reflect.TypeOf((*MockClient)(nil).SubmitExperiment), varargs...)
 }
 
+// SubmitExptFromTemplate mocks base method.
+func (m *MockClient) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest, callOptions ...callopt.Option) (*expt.SubmitExptFromTemplateResponse, error) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, req}
+	for _, a := range callOptions {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "SubmitExptFromTemplate", varargs...)
+	ret0, _ := ret[0].(*expt.SubmitExptFromTemplateResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SubmitExptFromTemplate indicates an expected call of SubmitExptFromTemplate.
+func (mr *MockClientMockRecorder) SubmitExptFromTemplate(ctx, req any, callOptions ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, req}, callOptions...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubmitExptFromTemplate", reflect.TypeOf((*MockClient)(nil).SubmitExptFromTemplate), varargs...)
+}
+
 // UpdateAnnotateRecord mocks base method.
 func (m *MockClient) UpdateAnnotateRecord(ctx context.Context, req *expt.UpdateAnnotateRecordReq, callOptions ...callopt.Option) (*expt.UpdateAnnotateRecordResp, error) {
 	m.ctrl.T.Helper()
