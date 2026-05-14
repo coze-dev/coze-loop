@@ -1,0 +1,123 @@
+backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go
+  76c825b4fbcb0e5f 557,598,612,635,702,728,758,770,782,799,813,827 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a04426d6515c443593998c5","tool_type":"agent","tool_id":"SearchReplace","line_ranges":[{"Single":557},{"Single":598},{"Single":612},{"Single":635},{"Single":702},{"Single":728},{"Single":758},{"Single":770},{"Single":782},{"Single":799},{"Single":813},{"Single":827}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "58a9074592b48697dd1c3d175d979dd534235e2c",
+  "prompts": {
+    "76c825b4fbcb0e5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "69dc5e2f5bdaa9adc56f0313",
+        "model": "Seed-Dogfooding-2.0__dev"
+      },
+      "human_author": "tpfz <wangziqi.9425@bytedance.com>",
+      "messages": [],
+      "total_additions": 12,
+      "total_deletions": 76,
+      "accepted_lines": 12,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/domain/service/expt_manage_execution_impl_test.go": [
+      {
+        "hash": "76c825b4fbcb0e5f",
+        "line_ranges": [
+          {
+            "Single": 557
+          },
+          {
+            "Single": 598
+          },
+          {
+            "Single": 612
+          },
+          {
+            "Single": 635
+          },
+          {
+            "Single": 702
+          },
+          {
+            "Single": 728
+          },
+          {
+            "Single": 758
+          },
+          {
+            "Single": 770
+          },
+          {
+            "Single": 782
+          },
+          {
+            "Single": 799
+          },
+          {
+            "Single": 813
+          },
+          {
+            "Single": 827
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a04426d6515c443593998c5",
+            "tool_type": "agent",
+            "tool_id": "SearchReplace",
+            "line_ranges": [
+              {
+                "Single": 557
+              },
+              {
+                "Single": 598
+              },
+              {
+                "Single": 612
+              },
+              {
+                "Single": 635
+              },
+              {
+                "Single": 702
+              },
+              {
+                "Single": 728
+              },
+              {
+                "Single": 758
+              },
+              {
+                "Single": 770
+              },
+              {
+                "Single": 782
+              },
+              {
+                "Single": 799
+              },
+              {
+                "Single": 813
+              },
+              {
+                "Single": 827
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "76c825b4fbcb0e5f": {
+      "tool": "trae",
+      "conversation_id": "69dc5e2f5bdaa9adc56f0313",
+      "session_id": "69dc5e2f5bdaa9adc56f0313",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
