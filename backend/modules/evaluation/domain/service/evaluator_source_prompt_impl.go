@@ -71,8 +71,8 @@ func (p *EvaluatorSourcePromptServiceImpl) EvaluatorType() entity.EvaluatorType 
 }
 
 // ShouldIntercept 判断Prompt评估器是否应劫持本次评估，默认不劫持
-func (p *EvaluatorSourcePromptServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
-	return nil, false
+func (p *EvaluatorSourcePromptServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+	return nil, entity.EvaluatorRunStatusSuccess, false
 }
 
 func (p *EvaluatorSourcePromptServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {

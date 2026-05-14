@@ -200,8 +200,8 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 }
 
 // ShouldIntercept 判断Code评估器是否应劫持本次评估，默认不劫持
-func (c *EvaluatorSourceCodeServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
-	return nil, false
+func (c *EvaluatorSourceCodeServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+	return nil, entity.EvaluatorRunStatusSuccess, false
 }
 
 // Run 执行Code评估器

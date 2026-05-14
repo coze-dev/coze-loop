@@ -35,7 +35,6 @@ type EvaluatorOutputData struct {
 	TimeConsumingMS   int64                        `json:"time_consuming_ms,omitempty"`
 	Stdout            string                       `json:"stdout,omitempty"`
 	ExtraOutput       *EvaluatorExtraOutputContent `json:"extra_output,omitempty"`
-	RunStatus         EvaluatorRunStatus           `json:"run_status,omitempty"`
 	Ext               map[string]string            `json:"ext,omitempty"`
 }
 

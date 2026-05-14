@@ -133,12 +133,13 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, eva
 }
 
 // ShouldIntercept mocks base method.
-func (m *MockEvaluatorSourceService) ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
+func (m *MockEvaluatorSourceService) ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ShouldIntercept", ctx, evaluator, input)
 	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
-	ret1, _ := ret[1].(bool)
-	return ret0, ret1
+	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
+	ret2, _ := ret[2].(bool)
+	return ret0, ret1, ret2
 }
 
 // ShouldIntercept indicates an expected call of ShouldIntercept.

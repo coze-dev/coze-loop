@@ -2629,9 +2629,10 @@ func TestEvaluatorSourceCodeServiceImpl_ShouldIntercept(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, intercepted := service.ShouldIntercept(context.Background(), tt.evaluator, tt.input)
+			output, runStatus, intercepted := service.ShouldIntercept(context.Background(), tt.evaluator, tt.input)
 			assert.Equal(t, tt.expectedSkip, intercepted)
 			assert.Equal(t, tt.expectedOutput, output)
+			assert.Equal(t, entity.EvaluatorRunStatusSuccess, runStatus)
 		})
 	}
 }

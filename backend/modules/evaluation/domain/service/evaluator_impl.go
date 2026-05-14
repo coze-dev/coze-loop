@@ -731,7 +731,7 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 	if !ok {
 		return nil, false, nil
 	}
-	output, intercepted := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
+	output, runStatus, intercepted := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
 	if !intercepted {
 		return nil, false, nil
 	}
@@ -744,12 +744,6 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	logID := logs.GetLogID(ctx)
 
-	// 从 output 中读取劫持后的运行状态，未设置时默认 Success
-	status := entity.EvaluatorRunStatusSuccess
-	if output != nil && output.RunStatus != entity.EvaluatorRunStatusUnknown {
-		status = output.RunStatus
-	}
-
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  recordID,
 		SpaceID:             request.SpaceID,
@@ -761,7 +755,7 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: output,
-		Status:              status,
+		Status:              runStatus,
 		Ext:                 request.Ext,
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{
