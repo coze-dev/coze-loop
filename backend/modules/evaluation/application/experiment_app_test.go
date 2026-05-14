@@ -163,6 +163,19 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{10001}, false).Return([]*entity.Evaluator{
+					{
+						ID:            3,
+						SpaceID:       validWorkspaceID,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
+							ID:          10001,
+							EvaluatorID: 3,
+							Version:     "v1",
+						},
+					},
+				}, nil)
 				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1, 1}).Return([]*entity.Evaluator{
 					{
 						ID:            1,
@@ -178,8 +191,10 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
 					{
 						ID:            2,
+						SpaceID:       validWorkspaceID,
 						EvaluatorType: entity.EvaluatorTypePrompt,
 						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
 							ID:          20200,
 							EvaluatorID: 2,
 							Version:     "1.0.0",
@@ -235,6 +250,63 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "cross_workspace_evaluator_id_version_list_rejected",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(2)), Version: gptr.Of("1.0.0")},
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+					{
+						ID:            2,
+						SpaceID:       validWorkspaceID + 1, // 其他空间
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						Builtin:       false,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID + 1,
+							ID:          20200,
+							EvaluatorID: 2,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+			},
+			wantErr:  true,
+			wantCode: errno.EvaluatorVersionNotFoundCode,
+		},
+		{
+			name: "cross_workspace_builtin_evaluator_id_version_list_allowed",
+			req: &exptpb.CreateExperimentRequest{
+				WorkspaceID: validWorkspaceID,
+				EvaluatorIDVersionList: []*evaluator.EvaluatorIDVersionItem{
+					{EvaluatorID: gptr.Of(int64(9)), Version: gptr.Of("1.0.0")},
+				},
+				CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+					EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+				},
+			},
+			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorByIDAndVersion(gomock.Any(), gomock.Any()).Return([]*entity.Evaluator{
+					{
+						ID:            9,
+						SpaceID:       validWorkspaceID + 2, // 预置评估器通常属于平台空间
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						Builtin:       true, // 预置评估器允许跨空间复用
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID + 2,
+							ID:          90900,
+							EvaluatorID: 9,
+							Version:     "1.0.0",
+						},
+					},
+				}, nil)
+				mockManager.EXPECT().CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).Return(validExpt, nil)
+			},
+			wantErr: false,
+		},
+		{
 			name: "skip_missing_evaluators",
 			req: &exptpb.CreateExperimentRequest{
 				WorkspaceID:         validWorkspaceID,
@@ -248,6 +320,19 @@ func TestExperimentApplication_CreateExperiment(t *testing.T) {
 				},
 			},
 			mockSetup: func() {
+				mockEvaluatorService.EXPECT().BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), []int64{10001}, false).Return([]*entity.Evaluator{
+					{
+						ID:            3,
+						SpaceID:       validWorkspaceID,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							SpaceID:     validWorkspaceID,
+							ID:          10001,
+							EvaluatorID: 3,
+							Version:     "v1",
+						},
+					},
+				}, nil)
 				mockEvaluatorService.EXPECT().BatchGetBuiltinEvaluator(gomock.Any(), []int64{1}).Return([]*entity.Evaluator{
 					{
 						ID:            1,
@@ -1076,7 +1161,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1104,7 +1189,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(false, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1177,7 +1262,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 						},
 					}, nil)
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), "other_name", workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), "other_name", workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -6899,4 +6984,381 @@ func TestExperimentApplication_BatchGetExperimentResult_MoreBranches(t *testing.
 		})
 		assert.Error(t, err)
 	})
+}
+
+// Test_experimentApplication_validateEvaluatorVersionsBelongToWorkspace 覆盖 evaluator_version 工作空间归属校验
+// 用例覆盖：空入参短路、workspaceID<=0 短路、负 ID 过滤、去重、BatchGetEvaluatorVersion 错误透传、
+// 评估器未找到、Builtin 跨空间放行、SpaceID 不匹配返回错误、SpaceID 匹配通过等关键分支
+func Test_experimentApplication_validateEvaluatorVersionsBelongToWorkspace(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("evaluatorVersionIDs 为空时直接返回 nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, nil, 100)
+		assert.NoError(t, err)
+	})
+
+	t.Run("workspaceID <= 0 时直接返回 nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{1, 2, 3}, 0)
+		assert.NoError(t, err)
+
+		err = app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{1, 2, 3}, -1)
+		assert.NoError(t, err)
+	})
+
+	t.Run("过滤负 ID 与 0 ID 后剩余为空，直接返回 nil", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{0, -1, -100}, 100)
+		assert.NoError(t, err)
+	})
+
+	t.Run("去重后调用 BatchGetEvaluatorVersion，且校验通过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		// 输入存在重复，应该被去重为 [101, 102]
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			DoAndReturn(func(_ context.Context, _ *int64, ids []int64, _ bool) ([]*entity.Evaluator, error) {
+				assert.ElementsMatch(t, []int64{101, 102}, ids)
+				return []*entity.Evaluator{
+					{
+						ID:            1,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID: 101, EvaluatorID: 1, Version: "v1", SpaceID: 100,
+						},
+					},
+					{
+						ID:            2,
+						EvaluatorType: entity.EvaluatorTypePrompt,
+						PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+							ID: 102, EvaluatorID: 2, Version: "v1", SpaceID: 100,
+						},
+					},
+				}, nil
+			})
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{101, 101, 102, 0, -3}, 100)
+		assert.NoError(t, err)
+	})
+
+	t.Run("BatchGetEvaluatorVersion 报错时透传错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return(nil, errors.New("rpc error"))
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{101}, 100)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "rpc error")
+	})
+
+	t.Run("evaluator 未找到时返回 EvaluatorVersionNotFoundCode", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return([]*entity.Evaluator{}, nil)
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{101}, 100)
+		assert.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		if ok {
+			assert.Equal(t, int32(errno.EvaluatorVersionNotFoundCode), statusErr.Code())
+		}
+	})
+
+	t.Run("BatchGetEvaluatorVersion 返回结果含 nil，按未找到处理", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return([]*entity.Evaluator{nil}, nil)
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{101}, 100)
+		assert.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		if ok {
+			assert.Equal(t, int32(errno.EvaluatorVersionNotFoundCode), statusErr.Code())
+		}
+	})
+
+	t.Run("Builtin=true 跨空间放行", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return([]*entity.Evaluator{
+				{
+					ID:            10,
+					Builtin:       true,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					// SpaceID 故意设置为不同空间
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID: 1010, EvaluatorID: 10, Version: "v1", SpaceID: 999,
+					},
+				},
+			}, nil)
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{1010}, 100)
+		assert.NoError(t, err)
+	})
+
+	t.Run("非 Builtin 且 SpaceID 不匹配时返回错误", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return([]*entity.Evaluator{
+				{
+					ID:            20,
+					Builtin:       false,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID: 2020, EvaluatorID: 20, Version: "v1", SpaceID: 999,
+					},
+				},
+			}, nil)
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{2020}, 100)
+		assert.Error(t, err)
+		statusErr, ok := errorx.FromStatusError(err)
+		assert.True(t, ok)
+		if ok {
+			assert.Equal(t, int32(errno.EvaluatorVersionNotFoundCode), statusErr.Code())
+		}
+	})
+
+	t.Run("混合用例：Builtin 放行 + 普通匹配通过", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockEvaluatorService := servicemocks.NewMockEvaluatorService(ctrl)
+		app := &experimentApplication{evaluatorService: mockEvaluatorService}
+
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(ctx, nil, gomock.Any(), false).
+			Return([]*entity.Evaluator{
+				{
+					ID:            10,
+					Builtin:       true,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID: 1010, EvaluatorID: 10, Version: "v1", SpaceID: 999,
+					},
+				},
+				{
+					ID:            20,
+					Builtin:       false,
+					EvaluatorType: entity.EvaluatorTypePrompt,
+					PromptEvaluatorVersion: &entity.PromptEvaluatorVersion{
+						ID: 2020, EvaluatorID: 20, Version: "v1", SpaceID: 100,
+					},
+				},
+			}, nil)
+
+		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{1010, 2020}, 100)
+		assert.NoError(t, err)
+	})
+}
+
+func TestExperimentApplication_SubmitExptFromTemplate(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(5001)
+	templateID := int64(5002)
+
+	buildValidTemplate := func() *entity.ExptTemplate {
+		return &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ID:          templateID,
+				WorkspaceID: workspaceID,
+			},
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID:        100,
+				EvalSetVersionID: 200,
+			},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *exptpb.SubmitExptFromTemplateRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager)
+		wantErr int32
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid workspace_id",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: 0,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid template_id",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  0,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth failed",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "template not found",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "template get error",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(nil, errors.New("get error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "name duplicate",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp", workspaceID, gomock.Any()).Return(false, nil)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "check name error",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp", workspaceID, gomock.Any()).Return(false, errors.New("check error"))
+			},
+			wantErr: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			templateMgr := servicemocks.NewMockIExptTemplateManager(ctrl)
+			manager := servicemocks.NewMockIExptManager(ctrl)
+
+			tc.setup(auth, templateMgr, manager)
+
+			app := &experimentApplication{
+				auth:            auth,
+				templateManager: templateMgr,
+				manager:         manager,
+			}
+
+			_, err := app.SubmitExptFromTemplate(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					if ok {
+						assert.Equal(t, tc.wantErr, statusErr.Code())
+					}
+				}
+			}
+		})
+	}
 }

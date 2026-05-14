@@ -97,8 +97,8 @@ func (e *ExptMangerImpl) CheckExpt(ctx context.Context, expt *entity.Experiment,
 	if expt.EvalConf == nil {
 		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg("EvalConfig is invalid"))
 	}
-	if gptr.Indirect(expt.EvalConf.ItemConcurNum) > consts.MaxItemConcurrentNum {
-		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", consts.MaxEvalSetItemLimit)))
+	if gptr.Indirect(expt.EvalConf.ItemConcurNum) > e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum() {
+		return errorx.NewByCode(errno.ExperimentValidateFailCode, errorx.WithExtraMsg(fmt.Sprintf("item concurrent num must not be greater than %d", e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum())))
 	}
 
 	return nil

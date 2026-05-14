@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
@@ -2007,10 +2008,7 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id is required"))
 	}
 
-	name := req.GetName()
-	if name == "" {
-		name = fmt.Sprintf("实验模板_%d", time.Now().Unix())
-	}
+	name := strings.TrimSpace(req.GetName())
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -2028,6 +2026,10 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 	}
 	if template == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment template not found"))
+	}
+
+	if name == "" {
+		name = experiment_convertor.DefaultExperimentNameFromTemplate(template, time.Now().Unix())
 	}
 
 	// 检查实验名称是否重复

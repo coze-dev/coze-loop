@@ -67,6 +67,10 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 			return nil, err
 		}
 
+		if gptr.Indirect(p.cfg.DisableProduce) {
+			continue
+		}
+
 		if !p.cfg.Valid() {
 			return nil, fmt.Errorf("rmq config with invalid addr, key: %v, conf: %v", key, json.Jsonify(p.cfg))
 		}

@@ -552,16 +552,9 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			mode:      entity.EvaluationModeSubmit,
 			spaceID:   789,
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, int64(789)).AnyTimes().
-					Return(&entity.ExptExecConf{
-						ZombieIntervalSecond: 300,
-					})
-
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), time.Duration(300)*time.Second, time.Second).
+					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -600,16 +593,9 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			mode:      entity.EvaluationModeSubmit,
 			spaceID:   789,
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, int64(789)).AnyTimes().
-					Return(&entity.ExptExecConf{
-						ZombieIntervalSecond: 300,
-					})
-
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), time.Duration(300)*time.Second, time.Second).
+					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
 					Return(false, nil)
 			},
 			wantErr: true,
@@ -621,16 +607,9 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			mode:      entity.EvaluationModeSubmit,
 			spaceID:   789,
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, int64(789)).AnyTimes().
-					Return(&entity.ExptExecConf{
-						ZombieIntervalSecond: 300,
-					})
-
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), time.Duration(300)*time.Second, time.Second).
+					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -651,16 +630,9 @@ func TestExptMangerImpl_LogRun(t *testing.T) {
 			mode:      entity.EvaluationModeSubmit,
 			spaceID:   789,
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, int64(789)).AnyTimes().
-					Return(&entity.ExptExecConf{
-						ZombieIntervalSecond: 300,
-					})
-
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					LockBackoff(ctx, gomock.Any(), time.Duration(300)*time.Second, time.Second).
+					LockBackoff(ctx, gomock.Any(), gomock.Any(), time.Second).
 					Return(true, nil)
 
 				mgr.mtr.(*metricsMocks.MockExptMetric).
@@ -723,15 +695,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "locked_success_new_run",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1001), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1001", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1001", gomock.Any(), time.Second).
 					Return(true, "1001", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Save(ctx, gomock.Any()).
@@ -753,15 +721,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "retried_append_to_existing_run",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1002), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1002", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1002", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
@@ -779,10 +743,6 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "idgen_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(0), errors.New("idgen failed"))
 			},
@@ -791,15 +751,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "lock_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1003), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1003", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1003", gomock.Any(), time.Second).
 					Return(false, "", errors.New("redis error"))
 			},
 			wantErr: true,
@@ -807,15 +763,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "retried_parse_run_id_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1004), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1004", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1004", gomock.Any(), time.Second).
 					Return(false, "not_a_number", nil)
 			},
 			wantErr: true,
@@ -823,15 +775,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "retried_get_run_log_returns_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1005), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1005", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1005", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, nil)
@@ -844,15 +792,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "save_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1006), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1006", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1006", gomock.Any(), time.Second).
 					Return(true, "1006", nil)
 				mgr.runLogRepo.(*repoMocks.MockIExptRunLogRepo).
 					EXPECT().Save(ctx, gomock.Any()).Return(errors.New("save failed"))
@@ -862,15 +806,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "retried_completing_lock_exists",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1007), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1007", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1007", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(true, nil)
@@ -880,15 +820,11 @@ func TestExptMangerImpl_LogRetryItemsRun(t *testing.T) {
 		{
 			name: "retried_completing_lock_check_error",
 			setup: func() {
-				mgr.configer.(*componentMocks.MockIConfiger).
-					EXPECT().
-					GetExptExecConf(ctx, spaceID).AnyTimes().
-					Return(&entity.ExptExecConf{ZombieIntervalSecond: 300})
 				mgr.idgenerator.(*idgenMocks.MockIIDGenerator).
 					EXPECT().GenID(ctx).Return(int64(1008), nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().
-					BackoffLockWithValue(ctx, gomock.Any(), "1008", 300*time.Second, time.Second).
+					BackoffLockWithValue(ctx, gomock.Any(), "1008", gomock.Any(), time.Second).
 					Return(false, "1001", nil)
 				mgr.mutex.(*lockMocks.MockILocker).
 					EXPECT().Exists(ctx, "expt_completing_mutex_lock:123:1001").Return(false, errors.New("lock check error"))

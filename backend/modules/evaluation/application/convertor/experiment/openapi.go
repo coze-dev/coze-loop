@@ -713,6 +713,9 @@ func OpenAPIItemResultsDO2DTOs(from []*entity.ItemResult) []*openapiExperiment.I
 			res.SystemInfo = &openapiExperiment.ItemSystemInfo{
 				RunState: ItemRunStateDO2DTO(item.SystemInfo.RunState),
 			}
+			if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
+				res.SystemInfo.SetLogID(gptr.Of(*item.SystemInfo.LogID))
+			}
 		}
 		result = append(result, res)
 	}
@@ -863,6 +866,9 @@ func openAPIResultPayloadDO2DTO(result *entity.ExperimentResult) *openapiExperim
 	if payload.SystemInfo != nil {
 		res.SystemInfo = &openapiExperiment.TurnSystemInfo{
 			TurnRunState: TurnRunStateDO2DTO(payload.SystemInfo.TurnRunState),
+		}
+		if payload.SystemInfo.LogID != nil && *payload.SystemInfo.LogID != "" {
+			res.SystemInfo.SetLogID(gptr.Of(*payload.SystemInfo.LogID))
 		}
 	}
 	if res.EvalSetTurn == nil && len(res.EvaluatorRecords) == 0 {
@@ -1491,8 +1497,15 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	}
 
 	if template.FieldMappingConfig != nil {
+		var itemRetryNum *int32
+		if template.TemplateConf != nil && gptr.Indirect(template.TemplateConf.ItemRetryNum) > 0 {
+			itemRetryNum = gptr.Of(int32(gptr.Indirect(template.TemplateConf.ItemRetryNum)))
+		} else {
+			itemRetryNum = gptr.Of(int32(0))
+		}
 		dto.FieldMappingConfig = &openapiExperiment.ExptFieldMapping{
 			ItemConcurNum: ptr.ConvIntPtr[int, int32](template.FieldMappingConfig.ItemConcurNum),
+			ItemRetryNum:  itemRetryNum,
 		}
 		if template.FieldMappingConfig.TargetFieldMapping != nil {
 			dto.FieldMappingConfig.TargetFieldMapping = DomainTargetFieldMappingDTO2OpenAPI(&domainExpt.TargetFieldMapping{
@@ -1744,6 +1757,7 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 		}
 		param.TemplateConf = &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			ItemRetryNum:        ptr.ConvIntPtr[int32, int](fmc.ItemRetryNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 			ConnectorConf: entity.Connector{
 				TargetConf: &entity.TargetConf{
@@ -1847,6 +1861,7 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 		}
 		param.TemplateConf = &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](fmc.ItemConcurNum),
+			ItemRetryNum:        ptr.ConvIntPtr[int32, int](fmc.ItemRetryNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
 			ConnectorConf: entity.Connector{
 				TargetConf: &entity.TargetConf{

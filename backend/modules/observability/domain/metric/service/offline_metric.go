@@ -116,12 +116,9 @@ func (m *MetricsService) buildTraverseMetrics(ctx context.Context, req *Traverse
 				continue
 			}
 			for _, metricDef := range metricGroup.MetricDefinitions {
-				if !m.shouldTraverseMetric(metricDef, req.MetricsNames) {
+				metrics := m.resolveTraverseMetrics(metricDef, req.MetricsNames)
+				if len(metrics) == 0 {
 					continue
-				}
-				metrics := []entity.IMetricDefinition{metricDef}
-				if compound, ok := metricDef.(entity.IMetricCompound); ok {
-					metrics = compound.GetMetrics()
 				}
 				for _, metric := range metrics {
 					// special case
@@ -168,13 +165,15 @@ func (m *MetricsService) traverseMetric(ctx context.Context, param *metricTraver
 	}
 	var mResp *QueryMetricsResp
 	err := backoff.RetryWithMaxTimes(ctx, 2, func() error {
+		reqCtx := ctx
 		if param.QueryTimeout > 0 {
 			iCtx, cancel := context.WithTimeout(ctx, param.QueryTimeout)
 			defer cancel()
-			ctx = iCtx
+			reqCtx = iCtx
 		}
-		resp, err := m.queryOnlineMetrics(ctx, qReq)
+		resp, err := m.queryOnlineMetrics(reqCtx, qReq)
 		if err != nil {
+			logs.CtxWarn(reqCtx, "queryOnlineMetrics failed for metric %s, err: %v", metricName, err)
 			return err
 		}
 		mResp = resp
@@ -201,13 +200,29 @@ func (m *MetricsService) parseStartDate(startDate string) (int64, int64, error) 
 	return startAt.UnixMilli(), endAt.UnixMilli(), nil
 }
 
-func (m *MetricsService) shouldTraverseMetric(metricDef entity.IMetricDefinition, reqMetrics []string) bool {
-	if len(reqMetrics) != 0 && !lo.Contains(reqMetrics, metricDef.Name()) {
-		return false
-	} else if metricDef.OExpression().MetricName != "" { // rely on other metric, no need to offline calculate
-		return false
+// resolveTraverseMetrics 返回 metricDef 需要遍历的指标列表，nil 表示跳过
+func (m *MetricsService) resolveTraverseMetrics(metricDef entity.IMetricDefinition, reqMetrics []string) []entity.IMetricDefinition {
+	if metricDef.OExpression().MetricName != "" {
+		return nil
 	}
-	return true
+	compound, isCompound := metricDef.(entity.IMetricCompound)
+	if len(reqMetrics) != 0 && !lo.Contains(reqMetrics, metricDef.Name()) {
+		if !isCompound {
+			return nil
+		}
+		// 通过子指标名匹配，只返回匹配的子指标
+		matched := lo.Filter(compound.GetMetrics(), func(sub entity.IMetricDefinition, _ int) bool {
+			return lo.Contains(reqMetrics, sub.Name())
+		})
+		if len(matched) == 0 {
+			return nil
+		}
+		return matched
+	}
+	if isCompound {
+		return compound.GetMetrics()
+	}
+	return []entity.IMetricDefinition{metricDef}
 }
 
 func (m *MetricsService) buildDrillDownFields(

@@ -52,6 +52,48 @@ func TestConvertCreateExptTemplateReq_ExptSourceInTemplateConf(t *testing.T) {
 	}
 }
 
+// 回归：exptSourceDTO2DO 必须保留 Scheduler 字段，否则创建/更新接口响应里 Scheduler 会丢失。
+func TestExptSourceDTO2DO_PreservesScheduler(t *testing.T) {
+	t.Parallel()
+
+	dto := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType_Evaluation),
+		SourceID:   gptr.Of("pipe-9"),
+		Scheduler: &domain_expt.Scheduler{
+			Enabled:   gptr.Of(true),
+			Frequency: gptr.Of("every_day"),
+			TriggerAt: gptr.Of(int64(1777392000)),
+			StartTime: gptr.Of(int64(1777452450)),
+			EndTime:   gptr.Of(int64(1777538850)),
+		},
+	}
+
+	do := exptSourceDTO2DO(dto)
+	if assert.NotNil(t, do) && assert.NotNil(t, do.Scheduler) {
+		assert.Equal(t, true, gptr.Indirect(do.Scheduler.Enabled))
+		if assert.NotNil(t, do.Scheduler.Frequency) {
+			assert.Equal(t, "every_day", *do.Scheduler.Frequency)
+		}
+		assert.Equal(t, int64(1777392000), gptr.Indirect(do.Scheduler.TriggerAt))
+		assert.Equal(t, int64(1777452450), gptr.Indirect(do.Scheduler.StartTime))
+		assert.Equal(t, int64(1777538850), gptr.Indirect(do.Scheduler.EndTime))
+	}
+}
+
+// 回归：exptSourceDTO2DO 在 Scheduler 为 nil 时不能 panic 且不写入伪空对象。
+func TestExptSourceDTO2DO_NilScheduler(t *testing.T) {
+	t.Parallel()
+
+	dto := &domain_expt.ExptSource{
+		SourceType: gptr.Of(domain_expt.SourceType_Evaluation),
+		SourceID:   gptr.Of("pipe-9"),
+	}
+	do := exptSourceDTO2DO(dto)
+	if assert.NotNil(t, do) {
+		assert.Nil(t, do.Scheduler)
+	}
+}
+
 func TestBuildTemplateConfForCreate_WithExptSourceOnly(t *testing.T) {
 	t.Parallel()
 
@@ -846,4 +888,22 @@ func TestConvertTemplateConfToDTO_EdgeCases(t *testing.T) {
 		assert.Nil(t, runtimeParam)
 		assert.Nil(t, evaluatorMappings)
 	})
+}
+
+func TestDefaultExperimentNameFromTemplate(t *testing.T) {
+	t.Parallel()
+	const ts int64 = 1735689600
+	tpl := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "  离线评测  "}}
+	assert.Equal(t, "离线评测1735689600", DefaultExperimentNameFromTemplate(tpl, ts))
+	assert.Equal(t, "实验模板1735689600", DefaultExperimentNameFromTemplate(&entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "   "}}, ts))
+	assert.Equal(t, "实验模板1735689600", DefaultExperimentNameFromTemplate(nil, ts))
+}
+
+func TestSchedulerExperimentNameFromTemplate(t *testing.T) {
+	t.Parallel()
+	const ts int64 = 1735689600
+	tpl := &entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "  离线评测  "}}
+	assert.Equal(t, "离线评测-1735689600", SchedulerExperimentNameFromTemplate(tpl, ts))
+	assert.Equal(t, "实验模板-1735689600", SchedulerExperimentNameFromTemplate(&entity.ExptTemplate{Meta: &entity.ExptTemplateMeta{Name: "   "}}, ts))
+	assert.Equal(t, "实验模板-1735689600", SchedulerExperimentNameFromTemplate(nil, ts))
 }

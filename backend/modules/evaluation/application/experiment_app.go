@@ -565,8 +565,71 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 // 2) 从有序 EvaluatorIDVersionList 中批量解析并按输入顺序回填版本ID
 // 3) 从 EvaluatorIDVersionList 中提取 runconfig 和权重配置，构建 evaluator_version_id 到 runconfig/权重的映射
 // 注意：runconfig 用于评估器运行时配置，score weight 用于加权分数计算
+// validateEvaluatorVersionsBelongToWorkspace 校验直接传入的 evaluator_version_id 是否属于当前工作空间
+// 预置评估器（Builtin=true）允许跨空间复用，不做 SpaceID 校验
+func (e *experimentApplication) validateEvaluatorVersionsBelongToWorkspace(ctx context.Context, evaluatorVersionIDs []int64, workspaceID int64) error {
+	if len(evaluatorVersionIDs) == 0 || workspaceID <= 0 {
+		return nil
+	}
+	// 去重，避免重复查询
+	seen := make(map[int64]struct{}, len(evaluatorVersionIDs))
+	uniq := make([]int64, 0, len(evaluatorVersionIDs))
+	for _, id := range evaluatorVersionIDs {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniq = append(uniq, id)
+	}
+	if len(uniq) == 0 {
+		return nil
+	}
+	evs, err := e.evaluatorService.BatchGetEvaluatorVersion(ctx, nil, uniq, false)
+	if err != nil {
+		return err
+	}
+	found := make(map[int64]*entity.Evaluator, len(evs))
+	for _, ev := range evs {
+		if ev == nil {
+			continue
+		}
+		found[ev.GetEvaluatorVersionID()] = ev
+	}
+	for _, id := range uniq {
+		ev, ok := found[id]
+		if !ok || ev == nil {
+			return errorx.NewByCode(
+				errno.EvaluatorVersionNotFoundCode,
+				errorx.WithExtraMsg(fmt.Sprintf("evaluator version %d not found", id)),
+			)
+		}
+		// 预置评估器允许跨空间复用
+		if ev.Builtin {
+			continue
+		}
+		if ev.GetSpaceID() != workspaceID {
+			return errorx.NewByCode(
+				errno.EvaluatorVersionNotFoundCode,
+				errorx.WithExtraMsg(fmt.Sprintf("evaluator %d version %s does not belong to workspace %d", ev.ID, ev.GetVersion(), workspaceID)),
+			)
+		}
+	}
+	return nil
+}
+
 func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx context.Context, req *expt.CreateExperimentRequest) ([]int64, map[int64]*evaluatordto.EvaluatorRunConfig, map[int64]float64, error) {
+	workspaceID := req.GetWorkspaceID()
+
 	evalVersionIDs := make([]int64, 0, len(req.EvaluatorVersionIds))
+	// 对于直接传入的 evaluator_version_id，需要校验是否属于当前空间（预置评估器除外）
+	if len(req.EvaluatorVersionIds) > 0 && workspaceID > 0 {
+		if err := e.validateEvaluatorVersionsBelongToWorkspace(ctx, req.EvaluatorVersionIds, workspaceID); err != nil {
+			return nil, nil, nil, err
+		}
+	}
 	evalVersionIDs = append(evalVersionIDs, req.EvaluatorVersionIds...)
 
 	// 权重映射：key 为 evaluator_version_id，value 为权重（用于加权分数计算）
@@ -609,6 +672,7 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 		}
 		for _, ev := range evs {
 			if ev != nil {
+				// 预置评估器允许跨空间复用，这里不做 SpaceID 校验
 				id2Builtin[ev.ID] = ev
 			}
 		}
@@ -623,6 +687,16 @@ func (e *experimentApplication) resolveEvaluatorVersionIDsFromCreateReq(ctx cont
 		for _, ev := range evs {
 			if ev == nil {
 				continue
+			}
+			// 非预置评估器必须与实验 WorkspaceID 一致，防止绑定其他空间的评估器
+			// 同时校验根字段 SpaceID（来自 evaluator 元信息）和内层版本 SpaceID（来自 evaluator_version）
+			if workspaceID > 0 && !ev.Builtin {
+				if ev.GetSpaceID() != workspaceID {
+					return nil, nil, nil, errorx.NewByCode(
+						errno.EvaluatorVersionNotFoundCode,
+						errorx.WithExtraMsg(fmt.Sprintf("evaluator %d version %s does not belong to workspace %d", ev.ID, ev.GetVersion(), workspaceID)),
+					)
+				}
 			}
 			key := fmt.Sprintf("%d#%s", ev.ID, ev.GetVersion())
 			pair2Eval[key] = ev
@@ -740,23 +814,36 @@ func (e *experimentApplication) CheckExperimentTemplateName(ctx context.Context,
 
 	session := entity.NewSession(ctx)
 
-	// 如果传了 template_id，且名称与当前模板名称相同，则直接返回可用
+	// expt_type：客户端显式传入优先；否则在拉取到 template_id 对应模板时用 Meta 推导；
+	// 两者皆无时保持 0，与旧客户端一致（跨类型判重）。
+	exptType := entity.ExptType(0)
+	if req.IsSetExptType() {
+		exptType = entity.ExptType(req.GetExptType())
+	}
+
+	// 如果传了 template_id，且名称与当前模板名称相同，则直接返回可用；
+	// 未传 expt_type 时用现有模板 Meta 推导判重维度
 	if req.IsSetTemplateID() && req.GetTemplateID() > 0 {
 		tpl, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
 		if err != nil {
 			return nil, err
 		}
-		if tpl != nil && tpl.Meta != nil && tpl.Meta.Name == req.GetName() {
-			isAvailable := true
-			return &expt.CheckExperimentTemplateNameResponse{
-				IsAvailable: &isAvailable,
-				BaseResp:    base.NewBaseResp(),
-			}, nil
+		if tpl != nil && tpl.Meta != nil {
+			if !req.IsSetExptType() {
+				exptType = tpl.Meta.ExptType
+			}
+			if tpl.Meta.Name == req.GetName() {
+				isAvailable := true
+				return &expt.CheckExperimentTemplateNameResponse{
+					IsAvailable: &isAvailable,
+					BaseResp:    base.NewBaseResp(),
+				}, nil
+			}
 		}
 	}
 
-	// 否则走正常的重名校验：模板名在该空间下是否已存在
-	pass, err := e.templateManager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), session)
+	// 否则走正常的重名校验：模板名在该空间 + 同 expt_type 下是否已存在
+	pass, err := e.templateManager.CheckName(ctx, req.GetName(), req.GetWorkspaceID(), exptType, session)
 	if err != nil {
 		return nil, err
 	}
@@ -764,6 +851,84 @@ func (e *experimentApplication) CheckExperimentTemplateName(ctx context.Context,
 	return &expt.CheckExperimentTemplateNameResponse{
 		IsAvailable: &pass,
 		BaseResp:    base.NewBaseResp(),
+	}, nil
+}
+
+// SubmitExptFromTemplate 根据 workspace_id 与实验模板 ID 创建并提交运行实验；
+// 拼装 SubmitExperimentRequest 时使用与 SubmitExptFromTemplateOApi 相同的 OpenAPITemplateToSubmitExperimentRequest（含 TemplateConf 评估器 runConfig/权重/version 回填）。
+func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest) (r *expt.SubmitExptFromTemplateResponse, err error) {
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetTemplateID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id is required"))
+	}
+
+	name := strings.TrimSpace(req.GetName())
+
+	if err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.ActionCreateExpt), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	}); err != nil {
+		return nil, err
+	}
+
+	session := entity.NewSession(ctx)
+	if req.Session != nil && req.Session.UserID != nil {
+		session = &entity.Session{
+			UserID: strconv.FormatInt(gptr.Indirect(req.Session.UserID), 10),
+		}
+	}
+
+	template, err := e.templateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if template == nil {
+		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment template not found"))
+	}
+
+	if name == "" {
+		name = experiment.SchedulerExperimentNameFromTemplate(template, time.Now().Unix())
+	}
+
+	pass, err := e.manager.CheckName(ctx, name, req.GetWorkspaceID(), session)
+	if err != nil {
+		return nil, err
+	}
+	if !pass {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment name already exists"))
+	}
+
+	submitReq := experiment.OpenAPITemplateToSubmitExperimentRequest(template, name, req.GetWorkspaceID())
+	if submitReq == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
+	}
+	// ByteScheduler 模板周期回调经本接口提交，与 trigger_type=schedule 对齐
+	submitReq.TriggerType = gptr.Of(domain_expt.Schedule)
+	submitReq.Session = &common.Session{}
+	if session.UserID != "" {
+		if userID, parseErr := strconv.ParseInt(session.UserID, 10, 64); parseErr == nil {
+			submitReq.Session.UserID = gptr.Of(userID)
+		}
+	}
+
+	cresp, err := e.SubmitExperiment(ctx, submitReq)
+	if err != nil {
+		return nil, err
+	}
+	if cresp == nil || cresp.GetExperiment() == nil || cresp.GetExperiment().ID == nil {
+		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("experiment create failed"))
+	}
+
+	return &expt.SubmitExptFromTemplateResponse{
+		Experiment: cresp.GetExperiment(),
+		RunID:      cresp.RunID,
+		BaseResp:   base.NewBaseResp(),
 	}, nil
 }
 

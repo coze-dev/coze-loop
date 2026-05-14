@@ -1427,6 +1427,7 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 		lock             sync.Mutex
 		defaultTimeRange = int64(60 * 60 * 1000) // ms
 	)
+	g.SetLimit(5)
 	tenants, err := r.getTenants(ctx, req.PlatformType)
 	if err != nil {
 		return nil, err

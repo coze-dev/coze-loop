@@ -40,9 +40,6 @@
       "path": "../../../infra/plugins/postcss-plugin/tsconfig.build.json"
     },
     {
-      "path": "../../../infra/plugins/subspace-resolve-plugin/tsconfig.build.json"
-    },
-    {
       "path": "../../loop-base/api-schema/tsconfig.build.json"
     },
     {

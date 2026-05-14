@@ -418,11 +418,141 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		return nil, err
 	}
 
+	// 基准实验“行级”结果需要在未终态时也返回 logid：
+	// - `expt_turn_result_run_log` / `expt_item_result_run_log` 中执行中就会写入 log_id
+	// - `expt_turn_result` / `expt_item_result` 的 log_id 往往要等终态回写后才可用
+	// 因此这里优先从 run-log 回填 item(SystemInfo.LogID)。
+	itemID2LogID := make(map[int64]string, len(itemIDs))
+	type itemTurnKey struct {
+		exptRunID int64
+		itemID    int64
+		turnID    int64
+	}
+	turnLogIDByRunItemTurn := make(map[itemTurnKey]string)
+	type itemTurnKeyNoRun struct {
+		itemID int64
+		turnID int64
+	}
+	turnLogIDByItemTurn := make(map[itemTurnKeyNoRun]string)
+
+	// 将基准页内 turn_result 里的 expt_run_id 拆分出来，批量拉取对应的 run-log
+	runID2ItemIDSet := make(map[int64]map[int64]struct{})
+	for _, tr := range turnResultDAOs {
+		if tr == nil {
+			continue
+		}
+		if runID2ItemIDSet[tr.ExptRunID] == nil {
+			runID2ItemIDSet[tr.ExptRunID] = make(map[int64]struct{})
+		}
+		runID2ItemIDSet[tr.ExptRunID][tr.ItemID] = struct{}{}
+	}
+
+	for exptRunID, itemIDSet := range runID2ItemIDSet {
+		if len(itemIDSet) == 0 {
+			continue
+		}
+		exptPageItemIDs := make([]int64, 0, len(itemIDSet))
+		for itemID := range itemIDSet {
+			exptPageItemIDs = append(exptPageItemIDs, itemID)
+		}
+
+		// 先尝试从 item_run_log 回填（若创建时就写入了 log_id，会更准确）
+		itemRunLogs, runLogErr := e.ExptItemResultRepo.MGetItemRunLog(ctx, baseExptID, exptRunID, exptPageItemIDs, spaceID)
+		if runLogErr != nil {
+			return nil, runLogErr
+		}
+		for _, irl := range itemRunLogs {
+			if irl == nil {
+				continue
+			}
+			if irl.LogID != "" {
+				itemID2LogID[irl.ItemID] = irl.LogID
+			}
+		}
+
+		// 再从 turn_run_log 回填（保证执行中也能提供 log_id）
+		turnRunLogs, runLogErr := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, baseExptID, exptRunID, exptPageItemIDs, spaceID)
+		if runLogErr != nil {
+			return nil, runLogErr
+		}
+		for _, trl := range turnRunLogs {
+			if trl == nil {
+				continue
+			}
+			if trl.LogID == "" {
+				continue
+			}
+			turnLogIDByRunItemTurn[itemTurnKey{
+				exptRunID: exptRunID,
+				itemID:    trl.ItemID,
+				turnID:    trl.TurnID,
+			}] = trl.LogID
+			// 兜底：同一分页里同一 item/turn 若出现多个 run_id，只保留第一个非空 logid 用于对外展示
+			k := itemTurnKeyNoRun{itemID: trl.ItemID, turnID: trl.TurnID}
+			if turnLogIDByItemTurn[k] == "" {
+				turnLogIDByItemTurn[k] = trl.LogID
+			}
+		}
+	}
+
+	// 确保每个 item 都能回填到一个 logid：按 turn_resultDAOs 的遍历顺序取该 item 的第一个非空 logid
+	for _, tr := range turnResultDAOs {
+		if tr == nil {
+			continue
+		}
+		if itemID2LogID[tr.ItemID] != "" {
+			continue
+		}
+		if logID, ok := turnLogIDByRunItemTurn[itemTurnKey{exptRunID: tr.ExptRunID, itemID: tr.ItemID, turnID: tr.TurnID}]; ok && logID != "" {
+			itemID2LogID[tr.ItemID] = logID
+		}
+	}
+
 	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider)
+
+	// 写回 item 级别 logid 到 payload.SystemInfo，供 BatchGetExperimentResult 返回给业务方
+	for _, item := range payloadBuilder.ItemResults {
+		if item == nil || item.SystemInfo == nil {
+			continue
+		}
+		if item.SystemInfo.LogID != nil && *item.SystemInfo.LogID != "" {
+			continue
+		}
+		if logID := itemID2LogID[item.ItemID]; logID != "" {
+			item.SystemInfo.LogID = gptr.Of(logID)
+		}
+	}
 
 	itemResults, err := payloadBuilder.BuildItemResults(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	// 写回 turn 级别 logid：若 turn_result 表未回写 log_id，则用 run-log 兜底
+	for _, item := range itemResults {
+		if item == nil {
+			continue
+		}
+		for _, turn := range item.TurnResults {
+			if turn == nil {
+				continue
+			}
+			for _, exptRes := range turn.ExperimentResults {
+				if exptRes == nil || exptRes.Payload == nil || exptRes.Payload.SystemInfo == nil {
+					continue
+				}
+				// 当前接口按 baseExpt 的 turn_result 拉取分页范围，这里只对 baseExpt 的系统信息做兜底即可
+				if exptRes.ExperimentID != baseExptID {
+					continue
+				}
+				if exptRes.Payload.SystemInfo.LogID != nil && *exptRes.Payload.SystemInfo.LogID != "" {
+					continue
+				}
+				if logID := turnLogIDByItemTurn[itemTurnKeyNoRun{itemID: item.ItemID, turnID: turn.TurnID}]; logID != "" {
+					exptRes.Payload.SystemInfo.LogID = gptr.Of(logID)
+				}
+			}
+		}
 	}
 
 	res.ItemResults = itemResults

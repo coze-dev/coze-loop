@@ -294,6 +294,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"SubmitExptFromTemplate": kitex.NewMethodInfo(
+		submitExptFromTemplateHandler,
+		newExperimentServiceSubmitExptFromTemplateArgs,
+		newExperimentServiceSubmitExptFromTemplateResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -1087,6 +1094,25 @@ func newExperimentServiceCheckExperimentTemplateNameResult() interface{} {
 	return expt.NewExperimentServiceCheckExperimentTemplateNameResult()
 }
 
+func submitExptFromTemplateHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*expt.ExperimentServiceSubmitExptFromTemplateArgs)
+	realResult := result.(*expt.ExperimentServiceSubmitExptFromTemplateResult)
+	success, err := handler.(expt.ExperimentService).SubmitExptFromTemplate(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newExperimentServiceSubmitExptFromTemplateArgs() interface{} {
+	return expt.NewExperimentServiceSubmitExptFromTemplateArgs()
+}
+
+func newExperimentServiceSubmitExptFromTemplateResult() interface{} {
+	return expt.NewExperimentServiceSubmitExptFromTemplateResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -1494,6 +1520,16 @@ func (p *kClient) CheckExperimentTemplateName(ctx context.Context, req *expt.Che
 	_args.Req = req
 	var _result expt.ExperimentServiceCheckExperimentTemplateNameResult
 	if err = p.c.Call(ctx, "CheckExperimentTemplateName", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest) (r *expt.SubmitExptFromTemplateResponse, err error) {
+	var _args expt.ExperimentServiceSubmitExptFromTemplateArgs
+	_args.Req = req
+	var _result expt.ExperimentServiceSubmitExptFromTemplateResult
+	if err = p.c.Call(ctx, "SubmitExptFromTemplate", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

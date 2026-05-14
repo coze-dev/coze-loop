@@ -11,7 +11,9 @@ import (
 
 //go:generate  mockgen -destination  ./mocks/expt_template.go  --package mocks . IExptTemplateManager
 type IExptTemplateManager interface {
-	CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error)
+	// CheckName 校验模板名是否可用；exptType 用于在线/离线模板隔离判重，
+	// 传 0 时跨类型查询（兼容旧调用），传具体类型时仅在同类型范围内判重。
+	CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error)
 	Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error)
 	Get(ctx context.Context, templateID, spaceID int64, session *entity.Session) (*entity.ExptTemplate, error)
 	MGet(ctx context.Context, templateIDs []int64, spaceID int64, session *entity.Session) ([]*entity.ExptTemplate, error)

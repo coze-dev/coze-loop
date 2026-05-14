@@ -4269,7 +4269,7 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
 				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
 				manager.EXPECT().CheckName(gomock.Any(), gomock.Any(), workspaceID, gomock.Any()).DoAndReturn(func(_ context.Context, name string, _ int64, _ *entity.Session) (bool, error) {
-					assert.Contains(t, name, "实验模板_")
+					assert.Regexp(t, `^实验模板\d+$`, name)
 					return true, nil
 				})
 				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(exptID)}}

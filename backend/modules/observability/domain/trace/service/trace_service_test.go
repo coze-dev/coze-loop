@@ -194,6 +194,137 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 			},
 		},
 		{
+			name: "get traces advance info with multiple traces concurrency limited",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, req *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+					return &repo.GetTraceResult{Spans: loop_span.SpanList{{
+						TraceID: req.TraceID,
+						SpanID:  "span-" + req.TraceID,
+					}}}, nil
+				}).Times(8)
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return().Times(8)
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				persistCmdMock := mocks.NewMockPersistentCmdable(ctrl)
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+					persistCmd:     persistCmdMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTracesAdvanceInfoReq{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+					Traces: func() []*TraceQueryParam {
+						traces := make([]*TraceQueryParam, 8)
+						for i := range traces {
+							traces[i] = &TraceQueryParam{
+								TraceID:   fmt.Sprintf("trace-%d", i),
+								StartTime: 0,
+								EndTime:   0,
+							}
+						}
+						return traces
+					}(),
+				},
+			},
+			want: func() *GetTracesAdvanceInfoResp {
+				infos := make([]*loop_span.TraceAdvanceInfo, 8)
+				for i := range infos {
+					infos[i] = &loop_span.TraceAdvanceInfo{
+						TraceId:    fmt.Sprintf("trace-%d", i),
+						InputCost:  0,
+						OutputCost: 0,
+					}
+				}
+				return &GetTracesAdvanceInfoResp{Infos: infos}
+			}(),
+		},
+		{
+			name: "get traces advance info with third party workspace id",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				repoMock := repomocks.NewMockITraceRepo(ctrl)
+				repoMock.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, req *repo.GetTraceParam) (*repo.GetTraceResult, error) {
+					assert.Equal(t, "third-party-ws", req.WorkSpaceID)
+					return &repo.GetTraceResult{Spans: loop_span.SpanList{{
+						TraceID: "123",
+						SpanID:  "234",
+					}}}, nil
+				})
+				filterFactoryMock := filtermocks.NewMockPlatformFilterFactory(ctrl)
+				buildHelper := NewTraceFilterProcessorBuilder(filterFactoryMock, map[entity.ProcessorScene][]span_processor.Factory{entity.SceneGetTrace: {}, entity.SceneListSpans: {}, entity.SceneAdvanceInfo: {}, entity.SceneIngestTrace: {}, entity.SceneSearchTraceOApi: {}, entity.SceneListSpansOApi: {}})
+				metricsMock := metricmocks.NewMockITraceMetrics(ctrl)
+				metricsMock.EXPECT().EmitGetTrace(gomock.Any(), gomock.Any(), gomock.Any()).Return()
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return([]string{"spans"}, nil).AnyTimes()
+				persistCmdMock := mocks.NewMockPersistentCmdable(ctrl)
+				return fields{
+					traceRepo:      repoMock,
+					traceConfig:    confMock,
+					buildHelper:    buildHelper,
+					metrics:        metricsMock,
+					tenantProvider: tenantProviderMock,
+					persistCmd:     persistCmdMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTracesAdvanceInfoReq{
+					WorkspaceID:           1,
+					ThirdPartyWorkspaceID: "third-party-ws",
+					PlatformType:          loop_span.PlatformCozeLoop,
+					Traces: []*TraceQueryParam{{
+						TraceID:   "123",
+						StartTime: 0,
+						EndTime:   0,
+					}},
+				},
+			},
+			want: &GetTracesAdvanceInfoResp{
+				Infos: []*loop_span.TraceAdvanceInfo{{
+					TraceId:    "123",
+					InputCost:  0,
+					OutputCost: 0,
+				}},
+			},
+		},
+		{
+			name: "get traces advance info with tenant provider error",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				confMock := confmocks.NewMockITraceConfig(ctrl)
+				tenantProviderMock := tenantmocks.NewMockITenantProvider(ctrl)
+				tenantProviderMock.EXPECT().GetTenantsByPlatformType(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("tenant error"))
+				return fields{
+					traceConfig:    confMock,
+					tenantProvider: tenantProviderMock,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &GetTracesAdvanceInfoReq{
+					WorkspaceID:  1,
+					PlatformType: loop_span.PlatformCozeLoop,
+					Traces: []*TraceQueryParam{{
+						TraceID:   "123",
+						StartTime: 0,
+						EndTime:   0,
+					}},
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "get traces advance info failed due to repo error",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				repoMock := repomocks.NewMockITraceRepo(ctrl)
@@ -247,7 +378,11 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 			)
 			got, err := r.GetTracesAdvanceInfo(tt.args.ctx, tt.args.req)
 			assert.Equal(t, tt.wantErr, err != nil)
-			assert.Equal(t, got, tt.want)
+			if tt.want != nil && got != nil {
+				assert.ElementsMatch(t, tt.want.Infos, got.Infos)
+			} else {
+				assert.Equal(t, got, tt.want)
+			}
 		})
 	}
 }

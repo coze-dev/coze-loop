@@ -53,35 +53,84 @@ func TestMetricsService_parseStartDate(t *testing.T) {
 	})
 }
 
-// TestMetricsService_shouldTraverseMetric 测试指标遍历判断逻辑
-func TestMetricsService_shouldTraverseMetric(t *testing.T) {
+// TestMetricsService_resolveTraverseMetrics 测试指标遍历解析逻辑
+func TestMetricsService_resolveTraverseMetrics(t *testing.T) {
 	t.Parallel()
 
-	t.Run("empty request metrics - should traverse", func(t *testing.T) {
+	t.Run("empty request metrics - returns self", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
+		def := &testMetricDefinition{name: "test_metric"}
 
-		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{})
+		result := svc.resolveTraverseMetrics(def, []string{})
 
-		assert.True(t, result)
+		assert.Len(t, result, 1)
+		assert.Equal(t, "test_metric", result[0].Name())
 	})
 
-	t.Run("metric in request metrics - should traverse", func(t *testing.T) {
+	t.Run("metric in request metrics - returns self", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
+		def := &testMetricDefinition{name: "test_metric"}
 
-		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{"test_metric", "other_metric"})
+		result := svc.resolveTraverseMetrics(def, []string{"test_metric", "other_metric"})
 
-		assert.True(t, result)
+		assert.Len(t, result, 1)
+		assert.Equal(t, "test_metric", result[0].Name())
 	})
 
-	t.Run("metric not in request metrics - should not traverse", func(t *testing.T) {
+	t.Run("metric not in request metrics - returns nil", func(t *testing.T) {
 		t.Parallel()
 		svc := &MetricsService{}
 
-		result := svc.shouldTraverseMetric(&testMetricDefinition{name: "test_metric"}, []string{"other_metric"})
+		result := svc.resolveTraverseMetrics(&testMetricDefinition{name: "test_metric"}, []string{"other_metric"})
 
-		assert.False(t, result)
+		assert.Nil(t, result)
+	})
+
+	t.Run("compound matched by sub-metric name - returns only matched sub-metrics", func(t *testing.T) {
+		t.Parallel()
+		svc := &MetricsService{}
+		sub1 := &testMetricDefinition{name: "sub_metric_a"}
+		sub2 := &testMetricDefinition{name: "sub_metric_b"}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "compound_metric"},
+			metrics:              []entity.IMetricDefinition{sub1, sub2},
+			operator:             entity.MetricOperatorDivide,
+		}
+
+		result := svc.resolveTraverseMetrics(compound, []string{"sub_metric_a"})
+		assert.Len(t, result, 1)
+		assert.Equal(t, "sub_metric_a", result[0].Name())
+	})
+
+	t.Run("compound not matched by any name - returns nil", func(t *testing.T) {
+		t.Parallel()
+		svc := &MetricsService{}
+		sub1 := &testMetricDefinition{name: "sub_metric_a"}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "compound_metric"},
+			metrics:              []entity.IMetricDefinition{sub1},
+			operator:             entity.MetricOperatorDivide,
+		}
+
+		result := svc.resolveTraverseMetrics(compound, []string{"unrelated_metric"})
+		assert.Nil(t, result)
+	})
+
+	t.Run("compound matched by parent name - returns all sub-metrics", func(t *testing.T) {
+		t.Parallel()
+		svc := &MetricsService{}
+		sub1 := &testMetricDefinition{name: "sub_metric_a"}
+		sub2 := &testMetricDefinition{name: "sub_metric_b"}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "compound_metric"},
+			metrics:              []entity.IMetricDefinition{sub1, sub2},
+			operator:             entity.MetricOperatorDivide,
+		}
+
+		result := svc.resolveTraverseMetrics(compound, []string{"compound_metric"})
+		assert.Len(t, result, 2)
 	})
 }
 
@@ -1081,6 +1130,42 @@ func TestMetricsService_buildTraverseMetrics_GroupBelong(t *testing.T) {
 		})
 		assert.Error(t, err)
 		assert.Nil(t, metrics)
+	})
+
+	t.Run("compound matched by sub-metric name expands only matched sub-metrics", func(t *testing.T) {
+		t.Parallel()
+		metric1 := &testMetricDefinition{name: "metric_numerator", metricType: entity.MetricTypeSummary}
+		metric2 := &testMetricDefinition{name: "metric_denominator", metricType: entity.MetricTypeSummary}
+		compound := &testCompoundMetricDefinition{
+			testMetricDefinition: &testMetricDefinition{name: "metric_ratio", metricType: entity.MetricTypeSummary},
+			metrics:              []entity.IMetricDefinition{metric1, metric2},
+			operator:             entity.MetricOperatorDivide,
+		}
+		pMetrics := &entity.PlatformMetrics{
+			MetricGroups: map[string]*entity.MetricGroup{
+				"group_a": {MetricDefinitions: []entity.IMetricDefinition{compound}},
+				"group_b": {MetricDefinitions: []entity.IMetricDefinition{metric1, metric2}},
+			},
+			DrillDownObjects: map[string]*loop_span.FilterField{},
+			PlatformMetricDefs: map[loop_span.PlatformType]*entity.PlatformMetricDef{
+				loop_span.PlatformType("test_platform"): {MetricGroups: []string{"group_a", "group_b"}},
+			},
+		}
+		svc := &MetricsService{
+			metricDefMap: map[string]entity.IMetricDefinition{
+				metric1.Name():  metric1,
+				metric2.Name():  metric2,
+				compound.Name(): compound,
+			},
+			pMetrics: pMetrics,
+		}
+		metrics, err := svc.buildTraverseMetrics(context.Background(), &TraverseMetricsReq{
+			PlatformTypes: []loop_span.PlatformType{"test_platform"},
+			MetricsNames:  []string{"metric_numerator"},
+		})
+		assert.NoError(t, err)
+		assert.Len(t, metrics, 1)
+		assert.Equal(t, "metric_numerator", metrics[0].metricDef.Name())
 	})
 }
 
