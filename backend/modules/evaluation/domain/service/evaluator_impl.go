@@ -717,8 +717,8 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 	}
 }
 
-// ShouldSkipEvaluator 判断评估器是否应跳过本次评估，跳过时创建记录并返回
-func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
+func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
 	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
 	if err != nil {
 		return nil, false, err
@@ -731,7 +731,7 @@ func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, request 
 	if !ok {
 		return nil, false, nil
 	}
-	output, skip := evaluatorSourceService.ShouldSkip(ctx, evaluatorDO, request.InputData)
+	output, skip := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
 	if !skip {
 		return nil, false, nil
 	}
@@ -743,6 +743,13 @@ func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, request 
 	}
 	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
 	logID := logs.GetLogID(ctx)
+
+	// 从 output 中读取劫持后的运行状态，未设置时默认 Success
+	status := entity.EvaluatorRunStatusSuccess
+	if output != nil && output.RunStatus != entity.EvaluatorRunStatusUnknown {
+		status = output.RunStatus
+	}
+
 	recordDO := &entity.EvaluatorRecord{
 		ID:                  recordID,
 		SpaceID:             request.SpaceID,
@@ -754,7 +761,7 @@ func (e *EvaluatorServiceImpl) ShouldSkipEvaluator(ctx context.Context, request 
 		LogID:               logID,
 		EvaluatorInputData:  request.InputData,
 		EvaluatorOutputData: output,
-		Status:              entity.EvaluatorRunStatusSuccess,
+		Status:              status,
 		Ext:                 request.Ext,
 		BaseInfo: &entity.BaseInfo{
 			CreatedBy: &entity.UserInfo{

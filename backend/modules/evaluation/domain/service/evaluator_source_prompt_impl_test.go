@@ -1668,7 +1668,7 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 	}
 }
 
-func TestEvaluatorSourcePromptServiceImpl_ShouldSkip(t *testing.T) {
+func TestEvaluatorSourcePromptServiceImpl_ShouldIntercept(t *testing.T) {
 	service := &EvaluatorSourcePromptServiceImpl{}
 
 	tests := []struct {
@@ -1709,7 +1709,7 @@ func TestEvaluatorSourcePromptServiceImpl_ShouldSkip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, skip := service.ShouldSkip(context.Background(), tt.evaluator, tt.input)
+			output, skip := service.ShouldIntercept(context.Background(), tt.evaluator, tt.input)
 			assert.Equal(t, tt.expectedSkip, skip)
 			assert.Equal(t, tt.expectedOutput, output)
 		})
