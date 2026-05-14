@@ -162,8 +162,8 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 	}
 
 	if len(itemResults) == 0 {
-		logs.CtxWarn(ctx, "[ExptEval] RecordItemRunLogs found empty item results, expt_id=%v, expt_run_id=%v, item_id=%v", exptID, exptRunID, itemID)
-		return nil, nil
+		logs.CtxWarn(ctx, "[ExptEval] found empty item results, expt_id=%v, expt_run_id=%v, item_id=%v", exptID, exptRunID, itemID)
+		return nil, errorx.NewByCode(errno.CommonMySqlErrorCode)
 	}
 
 	itemResult := itemResults[0]
