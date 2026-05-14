@@ -2500,3 +2500,32 @@ func TestToEvaluatorFieldMappingDoForTemplate_Complete(t *testing.T) {
 		assert.Len(t, result, 1)
 	})
 }
+
+func TestCreateEvalTargetParamDTO2DO_WithCluster(t *testing.T) {
+	t.Parallel()
+
+	t.Run("with cluster", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source-1"),
+			Cluster:        gptr.Of("my-cluster"),
+		}
+		result := CreateEvalTargetParamDTO2DO(param)
+		assert.NotNil(t, result)
+		assert.Equal(t, "source-1", *result.SourceTargetID)
+		assert.Equal(t, "my-cluster", *result.Cluster)
+	})
+
+	t.Run("without cluster", func(t *testing.T) {
+		param := &eval_target.CreateEvalTargetParam{
+			SourceTargetID: gptr.Of("source-2"),
+		}
+		result := CreateEvalTargetParamDTO2DO(param)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.Cluster)
+	})
+
+	t.Run("nil param", func(t *testing.T) {
+		result := CreateEvalTargetParamDTO2DO(nil)
+		assert.Nil(t, result)
+	})
+}
