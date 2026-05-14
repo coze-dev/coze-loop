@@ -15,8 +15,8 @@ import (
 type EvaluatorSourceService interface {
 	EvaluatorType() entity.EvaluatorType
 	// ShouldIntercept 判断评估器是否应劫持本次评估。
-	// 返回值: skip 表示是否劫持, output 为劫持时的输出数据(含劫持原因等，可为nil)。
-	ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, skip bool)
+	// 返回值: intercepted 表示是否被劫持, output 为劫持时的输出数据(含分数、状态、理由等，可为nil)。
+	ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (output *entity.EvaluatorOutputData, intercepted bool)
 	Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string)
 	AsyncRun(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, invokeID int64) (ext map[string]string, traceID string, err error)
 	Debug(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64) (output *entity.EvaluatorOutputData, err error)

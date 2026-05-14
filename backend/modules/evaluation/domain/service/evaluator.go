@@ -32,7 +32,7 @@ type EvaluatorService interface {
 	// RunEvaluator evaluator_version 运行
 	RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
-	ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, skip bool, err error)
+	ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (record *entity.EvaluatorRecord, intercepted bool, err error)
 	// AsyncRunEvaluator Agent evaluator_version 异步运行
 	AsyncRunEvaluator(ctx context.Context, request *entity.AsyncRunEvaluatorRequest) (*entity.EvaluatorRecord, error)
 	// DebugEvaluator 调试 evaluator_version；新增 exptSpaceID 作为实验空间ID

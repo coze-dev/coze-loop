@@ -4294,13 +4294,13 @@ func TestEvaluatorServiceImpl_ShouldInterceptEvaluator(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.setupMocks()
-			record, skip, err := s.ShouldInterceptEvaluator(ctx, tc.request)
+			record, intercepted, err := s.ShouldInterceptEvaluator(ctx, tc.request)
 			if tc.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-			assert.Equal(t, tc.expectedSkip, skip)
+			assert.Equal(t, tc.expectedSkip, intercepted)
 			if tc.expectedRecord != nil {
 				assert.NotNil(t, record)
 				assert.Equal(t, tc.expectedRecord.ID, record.ID)

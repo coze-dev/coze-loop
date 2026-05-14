@@ -731,12 +731,12 @@ func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, req
 	if !ok {
 		return nil, false, nil
 	}
-	output, skip := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
-	if !skip {
+	output, intercepted := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
+	if !intercepted {
 		return nil, false, nil
 	}
 
-	// 跳过时创建评估记录
+	// 劫持时创建评估记录
 	recordID, err := e.idgen.GenID(ctx)
 	if err != nil {
 		return nil, true, err
