@@ -199,9 +199,9 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 	return entity.EvaluatorTypeCode
 }
 
-// ShouldSkip 判断Code评估器是否应跳过本次评估，默认不跳过
-func (c *EvaluatorSourceCodeServiceImpl) ShouldSkip(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, bool) {
-	return nil, false
+// ShouldIntercept 判断Code评估器是否应劫持本次评估，默认不劫持
+func (c *EvaluatorSourceCodeServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+	return nil, entity.EvaluatorRunStatusSuccess, false
 }
 
 // Run 执行Code评估器

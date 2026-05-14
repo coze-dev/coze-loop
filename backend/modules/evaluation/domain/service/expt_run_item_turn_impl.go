@@ -414,8 +414,8 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
 		ecForCapture := ec
 
-		// 评估器跳过逻辑：根据输入数据前置判断是否需要跳过本次评估
-		if evaluatorRecord, skip, skipErr := e.evaluatorService.ShouldSkipEvaluator(ctx, &entity.RunEvaluatorRequest{
+		// 评估器劫持逻辑：根据输入数据前置判断是否需要劫持本次评估
+		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
 			SpaceID:            spaceID,
 			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
 			InputData:          inputDataForCapture,
@@ -424,9 +424,9 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 			ItemID:             item.ItemID,
 			TurnID:             turn.ID,
 			Ext:                etec.Ext,
-		}); skipErr != nil {
-			logs.CtxWarn(ctx, "[CallEvaluators] ShouldSkipEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), skipErr)
-		} else if skip {
+		}); interceptErr != nil {
+			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), interceptErr)
+		} else if intercepted {
 			if evaluatorRecord != nil {
 				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
 			}

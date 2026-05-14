@@ -2588,7 +2588,7 @@ func TestEvaluatorSourceCodeServiceImpl_getMaliciousPatternsForLanguage(t *testi
 	}
 }
 
-func TestEvaluatorSourceCodeServiceImpl_ShouldSkip(t *testing.T) {
+func TestEvaluatorSourceCodeServiceImpl_ShouldIntercept(t *testing.T) {
 	service := &EvaluatorSourceCodeServiceImpl{}
 
 	tests := []struct {
@@ -2629,9 +2629,10 @@ func TestEvaluatorSourceCodeServiceImpl_ShouldSkip(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, skip := service.ShouldSkip(context.Background(), tt.evaluator, tt.input)
-			assert.Equal(t, tt.expectedSkip, skip)
+			output, runStatus, intercepted := service.ShouldIntercept(context.Background(), tt.evaluator, tt.input)
+			assert.Equal(t, tt.expectedSkip, intercepted)
 			assert.Equal(t, tt.expectedOutput, output)
+			assert.Equal(t, entity.EvaluatorRunStatusSuccess, runStatus)
 		})
 	}
 }
