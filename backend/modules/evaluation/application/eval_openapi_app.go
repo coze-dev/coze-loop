@@ -2076,6 +2076,9 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateMetaOApi(ctx context.Context,
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
 	}
+·	if req.GetMeta() == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("meta is nil"))
+	}
 
 	session := entity.NewSession(ctx)
 	template, err := e.exptTemplateManager.Get(ctx, req.GetTemplateID(), req.GetWorkspaceID(), session)

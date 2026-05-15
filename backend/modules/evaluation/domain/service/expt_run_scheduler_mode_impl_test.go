@@ -2216,7 +2216,7 @@ func TestExptTrialRunExec_ExptStart(t *testing.T) {
 			prepareMock: func(f *trialFields) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).
-					Return(nil, nil, nil, nil, errors.New("list items err")).AnyTimes()
+					Return(nil, nil, nil, nil, errors.New("list items err")).MinTimes(1).MaxTimes(10)
 			},
 			wantErr:     true,
 			errContains: "list items err",
@@ -2538,7 +2538,7 @@ func TestExptSubmitExec_ExptStart_error_scenarios(t *testing.T) {
 			prepareMock: func(f *fields, ctrl *gomock.Controller, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil)
 				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).
-					Return(nil, nil, nil, nil, errors.New("list items err")).AnyTimes()
+					Return(nil, nil, nil, nil, errors.New("list items err")).MinTimes(1).MaxTimes(10)
 			},
 			assertErr: func(t *testing.T, err error) {
 				assert.ErrorContains(t, err, "list items err")
@@ -3251,7 +3251,7 @@ func TestExptRetryAllExec_ExptStart(t *testing.T) {
 			},
 			prepareMock: func(f *exptRetryAllExecFields, args args) {
 				f.idem.EXPECT().Exist(gomock.Any(), gomock.Any()).Return(false, nil).Times(1)
-				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, nil, nil, nil, errors.New("list error")).AnyTimes()
+				f.evaluationSetItemService.EXPECT().ListEvaluationSetItems(gomock.Any(), gomock.Any()).Return(nil, nil, nil, nil, errors.New("list error")).MinTimes(1).MaxTimes(10)
 			},
 			wantErr: true,
 			assertErr: func(t *testing.T, err error) {

@@ -230,7 +230,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptTrialRunExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, pageToken, pageSize, itemCnt, total)
+·			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
 		var items []*entity.EvaluationSetItem
 		var t *int64
@@ -401,7 +401,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, pageToken, pageSize, itemCnt, total)
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
 		var items []*entity.EvaluationSetItem
 		var t *int64
@@ -1256,7 +1256,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 
 	for i := 0; i < maxLoop; i++ {
 		logs.CtxInfo(ctx, "ExptRetryAllExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, pageToken, pageSize, itemCnt, total)
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
 		var items []*entity.EvaluationSetItem
 		var t *int64
