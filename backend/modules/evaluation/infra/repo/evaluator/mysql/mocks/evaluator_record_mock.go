@@ -138,22 +138,3 @@ func (mr *MockEvaluatorRecordDAOMockRecorder) UpdateEvaluatorRecordResult(ctx, r
 	varargs := append([]any{ctx, recordID, status, score, outputData}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluatorRecordResult", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).UpdateEvaluatorRecordResult), varargs...)
 }
-
-// TerminateAsyncInvokingByExptRunItems mocks base method.
-func (m *MockEvaluatorRecordDAO) TerminateAsyncInvokingByExptRunItems(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, outputData string, opts ...db.Option) error {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, spaceID, exptID, exptRunID, itemIDs, outputData}
-	for _, a := range opts {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "TerminateAsyncInvokingByExptRunItems", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// TerminateAsyncInvokingByExptRunItems indicates an expected call of TerminateAsyncInvokingByExptRunItems.
-func (mr *MockEvaluatorRecordDAOMockRecorder) TerminateAsyncInvokingByExptRunItems(ctx, spaceID, exptID, exptRunID, itemIDs, outputData any, opts ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, spaceID, exptID, exptRunID, itemIDs, outputData}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TerminateAsyncInvokingByExptRunItems", reflect.TypeOf((*MockEvaluatorRecordDAO)(nil).TerminateAsyncInvokingByExptRunItems), varargs...)
-}

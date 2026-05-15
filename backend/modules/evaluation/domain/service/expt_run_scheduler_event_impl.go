@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -441,7 +442,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 
 	logs.CtxWarn(ctx, "[ExptEval] found zombie items, set failure state, expt_id: %v, expt_run_id: %v, item_ids: %v, zombie_second: %v", event.ExptID, event.ExptRunID, zombieItemIDs, zombieSecond)
 
-	if err := e.EvaluatorRecordRepo.TerminateAsyncInvokingByExptRunItems(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, nil); err != nil {
+	if err := e.terminateZombieEvaluatorRecords(ctx, event, zombieItemIDs); err != nil {
 		logs.CtxError(ctx, "[ExptEval] terminate async evaluator records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
@@ -460,4 +461,63 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	time.Sleep(time.Millisecond * 1500)
 
 	return alives, zombies, nil
+}
+
+// terminateZombieEvaluatorRecords 将僵尸 item 关联的、仍处于 AsyncInvoking 状态的 EvaluatorRecord 置为失败。
+// 通过 turn run log 拿到 record id 列表，再按主键过滤与更新，避免在无二级索引的 evaluator_record 表上做条件 UPDATE。
+func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context, event *entity.ExptScheduleEvent, zombieItemIDs []int64) error {
+	if len(zombieItemIDs) == 0 {
+		return nil
+	}
+
+	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
+	if err != nil {
+		return err
+	}
+
+	recordIDSet := make(map[int64]struct{})
+	for _, rl := range turnRunLogs {
+		if rl == nil || rl.EvaluatorResultIds == nil {
+			continue
+		}
+		for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+			if resID > 0 {
+				recordIDSet[resID] = struct{}{}
+			}
+		}
+	}
+	if len(recordIDSet) == 0 {
+		return nil
+	}
+
+	recordIDs := make([]int64, 0, len(recordIDSet))
+	for id := range recordIDSet {
+		recordIDs = append(recordIDs, id)
+	}
+
+	records, err := e.EvaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, recordIDs, false, false)
+	if err != nil {
+		return err
+	}
+
+	failOutput := &entity.EvaluatorOutputData{
+		EvaluatorRunError: &entity.EvaluatorRunError{
+			Code:    int32(errno.AsyncEvaluatorZombieTimeoutCode),
+			Message: "async evaluator terminated: experiment item exceeded zombie timeout",
+		},
+	}
+
+	var firstErr error
+	for _, r := range records {
+		if r == nil || r.Status != entity.EvaluatorRunStatusAsyncInvoking {
+			continue
+		}
+		if err := e.EvaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, r.ID, entity.EvaluatorRunStatusFail, failOutput); err != nil {
+			logs.CtxError(ctx, "[ExptEval] update zombie evaluator record fail, record_id: %v, err: %v", r.ID, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/repo/evaluator/mysql/convertor"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
 
@@ -139,20 +138,4 @@ func (r *EvaluatorRecordRepoImpl) UpdateEvaluatorRecordResult(ctx context.Contex
 	}
 
 	return r.evaluatorRecordDao.UpdateEvaluatorRecordResult(ctx, recordID, int8(status), score, outputDataStr)
-}
-
-func (r *EvaluatorRecordRepoImpl) TerminateAsyncInvokingByExptRunItems(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, failOutput *entity.EvaluatorOutputData) error {
-	if len(itemIDs) == 0 {
-		return nil
-	}
-	out := failOutput
-	if out == nil {
-		out = &entity.EvaluatorOutputData{
-			EvaluatorRunError: &entity.EvaluatorRunError{
-				Code:    int32(errno.CommonInternalErrorCode),
-				Message: "async evaluator terminated: experiment item exceeded zombie timeout",
-			},
-		}
-	}
-	return r.evaluatorRecordDao.TerminateAsyncInvokingByExptRunItems(ctx, spaceID, exptID, exptRunID, itemIDs, json.Jsonify(out))
 }

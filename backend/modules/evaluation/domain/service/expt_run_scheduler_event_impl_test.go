@@ -853,9 +853,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
-				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
-					gomock.Any(), int64(3), int64(1), int64(2), []int64{1, 3}, nil,
-				).Return(nil).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1, 3}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -937,9 +940,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
-				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
-					gomock.Any(), int64(3), int64(1), int64(2), []int64{1}, nil,
-				).Return(nil).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -986,9 +992,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
-				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
-					gomock.Any(), int64(3), int64(1), int64(2), []int64{1}, nil,
-				).Return(nil).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -1049,9 +1058,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
-				f.evaluatorRecordRepo.EXPECT().TerminateAsyncInvokingByExptRunItems(
-					gomock.Any(), int64(3), int64(1), int64(2), []int64{1, 2}, nil,
-				).Return(nil).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1, 2}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
