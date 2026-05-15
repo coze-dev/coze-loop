@@ -442,7 +442,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	logs.CtxWarn(ctx, "[ExptEval] found zombie items, set failure state, expt_id: %v, expt_run_id: %v, item_ids: %v, zombie_second: %v", event.ExptID, event.ExptRunID, zombieItemIDs, zombieSecond)
 
 	if err := e.EvaluatorRecordRepo.TerminateAsyncInvokingByExptRunItems(ctx, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs, nil); err != nil {
-		return nil, nil, err
+		logs.CtxError(ctx, "[ExptEval] terminate async evaluator records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}, event.SpaceID); err != nil {
@@ -454,7 +454,7 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 	}
 
 	if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.ExptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs); err != nil {
-		return nil, nil, err
+		logs.CtxError(ctx, "[ExptEval] clear turn run log result refs for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
 	}
 
 	time.Sleep(time.Millisecond * 1500)
