@@ -96,6 +96,9 @@ struct SubmitExperimentRequest {
     // 智能评测相关
     60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
+    // 指定执行的评测集条目ID列表
+    70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     200: optional common.Session session
