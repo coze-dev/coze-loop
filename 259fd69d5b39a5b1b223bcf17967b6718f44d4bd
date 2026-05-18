@@ -1,0 +1,63 @@
+backend/modules/observability/domain/task/service/taskexe/processor/auto_evaluate_test.go
+  76c825b4fbcb0e5f 350-353 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a041c6e6515c443593994cb","tool_type":"agent","tool_id":"SearchReplace","line_ranges":[{"Range":[350,353]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "259fd69d5b39a5b1b223bcf17967b6718f44d4bd",
+  "prompts": {
+    "76c825b4fbcb0e5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "69dc5e2f5bdaa9adc56f0313",
+        "model": "Seed-Dogfooding-2.0__dev"
+      },
+      "human_author": "tpfz <wangziqi.9425@bytedance.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/observability/domain/task/service/taskexe/processor/auto_evaluate_test.go": [
+      {
+        "hash": "76c825b4fbcb0e5f",
+        "line_ranges": [
+          {
+            "Range": [
+              350,
+              353
+            ]
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a041c6e6515c443593994cb",
+            "tool_type": "agent",
+            "tool_id": "SearchReplace",
+            "line_ranges": [
+              {
+                "Range": [
+                  350,
+                  353
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "76c825b4fbcb0e5f": {
+      "tool": "trae",
+      "conversation_id": "69dc5e2f5bdaa9adc56f0313",
+      "session_id": "69dc5e2f5bdaa9adc56f0313",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

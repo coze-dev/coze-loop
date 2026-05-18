@@ -1,0 +1,124 @@
+backend/modules/evaluation/domain/service/expt_manage_impl_test.go
+  76c825b4fbcb0e5f 40-47,56 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a043b786515c443593997f6","tool_type":"agent","tool_id":"SearchReplace","line_ranges":[{"Range":[40,47]},{"Single":56}]}]}
+backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl_test.go
+  76c825b4fbcb0e5f 539,598,993,1571,3602,4455 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a043b786515c443593997f6","tool_type":"agent","tool_id":"SearchReplace","line_ranges":[{"Single":539},{"Single":598},{"Single":993},{"Single":1571},{"Single":3602},{"Single":4455}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "999349e51b42f06816ee1ea928a850794205a55e",
+  "prompts": {
+    "76c825b4fbcb0e5f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "69dc5e2f5bdaa9adc56f0313",
+        "model": "Seed-Dogfooding-2.0__dev"
+      },
+      "human_author": "tpfz <wangziqi.9425@bytedance.com>",
+      "messages": [],
+      "total_additions": 15,
+      "total_deletions": 7,
+      "accepted_lines": 15,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/domain/service/expt_manage_impl_test.go": [
+      {
+        "hash": "76c825b4fbcb0e5f",
+        "line_ranges": [
+          {
+            "Range": [
+              40,
+              47
+            ]
+          },
+          {
+            "Single": 56
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a043b786515c443593997f6",
+            "tool_type": "agent",
+            "tool_id": "SearchReplace",
+            "line_ranges": [
+              {
+                "Range": [
+                  40,
+                  47
+                ]
+              },
+              {
+                "Single": 56
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backend/modules/evaluation/domain/service/expt_run_scheduler_mode_impl_test.go": [
+      {
+        "hash": "76c825b4fbcb0e5f",
+        "line_ranges": [
+          {
+            "Single": 539
+          },
+          {
+            "Single": 598
+          },
+          {
+            "Single": 993
+          },
+          {
+            "Single": 1571
+          },
+          {
+            "Single": 3602
+          },
+          {
+            "Single": 4455
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a043b786515c443593997f6",
+            "tool_type": "agent",
+            "tool_id": "SearchReplace",
+            "line_ranges": [
+              {
+                "Single": 539
+              },
+              {
+                "Single": 598
+              },
+              {
+                "Single": 993
+              },
+              {
+                "Single": 1571
+              },
+              {
+                "Single": 3602
+              },
+              {
+                "Single": 4455
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "76c825b4fbcb0e5f": {
+      "tool": "trae",
+      "conversation_id": "69dc5e2f5bdaa9adc56f0313",
+      "session_id": "69dc5e2f5bdaa9adc56f0313",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
