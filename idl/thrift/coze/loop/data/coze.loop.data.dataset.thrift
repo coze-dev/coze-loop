@@ -95,6 +95,21 @@ struct ListDatasetsResponse {
     255: base.BaseResp BaseResp
 }
 
+struct CountDatasetsRequest {
+    1: required i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', api.path = "workspace_id", vt.gt = "0")
+    2: optional list<i64> dataset_ids (api.js_conv="true", go.tag='json:"dataset_ids"')
+    3: optional dataset.DatasetCategory category
+    4: optional string name (vt.max_size = "255")
+    5: optional list<string> created_bys
+
+    255: optional base.Base Base
+}
+
+struct CountDatasetsResponse {
+    1: optional i64 total (api.js_conv="true", go.tag='json:"total"')
+    255: base.BaseResp BaseResp
+}
+
 struct SignUploadFileTokenRequest {
     1: optional i64 workspace_id (api.js_conv="true", go.tag='json:"workspace_id"', vt.not_nil = "true", vt.gt = "0")
     2: optional dataset.StorageProvider storage (vt.not_nil = "true", vt.defined_only = "true") // 支持 ImageX, TOS
@@ -446,6 +461,8 @@ service DatasetService {
     DeleteDatasetResponse DeleteDataset(1: DeleteDatasetRequest req) (api.delete = "/api/data/v1/datasets/:dataset_id")
     // 获取数据集列表
     ListDatasetsResponse ListDatasets(1: ListDatasetsRequest req) (api.post = "/api/data/v1/datasets/list")
+    // 统计数据集数量
+    CountDatasetsResponse CountDatasets(1: CountDatasetsRequest req) (api.post = "/api/data/v1/datasets/count")
     // 数据集当前信息（不包括数据）
     GetDatasetResponse GetDataset(1: GetDatasetRequest req) (api.get = "/api/data/v1/datasets/:dataset_id")
     // 批量获取数据集
