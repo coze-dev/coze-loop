@@ -284,3 +284,19 @@ func RunBuiltinEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 func GetEvalTargetOutputFieldContentOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetOutputFieldContentOApi)
 }
+
+// RetryExperimentOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/retry [POST]
+func RetryExperimentOApi(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req openapi0.RetryExperimentOApiRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(openapi0.RetryExperimentOApiResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

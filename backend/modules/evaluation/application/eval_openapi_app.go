@@ -1283,6 +1283,72 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest) (r *openapi.RetryExperimentOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	// 转换 retry mode
+	retryMode, err := mapOpenAPIExptRetryMode(req.GetRetryMode())
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	retryReq := &exptpb.RetryExperimentRequest{
+		RetryMode:   domain_expt.ExptRetryModePtr(retryMode),
+		WorkspaceID: req.WorkspaceID,
+		ExptID:      req.ExperimentID,
+		ItemIds:     req.ItemIds,
+		Ext:         req.Ext,
+	}
+
+	resp, err := e.experimentApp.RetryExperiment(ctx, retryReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.RetryExperimentOApiResponse{
+		Data: &openapi.RetryExperimentOpenAPIData{
+			RunID: resp.RunID,
+		},
+	}, nil
+}
+
+func mapOpenAPIExptRetryMode(mode experiment.ExptRetryMode) (domain_expt.ExptRetryMode, error) {
+	switch mode {
+	case experiment.ExptRetryModeRetryAll:
+		return domain_expt.ExptRetryMode_RetryAll, nil
+	case experiment.ExptRetryModeRetryFailure, "":
+		return domain_expt.ExptRetryMode_RetryFailure, nil
+	case experiment.ExptRetryModeRetryTargetItems:
+		return domain_expt.ExptRetryMode_RetryTargetItems, nil
+	default:
+		return 0, fmt.Errorf("unsupported retry mode: %s", mode)
+	}
+}
+
 func (e *EvalOpenAPIApplication) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest) (r *openapi.ListEvaluatorsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {

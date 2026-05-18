@@ -575,6 +575,29 @@ struct GetExperimentAggrResultOpenAPIData {
     2: optional experiment.EvalTargetAggregateResult eval_target_aggr_result
 }
 
+struct RetryExperimentOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
+    3: optional experiment.ExptRetryMode retry_mode (api.body = 'retry_mode')
+    4: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
+
+    100: optional map<string, string> ext (api.body = 'ext')
+
+    255: optional base.Base Base
+}
+
+struct RetryExperimentOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional RetryExperimentOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct RetryExperimentOpenAPIData {
+    3: optional i64 run_id
+}
+
 // ===============================
 // 评估器 (Evaluator) 接口
 // ===============================
@@ -1121,6 +1144,8 @@ service EvaluationOpenAPIService {
     ListExperimentResultOApiResponse ListExperimentResultOApi(1: ListExperimentResultOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results")
     // 获取聚合结果
     GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
+    // 重试实验
+    RetryExperimentOApiResponse RetryExperimentOApi(1: RetryExperimentOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/retry")
 
     // 评估器接口
     // 查询评估器列表

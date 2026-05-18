@@ -48,6 +48,10 @@ const TurnRunState TurnRunState_Success = "success"
 const TurnRunState TurnRunState_Fail = "fail"
 const TurnRunState TurnRunState_Terminal = "terminal"
 
+typedef string ExptRetryMode(ts.enum="true")
+const ExptRetryMode ExptRetryMode_RetryAll = "retry_all"
+const ExptRetryMode ExptRetryMode_RetryFailure = "retry_failure"
+const ExptRetryMode ExptRetryMode_RetryTargetItems = "retry_target_items"
 
 // 字段映射
 struct FieldMapping {
