@@ -129,6 +129,27 @@ func (l *LocalEvaluationSetService) ListEvaluationSets(ctx context.Context, req 
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalEvaluationSetService) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest, callOptions ...callopt.Option) (*eval_set.CountEvaluationSetsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*eval_set.EvaluationSetServiceCountEvaluationSetsArgs)
+		result := out.(*eval_set.EvaluationSetServiceCountEvaluationSetsResult)
+		resp, err := l.impl.CountEvaluationSets(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &eval_set.EvaluationSetServiceCountEvaluationSetsArgs{Req: req}
+	result := &eval_set.EvaluationSetServiceCountEvaluationSetsResult{}
+	ctx = l.injectRPCInfo(ctx, "CountEvaluationSets")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalEvaluationSetService) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (*eval_set.CreateEvaluationSetWithImportResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*eval_set.EvaluationSetServiceCreateEvaluationSetWithImportArgs)

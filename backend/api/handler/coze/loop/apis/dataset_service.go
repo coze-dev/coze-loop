@@ -182,3 +182,19 @@ func ValidateDatasetItems(ctx context.Context, c *app.RequestContext) {
 
 	c.JSON(consts.StatusOK, resp)
 }
+
+// CountDatasets .
+// @router /api/data/v1/datasets/count [POST]
+func CountDatasets(ctx context.Context, c *app.RequestContext) {
+	var err error
+	var req dataset.CountDatasetsRequest
+	err = c.BindAndValidate(&req)
+	if err != nil {
+		c.String(consts.StatusBadRequest, err.Error())
+		return
+	}
+
+	resp := new(dataset.CountDatasetsResponse)
+
+	c.JSON(consts.StatusOK, resp)
+}

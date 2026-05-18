@@ -115,6 +115,29 @@ func (l *LocalDatasetService) ListDatasets(ctx context.Context, req *dataset.Lis
 	return result.GetSuccess(), nil
 }
 
+// CountDatasets
+// 统计数据集数量
+func (l *LocalDatasetService) CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest, callOptions ...callopt.Option) (*dataset.CountDatasetsResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*dataset.DatasetServiceCountDatasetsArgs)
+		result := out.(*dataset.DatasetServiceCountDatasetsResult)
+		resp, err := l.impl.CountDatasets(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &dataset.DatasetServiceCountDatasetsArgs{Req: req}
+	result := &dataset.DatasetServiceCountDatasetsResult{}
+	ctx = l.injectRPCInfo(ctx, "CountDatasets")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // GetDataset
 // 数据集当前信息（不包括数据）
 func (l *LocalDatasetService) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest, callOptions ...callopt.Option) (*dataset.GetDatasetResponse, error) {

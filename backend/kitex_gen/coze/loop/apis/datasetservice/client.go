@@ -15,6 +15,7 @@ type Client interface {
 	UpdateDataset(ctx context.Context, req *dataset.UpdateDatasetRequest, callOptions ...callopt.Option) (r *dataset.UpdateDatasetResponse, err error)
 	DeleteDataset(ctx context.Context, req *dataset.DeleteDatasetRequest, callOptions ...callopt.Option) (r *dataset.DeleteDatasetResponse, err error)
 	ListDatasets(ctx context.Context, req *dataset.ListDatasetsRequest, callOptions ...callopt.Option) (r *dataset.ListDatasetsResponse, err error)
+	CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest, callOptions ...callopt.Option) (r *dataset.CountDatasetsResponse, err error)
 	GetDataset(ctx context.Context, req *dataset.GetDatasetRequest, callOptions ...callopt.Option) (r *dataset.GetDatasetResponse, err error)
 	BatchGetDatasets(ctx context.Context, req *dataset.BatchGetDatasetsRequest, callOptions ...callopt.Option) (r *dataset.BatchGetDatasetsResponse, err error)
 	ImportDataset(ctx context.Context, req *dataset.ImportDatasetRequest, callOptions ...callopt.Option) (r *dataset.ImportDatasetResponse, err error)
@@ -86,6 +87,11 @@ func (p *kDatasetServiceClient) DeleteDataset(ctx context.Context, req *dataset.
 func (p *kDatasetServiceClient) ListDatasets(ctx context.Context, req *dataset.ListDatasetsRequest, callOptions ...callopt.Option) (r *dataset.ListDatasetsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListDatasets(ctx, req)
+}
+
+func (p *kDatasetServiceClient) CountDatasets(ctx context.Context, req *dataset.CountDatasetsRequest, callOptions ...callopt.Option) (r *dataset.CountDatasetsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CountDatasets(ctx, req)
 }
 
 func (p *kDatasetServiceClient) GetDataset(ctx context.Context, req *dataset.GetDatasetRequest, callOptions ...callopt.Option) (r *dataset.GetDatasetResponse, err error) {

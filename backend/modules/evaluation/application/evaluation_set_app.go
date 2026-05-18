@@ -24,6 +24,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 var (
@@ -820,6 +822,37 @@ func (e *EvaluationSetApplicationImpl) ClearEvaluationSetDraftItem(ctx context.C
 		return nil, err
 	}
 	return &eval_set.ClearEvaluationSetDraftItemResponse{}, nil
+}
+
+func (e *EvaluationSetApplicationImpl) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest) (resp *eval_set.CountEvaluationSetsResponse, err error) {
+	logs.CtxInfo(ctx, "CountEvaluationSets receive req: %v", json.Jsonify(req))
+	// 参数校验
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	// 鉴权
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
+		SpaceID:       req.WorkspaceID,
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of("listLoopEvaluationSet"), EntityType: gptr.Of(rpc.AuthEntityType_Space)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+	// domain调用
+	total, err := e.evaluationSetService.CountEvaluationSets(ctx, &entity.CountEvaluationSetsParam{
+		SpaceID:          req.WorkspaceID,
+		EvaluationSetIDs: req.EvaluationSetIds,
+		Name:             req.Name,
+		Creators:         req.Creators,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// 返回结果构建
+	return &eval_set.CountEvaluationSetsResponse{
+		Total: total,
+	}, nil
 }
 
 func (e *EvaluationSetApplicationImpl) GetEvaluationSetItemField(ctx context.Context, req *eval_set.GetEvaluationSetItemFieldRequest) (r *eval_set.GetEvaluationSetItemFieldResponse, err error) {

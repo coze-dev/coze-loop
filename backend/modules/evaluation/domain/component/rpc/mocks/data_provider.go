@@ -369,6 +369,21 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ListDatasets(ctx, param any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDatasets", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ListDatasets), ctx, param)
 }
 
+// CountDatasets mocks base method.
+func (m *MockIDatasetRPCAdapter) CountDatasets(ctx context.Context, param *rpc.CountDatasetsParam) (*int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountDatasets", ctx, param)
+	ret0, _ := ret[0].(*int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountDatasets indicates an expected call of CountDatasets.
+func (mr *MockIDatasetRPCAdapterMockRecorder) CountDatasets(ctx, param any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountDatasets", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).CountDatasets), ctx, param)
+}
+
 // ParseImportSourceFile mocks base method.
 func (m *MockIDatasetRPCAdapter) ParseImportSourceFile(ctx context.Context, param *entity.ParseImportSourceFileParam) (*entity.ParseImportSourceFileResult, error) {
 	m.ctrl.T.Helper()

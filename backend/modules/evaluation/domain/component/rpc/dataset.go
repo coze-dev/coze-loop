@@ -22,6 +22,7 @@ type IDatasetRPCAdapter interface {
 	GetDataset(ctx context.Context, spaceID *int64, evaluationSetID int64, deletedAt *bool) (set *entity.EvaluationSet, err error)
 	BatchGetDatasets(ctx context.Context, spaceID *int64, evaluationSetID []int64, deletedAt *bool) (sets []*entity.EvaluationSet, err error)
 	ListDatasets(ctx context.Context, param *ListDatasetsParam) (sets []*entity.EvaluationSet, total *int64, nextPageToken *string, err error)
+	CountDatasets(ctx context.Context, param *CountDatasetsParam) (total *int64, err error)
 
 	CreateDatasetVersion(ctx context.Context, spaceID, evaluationSetID int64, version string, desc *string) (id int64, err error)
 	GetDatasetVersion(ctx context.Context, spaceID, versionID int64, deletedAt *bool) (version *entity.EvaluationSetVersion, set *entity.EvaluationSet, err error)
@@ -96,6 +97,13 @@ type ListDatasetsParam struct {
 	PageSize         *int32
 	PageToken        *string
 	OrderBys         []*entity.OrderBy
+}
+
+type CountDatasetsParam struct {
+	SpaceID          int64
+	EvaluationSetIDs []int64
+	Name             *string
+	Creators         []string
 }
 
 type ListDatasetItemsParam struct {

@@ -47,6 +47,13 @@ type ListEvaluationSetsParam struct {
 	OrderBys         []*OrderBy
 }
 
+type CountEvaluationSetsParam struct {
+	SpaceID          int64
+	EvaluationSetIDs []int64
+	Name             *string
+	Creators         []string
+}
+
 type ListEvaluationSetItemsParam struct {
 	SpaceID         int64
 	EvaluationSetID int64

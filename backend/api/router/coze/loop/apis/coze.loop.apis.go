@@ -39,6 +39,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_v10.POST("/datasets", append(_datasetsMw(handler), apis.CreateDataset)...)
 				_datasets := _v10.Group("/datasets", _datasetsMw(handler)...)
 				_datasets.POST("/batch_get", append(_batchgetdatasetsMw(handler), apis.BatchGetDatasets)...)
+				_datasets.POST("/count", append(_countdatasetsMw(handler), apis.CountDatasets)...)
 				_datasets.DELETE("/:dataset_id", append(_dataset_idMw(handler), apis.DeleteDataset)...)
 				_dataset_id := _datasets.Group("/:dataset_id", _dataset_idMw(handler)...)
 				_dataset_id.POST("/import", append(_importdatasetMw(handler), apis.ImportDataset)...)
@@ -122,6 +123,7 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				}
 				_v11.POST("/evaluation_sets", append(_evaluation_setsMw(handler), apis.CreateEvaluationSet)...)
 				_evaluation_sets := _v11.Group("/evaluation_sets", _evaluation_setsMw(handler)...)
+				_evaluation_sets.POST("/count", append(_countevaluationsetsMw(handler), apis.CountEvaluationSets)...)
 				_evaluation_sets.POST("/create_with_import", append(_createevaluationsetwithimportMw(handler), apis.CreateEvaluationSetWithImport)...)
 				_evaluation_sets.DELETE("/:evaluation_set_id", append(_evaluation_set_idMw(handler), apis.DeleteEvaluationSet)...)
 				_evaluation_set_id := _evaluation_sets.Group("/:evaluation_set_id", _evaluation_set_idMw(handler)...)

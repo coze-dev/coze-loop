@@ -241,6 +241,30 @@ func (p *ListDatasetsResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CountDatasetsRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.Name != nil {
+		if len(*p.Name) > int(255) {
+			return fmt.Errorf("field Name max_len rule failed, current value: %d", len(*p.Name))
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CountDatasetsResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
 func (p *SignUploadFileTokenRequest) IsValid() error {
 	if p.WorkspaceID == nil {
 		return fmt.Errorf("field WorkspaceID not_nil rule failed")

@@ -16,6 +16,7 @@ type Client interface {
 	DeleteEvaluationSet(ctx context.Context, req *eval_set.DeleteEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.DeleteEvaluationSetResponse, err error)
 	GetEvaluationSet(ctx context.Context, req *eval_set.GetEvaluationSetRequest, callOptions ...callopt.Option) (r *eval_set.GetEvaluationSetResponse, err error)
 	ListEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetsResponse, err error)
+	CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest, callOptions ...callopt.Option) (r *eval_set.CountEvaluationSetsResponse, err error)
 	CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetWithImportResponse, err error)
 	ParseImportSourceFile(ctx context.Context, req *eval_set.ParseImportSourceFileRequest, callOptions ...callopt.Option) (r *eval_set.ParseImportSourceFileResponse, err error)
 	CreateEvaluationSetVersion(ctx context.Context, req *eval_set.CreateEvaluationSetVersionRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetVersionResponse, err error)
@@ -85,6 +86,11 @@ func (p *kEvaluationSetServiceClient) GetEvaluationSet(ctx context.Context, req 
 func (p *kEvaluationSetServiceClient) ListEvaluationSets(ctx context.Context, req *eval_set.ListEvaluationSetsRequest, callOptions ...callopt.Option) (r *eval_set.ListEvaluationSetsResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListEvaluationSets(ctx, req)
+}
+
+func (p *kEvaluationSetServiceClient) CountEvaluationSets(ctx context.Context, req *eval_set.CountEvaluationSetsRequest, callOptions ...callopt.Option) (r *eval_set.CountEvaluationSetsResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.CountEvaluationSets(ctx, req)
 }
 
 func (p *kEvaluationSetServiceClient) CreateEvaluationSetWithImport(ctx context.Context, req *eval_set.CreateEvaluationSetWithImportRequest, callOptions ...callopt.Option) (r *eval_set.CreateEvaluationSetWithImportResponse, err error) {
