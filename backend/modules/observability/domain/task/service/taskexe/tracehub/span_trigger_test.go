@@ -25,6 +25,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe/processor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	trepo_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo/mocks"
 	trace_service_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/mocks"
 	span_filter_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter/mocks"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -1528,6 +1529,297 @@ func TestTraceHubServiceImpl_buildSubscriberOfSpan_Filtering(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_NoAnnotationNeeded(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	impl := &TraceHubServiceImpl{traceRepo: mockTraceRepo}
+
+	span := &loop_span.Span{
+		SpanID:      "span-1",
+		TraceID:     "trace-1",
+		WorkspaceID: "1",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant1",
+		},
+	}
+
+	// 任务不需要 annotation
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						FilterFields: []*loop_span.FilterField{},
+					},
+				},
+			},
+		},
+	}
+
+	// ListAnnotations 不应被调用
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Empty(t, span.Annotations)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_WithAnnotationFilter(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	impl := &TraceHubServiceImpl{traceRepo: mockTraceRepo}
+
+	span := &loop_span.Span{
+		SpanID:      "span-1",
+		TraceID:     "trace-1",
+		WorkspaceID: "123",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant1",
+		},
+	}
+
+	// 任务需要 annotation（filter 中包含 annotation 字段）
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+						FilterFields: []*loop_span.FilterField{
+							{FieldName: "manual_feedback_score", FieldType: loop_span.FieldTypeLong, QueryType: ptr.Of(loop_span.QueryTypeEnumGte)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expectedAnnotations := loop_span.AnnotationList{
+		{ID: "anno-1", SpanID: "span-1"},
+	}
+	mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(expectedAnnotations, nil)
+
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Len(t, span.Annotations, 1)
+	require.Equal(t, "anno-1", span.Annotations[0].ID)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_WithFeedbackOutput(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	impl := &TraceHubServiceImpl{traceRepo: mockTraceRepo}
+
+	span := &loop_span.Span{
+		SpanID:      "span-2",
+		TraceID:     "trace-2",
+		WorkspaceID: "456",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant2",
+		},
+	}
+
+	// 任务需要 annotation（输出字段引用了 Feedback）
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{
+					AutoEvaluateConfigs: []*entity.AutoEvaluateConfig{
+						{
+							FieldMappings: []*entity.EvaluateFieldMapping{
+								{TraceFieldKey: "Feedback.rating"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	expectedAnnotations := loop_span.AnnotationList{
+		{ID: "anno-2", SpanID: "span-2"},
+	}
+	mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(expectedAnnotations, nil)
+
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Len(t, span.Annotations, 1)
+	require.Equal(t, "anno-2", span.Annotations[0].ID)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_ListAnnotationsError(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	impl := &TraceHubServiceImpl{traceRepo: mockTraceRepo}
+
+	span := &loop_span.Span{
+		SpanID:      "span-3",
+		TraceID:     "trace-3",
+		WorkspaceID: "789",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant3",
+		},
+	}
+
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+						FilterFields: []*loop_span.FilterField{
+							{FieldName: "auto_evaluate_score", FieldType: loop_span.FieldTypeLong, QueryType: ptr.Of(loop_span.QueryTypeEnumGte)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(nil, errors.New("db error"))
+
+	// 不应 panic，优雅降级
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Empty(t, span.Annotations)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_InvalidWorkspaceID(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+
+	span := &loop_span.Span{
+		SpanID:      "span-4",
+		TraceID:     "trace-4",
+		WorkspaceID: "not-a-number",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant4",
+		},
+	}
+
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+						FilterFields: []*loop_span.FilterField{
+							{FieldName: "manual_feedback_score", FieldType: loop_span.FieldTypeLong, QueryType: ptr.Of(loop_span.QueryTypeEnumGte)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// 不应 panic，优雅降级
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Empty(t, span.Annotations)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_EmptyTenant(t *testing.T) {
+	t.Parallel()
+
+	impl := &TraceHubServiceImpl{}
+
+	span := &loop_span.Span{
+		SpanID:           "span-5",
+		TraceID:          "trace-5",
+		WorkspaceID:      "100",
+		StartTime:        time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{},
+	}
+
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+						FilterFields: []*loop_span.FilterField{
+							{FieldName: "feedback_openapi_like", FieldType: loop_span.FieldTypeLong, QueryType: ptr.Of(loop_span.QueryTypeEnumEq)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// tenant 为空，直接返回，不应 panic
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Empty(t, span.Annotations)
+}
+
+func TestTraceHubServiceImpl_preloadAnnotationsIfNeeded_AppendsToExisting(t *testing.T) {
+	t.Parallel()
+
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	mockTraceRepo := trepo_mocks.NewMockITraceRepo(ctrl)
+	impl := &TraceHubServiceImpl{traceRepo: mockTraceRepo}
+
+	span := &loop_span.Span{
+		SpanID:      "span-6",
+		TraceID:     "trace-6",
+		WorkspaceID: "200",
+		StartTime:   time.Now().UnixMilli(),
+		SystemTagsString: map[string]string{
+			loop_span.SpanFieldTenant: "tenant6",
+		},
+		Annotations: loop_span.AnnotationList{
+			{ID: "existing-anno"},
+		},
+	}
+
+	subs := []*spanSubscriber{
+		{
+			t: &entity.ObservabilityTask{
+				TaskConfig: &entity.TaskConfig{},
+				SpanFilter: &entity.SpanFilterFields{
+					Filters: loop_span.FilterFields{
+						QueryAndOr: ptr.Of(loop_span.QueryAndOrEnumAnd),
+						FilterFields: []*loop_span.FilterField{
+							{FieldName: "manual_feedback_score", FieldType: loop_span.FieldTypeLong, QueryType: ptr.Of(loop_span.QueryTypeEnumGte)},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	newAnnotations := loop_span.AnnotationList{
+		{ID: "new-anno"},
+	}
+	mockTraceRepo.EXPECT().ListAnnotations(gomock.Any(), gomock.Any()).Return(newAnnotations, nil)
+
+	impl.preloadAnnotationsIfNeeded(context.Background(), span, subs)
+	require.Len(t, span.Annotations, 2)
+	require.Equal(t, "existing-anno", span.Annotations[0].ID)
+	require.Equal(t, "new-anno", span.Annotations[1].ID)
 }
 
 func TestTraceHubServiceImpl_withTaskRunCreateLock(t *testing.T) {

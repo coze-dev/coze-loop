@@ -1108,6 +1108,7 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EvaluatorFieldMapping = fieldMapping.EvaluatorFieldMapping
 		req.TargetRuntimeParam = fieldMapping.TargetRuntimeParam
 		req.ItemConcurNum = fieldMapping.ItemConcurNum
+		req.ItemRetryNum = fieldMapping.ItemRetryNum
 	}
 
 	// 评估器并发数
