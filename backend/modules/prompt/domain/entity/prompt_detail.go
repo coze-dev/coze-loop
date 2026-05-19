@@ -26,12 +26,13 @@ const (
 )
 
 type PromptDetail struct {
-	PromptTemplate *PromptTemplate   `json:"prompt_template,omitempty"`
-	Tools          []*Tool           `json:"tools,omitempty"`
-	ToolCallConfig *ToolCallConfig   `json:"tool_call_config,omitempty"`
-	ModelConfig    *ModelConfig      `json:"model_config,omitempty"`
-	McpConfig      *McpConfig        `json:"mcp_config,omitempty"`
-	ExtInfos       map[string]string `json:"ext_infos,omitempty"`
+	PromptTemplate     *PromptTemplate     `json:"prompt_template,omitempty"`
+	Tools              []*Tool             `json:"tools,omitempty"`
+	ToolCallConfig     *ToolCallConfig     `json:"tool_call_config,omitempty"`
+	ModelConfig        *ModelConfig        `json:"model_config,omitempty"`
+	McpConfig          *McpConfig          `json:"mcp_config,omitempty"`
+	SkillExecuteConfig *SkillExecuteConfig `json:"skill_execute_config,omitempty"`
+	ExtInfos           map[string]string   `json:"ext_infos,omitempty"`
 }
 
 type PromptTemplate struct {
@@ -252,6 +253,21 @@ type McpServerCombine struct {
 	DisabledTools  []string `json:"disabled_tools,omitempty"`
 	EnabledTools   []string `json:"enabled_tools,omitempty"`
 	IsEnabledTools *bool    `json:"is_enabled_tools,omitempty"`
+}
+
+type SkillExecuteConfig struct {
+	SkillCombine  []*SkillCombine `json:"skill_combine,omitempty"`
+	SandboxConfig *SandboxConfig  `json:"sandbox_config,omitempty"`
+}
+
+type SkillCombine struct {
+	SkillID  *int64  `json:"skill_id,omitempty"`
+	Version  *string `json:"version,omitempty"`
+	SkillKey *string `json:"skill_key,omitempty"`
+}
+
+type SandboxConfig struct {
+	SandboxPSM *string `json:"sandbox_psm,omitempty"`
 }
 
 func (pt *PromptTemplate) formatMessages(messages []*Message, variableVals []*VariableVal) ([]*Message, error) {
