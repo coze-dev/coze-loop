@@ -958,6 +958,7 @@ func (e *experimentApplication) BatchGetExperiments(ctx context.Context, req *ex
 }
 
 func (e *experimentApplication) ListExperiments(ctx context.Context, req *expt.ListExperimentsRequest) (r *expt.ListExperimentsResponse, err error) {
+	logs.CtxInfo(ctx, "ListExperiments req: %v", json.Jsonify(req))
 	session := entity.NewSession(ctx)
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
