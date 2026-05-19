@@ -115,6 +115,7 @@ struct Prompt {
     16: optional PublishStatus status // 发布状态
     17: optional PromptPublishInfo PublishInfo // 发布信息
     18: optional SecurityLevel security_level // 密级标签
+    19: optional SkillExecuteConfig skill_execute_config // skill调用配置
 }
 
 struct PromptTemplate {
@@ -305,6 +306,7 @@ struct PromptDetail {
     2: optional list<Tool> tools
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
+    5: optional SkillExecuteConfig skill_execute_config // skill调用配置
 }
 
 struct CommitInfo {
@@ -341,4 +343,20 @@ struct PromptManage {
     4: optional PromptBasic prompt_basic
     5: optional PromptDraft prompt_draft
     6: optional PromptCommit prompt_commit
+}
+
+// Skill调用配置
+struct SkillExecuteConfig {
+    1: optional list<SkillCombine> skill_combine // skill列表
+    2: optional SandboxConfig sandbox_config // 沙箱配置
+}
+
+struct SkillCombine {
+    1: optional i64 skill_id (api.js_conv="true", go.tag='json:"skill_id"') // skill ID
+    2: optional string version // skill版本
+    3: optional string skill_key // skill唯一标识
+}
+
+struct SandboxConfig {
+    1: optional string sandbox_psm // 沙箱PSM
 }
