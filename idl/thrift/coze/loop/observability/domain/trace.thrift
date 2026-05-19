@@ -8,4 +8,5 @@ struct Trace {
 struct TokenCost {
     1: required i64 input_token (api.js_conv='true', go.tag='json:"input_token"')
     2: required i64 output_token (api.js_conv='true', go.tag='json:"output_token"')
+    3: required i64 size (api.js_conv='true', go.tag='json:"size"')
 }

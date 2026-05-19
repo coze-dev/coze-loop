@@ -208,6 +208,7 @@ type TraceAdvanceInfo struct {
 	TraceId    string
 	InputCost  int64
 	OutputCost int64
+	Size       int64
 }
 
 type AttrTos struct {
