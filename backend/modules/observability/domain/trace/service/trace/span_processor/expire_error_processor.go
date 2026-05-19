@@ -26,7 +26,6 @@ func (c *ExpireErrorProcessor) Transform(ctx context.Context, spans loop_span.Sp
 	if len(spans) > 0 {
 		return spans, nil
 	}
-	logs.CtxInfo(ctx, "check trace benefit, connector_uid: %s, workspace_id: %d", session.UserIDInCtxOrEmpty(ctx), c.workspaceId)
 	res, err := c.benefitSvc.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
 		ConnectorUID: session.UserIDInCtxOrEmpty(ctx),
 		SpaceID:      c.workspaceId,
