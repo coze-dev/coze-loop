@@ -11,6 +11,7 @@ import (
 type Trace struct {
 	TraceID *string    `thrift:"trace_id,1,optional" frugal:"1,optional,string" form:"trace_id" json:"trace_id,omitempty" query:"trace_id"`
 	Tokens  *TokenCost `thrift:"tokens,2,optional" frugal:"2,optional,TokenCost" form:"tokens" json:"tokens,omitempty" query:"tokens"`
+	Size    *int64     `thrift:"size,3,optional" frugal:"3,optional,i64" form:"size" json:"size,omitempty" query:"size"`
 }
 
 func NewTrace() *Trace {
@@ -43,16 +44,32 @@ func (p *Trace) GetTokens() (v *TokenCost) {
 	}
 	return p.Tokens
 }
+
+var Trace_Size_DEFAULT int64
+
+func (p *Trace) GetSize() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSize() {
+		return Trace_Size_DEFAULT
+	}
+	return *p.Size
+}
 func (p *Trace) SetTraceID(val *string) {
 	p.TraceID = val
 }
 func (p *Trace) SetTokens(val *TokenCost) {
 	p.Tokens = val
 }
+func (p *Trace) SetSize(val *int64) {
+	p.Size = val
+}
 
 var fieldIDToName_Trace = map[int16]string{
 	1: "trace_id",
 	2: "tokens",
+	3: "size",
 }
 
 func (p *Trace) IsSetTraceID() bool {
@@ -61,6 +78,10 @@ func (p *Trace) IsSetTraceID() bool {
 
 func (p *Trace) IsSetTokens() bool {
 	return p.Tokens != nil
+}
+
+func (p *Trace) IsSetSize() bool {
+	return p.Size != nil
 }
 
 func (p *Trace) Read(iprot thrift.TProtocol) (err error) {
@@ -92,6 +113,14 @@ func (p *Trace) Read(iprot thrift.TProtocol) (err error) {
 		case 2:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -145,6 +174,17 @@ func (p *Trace) ReadField2(iprot thrift.TProtocol) error {
 	p.Tokens = _field
 	return nil
 }
+func (p *Trace) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Size = _field
+	return nil
+}
 
 func (p *Trace) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -158,6 +198,10 @@ func (p *Trace) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -214,6 +258,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
+func (p *Trace) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSize() {
+		if err = oprot.WriteFieldBegin("size", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Size); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
 
 func (p *Trace) String() string {
 	if p == nil {
@@ -233,6 +295,9 @@ func (p *Trace) DeepEqual(ano *Trace) bool {
 		return false
 	}
 	if !p.Field2DeepEqual(ano.Tokens) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Size) {
 		return false
 	}
 	return true
@@ -257,11 +322,22 @@ func (p *Trace) Field2DeepEqual(src *TokenCost) bool {
 	}
 	return true
 }
+func (p *Trace) Field3DeepEqual(src *int64) bool {
+
+	if p.Size == src {
+		return true
+	} else if p.Size == nil || src == nil {
+		return false
+	}
+	if *p.Size != *src {
+		return false
+	}
+	return true
+}
 
 type TokenCost struct {
 	InputToken  int64 `thrift:"input_token,1,required" frugal:"1,required,i64" json:"input_token" form:"input_token,required" query:"input_token,required"`
 	OutputToken int64 `thrift:"output_token,2,required" frugal:"2,required,i64" json:"output_token" form:"output_token,required" query:"output_token,required"`
-	Size        int64 `thrift:"size,3,required" frugal:"3,required,i64" json:"size" form:"size,required" query:"size,required"`
 }
 
 func NewTokenCost() *TokenCost {
@@ -284,27 +360,16 @@ func (p *TokenCost) GetOutputToken() (v int64) {
 	}
 	return
 }
-
-func (p *TokenCost) GetSize() (v int64) {
-	if p != nil {
-		return p.Size
-	}
-	return
-}
 func (p *TokenCost) SetInputToken(val int64) {
 	p.InputToken = val
 }
 func (p *TokenCost) SetOutputToken(val int64) {
 	p.OutputToken = val
 }
-func (p *TokenCost) SetSize(val int64) {
-	p.Size = val
-}
 
 var fieldIDToName_TokenCost = map[int16]string{
 	1: "input_token",
 	2: "output_token",
-	3: "size",
 }
 
 func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
@@ -312,7 +377,6 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 	var fieldId int16
 	var issetInputToken bool = false
 	var issetOutputToken bool = false
-	var issetSize bool = false
 
 	if _, err = iprot.ReadStructBegin(); err != nil {
 		goto ReadStructBeginError
@@ -346,15 +410,6 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 3:
-			if fieldTypeId == thrift.I64 {
-				if err = p.ReadField3(iprot); err != nil {
-					goto ReadFieldError
-				}
-				issetSize = true
-			} else if err = iprot.Skip(fieldTypeId); err != nil {
-				goto SkipFieldError
-			}
 		default:
 			if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
@@ -375,11 +430,6 @@ func (p *TokenCost) Read(iprot thrift.TProtocol) (err error) {
 
 	if !issetOutputToken {
 		fieldId = 2
-		goto RequiredFieldNotSetError
-	}
-
-	if !issetSize {
-		fieldId = 3
 		goto RequiredFieldNotSetError
 	}
 	return nil
@@ -422,17 +472,6 @@ func (p *TokenCost) ReadField2(iprot thrift.TProtocol) error {
 	p.OutputToken = _field
 	return nil
 }
-func (p *TokenCost) ReadField3(iprot thrift.TProtocol) error {
-
-	var _field int64
-	if v, err := iprot.ReadI64(); err != nil {
-		return err
-	} else {
-		_field = v
-	}
-	p.Size = _field
-	return nil
-}
 
 func (p *TokenCost) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -446,10 +485,6 @@ func (p *TokenCost) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField2(oprot); err != nil {
 			fieldId = 2
-			goto WriteFieldError
-		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
 			goto WriteFieldError
 		}
 	}
@@ -502,22 +537,6 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
-func (p *TokenCost) writeField3(oprot thrift.TProtocol) (err error) {
-	if err = oprot.WriteFieldBegin("size", thrift.I64, 3); err != nil {
-		goto WriteFieldBeginError
-	}
-	if err := oprot.WriteI64(p.Size); err != nil {
-		return err
-	}
-	if err = oprot.WriteFieldEnd(); err != nil {
-		goto WriteFieldEndError
-	}
-	return nil
-WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
-WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
-}
 
 func (p *TokenCost) String() string {
 	if p == nil {
@@ -539,9 +558,6 @@ func (p *TokenCost) DeepEqual(ano *TokenCost) bool {
 	if !p.Field2DeepEqual(ano.OutputToken) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.Size) {
-		return false
-	}
 	return true
 }
 
@@ -555,13 +571,6 @@ func (p *TokenCost) Field1DeepEqual(src int64) bool {
 func (p *TokenCost) Field2DeepEqual(src int64) bool {
 
 	if p.OutputToken != src {
-		return false
-	}
-	return true
-}
-func (p *TokenCost) Field3DeepEqual(src int64) bool {
-
-	if p.Size != src {
 		return false
 	}
 	return true
