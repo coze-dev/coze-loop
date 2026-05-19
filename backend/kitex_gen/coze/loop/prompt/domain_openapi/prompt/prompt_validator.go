@@ -61,6 +61,11 @@ func (p *Prompt) IsValid() error {
 			return fmt.Errorf("field PublishInfo not valid, %w", err)
 		}
 	}
+	if p.SkillExecuteConfig != nil {
+		if err := p.SkillExecuteConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SkillExecuteConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *PromptTemplate) IsValid() error {
@@ -214,6 +219,11 @@ func (p *PromptDetail) IsValid() error {
 			return fmt.Errorf("field ModelConfig not valid, %w", err)
 		}
 	}
+	if p.SkillExecuteConfig != nil {
+		if err := p.SkillExecuteConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SkillExecuteConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *CommitInfo) IsValid() error {
@@ -264,5 +274,19 @@ func (p *PromptManage) IsValid() error {
 			return fmt.Errorf("field PromptCommit not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *SkillExecuteConfig) IsValid() error {
+	if p.SandboxConfig != nil {
+		if err := p.SandboxConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SkillCombine) IsValid() error {
+	return nil
+}
+func (p *SandboxConfig) IsValid() error {
 	return nil
 }

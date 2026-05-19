@@ -962,6 +962,8 @@ type Prompt struct {
 	PublishInfo *PromptPublishInfo `thrift:"PublishInfo,17,optional" frugal:"17,optional,PromptPublishInfo" form:"PublishInfo" json:"PublishInfo,omitempty" query:"PublishInfo"`
 	// 密级标签
 	SecurityLevel *SecurityLevel `thrift:"security_level,18,optional" frugal:"18,optional,string" form:"security_level" json:"security_level,omitempty" query:"security_level"`
+	// skill调用配置
+	SkillExecuteConfig *SkillExecuteConfig `thrift:"skill_execute_config,19,optional" frugal:"19,optional,SkillExecuteConfig" form:"skill_execute_config" json:"skill_execute_config,omitempty" query:"skill_execute_config"`
 }
 
 func NewPrompt() *Prompt {
@@ -1174,6 +1176,18 @@ func (p *Prompt) GetSecurityLevel() (v SecurityLevel) {
 	}
 	return *p.SecurityLevel
 }
+
+var Prompt_SkillExecuteConfig_DEFAULT *SkillExecuteConfig
+
+func (p *Prompt) GetSkillExecuteConfig() (v *SkillExecuteConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillExecuteConfig() {
+		return Prompt_SkillExecuteConfig_DEFAULT
+	}
+	return p.SkillExecuteConfig
+}
 func (p *Prompt) SetWorkspaceID(val *int64) {
 	p.WorkspaceID = val
 }
@@ -1225,6 +1239,9 @@ func (p *Prompt) SetPublishInfo(val *PromptPublishInfo) {
 func (p *Prompt) SetSecurityLevel(val *SecurityLevel) {
 	p.SecurityLevel = val
 }
+func (p *Prompt) SetSkillExecuteConfig(val *SkillExecuteConfig) {
+	p.SkillExecuteConfig = val
+}
 
 var fieldIDToName_Prompt = map[int16]string{
 	1:  "workspace_id",
@@ -1244,6 +1261,7 @@ var fieldIDToName_Prompt = map[int16]string{
 	16: "status",
 	17: "PublishInfo",
 	18: "security_level",
+	19: "skill_execute_config",
 }
 
 func (p *Prompt) IsSetWorkspaceID() bool {
@@ -1312,6 +1330,10 @@ func (p *Prompt) IsSetPublishInfo() bool {
 
 func (p *Prompt) IsSetSecurityLevel() bool {
 	return p.SecurityLevel != nil
+}
+
+func (p *Prompt) IsSetSkillExecuteConfig() bool {
+	return p.SkillExecuteConfig != nil
 }
 
 func (p *Prompt) Read(iprot thrift.TProtocol) (err error) {
@@ -1463,6 +1485,14 @@ func (p *Prompt) Read(iprot thrift.TProtocol) (err error) {
 		case 18:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField18(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 19:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField19(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1684,6 +1714,14 @@ func (p *Prompt) ReadField18(iprot thrift.TProtocol) error {
 	p.SecurityLevel = _field
 	return nil
 }
+func (p *Prompt) ReadField19(iprot thrift.TProtocol) error {
+	_field := NewSkillExecuteConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SkillExecuteConfig = _field
+	return nil
+}
 
 func (p *Prompt) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -1757,6 +1795,10 @@ func (p *Prompt) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField18(oprot); err != nil {
 			fieldId = 18
+			goto WriteFieldError
+		}
+		if err = p.writeField19(oprot); err != nil {
+			fieldId = 19
 			goto WriteFieldError
 		}
 	}
@@ -2091,6 +2133,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 18 end error: ", p), err)
 }
+func (p *Prompt) writeField19(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillExecuteConfig() {
+		if err = oprot.WriteFieldBegin("skill_execute_config", thrift.STRUCT, 19); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SkillExecuteConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 19 end error: ", p), err)
+}
 
 func (p *Prompt) String() string {
 	if p == nil {
@@ -2155,6 +2215,9 @@ func (p *Prompt) DeepEqual(ano *Prompt) bool {
 		return false
 	}
 	if !p.Field18DeepEqual(ano.SecurityLevel) {
+		return false
+	}
+	if !p.Field19DeepEqual(ano.SkillExecuteConfig) {
 		return false
 	}
 	return true
@@ -2341,6 +2404,13 @@ func (p *Prompt) Field18DeepEqual(src *SecurityLevel) bool {
 		return false
 	}
 	if strings.Compare(*p.SecurityLevel, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *Prompt) Field19DeepEqual(src *SkillExecuteConfig) bool {
+
+	if !p.SkillExecuteConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -13325,6 +13395,8 @@ type PromptDetail struct {
 	Tools          []*Tool         `thrift:"tools,2,optional" frugal:"2,optional,list<Tool>" form:"tools" json:"tools,omitempty" query:"tools"`
 	ToolCallConfig *ToolCallConfig `thrift:"tool_call_config,3,optional" frugal:"3,optional,ToolCallConfig" form:"tool_call_config" json:"tool_call_config,omitempty" query:"tool_call_config"`
 	ModelConfig    *ModelConfig    `thrift:"model_config,4,optional" frugal:"4,optional,ModelConfig" form:"model_config" json:"model_config,omitempty" query:"model_config"`
+	// skill调用配置
+	SkillExecuteConfig *SkillExecuteConfig `thrift:"skill_execute_config,5,optional" frugal:"5,optional,SkillExecuteConfig" form:"skill_execute_config" json:"skill_execute_config,omitempty" query:"skill_execute_config"`
 }
 
 func NewPromptDetail() *PromptDetail {
@@ -13381,6 +13453,18 @@ func (p *PromptDetail) GetModelConfig() (v *ModelConfig) {
 	}
 	return p.ModelConfig
 }
+
+var PromptDetail_SkillExecuteConfig_DEFAULT *SkillExecuteConfig
+
+func (p *PromptDetail) GetSkillExecuteConfig() (v *SkillExecuteConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillExecuteConfig() {
+		return PromptDetail_SkillExecuteConfig_DEFAULT
+	}
+	return p.SkillExecuteConfig
+}
 func (p *PromptDetail) SetPromptTemplate(val *PromptTemplate) {
 	p.PromptTemplate = val
 }
@@ -13393,12 +13477,16 @@ func (p *PromptDetail) SetToolCallConfig(val *ToolCallConfig) {
 func (p *PromptDetail) SetModelConfig(val *ModelConfig) {
 	p.ModelConfig = val
 }
+func (p *PromptDetail) SetSkillExecuteConfig(val *SkillExecuteConfig) {
+	p.SkillExecuteConfig = val
+}
 
 var fieldIDToName_PromptDetail = map[int16]string{
 	1: "prompt_template",
 	2: "tools",
 	3: "tool_call_config",
 	4: "model_config",
+	5: "skill_execute_config",
 }
 
 func (p *PromptDetail) IsSetPromptTemplate() bool {
@@ -13415,6 +13503,10 @@ func (p *PromptDetail) IsSetToolCallConfig() bool {
 
 func (p *PromptDetail) IsSetModelConfig() bool {
 	return p.ModelConfig != nil
+}
+
+func (p *PromptDetail) IsSetSkillExecuteConfig() bool {
+	return p.SkillExecuteConfig != nil
 }
 
 func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
@@ -13462,6 +13554,14 @@ func (p *PromptDetail) Read(iprot thrift.TProtocol) (err error) {
 		case 4:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField5(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -13543,6 +13643,14 @@ func (p *PromptDetail) ReadField4(iprot thrift.TProtocol) error {
 	p.ModelConfig = _field
 	return nil
 }
+func (p *PromptDetail) ReadField5(iprot thrift.TProtocol) error {
+	_field := NewSkillExecuteConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SkillExecuteConfig = _field
+	return nil
+}
 
 func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -13564,6 +13672,10 @@ func (p *PromptDetail) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField4(oprot); err != nil {
 			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
 			goto WriteFieldError
 		}
 	}
@@ -13664,6 +13776,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
 }
+func (p *PromptDetail) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillExecuteConfig() {
+		if err = oprot.WriteFieldBegin("skill_execute_config", thrift.STRUCT, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SkillExecuteConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
 
 func (p *PromptDetail) String() string {
 	if p == nil {
@@ -13689,6 +13819,9 @@ func (p *PromptDetail) DeepEqual(ano *PromptDetail) bool {
 		return false
 	}
 	if !p.Field4DeepEqual(ano.ModelConfig) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.SkillExecuteConfig) {
 		return false
 	}
 	return true
@@ -13724,6 +13857,13 @@ func (p *PromptDetail) Field3DeepEqual(src *ToolCallConfig) bool {
 func (p *PromptDetail) Field4DeepEqual(src *ModelConfig) bool {
 
 	if !p.ModelConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *PromptDetail) Field5DeepEqual(src *SkillExecuteConfig) bool {
+
+	if !p.SkillExecuteConfig.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -15728,6 +15868,800 @@ func (p *PromptManage) Field5DeepEqual(src *PromptDraft) bool {
 func (p *PromptManage) Field6DeepEqual(src *PromptCommit) bool {
 
 	if !p.PromptCommit.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+// Skill调用配置
+type SkillExecuteConfig struct {
+	// skill列表
+	SkillCombine []*SkillCombine `thrift:"skill_combine,1,optional" frugal:"1,optional,list<SkillCombine>" form:"skill_combine" json:"skill_combine,omitempty" query:"skill_combine"`
+	// 沙箱配置
+	SandboxConfig *SandboxConfig `thrift:"sandbox_config,2,optional" frugal:"2,optional,SandboxConfig" form:"sandbox_config" json:"sandbox_config,omitempty" query:"sandbox_config"`
+}
+
+func NewSkillExecuteConfig() *SkillExecuteConfig {
+	return &SkillExecuteConfig{}
+}
+
+func (p *SkillExecuteConfig) InitDefault() {
+}
+
+var SkillExecuteConfig_SkillCombine_DEFAULT []*SkillCombine
+
+func (p *SkillExecuteConfig) GetSkillCombine() (v []*SkillCombine) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillCombine() {
+		return SkillExecuteConfig_SkillCombine_DEFAULT
+	}
+	return p.SkillCombine
+}
+
+var SkillExecuteConfig_SandboxConfig_DEFAULT *SandboxConfig
+
+func (p *SkillExecuteConfig) GetSandboxConfig() (v *SandboxConfig) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxConfig() {
+		return SkillExecuteConfig_SandboxConfig_DEFAULT
+	}
+	return p.SandboxConfig
+}
+func (p *SkillExecuteConfig) SetSkillCombine(val []*SkillCombine) {
+	p.SkillCombine = val
+}
+func (p *SkillExecuteConfig) SetSandboxConfig(val *SandboxConfig) {
+	p.SandboxConfig = val
+}
+
+var fieldIDToName_SkillExecuteConfig = map[int16]string{
+	1: "skill_combine",
+	2: "sandbox_config",
+}
+
+func (p *SkillExecuteConfig) IsSetSkillCombine() bool {
+	return p.SkillCombine != nil
+}
+
+func (p *SkillExecuteConfig) IsSetSandboxConfig() bool {
+	return p.SandboxConfig != nil
+}
+
+func (p *SkillExecuteConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SkillExecuteConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SkillExecuteConfig) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*SkillCombine, 0, size)
+	values := make([]SkillCombine, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.SkillCombine = _field
+	return nil
+}
+func (p *SkillExecuteConfig) ReadField2(iprot thrift.TProtocol) error {
+	_field := NewSandboxConfig()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SandboxConfig = _field
+	return nil
+}
+
+func (p *SkillExecuteConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SkillExecuteConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SkillExecuteConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillCombine() {
+		if err = oprot.WriteFieldBegin("skill_combine", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.SkillCombine)); err != nil {
+			return err
+		}
+		for _, v := range p.SkillCombine {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SkillExecuteConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxConfig() {
+		if err = oprot.WriteFieldBegin("sandbox_config", thrift.STRUCT, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SandboxConfig.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SkillExecuteConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SkillExecuteConfig(%+v)", *p)
+
+}
+
+func (p *SkillExecuteConfig) DeepEqual(ano *SkillExecuteConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SkillCombine) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.SandboxConfig) {
+		return false
+	}
+	return true
+}
+
+func (p *SkillExecuteConfig) Field1DeepEqual(src []*SkillCombine) bool {
+
+	if len(p.SkillCombine) != len(src) {
+		return false
+	}
+	for i, v := range p.SkillCombine {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *SkillExecuteConfig) Field2DeepEqual(src *SandboxConfig) bool {
+
+	if !p.SandboxConfig.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type SkillCombine struct {
+	// skill ID
+	SkillID *int64 `thrift:"skill_id,1,optional" frugal:"1,optional,i64" json:"skill_id" form:"skill_id" query:"skill_id"`
+	// skill版本
+	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// skill唯一标识
+	SkillKey *string `thrift:"skill_key,3,optional" frugal:"3,optional,string" form:"skill_key" json:"skill_key,omitempty" query:"skill_key"`
+}
+
+func NewSkillCombine() *SkillCombine {
+	return &SkillCombine{}
+}
+
+func (p *SkillCombine) InitDefault() {
+}
+
+var SkillCombine_SkillID_DEFAULT int64
+
+func (p *SkillCombine) GetSkillID() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillID() {
+		return SkillCombine_SkillID_DEFAULT
+	}
+	return *p.SkillID
+}
+
+var SkillCombine_Version_DEFAULT string
+
+func (p *SkillCombine) GetVersion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetVersion() {
+		return SkillCombine_Version_DEFAULT
+	}
+	return *p.Version
+}
+
+var SkillCombine_SkillKey_DEFAULT string
+
+func (p *SkillCombine) GetSkillKey() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSkillKey() {
+		return SkillCombine_SkillKey_DEFAULT
+	}
+	return *p.SkillKey
+}
+func (p *SkillCombine) SetSkillID(val *int64) {
+	p.SkillID = val
+}
+func (p *SkillCombine) SetVersion(val *string) {
+	p.Version = val
+}
+func (p *SkillCombine) SetSkillKey(val *string) {
+	p.SkillKey = val
+}
+
+var fieldIDToName_SkillCombine = map[int16]string{
+	1: "skill_id",
+	2: "version",
+	3: "skill_key",
+}
+
+func (p *SkillCombine) IsSetSkillID() bool {
+	return p.SkillID != nil
+}
+
+func (p *SkillCombine) IsSetVersion() bool {
+	return p.Version != nil
+}
+
+func (p *SkillCombine) IsSetSkillKey() bool {
+	return p.SkillKey != nil
+}
+
+func (p *SkillCombine) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SkillCombine[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SkillCombine) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkillID = _field
+	return nil
+}
+func (p *SkillCombine) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Version = _field
+	return nil
+}
+func (p *SkillCombine) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SkillKey = _field
+	return nil
+}
+
+func (p *SkillCombine) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SkillCombine"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SkillCombine) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillID() {
+		if err = oprot.WriteFieldBegin("skill_id", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.SkillID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SkillCombine) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetVersion() {
+		if err = oprot.WriteFieldBegin("version", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Version); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SkillCombine) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillKey() {
+		if err = oprot.WriteFieldBegin("skill_key", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SkillKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+
+func (p *SkillCombine) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SkillCombine(%+v)", *p)
+
+}
+
+func (p *SkillCombine) DeepEqual(ano *SkillCombine) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SkillID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Version) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.SkillKey) {
+		return false
+	}
+	return true
+}
+
+func (p *SkillCombine) Field1DeepEqual(src *int64) bool {
+
+	if p.SkillID == src {
+		return true
+	} else if p.SkillID == nil || src == nil {
+		return false
+	}
+	if *p.SkillID != *src {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field2DeepEqual(src *string) bool {
+
+	if p.Version == src {
+		return true
+	} else if p.Version == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Version, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field3DeepEqual(src *string) bool {
+
+	if p.SkillKey == src {
+		return true
+	} else if p.SkillKey == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SkillKey, *src) != 0 {
+		return false
+	}
+	return true
+}
+
+type SandboxConfig struct {
+	// 沙箱PSM
+	SandboxPsm *string `thrift:"sandbox_psm,1,optional" frugal:"1,optional,string" form:"sandbox_psm" json:"sandbox_psm,omitempty" query:"sandbox_psm"`
+}
+
+func NewSandboxConfig() *SandboxConfig {
+	return &SandboxConfig{}
+}
+
+func (p *SandboxConfig) InitDefault() {
+}
+
+var SandboxConfig_SandboxPsm_DEFAULT string
+
+func (p *SandboxConfig) GetSandboxPsm() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxPsm() {
+		return SandboxConfig_SandboxPsm_DEFAULT
+	}
+	return *p.SandboxPsm
+}
+func (p *SandboxConfig) SetSandboxPsm(val *string) {
+	p.SandboxPsm = val
+}
+
+var fieldIDToName_SandboxConfig = map[int16]string{
+	1: "sandbox_psm",
+}
+
+func (p *SandboxConfig) IsSetSandboxPsm() bool {
+	return p.SandboxPsm != nil
+}
+
+func (p *SandboxConfig) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxConfig[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SandboxConfig) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SandboxPsm = _field
+	return nil
+}
+
+func (p *SandboxConfig) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SandboxConfig"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SandboxConfig) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxPsm() {
+		if err = oprot.WriteFieldBegin("sandbox_psm", thrift.STRING, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SandboxPsm); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *SandboxConfig) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SandboxConfig(%+v)", *p)
+
+}
+
+func (p *SandboxConfig) DeepEqual(ano *SandboxConfig) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.SandboxPsm) {
+		return false
+	}
+	return true
+}
+
+func (p *SandboxConfig) Field1DeepEqual(src *string) bool {
+
+	if p.SandboxPsm == src {
+		return true
+	} else if p.SandboxPsm == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SandboxPsm, *src) != 0 {
 		return false
 	}
 	return true
