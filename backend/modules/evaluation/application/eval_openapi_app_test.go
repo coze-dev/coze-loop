@@ -4294,7 +4294,7 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				TemplateID:         gptr.Of(templateID),
 				Name:               gptr.Of("exp_with_runtime_param"),
-				TargetRuntimeParam: &common.RuntimeParam{JSONValue: `{"key": "value"}`},
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"key": "value"}`)},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
@@ -4310,7 +4310,7 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				WorkspaceID:        gptr.Of(workspaceID),
 				TemplateID:         gptr.Of(templateID),
 				Name:               gptr.Of("exp_with_existing_fmc"),
-				TargetRuntimeParam: &common.RuntimeParam{JSONValue: `{"custom": "param"}`},
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"custom": "param"}`)},
 			},
 			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
 				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
