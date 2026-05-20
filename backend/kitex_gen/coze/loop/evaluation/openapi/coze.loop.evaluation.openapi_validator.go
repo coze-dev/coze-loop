@@ -658,6 +658,11 @@ func (p *SubmitExperimentEvalTargetParam) IsValid() error {
 			return fmt.Errorf("field CustomEvalTarget not valid, %w", err)
 		}
 	}
+	if p.AgentConnection != nil {
+		if err := p.AgentConnection.IsValid(); err != nil {
+			return fmt.Errorf("field AgentConnection not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentOApiResponse) IsValid() error {
@@ -820,6 +825,30 @@ func (p *GetExperimentAggrResultOpenAPIData) IsValid() error {
 			return fmt.Errorf("field EvalTargetAggrResult_ not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *RetryExperimentOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RetryExperimentOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RetryExperimentOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *ListEvaluatorsOApiRequest) IsValid() error {

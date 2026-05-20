@@ -65,6 +65,12 @@ const (
 
 	TurnRunStateTerminal = "terminal"
 
+	ExptRetryModeRetryAll = "retry_all"
+
+	ExptRetryModeRetryFailure = "retry_failure"
+
+	ExptRetryModeRetryTargetItems = "retry_target_items"
+
 	ColumnEvalTargetNameActualOutput = "actual_output"
 
 	ColumnEvalTargetNameTrajectory = "trajectory"
@@ -199,6 +205,8 @@ type DataType = string
 type ItemRunState = string
 
 type TurnRunState = string
+
+type ExptRetryMode = string
 
 // ===============================
 // 筛选能力结构（与 domain/expt.thrift 结构一致）

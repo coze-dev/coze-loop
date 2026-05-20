@@ -167,6 +167,13 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"RetryExperimentOApi": kitex.NewMethodInfo(
+		retryExperimentOApiHandler,
+		newEvaluationOpenAPIServiceRetryExperimentOApiArgs,
+		newEvaluationOpenAPIServiceRetryExperimentOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListEvaluatorsOApi": kitex.NewMethodInfo(
 		listEvaluatorsOApiHandler,
 		newEvaluationOpenAPIServiceListEvaluatorsOApiArgs,
@@ -763,6 +770,25 @@ func newEvaluationOpenAPIServiceGetExperimentAggrResultOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceGetExperimentAggrResultOApiResult()
+}
+
+func retryExperimentOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceRetryExperimentOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).RetryExperimentOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceRetryExperimentOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRetryExperimentOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceRetryExperimentOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceRetryExperimentOApiResult()
 }
 
 func listEvaluatorsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1391,6 +1417,16 @@ func (p *kClient) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceGetExperimentAggrResultOApiResult
 	if err = p.c.Call(ctx, "GetExperimentAggrResultOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest) (r *openapi.RetryExperimentOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceRetryExperimentOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult
+	if err = p.c.Call(ctx, "RetryExperimentOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
