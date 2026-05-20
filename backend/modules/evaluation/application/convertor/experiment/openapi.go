@@ -592,7 +592,6 @@ func buildOpenAPIEvaluatorIDVersionListFromExperiment(experiment *entity.Experim
 	return items
 }
 
-
 func OpenAPIExperimentStatusDO2DTO(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {
 	var openapiStatus openapiExperiment.ExperimentStatus
 	switch status {

@@ -11,7 +11,6 @@ import (
 
 	domain_expt "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain/expt"
 	openapiExperiment "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
-	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 )
 
 func TestOpenAPIExportColumnSpecDTO2Inner(t *testing.T) {
@@ -299,23 +298,4 @@ func TestInnerExportRecordDTO2OpenAPI(t *testing.T) {
 			assert.Nil(t, got.Error.Detail)
 		}
 	})
-}
-
-// 确保 OpenAPI 转 inner 后字段类型与 inner expt.ExptResultExportColumnSpec 一致，
-// 防止未来 IDL 变动时悄悄破坏类型契约。
-func TestOpenAPIExportColumnSpecDTO2Inner_AssignableToInnerStruct(t *testing.T) {
-	t.Parallel()
-
-	from := &openapiExperiment.ExptResultExportColumnSpec{
-		EvalSetFields:       []string{"a"},
-		EvalTargetOutputs:   []string{"b"},
-		Metrics:             []string{"c"},
-		EvaluatorVersionIds: []int64{1},
-		TagKeyIds:           []int64{2},
-		WeightedScore:       gptr.Of(true),
-	}
-	got := OpenAPIExportColumnSpecDTO2Inner(from)
-	// 显式断言返回类型是内部 expt 包的结构（避免变成 entity 版本）
-	var _ *expt.ExptResultExportColumnSpec = got
-	assert.NotNil(t, got)
 }

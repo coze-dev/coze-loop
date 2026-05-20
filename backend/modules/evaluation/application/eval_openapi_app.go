@@ -1426,7 +1426,6 @@ func (e *EvalOpenAPIApplication) GetExperimentResultExportRecordOApi(ctx context
 	}, nil
 }
 
-
 func (e *EvalOpenAPIApplication) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest) (r *openapi.ListEvaluatorsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
