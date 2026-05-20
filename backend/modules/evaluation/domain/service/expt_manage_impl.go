@@ -968,9 +968,7 @@ func (e *ExptMangerImpl) List(ctx context.Context, page, pageSize int32, spaceID
 		return nil, 0, err
 	}
 	for idx := range exptTuples {
-		if expts[idx].ExptType != entity.ExptType_Online {
-			expts[idx].EvalSet = exptTuples[idx].EvalSet
-		}
+		expts[idx].EvalSet = exptTuples[idx].EvalSet
 		expts[idx].Target = exptTuples[idx].Target
 		expts[idx].Evaluators = exptTuples[idx].Evaluators
 	}
