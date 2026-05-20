@@ -2368,6 +2368,14 @@ type fakeExperimentApp struct {
 	retryResp    *exptpb.RetryExperimentResponse
 	retryErr     error
 	lastRetryReq *exptpb.RetryExperimentRequest
+
+	exportResp    *exptpb.ExportExptResultResponse
+	exportErr     error
+	lastExportReq *exptpb.ExportExptResultRequest
+
+	getExportRecordResp    *exptpb.GetExptResultExportRecordResponse
+	getExportRecordErr     error
+	lastGetExportRecordReq *exptpb.GetExptResultExportRecordRequest
 }
 
 func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.SubmitExperimentRequest) (*exptpb.SubmitExperimentResponse, error) {
@@ -2394,6 +2402,22 @@ func (f *fakeExperimentApp) RetryExperiment(_ context.Context, req *exptpb.Retry
 		return f.retryResp, f.retryErr
 	}
 	return &exptpb.RetryExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) ExportExptResult_(_ context.Context, req *exptpb.ExportExptResultRequest) (*exptpb.ExportExptResultResponse, error) {
+	f.lastExportReq = req
+	if f.exportResp != nil || f.exportErr != nil {
+		return f.exportResp, f.exportErr
+	}
+	return &exptpb.ExportExptResultResponse{}, nil
+}
+
+func (f *fakeExperimentApp) GetExptResultExportRecord(_ context.Context, req *exptpb.GetExptResultExportRecordRequest) (*exptpb.GetExptResultExportRecordResponse, error) {
+	f.lastGetExportRecordReq = req
+	if f.getExportRecordResp != nil || f.getExportRecordErr != nil {
+		return f.getExportRecordResp, f.getExportRecordErr
+	}
+	return &exptpb.GetExptResultExportRecordResponse{}, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)
