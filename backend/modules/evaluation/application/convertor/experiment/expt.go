@@ -421,7 +421,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
-	if experiment.ExptType != entity.ExptType_Online {
+	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
 	}
 	res.Evaluators = make([]*evaluatordto.Evaluator, 0, len(experiment.Evaluators))

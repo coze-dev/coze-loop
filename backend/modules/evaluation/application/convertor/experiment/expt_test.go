@@ -2529,3 +2529,59 @@ func TestCreateEvalTargetParamDTO2DO_WithCluster(t *testing.T) {
 		assert.Nil(t, result)
 	})
 }
+
+func TestToExptDTO_EvalSetByNilCheck(t *testing.T) {
+	t.Run("离线实验有EvalSet时返回EvalSet", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Offline,
+			EvalSet: &entity.EvaluationSet{
+				ID:   100,
+				Name: "test_eval_set",
+			},
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSet)
+		assert.Equal(t, int64(100), gptr.Indirect(result.EvalSet.ID))
+		assert.Equal(t, "test_eval_set", gptr.Indirect(result.EvalSet.Name))
+	})
+
+	t.Run("在线实验有EvalSet时返回EvalSet", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Online,
+			EvalSet: &entity.EvaluationSet{
+				ID:   200,
+				Name: "online_eval_set",
+			},
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.NotNil(t, result.EvalSet)
+		assert.Equal(t, int64(200), gptr.Indirect(result.EvalSet.ID))
+		assert.Equal(t, "online_eval_set", gptr.Indirect(result.EvalSet.Name))
+	})
+
+	t.Run("在线实验EvalSet为nil时不返回EvalSet", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Online,
+			EvalSet:  nil,
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.EvalSet)
+	})
+
+	t.Run("离线实验EvalSet为nil时不返回EvalSet", func(t *testing.T) {
+		experiment := &entity.Experiment{
+			ExptType: entity.ExptType_Offline,
+			EvalSet:  nil,
+		}
+
+		result := ToExptDTO(experiment)
+		assert.NotNil(t, result)
+		assert.Nil(t, result.EvalSet)
+	})
+}

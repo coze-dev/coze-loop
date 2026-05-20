@@ -1138,6 +1138,46 @@ func TestExptMangerImpl_List(t *testing.T) {
 			t.Errorf("List() error = %v, wantErr nil", err)
 		}
 	})
+
+	t.Run("在线实验也填充EvalSet", func(t *testing.T) {
+		onlineExpt := &entity.Experiment{
+			ID:                  456,
+			ExptType:            entity.ExptType_Online,
+			EvalSetID:           10,
+			EvalSetVersionID:    20,
+			EvaluatorVersionRef: []*entity.ExptEvaluatorVersionRef{{EvaluatorVersionID: 222}},
+		}
+		onlineEvalSetVersion := &entity.EvaluationSetVersion{ID: 20, EvaluationSetID: 10}
+		onlineEvalSet := &entity.EvaluationSet{ID: 10, Name: "online_eval_set", EvaluationSetVersion: onlineEvalSetVersion}
+
+		mockExptRepo.EXPECT().
+			List(ctx, page, pageSize, filter, orderBys, spaceID).
+			Return([]*entity.Experiment{onlineExpt}, int64(1), nil).Times(1)
+		mockEvaluationSetVersionService.EXPECT().
+			BatchGetEvaluationSetVersions(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.BatchGetEvaluationSetVersionsResult{
+				{Version: onlineEvalSetVersion, EvaluationSet: onlineEvalSet},
+			}, nil).AnyTimes()
+		mockEvalTargetService.EXPECT().
+			BatchGetEvalTargetVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.EvalTarget{}, nil).AnyTimes()
+		mockEvaluatorService.EXPECT().
+			BatchGetEvaluatorVersion(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.Evaluator{}, nil).AnyTimes()
+		mockExptResultService.EXPECT().
+			MGetStats(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptStats{}, nil).AnyTimes()
+		mockExptAggrResultService.EXPECT().
+			BatchGetExptAggrResultByExperimentIDs(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return([]*entity.ExptAggregateResult{}, nil).AnyTimes()
+
+		got, count, err := mgr.List(ctx, page, pageSize, spaceID, filter, orderBys, session)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(1), count)
+		assert.Len(t, got, 1)
+		assert.NotNil(t, got[0].EvalSet, "在线实验也应填充EvalSet")
+		assert.Equal(t, int64(10), got[0].EvalSet.ID)
+	})
 }
 
 func TestExptMangerImpl_ListExptRaw(t *testing.T) {
