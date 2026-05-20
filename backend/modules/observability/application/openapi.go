@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"io"
 	"strconv"
 	"strings"
@@ -1046,6 +1047,9 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	for _, info := range sResp.Infos {
 		traces = append(traces, tconv.AdvanceInfoDO2TraceDTO(info))
 	}
+	// todo test
+	jsonStr, _ := json.Marshal(traces)
+	logs.CtxInfo(ctx, "ListTracesOApi response: %+v", jsonStr)
 	return &openapi.ListTracesOApiResponse{
 		Data: &openapi.ListTracesData{
 			Traces: traces,
