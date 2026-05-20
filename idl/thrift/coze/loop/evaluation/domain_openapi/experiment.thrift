@@ -156,8 +156,6 @@ struct Experiment {
     50: optional ExperimentStatistics expt_stats
 
     60: optional bool enable_extract_trajectory
-    // 评估器得分加权配置
-    61: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     // 实验模板基础信息
     62: optional ExptTemplateMeta expt_template_meta
 

@@ -90,11 +90,6 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptStats not valid, %w", err)
 		}
 	}
-	if p.ScoreWeightConfig != nil {
-		if err := p.ScoreWeightConfig.IsValid(); err != nil {
-			return fmt.Errorf("field ScoreWeightConfig not valid, %w", err)
-		}
-	}
 	if p.ExptTemplateMeta != nil {
 		if err := p.ExptTemplateMeta.IsValid(); err != nil {
 			return fmt.Errorf("field ExptTemplateMeta not valid, %w", err)

@@ -284,7 +284,6 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
 	result.EnableExtractTrajectory = dto.EnableExtractTrajectory
 	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
-	result.ScoreWeightConfig = DomainExptScoreWeightDTO2OpenAPI(dto.ScoreWeightConfig)
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	return result
 }
@@ -314,23 +313,6 @@ func DomainEvaluatorIDVersionListDTO2OpenAPI(items []*domainEvaluator.EvaluatorI
 		res = append(res, oai)
 	}
 	return res
-}
-
-// DomainExptScoreWeightDTO2OpenAPI 将 domain.expt.ExptScoreWeight 映射为 openapi 版本。
-func DomainExptScoreWeightDTO2OpenAPI(in *domainExpt.ExptScoreWeight) *openapiExperiment.ExptScoreWeight {
-	if in == nil {
-		return nil
-	}
-	out := &openapiExperiment.ExptScoreWeight{
-		EnableWeightedScore: in.EnableWeightedScore,
-	}
-	if len(in.EvaluatorScoreWeights) > 0 {
-		out.EvaluatorScoreWeights = make(map[int64]float64, len(in.EvaluatorScoreWeights))
-		for k, v := range in.EvaluatorScoreWeights {
-			out.EvaluatorScoreWeights[k] = v
-		}
-	}
-	return out
 }
 
 // DomainExptTemplateMetaDTO2OpenAPI 将 domain.expt.ExptTemplateMeta 映射为 openapi 版本。
@@ -538,6 +520,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			itemConcur := int32(*experiment.EvalConf.ItemConcurNum)
 			result.ItemConcurNum = &itemConcur
 		}
+		if experiment.EvalConf.ItemRetryNum != nil {
+			itemRetry := int32(*experiment.EvalConf.ItemRetryNum)
+			result.ItemRetryNum = &itemRetry
+		}
 
 		mapping, runtimeParam := extractTargetIngressInfo(experiment.EvalConf.ConnectorConf.TargetConf)
 		if mapping != nil {
@@ -551,6 +537,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
 
+		if items := buildOpenAPIEvaluatorIDVersionListFromExperiment(experiment); len(items) > 0 {
+			result.EvaluatorIDVersionList = items
+		}
+
 		result.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 	}
 
@@ -561,8 +551,47 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		result.EvalSet = evalsetopenapi.OpenAPIEvaluationSetDO2DTO(experiment.EvalSet)
 	}
 
+	if experiment.ExptTemplateMeta != nil {
+		result.ExptTemplateMeta = &openapiExperiment.ExptTemplateMeta{
+			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
+			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
+			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
+			Description: gptr.Of(experiment.ExptTemplateMeta.Desc),
+			ExptType:    OpenAPIExptTypeDO2DTO(experiment.ExptTemplateMeta.ExptType),
+		}
+	}
+
 	return result
 }
+
+// buildOpenAPIEvaluatorIDVersionListFromExperiment 基于 entity.Experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
+// 构造 openapi EvaluatorIDVersionItem 列表（含 RunConfig / ScoreWeight）。
+func buildOpenAPIEvaluatorIDVersionListFromExperiment(experiment *entity.Experiment) []*openapiEvaluator.EvaluatorIDVersionItem {
+	if experiment == nil || experiment.EvalConf == nil ||
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf == nil ||
+		len(experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf) == 0 {
+		return nil
+	}
+	confs := experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
+	items := make([]*openapiEvaluator.EvaluatorIDVersionItem, 0, len(confs))
+	for _, ec := range confs {
+		if ec == nil {
+			continue
+		}
+		item := &openapiEvaluator.EvaluatorIDVersionItem{
+			EvaluatorID:        gptr.Of(ec.EvaluatorID),
+			Version:            gptr.Of(ec.Version),
+			EvaluatorVersionID: gptr.Of(ec.EvaluatorVersionID),
+			ScoreWeight:        ec.ScoreWeight,
+		}
+		if ec.RunConf != nil {
+			item.RunConfig = evaluator_convertor.OpenAPIEvaluatorRunConfigDO2DTO(ec.RunConf)
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
 
 func OpenAPIExperimentStatusDO2DTO(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {
 	var openapiStatus openapiExperiment.ExperimentStatus
