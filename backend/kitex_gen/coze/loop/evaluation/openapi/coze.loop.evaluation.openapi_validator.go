@@ -1551,6 +1551,11 @@ func (p *ListExptTemplatesOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

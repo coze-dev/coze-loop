@@ -1060,6 +1060,9 @@ struct SubmitExptFromTemplateOApiRequest {
     2: optional i64 template_id (api.body="template_id", api.js_conv="true", go.tag='json:"template_id"')
     3: optional string name (api.body="name")
 
+    // 创建实验时，判断不为空则替换模板上的信息
+    20: optional common.RuntimeParam target_runtime_param (api.body="target_runtime_param")
+
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }

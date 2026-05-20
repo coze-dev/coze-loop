@@ -2097,6 +2097,15 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 	if name == "" {
 		name = experiment_convertor.DefaultExperimentNameFromTemplate(template, time.Now().Unix())
 	}
+	// 创建实验时，判断不为空则替换模板上的信息
+	if req.TargetRuntimeParam != nil {
+		if template.FieldMappingConfig == nil {
+			template.FieldMappingConfig = &entity.ExptFieldMapping{}
+		}
+		template.FieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
+			JSONValue: req.TargetRuntimeParam.JSONValue,
+		}
+	}
 
 	// 检查实验名称是否重复
 	pass, err := e.manager.CheckName(ctx, name, req.GetWorkspaceID(), session)
