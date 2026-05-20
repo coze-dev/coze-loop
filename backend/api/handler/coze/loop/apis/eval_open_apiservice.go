@@ -288,15 +288,17 @@ func GetEvalTargetOutputFieldContentOApi(ctx context.Context, c *app.RequestCont
 // RetryExperimentOApi .
 // @router /v1/loop/evaluation/experiments/:experiment_id/retry [POST]
 func RetryExperimentOApi(ctx context.Context, c *app.RequestContext) {
-	var err error
-	var req openapi0.RetryExperimentOApiRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
-		return
-	}
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.RetryExperimentOApi)
+}
 
-	resp := new(openapi0.RetryExperimentOApiResponse)
+// ExportExperimentResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/results/export [POST]
+func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ExportExperimentResultOApi)
+}
 
-	c.JSON(consts.StatusOK, resp)
+// GetExperimentResultExportRecordOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/export_records/:export_id [GET]
+func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
 }

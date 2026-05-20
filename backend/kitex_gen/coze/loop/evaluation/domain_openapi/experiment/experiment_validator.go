@@ -90,6 +90,16 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptStats not valid, %w", err)
 		}
 	}
+	if p.ScoreWeightConfig != nil {
+		if err := p.ScoreWeightConfig.IsValid(); err != nil {
+			return fmt.Errorf("field ScoreWeightConfig not valid, %w", err)
+		}
+	}
+	if p.ExptTemplateMeta != nil {
+		if err := p.ExptTemplateMeta.IsValid(); err != nil {
+			return fmt.Errorf("field ExptTemplateMeta not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
@@ -269,6 +279,25 @@ func (p *ExperimentResultFilter) IsValid() error {
 	if p.KeywordSearch != nil {
 		if err := p.KeywordSearch.IsValid(); err != nil {
 			return fmt.Errorf("field KeywordSearch not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunError) IsValid() error {
+	return nil
+}
+func (p *ExptResultExportColumnSpec) IsValid() error {
+	return nil
+}
+func (p *ExptResultExportRecord) IsValid() error {
+	if p.BaseInfo != nil {
+		if err := p.BaseInfo.IsValid(); err != nil {
+			return fmt.Errorf("field BaseInfo not valid, %w", err)
+		}
+	}
+	if p.Error != nil {
+		if err := p.Error.IsValid(); err != nil {
+			return fmt.Errorf("field Error not valid, %w", err)
 		}
 	}
 	return nil

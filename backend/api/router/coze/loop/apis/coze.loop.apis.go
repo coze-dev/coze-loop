@@ -540,8 +540,14 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_experiments0.GET("/:experiment_id", append(_experiment_idMw(handler), apis.GetExperimentsOApi)...)
 				_experiment_id := _experiments0.Group("/:experiment_id", _experiment_idMw(handler)...)
 				_experiment_id.POST("/aggr_results", append(_getexperimentaggrresultoapiMw(handler), apis.GetExperimentAggrResultOApi)...)
-				_experiment_id.POST("/results", append(_listexperimentresultoapiMw(handler), apis.ListExperimentResultOApi)...)
+				_experiment_id.POST("/results", append(_results1Mw(handler), apis.ListExperimentResultOApi)...)
+				_results1 := _experiment_id.Group("/results", _results1Mw(handler)...)
+				_results1.POST("/export", append(_exportexperimentresultoapiMw(handler), apis.ExportExperimentResultOApi)...)
 				_experiment_id.POST("/retry", append(_retryexperimentoapiMw(handler), apis.RetryExperimentOApi)...)
+				{
+					_export_records0 := _experiment_id.Group("/export_records", _export_records0Mw(handler)...)
+					_export_records0.GET("/:export_id", append(_getexperimentresultexportrecordoapiMw(handler), apis.GetExperimentResultExportRecordOApi)...)
+				}
 				_experiments0.POST("/list", append(_listexperimentsoapiMw(handler), apis.ListExperimentsOApi)...)
 				{
 					_eval_target_records0 := _evaluation0.Group("/eval_target_records", _eval_target_records0Mw(handler)...)
