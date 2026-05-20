@@ -383,3 +383,21 @@ func TestEvalTargetVersion_RuntimeParamDemo_Integration(t *testing.T) {
 	assert.Len(t, version.InputSchema, 1)
 	assert.Len(t, version.OutputSchema, 1)
 }
+
+func TestEvalTargetType_A2AAgent_And_CustomAgent(t *testing.T) {
+	// String
+	assert.Equal(t, "A2AAgent", EvalTargetTypeA2AAgent.String())
+	assert.Equal(t, "CustomAgent", EvalTargetTypeCustomAgent.String())
+
+	// SupptTrajectory
+	assert.True(t, EvalTargetTypeA2AAgent.SupptTrajectory())
+	assert.True(t, EvalTargetTypeCustomAgent.SupptTrajectory())
+
+	// NeedExecuteTarget
+	assert.True(t, EvalTargetTypeA2AAgent.NeedExecuteTarget())
+	assert.True(t, EvalTargetTypeCustomAgent.NeedExecuteTarget())
+
+	// IsRecordOnlyType
+	assert.False(t, EvalTargetTypeA2AAgent.IsRecordOnlyType())
+	assert.False(t, EvalTargetTypeCustomAgent.IsRecordOnlyType())
+}

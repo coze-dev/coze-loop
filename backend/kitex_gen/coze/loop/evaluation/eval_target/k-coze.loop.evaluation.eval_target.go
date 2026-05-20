@@ -404,6 +404,34 @@ func (p *CreateEvalTargetParam) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -550,6 +578,32 @@ func (p *CreateEvalTargetParam) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateEvalTargetParam) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Cluster = _field
+	return offset, nil
+}
+
+func (p *CreateEvalTargetParam) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+	_field := eval_target.NewAgentConnection()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.AgentConnection = _field
+	return offset, nil
+}
+
 func (p *CreateEvalTargetParam) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -566,6 +620,8 @@ func (p *CreateEvalTargetParam) FastWriteNocopy(buf []byte, w thrift.NocopyWrite
 		offset += p.fastWriteField7(buf[offset:], w)
 		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField9(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -583,6 +639,8 @@ func (p *CreateEvalTargetParam) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -669,6 +727,24 @@ func (p *CreateEvalTargetParam) fastWriteField9(buf []byte, w thrift.NocopyWrite
 	return offset
 }
 
+func (p *CreateEvalTargetParam) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCluster() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 10)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Cluster)
+	}
+	return offset
+}
+
+func (p *CreateEvalTargetParam) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetAgentConnection() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
+		offset += p.AgentConnection.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *CreateEvalTargetParam) field1Length() int {
 	l := 0
 	if p.IsSetSourceTargetID() {
@@ -750,6 +826,24 @@ func (p *CreateEvalTargetParam) field9Length() int {
 	return l
 }
 
+func (p *CreateEvalTargetParam) field10Length() int {
+	l := 0
+	if p.IsSetCluster() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Cluster)
+	}
+	return l
+}
+
+func (p *CreateEvalTargetParam) field11Length() int {
+	l := 0
+	if p.IsSetAgentConnection() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.AgentConnection.BLength()
+	}
+	return l
+}
+
 func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 	src, ok := s.(*CreateEvalTargetParam)
 	if !ok {
@@ -819,6 +913,23 @@ func (p *CreateEvalTargetParam) DeepCopy(s interface{}) error {
 		}
 		p.OperationInstruction = &tmp
 	}
+
+	if src.Cluster != nil {
+		var tmp string
+		if *src.Cluster != "" {
+			tmp = kutils.StringDeepCopy(*src.Cluster)
+		}
+		p.Cluster = &tmp
+	}
+
+	var _agentConnection *eval_target.AgentConnection
+	if src.AgentConnection != nil {
+		_agentConnection = &eval_target.AgentConnection{}
+		if err := _agentConnection.DeepCopy(src.AgentConnection); err != nil {
+			return err
+		}
+	}
+	p.AgentConnection = _agentConnection
 
 	return nil
 }

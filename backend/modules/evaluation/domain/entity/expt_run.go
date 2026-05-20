@@ -106,6 +106,7 @@ const (
 	defaultSpaceExptConcurLimit  = 200
 	defaultItemZombieSecond      = 60 * 20
 	defaultItemAsyncZombieSecond = 60 * 60 * 3
+	defaultMaxItemConcurNum      = 200
 )
 
 type ExptConsumerConf struct {
@@ -216,6 +217,7 @@ type ExptItemEvalConf struct {
 	IntervalSecond    int `json:"interval_second" mapstructure:"interval_second"`
 	ZombieSecond      int `json:"zombie_second" mapstructure:"zombie_second"`
 	AsyncZombieSecond int `json:"async_zombie_second" mapstructure:"async_zombie_second"`
+	MaxItemConcurNum  int `json:"max_item_concur_num" mapstructure:"max_item_concur_num"`
 }
 
 func (e *ExptItemEvalConf) GetConcurNum() int {
@@ -223,6 +225,13 @@ func (e *ExptItemEvalConf) GetConcurNum() int {
 		return e.ConcurNum
 	}
 	return defaultItemEvalConcurNum
+}
+
+func (e *ExptItemEvalConf) GetMaxItemConcurNum() int {
+	if e != nil && e.MaxItemConcurNum > 0 {
+		return e.MaxItemConcurNum
+	}
+	return defaultMaxItemConcurNum
 }
 
 func (e *ExptItemEvalConf) GetInterval() time.Duration {

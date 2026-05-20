@@ -51,6 +51,7 @@ type Client interface {
 	DeleteExperimentTemplate(ctx context.Context, req *expt.DeleteExperimentTemplateRequest, callOptions ...callopt.Option) (r *expt.DeleteExperimentTemplateResponse, err error)
 	ListExperimentTemplates(ctx context.Context, req *expt.ListExperimentTemplatesRequest, callOptions ...callopt.Option) (r *expt.ListExperimentTemplatesResponse, err error)
 	CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest, callOptions ...callopt.Option) (r *expt.CheckExperimentTemplateNameResponse, err error)
+	SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest, callOptions ...callopt.Option) (r *expt.SubmitExptFromTemplateResponse, err error)
 }
 
 // NewClient creates a client for the service defined in IDL.
@@ -280,4 +281,9 @@ func (p *kExperimentServiceClient) ListExperimentTemplates(ctx context.Context, 
 func (p *kExperimentServiceClient) CheckExperimentTemplateName(ctx context.Context, req *expt.CheckExperimentTemplateNameRequest, callOptions ...callopt.Option) (r *expt.CheckExperimentTemplateNameResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.CheckExperimentTemplateName(ctx, req)
+}
+
+func (p *kExperimentServiceClient) SubmitExptFromTemplate(ctx context.Context, req *expt.SubmitExptFromTemplateRequest, callOptions ...callopt.Option) (r *expt.SubmitExptFromTemplateResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.SubmitExptFromTemplate(ctx, req)
 }

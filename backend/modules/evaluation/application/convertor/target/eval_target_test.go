@@ -856,3 +856,223 @@ func TestEvalTargetDO2DTO_OnlineTypeSameDTOAsBase(t *testing.T) {
 
 	assert.Equal(t, EvalTargetDO2DTO(base), EvalTargetDO2DTO(online))
 }
+
+func TestA2AAgentConversions(t *testing.T) {
+	t.Parallel()
+
+	// nil tests
+	assert.Nil(t, A2AAgentDTO2DO(nil))
+	assert.Nil(t, A2AAgentDO2DTO(nil))
+
+	// roundtrip test
+	doObj := &do.A2AAgent{
+		ID:          123,
+		Name:        "a2a-agent",
+		Description: "test a2a agent",
+		ServerName:  "svc_name",
+		URL:         "http://example.com",
+		ExecRegion:  do.RegionCN,
+		ExecEnv:     gptr.Of("prod"),
+	}
+
+	dtoObj := A2AAgentDO2DTO(doObj)
+	assert.NotNil(t, dtoObj)
+	assert.Equal(t, int64(123), gptr.Indirect(dtoObj.ID))
+	assert.Equal(t, "a2a-agent", gptr.Indirect(dtoObj.Name))
+	assert.Equal(t, "test a2a agent", gptr.Indirect(dtoObj.Description))
+	assert.Equal(t, "svc_name", gptr.Indirect(dtoObj.ServerName))
+	assert.Equal(t, "http://example.com", gptr.Indirect(dtoObj.URL))
+	assert.Equal(t, do.RegionCN, gptr.Indirect(dtoObj.ExecRegion))
+	assert.Equal(t, gptr.Of("prod"), dtoObj.ExecEnv)
+
+	roundtrip := A2AAgentDTO2DO(dtoObj)
+	assert.Equal(t, doObj, roundtrip)
+}
+
+func TestCustomAgentConversions(t *testing.T) {
+	t.Parallel()
+
+	// nil tests
+	assert.Nil(t, CustomAgentDTO2DO(nil))
+	assert.Nil(t, CustomAgentDO2DTO(nil))
+
+	// full roundtrip test
+	doObj := &do.CustomAgent{
+		ID:                  456,
+		Name:                "custom-agent",
+		Description:         "test custom agent",
+		ExecRegion:          do.RegionCN,
+		ExecEnv:             gptr.Of("staging"),
+		Cluster:             gptr.Of("cluster-1"),
+		TimeoutMs:           gptr.Of(int64(5000)),
+		FirstTokenTimeoutMs: gptr.Of(int64(3000)),
+		AgentConnection: &do.AgentConnection{
+			IP:              "10.0.0.1",
+			Region:          "cn-north",
+			IDC:             "lf",
+			SDKVersion:      "1.0.0",
+			ProtocolVersion: "2.0",
+			PSM:             "my.psm",
+			FrontierInfo: &do.FrontierInfo{
+				AppID:     1,
+				ProductID: 2,
+				UserID:    3,
+				DeviceID:  4,
+			},
+			AgentImpl: &do.AgentImpl{
+				Language:  "python",
+				Framework: "Langchain",
+				Kind:      "rag",
+			},
+		},
+	}
+
+	dtoObj := CustomAgentDO2DTO(doObj)
+	assert.NotNil(t, dtoObj)
+	assert.Equal(t, int64(456), gptr.Indirect(dtoObj.ID))
+	assert.Equal(t, "custom-agent", gptr.Indirect(dtoObj.Name))
+	assert.Equal(t, "test custom agent", gptr.Indirect(dtoObj.Description))
+	assert.Equal(t, do.RegionCN, gptr.Indirect(dtoObj.ExecRegion))
+	assert.Equal(t, gptr.Of("staging"), dtoObj.ExecEnv)
+	assert.Equal(t, gptr.Of("cluster-1"), dtoObj.Cluster)
+	assert.Equal(t, gptr.Of(int64(5000)), dtoObj.TimeoutMs)
+	assert.Equal(t, gptr.Of(int64(3000)), dtoObj.FirstTokenTimeoutMs)
+	assert.NotNil(t, dtoObj.AgentConnection)
+	assert.Equal(t, "10.0.0.1", gptr.Indirect(dtoObj.AgentConnection.IP))
+	assert.Equal(t, "cn-north", gptr.Indirect(dtoObj.AgentConnection.Region))
+	assert.Equal(t, "lf", gptr.Indirect(dtoObj.AgentConnection.Idc))
+	assert.Equal(t, "1.0.0", gptr.Indirect(dtoObj.AgentConnection.SdkVersion))
+	assert.Equal(t, "2.0", gptr.Indirect(dtoObj.AgentConnection.ProtocolVersion))
+	assert.Equal(t, "my.psm", gptr.Indirect(dtoObj.AgentConnection.Psm))
+	assert.NotNil(t, dtoObj.AgentConnection.FrontierInfo)
+	assert.Equal(t, int64(1), gptr.Indirect(dtoObj.AgentConnection.FrontierInfo.AppID))
+	assert.NotNil(t, dtoObj.AgentConnection.AgentImpl)
+	assert.Equal(t, "python", gptr.Indirect(dtoObj.AgentConnection.AgentImpl.Language))
+
+	roundtrip := CustomAgentDTO2DO(dtoObj)
+	assert.Equal(t, doObj, roundtrip)
+}
+
+func TestAgentConnectionConversions(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, AgentConnectionDTO2DO(nil))
+	assert.Nil(t, AgentConnectionDO2DTO(nil))
+
+	doObj := &do.AgentConnection{
+		IP:              "1.2.3.4",
+		Region:          "us",
+		IDC:             "va",
+		SDKVersion:      "2.0.0",
+		ProtocolVersion: "3.0",
+		PSM:             "agent.svc",
+	}
+	dtoObj := AgentConnectionDO2DTO(doObj)
+	assert.NotNil(t, dtoObj)
+	roundtrip := AgentConnectionDTO2DO(dtoObj)
+	assert.Equal(t, doObj, roundtrip)
+}
+
+func TestFrontierInfoConversions(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, FrontierInfoDTO2DO(nil))
+	assert.Nil(t, FrontierInfoDO2DTO(nil))
+
+	doObj := &do.FrontierInfo{
+		AppID:     10,
+		ProductID: 20,
+		UserID:    30,
+		DeviceID:  40,
+	}
+	dtoObj := FrontierInfoDO2DTO(doObj)
+	assert.NotNil(t, dtoObj)
+	assert.Equal(t, int64(10), gptr.Indirect(dtoObj.AppID))
+	assert.Equal(t, int64(20), gptr.Indirect(dtoObj.ProductID))
+	assert.Equal(t, int64(30), gptr.Indirect(dtoObj.UserID))
+	assert.Equal(t, int64(40), gptr.Indirect(dtoObj.DeviceID))
+
+	roundtrip := FrontierInfoDTO2DO(dtoObj)
+	assert.Equal(t, doObj, roundtrip)
+}
+
+func TestAgentImplConversions(t *testing.T) {
+	t.Parallel()
+
+	assert.Nil(t, AgentImplDTO2DO(nil))
+	assert.Nil(t, AgentImplDO2DTO(nil))
+
+	doObj := &do.AgentImpl{
+		Language:  "go",
+		Framework: "Eino",
+		Kind:      "chat",
+	}
+	dtoObj := AgentImplDO2DTO(doObj)
+	assert.NotNil(t, dtoObj)
+	assert.Equal(t, "go", gptr.Indirect(dtoObj.Language))
+	assert.Equal(t, "Eino", gptr.Indirect(dtoObj.Framework))
+	assert.Equal(t, "chat", gptr.Indirect(dtoObj.Kind))
+
+	roundtrip := AgentImplDTO2DO(dtoObj)
+	assert.Equal(t, doObj, roundtrip)
+}
+
+func TestEvalTargetVersionDO2DTO_A2AAgent(t *testing.T) {
+	t.Parallel()
+
+	targetVersionDO := &do.EvalTargetVersion{
+		ID:                  1,
+		SpaceID:             2,
+		TargetID:            3,
+		SourceTargetVersion: "v1.0",
+		EvalTargetType:      do.EvalTargetTypeA2AAgent,
+		A2AAgent: &do.A2AAgent{
+			ID:         100,
+			Name:       "my-a2a",
+			ServerName: "svc",
+			URL:        "http://a2a.example.com",
+		},
+	}
+
+	result := EvalTargetVersionDO2DTO(targetVersionDO)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.EvalTargetContent)
+	assert.NotNil(t, result.EvalTargetContent.A2aAgent)
+	assert.Equal(t, int64(100), gptr.Indirect(result.EvalTargetContent.A2aAgent.ID))
+	assert.Equal(t, "my-a2a", gptr.Indirect(result.EvalTargetContent.A2aAgent.Name))
+	assert.Equal(t, "svc", gptr.Indirect(result.EvalTargetContent.A2aAgent.ServerName))
+	assert.Equal(t, "http://a2a.example.com", gptr.Indirect(result.EvalTargetContent.A2aAgent.URL))
+}
+
+func TestEvalTargetVersionDO2DTO_CustomAgent(t *testing.T) {
+	t.Parallel()
+
+	targetVersionDO := &do.EvalTargetVersion{
+		ID:                  1,
+		SpaceID:             2,
+		TargetID:            3,
+		SourceTargetVersion: "v1.0",
+		EvalTargetType:      do.EvalTargetTypeCustomAgent,
+		CustomAgent: &do.CustomAgent{
+			ID:         200,
+			Name:       "my-custom",
+			ExecRegion: do.RegionCN,
+			Cluster:    gptr.Of("cluster-x"),
+			TimeoutMs:  gptr.Of(int64(10000)),
+			AgentConnection: &do.AgentConnection{
+				IP:           "192.168.1.1",
+				FrontierInfo: &do.FrontierInfo{AppID: 99},
+			},
+		},
+	}
+
+	result := EvalTargetVersionDO2DTO(targetVersionDO)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.EvalTargetContent)
+	assert.NotNil(t, result.EvalTargetContent.CustomAgent)
+	assert.Equal(t, int64(200), gptr.Indirect(result.EvalTargetContent.CustomAgent.ID))
+	assert.Equal(t, "my-custom", gptr.Indirect(result.EvalTargetContent.CustomAgent.Name))
+	assert.Equal(t, gptr.Of("cluster-x"), result.EvalTargetContent.CustomAgent.Cluster)
+	assert.NotNil(t, result.EvalTargetContent.CustomAgent.AgentConnection)
+	assert.Equal(t, "192.168.1.1", gptr.Indirect(result.EvalTargetContent.CustomAgent.AgentConnection.IP))
+}

@@ -490,3 +490,102 @@ func TestEvalTargetVersionPO2DO(t *testing.T) {
 		})
 	}
 }
+
+func TestEvalTargetVersionDO2PO_A2AAgent(t *testing.T) {
+	t.Parallel()
+
+	do := &entity.EvalTargetVersion{
+		ID:                  1,
+		SpaceID:             2,
+		TargetID:            3,
+		SourceTargetVersion: "v1.0",
+		EvalTargetType:      entity.EvalTargetTypeA2AAgent,
+		A2AAgent: &entity.A2AAgent{
+			ID:         100,
+			Name:       "a2a-test",
+			ServerName: "svc",
+			URL:        "http://example.com",
+			ExecRegion: entity.RegionCN,
+			ExecEnv:    gptr.Of("prod"),
+		},
+	}
+
+	po, err := EvalTargetVersionDO2PO(do)
+	assert.NoError(t, err)
+	assert.NotNil(t, po)
+	assert.NotNil(t, po.TargetMeta)
+	assert.Equal(t, int64(1), po.ID)
+	assert.Equal(t, "v1.0", po.SourceTargetVersion)
+}
+
+func TestEvalTargetVersionDO2PO_CustomAgent(t *testing.T) {
+	t.Parallel()
+
+	do := &entity.EvalTargetVersion{
+		ID:                  2,
+		SpaceID:             3,
+		TargetID:            4,
+		SourceTargetVersion: "v2.0",
+		EvalTargetType:      entity.EvalTargetTypeCustomAgent,
+		CustomAgent: &entity.CustomAgent{
+			ID:         200,
+			Name:       "custom-test",
+			ExecRegion: entity.RegionCN,
+			Cluster:    gptr.Of("default"),
+			TimeoutMs:  gptr.Of(int64(5000)),
+			AgentConnection: &entity.AgentConnection{
+				IP:     "10.0.0.1",
+				Region: "cn",
+				PSM:    "test.psm",
+				FrontierInfo: &entity.FrontierInfo{
+					AppID: 1,
+				},
+				AgentImpl: &entity.AgentImpl{
+					Language: "go",
+				},
+			},
+		},
+	}
+
+	po, err := EvalTargetVersionDO2PO(do)
+	assert.NoError(t, err)
+	assert.NotNil(t, po)
+	assert.NotNil(t, po.TargetMeta)
+	assert.Equal(t, int64(2), po.ID)
+}
+
+func TestEvalTargetVersionPO2DO_A2AAgent(t *testing.T) {
+	t.Parallel()
+
+	po := &model.TargetVersion{
+		ID:                  1,
+		SpaceID:             2,
+		TargetID:            3,
+		SourceTargetVersion: "v1.0",
+		TargetMeta:          gptr.Of([]byte(`{"ServerName":"svc","URL":"http://example.com","ExecRegion":"cn"}`)),
+	}
+
+	result := EvalTargetVersionPO2DO(po, entity.EvalTargetTypeA2AAgent)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.A2AAgent)
+	assert.Equal(t, "svc", result.A2AAgent.ServerName)
+	assert.Equal(t, "http://example.com", result.A2AAgent.URL)
+	assert.Equal(t, entity.Region("cn"), result.A2AAgent.ExecRegion)
+}
+
+func TestEvalTargetVersionPO2DO_CustomAgent(t *testing.T) {
+	t.Parallel()
+
+	po := &model.TargetVersion{
+		ID:                  2,
+		SpaceID:             3,
+		TargetID:            4,
+		SourceTargetVersion: "v2.0",
+		TargetMeta:          gptr.Of([]byte(`{"ExecRegion":"cn","Cluster":"default","TimeoutMs":5000}`)),
+	}
+
+	result := EvalTargetVersionPO2DO(po, entity.EvalTargetTypeCustomAgent)
+	assert.NotNil(t, result)
+	assert.NotNil(t, result.CustomAgent)
+	assert.Equal(t, entity.Region("cn"), result.CustomAgent.ExecRegion)
+}

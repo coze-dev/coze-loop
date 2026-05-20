@@ -2837,3 +2837,197 @@ func Test_snakeToFilterOperatorPascal(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenAPICreateEvalTargetParamDTO2Domain_WithClusterAndAgentConnection(t *testing.T) {
+	t.Parallel()
+
+	evalType := openapiEvalTarget.EvalTargetTypeCustomRPCServer
+	param := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("agent-1"),
+		EvalTargetType: &evalType,
+		Cluster:        gptr.Of("cluster-abc"),
+		AgentConnection: &openapiEvalTarget.AgentConnection{
+			IP:              gptr.Of("10.0.0.1"),
+			Region:          gptr.Of("cn-north"),
+			Idc:             gptr.Of("lf"),
+			SdkVersion:      gptr.Of("1.0.0"),
+			ProtocolVersion: gptr.Of("2.0"),
+			Psm:             gptr.Of("agent.psm"),
+			FrontierInfo: &openapiEvalTarget.FrontierInfo{
+				AppID:     gptr.Of(int64(100)),
+				ProductID: gptr.Of(int64(200)),
+				UserID:    gptr.Of(int64(300)),
+				DeviceID:  gptr.Of(int64(400)),
+			},
+			AgentImpl: &openapiEvalTarget.AgentImpl{
+				Language:  gptr.Of("go"),
+				Framework: gptr.Of("Eino"),
+				Kind:      gptr.Of("chat"),
+			},
+		},
+	}
+
+	converted := OpenAPICreateEvalTargetParamDTO2Domain(param)
+	if assert.NotNil(t, converted) {
+		assert.Equal(t, "agent-1", gptr.Indirect(converted.SourceTargetID))
+		assert.Equal(t, gptr.Of("cluster-abc"), converted.Cluster)
+		if assert.NotNil(t, converted.AgentConnection) {
+			assert.Equal(t, gptr.Of("10.0.0.1"), converted.AgentConnection.IP)
+			assert.Equal(t, gptr.Of("cn-north"), converted.AgentConnection.Region)
+			assert.Equal(t, gptr.Of("lf"), converted.AgentConnection.Idc)
+			assert.Equal(t, gptr.Of("1.0.0"), converted.AgentConnection.SdkVersion)
+			assert.Equal(t, gptr.Of("2.0"), converted.AgentConnection.ProtocolVersion)
+			assert.Equal(t, gptr.Of("agent.psm"), converted.AgentConnection.Psm)
+			if assert.NotNil(t, converted.AgentConnection.FrontierInfo) {
+				assert.Equal(t, gptr.Of(int64(100)), converted.AgentConnection.FrontierInfo.AppID)
+				assert.Equal(t, gptr.Of(int64(200)), converted.AgentConnection.FrontierInfo.ProductID)
+				assert.Equal(t, gptr.Of(int64(300)), converted.AgentConnection.FrontierInfo.UserID)
+				assert.Equal(t, gptr.Of(int64(400)), converted.AgentConnection.FrontierInfo.DeviceID)
+			}
+			if assert.NotNil(t, converted.AgentConnection.AgentImpl) {
+				assert.Equal(t, gptr.Of("go"), converted.AgentConnection.AgentImpl.Language)
+				assert.Equal(t, gptr.Of("Eino"), converted.AgentConnection.AgentImpl.Framework)
+				assert.Equal(t, gptr.Of("chat"), converted.AgentConnection.AgentImpl.Kind)
+			}
+		}
+	}
+
+	// nil Cluster and AgentConnection
+	paramNoConn := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("agent-2"),
+	}
+	converted2 := OpenAPICreateEvalTargetParamDTO2Domain(paramNoConn)
+	if assert.NotNil(t, converted2) {
+		assert.Nil(t, converted2.Cluster)
+		assert.Nil(t, converted2.AgentConnection)
+	}
+}
+
+func TestOpenapiAgentConnectionDTO2Domain_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiAgentConnectionDTO2Domain(nil))
+}
+
+func TestOpenapiFrontierInfoDTO2Domain_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiFrontierInfoDTO2Domain(nil))
+}
+
+func TestOpenapiAgentImplDTO2Domain_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiAgentImplDTO2Domain(nil))
+}
+
+func TestOpenAPICreateEvalTargetParamDTO2DomainV2_WithClusterAndAgentConnection(t *testing.T) {
+	t.Parallel()
+
+	param := &openapi.SubmitExperimentEvalTargetParam{
+		SourceTargetID: gptr.Of("agent-v2"),
+		Cluster:        gptr.Of("cluster-xyz"),
+		AgentConnection: &openapiEvalTarget.AgentConnection{
+			IP:              gptr.Of("192.168.1.1"),
+			Region:          gptr.Of("us"),
+			Idc:             gptr.Of("va"),
+			SdkVersion:      gptr.Of("2.0.0"),
+			ProtocolVersion: gptr.Of("3.0"),
+			Psm:             gptr.Of("svc.psm"),
+			FrontierInfo: &openapiEvalTarget.FrontierInfo{
+				AppID:     gptr.Of(int64(1)),
+				ProductID: gptr.Of(int64(2)),
+				UserID:    gptr.Of(int64(3)),
+				DeviceID:  gptr.Of(int64(4)),
+			},
+			AgentImpl: &openapiEvalTarget.AgentImpl{
+				Language:  gptr.Of("python"),
+				Framework: gptr.Of("Langchain"),
+				Kind:      gptr.Of("rag"),
+			},
+		},
+	}
+
+	got := OpenAPICreateEvalTargetParamDTO2DomainV2(param)
+	if assert.NotNil(t, got) {
+		assert.Equal(t, "agent-v2", *got.SourceTargetID)
+		assert.Equal(t, "cluster-xyz", *got.Cluster)
+		if assert.NotNil(t, got.AgentConnection) {
+			assert.Equal(t, "192.168.1.1", got.AgentConnection.IP)
+			assert.Equal(t, "us", got.AgentConnection.Region)
+			assert.Equal(t, "va", got.AgentConnection.IDC)
+			assert.Equal(t, "2.0.0", got.AgentConnection.SDKVersion)
+			assert.Equal(t, "3.0", got.AgentConnection.ProtocolVersion)
+			assert.Equal(t, "svc.psm", got.AgentConnection.PSM)
+			if assert.NotNil(t, got.AgentConnection.FrontierInfo) {
+				assert.Equal(t, int64(1), got.AgentConnection.FrontierInfo.AppID)
+				assert.Equal(t, int64(2), got.AgentConnection.FrontierInfo.ProductID)
+				assert.Equal(t, int64(3), got.AgentConnection.FrontierInfo.UserID)
+				assert.Equal(t, int64(4), got.AgentConnection.FrontierInfo.DeviceID)
+			}
+			if assert.NotNil(t, got.AgentConnection.AgentImpl) {
+				assert.Equal(t, "python", got.AgentConnection.AgentImpl.Language)
+				assert.Equal(t, "Langchain", got.AgentConnection.AgentImpl.Framework)
+				assert.Equal(t, "rag", got.AgentConnection.AgentImpl.Kind)
+			}
+		}
+	}
+
+	// nil AgentConnection and Cluster
+	paramNil := &openapi.SubmitExperimentEvalTargetParam{SourceTargetID: gptr.Of("no-conn")}
+	gotNil := OpenAPICreateEvalTargetParamDTO2DomainV2(paramNil)
+	if assert.NotNil(t, gotNil) {
+		assert.Nil(t, gotNil.Cluster)
+		assert.Nil(t, gotNil.AgentConnection)
+	}
+}
+
+func TestOpenapiAgentConnectionDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiAgentConnectionDTO2DO(nil))
+}
+
+func TestOpenapiFrontierInfoDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiFrontierInfoDTO2DO(nil))
+}
+
+func TestOpenapiAgentImplDTO2DO_Nil(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, openapiAgentImplDTO2DO(nil))
+}
+
+func TestOpenapiAgentConnectionDTO2DO_Full(t *testing.T) {
+	t.Parallel()
+
+	dtoObj := &openapiEvalTarget.AgentConnection{
+		IP:              gptr.Of("127.0.0.1"),
+		Region:          gptr.Of("cn"),
+		Idc:             gptr.Of("hl"),
+		SdkVersion:      gptr.Of("3.0"),
+		ProtocolVersion: gptr.Of("4.0"),
+		Psm:             gptr.Of("test.svc"),
+		FrontierInfo: &openapiEvalTarget.FrontierInfo{
+			AppID:     gptr.Of(int64(10)),
+			ProductID: gptr.Of(int64(20)),
+			UserID:    gptr.Of(int64(30)),
+			DeviceID:  gptr.Of(int64(40)),
+		},
+		AgentImpl: &openapiEvalTarget.AgentImpl{
+			Language:  gptr.Of("go"),
+			Framework: gptr.Of("Eino"),
+			Kind:      gptr.Of("custom"),
+		},
+	}
+
+	result := openapiAgentConnectionDTO2DO(dtoObj)
+	assert.NotNil(t, result)
+	assert.Equal(t, "127.0.0.1", result.IP)
+	assert.Equal(t, "cn", result.Region)
+	assert.Equal(t, "hl", result.IDC)
+	assert.Equal(t, "3.0", result.SDKVersion)
+	assert.Equal(t, "4.0", result.ProtocolVersion)
+	assert.Equal(t, "test.svc", result.PSM)
+	assert.Equal(t, int64(10), result.FrontierInfo.AppID)
+	assert.Equal(t, int64(20), result.FrontierInfo.ProductID)
+	assert.Equal(t, "go", result.AgentImpl.Language)
+	assert.Equal(t, "Eino", result.AgentImpl.Framework)
+	assert.Equal(t, "custom", result.AgentImpl.Kind)
+}

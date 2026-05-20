@@ -75,6 +75,12 @@ const (
 
 	TurnRunStateTerminal = "terminal"
 
+	ExptRetryModeRetryAll = "retry_all"
+
+	ExptRetryModeRetryFailure = "retry_failure"
+
+	ExptRetryModeRetryTargetItems = "retry_target_items"
+
 	ColumnEvalTargetNameActualOutput = "actual_output"
 
 	ColumnEvalTargetNameTrajectory = "trajectory"
@@ -212,6 +218,8 @@ type DataType = string
 type ItemRunState = string
 
 type TurnRunState = string
+
+type ExptRetryMode = string
 
 // ===============================
 // 筛选能力结构（与 domain/expt.thrift 结构一致）
@@ -8036,6 +8044,7 @@ func (p *ResultPayload) Field20DeepEqual(src *TurnSystemInfo) bool {
 
 type TurnSystemInfo struct {
 	TurnRunState *TurnRunState `thrift:"turn_run_state,1,optional" frugal:"1,optional,string" form:"turn_run_state" json:"turn_run_state,omitempty" query:"turn_run_state"`
+	LogID        *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
 }
 
 func NewTurnSystemInfo() *TurnSystemInfo {
@@ -8056,16 +8065,36 @@ func (p *TurnSystemInfo) GetTurnRunState() (v TurnRunState) {
 	}
 	return *p.TurnRunState
 }
+
+var TurnSystemInfo_LogID_DEFAULT string
+
+func (p *TurnSystemInfo) GetLogID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogID() {
+		return TurnSystemInfo_LogID_DEFAULT
+	}
+	return *p.LogID
+}
 func (p *TurnSystemInfo) SetTurnRunState(val *TurnRunState) {
 	p.TurnRunState = val
+}
+func (p *TurnSystemInfo) SetLogID(val *string) {
+	p.LogID = val
 }
 
 var fieldIDToName_TurnSystemInfo = map[int16]string{
 	1: "turn_run_state",
+	2: "log_id",
 }
 
 func (p *TurnSystemInfo) IsSetTurnRunState() bool {
 	return p.TurnRunState != nil
+}
+
+func (p *TurnSystemInfo) IsSetLogID() bool {
+	return p.LogID != nil
 }
 
 func (p *TurnSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -8089,6 +8118,14 @@ func (p *TurnSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8134,6 +8171,17 @@ func (p *TurnSystemInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.TurnRunState = _field
 	return nil
 }
+func (p *TurnSystemInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LogID = _field
+	return nil
+}
 
 func (p *TurnSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8143,6 +8191,10 @@ func (p *TurnSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -8181,6 +8233,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *TurnSystemInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogID() {
+		if err = oprot.WriteFieldBegin("log_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LogID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *TurnSystemInfo) String() string {
 	if p == nil {
@@ -8199,6 +8269,9 @@ func (p *TurnSystemInfo) DeepEqual(ano *TurnSystemInfo) bool {
 	if !p.Field1DeepEqual(ano.TurnRunState) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
 	return true
 }
 
@@ -8210,6 +8283,18 @@ func (p *TurnSystemInfo) Field1DeepEqual(src *TurnRunState) bool {
 		return false
 	}
 	if strings.Compare(*p.TurnRunState, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *TurnSystemInfo) Field2DeepEqual(src *string) bool {
+
+	if p.LogID == src {
+		return true
+	} else if p.LogID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LogID, *src) != 0 {
 		return false
 	}
 	return true
@@ -8819,6 +8904,7 @@ func (p *ItemResult_) Field20DeepEqual(src *ItemSystemInfo) bool {
 
 type ItemSystemInfo struct {
 	RunState *ItemRunState `thrift:"run_state,1,optional" frugal:"1,optional,string" form:"run_state" json:"run_state,omitempty" query:"run_state"`
+	LogID    *string       `thrift:"log_id,2,optional" frugal:"2,optional,string" form:"log_id" json:"log_id,omitempty" query:"log_id"`
 }
 
 func NewItemSystemInfo() *ItemSystemInfo {
@@ -8839,16 +8925,36 @@ func (p *ItemSystemInfo) GetRunState() (v ItemRunState) {
 	}
 	return *p.RunState
 }
+
+var ItemSystemInfo_LogID_DEFAULT string
+
+func (p *ItemSystemInfo) GetLogID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetLogID() {
+		return ItemSystemInfo_LogID_DEFAULT
+	}
+	return *p.LogID
+}
 func (p *ItemSystemInfo) SetRunState(val *ItemRunState) {
 	p.RunState = val
+}
+func (p *ItemSystemInfo) SetLogID(val *string) {
+	p.LogID = val
 }
 
 var fieldIDToName_ItemSystemInfo = map[int16]string{
 	1: "run_state",
+	2: "log_id",
 }
 
 func (p *ItemSystemInfo) IsSetRunState() bool {
 	return p.RunState != nil
+}
+
+func (p *ItemSystemInfo) IsSetLogID() bool {
+	return p.LogID != nil
 }
 
 func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
@@ -8872,6 +8978,14 @@ func (p *ItemSystemInfo) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -8917,6 +9031,17 @@ func (p *ItemSystemInfo) ReadField1(iprot thrift.TProtocol) error {
 	p.RunState = _field
 	return nil
 }
+func (p *ItemSystemInfo) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.LogID = _field
+	return nil
+}
 
 func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8926,6 +9051,10 @@ func (p *ItemSystemInfo) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
 			goto WriteFieldError
 		}
 	}
@@ -8964,6 +9093,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *ItemSystemInfo) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetLogID() {
+		if err = oprot.WriteFieldBegin("log_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.LogID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
 
 func (p *ItemSystemInfo) String() string {
 	if p == nil {
@@ -8982,6 +9129,9 @@ func (p *ItemSystemInfo) DeepEqual(ano *ItemSystemInfo) bool {
 	if !p.Field1DeepEqual(ano.RunState) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.LogID) {
+		return false
+	}
 	return true
 }
 
@@ -8993,6 +9143,18 @@ func (p *ItemSystemInfo) Field1DeepEqual(src *ItemRunState) bool {
 		return false
 	}
 	if strings.Compare(*p.RunState, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ItemSystemInfo) Field2DeepEqual(src *string) bool {
+
+	if p.LogID == src {
+		return true
+	} else if p.LogID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.LogID, *src) != 0 {
 		return false
 	}
 	return true

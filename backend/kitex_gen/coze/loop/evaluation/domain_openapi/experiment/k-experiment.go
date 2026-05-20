@@ -5673,6 +5673,20 @@ func (p *TurnSystemInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -5705,6 +5719,20 @@ func (p *TurnSystemInfo) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *TurnSystemInfo) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LogID = _field
+	return offset, nil
+}
+
 func (p *TurnSystemInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -5713,6 +5741,7 @@ func (p *TurnSystemInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -5722,6 +5751,7 @@ func (p *TurnSystemInfo) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -5736,11 +5766,29 @@ func (p *TurnSystemInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *TurnSystemInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LogID)
+	}
+	return offset
+}
+
 func (p *TurnSystemInfo) field1Length() int {
 	l := 0
 	if p.IsSetTurnRunState() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.TurnRunState)
+	}
+	return l
+}
+
+func (p *TurnSystemInfo) field2Length() int {
+	l := 0
+	if p.IsSetLogID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LogID)
 	}
 	return l
 }
@@ -5754,6 +5802,14 @@ func (p *TurnSystemInfo) DeepCopy(s interface{}) error {
 	if src.TurnRunState != nil {
 		tmp := *src.TurnRunState
 		p.TurnRunState = &tmp
+	}
+
+	if src.LogID != nil {
+		var tmp string
+		if *src.LogID != "" {
+			tmp = kutils.StringDeepCopy(*src.LogID)
+		}
+		p.LogID = &tmp
 	}
 
 	return nil
@@ -6222,6 +6278,20 @@ func (p *ItemSystemInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -6254,6 +6324,20 @@ func (p *ItemSystemInfo) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ItemSystemInfo) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.LogID = _field
+	return offset, nil
+}
+
 func (p *ItemSystemInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -6262,6 +6346,7 @@ func (p *ItemSystemInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int 
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -6271,6 +6356,7 @@ func (p *ItemSystemInfo) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -6285,11 +6371,29 @@ func (p *ItemSystemInfo) fastWriteField1(buf []byte, w thrift.NocopyWriter) int 
 	return offset
 }
 
+func (p *ItemSystemInfo) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetLogID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.LogID)
+	}
+	return offset
+}
+
 func (p *ItemSystemInfo) field1Length() int {
 	l := 0
 	if p.IsSetRunState() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.RunState)
+	}
+	return l
+}
+
+func (p *ItemSystemInfo) field2Length() int {
+	l := 0
+	if p.IsSetLogID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.LogID)
 	}
 	return l
 }
@@ -6303,6 +6407,14 @@ func (p *ItemSystemInfo) DeepCopy(s interface{}) error {
 	if src.RunState != nil {
 		tmp := *src.RunState
 		p.RunState = &tmp
+	}
+
+	if src.LogID != nil {
+		var tmp string
+		if *src.LogID != "" {
+			tmp = kutils.StringDeepCopy(*src.LogID)
+		}
+		p.LogID = &tmp
 	}
 
 	return nil

@@ -56,6 +56,10 @@ const TurnRunState TurnRunState_Success = "success"
 const TurnRunState TurnRunState_Fail = "fail"
 const TurnRunState TurnRunState_Terminal = "terminal"
 
+typedef string ExptRetryMode(ts.enum="true")
+const ExptRetryMode ExptRetryMode_RetryAll = "retry_all"
+const ExptRetryMode ExptRetryMode_RetryFailure = "retry_failure"
+const ExptRetryMode ExptRetryMode_RetryTargetItems = "retry_target_items"
 
 // 字段映射
 struct FieldMapping {
@@ -219,6 +223,7 @@ struct ResultPayload {
 
 struct TurnSystemInfo {
     1: optional TurnRunState turn_run_state
+    2: optional string log_id
 }
 
 // 轮次结果
@@ -237,6 +242,7 @@ struct ItemResult {
 
 struct ItemSystemInfo {
     1: optional ItemRunState run_state
+    2: optional string log_id
 }
 
 // ===============================

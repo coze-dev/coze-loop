@@ -530,6 +530,29 @@ func (l *LocalEvaluationOpenAPIService) GetExperimentAggrResultOApi(ctx context.
 	return result.GetSuccess(), nil
 }
 
+// RetryExperimentOApi
+// 重试实验
+func (l *LocalEvaluationOpenAPIService) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest, callOptions ...callopt.Option) (*openapi.RetryExperimentOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceRetryExperimentOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult)
+		resp, err := l.impl.RetryExperimentOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceRetryExperimentOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "RetryExperimentOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListEvaluatorsOApi
 // 评估器接口
 // 查询评估器列表

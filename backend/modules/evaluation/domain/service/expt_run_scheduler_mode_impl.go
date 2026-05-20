@@ -12,9 +12,9 @@ import (
 	"github.com/bytedance/gg/gslice"
 	"gorm.io/gorm/clause"
 
+	"github.com/coze-dev/coze-loop/backend/infra/backoff"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/idem"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -233,11 +233,11 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		maxLoop = 10000
 		itemIdx = int32(0)
 
-		page     = int32(1)
-		pageSize = int32(100)
-		itemCnt  = 0
-		total    = int64(0)
-		limit    = int(expt.TrialRunItemCount)
+		pageSize  = int32(100)
+		itemCnt   = 0
+		total     = int64(0)
+		limit     = int(expt.TrialRunItemCount)
+		pageToken *string
 	)
 	if limit > 0 && int(pageSize) > limit {
 		pageSize = int32(limit)
@@ -246,21 +246,27 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	orderByField := gptr.Of("item_id")
 
 	for i := 0; i < maxLoop; i++ {
-		logs.CtxInfo(ctx, "ExptTrialRunExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
+		logs.CtxInfo(ctx, "ExptTrialRunExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-			OrderBys: []*entity.OrderBy{{
-				Field: orderByField,
-				IsAsc: orderByDesc,
-			}},
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		var nextPageToken *string
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageSize:        &pageSize,
+				PageToken:       pageToken,
+				OrderBys: []*entity.OrderBy{{
+					Field: orderByField,
+					IsAsc: orderByDesc,
+				}},
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
@@ -277,7 +283,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 
 		itemCnt += len(items)
-		page++
+		pageToken = nextPageToken
 
 		turnCnt := 0
 		for _, item := range items {
@@ -326,7 +332,7 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
-		if itemCnt >= limit || len(items) == 0 || itemCnt >= int(total) {
+		if itemCnt >= limit || len(items) == 0 || itemCnt >= int(total) || pageToken == nil || *pageToken == "" {
 			break
 		}
 
@@ -404,29 +410,35 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		maxLoop = 10000
 		itemIdx = int32(0)
 
-		page     = int32(1)
-		pageSize = int32(100)
-		itemCnt  = 0
-		total    = int64(0)
+		pageSize  = int32(100)
+		itemCnt   = 0
+		total     = int64(0)
+		pageToken *string
 	)
 
 	for i := 0; i < maxLoop; i++ {
-		logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
+		logs.CtxInfo(ctx, "ExptSubmitExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		var nextPageToken *string
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageSize:        &pageSize,
+				PageToken:       pageToken,
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
 		itemCnt += len(items)
-		page++
+		pageToken = nextPageToken
 		total = gptr.Indirect(t)
 
 		turnCnt := 0
@@ -476,7 +488,7 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 			return err
 		}
 
-		if itemCnt >= int(total) || len(items) == 0 {
+		if itemCnt >= int(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 			break
 		}
 
@@ -1080,7 +1092,8 @@ func (e *exptBaseExec) scanIncompleteAndComplete(ctx context.Context, event *ent
 }
 
 func (e *exptBaseExec) getItemConcurNum(ctx context.Context, expt *entity.Experiment) int {
-	if val := gptr.Indirect(expt.EvalConf.ItemConcurNum); val > 0 && val <= consts.MaxItemConcurrentNum {
+	maxItemConcurNum := e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetMaxItemConcurNum()
+	if val := gptr.Indirect(expt.EvalConf.ItemConcurNum); val > 0 && val <= maxItemConcurNum {
 		return val
 	}
 	concurNum := e.configer.GetExptExecConf(ctx, expt.SpaceID).GetExptItemEvalConf().GetConcurNum()
@@ -1255,30 +1268,36 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		evalSetID        = expt.EvalSet.ID
 		evalSetVersionID = expt.EvalSet.EvaluationSetVersion.ID
 
-		maxLoop  = 10000
-		page     = int32(1)
-		pageSize = int32(100)
-		itemCnt  = 0
-		total    = int64(0)
+		maxLoop   = 10000
+		pageSize  = int32(100)
+		itemCnt   = 0
+		total     = int64(0)
+		pageToken *string
 	)
 
 	for i := 0; i < maxLoop; i++ {
-		logs.CtxInfo(ctx, "ExptRetryAllExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page: %v, limit: %v, cur_cnt: %v, total: %v",
-			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, page, pageSize, itemCnt, total)
+		logs.CtxInfo(ctx, "ExptRetryAllExec.ExptStart scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, page_token: %v, limit: %v, cur_cnt: %v, total: %v",
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, gptr.Indirect(pageToken), pageSize, itemCnt, total)
 
-		items, t, _, _, err := e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
-			SpaceID:         event.SpaceID,
-			EvaluationSetID: evalSetID,
-			VersionID:       &evalSetVersionID,
-			PageNumber:      &page,
-			PageSize:        &pageSize,
-		})
-		if err != nil {
+		var items []*entity.EvaluationSetItem
+		var t *int64
+		var nextPageToken *string
+		if err := backoff.RetryThreeSeconds(ctx, func() error {
+			var retryErr error
+			items, t, _, nextPageToken, retryErr = e.evaluationSetItemService.ListEvaluationSetItems(ctx, &entity.ListEvaluationSetItemsParam{
+				SpaceID:         event.SpaceID,
+				EvaluationSetID: evalSetID,
+				VersionID:       &evalSetVersionID,
+				PageSize:        &pageSize,
+				PageToken:       pageToken,
+			})
+			return retryErr
+		}); err != nil {
 			return err
 		}
 
 		itemCnt += len(items)
-		page++
+		pageToken = nextPageToken
 		total = gptr.Indirect(t)
 
 		turnCnt := 0
@@ -1339,7 +1358,7 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 			return err
 		}
 
-		if itemCnt >= int(total) || len(items) == 0 {
+		if itemCnt >= int(total) || len(items) == 0 || pageToken == nil || *pageToken == "" {
 			break
 		}
 
