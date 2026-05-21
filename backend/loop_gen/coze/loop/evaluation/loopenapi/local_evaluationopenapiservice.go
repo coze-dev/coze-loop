@@ -553,6 +553,52 @@ func (l *LocalEvaluationOpenAPIService) RetryExperimentOApi(ctx context.Context,
 	return result.GetSuccess(), nil
 }
 
+// ExportExperimentResultOApi
+// 导出实验报告
+func (l *LocalEvaluationOpenAPIService) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (*openapi.ExportExperimentResultOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult)
+		resp, err := l.impl.ExportExperimentResultOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "ExportExperimentResultOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+// GetExperimentResultExportRecordOApi
+// 查询实验报告导出记录（含下载链接）
+func (l *LocalEvaluationOpenAPIService) GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest, callOptions ...callopt.Option) (*openapi.GetExperimentResultExportRecordOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs)
+		result := out.(*openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult)
+		resp, err := l.impl.GetExperimentResultExportRecordOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs{Req: req}
+	result := &openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "GetExperimentResultExportRecordOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 // ListEvaluatorsOApi
 // 评估器接口
 // 查询评估器列表

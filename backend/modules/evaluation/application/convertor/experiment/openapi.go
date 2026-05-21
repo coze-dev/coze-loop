@@ -271,6 +271,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 		Name:                  dto.Name,
 		Description:           dto.Desc,
 		ItemConcurNum:         dto.ItemConcurNum,
+		ItemRetryNum:          dto.ItemRetryNum,
 		TargetFieldMapping:    DomainTargetFieldMappingDTO2OpenAPI(dto.TargetFieldMapping),
 		EvaluatorFieldMapping: DomainEvaluatorFieldMappingDTO2OpenAPI(dto.EvaluatorFieldMapping, dto.Evaluators),
 		TargetRuntimeParam:    DomainRuntimeParamDTO2OpenAPI(dto.TargetRuntimeParam),
@@ -282,7 +283,66 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.ExptStats = DomainExperimentStatsDTO2OpenAPI(dto.ExptStats)
 	result.BaseInfo = DomainBaseInfoDTO2OpenAPI(dto.BaseInfo)
 	result.EnableExtractTrajectory = dto.EnableExtractTrajectory
+	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
+	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	return result
+}
+
+// DomainEvaluatorIDVersionListDTO2OpenAPI 将 domain.evaluator.EvaluatorIDVersionItem 列表映射为 openapi 版本。
+func DomainEvaluatorIDVersionListDTO2OpenAPI(items []*domainEvaluator.EvaluatorIDVersionItem) []*openapiEvaluator.EvaluatorIDVersionItem {
+	if len(items) == 0 {
+		return nil
+	}
+	res := make([]*openapiEvaluator.EvaluatorIDVersionItem, 0, len(items))
+	for _, it := range items {
+		if it == nil {
+			continue
+		}
+		oai := &openapiEvaluator.EvaluatorIDVersionItem{
+			EvaluatorID:        it.EvaluatorID,
+			Version:            it.Version,
+			EvaluatorVersionID: it.EvaluatorVersionID,
+			ScoreWeight:        it.ScoreWeight,
+		}
+		if it.RunConfig != nil {
+			oai.RunConfig = &openapiEvaluator.EvaluatorRunConfig{
+				Env:                   it.RunConfig.Env,
+				EvaluatorRuntimeParam: DomainRuntimeParamDTO2OpenAPI(it.RunConfig.EvaluatorRuntimeParam),
+			}
+		}
+		res = append(res, oai)
+	}
+	return res
+}
+
+// DomainExptTemplateMetaDTO2OpenAPI 将 domain.expt.ExptTemplateMeta 映射为 openapi 版本。
+// 注意：openapi 中字段名为 Description，对应 domain 的 Desc；openapi 不包含 Visibility。
+func DomainExptTemplateMetaDTO2OpenAPI(in *domainExpt.ExptTemplateMeta) *openapiExperiment.ExptTemplateMeta {
+	if in == nil {
+		return nil
+	}
+	return &openapiExperiment.ExptTemplateMeta{
+		ID:          in.ID,
+		WorkspaceID: in.WorkspaceID,
+		Name:        in.Name,
+		Description: in.Desc,
+		ExptType:    mapDomainExptTypeToOpenAPI(in.ExptType),
+	}
+}
+
+// mapDomainExptTypeToOpenAPI 将 domain.expt.ExptType 映射为 openapi.ExperimentType 字符串枚举。
+func mapDomainExptTypeToOpenAPI(t *domainExpt.ExptType) *openapiExperiment.ExperimentType {
+	if t == nil {
+		return nil
+	}
+	var v openapiExperiment.ExperimentType
+	switch *t {
+	case domainExpt.ExptType_Online:
+		v = openapiExperiment.ExperimentTypeOnline
+	default:
+		v = openapiExperiment.ExperimentTypeOffline
+	}
+	return &v
 }
 
 func DomainTargetFieldMappingDTO2OpenAPI(mapping *domainExpt.TargetFieldMapping) *openapiExperiment.TargetFieldMapping {
@@ -460,6 +520,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			itemConcur := int32(*experiment.EvalConf.ItemConcurNum)
 			result.ItemConcurNum = &itemConcur
 		}
+		if experiment.EvalConf.ItemRetryNum != nil {
+			itemRetry := int32(*experiment.EvalConf.ItemRetryNum)
+			result.ItemRetryNum = &itemRetry
+		}
 
 		mapping, runtimeParam := extractTargetIngressInfo(experiment.EvalConf.ConnectorConf.TargetConf)
 		if mapping != nil {
@@ -473,6 +537,10 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			result.EvaluatorFieldMapping = evaluatorMappings
 		}
 
+		if items := buildOpenAPIEvaluatorIDVersionListFromExperiment(experiment); len(items) > 0 {
+			result.EvaluatorIDVersionList = items
+		}
+
 		result.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 	}
 
@@ -483,7 +551,45 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 		result.EvalSet = evalsetopenapi.OpenAPIEvaluationSetDO2DTO(experiment.EvalSet)
 	}
 
+	if experiment.ExptTemplateMeta != nil {
+		result.ExptTemplateMeta = &openapiExperiment.ExptTemplateMeta{
+			ID:          gptr.Of(experiment.ExptTemplateMeta.ID),
+			WorkspaceID: gptr.Of(experiment.ExptTemplateMeta.WorkspaceID),
+			Name:        gptr.Of(experiment.ExptTemplateMeta.Name),
+			Description: gptr.Of(experiment.ExptTemplateMeta.Desc),
+			ExptType:    OpenAPIExptTypeDO2DTO(experiment.ExptTemplateMeta.ExptType),
+		}
+	}
+
 	return result
+}
+
+// buildOpenAPIEvaluatorIDVersionListFromExperiment 基于 entity.Experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
+// 构造 openapi EvaluatorIDVersionItem 列表（含 RunConfig / ScoreWeight）。
+func buildOpenAPIEvaluatorIDVersionListFromExperiment(experiment *entity.Experiment) []*openapiEvaluator.EvaluatorIDVersionItem {
+	if experiment == nil || experiment.EvalConf == nil ||
+		experiment.EvalConf.ConnectorConf.EvaluatorsConf == nil ||
+		len(experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf) == 0 {
+		return nil
+	}
+	confs := experiment.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf
+	items := make([]*openapiEvaluator.EvaluatorIDVersionItem, 0, len(confs))
+	for _, ec := range confs {
+		if ec == nil {
+			continue
+		}
+		item := &openapiEvaluator.EvaluatorIDVersionItem{
+			EvaluatorID:        gptr.Of(ec.EvaluatorID),
+			Version:            gptr.Of(ec.Version),
+			EvaluatorVersionID: gptr.Of(ec.EvaluatorVersionID),
+			ScoreWeight:        ec.ScoreWeight,
+		}
+		if ec.RunConf != nil {
+			item.RunConfig = evaluator_convertor.OpenAPIEvaluatorRunConfigDO2DTO(ec.RunConf)
+		}
+		items = append(items, item)
+	}
+	return items
 }
 
 func OpenAPIExperimentStatusDO2DTO(status entity.ExptStatus) *openapiExperiment.ExperimentStatus {

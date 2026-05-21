@@ -1349,6 +1349,83 @@ func mapOpenAPIExptRetryMode(mode experiment.ExptRetryMode) (domain_expt.ExptRet
 	}
 }
 
+// ExportExperimentResultOApi 触发实验报告导出（异步），返回 export_id。
+// 鉴权与内部 ExportExptResult 一致：在 experimentApp.ExportExptResult_ 内部完成（含白名单 / SPI-less 鉴权）。
+func (e *EvalOpenAPIApplication) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest) (r *openapi.ExportExperimentResultOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	innerReq := &exptpb.ExportExptResultRequest{
+		WorkspaceID:   req.GetWorkspaceID(),
+		ExptID:        req.GetExperimentID(),
+		ExportColumns: experiment_convertor.OpenAPIExportColumnSpecDTO2Inner(req.GetExportColumns()),
+	}
+	if req.IsSetExportType() {
+		t := experiment_convertor.OpenAPIExportTypeDTO2Inner(req.GetExportType())
+		innerReq.ExportType = &t
+	}
+
+	resp, err := e.experimentApp.ExportExptResult_(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.ExportExperimentResultOApiResponse{
+		Data: &openapi.ExportExperimentResultOpenAPIData{
+			ExportID: gptr.Of(resp.GetExportID()),
+		},
+	}, nil
+}
+
+// GetExperimentResultExportRecordOApi 查询导出记录（含下载链接）。
+func (e *EvalOpenAPIApplication) GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+	if req.GetExportID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("export_id is required"))
+	}
+
+	innerReq := &exptpb.GetExptResultExportRecordRequest{
+		WorkspaceID: req.GetWorkspaceID(),
+		ExptID:      req.GetExperimentID(),
+		ExportID:    req.GetExportID(),
+	}
+	resp, err := e.experimentApp.GetExptResultExportRecord(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.GetExperimentResultExportRecordOApiResponse{
+		Data: &openapi.GetExperimentResultExportRecordOpenAPIData{
+			ExptResultExportRecord: experiment_convertor.InnerExportRecordDTO2OpenAPI(resp.GetExptResultExportRecords()),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest) (r *openapi.ListEvaluatorsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {

@@ -598,6 +598,52 @@ struct RetryExperimentOpenAPIData {
     3: optional i64 run_id
 }
 
+// 3.6 导出实验报告
+struct ExportExperimentResultOApiRequest {
+    1: optional i64 workspace_id (api.body = 'workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
+
+    3: optional experiment.ExptResultExportColumnSpec export_columns (api.body = "export_columns")
+    4: optional experiment.ExptResultExportType export_type (api.body = "export_type")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct ExportExperimentResultOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional ExportExperimentResultOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct ExportExperimentResultOpenAPIData {
+    1: optional i64 export_id (api.js_conv="true", go.tag='json:"export_id"')
+}
+
+// 3.7 查询实验报告导出记录
+struct GetExperimentResultExportRecordOApiRequest {
+    1: optional i64 workspace_id (api.query='workspace_id', api.js_conv="true", go.tag='json:"workspace_id"')
+    2: optional i64 experiment_id (api.path = "experiment_id", api.js_conv="true", go.tag='json:"experiment_id"')
+    3: optional i64 export_id (api.path = "export_id", api.js_conv="true", go.tag='json:"export_id"')
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct GetExperimentResultExportRecordOApiResponse {
+    1: optional i32 code
+    2: optional string msg
+    3: optional GetExperimentResultExportRecordOpenAPIData data
+
+    255: base.BaseResp BaseResp
+}
+
+struct GetExperimentResultExportRecordOpenAPIData {
+    1: optional experiment.ExptResultExportRecord expt_result_export_record
+}
+
 // ===============================
 // 评估器 (Evaluator) 接口
 // ===============================
@@ -1146,6 +1192,10 @@ service EvaluationOpenAPIService {
     GetExperimentAggrResultOApiResponse GetExperimentAggrResultOApi(1: GetExperimentAggrResultOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/aggr_results")
     // 重试实验
     RetryExperimentOApiResponse RetryExperimentOApi(1: RetryExperimentOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/retry")
+    // 导出实验报告
+    ExportExperimentResultOApiResponse ExportExperimentResultOApi(1: ExportExperimentResultOApiRequest req) (api.category="openapi", api.post = "/v1/loop/evaluation/experiments/:experiment_id/results/export")
+    // 查询实验报告导出记录（含下载链接）
+    GetExperimentResultExportRecordOApiResponse GetExperimentResultExportRecordOApi(1: GetExperimentResultExportRecordOApiRequest req) (api.category="openapi", api.get = "/v1/loop/evaluation/experiments/:experiment_id/export_records/:export_id")
 
     // 评估器接口
     // 查询评估器列表
