@@ -11443,6 +11443,62 @@ func (p *SkillCombine) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11499,6 +11555,62 @@ func (p *SkillCombine) FastReadField3(buf []byte) (int, error) {
 		offset += l
 		_field = &v
 	}
+	p.Name = _field
+	return offset, nil
+}
+
+func (p *SkillCombine) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Description = _field
+	return offset, nil
+}
+
+func (p *SkillCombine) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Source = _field
+	return offset, nil
+}
+
+func (p *SkillCombine) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsDeleted = _field
+	return offset, nil
+}
+
+func (p *SkillCombine) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
 	p.SkillKey = _field
 	return offset, nil
 }
@@ -11511,8 +11623,12 @@ func (p *SkillCombine) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -11524,6 +11640,10 @@ func (p *SkillCombine) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -11549,8 +11669,44 @@ func (p *SkillCombine) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 
 func (p *SkillCombine) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	if p.IsSetSkillKey() {
+	if p.IsSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	}
+	return offset
+}
+
+func (p *SkillCombine) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDescription() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
+	}
+	return offset
+}
+
+func (p *SkillCombine) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSource() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Source)
+	}
+	return offset
+}
+
+func (p *SkillCombine) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsDeleted() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 6)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsDeleted)
+	}
+	return offset
+}
+
+func (p *SkillCombine) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSkillKey() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SkillKey)
 	}
 	return offset
@@ -11576,6 +11732,42 @@ func (p *SkillCombine) field2Length() int {
 
 func (p *SkillCombine) field3Length() int {
 	l := 0
+	if p.IsSetName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
+	}
+	return l
+}
+
+func (p *SkillCombine) field4Length() int {
+	l := 0
+	if p.IsSetDescription() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Description)
+	}
+	return l
+}
+
+func (p *SkillCombine) field5Length() int {
+	l := 0
+	if p.IsSetSource() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Source)
+	}
+	return l
+}
+
+func (p *SkillCombine) field6Length() int {
+	l := 0
+	if p.IsSetIsDeleted() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *SkillCombine) field7Length() int {
+	l := 0
 	if p.IsSetSkillKey() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.SkillKey)
@@ -11600,6 +11792,35 @@ func (p *SkillCombine) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.Version)
 		}
 		p.Version = &tmp
+	}
+
+	if src.Name != nil {
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
+		}
+		p.Name = &tmp
+	}
+
+	if src.Description != nil {
+		var tmp string
+		if *src.Description != "" {
+			tmp = kutils.StringDeepCopy(*src.Description)
+		}
+		p.Description = &tmp
+	}
+
+	if src.Source != nil {
+		var tmp string
+		if *src.Source != "" {
+			tmp = kutils.StringDeepCopy(*src.Source)
+		}
+		p.Source = &tmp
+	}
+
+	if src.IsDeleted != nil {
+		tmp := *src.IsDeleted
+		p.IsDeleted = &tmp
 	}
 
 	if src.SkillKey != nil {
@@ -11644,6 +11865,146 @@ func (p *SandboxConfig) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField7(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField9(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField11(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -11676,6 +12037,142 @@ func (p *SandboxConfig) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SandboxConfig) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SessionID = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Name = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Description = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Region = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Type = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField7(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.SandboxID = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Owner = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField9(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.IsDeleted = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+	_field := NewSandboxResourceLimit()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.ResourceLimit = _field
+	return offset, nil
+}
+
+func (p *SandboxConfig) FastReadField11(buf []byte) (int, error) {
+	offset := 0
+	_field := NewSandboxSessionLimit()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.SessionLimit = _field
+	return offset, nil
+}
+
 func (p *SandboxConfig) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -11683,7 +12180,17 @@ func (p *SandboxConfig) FastWrite(buf []byte) int {
 func (p *SandboxConfig) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p != nil {
+		offset += p.fastWriteField9(buf[offset:], w)
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField7(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -11693,6 +12200,16 @@ func (p *SandboxConfig) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
+		l += p.field7Length()
+		l += p.field8Length()
+		l += p.field9Length()
+		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -11707,11 +12224,191 @@ func (p *SandboxConfig) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	return offset
 }
 
+func (p *SandboxConfig) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSessionID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 2)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SessionID)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetName() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetDescription() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Description)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRegion() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 5)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Region)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 6)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Type)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSandboxID() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 7)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SandboxID)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOwner() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 8)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Owner)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField9(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetIsDeleted() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 9)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.IsDeleted)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetResourceLimit() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
+		offset += p.ResourceLimit.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *SandboxConfig) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSessionLimit() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
+		offset += p.SessionLimit.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *SandboxConfig) field1Length() int {
 	l := 0
 	if p.IsSetSandboxPsm() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.StringLengthNocopy(*p.SandboxPsm)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field2Length() int {
+	l := 0
+	if p.IsSetSessionID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SessionID)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field3Length() int {
+	l := 0
+	if p.IsSetName() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Name)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field4Length() int {
+	l := 0
+	if p.IsSetDescription() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Description)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field5Length() int {
+	l := 0
+	if p.IsSetRegion() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Region)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field6Length() int {
+	l := 0
+	if p.IsSetType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Type)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field7Length() int {
+	l := 0
+	if p.IsSetSandboxID() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.SandboxID)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field8Length() int {
+	l := 0
+	if p.IsSetOwner() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Owner)
+	}
+	return l
+}
+
+func (p *SandboxConfig) field9Length() int {
+	l := 0
+	if p.IsSetIsDeleted() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *SandboxConfig) field10Length() int {
+	l := 0
+	if p.IsSetResourceLimit() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.ResourceLimit.BLength()
+	}
+	return l
+}
+
+func (p *SandboxConfig) field11Length() int {
+	l := 0
+	if p.IsSetSessionLimit() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.SessionLimit.BLength()
 	}
 	return l
 }
@@ -11728,6 +12425,425 @@ func (p *SandboxConfig) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.SandboxPsm)
 		}
 		p.SandboxPsm = &tmp
+	}
+
+	if src.SessionID != nil {
+		var tmp string
+		if *src.SessionID != "" {
+			tmp = kutils.StringDeepCopy(*src.SessionID)
+		}
+		p.SessionID = &tmp
+	}
+
+	if src.Name != nil {
+		var tmp string
+		if *src.Name != "" {
+			tmp = kutils.StringDeepCopy(*src.Name)
+		}
+		p.Name = &tmp
+	}
+
+	if src.Description != nil {
+		var tmp string
+		if *src.Description != "" {
+			tmp = kutils.StringDeepCopy(*src.Description)
+		}
+		p.Description = &tmp
+	}
+
+	if src.Region != nil {
+		var tmp string
+		if *src.Region != "" {
+			tmp = kutils.StringDeepCopy(*src.Region)
+		}
+		p.Region = &tmp
+	}
+
+	if src.Type != nil {
+		var tmp string
+		if *src.Type != "" {
+			tmp = kutils.StringDeepCopy(*src.Type)
+		}
+		p.Type = &tmp
+	}
+
+	if src.SandboxID != nil {
+		var tmp string
+		if *src.SandboxID != "" {
+			tmp = kutils.StringDeepCopy(*src.SandboxID)
+		}
+		p.SandboxID = &tmp
+	}
+
+	if src.Owner != nil {
+		var tmp string
+		if *src.Owner != "" {
+			tmp = kutils.StringDeepCopy(*src.Owner)
+		}
+		p.Owner = &tmp
+	}
+
+	if src.IsDeleted != nil {
+		tmp := *src.IsDeleted
+		p.IsDeleted = &tmp
+	}
+
+	var _resourceLimit *SandboxResourceLimit
+	if src.ResourceLimit != nil {
+		_resourceLimit = &SandboxResourceLimit{}
+		if err := _resourceLimit.DeepCopy(src.ResourceLimit); err != nil {
+			return err
+		}
+	}
+	p.ResourceLimit = _resourceLimit
+
+	var _sessionLimit *SandboxSessionLimit
+	if src.SessionLimit != nil {
+		_sessionLimit = &SandboxSessionLimit{}
+		if err := _sessionLimit.DeepCopy(src.SessionLimit); err != nil {
+			return err
+		}
+	}
+	p.SessionLimit = _sessionLimit
+
+	return nil
+}
+
+func (p *SandboxResourceLimit) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxResourceLimit[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SandboxResourceLimit) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.CPUMilli = _field
+	return offset, nil
+}
+
+func (p *SandboxResourceLimit) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.MemMb = _field
+	return offset, nil
+}
+
+func (p *SandboxResourceLimit) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SandboxResourceLimit) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SandboxResourceLimit) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SandboxResourceLimit) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCPUMilli() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.CPUMilli)
+	}
+	return offset
+}
+
+func (p *SandboxResourceLimit) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMemMb() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.MemMb)
+	}
+	return offset
+}
+
+func (p *SandboxResourceLimit) field1Length() int {
+	l := 0
+	if p.IsSetCPUMilli() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *SandboxResourceLimit) field2Length() int {
+	l := 0
+	if p.IsSetMemMb() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *SandboxResourceLimit) DeepCopy(s interface{}) error {
+	src, ok := s.(*SandboxResourceLimit)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.CPUMilli != nil {
+		tmp := *src.CPUMilli
+		p.CPUMilli = &tmp
+	}
+
+	if src.MemMb != nil {
+		tmp := *src.MemMb
+		p.MemMb = &tmp
+	}
+
+	return nil
+}
+
+func (p *SandboxSessionLimit) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxSessionLimit[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *SandboxSessionLimit) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Max = _field
+	return offset, nil
+}
+
+func (p *SandboxSessionLimit) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Min = _field
+	return offset, nil
+}
+
+func (p *SandboxSessionLimit) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *SandboxSessionLimit) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *SandboxSessionLimit) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *SandboxSessionLimit) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMax() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 1)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Max)
+	}
+	return offset
+}
+
+func (p *SandboxSessionLimit) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetMin() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 2)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.Min)
+	}
+	return offset
+}
+
+func (p *SandboxSessionLimit) field1Length() int {
+	l := 0
+	if p.IsSetMax() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *SandboxSessionLimit) field2Length() int {
+	l := 0
+	if p.IsSetMin() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *SandboxSessionLimit) DeepCopy(s interface{}) error {
+	src, ok := s.(*SandboxSessionLimit)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Max != nil {
+		tmp := *src.Max
+		p.Max = &tmp
+	}
+
+	if src.Min != nil {
+		tmp := *src.Min
+		p.Min = &tmp
 	}
 
 	return nil

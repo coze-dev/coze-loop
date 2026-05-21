@@ -16152,8 +16152,16 @@ type SkillCombine struct {
 	SkillID *int64 `thrift:"skill_id,1,optional" frugal:"1,optional,i64" json:"skill_id" form:"skill_id" query:"skill_id"`
 	// skill版本
 	Version *string `thrift:"version,2,optional" frugal:"2,optional,string" form:"version" json:"version,omitempty" query:"version"`
+	// skill名称
+	Name *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// skill描述
+	Description *string `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// skill来源
+	Source *string `thrift:"source,5,optional" frugal:"5,optional,string" form:"source" json:"source,omitempty" query:"source"`
+	// 是否已删除
+	IsDeleted *bool `thrift:"is_deleted,6,optional" frugal:"6,optional,bool" form:"is_deleted" json:"is_deleted,omitempty" query:"is_deleted"`
 	// skill唯一标识
-	SkillKey *string `thrift:"skill_key,3,optional" frugal:"3,optional,string" form:"skill_key" json:"skill_key,omitempty" query:"skill_key"`
+	SkillKey *string `thrift:"skill_key,7,optional" frugal:"7,optional,string" form:"skill_key" json:"skill_key,omitempty" query:"skill_key"`
 }
 
 func NewSkillCombine() *SkillCombine {
@@ -16187,6 +16195,54 @@ func (p *SkillCombine) GetVersion() (v string) {
 	return *p.Version
 }
 
+var SkillCombine_Name_DEFAULT string
+
+func (p *SkillCombine) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return SkillCombine_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var SkillCombine_Description_DEFAULT string
+
+func (p *SkillCombine) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return SkillCombine_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var SkillCombine_Source_DEFAULT string
+
+func (p *SkillCombine) GetSource() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSource() {
+		return SkillCombine_Source_DEFAULT
+	}
+	return *p.Source
+}
+
+var SkillCombine_IsDeleted_DEFAULT bool
+
+func (p *SkillCombine) GetIsDeleted() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsDeleted() {
+		return SkillCombine_IsDeleted_DEFAULT
+	}
+	return *p.IsDeleted
+}
+
 var SkillCombine_SkillKey_DEFAULT string
 
 func (p *SkillCombine) GetSkillKey() (v string) {
@@ -16204,6 +16260,18 @@ func (p *SkillCombine) SetSkillID(val *int64) {
 func (p *SkillCombine) SetVersion(val *string) {
 	p.Version = val
 }
+func (p *SkillCombine) SetName(val *string) {
+	p.Name = val
+}
+func (p *SkillCombine) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *SkillCombine) SetSource(val *string) {
+	p.Source = val
+}
+func (p *SkillCombine) SetIsDeleted(val *bool) {
+	p.IsDeleted = val
+}
 func (p *SkillCombine) SetSkillKey(val *string) {
 	p.SkillKey = val
 }
@@ -16211,7 +16279,11 @@ func (p *SkillCombine) SetSkillKey(val *string) {
 var fieldIDToName_SkillCombine = map[int16]string{
 	1: "skill_id",
 	2: "version",
-	3: "skill_key",
+	3: "name",
+	4: "description",
+	5: "source",
+	6: "is_deleted",
+	7: "skill_key",
 }
 
 func (p *SkillCombine) IsSetSkillID() bool {
@@ -16220,6 +16292,22 @@ func (p *SkillCombine) IsSetSkillID() bool {
 
 func (p *SkillCombine) IsSetVersion() bool {
 	return p.Version != nil
+}
+
+func (p *SkillCombine) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *SkillCombine) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *SkillCombine) IsSetSource() bool {
+	return p.Source != nil
+}
+
+func (p *SkillCombine) IsSetIsDeleted() bool {
+	return p.IsDeleted != nil
 }
 
 func (p *SkillCombine) IsSetSkillKey() bool {
@@ -16263,6 +16351,38 @@ func (p *SkillCombine) Read(iprot thrift.TProtocol) (err error) {
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16327,6 +16447,50 @@ func (p *SkillCombine) ReadField3(iprot thrift.TProtocol) error {
 	} else {
 		_field = &v
 	}
+	p.Name = _field
+	return nil
+}
+func (p *SkillCombine) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *SkillCombine) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Source = _field
+	return nil
+}
+func (p *SkillCombine) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDeleted = _field
+	return nil
+}
+func (p *SkillCombine) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
 	p.SkillKey = _field
 	return nil
 }
@@ -16347,6 +16511,22 @@ func (p *SkillCombine) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
 			goto WriteFieldError
 		}
 	}
@@ -16404,11 +16584,11 @@ WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
 }
 func (p *SkillCombine) writeField3(oprot thrift.TProtocol) (err error) {
-	if p.IsSetSkillKey() {
-		if err = oprot.WriteFieldBegin("skill_key", thrift.STRING, 3); err != nil {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
 			goto WriteFieldBeginError
 		}
-		if err := oprot.WriteString(*p.SkillKey); err != nil {
+		if err := oprot.WriteString(*p.Name); err != nil {
 			return err
 		}
 		if err = oprot.WriteFieldEnd(); err != nil {
@@ -16420,6 +16600,78 @@ WriteFieldBeginError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SkillCombine) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *SkillCombine) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSource() {
+		if err = oprot.WriteFieldBegin("source", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Source); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *SkillCombine) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDeleted() {
+		if err = oprot.WriteFieldBegin("is_deleted", thrift.BOOL, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsDeleted); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *SkillCombine) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSkillKey() {
+		if err = oprot.WriteFieldBegin("skill_key", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SkillKey); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
 }
 
 func (p *SkillCombine) String() string {
@@ -16442,7 +16694,19 @@ func (p *SkillCombine) DeepEqual(ano *SkillCombine) bool {
 	if !p.Field2DeepEqual(ano.Version) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.SkillKey) {
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Source) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.IsDeleted) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SkillKey) {
 		return false
 	}
 	return true
@@ -16474,6 +16738,54 @@ func (p *SkillCombine) Field2DeepEqual(src *string) bool {
 }
 func (p *SkillCombine) Field3DeepEqual(src *string) bool {
 
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field4DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field5DeepEqual(src *string) bool {
+
+	if p.Source == src {
+		return true
+	} else if p.Source == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Source, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field6DeepEqual(src *bool) bool {
+
+	if p.IsDeleted == src {
+		return true
+	} else if p.IsDeleted == nil || src == nil {
+		return false
+	}
+	if *p.IsDeleted != *src {
+		return false
+	}
+	return true
+}
+func (p *SkillCombine) Field7DeepEqual(src *string) bool {
+
 	if p.SkillKey == src {
 		return true
 	} else if p.SkillKey == nil || src == nil {
@@ -16488,6 +16800,26 @@ func (p *SkillCombine) Field3DeepEqual(src *string) bool {
 type SandboxConfig struct {
 	// 沙箱PSM
 	SandboxPsm *string `thrift:"sandbox_psm,1,optional" frugal:"1,optional,string" form:"sandbox_psm" json:"sandbox_psm,omitempty" query:"sandbox_psm"`
+	// 会话ID
+	SessionID *string `thrift:"session_id,2,optional" frugal:"2,optional,string" form:"session_id" json:"session_id,omitempty" query:"session_id"`
+	// 名称
+	Name *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty" query:"name"`
+	// 描述
+	Description *string `thrift:"description,4,optional" frugal:"4,optional,string" form:"description" json:"description,omitempty" query:"description"`
+	// 区域
+	Region *string `thrift:"region,5,optional" frugal:"5,optional,string" form:"region" json:"region,omitempty" query:"region"`
+	// 类型
+	Type *string `thrift:"type,6,optional" frugal:"6,optional,string" form:"type" json:"type,omitempty" query:"type"`
+	// 沙箱ID
+	SandboxID *string `thrift:"sandbox_id,7,optional" frugal:"7,optional,string" form:"sandbox_id" json:"sandbox_id,omitempty" query:"sandbox_id"`
+	// 拥有者
+	Owner *string `thrift:"owner,8,optional" frugal:"8,optional,string" form:"owner" json:"owner,omitempty" query:"owner"`
+	// 是否已删除
+	IsDeleted *bool `thrift:"is_deleted,9,optional" frugal:"9,optional,bool" form:"is_deleted" json:"is_deleted,omitempty" query:"is_deleted"`
+	// 资源限制
+	ResourceLimit *SandboxResourceLimit `thrift:"resource_limit,10,optional" frugal:"10,optional,SandboxResourceLimit" form:"resource_limit" json:"resource_limit,omitempty" query:"resource_limit"`
+	// 会话限制
+	SessionLimit *SandboxSessionLimit `thrift:"session_limit,11,optional" frugal:"11,optional,SandboxSessionLimit" form:"session_limit" json:"session_limit,omitempty" query:"session_limit"`
 }
 
 func NewSandboxConfig() *SandboxConfig {
@@ -16508,16 +16840,216 @@ func (p *SandboxConfig) GetSandboxPsm() (v string) {
 	}
 	return *p.SandboxPsm
 }
+
+var SandboxConfig_SessionID_DEFAULT string
+
+func (p *SandboxConfig) GetSessionID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSessionID() {
+		return SandboxConfig_SessionID_DEFAULT
+	}
+	return *p.SessionID
+}
+
+var SandboxConfig_Name_DEFAULT string
+
+func (p *SandboxConfig) GetName() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetName() {
+		return SandboxConfig_Name_DEFAULT
+	}
+	return *p.Name
+}
+
+var SandboxConfig_Description_DEFAULT string
+
+func (p *SandboxConfig) GetDescription() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetDescription() {
+		return SandboxConfig_Description_DEFAULT
+	}
+	return *p.Description
+}
+
+var SandboxConfig_Region_DEFAULT string
+
+func (p *SandboxConfig) GetRegion() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetRegion() {
+		return SandboxConfig_Region_DEFAULT
+	}
+	return *p.Region
+}
+
+var SandboxConfig_Type_DEFAULT string
+
+func (p *SandboxConfig) GetType() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetType() {
+		return SandboxConfig_Type_DEFAULT
+	}
+	return *p.Type
+}
+
+var SandboxConfig_SandboxID_DEFAULT string
+
+func (p *SandboxConfig) GetSandboxID() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSandboxID() {
+		return SandboxConfig_SandboxID_DEFAULT
+	}
+	return *p.SandboxID
+}
+
+var SandboxConfig_Owner_DEFAULT string
+
+func (p *SandboxConfig) GetOwner() (v string) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOwner() {
+		return SandboxConfig_Owner_DEFAULT
+	}
+	return *p.Owner
+}
+
+var SandboxConfig_IsDeleted_DEFAULT bool
+
+func (p *SandboxConfig) GetIsDeleted() (v bool) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetIsDeleted() {
+		return SandboxConfig_IsDeleted_DEFAULT
+	}
+	return *p.IsDeleted
+}
+
+var SandboxConfig_ResourceLimit_DEFAULT *SandboxResourceLimit
+
+func (p *SandboxConfig) GetResourceLimit() (v *SandboxResourceLimit) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetResourceLimit() {
+		return SandboxConfig_ResourceLimit_DEFAULT
+	}
+	return p.ResourceLimit
+}
+
+var SandboxConfig_SessionLimit_DEFAULT *SandboxSessionLimit
+
+func (p *SandboxConfig) GetSessionLimit() (v *SandboxSessionLimit) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSessionLimit() {
+		return SandboxConfig_SessionLimit_DEFAULT
+	}
+	return p.SessionLimit
+}
 func (p *SandboxConfig) SetSandboxPsm(val *string) {
 	p.SandboxPsm = val
 }
+func (p *SandboxConfig) SetSessionID(val *string) {
+	p.SessionID = val
+}
+func (p *SandboxConfig) SetName(val *string) {
+	p.Name = val
+}
+func (p *SandboxConfig) SetDescription(val *string) {
+	p.Description = val
+}
+func (p *SandboxConfig) SetRegion(val *string) {
+	p.Region = val
+}
+func (p *SandboxConfig) SetType(val *string) {
+	p.Type = val
+}
+func (p *SandboxConfig) SetSandboxID(val *string) {
+	p.SandboxID = val
+}
+func (p *SandboxConfig) SetOwner(val *string) {
+	p.Owner = val
+}
+func (p *SandboxConfig) SetIsDeleted(val *bool) {
+	p.IsDeleted = val
+}
+func (p *SandboxConfig) SetResourceLimit(val *SandboxResourceLimit) {
+	p.ResourceLimit = val
+}
+func (p *SandboxConfig) SetSessionLimit(val *SandboxSessionLimit) {
+	p.SessionLimit = val
+}
 
 var fieldIDToName_SandboxConfig = map[int16]string{
-	1: "sandbox_psm",
+	1:  "sandbox_psm",
+	2:  "session_id",
+	3:  "name",
+	4:  "description",
+	5:  "region",
+	6:  "type",
+	7:  "sandbox_id",
+	8:  "owner",
+	9:  "is_deleted",
+	10: "resource_limit",
+	11: "session_limit",
 }
 
 func (p *SandboxConfig) IsSetSandboxPsm() bool {
 	return p.SandboxPsm != nil
+}
+
+func (p *SandboxConfig) IsSetSessionID() bool {
+	return p.SessionID != nil
+}
+
+func (p *SandboxConfig) IsSetName() bool {
+	return p.Name != nil
+}
+
+func (p *SandboxConfig) IsSetDescription() bool {
+	return p.Description != nil
+}
+
+func (p *SandboxConfig) IsSetRegion() bool {
+	return p.Region != nil
+}
+
+func (p *SandboxConfig) IsSetType() bool {
+	return p.Type != nil
+}
+
+func (p *SandboxConfig) IsSetSandboxID() bool {
+	return p.SandboxID != nil
+}
+
+func (p *SandboxConfig) IsSetOwner() bool {
+	return p.Owner != nil
+}
+
+func (p *SandboxConfig) IsSetIsDeleted() bool {
+	return p.IsDeleted != nil
+}
+
+func (p *SandboxConfig) IsSetResourceLimit() bool {
+	return p.ResourceLimit != nil
+}
+
+func (p *SandboxConfig) IsSetSessionLimit() bool {
+	return p.SessionLimit != nil
 }
 
 func (p *SandboxConfig) Read(iprot thrift.TProtocol) (err error) {
@@ -16541,6 +17073,86 @@ func (p *SandboxConfig) Read(iprot thrift.TProtocol) (err error) {
 		case 1:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 5:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField6(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 7:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField7(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 8:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField8(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 9:
+			if fieldTypeId == thrift.BOOL {
+				if err = p.ReadField9(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 10:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField10(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 11:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -16586,6 +17198,110 @@ func (p *SandboxConfig) ReadField1(iprot thrift.TProtocol) error {
 	p.SandboxPsm = _field
 	return nil
 }
+func (p *SandboxConfig) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SessionID = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Name = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Description = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField5(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Region = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Type = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField7(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.SandboxID = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField8(iprot thrift.TProtocol) error {
+
+	var _field *string
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Owner = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField9(iprot thrift.TProtocol) error {
+
+	var _field *bool
+	if v, err := iprot.ReadBool(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.IsDeleted = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField10(iprot thrift.TProtocol) error {
+	_field := NewSandboxResourceLimit()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.ResourceLimit = _field
+	return nil
+}
+func (p *SandboxConfig) ReadField11(iprot thrift.TProtocol) error {
+	_field := NewSandboxSessionLimit()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.SessionLimit = _field
+	return nil
+}
 
 func (p *SandboxConfig) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -16595,6 +17311,46 @@ func (p *SandboxConfig) Write(oprot thrift.TProtocol) (err error) {
 	if p != nil {
 		if err = p.writeField1(oprot); err != nil {
 			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField5(oprot); err != nil {
+			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
+			goto WriteFieldError
+		}
+		if err = p.writeField7(oprot); err != nil {
+			fieldId = 7
+			goto WriteFieldError
+		}
+		if err = p.writeField8(oprot); err != nil {
+			fieldId = 8
+			goto WriteFieldError
+		}
+		if err = p.writeField9(oprot); err != nil {
+			fieldId = 9
+			goto WriteFieldError
+		}
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
+			goto WriteFieldError
+		}
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -16633,6 +17389,186 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
+func (p *SandboxConfig) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionID() {
+		if err = oprot.WriteFieldBegin("session_id", thrift.STRING, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SessionID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetName() {
+		if err = oprot.WriteFieldBegin("name", thrift.STRING, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Name); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetDescription() {
+		if err = oprot.WriteFieldBegin("description", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Description); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField5(oprot thrift.TProtocol) (err error) {
+	if p.IsSetRegion() {
+		if err = oprot.WriteFieldBegin("region", thrift.STRING, 5); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Region); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetType() {
+		if err = oprot.WriteFieldBegin("type", thrift.STRING, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Type); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField7(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSandboxID() {
+		if err = oprot.WriteFieldBegin("sandbox_id", thrift.STRING, 7); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.SandboxID); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 7 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField8(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOwner() {
+		if err = oprot.WriteFieldBegin("owner", thrift.STRING, 8); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.Owner); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 8 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField9(oprot thrift.TProtocol) (err error) {
+	if p.IsSetIsDeleted() {
+		if err = oprot.WriteFieldBegin("is_deleted", thrift.BOOL, 9); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteBool(*p.IsDeleted); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 9 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField10(oprot thrift.TProtocol) (err error) {
+	if p.IsSetResourceLimit() {
+		if err = oprot.WriteFieldBegin("resource_limit", thrift.STRUCT, 10); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.ResourceLimit.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
+}
+func (p *SandboxConfig) writeField11(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSessionLimit() {
+		if err = oprot.WriteFieldBegin("session_limit", thrift.STRUCT, 11); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.SessionLimit.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
+}
 
 func (p *SandboxConfig) String() string {
 	if p == nil {
@@ -16651,6 +17587,36 @@ func (p *SandboxConfig) DeepEqual(ano *SandboxConfig) bool {
 	if !p.Field1DeepEqual(ano.SandboxPsm) {
 		return false
 	}
+	if !p.Field2DeepEqual(ano.SessionID) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.Name) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.Description) {
+		return false
+	}
+	if !p.Field5DeepEqual(ano.Region) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.Type) {
+		return false
+	}
+	if !p.Field7DeepEqual(ano.SandboxID) {
+		return false
+	}
+	if !p.Field8DeepEqual(ano.Owner) {
+		return false
+	}
+	if !p.Field9DeepEqual(ano.IsDeleted) {
+		return false
+	}
+	if !p.Field10DeepEqual(ano.ResourceLimit) {
+		return false
+	}
+	if !p.Field11DeepEqual(ano.SessionLimit) {
+		return false
+	}
 	return true
 }
 
@@ -16662,6 +17628,636 @@ func (p *SandboxConfig) Field1DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.SandboxPsm, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field2DeepEqual(src *string) bool {
+
+	if p.SessionID == src {
+		return true
+	} else if p.SessionID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SessionID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field3DeepEqual(src *string) bool {
+
+	if p.Name == src {
+		return true
+	} else if p.Name == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field4DeepEqual(src *string) bool {
+
+	if p.Description == src {
+		return true
+	} else if p.Description == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Description, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field5DeepEqual(src *string) bool {
+
+	if p.Region == src {
+		return true
+	} else if p.Region == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Region, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field6DeepEqual(src *string) bool {
+
+	if p.Type == src {
+		return true
+	} else if p.Type == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Type, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field7DeepEqual(src *string) bool {
+
+	if p.SandboxID == src {
+		return true
+	} else if p.SandboxID == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.SandboxID, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field8DeepEqual(src *string) bool {
+
+	if p.Owner == src {
+		return true
+	} else if p.Owner == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.Owner, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field9DeepEqual(src *bool) bool {
+
+	if p.IsDeleted == src {
+		return true
+	} else if p.IsDeleted == nil || src == nil {
+		return false
+	}
+	if *p.IsDeleted != *src {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field10DeepEqual(src *SandboxResourceLimit) bool {
+
+	if !p.ResourceLimit.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *SandboxConfig) Field11DeepEqual(src *SandboxSessionLimit) bool {
+
+	if !p.SessionLimit.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type SandboxResourceLimit struct {
+	// CPU毫核
+	CPUMilli *int64 `thrift:"cpu_milli,1,optional" frugal:"1,optional,i64" form:"cpu_milli" json:"cpu_milli,omitempty" query:"cpu_milli"`
+	// 内存MB
+	MemMb *int64 `thrift:"mem_mb,2,optional" frugal:"2,optional,i64" form:"mem_mb" json:"mem_mb,omitempty" query:"mem_mb"`
+}
+
+func NewSandboxResourceLimit() *SandboxResourceLimit {
+	return &SandboxResourceLimit{}
+}
+
+func (p *SandboxResourceLimit) InitDefault() {
+}
+
+var SandboxResourceLimit_CPUMilli_DEFAULT int64
+
+func (p *SandboxResourceLimit) GetCPUMilli() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetCPUMilli() {
+		return SandboxResourceLimit_CPUMilli_DEFAULT
+	}
+	return *p.CPUMilli
+}
+
+var SandboxResourceLimit_MemMb_DEFAULT int64
+
+func (p *SandboxResourceLimit) GetMemMb() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMemMb() {
+		return SandboxResourceLimit_MemMb_DEFAULT
+	}
+	return *p.MemMb
+}
+func (p *SandboxResourceLimit) SetCPUMilli(val *int64) {
+	p.CPUMilli = val
+}
+func (p *SandboxResourceLimit) SetMemMb(val *int64) {
+	p.MemMb = val
+}
+
+var fieldIDToName_SandboxResourceLimit = map[int16]string{
+	1: "cpu_milli",
+	2: "mem_mb",
+}
+
+func (p *SandboxResourceLimit) IsSetCPUMilli() bool {
+	return p.CPUMilli != nil
+}
+
+func (p *SandboxResourceLimit) IsSetMemMb() bool {
+	return p.MemMb != nil
+}
+
+func (p *SandboxResourceLimit) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxResourceLimit[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SandboxResourceLimit) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.CPUMilli = _field
+	return nil
+}
+func (p *SandboxResourceLimit) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.MemMb = _field
+	return nil
+}
+
+func (p *SandboxResourceLimit) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SandboxResourceLimit"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SandboxResourceLimit) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetCPUMilli() {
+		if err = oprot.WriteFieldBegin("cpu_milli", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.CPUMilli); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SandboxResourceLimit) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMemMb() {
+		if err = oprot.WriteFieldBegin("mem_mb", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.MemMb); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SandboxResourceLimit) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SandboxResourceLimit(%+v)", *p)
+
+}
+
+func (p *SandboxResourceLimit) DeepEqual(ano *SandboxResourceLimit) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.CPUMilli) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.MemMb) {
+		return false
+	}
+	return true
+}
+
+func (p *SandboxResourceLimit) Field1DeepEqual(src *int64) bool {
+
+	if p.CPUMilli == src {
+		return true
+	} else if p.CPUMilli == nil || src == nil {
+		return false
+	}
+	if *p.CPUMilli != *src {
+		return false
+	}
+	return true
+}
+func (p *SandboxResourceLimit) Field2DeepEqual(src *int64) bool {
+
+	if p.MemMb == src {
+		return true
+	} else if p.MemMb == nil || src == nil {
+		return false
+	}
+	if *p.MemMb != *src {
+		return false
+	}
+	return true
+}
+
+type SandboxSessionLimit struct {
+	// 最大值
+	Max *int64 `thrift:"max,1,optional" frugal:"1,optional,i64" form:"max" json:"max,omitempty" query:"max"`
+	// 最小值
+	Min *int64 `thrift:"min,2,optional" frugal:"2,optional,i64" form:"min" json:"min,omitempty" query:"min"`
+}
+
+func NewSandboxSessionLimit() *SandboxSessionLimit {
+	return &SandboxSessionLimit{}
+}
+
+func (p *SandboxSessionLimit) InitDefault() {
+}
+
+var SandboxSessionLimit_Max_DEFAULT int64
+
+func (p *SandboxSessionLimit) GetMax() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMax() {
+		return SandboxSessionLimit_Max_DEFAULT
+	}
+	return *p.Max
+}
+
+var SandboxSessionLimit_Min_DEFAULT int64
+
+func (p *SandboxSessionLimit) GetMin() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetMin() {
+		return SandboxSessionLimit_Min_DEFAULT
+	}
+	return *p.Min
+}
+func (p *SandboxSessionLimit) SetMax(val *int64) {
+	p.Max = val
+}
+func (p *SandboxSessionLimit) SetMin(val *int64) {
+	p.Min = val
+}
+
+var fieldIDToName_SandboxSessionLimit = map[int16]string{
+	1: "max",
+	2: "min",
+}
+
+func (p *SandboxSessionLimit) IsSetMax() bool {
+	return p.Max != nil
+}
+
+func (p *SandboxSessionLimit) IsSetMin() bool {
+	return p.Min != nil
+}
+
+func (p *SandboxSessionLimit) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_SandboxSessionLimit[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *SandboxSessionLimit) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Max = _field
+	return nil
+}
+func (p *SandboxSessionLimit) ReadField2(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.Min = _field
+	return nil
+}
+
+func (p *SandboxSessionLimit) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("SandboxSessionLimit"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *SandboxSessionLimit) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMax() {
+		if err = oprot.WriteFieldBegin("max", thrift.I64, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Max); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *SandboxSessionLimit) writeField2(oprot thrift.TProtocol) (err error) {
+	if p.IsSetMin() {
+		if err = oprot.WriteFieldBegin("min", thrift.I64, 2); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.Min); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+
+func (p *SandboxSessionLimit) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("SandboxSessionLimit(%+v)", *p)
+
+}
+
+func (p *SandboxSessionLimit) DeepEqual(ano *SandboxSessionLimit) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Max) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.Min) {
+		return false
+	}
+	return true
+}
+
+func (p *SandboxSessionLimit) Field1DeepEqual(src *int64) bool {
+
+	if p.Max == src {
+		return true
+	} else if p.Max == nil || src == nil {
+		return false
+	}
+	if *p.Max != *src {
+		return false
+	}
+	return true
+}
+func (p *SandboxSessionLimit) Field2DeepEqual(src *int64) bool {
+
+	if p.Min == src {
+		return true
+	} else if p.Min == nil || src == nil {
+		return false
+	}
+	if *p.Min != *src {
 		return false
 	}
 	return true

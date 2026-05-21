@@ -288,5 +288,21 @@ func (p *SkillCombine) IsValid() error {
 	return nil
 }
 func (p *SandboxConfig) IsValid() error {
+	if p.ResourceLimit != nil {
+		if err := p.ResourceLimit.IsValid(); err != nil {
+			return fmt.Errorf("field ResourceLimit not valid, %w", err)
+		}
+	}
+	if p.SessionLimit != nil {
+		if err := p.SessionLimit.IsValid(); err != nil {
+			return fmt.Errorf("field SessionLimit not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SandboxResourceLimit) IsValid() error {
+	return nil
+}
+func (p *SandboxSessionLimit) IsValid() error {
 	return nil
 }

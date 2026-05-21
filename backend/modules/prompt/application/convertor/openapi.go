@@ -17,23 +17,20 @@ func OpenAPIPromptDO2DTO(do *entity.Prompt) *domainopenapi.Prompt {
 	var tools []*entity.Tool
 	var toolCallConfig *entity.ToolCallConfig
 	var modelConfig *entity.ModelConfig
-	var skillExecuteConfig *entity.SkillExecuteConfig
 	if promptDetail := do.GetPromptDetail(); promptDetail != nil {
 		promptTemplate = promptDetail.PromptTemplate
 		tools = promptDetail.Tools
 		toolCallConfig = promptDetail.ToolCallConfig
 		modelConfig = promptDetail.ModelConfig
-		skillExecuteConfig = promptDetail.SkillExecuteConfig
 	}
 	return &domainopenapi.Prompt{
-		WorkspaceID:        ptr.Of(do.SpaceID),
-		PromptKey:          ptr.Of(do.PromptKey),
-		Version:            ptr.Of(do.GetVersion()),
-		PromptTemplate:     OpenAPIPromptTemplateDO2DTO(promptTemplate),
-		Tools:              OpenAPIBatchToolDO2DTO(tools),
-		ToolCallConfig:     OpenAPIToolCallConfigDO2DTO(toolCallConfig),
-		LlmConfig:          OpenAPIModelConfigDO2DTO(modelConfig),
-		SkillExecuteConfig: OpenAPISkillExecuteConfigDO2DTO(skillExecuteConfig),
+		WorkspaceID:    ptr.Of(do.SpaceID),
+		PromptKey:      ptr.Of(do.PromptKey),
+		Version:        ptr.Of(do.GetVersion()),
+		PromptTemplate: OpenAPIPromptTemplateDO2DTO(promptTemplate),
+		Tools:          OpenAPIBatchToolDO2DTO(tools),
+		ToolCallConfig: OpenAPIToolCallConfigDO2DTO(toolCallConfig),
+		LlmConfig:      OpenAPIModelConfigDO2DTO(modelConfig),
 	}
 }
 
@@ -740,85 +737,5 @@ func OpenAPIResponseAPIConfigDTO2DO(dto *domainopenapi.ResponseAPIConfig) *entit
 		PreviousResponseID: dto.PreviousResponseID,
 		EnableCaching:      dto.EnableCaching,
 		SessionID:          dto.SessionID,
-	}
-}
-
-// OpenAPISkillExecuteConfigDO2DTO 将entity SkillExecuteConfig转换为openapi SkillExecuteConfig
-func OpenAPISkillExecuteConfigDO2DTO(do *entity.SkillExecuteConfig) *domainopenapi.SkillExecuteConfig {
-	if do == nil {
-		return nil
-	}
-	return &domainopenapi.SkillExecuteConfig{
-		SkillCombine:  OpenAPIBatchSkillCombineDO2DTO(do.SkillCombine),
-		SandboxConfig: OpenAPISandboxConfigDO2DTO(do.SandboxConfig),
-	}
-}
-
-// OpenAPIBatchSkillCombineDO2DTO 将entity SkillCombine列表转换为openapi SkillCombine列表
-func OpenAPIBatchSkillCombineDO2DTO(dos []*entity.SkillCombine) []*domainopenapi.SkillCombine {
-	if len(dos) == 0 {
-		return nil
-	}
-	result := make([]*domainopenapi.SkillCombine, 0, len(dos))
-	for _, do := range dos {
-		if do == nil {
-			continue
-		}
-		result = append(result, &domainopenapi.SkillCombine{
-			SkillID:  do.SkillID,
-			Version:  do.Version,
-			SkillKey: do.SkillKey,
-		})
-	}
-	return result
-}
-
-// OpenAPISandboxConfigDO2DTO 将entity SandboxConfig转换为openapi SandboxConfig
-func OpenAPISandboxConfigDO2DTO(do *entity.SandboxConfig) *domainopenapi.SandboxConfig {
-	if do == nil {
-		return nil
-	}
-	return &domainopenapi.SandboxConfig{
-		SandboxPsm: do.SandboxPSM,
-	}
-}
-
-// OpenAPISkillExecuteConfigDTO2DO 将openapi SkillExecuteConfig转换为entity SkillExecuteConfig
-func OpenAPISkillExecuteConfigDTO2DO(dto *domainopenapi.SkillExecuteConfig) *entity.SkillExecuteConfig {
-	if dto == nil {
-		return nil
-	}
-	return &entity.SkillExecuteConfig{
-		SkillCombine:  OpenAPIBatchSkillCombineDTO2DO(dto.SkillCombine),
-		SandboxConfig: OpenAPISandboxConfigDTO2DO(dto.SandboxConfig),
-	}
-}
-
-// OpenAPIBatchSkillCombineDTO2DO 将openapi SkillCombine列表转换为entity SkillCombine列表
-func OpenAPIBatchSkillCombineDTO2DO(dtos []*domainopenapi.SkillCombine) []*entity.SkillCombine {
-	if len(dtos) == 0 {
-		return nil
-	}
-	result := make([]*entity.SkillCombine, 0, len(dtos))
-	for _, dto := range dtos {
-		if dto == nil {
-			continue
-		}
-		result = append(result, &entity.SkillCombine{
-			SkillID:  dto.SkillID,
-			Version:  dto.Version,
-			SkillKey: dto.SkillKey,
-		})
-	}
-	return result
-}
-
-// OpenAPISandboxConfigDTO2DO 将openapi SandboxConfig转换为entity SandboxConfig
-func OpenAPISandboxConfigDTO2DO(dto *domainopenapi.SandboxConfig) *entity.SandboxConfig {
-	if dto == nil {
-		return nil
-	}
-	return &entity.SandboxConfig{
-		SandboxPSM: dto.SandboxPsm,
 	}
 }
