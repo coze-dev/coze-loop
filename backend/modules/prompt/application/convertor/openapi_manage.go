@@ -16,11 +16,10 @@ func OpenAPIPromptDetailDO2DTO(do *entity.PromptDetail) *domainopenapi.PromptDet
 		return nil
 	}
 	return &domainopenapi.PromptDetail{
-		PromptTemplate:     OpenAPIPromptTemplateDO2DTO(do.PromptTemplate),
-		Tools:              OpenAPIBatchToolDO2DTO(do.Tools),
-		ToolCallConfig:     OpenAPIToolCallConfigDO2DTO(do.ToolCallConfig),
-		ModelConfig:        OpenAPIModelConfigForDetailDO2DTO(do.ModelConfig),
-		SkillExecuteConfig: OpenAPISkillExecuteConfigDO2DTO(do.SkillExecuteConfig),
+		PromptTemplate: OpenAPIPromptTemplateDO2DTO(do.PromptTemplate),
+		Tools:          OpenAPIBatchToolDO2DTO(do.Tools),
+		ToolCallConfig: OpenAPIToolCallConfigDO2DTO(do.ToolCallConfig),
+		ModelConfig:    OpenAPIModelConfigForDetailDO2DTO(do.ModelConfig),
 	}
 }
 

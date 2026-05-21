@@ -66,6 +66,7 @@ struct PromptDetail {
     3: optional ToolCallConfig tool_call_config
     4: optional ModelConfig model_config
     5: optional McpConfig mcp_config
+
     255: optional map<string, string> ext_infos
 }
 
