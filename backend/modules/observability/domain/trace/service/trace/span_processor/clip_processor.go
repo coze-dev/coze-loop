@@ -33,7 +33,17 @@ func (c *ClipProcessor) Transform(ctx context.Context, spans loop_span.SpanList)
 type ClipProcessorFactory struct{}
 
 func (c *ClipProcessorFactory) CreateProcessor(ctx context.Context, set Settings) (Processor, error) {
+	if set.WithoutClip {
+		return &NoOpProcessor{}, nil
+	}
 	return &ClipProcessor{}, nil
+}
+
+// NoOpProcessor is a processor that does nothing, returning spans as-is.
+type NoOpProcessor struct{}
+
+func (n *NoOpProcessor) Transform(ctx context.Context, spans loop_span.SpanList) (loop_span.SpanList, error) {
+	return spans, nil
 }
 
 func NewClipProcessorFactory() Factory {

@@ -194,6 +194,20 @@ func (p *ListSpansRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 10:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField10(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -377,6 +391,20 @@ func (p *ListSpansRequest) FastReadField9(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ListSpansRequest) FastReadField10(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.WithoutClip = _field
+	return offset, nil
+}
+
 func (p *ListSpansRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -400,6 +428,7 @@ func (p *ListSpansRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) in
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField7(buf[offset:], w)
@@ -423,6 +452,7 @@ func (p *ListSpansRequest) BLength() int {
 		l += p.field7Length()
 		l += p.field8Length()
 		l += p.field9Length()
+		l += p.field10Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -507,6 +537,15 @@ func (p *ListSpansRequest) fastWriteField9(buf []byte, w thrift.NocopyWriter) in
 	if p.IsSetSpanListType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 9)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanListType)
+	}
+	return offset
+}
+
+func (p *ListSpansRequest) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWithoutClip() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 10)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.WithoutClip)
 	}
 	return offset
 }
@@ -599,6 +638,15 @@ func (p *ListSpansRequest) field9Length() int {
 	return l
 }
 
+func (p *ListSpansRequest) field10Length() int {
+	l := 0
+	if p.IsSetWithoutClip() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
 func (p *ListSpansRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -665,6 +713,11 @@ func (p *ListSpansRequest) DeepCopy(s interface{}) error {
 	if src.SpanListType != nil {
 		tmp := *src.SpanListType
 		p.SpanListType = &tmp
+	}
+
+	if src.WithoutClip != nil {
+		tmp := *src.WithoutClip
+		p.WithoutClip = &tmp
 	}
 
 	var _base *base.Base

@@ -23,6 +23,7 @@ type Settings struct {
 	QueryLogID            string
 	QueryFilter           *loop_span.FilterFields
 	Scene                 entity.ProcessorScene
+	WithoutClip           bool
 }
 
 type Factory interface {

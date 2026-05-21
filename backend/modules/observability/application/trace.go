@@ -218,6 +218,7 @@ func (t *TraceApplication) buildListSpansSvcReq(req *trace.ListSpansRequest) (*s
 		Limit:           QueryLimitDefault,
 		DescByStartTime: len(req.GetOrderBys()) > 0,
 		PageToken:       req.GetPageToken(),
+		WithoutClip:     req.GetWithoutClip(),
 	}
 	if req.PageSize != nil {
 		ret.Limit = *req.PageSize

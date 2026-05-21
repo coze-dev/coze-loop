@@ -68,6 +68,7 @@ type ListSpansReq struct {
 	OmitColumns           []string
 	Scene                 entity.ProcessorScene
 	NotQueryAnnotation    bool
+	WithoutClip           bool
 }
 
 type ListSpansResp struct {
@@ -1203,6 +1204,7 @@ func (r *TraceServiceImpl) ListSpans(ctx context.Context, req *ListSpansReq) (*L
 		QueryTenants:   tenants,
 		QueryFilter:    filters,
 		Scene:          req.Scene,
+		WithoutClip:    req.WithoutClip,
 	})
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInternalErrorCodeCode)
