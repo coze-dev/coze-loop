@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"strings"
-	"sync/atomic"
 
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
@@ -267,19 +266,19 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 		switch n := node.(type) {
 		case *receiverNode:
 			next := g.nextConsumers(n.ID())[0]
-			nextElapsed := g.wrapNextWithStopwatch(&next)
-			wrappedNext := g.wrapAsObserveConsumer(next, receiverSeed+"/"+n.componentID.String(), nextElapsed)
+			g.wrapNextWithStopwatch(&next)
+			wrappedNext := g.wrapAsObserveConsumer(next, receiverSeed+"/"+n.componentID.String(), true)
 			wrappedNext = g.wrapWithInjectConsumer(wrappedNext)
 			err = n.buildComponent(ctx, set.ReceiverBuilder, wrappedNext)
 		case *processorNode:
 			next := g.nextConsumers(n.ID())[0]
-			nextElapsed := g.wrapNextWithStopwatch(&next)
+			g.wrapNextWithStopwatch(&next)
 			err = n.buildComponent(ctx, set.ProcessorBuilder, next)
 			if err == nil {
 				n.overrideConsumer = g.wrapSelfConsumer(
 					n.Component.(consumer.Consumer),
 					processorSeed+"/"+n.componentID.String(),
-					nextElapsed,
+					true,
 				)
 			}
 		case *exporterNode:
@@ -288,7 +287,7 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 				n.overrideConsumer = g.wrapSelfConsumer(
 					n.Component.(consumer.Consumer),
 					exporterSeed+"/"+n.componentID.String(),
-					nil,
+					false,
 				)
 			}
 		case *fanOutNode:
@@ -301,27 +300,25 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 	return nil
 }
 
-func (g *Graph) wrapNextWithStopwatch(next *consumer.BaseConsumer) *atomic.Int64 {
+func (g *Graph) wrapNextWithStopwatch(next *consumer.BaseConsumer) {
 	if g.consumeMetric == nil {
-		return nil
+		return
 	}
 	c, ok := (*next).(consumer.Consumer)
 	if !ok {
-		return nil
+		return
 	}
-	elapsed := &atomic.Int64{}
-	*next = consumer.NewStopwatchConsumer(c, elapsed)
-	return elapsed
+	*next = consumer.NewStopwatchConsumer(c)
 }
 
-func (g *Graph) wrapSelfConsumer(c consumer.Consumer, name string, nextElapsed *atomic.Int64) consumer.Consumer {
+func (g *Graph) wrapSelfConsumer(c consumer.Consumer, name string, trackSelf bool) consumer.Consumer {
 	if g.consumeMetric == nil {
 		return nil
 	}
-	return consumer.NewObserveConsumer(name, c, nextElapsed, g.consumeMetric)
+	return consumer.NewObserveConsumer(name, c, trackSelf, g.consumeMetric)
 }
 
-func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, nextElapsed *atomic.Int64) consumer.BaseConsumer {
+func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, trackSelf bool) consumer.BaseConsumer {
 	if g.consumeMetric == nil {
 		return base
 	}
@@ -329,7 +326,7 @@ func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, n
 	if !ok {
 		return base
 	}
-	return consumer.NewObserveConsumer(name, c, nextElapsed, g.consumeMetric)
+	return consumer.NewObserveConsumer(name, c, trackSelf, g.consumeMetric)
 }
 
 func (g *Graph) wrapWithInjectConsumer(base consumer.BaseConsumer) consumer.BaseConsumer {

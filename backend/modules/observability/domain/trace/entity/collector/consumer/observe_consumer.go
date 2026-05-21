@@ -10,25 +10,29 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+type elapsedCtxKey struct{}
+
 type ObserveConsumer struct {
-	name        string
-	inner       Consumer
-	nextElapsed *atomic.Int64
-	metric      metrics.Metric
+	name      string
+	inner     Consumer
+	trackSelf bool
+	metric    metrics.Metric
 }
 
-func NewObserveConsumer(name string, inner Consumer, nextElapsed *atomic.Int64, metric metrics.Metric) Consumer {
+func NewObserveConsumer(name string, inner Consumer, trackSelf bool, metric metrics.Metric) Consumer {
 	return &ObserveConsumer{
-		name:        name,
-		inner:       inner,
-		nextElapsed: nextElapsed,
-		metric:      metric,
+		name:      name,
+		inner:     inner,
+		trackSelf: trackSelf,
+		metric:    metric,
 	}
 }
 
 func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
-	if t.nextElapsed != nil {
-		t.nextElapsed.Store(0)
+	var elapsed *atomic.Int64
+	if t.trackSelf {
+		elapsed = &atomic.Int64{}
+		ctx = context.WithValue(ctx, elapsedCtxKey{}, elapsed)
 	}
 
 	start := time.Now()
@@ -36,15 +40,14 @@ func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 	total := time.Since(start)
 
 	var selfDuration time.Duration
-	if t.nextElapsed != nil {
-		selfDuration = total - time.Duration(t.nextElapsed.Load())
+	if elapsed != nil {
+		selfDuration = total - time.Duration(elapsed.Load())
 	} else {
 		selfDuration = total
 	}
 
 	isErr := err != nil
 	if t.metric != nil {
-		// logs.CtxInfo(ctx, "ObserveConsumer[%s] ConsumeTraces, self_duration=%s, is_err=%s, spans_count=%d", t.name, selfDuration, boolToStr(isErr), tds.SpansCount())
 		psmCounts := tds.SpansCountByPSM()
 		for psm, count := range psmCounts {
 			t.metric.Emit(
@@ -68,21 +71,21 @@ func (t *ObserveConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 }
 
 type stopwatchConsumer struct {
-	inner   Consumer
-	elapsed *atomic.Int64
+	inner Consumer
 }
 
-func NewStopwatchConsumer(inner Consumer, elapsed *atomic.Int64) Consumer {
+func NewStopwatchConsumer(inner Consumer) Consumer {
 	return &stopwatchConsumer{
-		inner:   inner,
-		elapsed: elapsed,
+		inner: inner,
 	}
 }
 
 func (s *stopwatchConsumer) ConsumeTraces(ctx context.Context, tds Traces) error {
 	start := time.Now()
 	err := s.inner.ConsumeTraces(ctx, tds)
-	s.elapsed.Add(time.Since(start).Nanoseconds())
+	if elapsed, ok := ctx.Value(elapsedCtxKey{}).(*atomic.Int64); ok && elapsed != nil {
+		elapsed.Add(time.Since(start).Nanoseconds())
+	}
 	return err
 }
 
