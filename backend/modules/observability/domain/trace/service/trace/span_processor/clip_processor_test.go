@@ -252,7 +252,7 @@ func TestClipProcessorFactory(t *testing.T) {
 }
 
 func TestClipProcessorFactory_WithoutClip(t *testing.T) {
-	factory := NewClipProcessorFactory()
+	factory := NewClipProcessorFactory(nil)
 	processor, err := factory.CreateProcessor(context.Background(), Settings{WithoutClip: true})
 	require.NoError(t, err)
 	require.IsType(t, &NoOpProcessor{}, processor)
