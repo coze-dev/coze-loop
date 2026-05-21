@@ -37944,6 +37944,20 @@ func (p *SubmitExptFromTemplateOApiRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 20:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField20(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 254:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField254(buf[offset:])
@@ -38032,6 +38046,18 @@ func (p *SubmitExptFromTemplateOApiRequest) FastReadField3(buf []byte) (int, err
 	return offset, nil
 }
 
+func (p *SubmitExptFromTemplateOApiRequest) FastReadField20(buf []byte) (int, error) {
+	offset := 0
+	_field := common.NewRuntimeParam()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.TargetRuntimeParam = _field
+	return offset, nil
+}
+
 func (p *SubmitExptFromTemplateOApiRequest) FastReadField254(buf []byte) (int, error) {
 	offset := 0
 	_field := extra.NewExtra()
@@ -38066,6 +38092,7 @@ func (p *SubmitExptFromTemplateOApiRequest) FastWriteNocopy(buf []byte, w thrift
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField20(buf[offset:], w)
 		offset += p.fastWriteField254(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -38079,6 +38106,7 @@ func (p *SubmitExptFromTemplateOApiRequest) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field20Length()
 		l += p.field254Length()
 		l += p.field255Length()
 	}
@@ -38109,6 +38137,15 @@ func (p *SubmitExptFromTemplateOApiRequest) fastWriteField3(buf []byte, w thrift
 	if p.IsSetName() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 3)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Name)
+	}
+	return offset
+}
+
+func (p *SubmitExptFromTemplateOApiRequest) fastWriteField20(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetTargetRuntimeParam() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 20)
+		offset += p.TargetRuntimeParam.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -38158,6 +38195,15 @@ func (p *SubmitExptFromTemplateOApiRequest) field3Length() int {
 	return l
 }
 
+func (p *SubmitExptFromTemplateOApiRequest) field20Length() int {
+	l := 0
+	if p.IsSetTargetRuntimeParam() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.TargetRuntimeParam.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExptFromTemplateOApiRequest) field254Length() int {
 	l := 0
 	if p.IsSetExtra() {
@@ -38199,6 +38245,15 @@ func (p *SubmitExptFromTemplateOApiRequest) DeepCopy(s interface{}) error {
 		}
 		p.Name = &tmp
 	}
+
+	var _targetRuntimeParam *common.RuntimeParam
+	if src.TargetRuntimeParam != nil {
+		_targetRuntimeParam = &common.RuntimeParam{}
+		if err := _targetRuntimeParam.DeepCopy(src.TargetRuntimeParam); err != nil {
+			return err
+		}
+	}
+	p.TargetRuntimeParam = _targetRuntimeParam
 
 	var _extra *extra.Extra
 	if src.Extra != nil {

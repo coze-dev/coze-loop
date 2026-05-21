@@ -52790,11 +52790,13 @@ func (p *ListExptTemplatesOpenAPIData) Field2DeepEqual(src *int32) bool {
 
 // 4.7 根据实验模板提交新实验
 type SubmitExptFromTemplateOApiRequest struct {
-	WorkspaceID *int64       `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
-	TemplateID  *int64       `thrift:"template_id,2,optional" frugal:"2,optional,i64" json:"template_id" form:"template_id" `
-	Name        *string      `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
-	Extra       *extra.Extra `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
-	Base        *base.Base   `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	WorkspaceID *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
+	TemplateID  *int64  `thrift:"template_id,2,optional" frugal:"2,optional,i64" json:"template_id" form:"template_id" `
+	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
+	// 创建实验时，判断不为空则替换模板信息
+	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
+	Extra              *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base               *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSubmitExptFromTemplateOApiRequest() *SubmitExptFromTemplateOApiRequest {
@@ -52840,6 +52842,18 @@ func (p *SubmitExptFromTemplateOApiRequest) GetName() (v string) {
 	return *p.Name
 }
 
+var SubmitExptFromTemplateOApiRequest_TargetRuntimeParam_DEFAULT *common.RuntimeParam
+
+func (p *SubmitExptFromTemplateOApiRequest) GetTargetRuntimeParam() (v *common.RuntimeParam) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTargetRuntimeParam() {
+		return SubmitExptFromTemplateOApiRequest_TargetRuntimeParam_DEFAULT
+	}
+	return p.TargetRuntimeParam
+}
+
 var SubmitExptFromTemplateOApiRequest_Extra_DEFAULT *extra.Extra
 
 func (p *SubmitExptFromTemplateOApiRequest) GetExtra() (v *extra.Extra) {
@@ -52872,6 +52886,9 @@ func (p *SubmitExptFromTemplateOApiRequest) SetTemplateID(val *int64) {
 func (p *SubmitExptFromTemplateOApiRequest) SetName(val *string) {
 	p.Name = val
 }
+func (p *SubmitExptFromTemplateOApiRequest) SetTargetRuntimeParam(val *common.RuntimeParam) {
+	p.TargetRuntimeParam = val
+}
 func (p *SubmitExptFromTemplateOApiRequest) SetExtra(val *extra.Extra) {
 	p.Extra = val
 }
@@ -52883,6 +52900,7 @@ var fieldIDToName_SubmitExptFromTemplateOApiRequest = map[int16]string{
 	1:   "workspace_id",
 	2:   "template_id",
 	3:   "name",
+	20:  "target_runtime_param",
 	254: "extra",
 	255: "Base",
 }
@@ -52897,6 +52915,10 @@ func (p *SubmitExptFromTemplateOApiRequest) IsSetTemplateID() bool {
 
 func (p *SubmitExptFromTemplateOApiRequest) IsSetName() bool {
 	return p.Name != nil
+}
+
+func (p *SubmitExptFromTemplateOApiRequest) IsSetTargetRuntimeParam() bool {
+	return p.TargetRuntimeParam != nil
 }
 
 func (p *SubmitExptFromTemplateOApiRequest) IsSetExtra() bool {
@@ -52944,6 +52966,14 @@ func (p *SubmitExptFromTemplateOApiRequest) Read(iprot thrift.TProtocol) (err er
 		case 3:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 20:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField20(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -53027,6 +53057,14 @@ func (p *SubmitExptFromTemplateOApiRequest) ReadField3(iprot thrift.TProtocol) e
 	p.Name = _field
 	return nil
 }
+func (p *SubmitExptFromTemplateOApiRequest) ReadField20(iprot thrift.TProtocol) error {
+	_field := common.NewRuntimeParam()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.TargetRuntimeParam = _field
+	return nil
+}
 func (p *SubmitExptFromTemplateOApiRequest) ReadField254(iprot thrift.TProtocol) error {
 	_field := extra.NewExtra()
 	if err := _field.Read(iprot); err != nil {
@@ -53060,6 +53098,10 @@ func (p *SubmitExptFromTemplateOApiRequest) Write(oprot thrift.TProtocol) (err e
 		}
 		if err = p.writeField3(oprot); err != nil {
 			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField20(oprot); err != nil {
+			fieldId = 20
 			goto WriteFieldError
 		}
 		if err = p.writeField254(oprot); err != nil {
@@ -53142,6 +53184,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
 }
+func (p *SubmitExptFromTemplateOApiRequest) writeField20(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTargetRuntimeParam() {
+		if err = oprot.WriteFieldBegin("target_runtime_param", thrift.STRUCT, 20); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.TargetRuntimeParam.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 20 end error: ", p), err)
+}
 func (p *SubmitExptFromTemplateOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExtra() {
 		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
@@ -53202,6 +53262,9 @@ func (p *SubmitExptFromTemplateOApiRequest) DeepEqual(ano *SubmitExptFromTemplat
 	if !p.Field3DeepEqual(ano.Name) {
 		return false
 	}
+	if !p.Field20DeepEqual(ano.TargetRuntimeParam) {
+		return false
+	}
 	if !p.Field254DeepEqual(ano.Extra) {
 		return false
 	}
@@ -53243,6 +53306,13 @@ func (p *SubmitExptFromTemplateOApiRequest) Field3DeepEqual(src *string) bool {
 		return false
 	}
 	if strings.Compare(*p.Name, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *SubmitExptFromTemplateOApiRequest) Field20DeepEqual(src *common.RuntimeParam) bool {
+
+	if !p.TargetRuntimeParam.DeepEqual(src) {
 		return false
 	}
 	return true
