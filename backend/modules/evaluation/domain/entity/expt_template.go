@@ -92,11 +92,12 @@ type FilterFieldDO struct {
 
 // ExptSchedulerDO 定时触发器配置，与 expt.Scheduler 结构对应
 type ExptSchedulerDO struct {
-	Enabled   *bool
-	Frequency *string
-	TriggerAt *int64
-	StartTime *int64
-	EndTime   *int64
+	Enabled         *bool
+	Frequency       *string
+	TriggerAt       *int64
+	StartTime       *int64
+	EndTime         *int64
+	TriggerInterval *int32
 }
 
 // ExptInfo 实验模板关联的实验运行状态信息

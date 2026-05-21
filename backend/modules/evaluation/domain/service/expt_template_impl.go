@@ -1417,11 +1417,12 @@ func extractSchedulerFromPipeline(p *entity.Pipeline) *entity.ExptSchedulerDO {
 	}
 	s := p.Scheduler
 	return &entity.ExptSchedulerDO{
-		Enabled:   s.Enabled,
-		Frequency: s.Frequency,
-		TriggerAt: s.TriggerAt,
-		StartTime: s.StartTime,
-		EndTime:   s.EndTime,
+		Enabled:         s.Enabled,
+		Frequency:       s.Frequency,
+		TriggerAt:       s.TriggerAt,
+		StartTime:       s.StartTime,
+		EndTime:         s.EndTime,
+		TriggerInterval: s.TriggerInterval,
 	}
 }
 
