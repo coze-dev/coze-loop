@@ -547,6 +547,69 @@ func (l *LocalTraceService) ListMetadata(ctx context.Context, req *trace.ListMet
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalTraceService) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (*trace.UpsertColumnExtractConfigResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceUpsertColumnExtractConfigArgs)
+		result := out.(*trace.TraceServiceUpsertColumnExtractConfigResult)
+		resp, err := l.impl.UpsertColumnExtractConfig(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceUpsertColumnExtractConfigArgs{Req: req}
+	result := &trace.TraceServiceUpsertColumnExtractConfigResult{}
+	ctx = l.injectRPCInfo(ctx, "UpsertColumnExtractConfig")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (*trace.GetColumnExtractConfigResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceGetColumnExtractConfigArgs)
+		result := out.(*trace.TraceServiceGetColumnExtractConfigResult)
+		resp, err := l.impl.GetColumnExtractConfig(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceGetColumnExtractConfigArgs{Req: req}
+	result := &trace.TraceServiceGetColumnExtractConfigResult{}
+	ctx = l.injectRPCInfo(ctx, "GetColumnExtractConfig")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalTraceService) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (*trace.GetAgentMetadataResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*trace.TraceServiceGetAgentMetadataArgs)
+		result := out.(*trace.TraceServiceGetAgentMetadataResult)
+		resp, err := l.impl.GetAgentMetadata(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &trace.TraceServiceGetAgentMetadataArgs{Req: req}
+	result := &trace.TraceServiceGetAgentMetadataResult{}
+	ctx = l.injectRPCInfo(ctx, "GetAgentMetadata")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalTraceService) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (*trace.ListTraceChatResponse, error) {
 	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
 		arg := in.(*trace.TraceServiceListTraceChatArgs)
