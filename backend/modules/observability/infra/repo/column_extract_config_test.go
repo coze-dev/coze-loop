@@ -165,7 +165,6 @@ func TestColumnExtractConfigRepoImpl_ListColumnExtractConfigs(t *testing.T) {
 	}
 }
 
-
 func TestColumnExtractConfigRepoImpl_GetColumnExtractConfig(t *testing.T) {
 	{
 		stub := &columnExtractDaoStub{getResp: nil}

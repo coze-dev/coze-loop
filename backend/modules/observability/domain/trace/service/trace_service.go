@@ -472,7 +472,6 @@ type GetThreadStatResponse struct {
 	UsedModels  []string
 }
 
-
 type GetAgentMetadataRequest struct {
 	WorkspaceID  int64
 	PlatformType loop_span.PlatformType
