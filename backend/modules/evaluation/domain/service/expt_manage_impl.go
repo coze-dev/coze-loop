@@ -727,7 +727,8 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 			entity.WithCozeBotInfoType(gptr.Indirect(req.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(req.CreateEvalTargetParam.Region),
 			entity.WithEnv(req.CreateEvalTargetParam.Env),
-			entity.WithOperationInstruction(req.CreateEvalTargetParam.OperationInstruction))
+			entity.WithOperationInstruction(req.CreateEvalTargetParam.OperationInstruction),
+			entity.WithCluster(req.CreateEvalTargetParam.Cluster))
 		if req.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        req.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -735,6 +736,9 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 				AvatarURL: req.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
 				Ext:       req.CreateEvalTargetParam.CustomEvalTarget.Ext,
 			}))
+		}
+		if req.CreateEvalTargetParam.AgentConnection != nil {
+			opts = append(opts, entity.WithAgentConnection(req.CreateEvalTargetParam.AgentConnection))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, req.WorkspaceID, gptr.Indirect(req.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(req.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(req.CreateEvalTargetParam.EvalTargetType),
 			opts...)
@@ -964,9 +968,7 @@ func (e *ExptMangerImpl) List(ctx context.Context, page, pageSize int32, spaceID
 		return nil, 0, err
 	}
 	for idx := range exptTuples {
-		if expts[idx].ExptType != entity.ExptType_Online {
-			expts[idx].EvalSet = exptTuples[idx].EvalSet
-		}
+		expts[idx].EvalSet = exptTuples[idx].EvalSet
 		expts[idx].Target = exptTuples[idx].Target
 		expts[idx].Evaluators = exptTuples[idx].Evaluators
 	}

@@ -145,15 +145,16 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 	}
 
 	// Build query parameters
+	filters := h.buildSpanFilters(ctx, sub.t)
 	listParam := &repo.ListSpansParam{
 		WorkSpaceID:        strconv.FormatInt(sub.t.WorkspaceID, 10),
 		Tenants:            tenants,
-		Filters:            h.buildSpanFilters(ctx, sub.t),
+		Filters:            filters,
 		StartAt:            backfillTime.StartAt,
 		EndAt:              backfillTime.EndAt,
 		Limit:              pageSize, // Page size
 		DescByStartTime:    true,
-		NotQueryAnnotation: true, // No annotation query required during backfill
+		NotQueryAnnotation: !sub.t.BackfillNeedQueryAnnotation(),
 	}
 
 	if sub.tr.BackfillDetail != nil && sub.tr.BackfillDetail.LastSpanPageToken != "" {

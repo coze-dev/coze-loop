@@ -5,6 +5,7 @@ package entity
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	datadataset "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/data/domain/dataset"
@@ -352,4 +353,60 @@ func (t *ObservabilityTask) GetPlatformType() loop_span.PlatformType {
 
 func (t *ObservabilityTask) IsNewWorkflowTask() bool {
 	return t.WorkflowID != 0
+}
+
+const feedbackFieldKeyPrefix = "Feedback."
+
+// needAnnotationForOutput 检查 task_config 的输出字段映射中是否引用了 Feedback 字段。
+// 数据回流/自动评估的 processor 需要通过 extractByJsonpath 从 span.Annotations 中提取值。
+func (t *ObservabilityTask) needAnnotationForOutput() bool {
+	if t.TaskConfig == nil {
+		return false
+	}
+	for _, config := range t.TaskConfig.DataReflowConfig {
+		for _, mapping := range config.FieldMappings {
+			if strings.HasPrefix(mapping.TraceFieldKey, feedbackFieldKeyPrefix) {
+				return true
+			}
+		}
+	}
+	for _, config := range t.TaskConfig.AutoEvaluateConfigs {
+		for _, mapping := range config.FieldMappings {
+			if strings.HasPrefix(mapping.TraceFieldKey, feedbackFieldKeyPrefix) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// needAnnotationForFilter 检查 span_filter 中是否包含 annotation 字段。
+// NewData 路径使用内存匹配（Satisfied），GetFieldValue 会 fallback 到 getAnnotationValue，需要 span 携带 annotation 数据。
+func (t *ObservabilityTask) needAnnotationForFilter() bool {
+	if t.SpanFilter == nil {
+		return false
+	}
+	found := false
+	_ = t.SpanFilter.Filters.Traverse(func(field *loop_span.FilterField) error {
+		if field.FieldName != "" &&
+			(strings.HasPrefix(field.FieldName, loop_span.AnnotationManualFeedbackFieldPrefix) ||
+				strings.HasPrefix(field.FieldName, loop_span.AnnotationOpenAPIFeedbackFieldPrefix) ||
+				strings.HasPrefix(field.FieldName, loop_span.AnnotationAutoEvaluateFieldPrefix)) {
+			found = true
+		}
+		return nil
+	})
+	return found
+}
+
+// BackfillNeedQueryAnnotation 判断 BackFill 路径是否需要查询 annotation 数据。
+// BackFill 的筛选由 SQL 子查询完成，不需要 annotation；但后续 dispatch 中 processor 提取输出字段时需要。
+func (t *ObservabilityTask) BackfillNeedQueryAnnotation() bool {
+	return t.needAnnotationForOutput()
+}
+
+// NewDataNeedQueryAnnotation 判断 NewData 路径是否需要查询 annotation 数据。
+// NewData 的筛选在内存中完成（Satisfied），且后续 processor 也需要提取输出字段，两者都依赖 annotation。
+func (t *ObservabilityTask) NewDataNeedQueryAnnotation() bool {
+	return t.needAnnotationForFilter() || t.needAnnotationForOutput()
 }

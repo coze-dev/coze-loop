@@ -621,6 +621,47 @@ func TestExptItemEvalConf_GetConcurNum(t *testing.T) {
 	}
 }
 
+func TestExptItemEvalConf_GetMaxItemConcurNum(t *testing.T) {
+	tests := []struct {
+		name     string
+		conf     *ExptItemEvalConf
+		expected int
+	}{
+		{
+			name:     "conf为nil，返回默认值",
+			conf:     nil,
+			expected: defaultMaxItemConcurNum,
+		},
+		{
+			name:     "MaxItemConcurNum为0，返回默认值",
+			conf:     &ExptItemEvalConf{MaxItemConcurNum: 0},
+			expected: defaultMaxItemConcurNum,
+		},
+		{
+			name:     "MaxItemConcurNum为负数，返回默认值",
+			conf:     &ExptItemEvalConf{MaxItemConcurNum: -1},
+			expected: defaultMaxItemConcurNum,
+		},
+		{
+			name:     "MaxItemConcurNum为正数，返回设置值",
+			conf:     &ExptItemEvalConf{MaxItemConcurNum: 500},
+			expected: 500,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result int
+			if tt.conf != nil {
+				result = tt.conf.GetMaxItemConcurNum()
+			} else {
+				result = (*ExptItemEvalConf)(nil).GetMaxItemConcurNum()
+			}
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestExptItemEvalConf_GetInterval(t *testing.T) {
 	tests := []struct {
 		name     string

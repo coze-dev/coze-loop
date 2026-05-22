@@ -25,7 +25,9 @@ import (
 type IExptTemplateDAO interface {
 	Create(ctx context.Context, template *model.ExptTemplate) error
 	GetByID(ctx context.Context, id int64) (*model.ExptTemplate, error)
-	GetByName(ctx context.Context, name string, spaceID int64) (*model.ExptTemplate, error)
+	// GetByName 按空间 + 名称查询模板；当 exptType > 0 时附加 expt_type 维度过滤，
+	// 用于在线/离线两类模板独立判重（exptType=0 兼容旧逻辑，跨类型查询）。
+	GetByName(ctx context.Context, name string, spaceID int64, exptType int32) (*model.ExptTemplate, error)
 	MGetByID(ctx context.Context, ids []int64, opts ...db.Option) ([]*model.ExptTemplate, error)
 	Update(ctx context.Context, template *model.ExptTemplate) error
 	UpdateFields(ctx context.Context, id int64, ufields map[string]any) error
@@ -64,16 +66,20 @@ func (d *exptTemplateDAOImpl) GetByID(ctx context.Context, id int64) (*model.Exp
 	return result, nil
 }
 
-func (d *exptTemplateDAOImpl) GetByName(ctx context.Context, name string, spaceID int64) (*model.ExptTemplate, error) {
+func (d *exptTemplateDAOImpl) GetByName(ctx context.Context, name string, spaceID int64, exptType int32) (*model.ExptTemplate, error) {
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplate
-	result, err := q.WithContext(ctx).
-		Where(q.SpaceID.Eq(spaceID), q.Name.Eq(name), q.DeletedAt.IsNull()).
-		First()
+	stmt := q.WithContext(ctx).
+		Where(q.SpaceID.Eq(spaceID), q.Name.Eq(name), q.DeletedAt.IsNull())
+	if exptType > 0 {
+		// 复合索引 idx_space_id_expt_type_deleted_at 支持，按类型隔离判重
+		stmt = stmt.Where(q.ExptType.Eq(exptType))
+	}
+	result, err := stmt.First()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
-		return nil, errorx.Wrapf(err, "get expt_template by name fail, name: %v, space_id: %v", name, spaceID)
+		return nil, errorx.Wrapf(err, "get expt_template by name fail, name: %v, space_id: %v, expt_type: %v", name, spaceID, exptType)
 	}
 	return result, nil
 }

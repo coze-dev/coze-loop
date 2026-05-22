@@ -5,6 +5,8 @@ package experiment
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/bytedance/gg/gcond"
 	"github.com/bytedance/gg/gptr"
@@ -642,11 +644,32 @@ func exptSourceDTO2DO(dto *domain_expt.ExptSource) *entity.ExptSource {
 	if dto == nil {
 		return nil
 	}
+	// 注意：SpanFilterFields / Sampler 由 service 层的 enrichExptSourceFromPipeline
+	// 从 Pipeline.Flow 反填，不应从用户请求 body 接受；此处仅承载 SourceType/SourceID/Scheduler/TimeRange。
 	return &entity.ExptSource{
 		SourceType: entity.SourceType(gptr.Indirect(dto.SourceType)),
 		SourceID:   gptr.Indirect(dto.SourceID),
+		Scheduler:  exptSchedulerDTO2DO(dto.Scheduler),
 		TimeRange:  taskTimeRangeDTO2DO(dto.TimeRange),
 	}
+}
+
+// exptSchedulerDTO2DO 将 domain_expt.Scheduler 转为 entity.ExptSchedulerDO
+func exptSchedulerDTO2DO(dto *domain_expt.Scheduler) *entity.ExptSchedulerDO {
+	if dto == nil {
+		return nil
+	}
+	do := &entity.ExptSchedulerDO{
+		Enabled:   dto.Enabled,
+		TriggerAt: dto.TriggerAt,
+		StartTime: dto.StartTime,
+		EndTime:   dto.EndTime,
+	}
+	if dto.Frequency != nil {
+		f := *dto.Frequency
+		do.Frequency = &f
+	}
+	return do
 }
 
 // ConvertUpdateExptTemplateMetaReq 转换更新实验模板 Meta 请求为实体参数
@@ -1020,6 +1043,30 @@ func buildTemplateScoreWeightConfigDTO(template *entity.ExptTemplate) *domain_ex
 	}
 }
 
+// DefaultExperimentNameFromTemplate 未传实验名时：实验模板名称 + 秒级时间戳（无分隔符）；模板名为空时用「实验模板」作前缀。
+func DefaultExperimentNameFromTemplate(template *entity.ExptTemplate, nowUnix int64) string {
+	tplName := ""
+	if template != nil && template.Meta != nil {
+		tplName = strings.TrimSpace(template.Meta.Name)
+	}
+	if tplName == "" {
+		tplName = "实验模板"
+	}
+	return tplName + strconv.FormatInt(nowUnix, 10)
+}
+
+// SchedulerExperimentNameFromTemplate ByteScheduler 按模板定时创建实验、未自定义名称时：模板名称（Trim 后）+「-」+ 秒级时间戳；模板名为空时前缀「实验模板」。
+func SchedulerExperimentNameFromTemplate(template *entity.ExptTemplate, nowUnix int64) string {
+	tplName := ""
+	if template != nil && template.Meta != nil {
+		tplName = strings.TrimSpace(template.Meta.Name)
+	}
+	if tplName == "" {
+		tplName = "实验模板"
+	}
+	return tplName + "-" + strconv.FormatInt(nowUnix, 10)
+}
+
 // TemplateToSubmitExperimentRequest 将实验模板转换为 SubmitExperimentRequest，用于根据模板提交实验
 func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name string, workspaceID int64) *expt.SubmitExperimentRequest {
 	if template == nil {
@@ -1061,6 +1108,7 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EvaluatorFieldMapping = fieldMapping.EvaluatorFieldMapping
 		req.TargetRuntimeParam = fieldMapping.TargetRuntimeParam
 		req.ItemConcurNum = fieldMapping.ItemConcurNum
+		req.ItemRetryNum = fieldMapping.ItemRetryNum
 	}
 
 	// 评估器并发数
@@ -1348,6 +1396,10 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 		}
 
 		param.TemplateConf = templateConf
+	}
+
+	if req.IsSetExptSource() && req.GetExptSource() != nil {
+		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
 	}
 
 	return param, nil

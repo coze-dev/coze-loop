@@ -15,6 +15,8 @@ type Settings struct {
 	WorkspaceId           int64
 	ThirdPartyWorkspaceID string
 	PlatformType          loop_span.PlatformType
+	SpanListType          loop_span.SpanListType
+	AgentName             string
 	QueryStartTime        int64 // ms
 	QueryEndTime          int64 // ms
 	QueryTenants          []string
@@ -23,6 +25,7 @@ type Settings struct {
 	QueryLogID            string
 	QueryFilter           *loop_span.FilterFields
 	Scene                 entity.ProcessorScene
+	WithoutClip           bool
 }
 
 type Factory interface {

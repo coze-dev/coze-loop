@@ -116,11 +116,13 @@ var (
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
 		obrepo.NewViewRepoImpl,
+		obrepo.NewColumnExtractConfigRepoImpl,
 		mysqldao.NewViewDaoImpl,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
@@ -140,6 +142,7 @@ var (
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
 		obmetrics.NewConsumeMetric,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,

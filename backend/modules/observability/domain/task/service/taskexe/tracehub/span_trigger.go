@@ -7,12 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/gg/gslice"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/service/taskexe"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
+	trace_repo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 	"github.com/hashicorp/go-multierror"
 	pkgerrors "github.com/pkg/errors"
@@ -153,6 +155,9 @@ func (h *TraceHubServiceImpl) buildSubscriberOfSpan(ctx context.Context, span *l
 			traceService: h.traceService,
 		})
 	}
+
+	// 如果有任何 subscriber 的筛选条件包含 annotation 字段，则预加载 annotation 数据
+	h.preloadAnnotationsIfNeeded(ctx, span, subscribers)
 
 	var (
 		merr = &multierror.Error{}
@@ -364,4 +369,42 @@ func (h *TraceHubServiceImpl) listNonFinalTaskByRedis(ctx context.Context, space
 		taskPOs = append(taskPOs, taskPO)
 	}
 	return taskPOs, nil
+}
+
+// preloadAnnotationsIfNeeded 检查 subscribers 中是否有任何任务的筛选条件包含 annotation 字段，
+// 如果有则预先查询 annotation 数据并附加到 span 上，以支持内存中的 Satisfied 匹配。
+func (h *TraceHubServiceImpl) preloadAnnotationsIfNeeded(ctx context.Context, span *loop_span.Span, subs []*spanSubscriber) {
+	needAnno := false
+	for _, sub := range subs {
+		if sub.t != nil && sub.t.NewDataNeedQueryAnnotation() {
+			needAnno = true
+			break
+		}
+	}
+	if !needAnno {
+		return
+	}
+
+	workspaceID, err := strconv.ParseInt(span.WorkspaceID, 10, 64)
+	if err != nil {
+		logs.CtxWarn(ctx, "preloadAnnotations: parse workspace_id failed, span_id=%s, err=%v", span.SpanID, err)
+		return
+	}
+	tenant := span.GetTenant()
+	if tenant == "" {
+		return
+	}
+	annotations, err := h.traceRepo.ListAnnotations(ctx, &trace_repo.ListAnnotationsParam{
+		Tenants:     []string{tenant},
+		SpanID:      span.SpanID,
+		TraceID:     span.TraceID,
+		WorkspaceId: workspaceID,
+		StartAt:     span.StartTime/1000 - 5*time.Second.Milliseconds(),
+		EndAt:       span.StartTime/1000 + 5*time.Second.Milliseconds(),
+	})
+	if err != nil {
+		logs.CtxWarn(ctx, "preloadAnnotations: ListAnnotations failed, span_id=%s, err=%v", span.SpanID, err)
+		return
+	}
+	span.Annotations = append(span.Annotations, annotations...)
 }

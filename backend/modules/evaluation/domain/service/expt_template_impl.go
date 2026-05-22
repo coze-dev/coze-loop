@@ -28,6 +28,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/slices"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 func NewExptTemplateManager(
@@ -41,6 +42,7 @@ func NewExptTemplateManager(
 	taskRPCAdapter rpc.ITaskRPCAdapter,
 	pipelineRPCAdapter rpc.IPipelineListAdapter,
 	exptRepo repo.IExperimentRepo,
+	scheduleAdapter rpc.IExptScheduleAdapter,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
 		templateRepo:                templateRepo,
@@ -53,6 +55,7 @@ func NewExptTemplateManager(
 		taskRPCAdapter:              taskRPCAdapter,
 		pipelineRPCAdapter:          pipelineRPCAdapter,
 		exptRepo:                    exptRepo,
+		scheduleAdapter:             scheduleAdapter,
 	}
 }
 
@@ -67,10 +70,13 @@ type ExptTemplateManagerImpl struct {
 	taskRPCAdapter              rpc.ITaskRPCAdapter
 	pipelineRPCAdapter          rpc.IPipelineListAdapter
 	exptRepo                    repo.IExperimentRepo
+	// scheduleAdapter SourceType=Evaluation 时通过该适配器把 Scheduler 配置投递到底层调度平台；
+	// 上游可能注入 noop 实现（无 ByteScheduler 依赖时）以便在创建/更新模板的主流程上保持一致语义。
+	scheduleAdapter rpc.IExptScheduleAdapter
 }
 
-func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, session *entity.Session) (bool, error) {
-	_, exists, err := e.templateRepo.GetByName(ctx, name, spaceID)
+func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
+	_, exists, err := e.templateRepo.GetByName(ctx, name, spaceID, exptType)
 	if err != nil {
 		return false, err
 	}
@@ -78,8 +84,8 @@ func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, sp
 }
 
 func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.CreateExptTemplateParam, session *entity.Session) (*entity.ExptTemplate, error) {
-	// 验证名称
-	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+	// 验证名称：按 expt_type 隔离，避免在线/离线模板互相判重
+	pass, err := e.CheckName(ctx, param.Name, param.SpaceID, param.ExptType, session)
 	if !pass {
 		return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 	}
@@ -189,6 +195,18 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 		template.Evaluators = exptTuples[0].Evaluators
 	}
 
+	// 在线 Pipeline 模板：回填 SpanFilterFields / Sampler / Scheduler，返回与 Get/List 一致的完整 ExptSource
+	if err := e.enrichExptSourceFromPipeline(ctx, []*entity.ExptTemplate{template}, param.SpaceID); err != nil {
+		return nil, errorx.Wrapf(err, "enrich expt source from pipeline fail after create, workspace_id: %d", param.SpaceID)
+	}
+
+	// 创建模板成功后同步底层调度任务（仅 SourceType=Evaluation 生效）
+	logs.CtxInfo(ctx, "[expt_template_sched] sync after Create, space_id=%d, template_id=%d, has_expt_source=%v, has_scheduler=%v",
+		template.GetSpaceID(), template.GetID(),
+		template.ExptSource != nil,
+		template.ExptSource != nil && template.ExptSource.Scheduler != nil)
+	e.syncSchedulerForTemplate(ctx, template)
+
 	return template, nil
 }
 
@@ -256,9 +274,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
 	}
 
-	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）
+	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
-		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
 		if !pass {
 			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}
@@ -308,7 +326,8 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
 			entity.WithEnv(param.CreateEvalTargetParam.Env),
-			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction),
+			entity.WithCluster(param.CreateEvalTargetParam.Cluster))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -316,6 +335,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
 				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
 			}))
+		}
+		if param.CreateEvalTargetParam.AgentConnection != nil {
+			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, sourceTargetID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {
@@ -427,6 +449,15 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		}
 	}
 
+	// 显式传入 expt_source（含 Scheduler 等）时覆盖到 TemplateConf；
+	// 当 templateConf 还未初始化（请求未带字段映射等），克隆现有再写入，避免污染其他字段。
+	if param.ExptSource != nil {
+		if updatedTemplate.TemplateConf == nil {
+			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
 	e.buildFieldMappingConfigAndEnableScoreWeight(updatedTemplate, updatedTemplate.TemplateConf)
 
@@ -464,6 +495,17 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		updatedTemplate.Evaluators = exptTuples[0].Evaluators
 	}
 
+	if err := e.enrichExptSourceFromPipeline(ctx, []*entity.ExptTemplate{updatedTemplate}, param.SpaceID); err != nil {
+		return nil, errorx.Wrapf(err, "enrich expt source from pipeline fail after update, workspace_id: %d", param.SpaceID)
+	}
+
+	// 更新模板成功后同步底层调度任务，覆盖 Scheduler 启停 / 频率变更 / SourceType 切换等场景
+	logs.CtxInfo(ctx, "[expt_template_sched] sync after Update, space_id=%d, template_id=%d, has_expt_source=%v, has_scheduler=%v",
+		updatedTemplate.GetSpaceID(), updatedTemplate.GetID(),
+		updatedTemplate.ExptSource != nil,
+		updatedTemplate.ExptSource != nil && updatedTemplate.ExptSource.Scheduler != nil)
+	e.syncSchedulerForTemplate(ctx, updatedTemplate)
+
 	return updatedTemplate, nil
 }
 
@@ -477,9 +519,9 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
 	}
 
-	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）
+	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
-		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, session)
+		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
 		if !pass {
 			return nil, errorx.NewByCode(errno.ExperimentNameExistedCode, errorx.WithExtraMsg(fmt.Sprintf("template name %s already exists", param.Name)))
 		}
@@ -551,6 +593,13 @@ func (e *ExptTemplateManagerImpl) UpdateMeta(ctx context.Context, param *entity.
 		updatedTemplate.BaseInfo.UpdatedBy = &entity.UserInfo{UserID: gptr.Of(session.UserID)}
 	}
 
+	// CronActivate 翻转后需要同步底层调度任务
+	if param.CronActivate != nil {
+		logs.CtxInfo(ctx, "[expt_template_sched] sync after UpdateMeta (cron_activate flipped to %v), space_id=%d, template_id=%d",
+			*param.CronActivate, updatedTemplate.GetSpaceID(), updatedTemplate.GetID())
+		e.syncSchedulerForTemplate(ctx, updatedTemplate)
+	}
+
 	return updatedTemplate, nil
 }
 
@@ -614,7 +663,16 @@ func (e *ExptTemplateManagerImpl) UpdateExptInfo(ctx context.Context, templateID
 }
 
 func (e *ExptTemplateManagerImpl) Delete(ctx context.Context, templateID, spaceID int64, session *entity.Session) error {
-	return e.templateRepo.Delete(ctx, templateID, spaceID)
+	if err := e.templateRepo.Delete(ctx, templateID, spaceID); err != nil {
+		return err
+	}
+	// 删除模板时关闭底层定时任务，避免残留任务继续触发
+	if e.scheduleAdapter != nil {
+		if cerr := e.scheduleAdapter.CloseJob(ctx, buildScheduleBizKey(spaceID, templateID)); cerr != nil {
+			logs.CtxWarn(ctx, "[expt_template] close schedule job on delete failed, template_id=%d, err=%v", templateID, cerr)
+		}
+	}
+	return nil
 }
 
 func (e *ExptTemplateManagerImpl) List(ctx context.Context, page, pageSize int32, spaceID int64, filter *entity.ExptTemplateListFilter, orderBys []*entity.OrderBy, session *entity.Session) ([]*entity.ExptTemplate, int64, error) {
@@ -1809,7 +1867,8 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 			entity.WithCozeBotInfoType(gptr.Indirect(param.CreateEvalTargetParam.BotInfoType)),
 			entity.WithRegion(param.CreateEvalTargetParam.Region),
 			entity.WithEnv(param.CreateEvalTargetParam.Env),
-			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction))
+			entity.WithOperationInstruction(param.CreateEvalTargetParam.OperationInstruction),
+			entity.WithCluster(param.CreateEvalTargetParam.Cluster))
 		if param.CreateEvalTargetParam.CustomEvalTarget != nil {
 			opts = append(opts, entity.WithCustomEvalTarget(&entity.CustomEvalTarget{
 				ID:        param.CreateEvalTargetParam.CustomEvalTarget.ID,
@@ -1817,6 +1876,9 @@ func (e *ExptTemplateManagerImpl) resolveTargetForCreate(ctx context.Context, pa
 				AvatarURL: param.CreateEvalTargetParam.CustomEvalTarget.AvatarURL,
 				Ext:       param.CreateEvalTargetParam.CustomEvalTarget.Ext,
 			}))
+		}
+		if param.CreateEvalTargetParam.AgentConnection != nil {
+			opts = append(opts, entity.WithAgentConnection(param.CreateEvalTargetParam.AgentConnection))
 		}
 		targetID, targetVersionID, err := e.evalTargetService.CreateEvalTarget(ctx, param.SpaceID, gptr.Indirect(param.CreateEvalTargetParam.SourceTargetID), gptr.Indirect(param.CreateEvalTargetParam.SourceTargetVersion), gptr.Indirect(param.CreateEvalTargetParam.EvalTargetType), opts...)
 		if err != nil {

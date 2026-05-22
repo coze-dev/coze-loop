@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/domain_openapi/experiment"
@@ -1282,6 +1283,149 @@ func (e *EvalOpenAPIApplication) GetExperimentAggrResultOApi(ctx context.Context
 	}, nil
 }
 
+func (e *EvalOpenAPIApplication) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest) (r *openapi.RetryExperimentOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+
+	// 转换 retry mode
+	retryMode, err := mapOpenAPIExptRetryMode(req.GetRetryMode())
+	if err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
+
+	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
+		ObjectID:      strconv.FormatInt(req.GetExperimentID(), 10),
+		SpaceID:       req.GetWorkspaceID(),
+		ActionObjects: []*rpc.ActionObject{{Action: gptr.Of(consts.Run), EntityType: gptr.Of(rpc.AuthEntityType_EvaluationExperiment)}},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	retryReq := &exptpb.RetryExperimentRequest{
+		RetryMode:   domain_expt.ExptRetryModePtr(retryMode),
+		WorkspaceID: req.WorkspaceID,
+		ExptID:      req.ExperimentID,
+		ItemIds:     req.ItemIds,
+		Ext:         req.Ext,
+	}
+
+	resp, err := e.experimentApp.RetryExperiment(ctx, retryReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.RetryExperimentOApiResponse{
+		Data: &openapi.RetryExperimentOpenAPIData{
+			RunID: resp.RunID,
+		},
+	}, nil
+}
+
+func mapOpenAPIExptRetryMode(mode experiment.ExptRetryMode) (domain_expt.ExptRetryMode, error) {
+	switch mode {
+	case experiment.ExptRetryModeRetryAll:
+		return domain_expt.ExptRetryMode_RetryAll, nil
+	case experiment.ExptRetryModeRetryFailure, "":
+		return domain_expt.ExptRetryMode_RetryFailure, nil
+	case experiment.ExptRetryModeRetryTargetItems:
+		return domain_expt.ExptRetryMode_RetryTargetItems, nil
+	default:
+		return 0, fmt.Errorf("unsupported retry mode: %s", mode)
+	}
+}
+
+// ExportExperimentResultOApi 触发实验报告导出（异步），返回 export_id。
+// 鉴权与内部 ExportExptResult 一致：在 experimentApp.ExportExptResult_ 内部完成（含白名单 / SPI-less 鉴权）。
+func (e *EvalOpenAPIApplication) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest) (r *openapi.ExportExperimentResultOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+
+	innerReq := &exptpb.ExportExptResultRequest{
+		WorkspaceID:   req.GetWorkspaceID(),
+		ExptID:        req.GetExperimentID(),
+		ExportColumns: experiment_convertor.OpenAPIExportColumnSpecDTO2Inner(req.GetExportColumns()),
+	}
+	if req.IsSetExportType() {
+		t := experiment_convertor.OpenAPIExportTypeDTO2Inner(req.GetExportType())
+		innerReq.ExportType = &t
+	}
+
+	resp, err := e.experimentApp.ExportExptResult_(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.ExportExperimentResultOApiResponse{
+		Data: &openapi.ExportExperimentResultOpenAPIData{
+			ExportID: gptr.Of(resp.GetExportID()),
+		},
+	}, nil
+}
+
+// GetExperimentResultExportRecordOApi 查询导出记录（含下载链接）。
+func (e *EvalOpenAPIApplication) GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error) {
+	startTime := time.Now().UnixNano() / int64(time.Millisecond)
+	defer func() {
+		e.metric.EmitOpenAPIMetric(ctx, req.GetWorkspaceID(), 0, kitexutil.GetTOMethod(ctx), startTime, err)
+	}()
+
+	if req == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetWorkspaceID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("workspace_id is required"))
+	}
+	if req.GetExperimentID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("experiment_id is required"))
+	}
+	if req.GetExportID() <= 0 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("export_id is required"))
+	}
+
+	innerReq := &exptpb.GetExptResultExportRecordRequest{
+		WorkspaceID: req.GetWorkspaceID(),
+		ExptID:      req.GetExperimentID(),
+		ExportID:    req.GetExportID(),
+	}
+	resp, err := e.experimentApp.GetExptResultExportRecord(ctx, innerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return &openapi.GetExperimentResultExportRecordOApiResponse{
+		Data: &openapi.GetExperimentResultExportRecordOpenAPIData{
+			ExptResultExportRecord: experiment_convertor.InnerExportRecordDTO2OpenAPI(resp.GetExptResultExportRecords()),
+		},
+	}, nil
+}
+
 func (e *EvalOpenAPIApplication) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest) (r *openapi.ListEvaluatorsOApiResponse, err error) {
 	startTime := time.Now().UnixNano() / int64(time.Millisecond)
 	defer func() {
@@ -2007,10 +2151,7 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("template_id is required"))
 	}
 
-	name := req.GetName()
-	if name == "" {
-		name = fmt.Sprintf("实验模板_%d", time.Now().Unix())
-	}
+	name := strings.TrimSpace(req.GetName())
 
 	err = e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.GetWorkspaceID(), 10),
@@ -2028,6 +2169,19 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 	}
 	if template == nil {
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment template not found"))
+	}
+
+	if name == "" {
+		name = experiment_convertor.DefaultExperimentNameFromTemplate(template, time.Now().Unix())
+	}
+	// 创建实验时，判断不为空则替换模板上的信息
+	if req.TargetRuntimeParam != nil {
+		if template.FieldMappingConfig == nil {
+			template.FieldMappingConfig = &entity.ExptFieldMapping{}
+		}
+		template.FieldMappingConfig.TargetRuntimeParam = &entity.RuntimeParam{
+			JSONValue: req.TargetRuntimeParam.JSONValue,
+		}
 	}
 
 	// 检查实验名称是否重复
@@ -2073,6 +2227,9 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateMetaOApi(ctx context.Context,
 
 	if req == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("req is nil"))
+	}
+	if req.GetMeta() == nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("meta is nil"))
 	}
 
 	session := entity.NewSession(ctx)

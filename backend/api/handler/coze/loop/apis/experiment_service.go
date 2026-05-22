@@ -324,3 +324,9 @@ func UpdateExperimentTemplateMeta(ctx context.Context, c *app.RequestContext) {
 func CheckExperimentTemplateName(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localExptSvc.CheckExperimentTemplateName)
 }
+
+// SubmitExptFromTemplate .
+// @router /api/evaluation/v1/experiment_templates/submit_expt [POST]
+func SubmitExptFromTemplate(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localExptSvc.SubmitExptFromTemplate)
+}

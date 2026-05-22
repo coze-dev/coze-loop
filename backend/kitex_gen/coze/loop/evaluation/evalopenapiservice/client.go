@@ -33,6 +33,9 @@ type Client interface {
 	ListExperimentsOApi(ctx context.Context, req *openapi.ListExperimentsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentsOApiResponse, err error)
 	ListExperimentResultOApi(ctx context.Context, req *openapi.ListExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ListExperimentResultOApiResponse, err error)
 	GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error)
+	RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.RetryExperimentOApiResponse, err error)
+	ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ExportExperimentResultOApiResponse, err error)
+	GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error)
 	ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluatorsOApiResponse, err error)
 	BatchGetEvaluatorsOApi(ctx context.Context, req *openapi.BatchGetEvaluatorsOApiRequest, callOptions ...callopt.Option) (r *openapi.BatchGetEvaluatorsOApiResponse, err error)
 	CreateEvaluatorOApi(ctx context.Context, req *openapi.CreateEvaluatorOApiRequest, callOptions ...callopt.Option) (r *openapi.CreateEvaluatorOApiResponse, err error)
@@ -193,6 +196,21 @@ func (p *kEvalOpenAPIServiceClient) ListExperimentResultOApi(ctx context.Context
 func (p *kEvalOpenAPIServiceClient) GetExperimentAggrResultOApi(ctx context.Context, req *openapi.GetExperimentAggrResultOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentAggrResultOApiResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetExperimentAggrResultOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExperimentOApiRequest, callOptions ...callopt.Option) (r *openapi.RetryExperimentOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.RetryExperimentOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest, callOptions ...callopt.Option) (r *openapi.ExportExperimentResultOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.ExportExperimentResultOApi(ctx, req)
+}
+
+func (p *kEvalOpenAPIServiceClient) GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest, callOptions ...callopt.Option) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetExperimentResultExportRecordOApi(ctx, req)
 }
 
 func (p *kEvalOpenAPIServiceClient) ListEvaluatorsOApi(ctx context.Context, req *openapi.ListEvaluatorsOApiRequest, callOptions ...callopt.Option) (r *openapi.ListEvaluatorsOApiResponse, err error) {

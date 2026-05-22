@@ -226,6 +226,32 @@ func (e *DefaultExptTurnEvaluationImpl) callTarget(ctx context.Context, etec *en
 				}
 			}
 			return fields, nil
+		case entity.EvalTargetTypeCustomAgent, entity.EvalTargetTypeA2AAgent:
+			fields, err := e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
+			if err != nil {
+				return nil, err
+			}
+			defaultFields := gslice.ToMap(turn.FieldDataList, func(t *entity.FieldData) (string, *entity.Content) { return t.Name, t.Content })
+			for _, field := range turn.FieldDataList {
+				if field.Content != nil && field.Content.IsContentOmitted() {
+					req := &entity.GetEvaluationSetItemFieldParam{
+						SpaceID:         spaceID,
+						EvaluationSetID: turn.EvalSetID,
+						ItemPK:          turn.ItemID,
+						FieldName:       field.Name,
+						FieldKey:        gptr.Of(field.Key),
+						TurnID:          gptr.Of(turn.ID),
+					}
+					logs.CtxInfo(ctx, "found omitted content turn, turn_info: %v", json.Jsonify(req))
+					fd, err := e.evalSetItemSvc.GetEvaluationSetItemField(ctx, req)
+					if err != nil {
+						return nil, err
+					}
+					defaultFields[field.Name] = fd.Content
+				}
+				fields[field.Name] = defaultFields[field.Name]
+			}
+			return fields, nil
 		default:
 			return e.buildEvalSetFields(ctx, spaceID, targetConf.IngressConf.EvalSetAdapter.FieldConfs, turn)
 		}

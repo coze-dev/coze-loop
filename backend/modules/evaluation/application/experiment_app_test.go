@@ -1161,7 +1161,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1189,7 +1189,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 			},
 			mockSetup: func() {
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), templateName, workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), templateName, workspaceID, gomock.Any(), &entity.Session{}).
 					Return(false, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -1262,7 +1262,7 @@ func TestExperimentApplication_CheckExperimentTemplateName(t *testing.T) {
 						},
 					}, nil)
 				mockTemplateManager.EXPECT().
-					CheckName(gomock.Any(), "other_name", workspaceID, &entity.Session{}).
+					CheckName(gomock.Any(), "other_name", workspaceID, gomock.Any(), &entity.Session{}).
 					Return(true, nil)
 				mockAuth.EXPECT().
 					Authorization(
@@ -7203,4 +7203,162 @@ func Test_experimentApplication_validateEvaluatorVersionsBelongToWorkspace(t *te
 		err := app.validateEvaluatorVersionsBelongToWorkspace(ctx, []int64{1010, 2020}, 100)
 		assert.NoError(t, err)
 	})
+}
+
+func TestExperimentApplication_SubmitExptFromTemplate(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(5001)
+	templateID := int64(5002)
+
+	buildValidTemplate := func() *entity.ExptTemplate {
+		return &entity.ExptTemplate{
+			Meta: &entity.ExptTemplateMeta{
+				ID:          templateID,
+				WorkspaceID: workspaceID,
+			},
+			TripleConfig: &entity.ExptTemplateTuple{
+				EvalSetID:        100,
+				EvalSetVersionID: 200,
+			},
+		}
+	}
+
+	tests := []struct {
+		name    string
+		req     *exptpb.SubmitExptFromTemplateRequest
+		setup   func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager)
+		wantErr int32
+	}{
+		{
+			name: "nil request",
+			req:  nil,
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid workspace_id",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: 0,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid template_id",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  0,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(_ *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "auth failed",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name: "template not found",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(nil, nil)
+			},
+			wantErr: errno.ResourceNotFoundCode,
+		},
+		{
+			name: "template get error",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, _ *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(nil, errors.New("get error"))
+			},
+			wantErr: -1,
+		},
+		{
+			name: "name duplicate",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp", workspaceID, gomock.Any()).Return(false, nil)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "check name error",
+			req: &exptpb.SubmitExptFromTemplateRequest{
+				WorkspaceID: workspaceID,
+				TemplateID:  templateID,
+				Name:        gptr.Of("exp"),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp", workspaceID, gomock.Any()).Return(false, errors.New("check error"))
+			},
+			wantErr: -1,
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			templateMgr := servicemocks.NewMockIExptTemplateManager(ctrl)
+			manager := servicemocks.NewMockIExptManager(ctrl)
+
+			tc.setup(auth, templateMgr, manager)
+
+			app := &experimentApplication{
+				auth:            auth,
+				templateManager: templateMgr,
+				manager:         manager,
+			}
+
+			_, err := app.SubmitExptFromTemplate(context.Background(), tc.req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					if ok {
+						assert.Equal(t, tc.wantErr, statusErr.Code())
+					}
+				}
+			}
+		})
+	}
 }
