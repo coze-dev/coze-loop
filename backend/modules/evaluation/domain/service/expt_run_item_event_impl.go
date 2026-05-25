@@ -250,11 +250,6 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 	}
 
 	ctx = e.WithCtx(ctx, eiec)
-	if timeoutMS, ok := cozeVideoTimeoutRecordReproTimeoutMS(eiec); ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
-		defer cancel()
-	}
 
 	mode, err := NewRecordEvalMode(
 		eiec.Event,
@@ -272,6 +267,12 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 
 	if err := mode.PreEval(ctx, eiec); err != nil {
 		return err
+	}
+
+	if timeoutMS, ok := cozeVideoTimeoutRecordReproTimeoutMS(eiec); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
+		defer cancel()
 	}
 
 	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService).

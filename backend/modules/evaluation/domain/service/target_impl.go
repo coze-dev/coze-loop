@@ -43,8 +43,6 @@ type EvalTargetServiceImpl struct {
 	configer          component.IConfiger
 }
 
-const evalTargetRecordPersistTimeout = 5 * time.Second
-
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
@@ -356,18 +354,12 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			}
 		}
 
-		recordCtx, recordCancel := context.WithTimeout(context.WithoutCancel(ctx), evalTargetRecordPersistTimeout)
-		defer recordCancel()
-
-		recordID, err1 := e.idgen.GenID(recordCtx)
+		recordID, err1 := e.idgen.GenID(ctx)
 		if err1 != nil {
 			err = err1
 			return
 		}
-		logID := logs.GetLogID(recordCtx)
-
-		logs.CtxInfo(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record with detached ctx, expt_id: %v, item_id: %v, target_id: %v, source_target_id: %v, parent_ctx_err: %v, persist_ctx_err: %v, log_id: %v, trace_id: %v",
-			gptr.Indirect(param.ExperimentID), param.ItemID, targetID, evalTargetDO.SourceTargetID, ctx.Err(), recordCtx.Err(), logID, span.GetTraceID())
+		logID := logs.GetLogID(ctx)
 
 		record = &entity.EvalTargetRecord{
 			ID:                   recordID,
@@ -393,16 +385,12 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 			},
 		}
-		e.convEvalTargetRunErr(recordCtx, record)
+		e.convEvalTargetRunErr(ctx, record)
 
-		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record, nil)
+		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, nil)
 		if errCreate != nil {
-			logs.CtxError(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record failed, expt_id: %v, item_id: %v, target_record_id: %v, parent_ctx_err: %v, persist_ctx_err: %v, err: %v",
-				gptr.Indirect(param.ExperimentID), param.ItemID, record.ID, ctx.Err(), recordCtx.Err(), errCreate)
 			return
 		}
-		logs.CtxInfo(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record success, expt_id: %v, item_id: %v, target_record_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
-			gptr.Indirect(param.ExperimentID), param.ItemID, record.ID, runStatus, ctx.Err(), recordCtx.Err())
 		err = nil
 	}()
 
