@@ -11,6 +11,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
@@ -371,6 +372,23 @@ func Test_ExptItemEvalCtxExecutor_CompleteSetItemRun(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "mock updateitemrunlog error")
 	})
+
+	t.Run("ctx取消后仍落item失败状态", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		mockConfiger.EXPECT().GetErrRetryConf(gomock.Any(), int64(4), gomock.Any()).AnyTimes().Return(&entity.RetryConf{IsInDebt: false})
+		mockItemResultRepo.EXPECT().UpdateItemRunLog(gomock.Any(), int64(1), int64(2), []int64{3}, gomock.Any(), int64(4)).
+			DoAndReturn(func(ctx context.Context, _, _ int64, _ []int64, ufields map[string]any, _ int64) error {
+				require.NoError(t, ctx.Err())
+				assert.Equal(t, int32(entity.ItemRunState_Fail), ufields["status"])
+				return nil
+			})
+
+		event := &entity.ExptItemEvalEvent{ExptID: 1, ExptRunID: 2, EvalSetItemID: 3, SpaceID: 4, RetryTimes: 1}
+		err := executor.CompleteItemRun(ctx, event, errors.New("target timeout"))
+		assert.NoError(t, err)
+	})
 }
 
 func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
@@ -436,6 +454,37 @@ func Test_ExptItemEvalCtxExecutor_storeTurnRunResult(t *testing.T) {
 		}
 		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).Return(nil)
 		err := executor.storeTurnRunResult(context.Background(), etec, result)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ctx取消后仍落turn失败状态", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		turnResultLog := &entity.ExptTurnResultRunLog{ID: 1, TurnID: 1}
+		etec := &entity.ExptTurnEvalCtx{
+			Turn: &entity.Turn{ID: 1},
+			ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+				Expt:                &entity.Experiment{ID: 1, SourceID: "src", SpaceID: 2},
+				Event:               &entity.ExptItemEvalEvent{ExptRunID: 3},
+				EvalSetItem:         &entity.EvaluationSetItem{ItemID: 2},
+				ExistItemEvalResult: &entity.ExptItemEvalResult{TurnResultRunLogs: map[int64]*entity.ExptTurnResultRunLog{1: turnResultLog}},
+			},
+		}
+		result := &entity.ExptTurnRunResult{EvalErr: errors.New("target timeout")}
+
+		mockConfiger.EXPECT().GetErrCtrl(gomock.Any()).DoAndReturn(func(ctx context.Context) *entity.ExptErrCtrl {
+			require.NoError(t, ctx.Err())
+			return entity.DefaultExptErrCtrl()
+		})
+		mockTurnResultRepo.EXPECT().SaveTurnRunLogs(gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, logs []*entity.ExptTurnResultRunLog) error {
+			require.NoError(t, ctx.Err())
+			require.Len(t, logs, 1)
+			assert.Equal(t, entity.TurnRunState_Fail, logs[0].Status)
+			return nil
+		})
+
+		err := executor.storeTurnRunResult(ctx, etec, result)
 		assert.NoError(t, err)
 	})
 }
