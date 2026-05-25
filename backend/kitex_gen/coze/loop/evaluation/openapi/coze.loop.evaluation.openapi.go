@@ -52793,7 +52793,7 @@ type SubmitExptFromTemplateOApiRequest struct {
 	WorkspaceID *int64  `thrift:"workspace_id,1,optional" frugal:"1,optional,i64" json:"workspace_id" form:"workspace_id" `
 	TemplateID  *int64  `thrift:"template_id,2,optional" frugal:"2,optional,i64" json:"template_id" form:"template_id" `
 	Name        *string `thrift:"name,3,optional" frugal:"3,optional,string" form:"name" json:"name,omitempty"`
-	// 创建实验时，判断不为空则替换模板信息
+	// 创建实验时，判断不为空则替换模板上的信息
 	TargetRuntimeParam *common.RuntimeParam `thrift:"target_runtime_param,20,optional" frugal:"20,optional,common.RuntimeParam" form:"target_runtime_param" json:"target_runtime_param,omitempty"`
 	Extra              *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
 	Base               *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`

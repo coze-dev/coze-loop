@@ -3110,6 +3110,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 61:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField61(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 100:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField100(buf[offset:])
@@ -3390,6 +3404,20 @@ func (p *Experiment) FastReadField62(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField61(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *OfflineExptAnalysisStatus
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.OfflineExptAnalysisStatus = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -3426,6 +3454,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField35(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField62(buf[offset:], w)
+		offset += p.fastWriteField61(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -3452,6 +3481,7 @@ func (p *Experiment) BLength() int {
 		l += p.field50Length()
 		l += p.field60Length()
 		l += p.field62Length()
+		l += p.field61Length()
 		l += p.field100Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -3621,6 +3651,15 @@ func (p *Experiment) fastWriteField62(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetExptTemplateMeta() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 62)
 		offset += p.ExptTemplateMeta.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField61(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOfflineExptAnalysisStatus() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 61)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.OfflineExptAnalysisStatus)
 	}
 	return offset
 }
@@ -3795,6 +3834,15 @@ func (p *Experiment) field62Length() int {
 	return l
 }
 
+func (p *Experiment) field61Length() int {
+	l := 0
+	if p.IsSetOfflineExptAnalysisStatus() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.OfflineExptAnalysisStatus)
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetBaseInfo() {
@@ -3944,6 +3992,11 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ExptTemplateMeta = _exptTemplateMeta
+
+	if src.OfflineExptAnalysisStatus != nil {
+		tmp := *src.OfflineExptAnalysisStatus
+		p.OfflineExptAnalysisStatus = &tmp
+	}
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {
