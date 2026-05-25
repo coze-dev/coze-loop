@@ -199,9 +199,6 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
-	logs.CtxInfo(persistCtx, "[CozeVideoTimeoutRecordE2E] persist turn run log with detached ctx, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
-		etec.Expt.ID, etec.Event.ExptRunID, etec.EvalSetItem.ItemID, turn.ID, clone.Status, ctx.Err(), persistCtx.Err())
-
 	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
@@ -301,9 +298,6 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 	} else {
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
-
-	logs.CtxInfo(persistCtx, "[CozeVideoTimeoutRecordE2E] persist item run log with detached ctx, expt_id: %v, expt_run_id: %v, item_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
-		event.ExptID, event.ExptRunID, event.EvalSetItemID, ufields["status"], ctx.Err(), persistCtx.Err())
 
 	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 		return err

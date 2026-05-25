@@ -366,9 +366,6 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 		}
 		logID := logs.GetLogID(recordCtx)
 
-		logs.CtxInfo(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record with detached ctx, expt_id: %v, item_id: %v, target_id: %v, source_target_id: %v, parent_ctx_err: %v, persist_ctx_err: %v, log_id: %v, trace_id: %v",
-			gptr.Indirect(param.ExperimentID), param.ItemID, targetID, evalTargetDO.SourceTargetID, ctx.Err(), recordCtx.Err(), logID, span.GetTraceID())
-
 		record = &entity.EvalTargetRecord{
 			ID:                   recordID,
 			SpaceID:              spaceID,
@@ -397,12 +394,8 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 
 		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record, nil)
 		if errCreate != nil {
-			logs.CtxError(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record failed, expt_id: %v, item_id: %v, target_record_id: %v, parent_ctx_err: %v, persist_ctx_err: %v, err: %v",
-				gptr.Indirect(param.ExperimentID), param.ItemID, record.ID, ctx.Err(), recordCtx.Err(), errCreate)
 			return
 		}
-		logs.CtxInfo(recordCtx, "[CozeVideoTimeoutRecordE2E] persist eval target record success, expt_id: %v, item_id: %v, target_record_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
-			gptr.Indirect(param.ExperimentID), param.ItemID, record.ID, runStatus, ctx.Err(), recordCtx.Err())
 		err = nil
 	}()
 

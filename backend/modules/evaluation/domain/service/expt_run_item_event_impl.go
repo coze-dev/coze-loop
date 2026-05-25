@@ -269,12 +269,6 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 		return err
 	}
 
-	if timeoutMS, ok := cozeVideoTimeoutRecordReproTimeoutMS(eiec); ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(timeoutMS)*time.Millisecond)
-		defer cancel()
-	}
-
 	if err := NewExptItemEvaluation(e.exptTurnResultRepo, e.exptItemResultRepo, e.configer, e.metric, e.evaTargetService, e.evaluatorRecordService, e.evaluatorService, e.benefitService, e.evalAsyncRepo, e.evaluationSetItemService).
 		Eval(ctx, eiec); err != nil {
 		return err
@@ -285,26 +279,6 @@ func (e *ExptItemEventEvalServiceImpl) eval(ctx context.Context, event *entity.E
 	}
 
 	return nil
-}
-
-func cozeVideoTimeoutRecordReproTimeoutMS(eiec *entity.ExptItemEvalCtx) (int64, bool) {
-	if eiec == nil || eiec.Expt == nil || eiec.Expt.Target == nil || eiec.Expt.Target.EvalTargetVersion == nil {
-		return 0, false
-	}
-
-	target := eiec.Expt.Target
-	customRPC := target.EvalTargetVersion.CustomRPCServer
-	if customRPC == nil || customRPC.Timeout == nil || *customRPC.Timeout <= 0 {
-		return 0, false
-	}
-	if target.SourceTargetID != "7590095306227520514" {
-		return 0, false
-	}
-	if gptr.Indirect(customRPC.ExecEnv) != "ppe_fornax_timeout_record_0525" {
-		return 0, false
-	}
-
-	return *customRPC.Timeout, true
 }
 
 func (e *ExptItemEventEvalServiceImpl) WithCtx(ctx context.Context, eiec *entity.ExptItemEvalCtx) context.Context {
