@@ -59,6 +59,10 @@ func (f *fakeProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger) er
 	return nil
 }
 
+func (f *fakeProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	return nil
+}
+
 func (f *fakeProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return f.onTaskCreatedErr
 }

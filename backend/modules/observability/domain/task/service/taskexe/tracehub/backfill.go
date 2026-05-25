@@ -30,6 +30,11 @@ const (
 	backfillLockMaxHold     = 24 * time.Hour
 	backfillLockTTL         = 3 * time.Minute
 	backfillMaxRetryTimes   = 5
+
+	defaultBatchSize      = 10
+	defaultSleepDuration  = 1 * time.Second
+	configKeyBatchSize    = "backfill_batch_size"
+	configKeySleepMs      = "backfill_sleep_ms"
 )
 
 // 定时任务+锁
@@ -409,8 +414,8 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 
 // processSpansForBackfill handles spans for backfill
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
-	// Batch processing spans for efficiency
-	const batchSize = 10
+	batchSize := h.getBackfillBatchSize(ctx)
+	sleepDuration := h.getBackfillSleepDuration(ctx)
 
 	for i := 0; i < len(spans); i += batchSize {
 		end := i + batchSize
@@ -419,44 +424,56 @@ func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans
 		}
 
 		batch := spans[i:end]
-		err = h.traceService.MergeHistoryMessagesByRespIDBatch(ctx, spans, sub.t.GetPlatformType())
+		err = h.traceService.MergeHistoryMessagesByRespIDBatch(ctx, batch, sub.t.GetPlatformType())
 		if err != nil {
 			return err, false
 		}
-		err, shouldFinish = h.processBatchSpans(ctx, batch, sub)
-		if err != nil {
-			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
-				sub.t.ID, i, err)
-			return err, shouldFinish
-		}
 
-		if shouldFinish {
-			return err, shouldFinish
-		}
-
-		// ml_flow rate-limited: 50/5s
-		time.Sleep(1 * time.Second)
-	}
-
-	return err, shouldFinish
-}
-
-// processBatchSpans processes a batch of span data
-func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
-	for _, span := range spans {
-		// Execute processing logic according to the task type
+		// 检查采样限制
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		sampler := sub.t.Sampler
-		if taskCount+1 > sampler.SampleSize {
-			logs.CtxInfo(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.SampleSize)
+		if taskCount >= sampler.SampleSize {
+			logs.CtxInfo(ctx, "taskCount >= sampler.SampleSize, task_id=%d, SampleSize=%d", sub.taskID, sampler.SampleSize)
 			return nil, true
 		}
-		if err = h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
+
+		// 批量处理
+		err = sub.BatchAddSpan(ctx, batch)
+		if err != nil {
+			logs.CtxError(ctx, "batch add span failed, task_id=%d, batch_start=%d, err=%v",
+				sub.t.ID, i, err)
 			return err, false
 		}
+
+		// 可配置的限速休眠
+		time.Sleep(sleepDuration)
 	}
 
 	return nil, false
+}
+
+// getBackfillBatchSize 获取可配置的批处理大小
+func (h *TraceHubServiceImpl) getBackfillBatchSize(ctx context.Context) int {
+	if h.config != nil {
+		if v := h.config.Get(ctx, configKeyBatchSize); v != nil {
+			if size, ok := v.(int); ok && size > 0 {
+				return size
+			}
+		}
+	}
+	return defaultBatchSize
+}
+
+// getBackfillSleepDuration 获取可配置的每批休眠时间
+func (h *TraceHubServiceImpl) getBackfillSleepDuration(ctx context.Context) time.Duration {
+	if h.config != nil {
+		if v := h.config.Get(ctx, configKeySleepMs); v != nil {
+			if ms, ok := v.(int); ok && ms >= 0 {
+				return time.Duration(ms) * time.Millisecond
+			}
+		}
+	}
+	return defaultSleepDuration
 }
 
 // onHandleDone handles completion callback with exponential backoff retry

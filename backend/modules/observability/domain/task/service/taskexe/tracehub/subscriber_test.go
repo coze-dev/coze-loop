@@ -48,6 +48,11 @@ func (n *noopProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.O
 	return nil
 }
 
+func (n *noopProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	n.invoked = true
+	return nil
+}
+
 type fakeSpanFilter struct {
 	basic []*loop_span.FilterField
 	root  []*loop_span.FilterField

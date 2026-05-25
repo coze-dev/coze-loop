@@ -17,6 +17,13 @@ type Trigger struct {
 	Trajectory *loop_span.Trajectory
 }
 
+type BatchTrigger struct {
+	Task          *entity.ObservabilityTask
+	Spans         []*loop_span.Span
+	TaskRun       *entity.TaskRun
+	TrajectoryMap map[string]*loop_span.Trajectory
+}
+
 type OnTaskRunCreatedReq struct {
 	CurrentTask *entity.ObservabilityTask
 	RunType     entity.TaskRunType
@@ -37,6 +44,7 @@ type OnTaskFinishedReq struct {
 type Processor interface {
 	ValidateConfig(ctx context.Context, config any) error
 	Invoke(ctx context.Context, trigger *Trigger) error
+	BatchInvoke(ctx context.Context, trigger *BatchTrigger) error
 
 	OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error
 	OnTaskUpdated(ctx context.Context, currentTask *entity.ObservabilityTask, taskOp entity.TaskStatus) error

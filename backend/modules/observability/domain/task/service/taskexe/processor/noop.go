@@ -26,6 +26,10 @@ func (p *NoopTaskProcessor) Invoke(ctx context.Context, trigger *taskexe.Trigger
 	return nil
 }
 
+func (p *NoopTaskProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	return nil
+}
+
 func (p *NoopTaskProcessor) OnTaskCreated(ctx context.Context, currentTask *entity.ObservabilityTask) error {
 	return nil
 }

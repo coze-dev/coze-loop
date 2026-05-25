@@ -72,6 +72,11 @@ func (s *stubProcessor) OnTaskRunCreated(_ context.Context, req taskexe.OnTaskRu
 	return s.createTaskRunErr
 }
 
+func (s *stubProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	s.invokeCalled = true
+	return s.invokeErr
+}
+
 func (s *stubProcessor) OnTaskRunFinished(context.Context, taskexe.OnTaskRunFinishedReq) error {
 	return s.finishTaskRunErr
 }
