@@ -282,6 +282,18 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	if evalTargetDO == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("[ExecuteTarget]evalTargetDO is nil"))
 	}
+	if evalTargetDO.EvalTargetVersion != nil {
+		customRPC := evalTargetDO.EvalTargetVersion.CustomRPCServer
+		if customRPC != nil &&
+			customRPC.Timeout != nil &&
+			*customRPC.Timeout > 0 &&
+			evalTargetDO.SourceTargetID == "7590095306227520514" &&
+			gptr.Indirect(customRPC.ExecEnv) == "ppe_fornax_timeout_record_0525" {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, time.Duration(*customRPC.Timeout)*time.Millisecond)
+			defer cancel()
+		}
+	}
 
 	defer func() {
 		if e := recover(); e != nil {
