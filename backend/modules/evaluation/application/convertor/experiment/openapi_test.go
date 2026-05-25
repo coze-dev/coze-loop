@@ -3031,3 +3031,62 @@ func TestOpenapiAgentConnectionDTO2DO_Full(t *testing.T) {
 	assert.Equal(t, "Eino", result.AgentImpl.Framework)
 	assert.Equal(t, "custom", result.AgentImpl.Kind)
 }
+
+func Test_mapOfflineExptAnalysisStatusDTO2OpenAPI(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input *domainExpt.OfflineExptAnalysisStatus
+		want  *openapiExperiment.OfflineExptAnalysisStatus
+	}{
+		{"nil", nil, nil},
+		{"processing", gptr.Of(domainExpt.OfflineExptAnalysisStatus_Processing), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusProcessing)},
+		{"success", gptr.Of(domainExpt.OfflineExptAnalysisStatus_Success), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusSuccess)},
+		{"failed", gptr.Of(domainExpt.OfflineExptAnalysisStatus_Failed), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusFailed)},
+		{"superseded", gptr.Of(domainExpt.OfflineExptAnalysisStatus_Superseded), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusSuperseded)},
+		{"not_started", gptr.Of(domainExpt.OfflineExptAnalysisStatus_NotStarted), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusNotStarted)},
+		{"unknown_defaults_to_not_started", gptr.Of(domainExpt.OfflineExptAnalysisStatus(999)), gptr.Of(openapiExperiment.OfflineExptAnalysisStatusNotStarted)},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got := mapOfflineExptAnalysisStatusDTO2OpenAPI(tt.input)
+			if tt.want == nil {
+				assert.Nil(t, got)
+				return
+			}
+			if assert.NotNil(t, got) {
+				assert.Equal(t, *tt.want, *got)
+			}
+		})
+	}
+}
+
+func Test_openAPIOfflineExptAnalysisStatusDO2DTO(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name  string
+		input entity.OfflineExptAnalysisStatus
+		want  openapiExperiment.OfflineExptAnalysisStatus
+	}{
+		{"processing", entity.OfflineExptAnalysisStatus_Processing, openapiExperiment.OfflineExptAnalysisStatusProcessing},
+		{"success", entity.OfflineExptAnalysisStatus_Success, openapiExperiment.OfflineExptAnalysisStatusSuccess},
+		{"failed", entity.OfflineExptAnalysisStatus_Failed, openapiExperiment.OfflineExptAnalysisStatusFailed},
+		{"superseded", entity.OfflineExptAnalysisStatus_Superseded, openapiExperiment.OfflineExptAnalysisStatusSuperseded},
+		{"not_started", entity.OfflineExptAnalysisStatus_NotStarted, openapiExperiment.OfflineExptAnalysisStatusNotStarted},
+		{"unknown_defaults_to_not_started", entity.OfflineExptAnalysisStatus(999), openapiExperiment.OfflineExptAnalysisStatusNotStarted},
+	}
+
+	for _, tt := range cases {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			got := openAPIOfflineExptAnalysisStatusDO2DTO(tt.input)
+			if assert.NotNil(t, got) {
+				assert.Equal(t, tt.want, *got)
+			}
+		})
+	}
+}
