@@ -69,6 +69,8 @@ type ExptItemEvalCtxExecutor struct {
 	evalSetItemSvc         EvaluationSetItemService
 }
 
+const exptRunLogPersistTimeout = 5 * time.Second
+
 func (e *ExptItemEvalCtxExecutor) Eval(ctx context.Context, eiec *entity.ExptItemEvalCtx) error {
 	event := eiec.Event
 
@@ -130,6 +132,8 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 	if result == nil {
 		return fmt.Errorf("StoreTurnRunResult with nil result")
 	}
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
 
 	turn := etec.Turn
 	turnResultLog := etec.GetExistTurnResultLogs()[turn.ID]
@@ -173,7 +177,7 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 		if se, ok := errorx.FromStatusError(evalErr); ok && (se.Code() == errno.CustomEvalTargetInvokeFailCode || se.Code() == errno.CustomRPCEvaluatorRunFailedCode) {
 			errMsg = errorx.ErrorWithoutStack(evalErr)
 		} else {
-			errMsg = e.Configer.GetErrCtrl(ctx).ConvertErrMsg(evalErr.Error())
+			errMsg = e.Configer.GetErrCtrl(persistCtx).ConvertErrMsg(evalErr.Error())
 		}
 
 		logs.CtxWarn(ctx, "[ExptTurnEval] store turn run err, before: %v, after: %v", evalErr, errMsg)
@@ -195,7 +199,10 @@ func (e *ExptItemEvalCtxExecutor) storeTurnRunResult(ctx context.Context, etec *
 
 	result.SetEvalErr(evalErr)
 
-	if err := e.TurnResultRepo.SaveTurnRunLogs(ctx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
+	logs.CtxInfo(persistCtx, "[CozeVideoTimeoutRecordE2E] persist turn run log with detached ctx, expt_id: %v, expt_run_id: %v, item_id: %v, turn_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
+		etec.Expt.ID, etec.Event.ExptRunID, etec.EvalSetItem.ItemID, turn.ID, clone.Status, ctx.Err(), persistCtx.Err())
+
+	if err := e.TurnResultRepo.SaveTurnRunLogs(persistCtx, []*entity.ExptTurnResultRunLog{clone}); err != nil {
 		return err
 	}
 
@@ -275,8 +282,11 @@ func (e *ExptItemEvalCtxExecutor) buildExptTurnEvalCtx(ctx context.Context, turn
 }
 
 func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *entity.ExptItemEvalEvent, evalErr error) error {
+	persistCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), exptRunLogPersistTimeout)
+	defer cancel()
+
 	if evalErr != nil {
-		if retry, _ := e.evalErrNeedRetry(ctx, event, evalErr); retry {
+		if retry, _ := e.evalErrNeedRetry(persistCtx, event, evalErr); retry {
 			return evalErr
 		}
 	}
@@ -292,11 +302,14 @@ func (e *ExptItemEvalCtxExecutor) CompleteItemRun(ctx context.Context, event *en
 		ufields["status"] = int32(entity.ItemRunState_Success)
 	}
 
-	if err := e.ItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
+	logs.CtxInfo(persistCtx, "[CozeVideoTimeoutRecordE2E] persist item run log with detached ctx, expt_id: %v, expt_run_id: %v, item_id: %v, status: %v, parent_ctx_err: %v, persist_ctx_err: %v",
+		event.ExptID, event.ExptRunID, event.EvalSetItemID, ufields["status"], ctx.Err(), persistCtx.Err())
+
+	if err := e.ItemResultRepo.UpdateItemRunLog(persistCtx, event.ExptID, event.ExptRunID, []int64{event.EvalSetItemID}, ufields, event.SpaceID); err != nil {
 		return err
 	}
 
-	if e.evalErrNeedTerminateExpt(ctx, event.SpaceID, evalErr) {
+	if e.evalErrNeedTerminateExpt(persistCtx, event.SpaceID, evalErr) {
 		logs.CtxWarn(ctx, "[ExptTurnEval] found error which should terminate expt, expt_id: %v, expt_run_id: %v, item_id: %v, err: %v", event.ExptID, event.ExptRunID, event.EvalSetItemID, evalErr)
 		return evalErr
 	}
