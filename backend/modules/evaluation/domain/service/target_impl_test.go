@@ -607,10 +607,14 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
 			// convEvalTargetRunErr (in ExecuteTarget defer) may call GetErrCtrl when record has EvalTargetRunError
 			deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().Return(entity.DefaultExptErrCtrl())
-			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
+			deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(ctx context.Context) (int64, error) {
+				require.NoError(t, ctx.Err())
+				return int64(9999), nil
+			})
 
 			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
+				require.NoError(t, ctx.Err())
 				savedRecord = rec
 				return rec.ID, nil
 			})
@@ -649,6 +653,86 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailRecordAfterContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deps := &evalTargetServiceTestDeps{
+		repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+		idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+		metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+		configer: componentmocks.NewMockIConfiger(ctrl),
+	}
+
+	evalTarget := &entity.EvalTarget{
+		ID:             200,
+		SpaceID:        100,
+		SourceTargetID: "src-id",
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  300,
+			SourceTargetVersion: "v1",
+			InputSchema: []*entity.ArgsSchema{
+				{Key: gptr.Of("field")},
+			},
+		},
+	}
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"field": {
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("hello"),
+			},
+		},
+	}
+	param := &entity.ExecuteTargetCtx{
+		ExperimentRunID: gptr.Of(int64(555)),
+		ItemID:          777,
+		TurnID:          888,
+	}
+
+	deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
+	deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+	deps.configer.EXPECT().GetTargetTrajectoryConf(gomock.Any()).AnyTimes().Return(&entity.TargetTrajectoryConf{})
+	deps.configer.EXPECT().GetErrCtrl(gomock.Any()).AnyTimes().DoAndReturn(func(ctx context.Context) *entity.ExptErrCtrl {
+		require.NoError(t, ctx.Err())
+		return entity.DefaultExptErrCtrl()
+	})
+	deps.operator.EXPECT().ValidateInput(gomock.Any(), evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
+	deps.operator.EXPECT().Execute(gomock.Any(), evalTarget.SpaceID, gomock.Any()).DoAndReturn(func(context.Context, int64, *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+		cancel()
+		return nil, entity.EvalTargetRunStatusFail, context.Canceled
+	})
+	deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(ctx context.Context) (int64, error) {
+		require.NoError(t, ctx.Err())
+		return int64(9999), nil
+	})
+	deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
+		require.NoError(t, ctx.Err())
+		require.NotNil(t, rec)
+		assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(rec.Status))
+		return rec.ID, nil
+	})
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo: deps.repo,
+		idgen:          deps.idgen,
+		metric:         deps.metric,
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			evalTarget.EvalTargetType: deps.operator,
+		},
+		configer: deps.configer,
+	}
+
+	record, err := svc.ExecuteTarget(ctx, evalTarget.SpaceID, evalTarget.ID, evalTarget.EvalTargetVersion.ID, param, input)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	assert.Equal(t, int64(9999), record.ID)
+	assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(record.Status))
 }
 
 func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) {
@@ -752,7 +836,10 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 					spaceID: 1,
 				},
 			})
-			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
+			deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(ctx context.Context) (int64, error) {
+				require.NoError(t, ctx.Err())
+				return int64(9999), nil
+			})
 
 			trajectoryAdapter.EXPECT().
 				ListTrajectory(gomock.Any(), spaceID, gomock.Any(), gomock.AssignableToTypeOf((*int64)(nil))).
@@ -770,7 +857,8 @@ func TestEvalTargetServiceImpl_ExecuteTarget_TrajectoryExtraction(t *testing.T) 
 				Return(outputData, entity.EvalTargetRunStatusSuccess, nil)
 
 			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, rec *entity.EvalTargetRecord, _ *bool) (int64, error) {
+				require.NoError(t, ctx.Err())
 				savedRecord = rec
 				return rec.ID, nil
 			})
