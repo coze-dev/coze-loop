@@ -402,6 +402,7 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	ctx, span = looptracer.GetTracer().StartSpan(ctx, "EvalTarget", "eval_target", looptracer.WithStartNewTrace(), looptracer.WithSpanWorkspaceID(strconv.FormatInt(spaceID, 10)))
 	span.SetCallType("EvalTarget")
 	ctx = looptracer.GetTracer().Inject(ctx)
+	cozeVideoTimeoutRecordReproSleep(evalTargetDO)
 	if e.typedOperators[evalTargetDO.EvalTargetType] == nil {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("target type not support"))
 	}
@@ -438,6 +439,25 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 	setSpanInputOutput(ctx, spanParam, inputData, outputData)
 
 	return record, nil
+}
+
+func cozeVideoTimeoutRecordReproSleep(evalTargetDO *entity.EvalTarget) {
+	if evalTargetDO == nil || evalTargetDO.EvalTargetVersion == nil {
+		return
+	}
+
+	customRPC := evalTargetDO.EvalTargetVersion.CustomRPCServer
+	if customRPC == nil || customRPC.Timeout == nil || *customRPC.Timeout <= 0 {
+		return
+	}
+	if evalTargetDO.SourceTargetID != "7590095306227520514" {
+		return
+	}
+	if gptr.Indirect(customRPC.ExecEnv) != "ppe_fornax_timeout_record_0525" {
+		return
+	}
+
+	time.Sleep(time.Duration(*customRPC.Timeout+50) * time.Millisecond)
 }
 
 func (e *EvalTargetServiceImpl) ExtractTrajectory(ctx context.Context, spaceID int64, traceID string, startTimeMS *int64) (*entity.Trajectory, error) {
