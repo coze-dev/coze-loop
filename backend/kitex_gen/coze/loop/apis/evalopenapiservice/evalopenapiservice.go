@@ -175,6 +175,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"ExportExperimentResultOApi": kitex.NewMethodInfo(
+		exportExperimentResultOApiHandler,
+		newEvaluationOpenAPIServiceExportExperimentResultOApiArgs,
+		newEvaluationOpenAPIServiceExportExperimentResultOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"GetExperimentResultExportRecordOApi": kitex.NewMethodInfo(
+		getExperimentResultExportRecordOApiHandler,
+		newEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs,
+		newEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 	"ListEvaluatorsOApi": kitex.NewMethodInfo(
 		listEvaluatorsOApiHandler,
 		newEvaluationOpenAPIServiceListEvaluatorsOApiArgs,
@@ -790,6 +804,44 @@ func newEvaluationOpenAPIServiceRetryExperimentOApiArgs() interface{} {
 
 func newEvaluationOpenAPIServiceRetryExperimentOApiResult() interface{} {
 	return openapi.NewEvaluationOpenAPIServiceRetryExperimentOApiResult()
+}
+
+func exportExperimentResultOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).ExportExperimentResultOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceExportExperimentResultOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceExportExperimentResultOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceExportExperimentResultOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceExportExperimentResultOApiResult()
+}
+
+func getExperimentResultExportRecordOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs)
+	realResult := result.(*openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult)
+	success, err := handler.(openapi.EvaluationOpenAPIService).GetExperimentResultExportRecordOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs()
+}
+
+func newEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult() interface{} {
+	return openapi.NewEvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult()
 }
 
 func listEvaluatorsOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
@@ -1428,6 +1480,26 @@ func (p *kClient) RetryExperimentOApi(ctx context.Context, req *openapi.RetryExp
 	_args.Req = req
 	var _result openapi.EvaluationOpenAPIServiceRetryExperimentOApiResult
 	if err = p.c.Call(ctx, "RetryExperimentOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) ExportExperimentResultOApi(ctx context.Context, req *openapi.ExportExperimentResultOApiRequest) (r *openapi.ExportExperimentResultOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceExportExperimentResultOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceExportExperimentResultOApiResult
+	if err = p.c.Call(ctx, "ExportExperimentResultOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) GetExperimentResultExportRecordOApi(ctx context.Context, req *openapi.GetExperimentResultExportRecordOApiRequest) (r *openapi.GetExperimentResultExportRecordOApiResponse, err error) {
+	var _args openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiArgs
+	_args.Req = req
+	var _result openapi.EvaluationOpenAPIServiceGetExperimentResultExportRecordOApiResult
+	if err = p.c.Call(ctx, "GetExperimentResultExportRecordOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil

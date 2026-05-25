@@ -2368,6 +2368,14 @@ type fakeExperimentApp struct {
 	retryResp    *exptpb.RetryExperimentResponse
 	retryErr     error
 	lastRetryReq *exptpb.RetryExperimentRequest
+
+	exportResp    *exptpb.ExportExptResultResponse
+	exportErr     error
+	lastExportReq *exptpb.ExportExptResultRequest
+
+	getExportRecordResp    *exptpb.GetExptResultExportRecordResponse
+	getExportRecordErr     error
+	lastGetExportRecordReq *exptpb.GetExptResultExportRecordRequest
 }
 
 func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.SubmitExperimentRequest) (*exptpb.SubmitExperimentResponse, error) {
@@ -2394,6 +2402,22 @@ func (f *fakeExperimentApp) RetryExperiment(_ context.Context, req *exptpb.Retry
 		return f.retryResp, f.retryErr
 	}
 	return &exptpb.RetryExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) ExportExptResult_(_ context.Context, req *exptpb.ExportExptResultRequest) (*exptpb.ExportExptResultResponse, error) {
+	f.lastExportReq = req
+	if f.exportResp != nil || f.exportErr != nil {
+		return f.exportResp, f.exportErr
+	}
+	return &exptpb.ExportExptResultResponse{}, nil
+}
+
+func (f *fakeExperimentApp) GetExptResultExportRecord(_ context.Context, req *exptpb.GetExptResultExportRecordRequest) (*exptpb.GetExptResultExportRecordResponse, error) {
+	f.lastGetExportRecordReq = req
+	if f.getExportRecordResp != nil || f.getExportRecordErr != nil {
+		return f.getExportRecordResp, f.getExportRecordErr
+	}
+	return &exptpb.GetExptResultExportRecordResponse{}, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)
@@ -4288,6 +4312,42 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 			},
 			wantID: exptID,
 		},
+		{
+			name: "success with TargetRuntimeParam and nil FieldMappingConfig",
+			req: &openapi.SubmitExptFromTemplateOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				TemplateID:         gptr.Of(templateID),
+				Name:               gptr.Of("exp_with_runtime_param"),
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"key": "value"}`)},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp_with_runtime_param", workspaceID, gomock.Any()).Return(true, nil)
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(exptID)}}
+			},
+			wantID: exptID,
+		},
+		{
+			name: "success with TargetRuntimeParam and existing FieldMappingConfig",
+			req: &openapi.SubmitExptFromTemplateOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				TemplateID:         gptr.Of(templateID),
+				Name:               gptr.Of("exp_with_existing_fmc"),
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"custom": "param"}`)},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateWithFMC := buildValidTemplate()
+				templateWithFMC.FieldMappingConfig = &entity.ExptFieldMapping{
+					TargetFieldMapping: &entity.TargetFieldMapping{},
+				}
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(templateWithFMC, nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp_with_existing_fmc", workspaceID, gomock.Any()).Return(true, nil)
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(exptID)}}
+			},
+			wantID: exptID,
+		},
 	}
 
 	for _, tt := range tests {
@@ -4337,6 +4397,10 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				if assert.NotNil(t, fakeApp.lastReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.WorkspaceID)
 					assert.Equal(t, templateID, *fakeApp.lastReq.ExptTemplateID)
+					if tc.req != nil && tc.req.TargetRuntimeParam != nil {
+						assert.NotNil(t, fakeApp.lastReq.TargetRuntimeParam)
+						assert.Equal(t, tc.req.TargetRuntimeParam.JSONValue, fakeApp.lastReq.TargetRuntimeParam.JSONValue)
+					}
 				}
 			}
 

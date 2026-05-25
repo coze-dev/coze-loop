@@ -43,6 +43,10 @@ const (
 
 	FrequencySunday = "sunday"
 
+	FrequencyEveryHour = "every_hour"
+
+	FrequencyEveryMinute = "every_minute"
+
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
 	ColumnEvalTargetNameActualOutput = "actual_output"
@@ -7732,6 +7736,8 @@ type Scheduler struct {
 	StartTime *int64 `thrift:"start_time,4,optional" frugal:"4,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
 	// 生效结束时间（时间戳，秒）
 	EndTime *int64 `thrift:"end_time,5,optional" frugal:"5,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
+	// 触发间隔（every_minute时为分钟数，every_hour时为小时数）
+	TriggerInterval *int32 `thrift:"trigger_interval,6,optional" frugal:"6,optional,i32" form:"trigger_interval" json:"trigger_interval,omitempty" query:"trigger_interval"`
 }
 
 func NewScheduler() *Scheduler {
@@ -7800,6 +7806,18 @@ func (p *Scheduler) GetEndTime() (v int64) {
 	}
 	return *p.EndTime
 }
+
+var Scheduler_TriggerInterval_DEFAULT int32
+
+func (p *Scheduler) GetTriggerInterval() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerInterval() {
+		return Scheduler_TriggerInterval_DEFAULT
+	}
+	return *p.TriggerInterval
+}
 func (p *Scheduler) SetEnabled(val *bool) {
 	p.Enabled = val
 }
@@ -7815,6 +7833,9 @@ func (p *Scheduler) SetStartTime(val *int64) {
 func (p *Scheduler) SetEndTime(val *int64) {
 	p.EndTime = val
 }
+func (p *Scheduler) SetTriggerInterval(val *int32) {
+	p.TriggerInterval = val
+}
 
 var fieldIDToName_Scheduler = map[int16]string{
 	1: "enabled",
@@ -7822,6 +7843,7 @@ var fieldIDToName_Scheduler = map[int16]string{
 	3: "trigger_at",
 	4: "start_time",
 	5: "end_time",
+	6: "trigger_interval",
 }
 
 func (p *Scheduler) IsSetEnabled() bool {
@@ -7842,6 +7864,10 @@ func (p *Scheduler) IsSetStartTime() bool {
 
 func (p *Scheduler) IsSetEndTime() bool {
 	return p.EndTime != nil
+}
+
+func (p *Scheduler) IsSetTriggerInterval() bool {
+	return p.TriggerInterval != nil
 }
 
 func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
@@ -7897,6 +7923,14 @@ func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7986,6 +8020,17 @@ func (p *Scheduler) ReadField5(iprot thrift.TProtocol) error {
 	p.EndTime = _field
 	return nil
 }
+func (p *Scheduler) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerInterval = _field
+	return nil
+}
 
 func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8011,6 +8056,10 @@ func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -8121,6 +8170,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *Scheduler) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerInterval() {
+		if err = oprot.WriteFieldBegin("trigger_interval", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TriggerInterval); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *Scheduler) String() string {
 	if p == nil {
@@ -8149,6 +8216,9 @@ func (p *Scheduler) DeepEqual(ano *Scheduler) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.EndTime) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TriggerInterval) {
 		return false
 	}
 	return true
@@ -8210,6 +8280,18 @@ func (p *Scheduler) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.EndTime != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field6DeepEqual(src *int32) bool {
+
+	if p.TriggerInterval == src {
+		return true
+	} else if p.TriggerInterval == nil || src == nil {
+		return false
+	}
+	if *p.TriggerInterval != *src {
 		return false
 	}
 	return true

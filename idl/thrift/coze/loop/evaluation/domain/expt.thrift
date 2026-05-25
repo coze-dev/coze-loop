@@ -182,6 +182,8 @@ const Frequency FrequencyThursday = "thursday"
 const Frequency FrequencyFriday = "friday"
 const Frequency FrequencySaturday = "saturday"
 const Frequency FrequencySunday = "sunday"
+const Frequency FrequencyEveryHour = "every_hour"
+const Frequency FrequencyEveryMinute = "every_minute"
 
 struct Scheduler {
     1: optional bool enabled              // 定时触发器开关，默认关闭
@@ -189,6 +191,7 @@ struct Scheduler {
     3: optional i64 trigger_at (agw.js_conv = "str")    // 触发时间（时间戳，秒。只使用时间，不使用日期）
     4: optional i64 start_time (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
     5: optional i64 end_time (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
+    6: optional i32 trigger_interval      // 触发间隔（every_minute时为分钟数，every_hour时为小时数）
 }
 
 struct ExptInfo {
