@@ -29,6 +29,8 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+const evalTargetRecordPersistTimeout = 5 * time.Second
+
 type EvalTargetServiceImpl struct {
 	idgen          idgen.IIDGenerator
 	metric         metrics.EvalTargetMetrics
@@ -259,7 +261,10 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			span.Finish(ctx)
 		}
 
-		recordID, err1 := e.idgen.GenID(ctx)
+		recordCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), evalTargetRecordPersistTimeout)
+		defer cancel()
+
+		recordID, err1 := e.idgen.GenID(recordCtx)
 		if err1 != nil {
 			err = err1
 			return
@@ -291,8 +296,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			},
 		}
 
-		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record)
+		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record)
 		if errCreate != nil {
+			err = errCreate
 			return
 		}
 		err = nil

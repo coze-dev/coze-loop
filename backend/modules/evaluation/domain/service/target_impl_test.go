@@ -508,10 +508,14 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 
 			deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
 			deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
-			deps.idgen.EXPECT().GenID(ctx).Return(int64(9999), nil)
+			deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(gotCtx context.Context) (int64, error) {
+				require.NoError(t, gotCtx.Err())
+				return int64(9999), nil
+			})
 
 			var savedRecord *entity.EvalTargetRecord
-			deps.repo.EXPECT().CreateEvalTargetRecord(ctx, gomock.Any()).DoAndReturn(func(_ context.Context, rec *entity.EvalTargetRecord) (int64, error) {
+			deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(func(gotCtx context.Context, rec *entity.EvalTargetRecord) (int64, error) {
+				require.NoError(t, gotCtx.Err())
 				savedRecord = rec
 				return rec.ID, nil
 			})
@@ -548,6 +552,87 @@ func TestEvalTargetServiceImpl_ExecuteTarget(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestEvalTargetServiceImpl_ExecuteTarget_PersistsFailedRecordAfterCtxCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	deps := &evalTargetServiceTestDeps{
+		repo:     repomocks.NewMockIEvalTargetRepo(ctrl),
+		idgen:    idgenmocks.NewMockIIDGenerator(ctrl),
+		metric:   metricsmocks.NewMockEvalTargetMetrics(ctrl),
+		operator: servicemocks.NewMockISourceEvalTargetOperateService(ctrl),
+	}
+
+	evalTarget := &entity.EvalTarget{
+		ID:             200,
+		SpaceID:        100,
+		SourceTargetID: "src-id",
+		EvalTargetType: entity.EvalTargetTypeLoopPrompt,
+		EvalTargetVersion: &entity.EvalTargetVersion{
+			ID:                  300,
+			SourceTargetVersion: "v1",
+			InputSchema: []*entity.ArgsSchema{
+				{Key: gptr.Of("field")},
+			},
+		},
+	}
+	input := &entity.EvalTargetInputData{
+		InputFields: map[string]*entity.Content{
+			"field": {
+				ContentType: gptr.Of(entity.ContentTypeText),
+				Text:        gptr.Of("hello"),
+			},
+		},
+	}
+	param := &entity.ExecuteTargetCtx{
+		ExperimentRunID: gptr.Of(int64(555)),
+		ItemID:          777,
+		TurnID:          888,
+	}
+
+	deps.repo.EXPECT().GetEvalTargetVersion(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.ID).Return(evalTarget, nil)
+	deps.metric.EXPECT().EmitRun(evalTarget.SpaceID, gomock.Any(), gomock.Any()).Times(1)
+	deps.operator.EXPECT().ValidateInput(ctx, evalTarget.SpaceID, evalTarget.EvalTargetVersion.InputSchema, input).Return(nil)
+	deps.operator.EXPECT().Execute(ctx, evalTarget.SpaceID, gomock.Any()).DoAndReturn(
+		func(context.Context, int64, *entity.ExecuteEvalTargetParam) (*entity.EvalTargetOutputData, entity.EvalTargetRunStatus, error) {
+			cancel()
+			return nil, entity.EvalTargetRunStatusFail, context.DeadlineExceeded
+		},
+	)
+	deps.idgen.EXPECT().GenID(gomock.Any()).DoAndReturn(func(gotCtx context.Context) (int64, error) {
+		require.NoError(t, gotCtx.Err())
+		return int64(9999), nil
+	})
+
+	var savedRecord *entity.EvalTargetRecord
+	deps.repo.EXPECT().CreateEvalTargetRecord(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(gotCtx context.Context, rec *entity.EvalTargetRecord) (int64, error) {
+			require.NoError(t, gotCtx.Err())
+			savedRecord = rec
+			return rec.ID, nil
+		},
+	)
+
+	svc := &EvalTargetServiceImpl{
+		evalTargetRepo: deps.repo,
+		idgen:          deps.idgen,
+		metric:         deps.metric,
+		typedOperators: map[entity.EvalTargetType]ISourceEvalTargetOperateService{
+			evalTarget.EvalTargetType: deps.operator,
+		},
+	}
+
+	record, err := svc.ExecuteTarget(ctx, evalTarget.SpaceID, evalTarget.ID, evalTarget.EvalTargetVersion.ID, param, input)
+	require.NoError(t, err)
+	require.NotNil(t, record)
+	require.Same(t, savedRecord, record)
+	assert.Equal(t, entity.EvalTargetRunStatusFail, gptr.Indirect(record.Status))
+	if assert.NotNil(t, record.EvalTargetOutputData) && assert.NotNil(t, record.EvalTargetOutputData.EvalTargetRunError) {
+		assert.Contains(t, record.EvalTargetOutputData.EvalTargetRunError.Message, context.DeadlineExceeded.Error())
 	}
 }
 
