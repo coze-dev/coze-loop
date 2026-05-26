@@ -392,6 +392,8 @@ type CreateEvalTargetParam struct {
 	Region               *Region
 	Env                  *string
 	OperationInstruction *string
+	Cluster              *string
+	AgentConnection      *AgentConnection
 }
 
 func (c *CreateEvalTargetParam) IsNull() bool {

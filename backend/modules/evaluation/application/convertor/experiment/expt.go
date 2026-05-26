@@ -421,7 +421,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
-	if experiment.ExptType != entity.ExptType_Online {
+	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
 	}
 	res.Evaluators = make([]*evaluatordto.Evaluator, 0, len(experiment.Evaluators))
@@ -486,6 +486,7 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 		Region:               param.Region,
 		Env:                  param.Env,
 		OperationInstruction: param.OperationInstruction,
+		Cluster:              param.Cluster,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))

@@ -116,11 +116,13 @@ var (
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
 		obrepo.NewViewRepoImpl,
+		obrepo.NewColumnExtractConfigRepoImpl,
 		mysqldao.NewViewDaoImpl,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
@@ -139,6 +141,8 @@ var (
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		obmetrics.NewConsumeMetric,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -472,6 +476,7 @@ func InitTraceIngestionApplication(
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
 	idGenerator idgen.IIDGenerator,
+	meter metrics.Meter,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil

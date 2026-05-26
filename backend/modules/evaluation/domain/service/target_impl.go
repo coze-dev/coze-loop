@@ -43,6 +43,8 @@ type EvalTargetServiceImpl struct {
 	configer          component.IConfiger
 }
 
+const evalTargetRecordPersistTimeout = 5 * time.Second
+
 func NewEvalTargetServiceImpl(evalTargetRepo repo.IEvalTargetRepo,
 	idgen idgen.IIDGenerator,
 	metric metrics.EvalTargetMetrics,
@@ -354,12 +356,15 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 			}
 		}
 
-		recordID, err1 := e.idgen.GenID(ctx)
+		recordCtx, recordCancel := context.WithTimeout(context.WithoutCancel(ctx), evalTargetRecordPersistTimeout)
+		defer recordCancel()
+
+		recordID, err1 := e.idgen.GenID(recordCtx)
 		if err1 != nil {
 			err = err1
 			return
 		}
-		logID := logs.GetLogID(ctx)
+		logID := logs.GetLogID(recordCtx)
 
 		record = &entity.EvalTargetRecord{
 			ID:                   recordID,
@@ -385,9 +390,9 @@ func (e *EvalTargetServiceImpl) ExecuteTarget(ctx context.Context, spaceID, targ
 				UpdatedAt: gptr.Of(time.Now().UnixMilli()),
 			},
 		}
-		e.convEvalTargetRunErr(ctx, record)
+		e.convEvalTargetRunErr(recordCtx, record)
 
-		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(ctx, record, nil)
+		_, errCreate := e.evalTargetRepo.CreateEvalTargetRecord(recordCtx, record, nil)
 		if errCreate != nil {
 			return
 		}

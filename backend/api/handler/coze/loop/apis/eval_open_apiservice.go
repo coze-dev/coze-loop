@@ -284,3 +284,21 @@ func RunBuiltinEvaluatorOApi(ctx context.Context, c *app.RequestContext) {
 func GetEvalTargetOutputFieldContentOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetEvalTargetOutputFieldContentOApi)
 }
+
+// RetryExperimentOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/retry [POST]
+func RetryExperimentOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.RetryExperimentOApi)
+}
+
+// ExportExperimentResultOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/results/export [POST]
+func ExportExperimentResultOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.ExportExperimentResultOApi)
+}
+
+// GetExperimentResultExportRecordOApi .
+// @router /v1/loop/evaluation/experiments/:experiment_id/export_records/:export_id [GET]
+func GetExperimentResultExportRecordOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, localEvalOpenAPIClient.GetExperimentResultExportRecordOApi)
+}

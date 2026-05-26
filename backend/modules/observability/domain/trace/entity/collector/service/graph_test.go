@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
+	metricsmocks "github.com/coze-dev/coze-loop/backend/infra/metrics/mocks"
 	mqmocks "github.com/coze-dev/coze-loop/backend/infra/mq/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/component"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -174,4 +175,142 @@ func TestGraph_StartAll(t *testing.T) {
 			_ = s.ShutdownAll(tt.args.ctx)
 		})
 	}
+}
+
+func TestGraph_BuildWithConsumeMetric(t *testing.T) {
+	t.Parallel()
+
+	t.Run("build graph with consume metric", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mqConsumer := mqmocks.NewMockIConsumer(ctrl)
+		mqConsumer.EXPECT().Start().Return(nil)
+		mqConsumer.EXPECT().Close().Return(nil)
+		mqConsumer.EXPECT().RegisterHandler(gomock.Any()).Return()
+		mqFactory := mqmocks.NewMockIFactory(ctrl)
+		mqFactory.EXPECT().NewConsumer(gomock.Any()).Return(mqConsumer, nil)
+
+		receiverId := getComponentID("rmq/default")
+		receiverBuilder := receiver.NewBuilder(map[component.ID]component.Config{
+			receiverId: &rmqreceiver.Config{
+				Addr:          []string{"a"},
+				ConsumerGroup: "a",
+				Topic:         "b",
+			},
+		}, map[component.Type]receiver.Factory{
+			receiverId.Type(): rmqreceiver.NewFactory(mqFactory),
+		})
+
+		processorId := getComponentID("queue/default")
+		processorBuilder := processor.NewBuilder(map[component.ID]component.Config{
+			processorId: &queueprocessor.Config{
+				PoolName:        "1",
+				MaxPoolSize:     1,
+				QueueSize:       1,
+				MaxBatchSize:    1,
+				TickIntervalsMs: 1,
+				ShardCount:      1,
+			},
+		}, map[component.Type]processor.Factory{
+			processorId.Type(): queueprocessor.NewFactory(),
+		})
+
+		exporterId := getComponentID("clickhouse/default")
+		exporterBuilder := exporter.NewBuilder(map[component.ID]component.Config{
+			exporterId: &clickhouseexporter.Config{},
+		}, map[component.Type]exporter.Factory{
+			exporterId.Type(): clickhouseexporter.NewFactory(nil),
+		})
+
+		mockMetric := metricsmocks.NewMockMetric(ctrl)
+
+		set := Settings{
+			ReceiverBuilder:  receiverBuilder,
+			ProcessorBuilder: processorBuilder,
+			ExporterBuilder:  exporterBuilder,
+			PipelineConfig: &Config{
+				Receivers:  []component.ID{receiverId},
+				Processors: []component.ID{processorId},
+				Exporters:  []component.ID{exporterId},
+			},
+			ConsumeMetric: mockMetric,
+		}
+
+		g, err := BuildGraph(context.Background(), set)
+		assert.NoError(t, err)
+		assert.NotNil(t, g)
+
+		err = g.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		err = g.ShutdownAll(context.Background())
+		assert.NoError(t, err)
+	})
+
+	t.Run("build graph without consume metric", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mqConsumer := mqmocks.NewMockIConsumer(ctrl)
+		mqConsumer.EXPECT().Start().Return(nil)
+		mqConsumer.EXPECT().Close().Return(nil)
+		mqConsumer.EXPECT().RegisterHandler(gomock.Any()).Return()
+		mqFactory := mqmocks.NewMockIFactory(ctrl)
+		mqFactory.EXPECT().NewConsumer(gomock.Any()).Return(mqConsumer, nil)
+
+		receiverId := getComponentID("rmq/default")
+		receiverBuilder := receiver.NewBuilder(map[component.ID]component.Config{
+			receiverId: &rmqreceiver.Config{
+				Addr:          []string{"a"},
+				ConsumerGroup: "a",
+				Topic:         "b",
+			},
+		}, map[component.Type]receiver.Factory{
+			receiverId.Type(): rmqreceiver.NewFactory(mqFactory),
+		})
+
+		processorId := getComponentID("queue/default")
+		processorBuilder := processor.NewBuilder(map[component.ID]component.Config{
+			processorId: &queueprocessor.Config{
+				PoolName:        "1",
+				MaxPoolSize:     1,
+				QueueSize:       1,
+				MaxBatchSize:    1,
+				TickIntervalsMs: 1,
+				ShardCount:      1,
+			},
+		}, map[component.Type]processor.Factory{
+			processorId.Type(): queueprocessor.NewFactory(),
+		})
+
+		exporterId := getComponentID("clickhouse/default")
+		exporterBuilder := exporter.NewBuilder(map[component.ID]component.Config{
+			exporterId: &clickhouseexporter.Config{},
+		}, map[component.Type]exporter.Factory{
+			exporterId.Type(): clickhouseexporter.NewFactory(nil),
+		})
+
+		set := Settings{
+			ReceiverBuilder:  receiverBuilder,
+			ProcessorBuilder: processorBuilder,
+			ExporterBuilder:  exporterBuilder,
+			PipelineConfig: &Config{
+				Receivers:  []component.ID{receiverId},
+				Processors: []component.ID{processorId},
+				Exporters:  []component.ID{exporterId},
+			},
+			ConsumeMetric: nil,
+		}
+
+		g, err := BuildGraph(context.Background(), set)
+		assert.NoError(t, err)
+		assert.NotNil(t, g)
+
+		err = g.StartAll(context.Background())
+		assert.NoError(t, err)
+
+		err = g.ShutdownAll(context.Background())
+		assert.NoError(t, err)
+	})
 }

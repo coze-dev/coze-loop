@@ -61,6 +61,16 @@ func (p *EvalTargetContent) IsValid() error {
 			return fmt.Errorf("field CustomRPCServer not valid, %w", err)
 		}
 	}
+	if p.A2aAgent != nil {
+		if err := p.A2aAgent.IsValid(); err != nil {
+			return fmt.Errorf("field A2aAgent not valid, %w", err)
+		}
+	}
+	if p.CustomAgent != nil {
+		if err := p.CustomAgent.IsValid(); err != nil {
+			return fmt.Errorf("field CustomAgent not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *EvalTargetRecord) IsValid() error {
@@ -122,5 +132,35 @@ func (p *CustomRPCServer) IsValid() error {
 	return nil
 }
 func (p *HTTPInfo) IsValid() error {
+	return nil
+}
+func (p *A2Agent) IsValid() error {
+	return nil
+}
+func (p *CustomAgent) IsValid() error {
+	if p.AgentConnection != nil {
+		if err := p.AgentConnection.IsValid(); err != nil {
+			return fmt.Errorf("field AgentConnection not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *AgentConnection) IsValid() error {
+	if p.FrontierInfo != nil {
+		if err := p.FrontierInfo.IsValid(); err != nil {
+			return fmt.Errorf("field FrontierInfo not valid, %w", err)
+		}
+	}
+	if p.AgentImpl != nil {
+		if err := p.AgentImpl.IsValid(); err != nil {
+			return fmt.Errorf("field AgentImpl not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *FrontierInfo) IsValid() error {
+	return nil
+}
+func (p *AgentImpl) IsValid() error {
 	return nil
 }

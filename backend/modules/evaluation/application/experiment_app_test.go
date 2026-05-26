@@ -4446,6 +4446,45 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - empty idMap skips UpsertFilter",
+			req: &exptpb.InvokeExperimentRequest{
+				WorkspaceID:      validSpaceID,
+				ExperimentID:     gptr.Of(validExptID),
+				ExperimentRunID:  gptr.Of(validExptRunID),
+				EvaluationSetID:  validEvalSetID,
+				Items:            validItems,
+				Session:          &common.Session{UserID: gptr.Of(validUserID)},
+				SkipInvalidItems: gptr.Of(true),
+				AllowPartialAdd:  gptr.Of(true),
+			},
+			mockSetup: func() {
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
+					Return(validExpt, nil)
+
+				mockAuth.EXPECT().
+					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// BatchCreateEvaluationSetItems returns empty idMap (dataset full)
+				mockEvalSetItemService.EXPECT().
+					BatchCreateEvaluationSetItems(gomock.Any(), gomock.Any()).
+					Return(map[int64]int64{}, nil, nil, nil)
+
+				// Invoke is still called with empty Items
+				mockManager.EXPECT().
+					Invoke(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// UpsertExptTurnResultFilter should NOT be called
+			},
+			wantResp: &exptpb.InvokeExperimentResponse{
+				AddedItems: map[int64]int64{},
+				BaseResp:   base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "error - experiment status not allowed",
 			req: &exptpb.InvokeExperimentRequest{
 				WorkspaceID:     validSpaceID,
@@ -4592,6 +4631,25 @@ func TestExperimentApplication_FinishExperiment(t *testing.T) {
 				mockManager.EXPECT().
 					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
 					Return(finishedExpt, nil)
+			},
+			wantResp: &exptpb.FinishExperimentResponse{
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - experiment deleted",
+			req: &exptpb.FinishExperimentRequest{
+				WorkspaceID:     gptr.Of(validSpaceID),
+				ExperimentID:    gptr.Of(validExptID),
+				ExperimentRunID: gptr.Of(validExptRunID),
+				Session:         &common.Session{UserID: gptr.Of(validUserID)},
+			},
+			mockSetup: func() {
+				// Mock Get experiment returns ResourceNotFound (soft-deleted)
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment not found")))
 			},
 			wantResp: &exptpb.FinishExperimentResponse{
 				BaseResp: base.NewBaseResp(),
