@@ -617,6 +617,7 @@ func exptSchedulerDO2DTO(do *entity.ExptSchedulerDO) *domain_expt.Scheduler {
 	dto.TriggerAt = do.TriggerAt
 	dto.StartTime = do.StartTime
 	dto.EndTime = do.EndTime
+	dto.TriggerInterval = do.TriggerInterval
 	return dto
 }
 
@@ -660,10 +661,11 @@ func exptSchedulerDTO2DO(dto *domain_expt.Scheduler) *entity.ExptSchedulerDO {
 		return nil
 	}
 	do := &entity.ExptSchedulerDO{
-		Enabled:   dto.Enabled,
-		TriggerAt: dto.TriggerAt,
-		StartTime: dto.StartTime,
-		EndTime:   dto.EndTime,
+		Enabled:         dto.Enabled,
+		TriggerAt:       dto.TriggerAt,
+		StartTime:       dto.StartTime,
+		EndTime:         dto.EndTime,
+		TriggerInterval: dto.TriggerInterval,
 	}
 	if dto.Frequency != nil {
 		f := *dto.Frequency
