@@ -869,8 +869,12 @@ func (e *EvalOpenAPIApplication) ReportEvalTargetInvokeResult_(ctx context.Conte
 		return nil, err
 	}
 
-	logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
+	if actx == nil {
+		logs.CtxWarn(ctx, "report target record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
+		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
+	}
 
+	logs.CtxInfo(ctx, "report target record, record_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v", req.GetInvokeID(), req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID())
 	outputData := target.ToInvokeOutputDataDO(req)
 	outputData.TimeConsumingMS = gptr.Of(time.Now().UnixMilli() - actx.AsyncUnixMS)
 	if err := e.targetSvc.ReportInvokeRecords(ctx, &entity.ReportTargetRecordParam{
@@ -2432,6 +2436,10 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 	actx, err := e.asyncRepo.GetEvalAsyncCtx(ctx, asyncCtxKey)
 	if err != nil {
 		return nil, err
+	}
+	if actx == nil {
+		logs.CtxWarn(ctx, "report evaluator record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
+		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
 	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
