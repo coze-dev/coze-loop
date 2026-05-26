@@ -30,6 +30,14 @@ const (
 	consumerListeningCfgKey            = "consumer_listening"
 	metricPlatformTenantCfgKey         = "metric_platform_tenants"
 	metricQueryConfigKey               = "metric_query_config"
+	backfillCfgKey                     = "backfill_config"
+	dataReflowCfgKey                   = "data_reflow_config"
+
+	defaultBackfillDispatchBatchSize  = 10
+	defaultBackfillDispatchIntervalMs = 1000
+	defaultBackfillCkQueryLimit       = 100
+	defaultEvalSetInvokeBatchSize     = 1
+	defaultDatasetInvokeBatchSize     = 1
 )
 
 type TraceConfigCenter struct {
@@ -206,6 +214,46 @@ func (t *TraceConfigCenter) GetMetricQueryConfig(ctx context.Context) *config.Me
 		return &config.MetricQueryConfig{
 			SupportOffline: false,
 		}
+	}
+	return cfg
+}
+
+func (t *TraceConfigCenter) GetBackfillConfig(ctx context.Context) *config.BackfillConfig {
+	cfg := &config.BackfillConfig{}
+	if err := t.UnmarshalKey(ctx, backfillCfgKey, cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to get backfill config, %v", err)
+		return &config.BackfillConfig{
+			DispatchBatchSize:  config.SpaceAwareParam[int]{Default: defaultBackfillDispatchBatchSize},
+			DispatchIntervalMs: config.SpaceAwareParam[int]{Default: defaultBackfillDispatchIntervalMs},
+			CkQueryLimit:       config.SpaceAwareParam[int]{Default: defaultBackfillCkQueryLimit},
+		}
+	}
+	if cfg.DispatchBatchSize.Default <= 0 {
+		cfg.DispatchBatchSize.Default = defaultBackfillDispatchBatchSize
+	}
+	if cfg.DispatchIntervalMs.Default < 0 {
+		cfg.DispatchIntervalMs.Default = defaultBackfillDispatchIntervalMs
+	}
+	if cfg.CkQueryLimit.Default <= 0 {
+		cfg.CkQueryLimit.Default = defaultBackfillCkQueryLimit
+	}
+	return cfg
+}
+
+func (t *TraceConfigCenter) GetReflowInsertConfig(ctx context.Context) *config.ReflowInsertConfig {
+	cfg := &config.ReflowInsertConfig{}
+	if err := t.UnmarshalKey(ctx, dataReflowCfgKey, cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to get reflow insert config, %v", err)
+		return &config.ReflowInsertConfig{
+			EvalSetInvokeBatchSize: config.SpaceAwareParam[int]{Default: defaultEvalSetInvokeBatchSize},
+			DatasetInvokeBatchSize: config.SpaceAwareParam[int]{Default: defaultDatasetInvokeBatchSize},
+		}
+	}
+	if cfg.EvalSetInvokeBatchSize.Default <= 0 {
+		cfg.EvalSetInvokeBatchSize.Default = defaultEvalSetInvokeBatchSize
+	}
+	if cfg.DatasetInvokeBatchSize.Default <= 0 {
+		cfg.DatasetInvokeBatchSize.Default = defaultDatasetInvokeBatchSize
 	}
 	return cfg
 }

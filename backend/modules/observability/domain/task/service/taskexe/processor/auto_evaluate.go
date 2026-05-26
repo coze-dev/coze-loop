@@ -24,6 +24,7 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	componentConfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -50,6 +51,7 @@ type AutoEvaluateProcessor struct {
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
 	workflowProvider      taskhook.IWorkflowProvider
+	config                componentConfig.ITraceConfig
 }
 
 func NewAutoEvaluateProcessor(
@@ -60,6 +62,7 @@ func NewAutoEvaluateProcessor(
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
 	workflowProvider taskhook.IWorkflowProvider,
+	config componentConfig.ITraceConfig,
 ) *AutoEvaluateProcessor {
 	if workflowProvider == nil {
 		logs.Info("Auto Evaluate workflowProvider is nil")
@@ -73,6 +76,7 @@ func NewAutoEvaluateProcessor(
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
 		workflowProvider:      workflowProvider,
+		config:                config,
 	}
 }
 
@@ -265,42 +269,63 @@ func (p *AutoEvaluateProcessor) BatchInvoke(ctx context.Context, trigger *taskex
 		extMap["expt_template_id"] = cast.ToString(trigger.Task.TaskConfig.EvaluationExperimentConfig.ExptTemplateID)
 	}
 
-	// 一次 RPC 批量调用
-	addedItems, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
-		WorkspaceID:      workspaceID,
-		EvaluationSetID:  taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
-		Items:            items,
-		SkipInvalidItems: gptr.Of(true),
-		AllowPartialAdd:  gptr.Of(true),
-		ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
-		ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
-		Session:          sessionInfo,
-		Ext:              extMap,
-	})
-	if err != nil {
-		for i := int64(0); i < count; i++ {
-			_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
-			_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+	// 按配置的批大小分批调用下游 InvokeExperiment
+	invokeBatchSize := p.getInvokeBatchSize(ctx, workspaceID)
+	var totalAdded int64
+	for i := 0; i < len(items); i += invokeBatchSize {
+		end := i + invokeBatchSize
+		if end > len(items) {
+			end = len(items)
 		}
-		// 实验已失败，终止此轮自动化任务
-		if statusErr, ok := errorx.FromStatusError(err); ok {
-			if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
-				logs.CtxWarn(ctx, "[task-debug] experiment already failed (code=%d), terminate task_id=%d", statusErr.Code(), trigger.Task.ID)
-				if termErr := p.onTaskRunTerminated(ctx, trigger.TaskRun); termErr != nil {
-					logs.CtxError(ctx, "[task-debug] onTaskRunTerminated failed, err: %v", termErr)
-					return termErr
+		batchItems := items[i:end]
+
+		addedItems, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
+			WorkspaceID:      workspaceID,
+			EvaluationSetID:  taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
+			Items:            batchItems,
+			SkipInvalidItems: gptr.Of(true),
+			AllowPartialAdd:  gptr.Of(true),
+			ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
+			ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
+			Session:          sessionInfo,
+			Ext:              extMap,
+		})
+		if err != nil {
+			for j := int64(0); j < count; j++ {
+				_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+				_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+			}
+			// 实验已失败，终止此轮自动化任务
+			if statusErr, ok := errorx.FromStatusError(err); ok {
+				if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
+					logs.CtxWarn(ctx, "[task-debug] experiment already failed (code=%d), terminate task_id=%d", statusErr.Code(), trigger.Task.ID)
+					if termErr := p.onTaskRunTerminated(ctx, trigger.TaskRun); termErr != nil {
+						logs.CtxError(ctx, "[task-debug] onTaskRunTerminated failed, err: %v", termErr)
+						return termErr
+					}
 				}
 			}
+			return err
 		}
-		return err
+		totalAdded += addedItems
 	}
-	if addedItems <= 0 {
+
+	if totalAdded <= 0 {
 		for i := int64(0); i < count; i++ {
 			_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
 			_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
 		}
 	}
 	return nil
+}
+
+// getInvokeBatchSize 获取调用下游评测集服务的批大小
+func (p *AutoEvaluateProcessor) getInvokeBatchSize(ctx context.Context, workspaceID int64) int {
+	if p.config == nil {
+		return 1
+	}
+	cfg := p.config.GetReflowInsertConfig(ctx)
+	return cfg.GetEvalSetInvokeBatchSize(workspaceID)
 }
 
 // buildFieldMappings 从任务配置中构建字段映射（公共方法，Invoke 和 BatchInvoke 共用）

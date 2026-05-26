@@ -173,6 +173,34 @@ func (mr *MockITraceConfigMockRecorder) GetMetricQueryConfig(ctx any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMetricQueryConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetMetricQueryConfig), ctx)
 }
 
+// GetBackfillConfig mocks base method.
+func (m *MockITraceConfig) GetBackfillConfig(ctx context.Context) *config.BackfillConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBackfillConfig", ctx)
+	ret0, _ := ret[0].(*config.BackfillConfig)
+	return ret0
+}
+
+// GetBackfillConfig indicates an expected call of GetBackfillConfig.
+func (mr *MockITraceConfigMockRecorder) GetBackfillConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBackfillConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetBackfillConfig), ctx)
+}
+
+// GetReflowInsertConfig mocks base method.
+func (m *MockITraceConfig) GetReflowInsertConfig(ctx context.Context) *config.ReflowInsertConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetReflowInsertConfig", ctx)
+	ret0, _ := ret[0].(*config.ReflowInsertConfig)
+	return ret0
+}
+
+// GetReflowInsertConfig indicates an expected call of GetReflowInsertConfig.
+func (mr *MockITraceConfigMockRecorder) GetReflowInsertConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetReflowInsertConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetReflowInsertConfig), ctx)
+}
+
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()
