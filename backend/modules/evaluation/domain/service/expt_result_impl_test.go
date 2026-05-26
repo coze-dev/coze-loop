@@ -4545,6 +4545,51 @@ func TestExptResultBuilder_buildTargetOutput(t *testing.T) {
 	}
 }
 
+func TestExptResultBuilder_fillProcessingTargetResultID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	const (
+		spaceID        = int64(100)
+		exptID         = int64(200)
+		exptRunID      = int64(300)
+		itemID         = int64(400)
+		turnID         = int64(500)
+		targetResultID = int64(600)
+	)
+
+	mockTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
+	mockTurnResultRepo.EXPECT().
+		MGetItemTurnRunLogs(gomock.Any(), exptID, exptRunID, []int64{itemID}, spaceID).
+		Return([]*entity.ExptTurnResultRunLog{
+			{
+				ExptRunID:      exptRunID,
+				ItemID:         itemID,
+				TurnID:         turnID,
+				TargetResultID: targetResultID,
+			},
+		}, nil)
+
+	builder := &ExptResultBuilder{
+		ExptID:             exptID,
+		SpaceID:            spaceID,
+		ExptTurnResultRepo: mockTurnResultRepo,
+		turnResultDO: []*entity.ExptTurnResult{
+			{
+				ID:        1,
+				ExptRunID: exptRunID,
+				ItemID:    itemID,
+				TurnID:    turnID,
+			},
+		},
+	}
+
+	err := builder.fillProcessingTargetResultID(context.Background())
+
+	require.NoError(t, err)
+	assert.Equal(t, targetResultID, builder.turnResultDO[0].TargetResultID)
+}
+
 func TestExptResultBuilder_buildEvaluatorResult(t *testing.T) {
 	tests := []struct {
 		name           string

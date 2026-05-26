@@ -1573,6 +1573,10 @@ func (e *ExptResultBuilder) build(ctx context.Context) error {
 		return nil
 	}
 
+	if err := e.fillProcessingTargetResultID(ctx); err != nil {
+		return err
+	}
+
 	// 由于turnID可能为0，以turn_result_id为行的唯一标识聚合数据，组装payload数据时再通过turn_result_id与item_id(单轮)或turn_id(多轮)映射进行组装
 	e.ItemIDTurnID2TurnResultID = make(map[int64]map[int64]int64) // itemID -> turnID -> turn_result_id
 	for _, turnResult := range e.turnResultDO {
@@ -1601,6 +1605,64 @@ func (e *ExptResultBuilder) build(ctx context.Context) error {
 	err = e.buildAnalysis(ctx)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (e *ExptResultBuilder) fillProcessingTargetResultID(ctx context.Context) error {
+	type runItemTurnKey struct {
+		exptRunID int64
+		itemID    int64
+		turnID    int64
+	}
+
+	runID2ItemIDSet := make(map[int64]map[int64]struct{})
+	for _, turnResult := range e.turnResultDO {
+		if turnResult == nil || turnResult.TargetResultID > 0 || turnResult.ExptRunID == 0 {
+			continue
+		}
+		if runID2ItemIDSet[turnResult.ExptRunID] == nil {
+			runID2ItemIDSet[turnResult.ExptRunID] = make(map[int64]struct{})
+		}
+		runID2ItemIDSet[turnResult.ExptRunID][turnResult.ItemID] = struct{}{}
+	}
+	if len(runID2ItemIDSet) == 0 {
+		return nil
+	}
+
+	targetResultIDByRunItemTurn := make(map[runItemTurnKey]int64)
+	for exptRunID, itemIDSet := range runID2ItemIDSet {
+		itemIDs := make([]int64, 0, len(itemIDSet))
+		for itemID := range itemIDSet {
+			itemIDs = append(itemIDs, itemID)
+		}
+		sort.Slice(itemIDs, func(i, j int) bool { return itemIDs[i] < itemIDs[j] })
+
+		turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, e.ExptID, exptRunID, itemIDs, e.SpaceID)
+		if err != nil {
+			return err
+		}
+		for _, turnRunLog := range turnRunLogs {
+			if turnRunLog == nil || turnRunLog.TargetResultID == 0 {
+				continue
+			}
+			targetResultIDByRunItemTurn[runItemTurnKey{
+				exptRunID: exptRunID,
+				itemID:    turnRunLog.ItemID,
+				turnID:    turnRunLog.TurnID,
+			}] = turnRunLog.TargetResultID
+		}
+	}
+
+	for _, turnResult := range e.turnResultDO {
+		if turnResult == nil || turnResult.TargetResultID > 0 {
+			continue
+		}
+		key := runItemTurnKey{exptRunID: turnResult.ExptRunID, itemID: turnResult.ItemID, turnID: turnResult.TurnID}
+		if targetResultID := targetResultIDByRunItemTurn[key]; targetResultID > 0 {
+			turnResult.TargetResultID = targetResultID
+		}
 	}
 
 	return nil
