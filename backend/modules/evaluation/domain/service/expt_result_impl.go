@@ -439,6 +439,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		turnID int64
 	}
 	turnLogIDByItemTurn := make(map[itemTurnKeyNoRun]string)
+	targetResultIDByRunItemTurn := make(map[itemTurnKey]int64)
 
 	// 将基准页内 turn_result 里的 expt_run_id 拆分出来，批量拉取对应的 run-log
 	runID2ItemIDSet := make(map[int64]map[int64]struct{})
@@ -484,32 +485,42 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 			if trl == nil {
 				continue
 			}
-			if trl.LogID == "" {
-				continue
-			}
-			turnLogIDByRunItemTurn[itemTurnKey{
+			k := itemTurnKey{
 				exptRunID: exptRunID,
 				itemID:    trl.ItemID,
 				turnID:    trl.TurnID,
-			}] = trl.LogID
-			// 兜底：同一分页里同一 item/turn 若出现多个 run_id，只保留第一个非空 logid 用于对外展示
-			k := itemTurnKeyNoRun{itemID: trl.ItemID, turnID: trl.TurnID}
-			if turnLogIDByItemTurn[k] == "" {
-				turnLogIDByItemTurn[k] = trl.LogID
+			}
+			if trl.LogID != "" {
+				turnLogIDByRunItemTurn[k] = trl.LogID
+				// 兜底：同一分页里同一 item/turn 若出现多个 run_id，只保留第一个非空 logid 用于对外展示
+				noRunKey := itemTurnKeyNoRun{itemID: trl.ItemID, turnID: trl.TurnID}
+				if turnLogIDByItemTurn[noRunKey] == "" {
+					turnLogIDByItemTurn[noRunKey] = trl.LogID
+				}
+			}
+			if trl.TargetResultID > 0 {
+				targetResultIDByRunItemTurn[k] = trl.TargetResultID
 			}
 		}
 	}
 
-	// 确保每个 item 都能回填到一个 logid：按 turn_resultDAOs 的遍历顺序取该 item 的第一个非空 logid
+	// 确保每个 item 都能回填到一个 logid：按 turn_resultDAOs 的遍历顺序取该 item 的第一个非空 logid。
+	// 异步评测对象执行中会先把 target record id 写入 run-log，turn_result 可能要等终态才回写；
+	// 这里提前补齐 TargetResultID，保证 processing 阶段的结果接口也能返回 target_record/logid。
 	for _, tr := range turnResultDAOs {
 		if tr == nil {
 			continue
 		}
-		if itemID2LogID[tr.ItemID] != "" {
-			continue
+		key := itemTurnKey{exptRunID: tr.ExptRunID, itemID: tr.ItemID, turnID: tr.TurnID}
+		if itemID2LogID[tr.ItemID] == "" {
+			if logID, ok := turnLogIDByRunItemTurn[key]; ok && logID != "" {
+				itemID2LogID[tr.ItemID] = logID
+			}
 		}
-		if logID, ok := turnLogIDByRunItemTurn[itemTurnKey{exptRunID: tr.ExptRunID, itemID: tr.ItemID, turnID: tr.TurnID}]; ok && logID != "" {
-			itemID2LogID[tr.ItemID] = logID
+		if tr.TargetResultID == 0 {
+			if targetResultID := targetResultIDByRunItemTurn[key]; targetResultID > 0 {
+				tr.TargetResultID = targetResultID
+			}
 		}
 	}
 
