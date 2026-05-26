@@ -31,7 +31,7 @@ const (
 	metricPlatformTenantCfgKey         = "metric_platform_tenants"
 	metricQueryConfigKey               = "metric_query_config"
 	backfillCfgKey                     = "backfill_config"
-	dataReflowCfgKey                   = "data_reflow_config"
+	reflowInsertCfgKey                 = "reflow_insert_config"
 
 	defaultBackfillDispatchBatchSize  = 10
 	defaultBackfillDispatchIntervalMs = 1000
@@ -242,7 +242,7 @@ func (t *TraceConfigCenter) GetBackfillConfig(ctx context.Context) *config.Backf
 
 func (t *TraceConfigCenter) GetReflowInsertConfig(ctx context.Context) *config.ReflowInsertConfig {
 	cfg := &config.ReflowInsertConfig{}
-	if err := t.UnmarshalKey(ctx, dataReflowCfgKey, cfg); err != nil {
+	if err := t.UnmarshalKey(ctx, reflowInsertCfgKey, cfg); err != nil {
 		logs.CtxWarn(ctx, "fail to get reflow insert config, %v", err)
 		return &config.ReflowInsertConfig{
 			EvalSetInvokeBatchSize: config.SpaceAwareParam[int]{Default: defaultEvalSetInvokeBatchSize},
