@@ -141,6 +141,7 @@ var (
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		obmetrics.NewConsumeMetric,
 		mysqldao.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
@@ -475,6 +476,7 @@ func InitTraceIngestionApplication(
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
 	idGenerator idgen.IIDGenerator,
+	meter metrics.Meter,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil
