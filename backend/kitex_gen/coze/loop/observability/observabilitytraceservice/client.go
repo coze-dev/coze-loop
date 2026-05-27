@@ -198,21 +198,6 @@ func (p *kObservabilityTraceServiceClient) ListMetadata(ctx context.Context, req
 	return p.kClient.ListMetadata(ctx, req)
 }
 
-func (p *kObservabilityTraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.UpsertColumnExtractConfig(ctx, req)
-}
-
-func (p *kObservabilityTraceServiceClient) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.GetColumnExtractConfigResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetColumnExtractConfig(ctx, req)
-}
-
-func (p *kObservabilityTraceServiceClient) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (r *trace.GetAgentMetadataResponse, err error) {
-	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
-	return p.kClient.GetAgentMetadata(ctx, req)
-}
-
 func (p *kObservabilityTraceServiceClient) ListTraceChat(ctx context.Context, req *trace.ListTraceChatRequest, callOptions ...callopt.Option) (r *trace.ListTraceChatResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.ListTraceChat(ctx, req)
@@ -226,4 +211,19 @@ func (p *kObservabilityTraceServiceClient) ListThreadChat(ctx context.Context, r
 func (p *kObservabilityTraceServiceClient) GetThreadStat(ctx context.Context, req *trace.GetThreadStatRequest, callOptions ...callopt.Option) (r *trace.GetThreadStatResponse, err error) {
 	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
 	return p.kClient.GetThreadStat(ctx, req)
+}
+
+func (p *kObservabilityTraceServiceClient) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.UpsertColumnExtractConfigResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.UpsertColumnExtractConfig(ctx, req)
+}
+
+func (p *kObservabilityTraceServiceClient) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest, callOptions ...callopt.Option) (r *trace.GetColumnExtractConfigResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetColumnExtractConfig(ctx, req)
+}
+
+func (p *kObservabilityTraceServiceClient) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest, callOptions ...callopt.Option) (r *trace.GetAgentMetadataResponse, err error) {
+	ctx = client.NewCtxWithCallOptions(ctx, callOptions)
+	return p.kClient.GetAgentMetadata(ctx, req)
 }

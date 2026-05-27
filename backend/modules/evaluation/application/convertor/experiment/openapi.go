@@ -285,6 +285,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EnableExtractTrajectory = dto.EnableExtractTrajectory
 	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
+	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
 	return result
 }
 
@@ -483,6 +484,43 @@ func mapExperimentStatus(status *domainExpt.ExptStatus) *openapiExperiment.Exper
 	return &openapiStatus
 }
 
+func mapOfflineExptAnalysisStatusDTO2OpenAPI(s *domainExpt.OfflineExptAnalysisStatus) *openapiExperiment.OfflineExptAnalysisStatus {
+	if s == nil {
+		return nil
+	}
+	var v openapiExperiment.OfflineExptAnalysisStatus
+	switch *s {
+	case domainExpt.OfflineExptAnalysisStatus_Processing:
+		v = openapiExperiment.OfflineExptAnalysisStatusProcessing
+	case domainExpt.OfflineExptAnalysisStatus_Success:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuccess
+	case domainExpt.OfflineExptAnalysisStatus_Failed:
+		v = openapiExperiment.OfflineExptAnalysisStatusFailed
+	case domainExpt.OfflineExptAnalysisStatus_Superseded:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuperseded
+	default:
+		v = openapiExperiment.OfflineExptAnalysisStatusNotStarted
+	}
+	return &v
+}
+
+func openAPIOfflineExptAnalysisStatusDO2DTO(s entity.OfflineExptAnalysisStatus) *openapiExperiment.OfflineExptAnalysisStatus {
+	var v openapiExperiment.OfflineExptAnalysisStatus
+	switch s {
+	case entity.OfflineExptAnalysisStatus_Processing:
+		v = openapiExperiment.OfflineExptAnalysisStatusProcessing
+	case entity.OfflineExptAnalysisStatus_Success:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuccess
+	case entity.OfflineExptAnalysisStatus_Failed:
+		v = openapiExperiment.OfflineExptAnalysisStatusFailed
+	case entity.OfflineExptAnalysisStatus_Superseded:
+		v = openapiExperiment.OfflineExptAnalysisStatusSuperseded
+	default:
+		v = openapiExperiment.OfflineExptAnalysisStatusNotStarted
+	}
+	return &v
+}
+
 // ---------- Column Result Converters ----------
 
 func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experiment {
@@ -507,6 +545,8 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 	if status := OpenAPIExperimentStatusDO2DTO(experiment.Status); status != nil {
 		result.Status = status
 	}
+
+	result.OfflineExptAnalysisStatus = openAPIOfflineExptAnalysisStatusDO2DTO(experiment.OfflineExptAnalysisStatus)
 
 	if experiment.StartAt != nil {
 		result.StartedAt = gptr.Of(experiment.StartAt.Unix())

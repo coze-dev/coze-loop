@@ -199,6 +199,11 @@ func (c *EvaluatorSourceCodeServiceImpl) EvaluatorType() entity.EvaluatorType {
 	return entity.EvaluatorTypeCode
 }
 
+// ShouldIntercept 判断Code评估器是否应劫持本次评估，默认不劫持
+func (c *EvaluatorSourceCodeServiceImpl) ShouldIntercept(_ context.Context, _ *entity.Evaluator, _ *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+	return nil, entity.EvaluatorRunStatusSuccess, false
+}
+
 // Run 执行Code评估器
 func (c *EvaluatorSourceCodeServiceImpl) Run(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData, evaluatorRunConf *entity.EvaluatorRunConfig, exptSpaceID int64, disableTracing bool) (output *entity.EvaluatorOutputData, runStatus entity.EvaluatorRunStatus, traceID string) {
 	logs.CtxInfo(ctx, "[Run] Run Code Evaluator input: %v", input)

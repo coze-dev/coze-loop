@@ -1667,3 +1667,52 @@ func TestEvaluatorSourcePromptServiceImpl_Run_DisableTracing(t *testing.T) {
 		})
 	}
 }
+
+func TestEvaluatorSourcePromptServiceImpl_ShouldIntercept(t *testing.T) {
+	service := &EvaluatorSourcePromptServiceImpl{}
+
+	tests := []struct {
+		name           string
+		evaluator      *entity.Evaluator
+		input          *entity.EvaluatorInputData
+		expectedOutput *entity.EvaluatorOutputData
+		expectedSkip   bool
+	}{
+		{
+			name:           "默认不跳过_nil输入",
+			evaluator:      &entity.Evaluator{},
+			input:          nil,
+			expectedOutput: nil,
+			expectedSkip:   false,
+		},
+		{
+			name: "默认不跳过_有输入数据",
+			evaluator: &entity.Evaluator{
+				EvaluatorType: entity.EvaluatorTypePrompt,
+			},
+			input: &entity.EvaluatorInputData{
+				InputFields: map[string]*entity.Content{
+					"test": {Text: gptr.Of("hello")},
+				},
+			},
+			expectedOutput: nil,
+			expectedSkip:   false,
+		},
+		{
+			name:           "默认不跳过_空输入数据",
+			evaluator:      &entity.Evaluator{},
+			input:          &entity.EvaluatorInputData{},
+			expectedOutput: nil,
+			expectedSkip:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, runStatus, intercepted := service.ShouldIntercept(context.Background(), tt.evaluator, tt.input)
+			assert.Equal(t, tt.expectedSkip, intercepted)
+			assert.Equal(t, tt.expectedOutput, output)
+			assert.Equal(t, entity.EvaluatorRunStatusSuccess, runStatus)
+		})
+	}
+}

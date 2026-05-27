@@ -28,6 +28,23 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
+// emptyEvaluatorResultIDsJSONForRunLogUpdate 返回写入 expt_turn_result_run_log.evaluator_result_ids 的空 JSON。
+// GORM Updates(map) 会忽略值为 nil 的键，传 nil 无法清空 blob 列，旧 EvalVerIDToResID 会残留。
+func emptyEvaluatorResultIDsJSONForRunLogUpdate() []byte {
+	b, _ := (&entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{}}).Serialize()
+	return b
+}
+
+func clearExptTurnRunLogResultRefsOnItems(ctx context.Context, turnResultRepo repo.IExptTurnResultRepo, spaceID, exptID, exptRunID int64, itemIDs []int64) error {
+	if len(itemIDs) == 0 {
+		return nil
+	}
+	return turnResultRepo.UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, map[string]any{
+		"target_result_id":     int64(0),
+		"evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate(),
+	})
+}
+
 // SchedulerModeFactory 定义创建 ExptSchedulerMode 实例的接口
 type SchedulerModeFactory interface {
 	NewSchedulerMode(
@@ -715,6 +732,10 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 			return err
 		}
 
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })); err != nil {
+			return err
+		}
+
 		if err := e.exptItemResultRepo.BatchCreateNXRunLogs(ctx, itemRunLogs); err != nil {
 			return err
 		}
@@ -1323,8 +1344,13 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
 		}); err != nil {
+			return err
+		}
+
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDs, func(k int64, v bool) int64 { return k })); err != nil {
 			return err
 		}
 
@@ -1606,8 +1632,13 @@ func (e *ExptRetryItemsExec) resetEvalItems(ctx context.Context, event *entity.E
 		}
 
 		if err := e.exptTurnResultRepo.UpdateTurnResults(ctx, event.ExptID, itemTurnIDs, event.SpaceID, map[string]any{
-			"status": int32(entity.TurnRunState_Queueing),
+			"status":           int32(entity.TurnRunState_Queueing),
+			"target_result_id": int64(0),
 		}); err != nil {
+			return err
+		}
+
+		if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.exptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, maps.ToSlice(itemIDMap, func(k int64, v bool) int64 { return k })); err != nil {
 			return err
 		}
 

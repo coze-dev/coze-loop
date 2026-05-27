@@ -27340,708 +27340,6 @@ func (p *TraceServiceListMetadataResult) DeepCopy(s interface{}) error {
 	return nil
 }
 
-func (p *TraceServiceUpsertColumnExtractConfigArgs) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField1(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigArgs[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-	_field := NewUpsertColumnExtractConfigRequest()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Req = _field
-	return offset, nil
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField1(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field1Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-	offset += p.Req.FastWriteNocopy(buf[offset:], w)
-	return offset
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) field1Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += p.Req.BLength()
-	return l
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceUpsertColumnExtractConfigArgs)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _req *UpsertColumnExtractConfigRequest
-	if src.Req != nil {
-		_req = &UpsertColumnExtractConfigRequest{}
-		if err := _req.DeepCopy(src.Req); err != nil {
-			return err
-		}
-	}
-	p.Req = _req
-
-	return nil
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField0(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigResult[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) FastReadField0(buf []byte) (int, error) {
-	offset := 0
-	_field := NewUpsertColumnExtractConfigResponse()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Success = _field
-	return offset, nil
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField0(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field0Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuccess() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
-		offset += p.Success.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) field0Length() int {
-	l := 0
-	if p.IsSetSuccess() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Success.BLength()
-	}
-	return l
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceUpsertColumnExtractConfigResult)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _success *UpsertColumnExtractConfigResponse
-	if src.Success != nil {
-		_success = &UpsertColumnExtractConfigResponse{}
-		if err := _success.DeepCopy(src.Success); err != nil {
-			return err
-		}
-	}
-	p.Success = _success
-
-	return nil
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField1(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigArgs[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-	_field := NewGetColumnExtractConfigRequest()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Req = _field
-	return offset, nil
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField1(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field1Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-	offset += p.Req.FastWriteNocopy(buf[offset:], w)
-	return offset
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) field1Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += p.Req.BLength()
-	return l
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetColumnExtractConfigArgs)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _req *GetColumnExtractConfigRequest
-	if src.Req != nil {
-		_req = &GetColumnExtractConfigRequest{}
-		if err := _req.DeepCopy(src.Req); err != nil {
-			return err
-		}
-	}
-	p.Req = _req
-
-	return nil
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField0(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigResult[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) FastReadField0(buf []byte) (int, error) {
-	offset := 0
-	_field := NewGetColumnExtractConfigResponse()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Success = _field
-	return offset, nil
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField0(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field0Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuccess() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
-		offset += p.Success.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) field0Length() int {
-	l := 0
-	if p.IsSetSuccess() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Success.BLength()
-	}
-	return l
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetColumnExtractConfigResult)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _success *GetColumnExtractConfigResponse
-	if src.Success != nil {
-		_success = &GetColumnExtractConfigResponse{}
-		if err := _success.DeepCopy(src.Success); err != nil {
-			return err
-		}
-	}
-	p.Success = _success
-
-	return nil
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 1:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField1(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataArgs[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) FastReadField1(buf []byte) (int, error) {
-	offset := 0
-	_field := NewGetAgentMetadataRequest()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Req = _field
-	return offset, nil
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField1(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field1Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
-	offset += p.Req.FastWriteNocopy(buf[offset:], w)
-	return offset
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) field1Length() int {
-	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += p.Req.BLength()
-	return l
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetAgentMetadataArgs)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _req *GetAgentMetadataRequest
-	if src.Req != nil {
-		_req = &GetAgentMetadataRequest{}
-		if err := _req.DeepCopy(src.Req); err != nil {
-			return err
-		}
-	}
-	p.Req = _req
-
-	return nil
-}
-
-func (p *TraceServiceGetAgentMetadataResult) FastRead(buf []byte) (int, error) {
-
-	var err error
-	var offset int
-	var l int
-	var fieldTypeId thrift.TType
-	var fieldId int16
-	for {
-		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
-		offset += l
-		if err != nil {
-			goto ReadFieldBeginError
-		}
-		if fieldTypeId == thrift.STOP {
-			break
-		}
-		switch fieldId {
-		case 0:
-			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField0(buf[offset:])
-				offset += l
-				if err != nil {
-					goto ReadFieldError
-				}
-			} else {
-				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-				offset += l
-				if err != nil {
-					goto SkipFieldError
-				}
-			}
-		default:
-			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
-			offset += l
-			if err != nil {
-				goto SkipFieldError
-			}
-		}
-	}
-
-	return offset, nil
-ReadFieldBeginError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
-ReadFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataResult[fieldId]), err)
-SkipFieldError:
-	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-}
-
-func (p *TraceServiceGetAgentMetadataResult) FastReadField0(buf []byte) (int, error) {
-	offset := 0
-	_field := NewGetAgentMetadataResponse()
-	if l, err := _field.FastRead(buf[offset:]); err != nil {
-		return offset, err
-	} else {
-		offset += l
-	}
-	p.Success = _field
-	return offset, nil
-}
-
-func (p *TraceServiceGetAgentMetadataResult) FastWrite(buf []byte) int {
-	return p.FastWriteNocopy(buf, nil)
-}
-
-func (p *TraceServiceGetAgentMetadataResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p != nil {
-		offset += p.fastWriteField0(buf[offset:], w)
-	}
-	offset += thrift.Binary.WriteFieldStop(buf[offset:])
-	return offset
-}
-
-func (p *TraceServiceGetAgentMetadataResult) BLength() int {
-	l := 0
-	if p != nil {
-		l += p.field0Length()
-	}
-	l += thrift.Binary.FieldStopLength()
-	return l
-}
-
-func (p *TraceServiceGetAgentMetadataResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
-	offset := 0
-	if p.IsSetSuccess() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
-		offset += p.Success.FastWriteNocopy(buf[offset:], w)
-	}
-	return offset
-}
-
-func (p *TraceServiceGetAgentMetadataResult) field0Length() int {
-	l := 0
-	if p.IsSetSuccess() {
-		l += thrift.Binary.FieldBeginLength()
-		l += p.Success.BLength()
-	}
-	return l
-}
-
-func (p *TraceServiceGetAgentMetadataResult) DeepCopy(s interface{}) error {
-	src, ok := s.(*TraceServiceGetAgentMetadataResult)
-	if !ok {
-		return fmt.Errorf("%T's type not matched %T", s, p)
-	}
-
-	var _success *GetAgentMetadataResponse
-	if src.Success != nil {
-		_success = &GetAgentMetadataResponse{}
-		if err := _success.DeepCopy(src.Success); err != nil {
-			return err
-		}
-	}
-	p.Success = _success
-
-	return nil
-}
-
 func (p *TraceServiceListTraceChatArgs) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -28744,6 +28042,708 @@ func (p *TraceServiceGetThreadStatResult) DeepCopy(s interface{}) error {
 	return nil
 }
 
+func (p *TraceServiceUpsertColumnExtractConfigArgs) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigArgs[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewUpsertColumnExtractConfigRequest()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Req = _field
+	return offset, nil
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += p.Req.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += p.Req.BLength()
+	return l
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceUpsertColumnExtractConfigArgs)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _req *UpsertColumnExtractConfigRequest
+	if src.Req != nil {
+		_req = &UpsertColumnExtractConfigRequest{}
+		if err := _req.DeepCopy(src.Req); err != nil {
+			return err
+		}
+	}
+	p.Req = _req
+
+	return nil
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceUpsertColumnExtractConfigResult[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+	_field := NewUpsertColumnExtractConfigResponse()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Success.BLength()
+	}
+	return l
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceUpsertColumnExtractConfigResult)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _success *UpsertColumnExtractConfigResponse
+	if src.Success != nil {
+		_success = &UpsertColumnExtractConfigResponse{}
+		if err := _success.DeepCopy(src.Success); err != nil {
+			return err
+		}
+	}
+	p.Success = _success
+
+	return nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigArgs[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetColumnExtractConfigRequest()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Req = _field
+	return offset, nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += p.Req.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += p.Req.BLength()
+	return l
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceGetColumnExtractConfigArgs)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _req *GetColumnExtractConfigRequest
+	if src.Req != nil {
+		_req = &GetColumnExtractConfigRequest{}
+		if err := _req.DeepCopy(src.Req); err != nil {
+			return err
+		}
+	}
+	p.Req = _req
+
+	return nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetColumnExtractConfigResult[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetColumnExtractConfigResponse()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Success.BLength()
+	}
+	return l
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceGetColumnExtractConfigResult)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _success *GetColumnExtractConfigResponse
+	if src.Success != nil {
+		_success = &GetColumnExtractConfigResponse{}
+		if err := _success.DeepCopy(src.Success); err != nil {
+			return err
+		}
+	}
+	p.Success = _success
+
+	return nil
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataArgs[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetAgentMetadataRequest()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Req = _field
+	return offset, nil
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+	offset += p.Req.FastWriteNocopy(buf[offset:], w)
+	return offset
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) field1Length() int {
+	l := 0
+	l += thrift.Binary.FieldBeginLength()
+	l += p.Req.BLength()
+	return l
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceGetAgentMetadataArgs)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _req *GetAgentMetadataRequest
+	if src.Req != nil {
+		_req = &GetAgentMetadataRequest{}
+		if err := _req.DeepCopy(src.Req); err != nil {
+			return err
+		}
+	}
+	p.Req = _req
+
+	return nil
+}
+
+func (p *TraceServiceGetAgentMetadataResult) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField0(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_TraceServiceGetAgentMetadataResult[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *TraceServiceGetAgentMetadataResult) FastReadField0(buf []byte) (int, error) {
+	offset := 0
+	_field := NewGetAgentMetadataResponse()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Success = _field
+	return offset, nil
+}
+
+func (p *TraceServiceGetAgentMetadataResult) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *TraceServiceGetAgentMetadataResult) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField0(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *TraceServiceGetAgentMetadataResult) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field0Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *TraceServiceGetAgentMetadataResult) fastWriteField0(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetSuccess() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 0)
+		offset += p.Success.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *TraceServiceGetAgentMetadataResult) field0Length() int {
+	l := 0
+	if p.IsSetSuccess() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Success.BLength()
+	}
+	return l
+}
+
+func (p *TraceServiceGetAgentMetadataResult) DeepCopy(s interface{}) error {
+	src, ok := s.(*TraceServiceGetAgentMetadataResult)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _success *GetAgentMetadataResponse
+	if src.Success != nil {
+		_success = &GetAgentMetadataResponse{}
+		if err := _success.DeepCopy(src.Success); err != nil {
+			return err
+		}
+	}
+	p.Success = _success
+
+	return nil
+}
+
 func (p *TraceServiceListSpansArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
@@ -28944,30 +28944,6 @@ func (p *TraceServiceListMetadataResult) GetResult() interface{} {
 	return p.Success
 }
 
-func (p *TraceServiceUpsertColumnExtractConfigArgs) GetFirstArgument() interface{} {
-	return p.Req
-}
-
-func (p *TraceServiceUpsertColumnExtractConfigResult) GetResult() interface{} {
-	return p.Success
-}
-
-func (p *TraceServiceGetColumnExtractConfigArgs) GetFirstArgument() interface{} {
-	return p.Req
-}
-
-func (p *TraceServiceGetColumnExtractConfigResult) GetResult() interface{} {
-	return p.Success
-}
-
-func (p *TraceServiceGetAgentMetadataArgs) GetFirstArgument() interface{} {
-	return p.Req
-}
-
-func (p *TraceServiceGetAgentMetadataResult) GetResult() interface{} {
-	return p.Success
-}
-
 func (p *TraceServiceListTraceChatArgs) GetFirstArgument() interface{} {
 	return p.Req
 }
@@ -28989,5 +28965,29 @@ func (p *TraceServiceGetThreadStatArgs) GetFirstArgument() interface{} {
 }
 
 func (p *TraceServiceGetThreadStatResult) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigArgs) GetFirstArgument() interface{} {
+	return p.Req
+}
+
+func (p *TraceServiceUpsertColumnExtractConfigResult) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *TraceServiceGetColumnExtractConfigArgs) GetFirstArgument() interface{} {
+	return p.Req
+}
+
+func (p *TraceServiceGetColumnExtractConfigResult) GetResult() interface{} {
+	return p.Success
+}
+
+func (p *TraceServiceGetAgentMetadataArgs) GetFirstArgument() interface{} {
+	return p.Req
+}
+
+func (p *TraceServiceGetAgentMetadataResult) GetResult() interface{} {
 	return p.Success
 }

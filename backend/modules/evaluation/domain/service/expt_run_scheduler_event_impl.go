@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/ctxcache"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
@@ -36,6 +37,7 @@ type ExptSchedulerImpl struct {
 	Publisher                events.ExptEventPublisher
 	ExptItemResultRepo       repo.IExptItemResultRepo
 	ExptTurnResultRepo       repo.IExptTurnResultRepo
+	EvaluatorRecordRepo      repo.IEvaluatorRecordRepo
 	ExptStatsRepo            repo.IExptStatsRepo
 	ExptRunLogRepo           repo.IExptRunLogRepo
 	Idem                     idem.IdempotentService
@@ -56,6 +58,7 @@ func NewExptSchedulerSvc(
 	exptRepo repo.IExperimentRepo,
 	exptItemResultRepo repo.IExptItemResultRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
+	evaluatorRecordRepo repo.IEvaluatorRecordRepo,
 	exptStatsRepo repo.IExptStatsRepo,
 	exptRunLogRepo repo.IExptRunLogRepo,
 	Idem idem.IdempotentService,
@@ -75,6 +78,7 @@ func NewExptSchedulerSvc(
 		ExptRepo:                 exptRepo,
 		ExptItemResultRepo:       exptItemResultRepo,
 		ExptTurnResultRepo:       exptTurnResultRepo,
+		EvaluatorRecordRepo:      evaluatorRecordRepo,
 		ExptStatsRepo:            exptStatsRepo,
 		ExptRunLogRepo:           exptRunLogRepo,
 		Idem:                     Idem,
@@ -415,7 +419,11 @@ func (e *ExptSchedulerImpl) handleToSubmits(ctx context.Context, event *entity.E
 }
 
 func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.ExptScheduleEvent, items []*entity.ExptEvalItem, expt *entity.Experiment) (alives, zombies []*entity.ExptEvalItem, err error) {
-	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(expt.AsyncExec())
+	asyncExec := false
+	if expt != nil {
+		asyncExec = expt.AsyncExec()
+	}
+	zombieSecond := e.Configer.GetConsumerConf(ctx).GetExptExecConf(event.SpaceID).GetExptItemEvalConf().GetItemZombieSecond(asyncExec)
 	for _, item := range items {
 		if item.State == entity.ItemRunState_Processing && item.UpdatedAt != nil && !gptr.Indirect(item.UpdatedAt).IsZero() {
 			if time.Since(gptr.Indirect(item.UpdatedAt)).Seconds() > float64(zombieSecond) {
@@ -434,6 +442,10 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 
 	logs.CtxWarn(ctx, "[ExptEval] found zombie items, set failure state, expt_id: %v, expt_run_id: %v, item_ids: %v, zombie_second: %v", event.ExptID, event.ExptRunID, zombieItemIDs, zombieSecond)
 
+	if err := e.terminateZombieEvaluatorRecords(ctx, event, zombieItemIDs); err != nil {
+		logs.CtxError(ctx, "[ExptEval] terminate async evaluator records for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
+	}
+
 	if err := e.ExptItemResultRepo.UpdateItemRunLog(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, map[string]any{"status": int32(entity.ItemRunState_Fail), "result_state": int32(entity.ExptItemResultStateLogged)}, event.SpaceID); err != nil {
 		return nil, nil, err
 	}
@@ -442,7 +454,70 @@ func (e *ExptSchedulerImpl) handleZombies(ctx context.Context, event *entity.Exp
 		return nil, nil, err
 	}
 
+	if err := clearExptTurnRunLogResultRefsOnItems(ctx, e.ExptTurnResultRepo, event.SpaceID, event.ExptID, event.ExptRunID, zombieItemIDs); err != nil {
+		logs.CtxError(ctx, "[ExptEval] clear turn run log result refs for zombie items fail, expt_id: %v, expt_run_id: %v, item_ids: %v, err: %v", event.ExptID, event.ExptRunID, zombieItemIDs, err)
+	}
+
 	time.Sleep(time.Millisecond * 1500)
 
 	return alives, zombies, nil
+}
+
+// terminateZombieEvaluatorRecords 将僵尸 item 关联的、仍处于 AsyncInvoking 状态的 EvaluatorRecord 置为失败。
+// 通过 turn run log 拿到 record id 列表，再按主键过滤与更新，避免在无二级索引的 evaluator_record 表上做条件 UPDATE。
+func (e *ExptSchedulerImpl) terminateZombieEvaluatorRecords(ctx context.Context, event *entity.ExptScheduleEvent, zombieItemIDs []int64) error {
+	if len(zombieItemIDs) == 0 {
+		return nil
+	}
+
+	turnRunLogs, err := e.ExptTurnResultRepo.MGetItemTurnRunLogs(ctx, event.ExptID, event.ExptRunID, zombieItemIDs, event.SpaceID)
+	if err != nil {
+		return err
+	}
+
+	recordIDSet := make(map[int64]struct{})
+	for _, rl := range turnRunLogs {
+		if rl == nil || rl.EvaluatorResultIds == nil {
+			continue
+		}
+		for _, resID := range rl.EvaluatorResultIds.EvalVerIDToResID {
+			if resID > 0 {
+				recordIDSet[resID] = struct{}{}
+			}
+		}
+	}
+	if len(recordIDSet) == 0 {
+		return nil
+	}
+
+	recordIDs := make([]int64, 0, len(recordIDSet))
+	for id := range recordIDSet {
+		recordIDs = append(recordIDs, id)
+	}
+
+	records, err := e.EvaluatorRecordRepo.BatchGetEvaluatorRecord(ctx, recordIDs, false, false)
+	if err != nil {
+		return err
+	}
+
+	failOutput := &entity.EvaluatorOutputData{
+		EvaluatorRunError: &entity.EvaluatorRunError{
+			Code:    int32(errno.AsyncEvaluatorZombieTimeoutCode),
+			Message: "async evaluator terminated: experiment item exceeded zombie timeout",
+		},
+	}
+
+	var firstErr error
+	for _, r := range records {
+		if r == nil || r.Status != entity.EvaluatorRunStatusAsyncInvoking {
+			continue
+		}
+		if err := e.EvaluatorRecordRepo.UpdateEvaluatorRecordResult(ctx, r.ID, entity.EvaluatorRunStatusFail, failOutput); err != nil {
+			logs.CtxError(ctx, "[ExptEval] update zombie evaluator record fail, record_id: %v, err: %v", r.ID, err)
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	return firstErr
 }

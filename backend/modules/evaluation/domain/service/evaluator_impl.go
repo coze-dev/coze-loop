@@ -717,6 +717,58 @@ func roundEvaluatorOutputScore(outputData *entity.EvaluatorOutputData) {
 	}
 }
 
+// ShouldInterceptEvaluator 判断评估器是否应劫持本次评估，劫持时创建记录并返回
+func (e *EvaluatorServiceImpl) ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+	evaluatorDOList, err := e.evaluatorRepo.BatchGetEvaluatorByVersionID(ctx, nil, []int64{request.EvaluatorVersionID}, false, false)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(evaluatorDOList) == 0 {
+		return nil, false, errorx.NewByCode(errno.EvaluatorVersionNotFoundCode, errorx.WithExtraMsg("evaluator_version version not found"))
+	}
+	evaluatorDO := evaluatorDOList[0]
+	evaluatorSourceService, ok := e.evaluatorSourceServices[evaluatorDO.EvaluatorType]
+	if !ok {
+		return nil, false, nil
+	}
+	output, runStatus, intercepted := evaluatorSourceService.ShouldIntercept(ctx, evaluatorDO, request.InputData)
+	if !intercepted {
+		return nil, false, nil
+	}
+
+	// 劫持时创建评估记录
+	recordID, err := e.idgen.GenID(ctx)
+	if err != nil {
+		return nil, true, err
+	}
+	userIDInContext := session.UserIDInCtxOrEmpty(ctx)
+	logID := logs.GetLogID(ctx)
+
+	recordDO := &entity.EvaluatorRecord{
+		ID:                  recordID,
+		SpaceID:             request.SpaceID,
+		ExperimentID:        request.ExperimentID,
+		ExperimentRunID:     request.ExperimentRunID,
+		ItemID:              request.ItemID,
+		TurnID:              request.TurnID,
+		EvaluatorVersionID:  request.EvaluatorVersionID,
+		LogID:               logID,
+		EvaluatorInputData:  request.InputData,
+		EvaluatorOutputData: output,
+		Status:              runStatus,
+		Ext:                 request.Ext,
+		BaseInfo: &entity.BaseInfo{
+			CreatedBy: &entity.UserInfo{
+				UserID: gptr.Of(userIDInContext),
+			},
+		},
+	}
+	if err := e.evaluatorRecordRepo.CreateEvaluatorRecord(ctx, recordDO); err != nil {
+		return nil, true, err
+	}
+	return recordDO, true, nil
+}
+
 // RunEvaluator evaluator_version 运行
 func (e *EvaluatorServiceImpl) RunEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, error) {
 	logs.CtxInfo(ctx, "[RunEvaluator] RunEvaluator request: %v", request)
@@ -954,6 +1006,12 @@ func (e *EvaluatorServiceImpl) ReportEvaluatorInvokeResult(ctx context.Context, 
 		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] spaceID mismatch, recordID: %d, requestSpaceID: %d, recordSpaceID: %d",
 			param.RecordID, param.SpaceID, existingRecord.SpaceID)
 		return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("spaceID mismatch"))
+	}
+
+	if existingRecord.Status != entity.EvaluatorRunStatusAsyncInvoking {
+		logs.CtxWarn(ctx, "[ReportEvaluatorInvokeResult] skip stale callback, recordID: %d, dbStatus: %v, reportStatus: %v",
+			param.RecordID, existingRecord.Status, param.Status)
+		return nil
 	}
 
 	mergedOutputData := param.OutputData

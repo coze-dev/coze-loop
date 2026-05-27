@@ -457,6 +457,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	exptRepo := mock_repo.NewMockIExperimentRepo(ctrl)
 	exptItemResultRepo := mock_repo.NewMockIExptItemResultRepo(ctrl)
 	exptTurnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+	evaluatorRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
 	exptStatsRepo := mock_repo.NewMockIExptStatsRepo(ctrl)
 	exptRunLogRepo := mock_repo.NewMockIExptRunLogRepo(ctrl)
 	idem := idemmocks.NewMockIdempotentService(ctrl)
@@ -476,6 +477,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 		exptRepo,
 		exptItemResultRepo,
 		exptTurnResultRepo,
+		evaluatorRecordRepo,
 		exptStatsRepo,
 		exptRunLogRepo,
 		idem,
@@ -498,6 +500,7 @@ func TestNewExptSchedulerSvc(t *testing.T) {
 	assert.Equal(t, exptRepo, impl.ExptRepo)
 	assert.Equal(t, exptItemResultRepo, impl.ExptItemResultRepo)
 	assert.Equal(t, exptTurnResultRepo, impl.ExptTurnResultRepo)
+	assert.Equal(t, evaluatorRecordRepo, impl.EvaluatorRecordRepo)
 	assert.Equal(t, exptStatsRepo, impl.ExptStatsRepo)
 	assert.Equal(t, exptRunLogRepo, impl.ExptRunLogRepo)
 	assert.Equal(t, idem, impl.Idem)
@@ -728,9 +731,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 	testUserID := "test_user_id_123"
 
 	type fields struct {
-		configer           *configmocks.MockIConfiger
-		exptItemResultRepo *mock_repo.MockIExptItemResultRepo
-		exptTurnResultRepo *mock_repo.MockIExptTurnResultRepo
+		configer            *configmocks.MockIConfiger
+		exptItemResultRepo  *mock_repo.MockIExptItemResultRepo
+		exptTurnResultRepo  *mock_repo.MockIExptTurnResultRepo
+		evaluatorRecordRepo *mock_repo.MockIEvaluatorRecordRepo
 	}
 
 	type args struct {
@@ -849,6 +853,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1, 3}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -864,6 +874,14 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(2),
 					[]int64{1, 3},
 					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 3},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{
@@ -922,6 +940,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -968,6 +992,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -1028,6 +1058,12 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 						},
 					},
 				}).Times(1)
+				f.evaluatorRecordRepo.EXPECT().BatchGetEvaluatorRecord(
+					gomock.Any(), gomock.Any(), false, false,
+				).Return(nil, nil).AnyTimes()
+				f.exptTurnResultRepo.EXPECT().MGetItemTurnRunLogs(
+					gomock.Any(), int64(1), int64(2), []int64{1, 2}, int64(3),
+				).Return(nil, nil).Times(1)
 				f.exptItemResultRepo.EXPECT().UpdateItemRunLog(
 					gomock.Any(),
 					int64(1),
@@ -1043,6 +1079,14 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 					int64(2),
 					[]int64{1, 2},
 					entity.TurnRunState_Fail,
+				).Return(nil).Times(1)
+				f.exptTurnResultRepo.EXPECT().UpdateTurnRunLogWithItemIDs(
+					gomock.Any(),
+					int64(3),
+					int64(1),
+					int64(2),
+					[]int64{1, 2},
+					map[string]any{"target_result_id": int64(0), "evaluator_result_ids": emptyEvaluatorResultIDsJSONForRunLogUpdate()},
 				).Return(nil).Times(1)
 			},
 			wantAlives: []*entity.ExptEvalItem{},
@@ -1185,9 +1229,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 			defer ctrl.Finish()
 
 			f := &fields{
-				configer:           configmocks.NewMockIConfiger(ctrl),
-				exptItemResultRepo: mock_repo.NewMockIExptItemResultRepo(ctrl),
-				exptTurnResultRepo: mock_repo.NewMockIExptTurnResultRepo(ctrl),
+				configer:            configmocks.NewMockIConfiger(ctrl),
+				exptItemResultRepo:  mock_repo.NewMockIExptItemResultRepo(ctrl),
+				exptTurnResultRepo:  mock_repo.NewMockIExptTurnResultRepo(ctrl),
+				evaluatorRecordRepo: mock_repo.NewMockIEvaluatorRecordRepo(ctrl),
 			}
 
 			if tt.prepareMock != nil {
@@ -1195,9 +1240,10 @@ func TestExptSchedulerImpl_handleZombies(t *testing.T) {
 			}
 
 			svc := &ExptSchedulerImpl{
-				Configer:           f.configer,
-				ExptItemResultRepo: f.exptItemResultRepo,
-				ExptTurnResultRepo: f.exptTurnResultRepo,
+				Configer:            f.configer,
+				ExptItemResultRepo:  f.exptItemResultRepo,
+				ExptTurnResultRepo:  f.exptTurnResultRepo,
+				EvaluatorRecordRepo: f.evaluatorRecordRepo,
 			}
 
 			alives, zombies, err := svc.handleZombies(tt.args.ctx, tt.args.event, tt.args.items, nil)
@@ -1262,4 +1308,203 @@ func TestExptSchedulerImpl_Schedule_ContextCancelled(t *testing.T) {
 	err := svc.schedule(ctx, event)
 	assert.Error(t, err)
 	assert.True(t, errors.Is(err, context.DeadlineExceeded))
+}
+
+func TestExptSchedulerImpl_terminateZombieEvaluatorRecords(t *testing.T) {
+	type args struct {
+		ctx           context.Context
+		event         *entity.ExptScheduleEvent
+		zombieItemIDs []int64
+	}
+
+	tests := []struct {
+		name        string
+		args        args
+		prepareMock func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo)
+		wantErr     bool
+		assertErr   func(t *testing.T, err error)
+	}{
+		{
+			name: "empty zombieItemIDs returns nil",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				// no calls expected
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: false,
+		},
+		{
+			name: "MGetItemTurnRunLogs returns error",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100, 200},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100, 200}, int64(3)).
+					Return(nil, errors.New("db error"))
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "db error")
+			},
+		},
+		{
+			name: "turn run logs have no evaluator result IDs returns nil",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100}, int64(3)).
+					Return([]*entity.ExptTurnResultRunLog{
+						nil,
+						{EvaluatorResultIds: nil},
+						{EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{}}},
+					}, nil)
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: false,
+		},
+		{
+			name: "BatchGetEvaluatorRecord returns error",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100}, int64(3)).
+					Return([]*entity.ExptTurnResultRunLog{
+						{EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 1001}}},
+					}, nil)
+				evalRecordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).
+					Return(nil, errors.New("batch get error"))
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "batch get error")
+			},
+		},
+		{
+			name: "records with AsyncInvoking status get updated to Fail",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100}, int64(3)).
+					Return([]*entity.ExptTurnResultRunLog{
+						{EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 1001, 2: 1002}}},
+					}, nil)
+				evalRecordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).
+					Return([]*entity.EvaluatorRecord{
+						{ID: 1001, Status: entity.EvaluatorRunStatusAsyncInvoking},
+						{ID: 1002, Status: entity.EvaluatorRunStatusAsyncInvoking},
+					}, nil)
+				evalRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(1001), entity.EvaluatorRunStatusFail, gomock.Any()).Return(nil)
+				evalRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(1002), entity.EvaluatorRunStatusFail, gomock.Any()).Return(nil)
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: false,
+		},
+		{
+			name: "records with non-AsyncInvoking status are skipped",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100}, int64(3)).
+					Return([]*entity.ExptTurnResultRunLog{
+						{EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 1001, 2: 1002, 3: 1003}}},
+					}, nil)
+				evalRecordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).
+					Return([]*entity.EvaluatorRecord{
+						{ID: 1001, Status: entity.EvaluatorRunStatusSuccess},
+						{ID: 1002, Status: entity.EvaluatorRunStatusFail},
+						nil,
+					}, nil)
+				// no UpdateEvaluatorRecordResult calls expected
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: false,
+		},
+		{
+			name: "UpdateEvaluatorRecordResult error returns first error",
+			args: args{
+				ctx:           context.Background(),
+				event:         &entity.ExptScheduleEvent{ExptID: 1, ExptRunID: 2, SpaceID: 3},
+				zombieItemIDs: []int64{100},
+			},
+			prepareMock: func(ctrl *gomock.Controller) (*mock_repo.MockIExptTurnResultRepo, *mock_repo.MockIEvaluatorRecordRepo) {
+				turnResultRepo := mock_repo.NewMockIExptTurnResultRepo(ctrl)
+				evalRecordRepo := mock_repo.NewMockIEvaluatorRecordRepo(ctrl)
+				turnResultRepo.EXPECT().MGetItemTurnRunLogs(gomock.Any(), int64(1), int64(2), []int64{100}, int64(3)).
+					Return([]*entity.ExptTurnResultRunLog{
+						{EvaluatorResultIds: &entity.EvaluatorResults{EvalVerIDToResID: map[int64]int64{1: 1001, 2: 1002}}},
+					}, nil)
+				evalRecordRepo.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).
+					Return([]*entity.EvaluatorRecord{
+						{ID: 1001, Status: entity.EvaluatorRunStatusAsyncInvoking},
+						{ID: 1002, Status: entity.EvaluatorRunStatusAsyncInvoking},
+					}, nil)
+				evalRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(1001), entity.EvaluatorRunStatusFail, gomock.Any()).
+					Return(errors.New("update error 1"))
+				evalRecordRepo.EXPECT().UpdateEvaluatorRecordResult(gomock.Any(), int64(1002), entity.EvaluatorRunStatusFail, gomock.Any()).
+					Return(errors.New("update error 2"))
+				return turnResultRepo, evalRecordRepo
+			},
+			wantErr: true,
+			assertErr: func(t *testing.T, err error) {
+				assert.EqualError(t, err, "update error 1")
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			turnResultRepo, evalRecordRepo := tt.prepareMock(ctrl)
+
+			svc := &ExptSchedulerImpl{
+				ExptTurnResultRepo:  turnResultRepo,
+				EvaluatorRecordRepo: evalRecordRepo,
+			}
+
+			err := svc.terminateZombieEvaluatorRecords(tt.args.ctx, tt.args.event, tt.args.zombieItemIDs)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				if tt.assertErr != nil {
+					tt.assertErr(t, err)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

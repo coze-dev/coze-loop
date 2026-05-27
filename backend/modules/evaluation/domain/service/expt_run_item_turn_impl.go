@@ -327,7 +327,7 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		existResult := etec.ExptTurnRunResult.GetEvaluatorRecord(evaluatorVersion.GetEvaluatorVersionID())
 
 		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
-			evaluatorResults[existResult.ID] = existResult
+			evaluatorResults[evaluatorVersion.GetEvaluatorVersionID()] = existResult
 			continue
 		}
 
@@ -439,6 +439,26 @@ func (e *DefaultExptTurnEvaluationImpl) callEvaluators(ctx context.Context, exec
 		// 若共享同一 inputData 的 *Content 指针，先完成的 evaluator 会污染未执行 evaluator 的输入，导致 content_omitted。
 		inputDataForCapture := deepCopyEvaluatorInputData(inputData)
 		ecForCapture := ec
+
+		// 评估器劫持逻辑：根据输入数据前置判断是否需要劫持本次评估
+		if evaluatorRecord, intercepted, interceptErr := e.evaluatorService.ShouldInterceptEvaluator(ctx, &entity.RunEvaluatorRequest{
+			SpaceID:            spaceID,
+			EvaluatorVersionID: evForCapture.GetEvaluatorVersionID(),
+			InputData:          inputDataForCapture,
+			ExperimentID:       etec.Event.ExptID,
+			ExperimentRunID:    etec.Event.ExptRunID,
+			ItemID:             item.ItemID,
+			TurnID:             turn.ID,
+			Ext:                etec.Ext,
+		}); interceptErr != nil {
+			logs.CtxWarn(ctx, "[CallEvaluators] ShouldInterceptEvaluator failed, evaluator_version_id: %d, err: %v", evForCapture.GetEvaluatorVersionID(), interceptErr)
+		} else if intercepted {
+			if evaluatorRecord != nil {
+				recordMap.Store(evForCapture.GetEvaluatorVersionID(), evaluatorRecord)
+			}
+			continue
+		}
+
 		if evForCapture.IsAsync() {
 			pool.Add(func() error {
 				return e.asyncCallEvaluator(ctx, evForCapture, ecForCapture, etec, inputDataForCapture, &recordMap)

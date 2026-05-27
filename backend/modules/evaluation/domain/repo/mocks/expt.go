@@ -913,6 +913,20 @@ func (mr *MockIExptTurnResultRepoMockRecorder) UpdateTurnResultsWithItemIDs(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTurnResultsWithItemIDs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).UpdateTurnResultsWithItemIDs), ctx, exptID, itemIDs, spaceID, ufields)
 }
 
+// UpdateTurnRunLogWithItemIDs mocks base method.
+func (m *MockIExptTurnResultRepo) UpdateTurnRunLogWithItemIDs(ctx context.Context, spaceID, exptID, exptRunID int64, itemIDs []int64, ufields map[string]any) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateTurnRunLogWithItemIDs", ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateTurnRunLogWithItemIDs indicates an expected call of UpdateTurnRunLogWithItemIDs.
+func (mr *MockIExptTurnResultRepoMockRecorder) UpdateTurnRunLogWithItemIDs(ctx, spaceID, exptID, exptRunID, itemIDs, ufields any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateTurnRunLogWithItemIDs", reflect.TypeOf((*MockIExptTurnResultRepo)(nil).UpdateTurnRunLogWithItemIDs), ctx, spaceID, exptID, exptRunID, itemIDs, ufields)
+}
+
 // MockIExptRunLogRepo is a mock of IExptRunLogRepo interface.
 type MockIExptRunLogRepo struct {
 	ctrl     *gomock.Controller

@@ -17,10 +17,11 @@ import (
 )
 
 type (
-	ExptStatus int64
-	ExptType   int64
-	SourceType = int64
-	Visibility = int64
+	ExptStatus                int64
+	OfflineExptAnalysisStatus int32
+	ExptType                  int64
+	SourceType                = int64
+	Visibility                = int64
 )
 
 const (
@@ -45,6 +46,14 @@ const (
 
 	// 流式执行完成，不再接收新的请求
 	ExptStatus_Draining ExptStatus = 21
+)
+
+const (
+	OfflineExptAnalysisStatus_NotStarted OfflineExptAnalysisStatus = 0 // 未开始
+	OfflineExptAnalysisStatus_Processing OfflineExptAnalysisStatus = 1 // 进行中
+	OfflineExptAnalysisStatus_Success    OfflineExptAnalysisStatus = 2 // 成功
+	OfflineExptAnalysisStatus_Failed     OfflineExptAnalysisStatus = 3 // 失败
+	OfflineExptAnalysisStatus_Superseded OfflineExptAnalysisStatus = 4 // 已被新版本/新分析取代
 )
 
 const (
@@ -134,7 +143,9 @@ type Experiment struct {
 
 	Status        ExptStatus
 	StatusMessage string
-	LatestRunID   int64
+	// OfflineExptAnalysisStatus 离线实验分析状态，与表字段 offline_expt_analysis_status 一致
+	OfflineExptAnalysisStatus OfflineExptAnalysisStatus
+	LatestRunID               int64
 
 	CreditCost CreditCost
 

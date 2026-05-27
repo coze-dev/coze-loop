@@ -3532,6 +3532,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 					&entity.EvaluatorRecord{
 						ID:      100,
 						SpaceID: 2,
+						Status:  entity.EvaluatorRunStatusAsyncInvoking,
 						EvaluatorOutputData: &entity.EvaluatorOutputData{
 							Ext: map[string]string{"old": "1"},
 						},
@@ -3571,6 +3572,23 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult(t *testing.T) {
 				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(&entity.EvaluatorRecord{ID: 100, SpaceID: 2}, nil)
 			},
 			expectedErrCode: int32(errno.CommonInvalidParamCode),
+		},
+		{
+			name: "忽略 - 记录已非 AsyncInvoking（迟回调不落库）",
+			param: &entity.ReportEvaluatorRecordParam{
+				SpaceID:  2,
+				RecordID: 100,
+				Status:   entity.EvaluatorRunStatusSuccess,
+			},
+			setupMocks: func() {
+				mockEvaluatorRecordRepo.EXPECT().GetEvaluatorRecord(gomock.Any(), int64(100), false).Return(
+					&entity.EvaluatorRecord{
+						ID:      100,
+						SpaceID: 2,
+						Status:  entity.EvaluatorRunStatusFail,
+					}, nil)
+			},
+			expectedErrCode: 0,
 		},
 	}
 
@@ -3630,6 +3648,7 @@ func TestEvaluatorServiceImpl_ReportEvaluatorInvokeResult_OutputDataNilOrExtNil(
 				&entity.EvaluatorRecord{
 					ID:      100,
 					SpaceID: 2,
+					Status:  entity.EvaluatorRunStatusAsyncInvoking,
 					EvaluatorOutputData: &entity.EvaluatorOutputData{
 						Ext: map[string]string{"old": "1"},
 					},
@@ -3977,6 +3996,319 @@ func TestEvaluatorServiceImpl_DebugEvaluator_InvalidAndRound(t *testing.T) {
 				assert.NotNil(t, got.EvaluatorResult.Correction) &&
 				assert.NotNil(t, got.EvaluatorResult.Correction.Score) {
 				assert.InDelta(t, *tt.wantCorrection, *got.EvaluatorResult.Correction.Score, 1e-9)
+			}
+		})
+	}
+}
+
+func TestEvaluatorServiceImpl_ShouldInterceptEvaluator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockEvaluatorRepo := repomocks.NewMockIEvaluatorRepo(ctrl)
+	mockEvaluatorSourceService := mocks.NewMockEvaluatorSourceService(ctrl)
+	mockIDGen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvaluatorRecordRepo := repomocks.NewMockIEvaluatorRecordRepo(ctrl)
+
+	s := &EvaluatorServiceImpl{
+		evaluatorRepo: mockEvaluatorRepo,
+		evaluatorSourceServices: map[entity.EvaluatorType]EvaluatorSourceService{
+			entity.EvaluatorTypePrompt: mockEvaluatorSourceService,
+		},
+		idgen:               mockIDGen,
+		evaluatorRecordRepo: mockEvaluatorRecordRepo,
+	}
+
+	ctx := context.Background()
+
+	defaultEvaluatorDO := &entity.Evaluator{
+		ID:            100,
+		SpaceID:       1,
+		EvaluatorType: entity.EvaluatorTypePrompt,
+	}
+
+	defaultRequest := &entity.RunEvaluatorRequest{
+		SpaceID:            1,
+		EvaluatorVersionID: 101,
+		InputData: &entity.EvaluatorInputData{
+			InputFields: map[string]*entity.Content{
+				"input": {Text: gptr.Of("test")},
+			},
+		},
+		ExperimentID:    200,
+		ExperimentRunID: 300,
+		ItemID:          400,
+		TurnID:          500,
+		Ext:             map[string]string{"key": "value"},
+	}
+
+	testCases := []struct {
+		name           string
+		request        *entity.RunEvaluatorRequest
+		setupMocks     func()
+		expectedRecord *entity.EvaluatorRecord
+		expectedSkip   bool
+		expectedErr    bool
+	}{
+		{
+			name:    "默认不跳过",
+			request: defaultRequest,
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(nil, entity.EvaluatorRunStatusSuccess, false)
+			},
+			expectedRecord: nil,
+			expectedSkip:   false,
+			expectedErr:    false,
+		},
+		{
+			name:    "跳过并创建记录",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "input fields are empty, skipped",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusSuccess, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                 12345,
+				SpaceID:            1,
+				ExperimentID:       200,
+				ExperimentRunID:    300,
+				ItemID:             400,
+				TurnID:             500,
+				EvaluatorVersionID: 101,
+				EvaluatorInputData: defaultRequest.InputData,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "input fields are empty, skipped",
+					},
+				},
+				Status: entity.EvaluatorRunStatusSuccess,
+				Ext:    map[string]string{"key": "value"},
+			},
+			expectedSkip: true,
+			expectedErr:  false,
+		},
+		{
+			name:    "查询evaluator失败",
+			request: defaultRequest,
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return(nil, errors.New("db error"))
+			},
+			expectedRecord: nil,
+			expectedSkip:   false,
+			expectedErr:    true,
+		},
+		{
+			name:    "evaluator不存在",
+			request: defaultRequest,
+			setupMocks: func() {
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{}, nil)
+			},
+			expectedRecord: nil,
+			expectedSkip:   false,
+			expectedErr:    true,
+		},
+		{
+			name:    "evaluator类型无对应source service",
+			request: defaultRequest,
+			setupMocks: func() {
+				agentEvaluator := &entity.Evaluator{
+					ID:            100,
+					EvaluatorType: entity.EvaluatorTypeAgent,
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{agentEvaluator}, nil)
+			},
+			expectedRecord: nil,
+			expectedSkip:   false,
+			expectedErr:    false,
+		},
+		{
+			name:    "跳过但生成ID失败",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusSuccess, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(0), errors.New("id gen error"))
+			},
+			expectedRecord: nil,
+			expectedSkip:   true,
+			expectedErr:    true,
+		},
+		{
+			name:    "跳过但创建记录失败",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusSuccess, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(errors.New("create record error"))
+			},
+			expectedRecord: nil,
+			expectedSkip:   true,
+			expectedErr:    true,
+		},
+		{
+			name:    "劫持时runStatus=Fail则record.Status=Fail",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "evaluator failed",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusFail, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                 12345,
+				SpaceID:            1,
+				ExperimentID:       200,
+				ExperimentRunID:    300,
+				ItemID:             400,
+				TurnID:             500,
+				EvaluatorVersionID: 101,
+				EvaluatorInputData: defaultRequest.InputData,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "evaluator failed",
+					},
+				},
+				Status: entity.EvaluatorRunStatusFail,
+				Ext:    map[string]string{"key": "value"},
+			},
+			expectedSkip: true,
+			expectedErr:  false,
+		},
+		{
+			name:    "劫持时runStatus=Success则record.Status=Success",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "evaluator success",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusSuccess, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                 12345,
+				SpaceID:            1,
+				ExperimentID:       200,
+				ExperimentRunID:    300,
+				ItemID:             400,
+				TurnID:             500,
+				EvaluatorVersionID: 101,
+				EvaluatorInputData: defaultRequest.InputData,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "evaluator success",
+					},
+				},
+				Status: entity.EvaluatorRunStatusSuccess,
+				Ext:    map[string]string{"key": "value"},
+			},
+			expectedSkip: true,
+			expectedErr:  false,
+		},
+		{
+			name:    "劫持时runStatus=Unknown则record.Status默认为Success(向后兼容)",
+			request: defaultRequest,
+			setupMocks: func() {
+				skipOutput := &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped with unknown status",
+					},
+				}
+				mockEvaluatorRepo.EXPECT().BatchGetEvaluatorByVersionID(gomock.Any(), nil, []int64{101}, false, false).
+					Return([]*entity.Evaluator{defaultEvaluatorDO}, nil)
+				mockEvaluatorSourceService.EXPECT().ShouldIntercept(gomock.Any(), defaultEvaluatorDO, defaultRequest.InputData).
+					Return(skipOutput, entity.EvaluatorRunStatusSuccess, true)
+				mockIDGen.EXPECT().GenID(gomock.Any()).Return(int64(12345), nil)
+				mockEvaluatorRecordRepo.EXPECT().CreateEvaluatorRecord(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			expectedRecord: &entity.EvaluatorRecord{
+				ID:                 12345,
+				SpaceID:            1,
+				ExperimentID:       200,
+				ExperimentRunID:    300,
+				ItemID:             400,
+				TurnID:             500,
+				EvaluatorVersionID: 101,
+				EvaluatorInputData: defaultRequest.InputData,
+				EvaluatorOutputData: &entity.EvaluatorOutputData{
+					EvaluatorResult: &entity.EvaluatorResult{
+						Reasoning: "skipped with unknown status",
+					},
+				},
+				Status: entity.EvaluatorRunStatusSuccess, // 默认为 Success
+				Ext:    map[string]string{"key": "value"},
+			},
+			expectedSkip: true,
+			expectedErr:  false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.setupMocks()
+			record, intercepted, err := s.ShouldInterceptEvaluator(ctx, tc.request)
+			if tc.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expectedSkip, intercepted)
+			if tc.expectedRecord != nil {
+				assert.NotNil(t, record)
+				assert.Equal(t, tc.expectedRecord.ID, record.ID)
+				assert.Equal(t, tc.expectedRecord.SpaceID, record.SpaceID)
+				assert.Equal(t, tc.expectedRecord.ExperimentID, record.ExperimentID)
+				assert.Equal(t, tc.expectedRecord.ExperimentRunID, record.ExperimentRunID)
+				assert.Equal(t, tc.expectedRecord.ItemID, record.ItemID)
+				assert.Equal(t, tc.expectedRecord.TurnID, record.TurnID)
+				assert.Equal(t, tc.expectedRecord.EvaluatorVersionID, record.EvaluatorVersionID)
+				assert.Equal(t, tc.expectedRecord.Status, record.Status)
+				assert.Equal(t, tc.expectedRecord.Ext, record.Ext)
+				assert.Equal(t, tc.expectedRecord.EvaluatorOutputData, record.EvaluatorOutputData)
+			} else {
+				assert.Nil(t, record)
 			}
 		})
 	}
