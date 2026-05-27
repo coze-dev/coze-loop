@@ -469,6 +469,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if hasDuplicates(req.EvaluatorVersionIds) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
+	if len(req.ItemIds) > 100 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
+	}
 
 	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
@@ -523,6 +526,16 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
+	submitExt := req.Ext
+	if len(req.ItemIds) > 0 {
+		if submitExt == nil {
+			submitExt = make(map[string]string)
+		}
+		itemIdsBytes, _ := json.Marshal(req.ItemIds)
+		submitExt["__item_ids"] = string(itemIdsBytes)
+	}
+
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
 		WorkspaceID:       gptr.Of(req.GetWorkspaceID()),
 		ExptID:            cresp.GetExperiment().ID,
@@ -530,7 +543,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		ItemRetryNum:      req.ItemRetryNum,
 		TrialRunItemCount: req.TrialRunItemCount,
 		Session:           req.Session,
-		Ext:               req.Ext,
+		Ext:               submitExt,
 	})
 	if err != nil {
 		return nil, err

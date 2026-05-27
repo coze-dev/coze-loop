@@ -208,6 +208,57 @@ func (e *ExptTrialRunExec) Mode() entity.ExptRunMode {
 	return entity.EvaluationModeTrialRun
 }
 
+// finishExptStart 完成实验启动的收尾逻辑：更新统计、状态、模板信息、幂等标记
+func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemCnt int, idemKey string) error {
+	err := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
+	if err != nil {
+		logs.CtxError(ctx, "finishExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
+	}
+
+	if err := e.exptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID,
+		&entity.ExptStats{
+			ExptID:         event.ExptID,
+			SpaceID:        event.SpaceID,
+			PendingItemCnt: int32(itemCnt),
+		}); err != nil {
+		return err
+	}
+
+	exptDo := &entity.Experiment{
+		Status:  entity.ExptStatus_Processing,
+		ID:      event.ExptID,
+		SpaceID: event.SpaceID,
+	}
+	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
+		return err
+	}
+
+	var templateID int64
+	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
+		templateID = expt.ExptTemplateMeta.ID
+	} else {
+		updatedExpt, err := e.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+		if err == nil && updatedExpt != nil && updatedExpt.ExptTemplateMeta != nil && updatedExpt.ExptTemplateMeta.ID > 0 {
+			templateID = updatedExpt.ExptTemplateMeta.ID
+		}
+	}
+	if templateID > 0 && e.templateManager != nil {
+		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
+			logs.CtxError(ctx, "UpdateExptInfo failed in finishExptStart, template_id: %v, expt_id: %v, err: %v",
+				templateID, event.ExptID, err)
+		}
+	}
+
+	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
+	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
+		return err
+	}
+
+	time.Sleep(time.Second * 3)
+
+	return nil
+}
+
 func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
 	if e.ExptSubmitExec == nil {
 		return nil
@@ -215,6 +266,12 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 	if expt == nil || expt.TrialRunItemCount <= 0 {
 		return e.ExptSubmitExec.ExptStart(ctx, event, expt)
 	}
+
+	// 如果 ext 中携带了指定的 item_ids，按ID获取条目执行
+	if itemIdsStr, ok := event.Ext["__item_ids"]; ok && itemIdsStr != "" {
+		return e.exptStartByItemIds(ctx, event, expt, itemIdsStr)
+	}
+
 	idemKey := makeStartIdemKey(event)
 
 	exist, err := e.idem.Exist(ctx, idemKey)
@@ -338,57 +395,104 @@ func (e *ExptTrialRunExec) ExptStart(ctx context.Context, event *entity.ExptSche
 
 		time.Sleep(time.Millisecond * 30)
 	}
-	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
+
+	return e.finishExptStart(ctx, event, expt, itemCnt, idemKey)
+}
+
+// exptStartByItemIds 按指定的 item_ids 获取评测集条目并创建执行记录
+func (e *ExptTrialRunExec) exptStartByItemIds(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemIdsStr string) error {
+	var itemIds []int64
+	if err := json.Unmarshal([]byte(itemIdsStr), &itemIds); err != nil {
+		return fmt.Errorf("ExptTrialRunExec.exptStartByItemIds unmarshal item_ids failed: %w", err)
+	}
+	if len(itemIds) == 0 {
+		return e.ExptSubmitExec.ExptStart(ctx, event, expt)
+	}
+
+	idemKey := makeStartIdemKey(event)
+	exist, err := e.idem.Exist(ctx, idemKey)
 	if err != nil {
-		logs.CtxError(ctx, "ExptTrialRunExec.ExptStart UpsertExptTurnResultFilter fail, expt_id: %v, err: %v", event.ExptID, err)
-	}
-	logs.CtxInfo(ctx, "ExptTrialRunExec ExptStart UpsertExptTurnResultFilter done, expt_id: %v, err: %v", event.ExptID, err)
-	if err := e.exptStatsRepo.UpdateByExptID(ctx, event.ExptID, event.SpaceID,
-		&entity.ExptStats{
-			ExptID:         event.ExptID,
-			SpaceID:        event.SpaceID,
-			PendingItemCnt: int32(itemCnt),
-		}); err != nil {
 		return err
 	}
-
-	exptDo := &entity.Experiment{
-		Status:  entity.ExptStatus_Processing,
-		ID:      event.ExptID,
-		SpaceID: event.SpaceID,
+	if exist {
+		return nil
 	}
 
-	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
-		return err
-	}
+	var (
+		evalSetID        = expt.EvalSet.ID
+		evalSetVersionID = expt.EvalSet.EvaluationSetVersion.ID
+		itemIdx          = int32(0)
+		itemCnt          = 0
+		pageSize         = int32(100)
+	)
 
-	var templateID int64
-	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
-		templateID = expt.ExptTemplateMeta.ID
-	} else {
-		updatedExpt, err := e.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
-		if err == nil && updatedExpt != nil && updatedExpt.ExptTemplateMeta != nil && updatedExpt.ExptTemplateMeta.ID > 0 {
-			templateID = updatedExpt.ExptTemplateMeta.ID
+	for _, chunk := range gslice.Chunk(itemIds, int(pageSize)) {
+		logs.CtxInfo(ctx, "ExptTrialRunExec.exptStartByItemIds scan item, expt_id: %v, expt_run_id: %v, eval_set_id: %v, eval_set_ver_id: %v, item_ids: %v",
+			event.ExptID, event.ExptRunID, evalSetID, evalSetVersionID, chunk)
+
+		items, err := e.evaluationSetItemService.BatchGetEvaluationSetItems(ctx, &entity.BatchGetEvaluationSetItemsParam{
+			SpaceID:         event.SpaceID,
+			EvaluationSetID: evalSetID,
+			VersionID:       &evalSetVersionID,
+			ItemIDs:         chunk,
+		})
+		if err != nil {
+			return err
 		}
-	}
-	if templateID > 0 && e.templateManager != nil {
-		if err := e.templateManager.UpdateExptInfo(ctx, templateID, event.SpaceID, event.ExptID, entity.ExptStatus_Processing, 0, nil); err != nil {
-			logs.CtxError(ctx, "UpdateExptInfo failed in ExptTrialRunExec.ExptStart, template_id: %v, expt_id: %v, err: %v",
-				templateID, event.ExptID, err)
-		} else {
-			logs.CtxInfo(ctx, "UpdateExptInfo succeeded in ExptTrialRunExec.ExptStart, template_id: %v, expt_id: %v, status: %v",
-				templateID, event.ExptID, entity.ExptStatus_Processing)
+
+		itemCnt += len(items)
+
+		turnCnt := 0
+		for _, item := range items {
+			turnCnt += len(item.Turns)
 		}
+
+		ids, err := e.idgenerator.GenMultiIDs(ctx, len(items)+turnCnt)
+		if err != nil {
+			return err
+		}
+
+		idIdx := 0
+		eirs := make([]*entity.ExptItemResult, 0, len(items))
+		etrs := make([]*entity.ExptTurnResult, 0, len(items))
+		for _, item := range items {
+			eir := &entity.ExptItemResult{
+				ID:        ids[idIdx],
+				SpaceID:   event.SpaceID,
+				ExptID:    event.ExptID,
+				ExptRunID: event.ExptRunID,
+				ItemID:    item.ItemID,
+				ItemIdx:   itemIdx,
+				Status:    entity.ItemRunState_Queueing,
+			}
+			eirs = append(eirs, eir)
+			itemIdx++
+			idIdx++
+
+			for turnIdx, turn := range item.Turns {
+				etr := &entity.ExptTurnResult{
+					ID:        ids[idIdx],
+					SpaceID:   event.SpaceID,
+					ExptID:    event.ExptID,
+					ExptRunID: event.ExptRunID,
+					ItemID:    item.ItemID,
+					TurnID:    turn.ID,
+					TurnIdx:   int32(turnIdx),
+					Status:    int32(entity.TurnRunState_Queueing),
+				}
+				etrs = append(etrs, etr)
+				idIdx++
+			}
+		}
+
+		if err := e.createItemTurnResults(ctx, eirs, etrs, event.Session); err != nil {
+			return err
+		}
+
+		time.Sleep(time.Millisecond * 30)
 	}
 
-	duration := time.Duration(e.configer.GetExptExecConf(ctx, event.SpaceID).GetZombieIntervalSecond()) * time.Second * 2
-	if err := e.idem.Set(ctx, idemKey, duration); err != nil {
-		return err
-	}
-
-	time.Sleep(time.Second * 3)
-
-	return nil
+	return e.finishExptStart(ctx, event, expt, itemCnt, idemKey)
 }
 
 func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) error {
