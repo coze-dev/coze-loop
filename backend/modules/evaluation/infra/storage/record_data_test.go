@@ -57,6 +57,10 @@ func (f *fakeConfiger) GetTargetTrajectoryConf(ctx context.Context) *entity.Targ
 	return nil
 }
 
+func (f *fakeConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
+	return nil
+}
+
 type nopReader struct{ buf *bytes.Reader }
 
 func newNopReader(b []byte) *nopReader                       { return &nopReader{buf: bytes.NewReader(b)} }

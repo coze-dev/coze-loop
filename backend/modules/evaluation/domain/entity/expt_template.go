@@ -454,3 +454,29 @@ type UpdateExptTemplateMetaParam struct {
 	Visibility   *Visibility
 	CronActivate *bool // nil 表示不修改
 }
+
+// ExptTemplateUpdateEvalSetWhiteList 控制哪些空间在更新实验模板时允许变更 EvalSetID；
+// 名单外的空间只能更新评测集版本，不能切换评测集本身。
+type ExptTemplateUpdateEvalSetWhiteList struct {
+	SpaceIDs []int64 `json:"space_ids" mapstructure:"space_ids"`
+	AllowAll bool    `json:"allow_all" mapstructure:"allow_all"`
+}
+
+func DefaultExptTemplateUpdateEvalSetWhiteList() *ExptTemplateUpdateEvalSetWhiteList {
+	return &ExptTemplateUpdateEvalSetWhiteList{}
+}
+
+func (w *ExptTemplateUpdateEvalSetWhiteList) IsSpaceAllowed(spaceID int64) bool {
+	if w == nil {
+		return false
+	}
+	if w.AllowAll {
+		return true
+	}
+	for _, id := range w.SpaceIDs {
+		if id == spaceID {
+			return true
+		}
+	}
+	return false
+}

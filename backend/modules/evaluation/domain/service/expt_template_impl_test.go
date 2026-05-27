@@ -33,6 +33,7 @@ import (
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	componentmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -98,6 +99,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 	mockPipelineRPCAdapter := mocks.NewMockIPipelineListAdapter(ctrl)
 	mockExptRepo := repo_mocks.NewMockIExperimentRepo(ctrl)
 	mockScheduleAdapter := mocks.NewMockIExptScheduleAdapter(ctrl)
+	mockConfiger := componentmocks.NewMockIConfiger(ctrl)
 
 	mgr := NewExptTemplateManager(
 		mockRepo,
@@ -111,6 +113,7 @@ func TestExptTemplateManagerImpl_Create_NameExists(t *testing.T) {
 		mockPipelineRPCAdapter,
 		mockExptRepo,
 		mockScheduleAdapter,
+		mockConfiger,
 	)
 
 	ctx := context.Background()

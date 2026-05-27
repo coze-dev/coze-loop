@@ -94,6 +94,10 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetTargetTrajectoryConf(ctx context
 	return nil
 }
 
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
+	return nil
+}
+
 func TestEvaluatorRecordRepoImpl_CreateEvaluatorRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
