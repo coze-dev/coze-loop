@@ -282,7 +282,7 @@ func InitTaskApplication(db2 db.Provider, idgen2 idgen.IIDGenerator, configFacto
 	datasetServiceAdaptor := NewDatasetServiceAdapter(evalSetService, datasetService)
 	iEvaluatorRPCAdapter := evaluator.NewEvaluatorRPCProvider(evalService)
 	iEvaluationRPCAdapter := evaluation.NewEvaluationRPCProvider(exptService)
-	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, taskHookProvider)
+	processorTaskProcessor := NewInitTaskProcessor(datasetServiceAdaptor, iEvaluatorRPCAdapter, iEvaluationRPCAdapter, iTaskRepo, taskHookProvider, iTraceConfig)
 	iStorageProvider := storage.NewTraceStorageProvider()
 	iTenantProvider := tenant.NewTenantProvider(iTraceConfig)
 	iFileProvider := file.NewFileRPCProvider(fileClient)
@@ -461,10 +461,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo repo4.ITaskRepo, taskHookProvider task.IWorkflowProvider,
+	traceConfig config2.ITraceConfig,
 ) *processor.TaskProcessor {
 	taskProcessor := processor.NewTaskProcessor()
 	taskProcessor.Register(entity3.TaskTypeAutoEval, processor.NewAutoEvaluateProcessor(
-		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &processor.EvalTargetBuilderImpl{}, taskHookProvider))
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &processor.EvalTargetBuilderImpl{}, taskHookProvider, traceConfig))
 	return taskProcessor
 }
 

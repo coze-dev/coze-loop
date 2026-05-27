@@ -51,6 +51,10 @@ func (c *capturingProcessor) OnTaskCreated(ctx context.Context, currentTask *ent
 	return nil
 }
 
+func (c *capturingProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	return nil
+}
+
 func TestSpanSubscriber_AddSpan_WithTrajectory(t *testing.T) {
 	t.Parallel()
 	ctrl := gomock.NewController(t)

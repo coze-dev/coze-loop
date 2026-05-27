@@ -393,10 +393,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskHookProvider taskhook.IWorkflowProvider,
+	traceConfig config.ITraceConfig,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluateProcessor(
-		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}, taskHookProvider))
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}, taskHookProvider, traceConfig))
 	return taskProcessor
 }
 
