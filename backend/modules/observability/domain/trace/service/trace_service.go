@@ -37,6 +37,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_filter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service/trace/span_processor"
 	obErrorx "github.com/coze-dev/coze-loop/backend/modules/observability/pkg/errno"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/pkg/size_util"
 	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/goroutine"
@@ -1616,12 +1617,17 @@ func (r *TraceServiceImpl) GetTracesAdvanceInfo(ctx context.Context, req *GetTra
 				logs.CtxWarn(ctx, "Fail to get spans stat, %v", err)
 				return nil
 			}
+			var size int64
+			for _, span := range spans {
+				size += int64(size_util.SizeOfSpanNew(span))
+			}
 			lock.Lock()
 			defer lock.Unlock()
 			resp.Infos = append(resp.Infos, &loop_span.TraceAdvanceInfo{
 				TraceId:    qReq.TraceID,
 				InputCost:  inputTokens,
 				OutputCost: outputTokens,
+				Size:       size,
 			})
 			return nil
 		})

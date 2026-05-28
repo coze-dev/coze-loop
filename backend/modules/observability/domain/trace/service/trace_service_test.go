@@ -144,6 +144,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 					TraceId:    "123",
 					InputCost:  0,
 					OutputCost: 0,
+					Size:       26,
 				}},
 			},
 		},
@@ -191,6 +192,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 					TraceId:    "123",
 					InputCost:  0,
 					OutputCost: 0,
+					Size:       29,
 				}},
 			},
 		},
@@ -246,6 +248,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 						TraceId:    fmt.Sprintf("trace-%d", i),
 						InputCost:  0,
 						OutputCost: 0,
+						Size:       39,
 					}
 				}
 				return &GetTracesAdvanceInfoResp{Infos: infos}
@@ -297,6 +300,7 @@ func TestTraceServiceImpl_GetTracesAdvanceInfo(t *testing.T) {
 					TraceId:    "123",
 					InputCost:  0,
 					OutputCost: 0,
+					Size:       26,
 				}},
 			},
 		},
