@@ -12,6 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	mock_conf "github.com/coze-dev/coze-loop/backend/pkg/conf/mocks"
 )
@@ -114,4 +115,54 @@ func TestConfiger_GetEvaluationRecordStorage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConfiger_GetExptTemplateUpdateEvalSetWhiteList(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockLoader := mock_conf.NewMockIConfigLoader(ctrl)
+	c := &configer{loader: mockLoader}
+	ctx := context.Background()
+	const key = "expt_template_update_eval_set_white_list"
+
+	t.Run("解析成功返回配置", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+				ptr := out.(**entity.ExptTemplateUpdateEvalSetWhiteList)
+				*ptr = &entity.ExptTemplateUpdateEvalSetWhiteList{
+					SpaceIDs: []int64{7533126599059701761, 7485358401870888962},
+				}
+				return nil
+			},
+		)
+		result := c.GetExptTemplateUpdateEvalSetWhiteList(ctx)
+		assert.NotNil(t, result)
+		assert.False(t, result.AllowAll)
+		assert.Equal(t, []int64{7533126599059701761, 7485358401870888962}, result.SpaceIDs)
+		assert.True(t, result.IsSpaceAllowed(7533126599059701761))
+		assert.False(t, result.IsSpaceAllowed(1))
+	})
+
+	t.Run("UnmarshalKey失败返回默认", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).Return(errors.New("parse fail"))
+		result := c.GetExptTemplateUpdateEvalSetWhiteList(ctx)
+		assert.NotNil(t, result)
+		assert.False(t, result.AllowAll)
+		assert.Empty(t, result.SpaceIDs)
+	})
+
+	t.Run("解析成功且 allow_all=true", func(t *testing.T) {
+		mockLoader.EXPECT().UnmarshalKey(ctx, key, gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, _ string, out any, _ ...conf.DecodeOptionFn) error {
+				ptr := out.(**entity.ExptTemplateUpdateEvalSetWhiteList)
+				*ptr = &entity.ExptTemplateUpdateEvalSetWhiteList{AllowAll: true}
+				return nil
+			},
+		)
+		result := c.GetExptTemplateUpdateEvalSetWhiteList(ctx)
+		assert.NotNil(t, result)
+		assert.True(t, result.AllowAll)
+		assert.True(t, result.IsSpaceAllowed(999))
+	})
 }
