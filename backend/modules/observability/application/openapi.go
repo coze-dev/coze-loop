@@ -21,7 +21,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/span_context_extractor"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/time_range"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/lib/otel"
-	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	coltracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/protobuf/proto"
@@ -1047,9 +1046,6 @@ func (o *OpenAPIApplication) ListTracesOApi(ctx context.Context, req *openapi.Li
 	for _, info := range sResp.Infos {
 		traces = append(traces, tconv.AdvanceInfoDO2TraceDTO(info))
 	}
-	// todo test
-	jsonStr, _ := json.Marshal(traces)
-	logs.CtxInfo(ctx, "ListTracesOApi response: %+v", jsonStr)
 	return &openapi.ListTracesOApiResponse{
 		Data: &openapi.ListTracesData{
 			Traces: traces,
