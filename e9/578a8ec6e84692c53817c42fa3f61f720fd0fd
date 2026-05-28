@@ -1,0 +1,99 @@
+modules/evaluation/domain/service/offline_analysis_impl.go
+  043f50c7045691a0 12,1326,1462,1488-1504,1506,1510,1518 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a180fb2dd40783a8059786b","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":12},{"Single":1326},{"Single":1462},{"Range":[1488,1504]},{"Single":1506},{"Single":1510},{"Single":1518}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "e9578a8ec6e84692c53817c42fa3f61f720fd0fd",
+  "prompts": {
+    "043f50c7045691a0": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a180a37dd40783a8059778c",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "suhanlin <suhanlin@bytedance.com>",
+      "messages": [],
+      "total_additions": 25,
+      "total_deletions": 7,
+      "accepted_lines": 23,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "modules/evaluation/domain/service/offline_analysis_impl.go": [
+      {
+        "hash": "043f50c7045691a0",
+        "line_ranges": [
+          {
+            "Single": 12
+          },
+          {
+            "Single": 1326
+          },
+          {
+            "Single": 1462
+          },
+          {
+            "Range": [
+              1488,
+              1504
+            ]
+          },
+          {
+            "Single": 1506
+          },
+          {
+            "Single": 1510
+          },
+          {
+            "Single": 1518
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a180fb2dd40783a8059786b",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 12
+              },
+              {
+                "Single": 1326
+              },
+              {
+                "Single": 1462
+              },
+              {
+                "Range": [
+                  1488,
+                  1504
+                ]
+              },
+              {
+                "Single": 1506
+              },
+              {
+                "Single": 1510
+              },
+              {
+                "Single": 1518
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "043f50c7045691a0": {
+      "tool": "trae",
+      "conversation_id": "6a180a37dd40783a8059778c",
+      "session_id": "6a180a37dd40783a8059778c",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}

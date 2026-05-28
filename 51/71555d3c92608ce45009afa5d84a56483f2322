@@ -1,0 +1,189 @@
+cmd/evaluation/conf/config.online.US-TTP1.default.yaml
+  d4355ae6c5209cd3 1-62 gitai:{"mixed_line_ranges":[{"Single":6},{"Single":11},{"Single":16},{"Single":21},{"Single":25},{"Range":[30,31]},{"Range":[33,34]},{"Range":[36,37]},{"Range":[39,40]},{"Range":[42,43]}],"operations":[{"operation_id":"6a1571d6d37d75eee1a550a3","tool_type":"agent","tool_id":"Write","line_ranges":[{"Range":[1,62]}]}]}
+cmd/evaluation/conf/config.online.US-TTP2.default.yaml
+  d4355ae6c5209cd3 1-62 gitai:{"mixed_line_ranges":[{"Single":6},{"Single":11},{"Single":16},{"Single":21},{"Single":25},{"Range":[30,31]},{"Range":[33,34]},{"Range":[36,37]},{"Range":[39,40]},{"Range":[42,43]},{"Single":46}],"operations":[{"operation_id":"6a1571d6d37d75eee1a550a3","tool_type":"agent","tool_id":"Write","line_ranges":[{"Range":[1,62]}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "5171555d3c92608ce45009afa5d84a56483f2322",
+  "prompts": {
+    "d4355ae6c5209cd3": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a155628287c3f206c8c26a4",
+        "model": "minimax-m2.5__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 134,
+      "total_deletions": 0,
+      "accepted_lines": 91,
+      "overriden_lines": 31
+    }
+  },
+  "attestation_metadata": {
+    "cmd/evaluation/conf/config.online.US-TTP1.default.yaml": [
+      {
+        "hash": "d4355ae6c5209cd3",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              62
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 11
+          },
+          {
+            "Single": 16
+          },
+          {
+            "Single": 21
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Range": [
+              30,
+              31
+            ]
+          },
+          {
+            "Range": [
+              33,
+              34
+            ]
+          },
+          {
+            "Range": [
+              36,
+              37
+            ]
+          },
+          {
+            "Range": [
+              39,
+              40
+            ]
+          },
+          {
+            "Range": [
+              42,
+              43
+            ]
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1571d6d37d75eee1a550a3",
+            "tool_type": "agent",
+            "tool_id": "Write",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  62
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "cmd/evaluation/conf/config.online.US-TTP2.default.yaml": [
+      {
+        "hash": "d4355ae6c5209cd3",
+        "line_ranges": [
+          {
+            "Range": [
+              1,
+              62
+            ]
+          }
+        ],
+        "mixed_line_ranges": [
+          {
+            "Single": 6
+          },
+          {
+            "Single": 11
+          },
+          {
+            "Single": 16
+          },
+          {
+            "Single": 21
+          },
+          {
+            "Single": 25
+          },
+          {
+            "Range": [
+              30,
+              31
+            ]
+          },
+          {
+            "Range": [
+              33,
+              34
+            ]
+          },
+          {
+            "Range": [
+              36,
+              37
+            ]
+          },
+          {
+            "Range": [
+              39,
+              40
+            ]
+          },
+          {
+            "Range": [
+              42,
+              43
+            ]
+          },
+          {
+            "Single": 46
+          }
+        ],
+        "operations": [
+          {
+            "operation_id": "6a1571d6d37d75eee1a550a3",
+            "tool_type": "agent",
+            "tool_id": "Write",
+            "line_ranges": [
+              {
+                "Range": [
+                  1,
+                  62
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "d4355ae6c5209cd3": {
+      "tool": "trae",
+      "conversation_id": "6a155628287c3f206c8c26a4",
+      "session_id": "6a155628287c3f206c8c26a4",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
