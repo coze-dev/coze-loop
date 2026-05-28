@@ -469,6 +469,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if hasDuplicates(req.EvaluatorVersionIds) {
 		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("duplicate evaluator version ids"))
 	}
+	if len(req.ItemIds) > 100 {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("item_ids exceeds maximum of 100"))
+	}
 
 	if err := e.auth.Authorization(ctx, &rpc.AuthorizationParam{
 		ObjectID:      strconv.FormatInt(req.WorkspaceID, 10),
@@ -523,6 +526,16 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	// 将 item_ids 编码到 ext 中，通过 MQ 事件传递给调度器
+	submitExt := req.Ext
+	if len(req.ItemIds) > 0 {
+		if submitExt == nil {
+			submitExt = make(map[string]string)
+		}
+		itemIdsBytes, _ := json.Marshal(req.ItemIds)
+		submitExt["__item_ids"] = string(itemIdsBytes)
+	}
+
 	rresp, err := e.RunExperiment(ctx, &expt.RunExperimentRequest{
 		WorkspaceID:       gptr.Of(req.GetWorkspaceID()),
 		ExptID:            cresp.GetExperiment().ID,
@@ -530,7 +543,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		ItemRetryNum:      req.ItemRetryNum,
 		TrialRunItemCount: req.TrialRunItemCount,
 		Session:           req.Session,
-		Ext:               req.Ext,
+		Ext:               submitExt,
 	})
 	if err != nil {
 		return nil, err
@@ -1550,11 +1563,15 @@ func (e *experimentApplication) InvokeExperiment(ctx context.Context, req *expt.
 	if err != nil {
 		return nil, err
 	}
-	err = e.resultSvc.UpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), maps.ToSlice(idMap, func(k, v int64) int64 {
-		return v
-	}))
-	if err != nil {
-		return nil, err
+
+	// 当没有新增 item 时，跳过全量 UpsertFilter 避免无效的 O(N) CK 扫描和逐条 BMQ 发送
+	if len(idMap) > 0 {
+		err = e.resultSvc.UpsertExptTurnResultFilter(ctx, req.GetWorkspaceID(), req.GetExperimentID(), maps.ToSlice(idMap, func(k, v int64) int64 {
+			return v
+		}))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &expt.InvokeExperimentResponse{
@@ -1570,6 +1587,10 @@ func (e *experimentApplication) FinishExperiment(ctx context.Context, req *expt.
 
 	got, err := e.manager.Get(ctx, req.GetExperimentID(), req.GetWorkspaceID(), session)
 	if err != nil {
+		if se, ok := errorx.FromStatusError(err); ok && se.Code() == errno.ResourceNotFoundCode {
+			// 实验已删除，视为已完成，幂等返回
+			return &expt.FinishExperimentResponse{BaseResp: base.NewBaseResp()}, nil
+		}
 		return nil, err
 	}
 

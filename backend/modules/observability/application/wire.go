@@ -116,11 +116,13 @@ var (
 		NewDatasetServiceAdapter,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 		taskDomainSet,
 	)
 	traceSet = wire.NewSet(
 		NewTraceApplication,
 		obrepo.NewViewRepoImpl,
+		obrepo.NewColumnExtractConfigRepoImpl,
 		mysqldao.NewViewDaoImpl,
 		auth.NewAuthProvider,
 		user.NewUserRPCProvider,
@@ -139,6 +141,8 @@ var (
 		mq2.NewSpanWithAnnotationProducerImpl,
 		redis2.NewSpansRedisDaoImpl,
 		mysqldao.NewTrajectoryConfigDaoImpl,
+		obmetrics.NewConsumeMetric,
+		mysqldao.NewColumnExtractConfigDaoImpl,
 	)
 	openApiSet = wire.NewSet(
 		NewOpenAPIApplication,
@@ -389,10 +393,11 @@ func NewDatasetServiceAdapter(evalSetService evaluationsetservice.Client, datase
 
 func NewInitTaskProcessor(datasetServiceProvider *service.DatasetServiceAdaptor, evalService rpc.IEvaluatorRPCAdapter,
 	evaluationService rpc.IEvaluationRPCAdapter, taskRepo trepo.ITaskRepo, taskHookProvider taskhook.IWorkflowProvider,
+	traceConfig config.ITraceConfig,
 ) *task_processor.TaskProcessor {
 	taskProcessor := task_processor.NewTaskProcessor()
 	taskProcessor.Register(task_entity.TaskTypeAutoEval, task_processor.NewAutoEvaluateProcessor(
-		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}, taskHookProvider))
+		0, datasetServiceProvider, evalService, evaluationService, taskRepo, &task_processor.EvalTargetBuilderImpl{}, taskHookProvider, traceConfig))
 	return taskProcessor
 }
 
@@ -472,6 +477,7 @@ func InitTraceIngestionApplication(
 	mqFactory mq.IFactory,
 	persistentCmdable redis.PersistentCmdable,
 	idGenerator idgen.IIDGenerator,
+	meter metrics.Meter,
 ) (ITraceIngestionApplication, error) {
 	wire.Build(traceIngestionSet)
 	return nil, nil

@@ -123,6 +123,96 @@ type SpaceConfig struct {
 	DisableQuery bool `mapstructure:"disable_query" json:"disable_query"`
 }
 
+// SpaceAwareParam 支持按 workspace_id 获取特定值的配置参数
+// Default 为兜底值，Overrides 为指定 workspace 的覆盖值
+type SpaceAwareParam[T any] struct {
+	Default   T           `mapstructure:"default" json:"default"`
+	Overrides map[int64]T `mapstructure:"overrides" json:"overrides"`
+}
+
+// Get 根据 workspaceID 获取配置值，优先取 Overrides，未命中则返回 Default
+func (p *SpaceAwareParam[T]) Get(workspaceID int64) T {
+	if p.Overrides != nil {
+		if v, ok := p.Overrides[workspaceID]; ok {
+			return v
+		}
+	}
+	return p.Default
+}
+
+type BackfillConfig struct {
+	// DispatchBatchSize 每批分发处理的 span 条数
+	DispatchBatchSize SpaceAwareParam[int] `mapstructure:"dispatch_batch_size" json:"dispatch_batch_size"`
+	// DispatchIntervalMs 每批分发之间的休眠间隔（毫秒）
+	DispatchIntervalMs SpaceAwareParam[int] `mapstructure:"dispatch_interval_ms" json:"dispatch_interval_ms"`
+	// CkQueryLimit ClickHouse 分页查询每页大小
+	CkQueryLimit SpaceAwareParam[int] `mapstructure:"ck_query_limit" json:"ck_query_limit"`
+	// BatchDispatchGray 批量分发灰度配置
+	BatchDispatchGray *BatchGrayConfig `mapstructure:"batch_dispatch_gray" json:"batch_dispatch_gray"`
+}
+
+// GetDispatchBatchSize 获取指定 workspace 的分发批大小
+func (c *BackfillConfig) GetDispatchBatchSize(workspaceID int64) int {
+	return c.DispatchBatchSize.Get(workspaceID)
+}
+
+// GetDispatchIntervalMs 获取指定 workspace 的分发间隔
+func (c *BackfillConfig) GetDispatchIntervalMs(workspaceID int64) int {
+	return c.DispatchIntervalMs.Get(workspaceID)
+}
+
+// GetCkQueryLimit 获取指定 workspace 的 CK 查询页大小
+func (c *BackfillConfig) GetCkQueryLimit(workspaceID int64) int {
+	return c.CkQueryLimit.Get(workspaceID)
+}
+
+// BatchGrayConfig 批量处理灰度开关配置
+type BatchGrayConfig struct {
+	// EnableAll 全开开关，为 true 时所有 workspace 走批量逻辑
+	EnableAll bool `mapstructure:"enable_all" json:"enable_all"`
+	// Whitelist workspace_id 白名单，在白名单中的无条件走批量逻辑
+	Whitelist []int64 `mapstructure:"whitelist" json:"whitelist"`
+	// Percentage 百分比灰度（0-100），按 workspace_id 哈希取模判断
+	Percentage int `mapstructure:"percentage" json:"percentage"`
+}
+
+// IsBatchEnabled 判断指定 workspaceID 是否命中批量分发灰度
+func (c *BackfillConfig) IsBatchEnabled(workspaceID int64) bool {
+	if c.BatchDispatchGray == nil {
+		return false
+	}
+	if c.BatchDispatchGray.EnableAll {
+		return true
+	}
+	for _, wid := range c.BatchDispatchGray.Whitelist {
+		if wid == workspaceID {
+			return true
+		}
+	}
+	if c.BatchDispatchGray.Percentage > 0 {
+		return int(workspaceID%100) < c.BatchDispatchGray.Percentage
+	}
+	return false
+}
+
+// ReflowInsertConfig 数据回流过程中新增数据的批大小配置
+type ReflowInsertConfig struct {
+	// EvalSetInvokeBatchSize 每次调用下游评测集服务插入的数据行数
+	EvalSetInvokeBatchSize SpaceAwareParam[int] `mapstructure:"eval_set_invoke_batch_size" json:"eval_set_invoke_batch_size"`
+	// DatasetInvokeBatchSize 每次调用下游数据集服务插入的数据行数
+	DatasetInvokeBatchSize SpaceAwareParam[int] `mapstructure:"dataset_invoke_batch_size" json:"dataset_invoke_batch_size"`
+}
+
+// GetEvalSetInvokeBatchSize 获取指定 workspace 的评测集插入批大小
+func (c *ReflowInsertConfig) GetEvalSetInvokeBatchSize(workspaceID int64) int {
+	return c.EvalSetInvokeBatchSize.Get(workspaceID)
+}
+
+// GetDatasetInvokeBatchSize 获取指定 workspace 的数据集插入批大小
+func (c *ReflowInsertConfig) GetDatasetInvokeBatchSize(workspaceID int64) int {
+	return c.DatasetInvokeBatchSize.Get(workspaceID)
+}
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
@@ -143,6 +233,8 @@ type ITraceConfig interface {
 	GetSpanWithAnnotationMqProducerCfg(ctx context.Context) (*MqProducerCfg, error)
 	GetMetricPlatformTenants(ctx context.Context) (*PlatformTenantsCfg, error)
 	GetMetricQueryConfig(ctx context.Context) *MetricQueryConfig
+	GetBackfillConfig(ctx context.Context) *BackfillConfig
+	GetReflowInsertConfig(ctx context.Context) *ReflowInsertConfig
 
 	conf.IConfigLoader
 }

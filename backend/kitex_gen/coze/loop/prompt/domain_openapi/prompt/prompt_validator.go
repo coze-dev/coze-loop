@@ -61,6 +61,11 @@ func (p *Prompt) IsValid() error {
 			return fmt.Errorf("field PublishInfo not valid, %w", err)
 		}
 	}
+	if p.SkillExecuteConfig != nil {
+		if err := p.SkillExecuteConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SkillExecuteConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *PromptTemplate) IsValid() error {
@@ -214,6 +219,11 @@ func (p *PromptDetail) IsValid() error {
 			return fmt.Errorf("field ModelConfig not valid, %w", err)
 		}
 	}
+	if p.SkillExecuteConfig != nil {
+		if err := p.SkillExecuteConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SkillExecuteConfig not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *CommitInfo) IsValid() error {
@@ -264,5 +274,35 @@ func (p *PromptManage) IsValid() error {
 			return fmt.Errorf("field PromptCommit not valid, %w", err)
 		}
 	}
+	return nil
+}
+func (p *SkillExecuteConfig) IsValid() error {
+	if p.SandboxConfig != nil {
+		if err := p.SandboxConfig.IsValid(); err != nil {
+			return fmt.Errorf("field SandboxConfig not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SkillCombine) IsValid() error {
+	return nil
+}
+func (p *SandboxConfig) IsValid() error {
+	if p.ResourceLimit != nil {
+		if err := p.ResourceLimit.IsValid(); err != nil {
+			return fmt.Errorf("field ResourceLimit not valid, %w", err)
+		}
+	}
+	if p.SessionLimit != nil {
+		if err := p.SessionLimit.IsValid(); err != nil {
+			return fmt.Errorf("field SessionLimit not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *SandboxResourceLimit) IsValid() error {
+	return nil
+}
+func (p *SandboxSessionLimit) IsValid() error {
 	return nil
 }

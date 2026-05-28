@@ -342,6 +342,22 @@ func (mr *MockEvaluatorServiceMockRecorder) RunEvaluator(ctx, request any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RunEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).RunEvaluator), ctx, request)
 }
 
+// ShouldInterceptEvaluator mocks base method.
+func (m *MockEvaluatorService) ShouldInterceptEvaluator(ctx context.Context, request *entity.RunEvaluatorRequest) (*entity.EvaluatorRecord, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldInterceptEvaluator", ctx, request)
+	ret0, _ := ret[0].(*entity.EvaluatorRecord)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ShouldInterceptEvaluator indicates an expected call of ShouldInterceptEvaluator.
+func (mr *MockEvaluatorServiceMockRecorder) ShouldInterceptEvaluator(ctx, request any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldInterceptEvaluator", reflect.TypeOf((*MockEvaluatorService)(nil).ShouldInterceptEvaluator), ctx, request)
+}
+
 // SubmitEvaluatorVersion mocks base method.
 func (m *MockEvaluatorService) SubmitEvaluatorVersion(ctx context.Context, evaluatorVersionDO *entity.Evaluator, version, description, cid string) (*entity.Evaluator, error) {
 	m.ctrl.T.Helper()

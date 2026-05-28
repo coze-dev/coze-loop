@@ -2872,10 +2872,12 @@ type SubmitExperimentRequest struct {
 	TriggerType             *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
 	TimeRange               *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	// 智能评测相关
-	ThreadID *string           `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
-	Ext      map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
-	Session  *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base     *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
+	// 指定执行的评测集条目ID列表
+	ItemIds []int64           `thrift:"item_ids,70,optional" frugal:"70,optional,list<i64>" json:"item_ids" form:"item_ids" `
+	Ext     map[string]string `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
+	Session *common.Session   `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base    *base.Base        `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewSubmitExperimentRequest() *SubmitExperimentRequest {
@@ -3216,6 +3218,18 @@ func (p *SubmitExperimentRequest) GetThreadID() (v string) {
 	return *p.ThreadID
 }
 
+var SubmitExperimentRequest_ItemIds_DEFAULT []int64
+
+func (p *SubmitExperimentRequest) GetItemIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemIds() {
+		return SubmitExperimentRequest_ItemIds_DEFAULT
+	}
+	return p.ItemIds
+}
+
 var SubmitExperimentRequest_Ext_DEFAULT map[string]string
 
 func (p *SubmitExperimentRequest) GetExt() (v map[string]string) {
@@ -3335,6 +3349,9 @@ func (p *SubmitExperimentRequest) SetTimeRange(val *expt.TaskTimeRange) {
 func (p *SubmitExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
 }
+func (p *SubmitExperimentRequest) SetItemIds(val []int64) {
+	p.ItemIds = val
+}
 func (p *SubmitExperimentRequest) SetExt(val map[string]string) {
 	p.Ext = val
 }
@@ -3374,6 +3391,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	50:  "trigger_type",
 	51:  "time_range",
 	60:  "thread_id",
+	70:  "item_ids",
 	100: "ext",
 	200: "session",
 	255: "Base",
@@ -3485,6 +3503,10 @@ func (p *SubmitExperimentRequest) IsSetTimeRange() bool {
 
 func (p *SubmitExperimentRequest) IsSetThreadID() bool {
 	return p.ThreadID != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetItemIds() bool {
+	return p.ItemIds != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetExt() bool {
@@ -3738,6 +3760,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 60:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField60(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 70:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField70(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4136,6 +4166,29 @@ func (p *SubmitExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 	p.ThreadID = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField70(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ItemIds = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField100(iprot thrift.TProtocol) error {
 	_, _, size, err := iprot.ReadMapBegin()
 	if err != nil {
@@ -4298,6 +4351,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField60(oprot); err != nil {
 			fieldId = 60
+			goto WriteFieldError
+		}
+		if err = p.writeField70(oprot); err != nil {
+			fieldId = 70
 			goto WriteFieldError
 		}
 		if err = p.writeField100(oprot); err != nil {
@@ -4856,6 +4913,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField70(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemIds() {
+		if err = oprot.WriteFieldBegin("item_ids", thrift.LIST, 70); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.ItemIds)); err != nil {
+			return err
+		}
+		for _, v := range p.ItemIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField100(oprot thrift.TProtocol) (err error) {
 	if p.IsSetExt() {
 		if err = oprot.WriteFieldBegin("ext", thrift.MAP, 100); err != nil {
@@ -5018,6 +5101,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field60DeepEqual(ano.ThreadID) {
+		return false
+	}
+	if !p.Field70DeepEqual(ano.ItemIds) {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
@@ -5343,6 +5429,19 @@ func (p *SubmitExperimentRequest) Field60DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.ThreadID, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field70DeepEqual(src []int64) bool {
+
+	if len(p.ItemIds) != len(src) {
+		return false
+	}
+	for i, v := range p.ItemIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

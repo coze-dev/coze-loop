@@ -25,7 +25,6 @@ import (
 )
 
 const (
-	pageSize                = 100
 	backfillLockKeyTemplate = "observability:tracehub:backfill:%d"
 	backfillLockMaxHold     = 24 * time.Hour
 	backfillLockTTL         = 3 * time.Minute
@@ -144,6 +143,8 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		return err
 	}
 
+	cfg := h.config.GetBackfillConfig(ctx)
+
 	// Build query parameters
 	filters := h.buildSpanFilters(ctx, sub.t)
 	listParam := &repo.ListSpansParam{
@@ -152,7 +153,7 @@ func (h *TraceHubServiceImpl) listAndSendSpans(ctx context.Context, sub *spanSub
 		Filters:            filters,
 		StartAt:            backfillTime.StartAt,
 		EndAt:              backfillTime.EndAt,
-		Limit:              pageSize, // Page size
+		Limit:              int32(cfg.GetCkQueryLimit(sub.t.WorkspaceID)),
 		DescByStartTime:    true,
 		NotQueryAnnotation: !sub.t.BackfillNeedQueryAnnotation(),
 	}
@@ -409,51 +410,55 @@ func (h *TraceHubServiceImpl) applySampling(spans []*loop_span.Span, sub *spanSu
 
 // processSpansForBackfill handles spans for backfill
 func (h *TraceHubServiceImpl) processSpansForBackfill(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
-	// Batch processing spans for efficiency
-	const batchSize = 10
+	cfg := h.config.GetBackfillConfig(ctx)
+	workspaceID := sub.t.WorkspaceID
+	sleepDuration := time.Duration(cfg.GetDispatchIntervalMs(workspaceID)) * time.Millisecond
 
-	for i := 0; i < len(spans); i += batchSize {
-		end := i + batchSize
+	useBatch := cfg.IsBatchEnabled(workspaceID)
+
+	dispatchBatchSize := cfg.GetDispatchBatchSize(workspaceID)
+	for i := 0; i < len(spans); i += dispatchBatchSize {
+		end := i + dispatchBatchSize
 		if end > len(spans) {
 			end = len(spans)
 		}
 
 		batch := spans[i:end]
-		err = h.traceService.MergeHistoryMessagesByRespIDBatch(ctx, spans, sub.t.GetPlatformType())
+		err = h.traceService.MergeHistoryMessagesByRespIDBatch(ctx, batch, sub.t.GetPlatformType())
 		if err != nil {
 			return err, false
 		}
-		err, shouldFinish = h.processBatchSpans(ctx, batch, sub)
-		if err != nil {
-			logs.CtxError(ctx, "process batch spans failed, task_id=%d, batch_start=%d, err=%v",
-				sub.t.ID, i, err)
-			return err, shouldFinish
-		}
 
-		if shouldFinish {
-			return err, shouldFinish
-		}
-
-		// ml_flow rate-limited: 50/5s
-		time.Sleep(1 * time.Second)
-	}
-
-	return err, shouldFinish
-}
-
-// processBatchSpans processes a batch of span data
-func (h *TraceHubServiceImpl) processBatchSpans(ctx context.Context, spans []*loop_span.Span, sub *spanSubscriber) (err error, shouldFinish bool) {
-	for _, span := range spans {
-		// Execute processing logic according to the task type
+		// 检查采样限制
 		taskCount, _ := h.taskRepo.GetTaskCount(ctx, sub.taskID)
 		sampler := sub.t.Sampler
-		if taskCount+1 > sampler.SampleSize {
-			logs.CtxInfo(ctx, "taskCount+1 > sampler.GetSampleSize(), task_id=%d,SampleSize=%d", sub.taskID, sampler.SampleSize)
+		if taskCount >= sampler.SampleSize {
+			logs.CtxInfo(ctx, "taskCount >= sampler.SampleSize, task_id=%d, SampleSize=%d", sub.taskID, sampler.SampleSize)
 			return nil, true
 		}
-		if err = h.dispatch(ctx, span, []*spanSubscriber{sub}); err != nil {
-			return err, false
+
+		if useBatch {
+			// 新逻辑：批量处理
+			err = sub.BatchAddSpan(ctx, batch)
+			if err != nil {
+				logs.CtxError(ctx, "batch add span failed, task_id=%d, batch_start=%d, err=%v",
+					sub.t.ID, i, err)
+				return err, false
+			}
+		} else {
+			// 旧逻辑：逐条处理
+			for _, span := range batch {
+				err = sub.AddSpan(ctx, span)
+				if err != nil {
+					logs.CtxError(ctx, "add span failed, task_id=%d, span_id=%s, err=%v",
+						sub.t.ID, span.SpanID, err)
+					return err, false
+				}
+			}
 		}
+
+		// 可配置的限速休眠
+		time.Sleep(sleepDuration)
 	}
 
 	return nil, false

@@ -908,6 +908,113 @@ func TestExperimentApplication_SubmitExperiment(t *testing.T) {
 	}
 }
 
+func TestExperimentApplication_SubmitExperiment_ItemIds(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockManager := servicemocks.NewMockIExptManager(ctrl)
+	mockResultSvc := servicemocks.NewMockExptResultService(ctrl)
+	mockAuth := rpcmocks.NewMockIAuthProvider(ctrl)
+	mockScheduler := servicemocks.NewMockExptSchedulerEvent(ctrl)
+	mockIDGen := idgenmock.NewMockIIDGenerator(ctrl)
+
+	workspaceID := int64(123)
+	exptID := int64(456)
+	runID := int64(789)
+	validExpt := &entity.Experiment{
+		ID:      exptID,
+		SpaceID: workspaceID,
+		Name:    "test_experiment",
+		Status:  entity.ExptStatus_Pending,
+	}
+
+	t.Run("item_ids exceeds maximum of 100", func(t *testing.T) {
+		itemIds := make([]int64, 101)
+		for i := range itemIds {
+			itemIds[i] = int64(i + 1)
+		}
+		req := &exptpb.SubmitExperimentRequest{
+			WorkspaceID: workspaceID,
+			Name:        gptr.Of("test"),
+			ItemIds:     itemIds,
+			Session: &common.Session{
+				UserID: gptr.Of(int64(789)),
+			},
+		}
+
+		app := &experimentApplication{
+			manager:            mockManager,
+			resultSvc:          mockResultSvc,
+			auth:               mockAuth,
+			ExptSchedulerEvent: mockScheduler,
+			idgen:              mockIDGen,
+		}
+
+		_, err := app.SubmitExperiment(context.Background(), req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "item_ids exceeds maximum of 100")
+	})
+
+	t.Run("item_ids encoded into ext correctly", func(t *testing.T) {
+		itemIds := []int64{100, 200}
+		req := &exptpb.SubmitExperimentRequest{
+			WorkspaceID: workspaceID,
+			Name:        gptr.Of("test_experiment"),
+			Desc:        gptr.Of("test description"),
+			CreateEvalTargetParam: &eval_target.CreateEvalTargetParam{
+				EvalTargetType: gptr.Of(domain_eval_target.EvalTargetType_CozeBot),
+			},
+			Session: &common.Session{
+				UserID: gptr.Of(int64(789)),
+			},
+			ItemConcurNum:       gptr.Of(int32(1)),
+			EvaluatorsConcurNum: gptr.Of(int32(1)),
+			TargetFieldMapping:  &expt.TargetFieldMapping{},
+			EvaluatorFieldMapping: []*expt.EvaluatorFieldMapping{
+				{},
+			},
+			ItemIds: itemIds,
+		}
+
+		mockAuth.EXPECT().
+			Authorization(gomock.Any(), gomock.Any()).
+			Return(nil).AnyTimes()
+
+		mockManager.EXPECT().
+			CreateExpt(gomock.Any(), gomock.Any(), gomock.Any()).
+			Return(validExpt, nil)
+
+		mockIDGen.EXPECT().
+			GenID(gomock.Any()).
+			Return(runID, nil)
+
+		mockManager.EXPECT().
+			LogRun(gomock.Any(), exptID, runID, gomock.Any(), workspaceID, gomock.Any(), gomock.Any()).
+			Return(nil)
+
+		mockManager.EXPECT().
+			Run(gomock.Any(), exptID, runID, workspaceID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, exptID, runID, spaceID int64, itemRetryNum int, session *entity.Session, runMode entity.ExptRunMode, ext map[string]string) error {
+				assert.Contains(t, ext, "__item_ids")
+				assert.Equal(t, "[100,200]", ext["__item_ids"])
+				return nil
+			})
+
+		app := &experimentApplication{
+			manager:            mockManager,
+			resultSvc:          mockResultSvc,
+			auth:               mockAuth,
+			ExptSchedulerEvent: mockScheduler,
+			idgen:              mockIDGen,
+		}
+
+		resp, err := app.SubmitExperiment(context.Background(), req)
+		assert.NoError(t, err)
+		assert.NotNil(t, resp)
+		assert.Equal(t, gptr.Of(runID), resp.RunID)
+	})
+}
+
 func TestExperimentApplication_SubmitExperiment_UpdateExptInfo(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -4339,6 +4446,45 @@ func TestExperimentApplication_InvokeExperiment(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "success - empty idMap skips UpsertFilter",
+			req: &exptpb.InvokeExperimentRequest{
+				WorkspaceID:      validSpaceID,
+				ExperimentID:     gptr.Of(validExptID),
+				ExperimentRunID:  gptr.Of(validExptRunID),
+				EvaluationSetID:  validEvalSetID,
+				Items:            validItems,
+				Session:          &common.Session{UserID: gptr.Of(validUserID)},
+				SkipInvalidItems: gptr.Of(true),
+				AllowPartialAdd:  gptr.Of(true),
+			},
+			mockSetup: func() {
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
+					Return(validExpt, nil)
+
+				mockAuth.EXPECT().
+					AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// BatchCreateEvaluationSetItems returns empty idMap (dataset full)
+				mockEvalSetItemService.EXPECT().
+					BatchCreateEvaluationSetItems(gomock.Any(), gomock.Any()).
+					Return(map[int64]int64{}, nil, nil, nil)
+
+				// Invoke is still called with empty Items
+				mockManager.EXPECT().
+					Invoke(gomock.Any(), gomock.Any()).
+					Return(nil)
+
+				// UpsertExptTurnResultFilter should NOT be called
+			},
+			wantResp: &exptpb.InvokeExperimentResponse{
+				AddedItems: map[int64]int64{},
+				BaseResp:   base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
 			name: "error - experiment status not allowed",
 			req: &exptpb.InvokeExperimentRequest{
 				WorkspaceID:     validSpaceID,
@@ -4485,6 +4631,25 @@ func TestExperimentApplication_FinishExperiment(t *testing.T) {
 				mockManager.EXPECT().
 					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
 					Return(finishedExpt, nil)
+			},
+			wantResp: &exptpb.FinishExperimentResponse{
+				BaseResp: base.NewBaseResp(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success - experiment deleted",
+			req: &exptpb.FinishExperimentRequest{
+				WorkspaceID:     gptr.Of(validSpaceID),
+				ExperimentID:    gptr.Of(validExptID),
+				ExperimentRunID: gptr.Of(validExptRunID),
+				Session:         &common.Session{UserID: gptr.Of(validUserID)},
+			},
+			mockSetup: func() {
+				// Mock Get experiment returns ResourceNotFound (soft-deleted)
+				mockManager.EXPECT().
+					Get(gomock.Any(), validExptID, validSpaceID, &entity.Session{UserID: strconv.FormatInt(validUserID, 10)}).
+					Return(nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg("experiment not found")))
 			},
 			wantResp: &exptpb.FinishExperimentResponse{
 				BaseResp: base.NewBaseResp(),

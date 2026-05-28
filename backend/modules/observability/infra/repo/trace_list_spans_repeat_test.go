@@ -80,6 +80,7 @@ func TestTraceRepoImpl_ListSpansRepeat(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
 		WithTraceStorageDaos("ck", spansDaoMock, annoDaoMock),
 	)
 	assert.NoError(t, err)
@@ -129,6 +130,7 @@ func TestTraceRepoImpl_ListSpansRepeat_NilRequest(t *testing.T) {
 	repoImpl, err := NewTraceRepoImpl(
 		traceConfigMock,
 		&mockStorageProvider{},
+		nil,
 		nil,
 		nil,
 		nil,

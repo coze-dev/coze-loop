@@ -24,6 +24,7 @@ import (
 	dataset0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/dataset"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/task"
+	componentConfig "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	taskhook "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/task"
 	task_entity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
@@ -50,6 +51,7 @@ type AutoEvaluateProcessor struct {
 	aid                   int32
 	evalTargetBuilder     EvalTargetBuilder
 	workflowProvider      taskhook.IWorkflowProvider
+	config                componentConfig.ITraceConfig
 }
 
 func NewAutoEvaluateProcessor(
@@ -60,6 +62,7 @@ func NewAutoEvaluateProcessor(
 	taskRepo repo.ITaskRepo,
 	evalTargetBuilder EvalTargetBuilder,
 	workflowProvider taskhook.IWorkflowProvider,
+	config componentConfig.ITraceConfig,
 ) *AutoEvaluateProcessor {
 	if workflowProvider == nil {
 		logs.Info("Auto Evaluate workflowProvider is nil")
@@ -73,6 +76,7 @@ func NewAutoEvaluateProcessor(
 		aid:                   aid,
 		evalTargetBuilder:     evalTargetBuilder,
 		workflowProvider:      workflowProvider,
+		config:                config,
 	}
 }
 
@@ -120,28 +124,9 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 	}
 	workspaceID := trigger.Task.WorkspaceID
 	sessionInfo := p.getSession(ctx, trigger.Task)
-	var mapping []*task_entity.EvaluateFieldMapping
-	evalsetName := make(map[string]bool)
 
-	for _, autoEvaluateConfig := range trigger.Task.TaskConfig.AutoEvaluateConfigs {
-		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
-		for _, fieldMapping := range autoEvaluateConfig.FieldMappings {
-			if fieldMapping.EvalSetName != nil {
-				evalsetName[*fieldMapping.EvalSetName] = true
-			}
-		}
-	}
-	if trigger.Task.TaskConfig.EvaluationExperimentConfig != nil && trigger.Task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings != nil {
-		for _, fieldMapping := range trigger.Task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings {
-			if fieldMapping.EvalSetName == nil {
-				continue
-			}
-			if ok := evalsetName[*fieldMapping.EvalSetName]; !ok {
-				mapping = append(mapping, fieldMapping)
-				evalsetName[*fieldMapping.EvalSetName] = true
-			}
-		}
-	}
+	mapping := p.buildFieldMappings(trigger.Task)
+
 	turns := buildItems(ctx, []*loop_span.Span{trigger.Span}, mapping, taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema(), strconv.FormatInt(taskRun.ID, 10))
 	if len(turns) == 0 {
 		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor Invoke, turns is empty")
@@ -213,6 +198,161 @@ func (p *AutoEvaluateProcessor) Invoke(ctx context.Context, trigger *taskexe.Tri
 		return nil
 	}
 	return nil
+}
+
+func (p *AutoEvaluateProcessor) BatchInvoke(ctx context.Context, trigger *taskexe.BatchTrigger) error {
+	taskRun := tconv.TaskRunDO2DTO(ctx, trigger.TaskRun, nil)
+	if taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig() == nil {
+		return nil
+	}
+	workspaceID := trigger.Task.WorkspaceID
+	sessionInfo := p.getSession(ctx, trigger.Task)
+
+	// 构建 field mapping
+	mapping := p.buildFieldMappings(trigger.Task)
+
+	// 为每条 span 构建评测项
+	schema := taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchema()
+	taskRunIDStr := strconv.FormatInt(taskRun.ID, 10)
+	var items []*eval_set.EvaluationSetItem
+	for _, span := range trigger.Spans {
+		turns := buildItems(ctx, []*loop_span.Span{span}, mapping, schema, taskRunIDStr)
+		if len(turns) == 0 {
+			continue
+		}
+		items = append(items, &eval_set.EvaluationSetItem{
+			WorkspaceID:     gptr.Of(workspaceID),
+			EvaluationSetID: gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID()),
+			SchemaID:        gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetSchemaID()),
+			Turns:           turns,
+			ItemKey:         gptr.Of(span.SpanID),
+		})
+	}
+	if len(items) == 0 {
+		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor BatchInvoke, no valid items")
+		return nil
+	}
+
+	// 批量增加计数
+	taskTTL := trigger.Task.GetTaskttl()
+	count := int64(len(items))
+	for i := int64(0); i < count; i++ {
+		_ = p.taskRepo.IncrTaskCount(ctx, trigger.Task.ID, taskTTL)
+		_ = p.taskRepo.IncrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+	}
+
+	// 检查采样限制
+	taskCount, _ := p.taskRepo.GetTaskCount(ctx, trigger.Task.ID)
+	taskRunCount, _ := p.taskRepo.GetTaskRunCount(ctx, trigger.Task.ID, taskRun.ID)
+	if (trigger.Task.Sampler.IsCycle && trigger.Task.Sampler.CycleCount != 0 && taskRunCount > trigger.Task.Sampler.CycleCount) ||
+		(taskCount > trigger.Task.Sampler.SampleSize) {
+		logs.CtxInfo(ctx, "[task-debug] AutoEvaluateProcessor BatchInvoke, over limit, taskRunCount:%v, taskCount:%v", taskRunCount, taskCount)
+		for i := int64(0); i < count; i++ {
+			_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+			_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		}
+		return nil
+	}
+
+	// 构建 extMap（使用第一个 span 的信息作为代表）
+	firstSpan := trigger.Spans[0]
+	extMap := map[string]string{
+		"workspace_id":    strconv.FormatInt(trigger.Task.WorkspaceID, 10),
+		"span_id":         firstSpan.SpanID,
+		"task_id":         cast.ToString(trigger.Task.ID),
+		"task_run_id":     cast.ToString(taskRun.ID),
+		"span_start_time": cast.ToString(firstSpan.StartTime/1000 - time.Hour.Milliseconds()),
+		"span_end_time":   cast.ToString(firstSpan.StartTime/1000 + time.Hour.Milliseconds()),
+		"platform_type":   string(trigger.Task.GetPlatformType()),
+	}
+	if trigger.Task.TaskConfig.EvaluationExperimentConfig != nil && trigger.Task.TaskConfig.EvaluationExperimentConfig.ExptTemplateID != nil {
+		extMap["expt_template_id"] = cast.ToString(trigger.Task.TaskConfig.EvaluationExperimentConfig.ExptTemplateID)
+	}
+
+	// 按配置的批大小分批调用下游 InvokeExperiment
+	invokeBatchSize := p.getInvokeBatchSize(ctx, workspaceID)
+	var totalAdded int64
+	for i := 0; i < len(items); i += invokeBatchSize {
+		end := i + invokeBatchSize
+		if end > len(items) {
+			end = len(items)
+		}
+		batchItems := items[i:end]
+
+		addedItems, err := p.evaluationSvc.InvokeExperiment(ctx, &rpc.InvokeExperimentReq{
+			WorkspaceID:      workspaceID,
+			EvaluationSetID:  taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetEvalID(),
+			Items:            batchItems,
+			SkipInvalidItems: gptr.Of(true),
+			AllowPartialAdd:  gptr.Of(true),
+			ExperimentID:     gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptID()),
+			ExperimentRunID:  gptr.Of(taskRun.GetTaskRunConfig().GetAutoEvaluateRunConfig().GetExptRunID()),
+			Session:          sessionInfo,
+			Ext:              extMap,
+		})
+		if err != nil {
+			for j := int64(0); j < count; j++ {
+				_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+				_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+			}
+			// 实验已失败，终止此轮自动化任务
+			if statusErr, ok := errorx.FromStatusError(err); ok {
+				if statusErr.Code() == errno.ExperimentStatusNotAllowedToInvokeCode {
+					logs.CtxWarn(ctx, "[task-debug] experiment already failed (code=%d), terminate task_id=%d", statusErr.Code(), trigger.Task.ID)
+					if termErr := p.onTaskRunTerminated(ctx, trigger.TaskRun); termErr != nil {
+						logs.CtxError(ctx, "[task-debug] onTaskRunTerminated failed, err: %v", termErr)
+						return termErr
+					}
+				}
+			}
+			return err
+		}
+		totalAdded += addedItems
+	}
+
+	if totalAdded <= 0 {
+		for i := int64(0); i < count; i++ {
+			_ = p.taskRepo.DecrTaskCount(ctx, trigger.Task.ID, taskTTL)
+			_ = p.taskRepo.DecrTaskRunCount(ctx, trigger.Task.ID, taskRun.ID, taskTTL)
+		}
+	}
+	return nil
+}
+
+// getInvokeBatchSize 获取调用下游评测集服务的批大小
+func (p *AutoEvaluateProcessor) getInvokeBatchSize(ctx context.Context, workspaceID int64) int {
+	if p.config == nil {
+		return 1
+	}
+	cfg := p.config.GetReflowInsertConfig(ctx)
+	return cfg.GetEvalSetInvokeBatchSize(workspaceID)
+}
+
+// buildFieldMappings 从任务配置中构建字段映射（公共方法，Invoke 和 BatchInvoke 共用）
+func (p *AutoEvaluateProcessor) buildFieldMappings(task *task_entity.ObservabilityTask) []*task_entity.EvaluateFieldMapping {
+	var mapping []*task_entity.EvaluateFieldMapping
+	evalsetName := make(map[string]bool)
+
+	for _, autoEvaluateConfig := range task.TaskConfig.AutoEvaluateConfigs {
+		mapping = append(mapping, autoEvaluateConfig.FieldMappings...)
+		for _, fieldMapping := range autoEvaluateConfig.FieldMappings {
+			if fieldMapping.EvalSetName != nil {
+				evalsetName[*fieldMapping.EvalSetName] = true
+			}
+		}
+	}
+	if task.TaskConfig.EvaluationExperimentConfig != nil && task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings != nil {
+		for _, fieldMapping := range task.TaskConfig.EvaluationExperimentConfig.FullEvalSetFieldMappings {
+			if fieldMapping.EvalSetName == nil {
+				continue
+			}
+			if ok := evalsetName[*fieldMapping.EvalSetName]; !ok {
+				mapping = append(mapping, fieldMapping)
+				evalsetName[*fieldMapping.EvalSetName] = true
+			}
+		}
+	}
+	return mapping
 }
 
 func (p *AutoEvaluateProcessor) OnTaskCreated(ctx context.Context, currentTask *task_entity.ObservabilityTask) error {

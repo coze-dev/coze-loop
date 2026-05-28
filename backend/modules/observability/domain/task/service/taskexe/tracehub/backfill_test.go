@@ -15,6 +15,8 @@ import (
 
 	lockmock "github.com/coze-dev/coze-loop/backend/infra/lock/mocks"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/common"
+	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
+	config_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config/mocks"
 	tenant_mocks "github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	taskrepo "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/repo"
@@ -109,9 +111,11 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_TaskLimit(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
+	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 	proc := &stubProcessor{}
 
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo}
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, traceService: mockTraceService, config: mockConfig}
 
 	now := time.Now()
 	sampler := &entity.Sampler{
@@ -138,29 +142,26 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_TaskLimit(t *testing.T) {
 		RunEndAt:    now.Add(time.Minute),
 	}
 	sub := &spanSubscriber{
-		taskID:    1,
-		t:         taskDO,
-		tr:        taskRun,
-		processor: proc,
-		taskRepo:  mockRepo,
-		runType:   entity.TaskRunTypeBackFill,
+		taskID:       1,
+		t:            taskDO,
+		tr:           taskRun,
+		processor:    proc,
+		traceService: mockTraceService,
+		taskRepo:     mockRepo,
+		runType:      entity.TaskRunTypeBackFill,
 	}
 
+	mockTraceService.EXPECT().
+		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil).
+		AnyTimes()
 	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).AnyTimes()
-	mockRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(&entity.TaskRun{
-		ID:          10,
-		TaskID:      1,
-		WorkspaceID: 2,
-		TaskType:    entity.TaskRunTypeBackFill,
-		RunStatus:   entity.TaskRunStatusRunning,
-		RunStartAt:  time.Now().Add(-time.Minute),
-		RunEndAt:    time.Now().Add(time.Minute),
-	}, nil)
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 
 	spans := []*loop_span.Span{{SpanID: "span-1", StartTime: time.Now().UnixMilli()}}
 	ctx := context.Background()
 
-	err, shouldFinish := impl.processBatchSpans(ctx, spans, sub)
+	err, shouldFinish := impl.processSpansForBackfill(ctx, spans, sub)
 	require.NoError(t, err)
 	require.False(t, shouldFinish)
 	require.True(t, proc.invokeCalled)
@@ -174,13 +175,15 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 
 	mockRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 	proc := &stubProcessor{invokeErr: errors.New("invoke fail")}
 
-	impl := &TraceHubServiceImpl{taskRepo: mockRepo, traceService: mockTraceService}
+	impl := &TraceHubServiceImpl{taskRepo: mockRepo, traceService: mockTraceService, config: mockConfig}
 	mockTraceService.EXPECT().
 		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).
 		AnyTimes()
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 
 	now := time.Now()
 	sampler := &entity.Sampler{
@@ -216,22 +219,11 @@ func TestTraceHubServiceImpl_ProcessBatchSpans_DispatchError(t *testing.T) {
 		taskRepo:     mockRepo,
 	}
 
-	spanRun := &entity.TaskRun{
-		ID:          20,
-		TaskID:      1,
-		WorkspaceID: 1,
-		TaskType:    entity.TaskRunTypeNewData,
-		RunStatus:   entity.TaskRunStatusRunning,
-		RunStartAt:  now.Add(-time.Minute),
-		RunEndAt:    now.Add(time.Minute),
-	}
-
 	mockRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockRepo.EXPECT().GetLatestNewDataTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(spanRun, nil)
 
 	spans := []*loop_span.Span{{SpanID: "span-1", StartTime: now.Add(10 * time.Millisecond).UnixMilli(), WorkspaceID: "space", TraceID: "trace"}}
 
-	err, _ := impl.processBatchSpans(context.Background(), spans, sub)
+	err, _ := impl.processSpansForBackfill(context.Background(), spans, sub)
 	require.Error(t, err)
 	require.ErrorContains(t, err, "invoke fail")
 }
@@ -317,6 +309,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:       mockTaskRepo,
@@ -324,13 +317,14 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 		tenantProvider: mockTenant,
 		buildHelper:    mockBuilder,
 		traceService:   mockTraceService,
+		config:         mockConfig,
 	}
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
-	domainRun := newDomainBackfillTaskRun(now)
 	span := newTestSpan(now)
 
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
 		Return(filterMock, nil)
 	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
@@ -362,7 +356,6 @@ func TestTraceHubServiceImpl_ListAndSendSpans_WithoutLastSpanPageToken(t *testin
 	}).Times(2)
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil).Times(2)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil).Times(2)
 	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil).Times(2)
 
 	err := impl.listAndSendSpans(context.Background(), sub)
@@ -383,6 +376,7 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:       mockTaskRepo,
@@ -390,14 +384,15 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 		tenantProvider: mockTenant,
 		buildHelper:    mockBuilder,
 		traceService:   mockTraceService,
+		config:         mockConfig,
 	}
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
 	sub.tr.BackfillDetail = &entity.BackfillDetail{LastSpanPageToken: "prev"}
-	domainRun := newDomainBackfillTaskRun(now)
 	span := newTestSpan(now)
 
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
 		Return(filterMock, nil)
 	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
@@ -420,7 +415,6 @@ func TestTraceHubServiceImpl_ListAndSendSpans_Success(t *testing.T) {
 	})
 
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 	mockTaskRepo.EXPECT().UpdateTaskRunWithOCC(gomock.Any(), sub.tr.ID, sub.tr.WorkspaceID, gomock.AssignableToTypeOf(map[string]interface{}{})).Return(nil)
 
 	err := impl.listAndSendSpans(context.Background(), sub)
@@ -440,17 +434,20 @@ func TestTraceHubServiceImpl_ListAndSendSpans_ListError(t *testing.T) {
 	mockTenant := tenant_mocks.NewMockITenantProvider(ctrl)
 	mockBuilder := builder_mocks.NewMockTraceFilterProcessorBuilder(ctrl)
 	filterMock := spanfilter_mocks.NewMockFilter(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 
 	impl := &TraceHubServiceImpl{
 		taskRepo:       mockTaskRepo,
 		traceRepo:      mockTraceRepo,
 		tenantProvider: mockTenant,
 		buildHelper:    mockBuilder,
+		config:         mockConfig,
 	}
 
 	now := time.Now()
 	sub, _ := newBackfillSubscriber(mockTaskRepo, now)
 
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockBuilder.EXPECT().BuildPlatformRelatedFilter(gomock.Any(), loop_span.PlatformType(common.PlatformTypeCozeBot)).
 		Return(filterMock, nil)
 	filterMock.EXPECT().BuildBasicSpanFilter(gomock.Any(), gomock.Any()).Return([]*loop_span.FilterField{}, true, nil)
@@ -489,16 +486,16 @@ func TestTraceHubServiceImpl_DoFlush_NoMoreFinishError(t *testing.T) {
 
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
-	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo, traceService: mockTraceService}
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
+	impl := &TraceHubServiceImpl{taskRepo: mockTaskRepo, traceService: mockTraceService, config: mockConfig}
 
 	now := time.Now()
 	sub, proc := newBackfillSubscriber(mockTaskRepo, now)
 	proc.finishErr = errors.New("finish fail")
 	span := newTestSpan(now)
-	domainRun := newDomainBackfillTaskRun(now)
 
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 	mockTraceService.EXPECT().
 		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil).
@@ -538,9 +535,11 @@ func TestTraceHubServiceImpl_FlushSpans_ReturnsProcessResult(t *testing.T) {
 
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 	impl := &TraceHubServiceImpl{
 		taskRepo:     mockTaskRepo,
 		traceService: mockTraceService,
+		config:       mockConfig,
 	}
 
 	now := time.Now()
@@ -548,13 +547,12 @@ func TestTraceHubServiceImpl_FlushSpans_ReturnsProcessResult(t *testing.T) {
 	proc.invokeErr = errors.New("invoke fail")
 
 	span := newTestSpan(now)
-	domainRun := newDomainBackfillTaskRun(now)
 
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockTraceService.EXPECT().
 		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil)
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
-	mockTaskRepo.EXPECT().GetBackfillTaskRun(gomock.Any(), gomock.Nil(), int64(1)).Return(domainRun, nil)
 
 	err, shouldFinish := impl.flushSpans(context.Background(), []*loop_span.Span{span}, sub)
 	require.ErrorContains(t, err, "invoke fail")
@@ -567,9 +565,11 @@ func TestTraceHubServiceImpl_ProcessSpansForBackfill_ReturnsShouldFinish(t *test
 
 	mockTaskRepo := repo_mocks.NewMockITaskRepo(ctrl)
 	mockTraceService := builder_mocks.NewMockITraceService(ctrl)
+	mockConfig := config_mocks.NewMockITraceConfig(ctrl)
 	impl := &TraceHubServiceImpl{
 		taskRepo:     mockTaskRepo,
 		traceService: mockTraceService,
+		config:       mockConfig,
 	}
 
 	now := time.Now()
@@ -580,6 +580,7 @@ func TestTraceHubServiceImpl_ProcessSpansForBackfill_ReturnsShouldFinish(t *test
 	mockTraceService.EXPECT().
 		MergeHistoryMessagesByRespIDBatch(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil)
+	mockConfig.EXPECT().GetBackfillConfig(gomock.Any()).Return(&config.BackfillConfig{DispatchBatchSize: config.SpaceAwareParam[int]{Default: 10}, DispatchIntervalMs: config.SpaceAwareParam[int]{Default: 0}, CkQueryLimit: config.SpaceAwareParam[int]{Default: 100}, BatchDispatchGray: &config.BatchGrayConfig{EnableAll: true}}).AnyTimes()
 	mockTaskRepo.EXPECT().GetTaskCount(gomock.Any(), int64(1)).Return(int64(0), nil)
 
 	err, shouldFinish := impl.processSpansForBackfill(context.Background(), spans, sub)
@@ -899,19 +900,6 @@ func newBackfillSubscriber(taskRepo taskrepo.ITaskRepo, now time.Time) (*spanSub
 		runType:   entity.TaskRunTypeBackFill,
 	}
 	return sub, proc
-}
-
-func newDomainBackfillTaskRun(now time.Time) *entity.TaskRun {
-	return &entity.TaskRun{
-		ID:             10,
-		TaskID:         1,
-		WorkspaceID:    2,
-		TaskType:       entity.TaskRunTypeBackFill,
-		RunStatus:      entity.TaskRunStatusRunning,
-		RunStartAt:     now.Add(-time.Minute),
-		RunEndAt:       now.Add(time.Minute),
-		BackfillDetail: &entity.BackfillDetail{},
-	}
 }
 
 func newTestSpan(now time.Time) *loop_span.Span {

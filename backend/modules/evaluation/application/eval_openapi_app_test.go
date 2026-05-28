@@ -1595,6 +1595,14 @@ func TestEvalOpenAPIApplication_ReportEvalTargetInvokeResult(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "actx is nil",
+			req:  repoErrorReq,
+			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockIEvalTargetService, _ *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), strconv.FormatInt(repoErrorReq.GetInvokeID(), 10)).Return(nil, nil)
+			},
+			wantErr: true,
+		},
+		{
 			name: "report invoke records returns error",
 			req:  reportErrorReq,
 			setup: func(t *testing.T, asyncRepo *repomocks.MockIEvalAsyncRepo, targetSvc *servicemocks.MockIEvalTargetService, publisher *eventmocks.MockExptEventPublisher, _ *configermocks.MockIConfiger) {
@@ -2364,6 +2372,18 @@ type fakeExperimentApp struct {
 
 	listExperimentsResp *exptpb.ListExperimentsResponse
 	listExperimentsErr  error
+
+	retryResp    *exptpb.RetryExperimentResponse
+	retryErr     error
+	lastRetryReq *exptpb.RetryExperimentRequest
+
+	exportResp    *exptpb.ExportExptResultResponse
+	exportErr     error
+	lastExportReq *exptpb.ExportExptResultRequest
+
+	getExportRecordResp    *exptpb.GetExptResultExportRecordResponse
+	getExportRecordErr     error
+	lastGetExportRecordReq *exptpb.GetExptResultExportRecordRequest
 }
 
 func (f *fakeExperimentApp) SubmitExperiment(ctx context.Context, req *exptpb.SubmitExperimentRequest) (*exptpb.SubmitExperimentResponse, error) {
@@ -2382,6 +2402,30 @@ func (f *fakeExperimentApp) ListExperiments(_ context.Context, _ *exptpb.ListExp
 		return f.listExperimentsResp, nil
 	}
 	return &exptpb.ListExperimentsResponse{}, nil
+}
+
+func (f *fakeExperimentApp) RetryExperiment(_ context.Context, req *exptpb.RetryExperimentRequest) (*exptpb.RetryExperimentResponse, error) {
+	f.lastRetryReq = req
+	if f.retryResp != nil || f.retryErr != nil {
+		return f.retryResp, f.retryErr
+	}
+	return &exptpb.RetryExperimentResponse{}, nil
+}
+
+func (f *fakeExperimentApp) ExportExptResult_(_ context.Context, req *exptpb.ExportExptResultRequest) (*exptpb.ExportExptResultResponse, error) {
+	f.lastExportReq = req
+	if f.exportResp != nil || f.exportErr != nil {
+		return f.exportResp, f.exportErr
+	}
+	return &exptpb.ExportExptResultResponse{}, nil
+}
+
+func (f *fakeExperimentApp) GetExptResultExportRecord(_ context.Context, req *exptpb.GetExptResultExportRecordRequest) (*exptpb.GetExptResultExportRecordResponse, error) {
+	f.lastGetExportRecordReq = req
+	if f.getExportRecordResp != nil || f.getExportRecordErr != nil {
+		return f.getExportRecordResp, f.getExportRecordErr
+	}
+	return &exptpb.GetExptResultExportRecordResponse{}, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)
@@ -4276,6 +4320,42 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 			},
 			wantID: exptID,
 		},
+		{
+			name: "success with TargetRuntimeParam and nil FieldMappingConfig",
+			req: &openapi.SubmitExptFromTemplateOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				TemplateID:         gptr.Of(templateID),
+				Name:               gptr.Of("exp_with_runtime_param"),
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"key": "value"}`)},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(buildValidTemplate(), nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp_with_runtime_param", workspaceID, gomock.Any()).Return(true, nil)
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(exptID)}}
+			},
+			wantID: exptID,
+		},
+		{
+			name: "success with TargetRuntimeParam and existing FieldMappingConfig",
+			req: &openapi.SubmitExptFromTemplateOApiRequest{
+				WorkspaceID:        gptr.Of(workspaceID),
+				TemplateID:         gptr.Of(templateID),
+				Name:               gptr.Of("exp_with_existing_fmc"),
+				TargetRuntimeParam: &common.RuntimeParam{JSONValue: gptr.Of(`{"custom": "param"}`)},
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, templateMgr *servicemocks.MockIExptTemplateManager, manager *servicemocks.MockIExptManager, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				templateWithFMC := buildValidTemplate()
+				templateWithFMC.FieldMappingConfig = &entity.ExptFieldMapping{
+					TargetFieldMapping: &entity.TargetFieldMapping{},
+				}
+				templateMgr.EXPECT().Get(gomock.Any(), templateID, workspaceID, gomock.Any()).Return(templateWithFMC, nil)
+				manager.EXPECT().CheckName(gomock.Any(), "exp_with_existing_fmc", workspaceID, gomock.Any()).Return(true, nil)
+				fakeApp.submitResp = &exptpb.SubmitExperimentResponse{Experiment: &domainexpt.Experiment{ID: gptr.Of(exptID)}}
+			},
+			wantID: exptID,
+		},
 	}
 
 	for _, tt := range tests {
@@ -4325,6 +4405,10 @@ func TestEvalOpenAPIApplication_SubmitExptFromTemplateOApi(t *testing.T) {
 				if assert.NotNil(t, fakeApp.lastReq) {
 					assert.Equal(t, workspaceID, fakeApp.lastReq.WorkspaceID)
 					assert.Equal(t, templateID, *fakeApp.lastReq.ExptTemplateID)
+					if tc.req != nil && tc.req.TargetRuntimeParam != nil {
+						assert.NotNil(t, fakeApp.lastReq.TargetRuntimeParam)
+						assert.Equal(t, tc.req.TargetRuntimeParam.JSONValue, fakeApp.lastReq.TargetRuntimeParam.JSONValue)
+					}
 				}
 			}
 
@@ -5511,6 +5595,19 @@ func TestEvalOpenAPIApplication_ReportEvaluatorInvokeResult(t *testing.T) {
 			wantErr: -1,
 		},
 		{
+			name: "actx is nil",
+			req: &openapi.ReportEvaluatorInvokeResultRequest{
+				WorkspaceID: gptr.Of(workspaceID),
+				InvokeID:    gptr.Of(invokeID),
+				Status:      gptr.Of(spi.InvokeEvaluatorRunStatus_SUCCESS),
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, asyncRepo *repomocks.MockIEvalAsyncRepo, _ *servicemocks.MockEvaluatorService, _ *eventmocks.MockExptEventPublisher) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Return(nil)
+				asyncRepo.EXPECT().GetEvalAsyncCtx(gomock.Any(), "evaluator:2002").Return(nil, nil)
+			},
+			wantErr: -1,
+		},
+		{
 			name: "report service failed",
 			req: &openapi.ReportEvaluatorInvokeResultRequest{
 				WorkspaceID: gptr.Of(workspaceID),
@@ -6549,6 +6646,222 @@ func TestEvalOpenAPIApplication_ListExperimentResultOApi_FilterBranches(t *testi
 
 			if tc.req != nil {
 				assert.True(t, metric.called)
+			}
+		})
+	}
+}
+
+func TestEvalOpenAPIApplication_RetryExperimentOApi(t *testing.T) {
+	t.Parallel()
+
+	workspaceID := int64(90001)
+	experimentID := int64(90002)
+	runID := int64(90003)
+
+	buildBaseReq := func() *openapi.RetryExperimentOApiRequest {
+		retryMode := openapiExperiment.ExptRetryModeRetryFailure
+		return &openapi.RetryExperimentOApiRequest{
+			WorkspaceID:  gptr.Of(workspaceID),
+			ExperimentID: gptr.Of(experimentID),
+			RetryMode:    &retryMode,
+		}
+	}
+
+	tests := []struct {
+		name     string
+		buildReq func() *openapi.RetryExperimentOApiRequest
+		setup    func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp)
+		wantErr  int32
+	}{
+		{
+			name:     "nil request",
+			buildReq: func() *openapi.RetryExperimentOApiRequest { return nil },
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid experiment_id",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				req.ExperimentID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid workspace_id",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				req.WorkspaceID = gptr.Of(int64(0))
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name: "invalid retry mode",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				badMode := openapiExperiment.ExptRetryMode("invalid_mode")
+				req.RetryMode = &badMode
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.Any()).Times(0)
+			},
+			wantErr: errno.CommonInvalidParamCode,
+		},
+		{
+			name:     "auth failed",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, _ *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(errorx.NewByCode(errno.CommonNoPermissionCode))
+			},
+			wantErr: errno.CommonNoPermissionCode,
+		},
+		{
+			name:     "retry experiment error",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.retryErr = errors.New("retry failed")
+			},
+			wantErr: -1,
+		},
+		{
+			name:     "success with retry_failure mode",
+			buildReq: buildBaseReq,
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.retryResp = &exptpb.RetryExperimentResponse{RunID: gptr.Of(runID)}
+			},
+		},
+		{
+			name: "success with retry_all mode",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				retryAll := openapiExperiment.ExptRetryModeRetryAll
+				req.RetryMode = &retryAll
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.retryResp = &exptpb.RetryExperimentResponse{RunID: gptr.Of(runID)}
+			},
+		},
+		{
+			name: "success with retry_target_items mode",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				retryItems := openapiExperiment.ExptRetryModeRetryTargetItems
+				req.RetryMode = &retryItems
+				req.ItemIds = []int64{1, 2, 3}
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.retryResp = &exptpb.RetryExperimentResponse{RunID: gptr.Of(runID)}
+			},
+		},
+		{
+			name: "success with empty retry mode defaults to retry_failure",
+			buildReq: func() *openapi.RetryExperimentOApiRequest {
+				req := buildBaseReq()
+				req.RetryMode = nil
+				return req
+			},
+			setup: func(auth *rpcmocks.MockIAuthProvider, fakeApp *fakeExperimentApp) {
+				auth.EXPECT().Authorization(gomock.Any(), gomock.AssignableToTypeOf(&rpc.AuthorizationParam{})).Return(nil)
+				fakeApp.retryResp = &exptpb.RetryExperimentResponse{RunID: gptr.Of(runID)}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			auth := rpcmocks.NewMockIAuthProvider(ctrl)
+			metric := &fakeOpenAPIMetric{}
+			fakeApp := &fakeExperimentApp{}
+
+			app := &EvalOpenAPIApplication{
+				auth:          auth,
+				experimentApp: fakeApp,
+				metric:        metric,
+			}
+
+			req := tc.buildReq()
+			if tc.setup != nil {
+				tc.setup(auth, fakeApp)
+			}
+
+			resp, err := app.RetryExperimentOApi(context.Background(), req)
+
+			if tc.wantErr != 0 {
+				assert.Error(t, err)
+				if tc.wantErr > 0 {
+					statusErr, ok := errorx.FromStatusError(err)
+					assert.True(t, ok)
+					assert.Equal(t, tc.wantErr, statusErr.Code())
+				}
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if assert.NotNil(t, resp) && assert.NotNil(t, resp.Data) {
+					assert.Equal(t, gptr.Of(runID), resp.Data.RunID)
+				}
+				if assert.NotNil(t, fakeApp.lastRetryReq) {
+					assert.Equal(t, workspaceID, fakeApp.lastRetryReq.GetWorkspaceID())
+					assert.Equal(t, experimentID, fakeApp.lastRetryReq.GetExptID())
+				}
+			}
+
+			if req != nil {
+				assert.True(t, metric.called)
+				assert.Equal(t, req.GetWorkspaceID(), metric.spaceID)
+			}
+		})
+	}
+}
+
+func TestMapOpenAPIExptRetryMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		input   openapiExperiment.ExptRetryMode
+		want    domainexpt.ExptRetryMode
+		wantErr bool
+	}{
+		{name: "retry_all", input: openapiExperiment.ExptRetryModeRetryAll, want: domainexpt.ExptRetryMode_RetryAll},
+		{name: "retry_failure", input: openapiExperiment.ExptRetryModeRetryFailure, want: domainexpt.ExptRetryMode_RetryFailure},
+		{name: "retry_target_items", input: openapiExperiment.ExptRetryModeRetryTargetItems, want: domainexpt.ExptRetryMode_RetryTargetItems},
+		{name: "empty string defaults to retry_failure", input: "", want: domainexpt.ExptRetryMode_RetryFailure},
+		{name: "invalid mode", input: "bad_mode", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		tc := tt
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := mapOpenAPIExptRetryMode(tc.input)
+			if tc.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.want, got)
 			}
 		})
 	}

@@ -1193,6 +1193,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "normal flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -1266,6 +1267,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "Agent evaluator flow",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), false)
 				mockEvalAsyncRepo.EXPECT().SetEvalAsyncCtx(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -1326,6 +1328,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
 				mockEvalTargetService.EXPECT().LoadRecordOutputFields(gomock.Any(), gomock.Any(), []string{"field1"}).Return(nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(mockEvaluatorResults[1], nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -1464,6 +1467,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators(t *testing.T) {
 			name: "RunEvaluator error",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(nil, errors.New("run evaluator failed"))
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -2818,6 +2822,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_EdgeCases(t *testing.T) {
 			name: "Code evaluator builds input data",
 			prepare: func() {
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().RunEvaluator(gomock.Any(), gomock.Any()).Return(&entity.EvaluatorRecord{ID: 1, Status: entity.EvaluatorRunStatusSuccess}, nil)
 				mockMetric.EXPECT().EmitTurnExecEvaluatorResult(gomock.Any(), gomock.Any())
 			},
@@ -3830,6 +3835,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
@@ -3868,6 +3874,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
@@ -3906,6 +3913,7 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 				mockEvaluatorRecordService := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 				mockBenefitService.EXPECT().CheckAndDeductEvalBenefit(gomock.Any(), gomock.Any()).Return(&benefit.CheckAndDeductEvalBenefitResult{}, nil)
+				mockEvaluatorService.EXPECT().ShouldInterceptEvaluator(gomock.Any(), gomock.Any()).Return(nil, false, nil)
 				mockEvaluatorService.EXPECT().AsyncRunEvaluator(gomock.Any(), gomock.Any()).Return(
 					&entity.EvaluatorRecord{ID: 201, EvaluatorVersionID: 101, Status: entity.EvaluatorRunStatusAsyncInvoking}, nil,
 				)
@@ -3944,6 +3952,160 @@ func TestDefaultExptTurnEvaluationImpl_CallEvaluators_WithRefresh(t *testing.T) 
 			assert.NoError(t, err)
 			if tt.validateResult != nil {
 				tt.validateResult(t, results)
+			}
+		})
+	}
+}
+
+func TestDefaultExptTurnEvaluationImpl_callTarget_CustomAgentAndA2AAgent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
+	mockEvalTargetService := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockBenefitService := benefitmocks.NewMockIBenefitService(ctrl)
+	mockEvalSetItemSvc := svcmocks.NewMockEvaluationSetItemService(ctrl)
+
+	service := &DefaultExptTurnEvaluationImpl{
+		metric:            mockMetric,
+		evalTargetService: mockEvalTargetService,
+		benefitService:    mockBenefitService,
+		evalSetItemSvc:    mockEvalSetItemSvc,
+	}
+
+	content1 := &entity.Content{Text: gptr.Of("hello"), ContentType: gptr.Of(entity.ContentTypeText)}
+	content2 := &entity.Content{Text: gptr.Of("world"), ContentType: gptr.Of(entity.ContentTypeText)}
+	omittedContent := &entity.Content{
+		Text:           gptr.Of(""),
+		ContentType:    gptr.Of(entity.ContentTypeText),
+		ContentOmitted: gptr.Of(true),
+	}
+
+	tests := []struct {
+		name       string
+		targetType entity.EvalTargetType
+		prepare    func()
+		turn       *entity.Turn
+		wantErr    bool
+	}{
+		{
+			name:       "CustomAgent - normal fields no omitted",
+			targetType: entity.EvalTargetTypeCustomAgent,
+			prepare: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
+				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					&entity.EvalTargetRecord{
+						ID: 1,
+						EvalTargetOutputData: &entity.EvalTargetOutputData{
+							OutputFields: map[string]*entity.Content{"output": content1},
+						},
+					}, nil)
+			},
+			turn: &entity.Turn{
+				ID:        1,
+				EvalSetID: 100,
+				ItemID:    200,
+				FieldDataList: []*entity.FieldData{
+					{Name: "user_query", Key: "key1", Content: content1},
+					{Name: "context", Key: "key2", Content: content2},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "A2AAgent - with omitted content field",
+			targetType: entity.EvalTargetTypeA2AAgent,
+			prepare: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
+				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
+					&entity.FieldData{Name: "context", Content: content2}, nil).Times(2)
+				mockEvalTargetService.EXPECT().ExecuteTarget(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(
+					&entity.EvalTargetRecord{
+						ID: 2,
+						EvalTargetOutputData: &entity.EvalTargetOutputData{
+							OutputFields: map[string]*entity.Content{"output": content1},
+						},
+					}, nil)
+			},
+			turn: &entity.Turn{
+				ID:        2,
+				EvalSetID: 100,
+				ItemID:    200,
+				FieldDataList: []*entity.FieldData{
+					{Name: "user_query", Key: "key1", Content: content1},
+					{Name: "context", Key: "key2", Content: omittedContent},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:       "CustomAgent - omitted content fetch error",
+			targetType: entity.EvalTargetTypeCustomAgent,
+			prepare: func() {
+				mockMetric.EXPECT().EmitTurnExecTargetResult(gomock.Any(), gomock.Any())
+				mockEvalSetItemSvc.EXPECT().GetEvaluationSetItemField(gomock.Any(), gomock.Any()).Return(
+					nil, errors.New("fetch error"))
+			},
+			turn: &entity.Turn{
+				ID:        3,
+				EvalSetID: 100,
+				ItemID:    200,
+				FieldDataList: []*entity.FieldData{
+					{Name: "context", Key: "key2", Content: omittedContent},
+				},
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			tt.prepare()
+
+			etec := &entity.ExptTurnEvalCtx{
+				ExptItemEvalCtx: &entity.ExptItemEvalCtx{
+					Event: &entity.ExptItemEvalEvent{
+						SpaceID:   1,
+						ExptID:    1,
+						ExptRunID: 1,
+						Session:   &entity.Session{UserID: "user1"},
+					},
+					EvalSetItem: &entity.EvaluationSetItem{ItemID: tt.turn.ItemID},
+					Expt: &entity.Experiment{
+						ExptType:        entity.ExptType_Offline,
+						TargetVersionID: 10,
+						Target: &entity.EvalTarget{
+							ID:                1,
+							EvalTargetType:    tt.targetType,
+							EvalTargetVersion: &entity.EvalTargetVersion{ID: 10},
+						},
+						EvalConf: &entity.EvaluationConfiguration{
+							ConnectorConf: entity.Connector{
+								TargetConf: &entity.TargetConf{
+									TargetVersionID: 10,
+									IngressConf: &entity.TargetIngressConf{
+										EvalSetAdapter: &entity.FieldAdapter{
+											FieldConfs: []*entity.FieldConf{
+												{FieldName: "user_query", FromField: "user_query"},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Turn:              tt.turn,
+				ExptTurnRunResult: &entity.ExptTurnRunResult{},
+			}
+
+			record, err := service.callTarget(context.Background(), etec, nil, 1)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, record)
 			}
 		})
 	}

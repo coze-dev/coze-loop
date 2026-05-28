@@ -29,6 +29,15 @@ enum ExptType {
     Online = 2
 }
 
+// 离线实验分析状态（与表字段 offline_expt_analysis_status 一致）
+enum OfflineExptAnalysisStatus {
+    NotStarted = 0  // 未开始
+    Processing = 1  // 进行中
+    Success = 2    // 成功
+    Failed = 3     // 失败
+    Superseded = 4 // 已被新版本/新分析取代
+}
+
 enum SourceType {
     Evaluation = 1
     AutoTask = 2
@@ -94,6 +103,8 @@ struct Experiment {
     71: optional ExptSource expt_source
 
     100: optional map<string, string> ext
+    // 离线实验分析状态
+    101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 }
 
 // 实验模板基础信息
@@ -171,6 +182,8 @@ const Frequency FrequencyThursday = "thursday"
 const Frequency FrequencyFriday = "friday"
 const Frequency FrequencySaturday = "saturday"
 const Frequency FrequencySunday = "sunday"
+const Frequency FrequencyEveryHour = "every_hour"
+const Frequency FrequencyEveryMinute = "every_minute"
 
 struct Scheduler {
     1: optional bool enabled              // 定时触发器开关，默认关闭
@@ -178,6 +191,7 @@ struct Scheduler {
     3: optional i64 trigger_at (agw.js_conv = "str")    // 触发时间（时间戳，秒。只使用时间，不使用日期）
     4: optional i64 start_time (agw.js_conv = "str")  // 生效开始时间（时间戳，秒）
     5: optional i64 end_time (agw.js_conv = "str")    // 生效结束时间（时间戳，秒）
+    6: optional i32 trigger_interval      // 触发间隔（every_minute时为分钟数，every_hour时为小时数）
 }
 
 struct ExptInfo {

@@ -653,6 +653,8 @@ func TestNewRecordEvalMode(t *testing.T) {
 	mockMetric := metricsmocks.NewMockExptMetric(ctrl)
 	mockResultSvc := svcmocks.NewMockExptResultService(ctrl)
 	mockIdgen := idgenmocks.NewMockIIDGenerator(ctrl)
+	mockEvalTarget := svcmocks.NewMockIEvalTargetService(ctrl)
+	mockEvaluatorRecord := svcmocks.NewMockEvaluatorRecordService(ctrl)
 
 	tests := []struct {
 		name    string
@@ -695,7 +697,7 @@ func TestNewRecordEvalMode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewRecordEvalMode(tt.event, mockExptItemResultRepo, mockExptTurnResultRepo, mockExptStatsRepo, mockExperimentRepo, mockMetric, mockResultSvc, mockIdgen)
+			got, err := NewRecordEvalMode(tt.event, mockExptItemResultRepo, mockExptTurnResultRepo, mockExptStatsRepo, mockExperimentRepo, mockMetric, mockResultSvc, mockIdgen, mockEvalTarget, mockEvaluatorRecord)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -848,6 +850,8 @@ func TestExptRecordEvalModeFailRetry_PreEval(t *testing.T) {
 		resultSvc:          mockResultSvc,
 		exptTurnResultRepo: mockExptTurnResultRepo,
 		idgen:              mockIdgen,
+		evalTargetService:  nil,
+		evaluatorRecordSvc: nil,
 	}
 
 	mockTurnResults := []*entity.ExptTurnResult{
@@ -1037,6 +1041,275 @@ func TestExptItemEventEvalServiceImpl_HandleEventExec(t *testing.T) {
 				assert.NoError(t, err)
 				assert.True(t, nextCalled)
 			}
+		})
+	}
+}
+
+func Test_failRetrySelectTurnRunLogRefs(t *testing.T) {
+	tests := []struct {
+		name            string
+		spaceID         int64
+		tr              *entity.ExptTurnResult
+		setupEvalTarget func(ctrl *gomock.Controller) IEvalTargetService
+		setupEvalRecord func(ctrl *gomock.Controller) EvaluatorRecordService
+		wantTargetID    int64
+		wantEvalResults *entity.EvaluatorResults
+	}{
+		{
+			name:    "tr is nil -> returns 0, nil",
+			spaceID: 1,
+			tr:      nil,
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				return svcmocks.NewMockIEvalTargetService(ctrl)
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			wantTargetID:    0,
+			wantEvalResults: nil,
+		},
+		{
+			name:    "TargetResultID > 0, evalTarget is nil -> returns 0, nil",
+			spaceID: 1,
+			tr: &entity.ExptTurnResult{
+				TargetResultID: 100,
+			},
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				return nil
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			wantTargetID:    0,
+			wantEvalResults: nil,
+		},
+		{
+			name:    "TargetResultID > 0, GetRecordByID returns error -> returns 0, nil",
+			spaceID: 1,
+			tr: &entity.ExptTurnResult{
+				TargetResultID: 100,
+			},
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				m := svcmocks.NewMockIEvalTargetService(ctrl)
+				m.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(nil, errors.New("db error"))
+				return m
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			wantTargetID:    0,
+			wantEvalResults: nil,
+		},
+		{
+			name:    "TargetResultID > 0, target record status is not Success -> returns 0, nil",
+			spaceID: 1,
+			tr: &entity.ExptTurnResult{
+				TargetResultID: 100,
+			},
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				m := svcmocks.NewMockIEvalTargetService(ctrl)
+				failStatus := entity.EvalTargetRunStatusFail
+				m.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(&entity.EvalTargetRecord{
+					Status: &failStatus,
+				}, nil)
+				return m
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			wantTargetID:    0,
+			wantEvalResults: nil,
+		},
+		{
+			name:    "TargetResultID > 0, target record status is Success, with evaluator records -> returns targetResultID and pruned results",
+			spaceID: 1,
+			tr: &entity.ExptTurnResult{
+				TargetResultID: 100,
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{
+						10: 1001,
+						20: 1002,
+					},
+				},
+			},
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				m := svcmocks.NewMockIEvalTargetService(ctrl)
+				successStatus := entity.EvalTargetRunStatusSuccess
+				m.EXPECT().GetRecordByID(gomock.Any(), int64(1), int64(100)).Return(&entity.EvalTargetRecord{
+					Status: &successStatus,
+				}, nil)
+				return m
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
+				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
+					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
+					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusFail},
+				}, nil)
+				return m
+			},
+			wantTargetID: 100,
+			wantEvalResults: &entity.EvaluatorResults{
+				EvalVerIDToResID: map[int64]int64{
+					10: 1001,
+				},
+			},
+		},
+		{
+			name:    "TargetResultID == 0, with evaluator records -> returns 0 and pruned results",
+			spaceID: 1,
+			tr: &entity.ExptTurnResult{
+				TargetResultID: 0,
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{
+						10: 1001,
+						20: 1002,
+					},
+				},
+			},
+			setupEvalTarget: func(ctrl *gomock.Controller) IEvalTargetService {
+				return svcmocks.NewMockIEvalTargetService(ctrl)
+			},
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
+				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
+					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
+					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusSuccess},
+				}, nil)
+				return m
+			},
+			wantTargetID: 0,
+			wantEvalResults: &entity.EvaluatorResults{
+				EvalVerIDToResID: map[int64]int64{
+					10: 1001,
+					20: 1002,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			evalTarget := tt.setupEvalTarget(ctrl)
+			evalRecord := tt.setupEvalRecord(ctrl)
+
+			gotTargetID, gotEvalResults := failRetrySelectTurnRunLogRefs(
+				context.Background(), tt.spaceID, tt.tr, evalTarget, evalRecord,
+			)
+			assert.Equal(t, tt.wantTargetID, gotTargetID)
+			assert.Equal(t, tt.wantEvalResults, gotEvalResults)
+		})
+	}
+}
+
+func Test_pruneSuccessfulEvaluatorRecords(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupEvalRecord func(ctrl *gomock.Controller) EvaluatorRecordService
+		tr              *entity.ExptTurnResult
+		want            *entity.EvaluatorResults
+	}{
+		{
+			name: "evalRecord is nil -> nil",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return nil
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{10: 1001},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "tr.EvaluatorResults is nil -> nil",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: nil,
+			},
+			want: nil,
+		},
+		{
+			name: "tr.EvaluatorResults.EvalVerIDToResID is empty -> nil",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				return svcmocks.NewMockEvaluatorRecordService(ctrl)
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "BatchGetEvaluatorRecord returns error -> nil",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
+				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return(nil, errors.New("batch error"))
+				return m
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{10: 1001},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "All records are non-success -> nil",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
+				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
+					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusFail},
+					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusAsyncInvoking},
+				}, nil)
+				return m
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{10: 1001, 20: 1002},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Mix of success and failed records -> returns only success ones",
+			setupEvalRecord: func(ctrl *gomock.Controller) EvaluatorRecordService {
+				m := svcmocks.NewMockEvaluatorRecordService(ctrl)
+				m.EXPECT().BatchGetEvaluatorRecord(gomock.Any(), gomock.Any(), false, false).Return([]*entity.EvaluatorRecord{
+					{ID: 1001, EvaluatorVersionID: 10, Status: entity.EvaluatorRunStatusSuccess},
+					{ID: 1002, EvaluatorVersionID: 20, Status: entity.EvaluatorRunStatusFail},
+					{ID: 1003, EvaluatorVersionID: 30, Status: entity.EvaluatorRunStatusSuccess},
+				}, nil)
+				return m
+			},
+			tr: &entity.ExptTurnResult{
+				EvaluatorResults: &entity.EvaluatorResults{
+					EvalVerIDToResID: map[int64]int64{10: 1001, 20: 1002, 30: 1003},
+				},
+			},
+			want: &entity.EvaluatorResults{
+				EvalVerIDToResID: map[int64]int64{
+					10: 1001,
+					30: 1003,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			evalRecord := tt.setupEvalRecord(ctrl)
+			got := pruneSuccessfulEvaluatorRecords(context.Background(), evalRecord, tt.tr)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

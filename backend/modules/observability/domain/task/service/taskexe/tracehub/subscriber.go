@@ -259,3 +259,64 @@ func (s *spanSubscriber) AddSpan(ctx context.Context, span *loop_span.Span) erro
 
 	return nil
 }
+
+// BatchAddSpan 批量添加 span，用于 backfill 场景提升吞吐
+func (s *spanSubscriber) BatchAddSpan(ctx context.Context, spans []*loop_span.Span) error {
+	if s.tr == nil {
+		return nil
+	}
+
+	if s.tr.RunStatus != entity.TaskRunStatusRunning {
+		logs.CtxInfo(ctx, "skip non-running task run: task_id=%d, run_id=%d, status=%s", s.t.ID, s.tr.ID, s.tr.RunStatus)
+		return nil
+	}
+
+	now := time.Now()
+	if s.tr.RunEndAt.Before(now) || s.tr.RunStartAt.After(now) {
+		return nil
+	}
+
+	// 过滤有效 span
+	validSpans := make([]*loop_span.Span, 0, len(spans))
+	for _, span := range spans {
+		if span.StartTime >= s.tr.RunStartAt.UnixMilli() {
+			validSpans = append(validSpans, span)
+		}
+	}
+	if len(validSpans) == 0 {
+		return nil
+	}
+
+	// 批量获取轨迹
+	var trajectoryMap map[string]*loop_span.Trajectory
+	if s.hasTrajectory() {
+		startAt := time.Now().Add(-90 * 24 * time.Hour).UnixMilli()
+		endAt := time.Now().UnixMilli()
+		traceIDs := make([]string, 0, len(validSpans))
+		for _, span := range validSpans {
+			traceIDs = append(traceIDs, span.TraceID)
+		}
+		var err error
+		trajectoryMap, err = s.traceService.GetTrajectories(ctx, s.t.WorkspaceID, traceIDs, startAt, endAt, s.t.GetPlatformType())
+		if err != nil {
+			logs.CtxError(ctx, "batch get trajectories failed, task_id=%d, err: %v", s.t.ID, err)
+			return err
+		}
+	}
+
+	// 构建 BatchTrigger 并调用 BatchInvoke
+	batchTrigger := &taskexe.BatchTrigger{
+		Task:          s.t,
+		Spans:         validSpans,
+		TaskRun:       s.tr,
+		TrajectoryMap: trajectoryMap,
+	}
+
+	err := s.processor.BatchInvoke(ctx, batchTrigger)
+	if err != nil {
+		logs.CtxWarn(ctx, "batch invoke processor failed, task_id=%d, span_count=%d, err: %v", s.t.ID, len(validSpans), err)
+		return err
+	}
+
+	return nil
+}

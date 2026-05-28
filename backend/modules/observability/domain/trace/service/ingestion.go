@@ -6,6 +6,7 @@ package service
 import (
 	"context"
 
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/processor"
@@ -64,12 +65,16 @@ type IngestionServiceImpl struct {
 }
 
 func (i *IngestionServiceImpl) RunSync(ctx context.Context) error {
-	return i.c.RunInOne(ctx)
+	return i.c.RunInOne(ctx, func() error {
+		return nil
+	})
 }
 
 func (i *IngestionServiceImpl) RunAsync(ctx context.Context) {
 	go func() {
-		err := i.c.Run(ctx)
+		err := i.c.Run(ctx, func() error {
+			return nil
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -80,10 +85,12 @@ func (i *IngestionServiceImpl) RunAsync(ctx context.Context) {
 func NewIngestionServiceImpl(
 	traceConfig conf.IConfigLoader,
 	collectorFactory IngestionCollectorFactory,
+	consumeMetric metrics.Metric,
 ) (IngestionService, error) {
 	c, err := collector.New(collector.Settings{
 		Factories:      collectorFactory.GetCollectorFactory,
 		ConfigProvider: collector.NewConfigProvider(traceConfig),
+		ConsumeMetric:  consumeMetric,
 	})
 	if err != nil {
 		return nil, err

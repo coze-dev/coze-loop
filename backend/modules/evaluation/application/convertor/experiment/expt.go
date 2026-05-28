@@ -340,26 +340,27 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 
 	res := &domain_expt.Experiment{
-		ID:                     gptr.Of(experiment.ID),
-		Name:                   gptr.Of(experiment.Name),
-		Desc:                   gptr.Of(experiment.Description),
-		CreatorBy:              gptr.Of(experiment.CreatedBy),
-		EvalSetVersionID:       gptr.Of(experiment.EvalSetVersionID),
-		TargetVersionID:        gptr.Of(experiment.TargetVersionID),
-		EvalSetID:              gptr.Of(experiment.EvalSetID),
-		TargetID:               gptr.Of(experiment.TargetID),
-		EvaluatorVersionIds:    evaluatorVersionIDs,
-		Status:                 gptr.Of(domain_expt.ExptStatus(experiment.Status)),
-		StatusMessage:          gptr.Of(experiment.StatusMessage),
-		ExptStats:              ToExptStatsDTO(experiment.Stats, experiment.AggregateResult),
-		TargetFieldMapping:     tm,
-		EvaluatorFieldMapping:  ems,
-		SourceType:             gptr.Of(domain_expt.SourceType(experiment.SourceType)),
-		SourceID:               gptr.Of(experiment.SourceID),
-		ExptType:               gptr.Of(domain_expt.ExptType(experiment.ExptType)),
-		MaxAliveTime:           gptr.Of(experiment.MaxAliveTime),
-		TargetRuntimeParam:     trtp,
-		EvaluatorIDVersionList: evaluatorIDVersionList,
+		ID:                        gptr.Of(experiment.ID),
+		Name:                      gptr.Of(experiment.Name),
+		Desc:                      gptr.Of(experiment.Description),
+		CreatorBy:                 gptr.Of(experiment.CreatedBy),
+		EvalSetVersionID:          gptr.Of(experiment.EvalSetVersionID),
+		TargetVersionID:           gptr.Of(experiment.TargetVersionID),
+		EvalSetID:                 gptr.Of(experiment.EvalSetID),
+		TargetID:                  gptr.Of(experiment.TargetID),
+		EvaluatorVersionIds:       evaluatorVersionIDs,
+		Status:                    gptr.Of(domain_expt.ExptStatus(experiment.Status)),
+		StatusMessage:             gptr.Of(experiment.StatusMessage),
+		OfflineExptAnalysisStatus: gptr.Of(domain_expt.OfflineExptAnalysisStatus(experiment.OfflineExptAnalysisStatus)),
+		ExptStats:                 ToExptStatsDTO(experiment.Stats, experiment.AggregateResult),
+		TargetFieldMapping:        tm,
+		EvaluatorFieldMapping:     ems,
+		SourceType:                gptr.Of(domain_expt.SourceType(experiment.SourceType)),
+		SourceID:                  gptr.Of(experiment.SourceID),
+		ExptType:                  gptr.Of(domain_expt.ExptType(experiment.ExptType)),
+		MaxAliveTime:              gptr.Of(experiment.MaxAliveTime),
+		TargetRuntimeParam:        trtp,
+		EvaluatorIDVersionList:    evaluatorIDVersionList,
 	}
 	if experiment.Visibility == entity.Visibility_Hidden {
 		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
@@ -421,7 +422,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	}
 
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
-	if experiment.ExptType != entity.ExptType_Online {
+	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
 	}
 	res.Evaluators = make([]*evaluatordto.Evaluator, 0, len(experiment.Evaluators))
@@ -486,6 +487,7 @@ func CreateEvalTargetParamDTO2DO(param *eval_target.CreateEvalTargetParam) *enti
 		Region:               param.Region,
 		Env:                  param.Env,
 		OperationInstruction: param.OperationInstruction,
+		Cluster:              param.Cluster,
 	}
 	if param.EvalTargetType != nil {
 		res.EvalTargetType = gptr.Of(entity.EvalTargetType(*param.EvalTargetType))

@@ -60,9 +60,13 @@ release/deployment/helm-chart/umbrella/Chart.lock
 CLAUDE.md
 AGENTS.md
 backend/script/errorx/.env
+backend/bin/
 .cursor/
 .specify/
 specs/
 .puml
 .trae
 openspec/
+.agents/
+.trae-cn/
+.hermes/

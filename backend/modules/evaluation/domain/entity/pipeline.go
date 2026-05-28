@@ -21,11 +21,12 @@ type Pipeline struct {
 
 // Scheduler 定时触发器配置，参考 pipelinet.Scheduler 定义
 type Scheduler struct {
-	Enabled   *bool   `json:"enabled,omitempty"`
-	Frequency *string `json:"frequency,omitempty"`
-	TriggerAt *int64  `json:"trigger_at,omitempty"`
-	StartTime *int64  `json:"startTime,omitempty"`
-	EndTime   *int64  `json:"endTime,omitempty"`
+	Enabled         *bool   `json:"enabled,omitempty"`
+	Frequency       *string `json:"frequency,omitempty"`
+	TriggerAt       *int64  `json:"trigger_at,omitempty"`
+	StartTime       *int64  `json:"startTime,omitempty"`
+	EndTime         *int64  `json:"endTime,omitempty"`
+	TriggerInterval *int32  `json:"triggerInterval,omitempty"`
 }
 
 // RefType 引用类型

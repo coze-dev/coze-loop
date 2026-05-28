@@ -46,6 +46,10 @@ struct EvalTargetContent {
     105: optional CustomRPCServer custom_rpc_server
     // EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息
     106: optional WebAgent web_agent
+    // EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息
+    107: optional A2AAgent a2a_agent
+    // EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息
+    108: optional CustomAgent custom_agent
 }
 
 struct WebAgent {
@@ -78,13 +82,15 @@ enum EvalTargetType {
     VolcengineAgentAgentkit = 7 // 火山智能体Agentkit
     WebAgent = 8 // Web智能体
 
+    A2AAgent = 9 // A2A协议智能体
+    CustomAgent = 10 // 自定义智能体 for内场,目前支持长链接方式访问
+
     CozeBotOnline = 11 // CozeBot在线(评测过程中不执行对象，仅用于展示对象)
     CozeLoopPromptOnline = 12 // Prompt在线(评测过程中不执行对象，仅用于展示对象)
     CozeWorkflowOnline = 13 // CozeWorkflow在线(评测过程中不执行对象，仅用于展示对象)
     VolcengineAgentOnline = 14 // 火山智能体在线(评测过程中不执行对象，仅用于展示对象)
     CustomRPCServerOnline = 15 // 自定义RPC服务在线(评测过程中不执行对象，仅用于展示对象)
     VolcengineAgentAgentkitOnline = 16 // 火山智能体Agentkit在线(评测过程中不执行对象，仅用于展示对象)
-
 }
 
 // Agent协议类型
@@ -226,6 +232,54 @@ enum ModelPlatform {
     Unknown = 0;
     GPTOpenAPI = 1;
     MAAS = 2;
+}
+
+struct A2AAgent {
+    1: optional i64 id    // 应用ID
+    2: optional string name    // DTO使用，不存数据库
+    3: optional string description // DTO使用，不存数据库
+    4: optional string server_name
+    5: optional string url
+
+    20: optional Region exec_region // 执行区域
+    21: optional string exec_env // 执行环境
+}
+
+struct CustomAgent {
+    1: optional i64 id    // 应用ID
+    2: optional string name    // DTO使用，不存数据库
+    3: optional string description // DTO使用，不存数据库
+
+    20: optional Region exec_region // 执行区域
+    21: optional string exec_env // 执行环境
+    22: optional string cluster // 执行集群
+    23: optional i64 timeout_ms
+    24: optional i64 first_token_timeout_ms
+    25: optional AgentConnection AgentConnection
+}
+
+struct AgentConnection {
+    1: optional FrontierInfo frontier_info
+    3: optional string ip
+    4: optional string region
+    5: optional string idc
+    6: optional string sdk_version
+    7: optional string protocol_version
+    8: optional string psm
+    30: optional AgentImpl agent_impl
+}
+
+struct FrontierInfo {
+    1: optional i64 app_id  (api.js_conv='true', go.tag='json:"app_id"') // frontier应用ID
+    2: optional i64 product_id (api.js_conv='true', go.tag='json:"product_id"') // frontier产品ID
+    3: optional i64 user_id  (api.js_conv='true', go.tag='json:"user_id"') // frontier连接标识参数，随机
+    4: optional i64 device_id (api.js_conv='true', go.tag='json:"device_id"') // frontier连接标识参数，随机
+}
+
+struct AgentImpl {
+    1: optional string language     // go/python
+    2: optional string framework    // Eino/Langchain
+    3: optional string kind         // 用户agent的具体实体类型标识
 }
 
 struct EvalTargetRecord  {

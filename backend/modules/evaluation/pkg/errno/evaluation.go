@@ -371,6 +371,10 @@ const (
 	AgentEvaluatorRunFailedCode              = 601205068 // the agent evaluator run failed, check if the configuration is correct
 	agentEvaluatorRunFailedMessage           = "agent evaluator run failed"
 	agentEvaluatorRunFailedNoAffectStability = true
+
+	AsyncEvaluatorZombieTimeoutCode              = 601205069 // the async evaluator was terminated because the experiment item exceeded the zombie timeout before the result was reported
+	asyncEvaluatorZombieTimeoutMessage           = "async evaluator terminated: experiment item exceeded zombie timeout"
+	asyncEvaluatorZombieTimeoutNoAffectStability = true
 )
 
 func init() {
@@ -919,6 +923,12 @@ func init() {
 		AgentEvaluatorRunFailedCode,
 		agentEvaluatorRunFailedMessage,
 		code.WithAffectStability(!agentEvaluatorRunFailedNoAffectStability),
+	)
+
+	code.Register(
+		AsyncEvaluatorZombieTimeoutCode,
+		asyncEvaluatorZombieTimeoutMessage,
+		code.WithAffectStability(!asyncEvaluatorZombieTimeoutNoAffectStability),
 	)
 
 }

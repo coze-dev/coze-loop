@@ -28,6 +28,16 @@ func (t *Traces) SpansCount() int {
 	return ret
 }
 
+func (t *Traces) SpansCountByPSM() map[string]int {
+	result := make(map[string]int)
+	for _, trace := range t.TraceData {
+		for _, span := range trace.SpanList {
+			result[span.PSM]++
+		}
+	}
+	return result
+}
+
 type BaseConsumer interface{}
 
 //go:generate mockgen -destination=mocks/consumer.go -package=mocks . Consumer

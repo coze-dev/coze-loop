@@ -15,6 +15,7 @@ import (
 	"gonum.org/v1/gonum/graph/simple"
 	"gonum.org/v1/gonum/graph/topo"
 
+	"github.com/coze-dev/coze-loop/backend/infra/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/component"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/consumer"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/collector/exporter"
@@ -78,6 +79,7 @@ type processorNode struct {
 	nodeID
 	componentID component.ID
 	component.Component
+	overrideConsumer consumer.Consumer
 }
 
 func newProcessorNode(procID component.ID) *processorNode {
@@ -100,6 +102,9 @@ func (n *processorNode) buildComponent(ctx context.Context, builder *processor.B
 }
 
 func (n *processorNode) getConsumer() consumer.BaseConsumer {
+	if n.overrideConsumer != nil {
+		return n.overrideConsumer
+	}
 	return n.Component.(consumer.BaseConsumer)
 }
 
@@ -107,6 +112,7 @@ type exporterNode struct {
 	nodeID
 	componentID component.ID
 	component.Component
+	overrideConsumer consumer.Consumer
 }
 
 func newExporterNode(exprID component.ID) *exporterNode {
@@ -129,6 +135,9 @@ func (n *exporterNode) buildComponent(ctx context.Context, builder *exporter.Bui
 }
 
 func (n *exporterNode) getConsumer() consumer.BaseConsumer {
+	if n.overrideConsumer != nil {
+		return n.overrideConsumer
+	}
 	return n.Component.(consumer.BaseConsumer)
 }
 
@@ -166,6 +175,7 @@ type pipelineNodes struct {
 type Graph struct {
 	componentGraph *simple.DirectedGraph
 	pipelineNodes  *pipelineNodes
+	consumeMetric  metrics.Metric
 }
 
 func BuildGraph(ctx context.Context, set Settings) (*Graph, error) {
@@ -176,6 +186,7 @@ func BuildGraph(ctx context.Context, set Settings) (*Graph, error) {
 			processors: make([]*processorNode, 0),
 			exporters:  make(map[int64]*exporterNode),
 		},
+		consumeMetric: set.ConsumeMetric,
 	}
 	if err := g.createNodes(set); err != nil {
 		return nil, err
@@ -254,11 +265,31 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 		node := nodes[i]
 		switch n := node.(type) {
 		case *receiverNode:
-			err = n.buildComponent(ctx, set.ReceiverBuilder, g.nextConsumers(n.ID())[0])
+			next := g.nextConsumers(n.ID())[0]
+			g.wrapNextWithStopwatch(&next)
+			wrappedNext := g.wrapAsObserveConsumer(next, receiverSeed+"/"+n.componentID.String(), true)
+			wrappedNext = g.wrapWithInjectConsumer(wrappedNext)
+			err = n.buildComponent(ctx, set.ReceiverBuilder, wrappedNext)
 		case *processorNode:
-			err = n.buildComponent(ctx, set.ProcessorBuilder, g.nextConsumers(n.ID())[0])
+			next := g.nextConsumers(n.ID())[0]
+			g.wrapNextWithStopwatch(&next)
+			err = n.buildComponent(ctx, set.ProcessorBuilder, next)
+			if err == nil {
+				n.overrideConsumer = g.wrapSelfConsumer(
+					n.Component.(consumer.Consumer),
+					processorSeed+"/"+n.componentID.String(),
+					true,
+				)
+			}
 		case *exporterNode:
 			err = n.buildComponent(ctx, set.ExporterBuilder)
+			if err == nil {
+				n.overrideConsumer = g.wrapSelfConsumer(
+					n.Component.(consumer.Consumer),
+					exporterSeed+"/"+n.componentID.String(),
+					false,
+				)
+			}
 		case *fanOutNode:
 			err = n.buildComponent(ctx, g.nextConsumers(n.ID()))
 		}
@@ -267,6 +298,43 @@ func (g *Graph) buildComponents(ctx context.Context, set Settings) error {
 		}
 	}
 	return nil
+}
+
+func (g *Graph) wrapNextWithStopwatch(next *consumer.BaseConsumer) {
+	if g.consumeMetric == nil {
+		return
+	}
+	c, ok := (*next).(consumer.Consumer)
+	if !ok {
+		return
+	}
+	*next = consumer.NewStopwatchConsumer(c)
+}
+
+func (g *Graph) wrapSelfConsumer(c consumer.Consumer, name string, trackSelf bool) consumer.Consumer {
+	if g.consumeMetric == nil {
+		return nil
+	}
+	return consumer.NewObserveConsumer(name, c, trackSelf, g.consumeMetric)
+}
+
+func (g *Graph) wrapAsObserveConsumer(base consumer.BaseConsumer, name string, trackSelf bool) consumer.BaseConsumer {
+	if g.consumeMetric == nil {
+		return base
+	}
+	c, ok := base.(consumer.Consumer)
+	if !ok {
+		return base
+	}
+	return consumer.NewObserveConsumer(name, c, trackSelf, g.consumeMetric)
+}
+
+func (g *Graph) wrapWithInjectConsumer(base consumer.BaseConsumer) consumer.BaseConsumer {
+	c, ok := base.(consumer.Consumer)
+	if !ok {
+		return base
+	}
+	return consumer.NewInjectConsumer(c)
 }
 
 func (g *Graph) nextConsumers(nodeID int64) []consumer.BaseConsumer {

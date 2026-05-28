@@ -20,6 +20,14 @@ typedef string ExperimentType(ts.enum="true")
 const ExperimentType ExperimentType_Offline = "offline"
 const ExperimentType ExperimentType_Online = "online"
 
+// 离线实验分析状态（OpenAPI 字符串枚举，与 domain OfflineExptAnalysisStatus 对应）
+typedef string OfflineExptAnalysisStatus(ts.enum="true")
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_NotStarted = "not_started"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Processing = "processing"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Success = "success"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Failed = "failed"
+const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Superseded = "superseded"
+
 // 聚合器类型
 typedef string AggregatorType(ts.enum="true")
 const AggregatorType AggregatorType_Average = "average"
@@ -48,6 +56,10 @@ const TurnRunState TurnRunState_Success = "success"
 const TurnRunState TurnRunState_Fail = "fail"
 const TurnRunState TurnRunState_Terminal = "terminal"
 
+typedef string ExptRetryMode(ts.enum="true")
+const ExptRetryMode ExptRetryMode_RetryAll = "retry_all"
+const ExptRetryMode ExptRetryMode_RetryFailure = "retry_failure"
+const ExptRetryMode ExptRetryMode_RetryTargetItems = "retry_target_items"
 
 // 字段映射
 struct FieldMapping {
@@ -138,17 +150,25 @@ struct Experiment {
     12: optional i64 ended_at    (api.js_conv='true', go.tag='json:"ended_at"') // ISO 8601格式
     13: optional i32 item_concur_num // 评测集并发数
     14: optional common.RuntimeParam target_runtime_param   // 运行时参数
+    15: optional i32 item_retry_num // 单条数据失败重试次数
 
     // 三元组信息
     31: optional TargetFieldMapping target_field_mapping
     32: optional list<EvaluatorFieldMapping> evaluator_field_mapping
     33: optional eval_set.EvaluationSet eval_set
     34: optional eval_target.EvalTarget eval_target
+    // 评估器 id + version 关联（与 evaluator_field_mapping 共同使用，兼容老逻辑）
+    35: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_list (go.tag = 'json:"evaluator_id_version_list"')
 
     // 统计信息
     50: optional ExperimentStatistics expt_stats
 
     60: optional bool enable_extract_trajectory
+    // 实验模板基础信息
+    62: optional ExptTemplateMeta expt_template_meta
+
+    // 离线实验分析状态
+    61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
     100: optional common.BaseInfo base_info
 }
@@ -398,4 +418,56 @@ struct ExperimentFilterOption {
 struct ExperimentResultFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
+}
+
+// ===============================
+// 实验报告导出相关结构（对应 domain/expt ExptResultExportType / ExptResultExportRecord）
+// ===============================
+
+// 实验报告导出类型
+typedef string ExptResultExportType(ts.enum="true")
+const ExptResultExportType ExptResultExportType_CSV = "CSV"
+
+// CSV 导出任务状态
+typedef string CSVExportStatus(ts.enum="true")
+const CSVExportStatus CSVExportStatus_Unknown = "Unknown"
+const CSVExportStatus CSVExportStatus_Running = "Running"
+const CSVExportStatus CSVExportStatus_Success = "Success"
+const CSVExportStatus CSVExportStatus_Failed = "Failed"
+
+// 运行错误（对应 domain/expt RunError）
+struct RunError {
+    1: optional i64 code (api.js_conv='true', go.tag='json:"code"')
+    2: optional string message
+    3: optional string detail
+}
+
+// 实验报告导出列规格（对应 domain ExptResultExportColumnSpec）
+struct ExptResultExportColumnSpec {
+    // 评测集字段：ColumnEvalSetField.Key
+    1: optional list<string> eval_set_fields (go.tag = 'json:"eval_set_fields"')
+    // 评测对象输出（非性能指标）：ColumnEvalTarget.Name，如 actual_output、trajectory、自定义输出名
+    2: optional list<string> eval_target_outputs (go.tag = 'json:"eval_target_outputs"')
+    // 性能指标：ColumnEvalTarget.Name（如 eval_target_total_latency、eval_target_input_tokens 等）
+    3: optional list<string> metrics (go.tag = 'json:"metrics"')
+    // 评估器版本 ID 列表；每个 ID 导出该评估器的 score 与 reason 列
+    4: optional list<i64> evaluator_version_ids (api.js_conv = 'true', go.tag = 'json:"evaluator_version_ids"')
+    // 是否导出加权分数
+    5: optional bool weighted_score (go.tag = 'json:"weighted_score"')
+    // 人工标注：每项为标注 TagKeyID，与 ColumnAnnotation.TagKeyID 对应，导出该标注列
+    6: optional list<i64> tag_key_ids (api.js_conv = 'true', go.tag = 'json:"tag_key_ids"')
+}
+
+// 实验报告导出记录（对应 domain/expt ExptResultExportRecord）
+struct ExptResultExportRecord {
+    1: optional i64 export_id (api.js_conv='true', go.tag='json:"export_id"')
+    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    3: optional i64 expt_id (api.js_conv='true', go.tag='json:"expt_id"')
+    4: optional CSVExportStatus csv_export_status
+    5: optional common.BaseInfo base_info
+    6: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
+    7: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
+    8: optional bool expired
+    9: optional RunError error
+    10: optional string url
 }

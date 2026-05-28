@@ -132,6 +132,22 @@ func (mr *MockEvaluatorSourceServiceMockRecorder) Run(ctx, evaluator, input, eva
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockEvaluatorSourceService)(nil).Run), ctx, evaluator, input, evaluatorRunConf, exptSpaceID, disableTracing)
 }
 
+// ShouldIntercept mocks base method.
+func (m *MockEvaluatorSourceService) ShouldIntercept(ctx context.Context, evaluator *entity.Evaluator, input *entity.EvaluatorInputData) (*entity.EvaluatorOutputData, entity.EvaluatorRunStatus, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ShouldIntercept", ctx, evaluator, input)
+	ret0, _ := ret[0].(*entity.EvaluatorOutputData)
+	ret1, _ := ret[1].(entity.EvaluatorRunStatus)
+	ret2, _ := ret[2].(bool)
+	return ret0, ret1, ret2
+}
+
+// ShouldIntercept indicates an expected call of ShouldIntercept.
+func (mr *MockEvaluatorSourceServiceMockRecorder) ShouldIntercept(ctx, evaluator, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldIntercept", reflect.TypeOf((*MockEvaluatorSourceService)(nil).ShouldIntercept), ctx, evaluator, input)
+}
+
 // Validate mocks base method.
 func (m *MockEvaluatorSourceService) Validate(ctx context.Context, evaluator *entity.Evaluator) error {
 	m.ctrl.T.Helper()

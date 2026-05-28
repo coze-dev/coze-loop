@@ -445,3 +445,48 @@ func (mr *MockITraceApplicationMockRecorder) UpsertTrajectoryConfig(ctx, req any
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertTrajectoryConfig", reflect.TypeOf((*MockITraceApplication)(nil).UpsertTrajectoryConfig), ctx, req)
 }
+
+// UpsertColumnExtractConfig mocks base method.
+func (m *MockITraceApplication) UpsertColumnExtractConfig(ctx context.Context, req *trace.UpsertColumnExtractConfigRequest) (*trace.UpsertColumnExtractConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertColumnExtractConfig", ctx, req)
+	ret0, _ := ret[0].(*trace.UpsertColumnExtractConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpsertColumnExtractConfig indicates an expected call of UpsertColumnExtractConfig.
+func (mr *MockITraceApplicationMockRecorder) UpsertColumnExtractConfig(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertColumnExtractConfig", reflect.TypeOf((*MockITraceApplication)(nil).UpsertColumnExtractConfig), ctx, req)
+}
+
+// GetColumnExtractConfig mocks base method.
+func (m *MockITraceApplication) GetColumnExtractConfig(ctx context.Context, req *trace.GetColumnExtractConfigRequest) (*trace.GetColumnExtractConfigResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetColumnExtractConfig", ctx, req)
+	ret0, _ := ret[0].(*trace.GetColumnExtractConfigResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetColumnExtractConfig indicates an expected call of GetColumnExtractConfig.
+func (mr *MockITraceApplicationMockRecorder) GetColumnExtractConfig(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetColumnExtractConfig", reflect.TypeOf((*MockITraceApplication)(nil).GetColumnExtractConfig), ctx, req)
+}
+
+// GetAgentMetadata mocks base method.
+func (m *MockITraceApplication) GetAgentMetadata(ctx context.Context, req *trace.GetAgentMetadataRequest) (*trace.GetAgentMetadataResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAgentMetadata", ctx, req)
+	ret0, _ := ret[0].(*trace.GetAgentMetadataResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAgentMetadata indicates an expected call of GetAgentMetadata.
+func (mr *MockITraceApplicationMockRecorder) GetAgentMetadata(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAgentMetadata", reflect.TypeOf((*MockITraceApplication)(nil).GetAgentMetadata), ctx, req)
+}
