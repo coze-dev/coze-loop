@@ -15,6 +15,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/span"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/trace"
 	trace0 "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/trace"
+	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/trajectory"
 	"strings"
 )
 
@@ -10285,6 +10286,837 @@ func (p *ListTracesData) Field1DeepEqual(src []*trace.Trace) bool {
 	return true
 }
 
+type ListTrajectoryOApiRequest struct {
+	WorkspaceID int64    `thrift:"workspace_id,1,required" frugal:"1,required,i64" json:"workspace_id" form:"workspace_id,required" `
+	TraceIds    []string `thrift:"trace_ids,2,required" frugal:"2,required,list<string>" form:"trace_ids,required" json:"trace_ids,required"`
+	// ms
+	StartTime    *int64               `thrift:"start_time,3,optional" frugal:"3,optional,i64" json:"start_time" form:"start_time" `
+	PlatformType *common.PlatformType `thrift:"platform_type,4,optional" frugal:"4,optional,string" form:"platform_type" json:"platform_type,omitempty"`
+	Extra        *extra.Extra         `thrift:"extra,254,optional" frugal:"254,optional,extra.Extra" form:"extra" json:"extra,omitempty" query:"extra"`
+	Base         *base.Base           `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+}
+
+func NewListTrajectoryOApiRequest() *ListTrajectoryOApiRequest {
+	return &ListTrajectoryOApiRequest{}
+}
+
+func (p *ListTrajectoryOApiRequest) InitDefault() {
+}
+
+func (p *ListTrajectoryOApiRequest) GetWorkspaceID() (v int64) {
+	if p != nil {
+		return p.WorkspaceID
+	}
+	return
+}
+
+func (p *ListTrajectoryOApiRequest) GetTraceIds() (v []string) {
+	if p != nil {
+		return p.TraceIds
+	}
+	return
+}
+
+var ListTrajectoryOApiRequest_StartTime_DEFAULT int64
+
+func (p *ListTrajectoryOApiRequest) GetStartTime() (v int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetStartTime() {
+		return ListTrajectoryOApiRequest_StartTime_DEFAULT
+	}
+	return *p.StartTime
+}
+
+var ListTrajectoryOApiRequest_PlatformType_DEFAULT common.PlatformType
+
+func (p *ListTrajectoryOApiRequest) GetPlatformType() (v common.PlatformType) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetPlatformType() {
+		return ListTrajectoryOApiRequest_PlatformType_DEFAULT
+	}
+	return *p.PlatformType
+}
+
+var ListTrajectoryOApiRequest_Extra_DEFAULT *extra.Extra
+
+func (p *ListTrajectoryOApiRequest) GetExtra() (v *extra.Extra) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetExtra() {
+		return ListTrajectoryOApiRequest_Extra_DEFAULT
+	}
+	return p.Extra
+}
+
+var ListTrajectoryOApiRequest_Base_DEFAULT *base.Base
+
+func (p *ListTrajectoryOApiRequest) GetBase() (v *base.Base) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBase() {
+		return ListTrajectoryOApiRequest_Base_DEFAULT
+	}
+	return p.Base
+}
+func (p *ListTrajectoryOApiRequest) SetWorkspaceID(val int64) {
+	p.WorkspaceID = val
+}
+func (p *ListTrajectoryOApiRequest) SetTraceIds(val []string) {
+	p.TraceIds = val
+}
+func (p *ListTrajectoryOApiRequest) SetStartTime(val *int64) {
+	p.StartTime = val
+}
+func (p *ListTrajectoryOApiRequest) SetPlatformType(val *common.PlatformType) {
+	p.PlatformType = val
+}
+func (p *ListTrajectoryOApiRequest) SetExtra(val *extra.Extra) {
+	p.Extra = val
+}
+func (p *ListTrajectoryOApiRequest) SetBase(val *base.Base) {
+	p.Base = val
+}
+
+var fieldIDToName_ListTrajectoryOApiRequest = map[int16]string{
+	1:   "workspace_id",
+	2:   "trace_ids",
+	3:   "start_time",
+	4:   "platform_type",
+	254: "extra",
+	255: "Base",
+}
+
+func (p *ListTrajectoryOApiRequest) IsSetStartTime() bool {
+	return p.StartTime != nil
+}
+
+func (p *ListTrajectoryOApiRequest) IsSetPlatformType() bool {
+	return p.PlatformType != nil
+}
+
+func (p *ListTrajectoryOApiRequest) IsSetExtra() bool {
+	return p.Extra != nil
+}
+
+func (p *ListTrajectoryOApiRequest) IsSetBase() bool {
+	return p.Base != nil
+}
+
+func (p *ListTrajectoryOApiRequest) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	var issetWorkspaceID bool = false
+	var issetTraceIds bool = false
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetWorkspaceID = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField2(iprot); err != nil {
+					goto ReadFieldError
+				}
+				issetTraceIds = true
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 3:
+			if fieldTypeId == thrift.I64 {
+				if err = p.ReadField3(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				if err = p.ReadField4(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 254:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField254(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	if !issetWorkspaceID {
+		fieldId = 1
+		goto RequiredFieldNotSetError
+	}
+
+	if !issetTraceIds {
+		fieldId = 2
+		goto RequiredFieldNotSetError
+	}
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTrajectoryOApiRequest[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+RequiredFieldNotSetError:
+	return thrift.NewTProtocolExceptionWithType(thrift.INVALID_DATA, fmt.Errorf("required field %s is not set", fieldIDToName_ListTrajectoryOApiRequest[fieldId]))
+}
+
+func (p *ListTrajectoryOApiRequest) ReadField1(iprot thrift.TProtocol) error {
+
+	var _field int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = v
+	}
+	p.WorkspaceID = _field
+	return nil
+}
+func (p *ListTrajectoryOApiRequest) ReadField2(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem string
+		if v, err := iprot.ReadString(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.TraceIds = _field
+	return nil
+}
+func (p *ListTrajectoryOApiRequest) ReadField3(iprot thrift.TProtocol) error {
+
+	var _field *int64
+	if v, err := iprot.ReadI64(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.StartTime = _field
+	return nil
+}
+func (p *ListTrajectoryOApiRequest) ReadField4(iprot thrift.TProtocol) error {
+
+	var _field *common.PlatformType
+	if v, err := iprot.ReadString(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.PlatformType = _field
+	return nil
+}
+func (p *ListTrajectoryOApiRequest) ReadField254(iprot thrift.TProtocol) error {
+	_field := extra.NewExtra()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Extra = _field
+	return nil
+}
+func (p *ListTrajectoryOApiRequest) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBase()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Base = _field
+	return nil
+}
+
+func (p *ListTrajectoryOApiRequest) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListTrajectoryOApiRequest"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField2(oprot); err != nil {
+			fieldId = 2
+			goto WriteFieldError
+		}
+		if err = p.writeField3(oprot); err != nil {
+			fieldId = 3
+			goto WriteFieldError
+		}
+		if err = p.writeField4(oprot); err != nil {
+			fieldId = 4
+			goto WriteFieldError
+		}
+		if err = p.writeField254(oprot); err != nil {
+			fieldId = 254
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListTrajectoryOApiRequest) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("workspace_id", thrift.I64, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteI64(p.WorkspaceID); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiRequest) writeField2(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("trace_ids", thrift.LIST, 2); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := oprot.WriteListBegin(thrift.STRING, len(p.TraceIds)); err != nil {
+		return err
+	}
+	for _, v := range p.TraceIds {
+		if err := oprot.WriteString(v); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteListEnd(); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiRequest) writeField3(oprot thrift.TProtocol) (err error) {
+	if p.IsSetStartTime() {
+		if err = oprot.WriteFieldBegin("start_time", thrift.I64, 3); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI64(*p.StartTime); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiRequest) writeField4(oprot thrift.TProtocol) (err error) {
+	if p.IsSetPlatformType() {
+		if err = oprot.WriteFieldBegin("platform_type", thrift.STRING, 4); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteString(*p.PlatformType); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 4 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiRequest) writeField254(oprot thrift.TProtocol) (err error) {
+	if p.IsSetExtra() {
+		if err = oprot.WriteFieldBegin("extra", thrift.STRUCT, 254); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Extra.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 254 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiRequest) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBase() {
+		if err = oprot.WriteFieldBegin("Base", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Base.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListTrajectoryOApiRequest) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTrajectoryOApiRequest(%+v)", *p)
+
+}
+
+func (p *ListTrajectoryOApiRequest) DeepEqual(ano *ListTrajectoryOApiRequest) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.WorkspaceID) {
+		return false
+	}
+	if !p.Field2DeepEqual(ano.TraceIds) {
+		return false
+	}
+	if !p.Field3DeepEqual(ano.StartTime) {
+		return false
+	}
+	if !p.Field4DeepEqual(ano.PlatformType) {
+		return false
+	}
+	if !p.Field254DeepEqual(ano.Extra) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.Base) {
+		return false
+	}
+	return true
+}
+
+func (p *ListTrajectoryOApiRequest) Field1DeepEqual(src int64) bool {
+
+	if p.WorkspaceID != src {
+		return false
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field2DeepEqual(src []string) bool {
+
+	if len(p.TraceIds) != len(src) {
+		return false
+	}
+	for i, v := range p.TraceIds {
+		_src := src[i]
+		if strings.Compare(v, _src) != 0 {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field3DeepEqual(src *int64) bool {
+
+	if p.StartTime == src {
+		return true
+	} else if p.StartTime == nil || src == nil {
+		return false
+	}
+	if *p.StartTime != *src {
+		return false
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field4DeepEqual(src *common.PlatformType) bool {
+
+	if p.PlatformType == src {
+		return true
+	} else if p.PlatformType == nil || src == nil {
+		return false
+	}
+	if strings.Compare(*p.PlatformType, *src) != 0 {
+		return false
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field254DeepEqual(src *extra.Extra) bool {
+
+	if !p.Extra.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *ListTrajectoryOApiRequest) Field255DeepEqual(src *base.Base) bool {
+
+	if !p.Base.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type ListTrajectoryOApiResponse struct {
+	Trajectories []*trajectory.Trajectory `thrift:"trajectories,1,optional" frugal:"1,optional,list<trajectory.Trajectory>" form:"trajectories" json:"trajectories,omitempty" query:"trajectories"`
+	BaseResp     *base.BaseResp           `thrift:"BaseResp,255,optional" frugal:"255,optional,base.BaseResp" form:"BaseResp" json:"BaseResp,omitempty" query:"BaseResp"`
+}
+
+func NewListTrajectoryOApiResponse() *ListTrajectoryOApiResponse {
+	return &ListTrajectoryOApiResponse{}
+}
+
+func (p *ListTrajectoryOApiResponse) InitDefault() {
+}
+
+var ListTrajectoryOApiResponse_Trajectories_DEFAULT []*trajectory.Trajectory
+
+func (p *ListTrajectoryOApiResponse) GetTrajectories() (v []*trajectory.Trajectory) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTrajectories() {
+		return ListTrajectoryOApiResponse_Trajectories_DEFAULT
+	}
+	return p.Trajectories
+}
+
+var ListTrajectoryOApiResponse_BaseResp_DEFAULT *base.BaseResp
+
+func (p *ListTrajectoryOApiResponse) GetBaseResp() (v *base.BaseResp) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetBaseResp() {
+		return ListTrajectoryOApiResponse_BaseResp_DEFAULT
+	}
+	return p.BaseResp
+}
+func (p *ListTrajectoryOApiResponse) SetTrajectories(val []*trajectory.Trajectory) {
+	p.Trajectories = val
+}
+func (p *ListTrajectoryOApiResponse) SetBaseResp(val *base.BaseResp) {
+	p.BaseResp = val
+}
+
+var fieldIDToName_ListTrajectoryOApiResponse = map[int16]string{
+	1:   "trajectories",
+	255: "BaseResp",
+}
+
+func (p *ListTrajectoryOApiResponse) IsSetTrajectories() bool {
+	return p.Trajectories != nil
+}
+
+func (p *ListTrajectoryOApiResponse) IsSetBaseResp() bool {
+	return p.BaseResp != nil
+}
+
+func (p *ListTrajectoryOApiResponse) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 255:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField255(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ListTrajectoryOApiResponse[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *ListTrajectoryOApiResponse) ReadField1(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]*trajectory.Trajectory, 0, size)
+	values := make([]trajectory.Trajectory, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+
+		if err := _elem.Read(iprot); err != nil {
+			return err
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.Trajectories = _field
+	return nil
+}
+func (p *ListTrajectoryOApiResponse) ReadField255(iprot thrift.TProtocol) error {
+	_field := base.NewBaseResp()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.BaseResp = _field
+	return nil
+}
+
+func (p *ListTrajectoryOApiResponse) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListTrajectoryOApiResponse"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+		if err = p.writeField255(oprot); err != nil {
+			fieldId = 255
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *ListTrajectoryOApiResponse) writeField1(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTrajectories() {
+		if err = oprot.WriteFieldBegin("trajectories", thrift.LIST, 1); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.STRUCT, len(p.Trajectories)); err != nil {
+			return err
+		}
+		for _, v := range p.Trajectories {
+			if err := v.Write(oprot); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+func (p *ListTrajectoryOApiResponse) writeField255(oprot thrift.TProtocol) (err error) {
+	if p.IsSetBaseResp() {
+		if err = oprot.WriteFieldBegin("BaseResp", thrift.STRUCT, 255); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.BaseResp.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 255 end error: ", p), err)
+}
+
+func (p *ListTrajectoryOApiResponse) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ListTrajectoryOApiResponse(%+v)", *p)
+
+}
+
+func (p *ListTrajectoryOApiResponse) DeepEqual(ano *ListTrajectoryOApiResponse) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Trajectories) {
+		return false
+	}
+	if !p.Field255DeepEqual(ano.BaseResp) {
+		return false
+	}
+	return true
+}
+
+func (p *ListTrajectoryOApiResponse) Field1DeepEqual(src []*trajectory.Trajectory) bool {
+
+	if len(p.Trajectories) != len(src) {
+		return false
+	}
+	for i, v := range p.Trajectories {
+		_src := src[i]
+		if !v.DeepEqual(_src) {
+			return false
+		}
+	}
+	return true
+}
+func (p *ListTrajectoryOApiResponse) Field255DeepEqual(src *base.BaseResp) bool {
+
+	if !p.BaseResp.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
 type OpenAPIService interface {
 	IngestTraces(ctx context.Context, req *IngestTracesRequest) (r *IngestTracesResponse, err error)
 
@@ -10299,6 +11131,8 @@ type OpenAPIService interface {
 	ListPreSpanOApi(ctx context.Context, req *ListPreSpanOApiRequest) (r *ListPreSpanOApiResponse, err error)
 
 	ListTracesOApi(ctx context.Context, req *ListTracesOApiRequest) (r *ListTracesOApiResponse, err error)
+
+	ListTrajectoryOApi(ctx context.Context, req *ListTrajectoryOApiRequest) (r *ListTrajectoryOApiResponse, err error)
 
 	CreateAnnotation(ctx context.Context, req *CreateAnnotationRequest) (r *CreateAnnotationResponse, err error)
 
@@ -10394,6 +11228,15 @@ func (p *OpenAPIServiceClient) ListTracesOApi(ctx context.Context, req *ListTrac
 	}
 	return _result.GetSuccess(), nil
 }
+func (p *OpenAPIServiceClient) ListTrajectoryOApi(ctx context.Context, req *ListTrajectoryOApiRequest) (r *ListTrajectoryOApiResponse, err error) {
+	var _args OpenAPIServiceListTrajectoryOApiArgs
+	_args.Req = req
+	var _result OpenAPIServiceListTrajectoryOApiResult
+	if err = p.Client_().Call(ctx, "ListTrajectoryOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
 func (p *OpenAPIServiceClient) CreateAnnotation(ctx context.Context, req *CreateAnnotationRequest) (r *CreateAnnotationResponse, err error) {
 	var _args OpenAPIServiceCreateAnnotationArgs
 	_args.Req = req
@@ -10440,6 +11283,7 @@ func NewOpenAPIServiceProcessor(handler OpenAPIService) *OpenAPIServiceProcessor
 	self.AddToProcessorMap("ListSpansOApi", &openAPIServiceProcessorListSpansOApi{handler: handler})
 	self.AddToProcessorMap("ListPreSpanOApi", &openAPIServiceProcessorListPreSpanOApi{handler: handler})
 	self.AddToProcessorMap("ListTracesOApi", &openAPIServiceProcessorListTracesOApi{handler: handler})
+	self.AddToProcessorMap("ListTrajectoryOApi", &openAPIServiceProcessorListTrajectoryOApi{handler: handler})
 	self.AddToProcessorMap("CreateAnnotation", &openAPIServiceProcessorCreateAnnotation{handler: handler})
 	self.AddToProcessorMap("DeleteAnnotation", &openAPIServiceProcessorDeleteAnnotation{handler: handler})
 	return self
@@ -10781,6 +11625,54 @@ func (p *openAPIServiceProcessorListTracesOApi) Process(ctx context.Context, seq
 		result.Success = retval
 	}
 	if err2 = oprot.WriteMessageBegin("ListTracesOApi", thrift.REPLY, seqId); err2 != nil {
+		err = err2
+	}
+	if err2 = result.Write(oprot); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.WriteMessageEnd(); err == nil && err2 != nil {
+		err = err2
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = err2
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
+type openAPIServiceProcessorListTrajectoryOApi struct {
+	handler OpenAPIService
+}
+
+func (p *openAPIServiceProcessorListTrajectoryOApi) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := OpenAPIServiceListTrajectoryOApiArgs{}
+	if err = args.Read(iprot); err != nil {
+		iprot.ReadMessageEnd()
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err.Error())
+		oprot.WriteMessageBegin("ListTrajectoryOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return false, err
+	}
+
+	iprot.ReadMessageEnd()
+	var err2 error
+	result := OpenAPIServiceListTrajectoryOApiResult{}
+	var retval *ListTrajectoryOApiResponse
+	if retval, err2 = p.handler.ListTrajectoryOApi(ctx, args.Req); err2 != nil {
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing ListTrajectoryOApi: "+err2.Error())
+		oprot.WriteMessageBegin("ListTrajectoryOApi", thrift.EXCEPTION, seqId)
+		x.Write(oprot)
+		oprot.WriteMessageEnd()
+		oprot.Flush(ctx)
+		return true, err2
+	} else {
+		result.Success = retval
+	}
+	if err2 = oprot.WriteMessageBegin("ListTrajectoryOApi", thrift.REPLY, seqId); err2 != nil {
 		err = err2
 	}
 	if err2 = result.Write(oprot); err == nil && err2 != nil {
@@ -13295,6 +14187,350 @@ func (p *OpenAPIServiceListTracesOApiResult) DeepEqual(ano *OpenAPIServiceListTr
 }
 
 func (p *OpenAPIServiceListTracesOApiResult) Field0DeepEqual(src *ListTracesOApiResponse) bool {
+
+	if !p.Success.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type OpenAPIServiceListTrajectoryOApiArgs struct {
+	Req *ListTrajectoryOApiRequest `thrift:"req,1" frugal:"1,default,ListTrajectoryOApiRequest"`
+}
+
+func NewOpenAPIServiceListTrajectoryOApiArgs() *OpenAPIServiceListTrajectoryOApiArgs {
+	return &OpenAPIServiceListTrajectoryOApiArgs{}
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) InitDefault() {
+}
+
+var OpenAPIServiceListTrajectoryOApiArgs_Req_DEFAULT *ListTrajectoryOApiRequest
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) GetReq() (v *ListTrajectoryOApiRequest) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetReq() {
+		return OpenAPIServiceListTrajectoryOApiArgs_Req_DEFAULT
+	}
+	return p.Req
+}
+func (p *OpenAPIServiceListTrajectoryOApiArgs) SetReq(val *ListTrajectoryOApiRequest) {
+	p.Req = val
+}
+
+var fieldIDToName_OpenAPIServiceListTrajectoryOApiArgs = map[int16]string{
+	1: "req",
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) IsSetReq() bool {
+	return p.Req != nil
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField1(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_OpenAPIServiceListTrajectoryOApiArgs[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) ReadField1(iprot thrift.TProtocol) error {
+	_field := NewListTrajectoryOApiRequest()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Req = _field
+	return nil
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListTrajectoryOApi_args"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField1(oprot); err != nil {
+			fieldId = 1
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) writeField1(oprot thrift.TProtocol) (err error) {
+	if err = oprot.WriteFieldBegin("req", thrift.STRUCT, 1); err != nil {
+		goto WriteFieldBeginError
+	}
+	if err := p.Req.Write(oprot); err != nil {
+		return err
+	}
+	if err = oprot.WriteFieldEnd(); err != nil {
+		goto WriteFieldEndError
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("OpenAPIServiceListTrajectoryOApiArgs(%+v)", *p)
+
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) DeepEqual(ano *OpenAPIServiceListTrajectoryOApiArgs) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field1DeepEqual(ano.Req) {
+		return false
+	}
+	return true
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiArgs) Field1DeepEqual(src *ListTrajectoryOApiRequest) bool {
+
+	if !p.Req.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+
+type OpenAPIServiceListTrajectoryOApiResult struct {
+	Success *ListTrajectoryOApiResponse `thrift:"success,0,optional" frugal:"0,optional,ListTrajectoryOApiResponse"`
+}
+
+func NewOpenAPIServiceListTrajectoryOApiResult() *OpenAPIServiceListTrajectoryOApiResult {
+	return &OpenAPIServiceListTrajectoryOApiResult{}
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) InitDefault() {
+}
+
+var OpenAPIServiceListTrajectoryOApiResult_Success_DEFAULT *ListTrajectoryOApiResponse
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) GetSuccess() (v *ListTrajectoryOApiResponse) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetSuccess() {
+		return OpenAPIServiceListTrajectoryOApiResult_Success_DEFAULT
+	}
+	return p.Success
+}
+func (p *OpenAPIServiceListTrajectoryOApiResult) SetSuccess(x interface{}) {
+	p.Success = x.(*ListTrajectoryOApiResponse)
+}
+
+var fieldIDToName_OpenAPIServiceListTrajectoryOApiResult = map[int16]string{
+	0: "success",
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) Read(iprot thrift.TProtocol) (err error) {
+	var fieldTypeId thrift.TType
+	var fieldId int16
+
+	if _, err = iprot.ReadStructBegin(); err != nil {
+		goto ReadStructBeginError
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err = iprot.ReadFieldBegin()
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField0(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		default:
+			if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		}
+		if err = iprot.ReadFieldEnd(); err != nil {
+			goto ReadFieldEndError
+		}
+	}
+	if err = iprot.ReadStructEnd(); err != nil {
+		goto ReadStructEndError
+	}
+
+	return nil
+ReadStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct begin error: ", p), err)
+ReadFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_OpenAPIServiceListTrajectoryOApiResult[fieldId]), err)
+SkipFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+
+ReadFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read field end error", p), err)
+ReadStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) ReadField0(iprot thrift.TProtocol) error {
+	_field := NewListTrajectoryOApiResponse()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.Success = _field
+	return nil
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) Write(oprot thrift.TProtocol) (err error) {
+	var fieldId int16
+	if err = oprot.WriteStructBegin("ListTrajectoryOApi_result"); err != nil {
+		goto WriteStructBeginError
+	}
+	if p != nil {
+		if err = p.writeField0(oprot); err != nil {
+			fieldId = 0
+			goto WriteFieldError
+		}
+	}
+	if err = oprot.WriteFieldStop(); err != nil {
+		goto WriteFieldStopError
+	}
+	if err = oprot.WriteStructEnd(); err != nil {
+		goto WriteStructEndError
+	}
+	return nil
+WriteStructBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+WriteFieldError:
+	return thrift.PrependError(fmt.Sprintf("%T write field %d error: ", p, fieldId), err)
+WriteFieldStopError:
+	return thrift.PrependError(fmt.Sprintf("%T write field stop error: ", p), err)
+WriteStructEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write struct end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) writeField0(oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err = oprot.WriteFieldBegin("success", thrift.STRUCT, 0); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.Success.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 0 end error: ", p), err)
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("OpenAPIServiceListTrajectoryOApiResult(%+v)", *p)
+
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) DeepEqual(ano *OpenAPIServiceListTrajectoryOApiResult) bool {
+	if p == ano {
+		return true
+	} else if p == nil || ano == nil {
+		return false
+	}
+	if !p.Field0DeepEqual(ano.Success) {
+		return false
+	}
+	return true
+}
+
+func (p *OpenAPIServiceListTrajectoryOApiResult) Field0DeepEqual(src *ListTrajectoryOApiResponse) bool {
 
 	if !p.Success.DeepEqual(src) {
 		return false

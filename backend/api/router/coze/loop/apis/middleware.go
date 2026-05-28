@@ -2289,3 +2289,8 @@ func _upsertcolumnextractconfigMw(handler *apis.APIHandler) []app.HandlerFunc {
 	// your code...
 	return nil
 }
+
+func _listtrajectoryoapiMw(handler *apis.APIHandler) []app.HandlerFunc {
+	// your code...
+	return nil
+}

@@ -1102,6 +1102,90 @@ func (o *OpenAPIApplication) buildListTracesOApiReq(ctx context.Context, req *op
 	return ret
 }
 
+func (o *OpenAPIApplication) ListTrajectoryOApi(ctx context.Context, req *openapi.ListTrajectoryOApiRequest) (*openapi.ListTrajectoryOApiResponse, error) {
+	var err error
+	st := time.Now()
+	errCode := 0
+	defer func() {
+		src := ""
+		if req.Extra != nil {
+			src = req.Extra.GetSrc()
+		}
+		o.metrics.EmitTraceOapi("ListTrajectoryOApi", req.WorkspaceID, req.GetPlatformType(), "", src, 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "ListTrajectoryOApi", req.WorkspaceID, req.GetPlatformType(), "", src, 0, errCode, st, err != nil)
+	}()
+
+	if err = o.validateListTrajectoryOApiReq(ctx, req); err != nil {
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+	if err = o.auth.CheckQueryPermission(ctx, strconv.FormatInt(req.GetWorkspaceID(), 10), req.GetPlatformType()); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+
+	startTime := req.StartTime
+	if startTime == nil {
+		userID := session.UserIDInCtxOrEmpty(ctx)
+		if userID == "" {
+			err = errorx.NewByCode(obErrorx.UserParseFailedCode)
+			errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+			return nil, err
+		}
+		platformType := req.PlatformType
+		finalStartTime := o.traceConfig.GetTraceDataMaxDurationDay(ctx, platformType)
+		benefitRes, benefitErr := o.benefit.CheckTraceBenefit(ctx, &benefit.CheckTraceBenefitParams{
+			ConnectorUID: userID,
+			SpaceID:      req.GetWorkspaceID(),
+		})
+		if benefitErr == nil && benefitRes != nil {
+			finalStartTime = time.Now().UnixMilli() - int64(benefitRes.StorageDuration)*24*60*60*1000
+		}
+		startTime = &finalStartTime
+	}
+
+	resp, err := o.traceService.ListTrajectory(ctx, &service.ListTrajectoryRequest{
+		PlatformType: loop_span.PlatformType(req.GetPlatformType()),
+		WorkspaceID:  req.WorkspaceID,
+		TraceIds:     req.TraceIds,
+		StartTime:    startTime,
+	})
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, err
+	}
+	if resp == nil {
+		return &openapi.ListTrajectoryOApiResponse{}, nil
+	}
+
+	return &openapi.ListTrajectoryOApiResponse{
+		Trajectories: tconv.TrajectoriesDO2DTO(resp.Trajectories),
+	}, nil
+}
+
+func (o *OpenAPIApplication) validateListTrajectoryOApiReq(ctx context.Context, req *openapi.ListTrajectoryOApiRequest) error {
+	if req == nil {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+	} else if req.GetWorkspaceID() <= 0 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+	} else if len(req.GetTraceIds()) < 1 {
+		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_ids"))
+	}
+	for _, id := range req.TraceIds {
+		if id == "" {
+			return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
+		}
+	}
+	return nil
+}
+
 func (o *OpenAPIApplication) Send(ctx context.Context, event *entity.AnnotationEvent) error {
 	return o.traceService.Send(ctx, event)
 }
