@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `visibility` int unsigned NOT NULL DEFAULT '0' COMMENT '可见性，默认0-可见，1-隐藏',
     `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID',
     `trial_run_item_count`      bigint unsigned                                                         DEFAULT NULL COMMENT '试运行行数',
+    `notification_conf`         blob COMMENT '通知配置，json格式存储webhook/飞书通知配置',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_deleted_created_by` (`space_id`, `created_by`, `deleted_at`),

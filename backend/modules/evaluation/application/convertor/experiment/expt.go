@@ -555,6 +555,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.NotificationConf != nil {
+		param.NotificationConf = notificationConfDTO2DO(cer.NotificationConf)
+	}
 	return param, nil
 }
 
@@ -569,4 +572,53 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 	default:
 		return entity.EvaluationModeUnknown
 	}
+}
+
+// notificationConfDTO2DO 将 thrift ExptNotificationConf 转换为 domain entity ExptNotificationConf
+func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) *entity.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	result := &entity.ExptNotificationConf{}
+	if conf.Filter != nil {
+		filter := &entity.NotificationFilter{}
+		if conf.Filter.LogicOp != nil {
+			logicOp := entity.FilterLogicOp(*conf.Filter.LogicOp)
+			filter.LogicOp = &logicOp
+		}
+		if len(conf.Filter.FilterConditions) > 0 {
+			conditions := make([]*entity.NotificationFilterCondition, 0, len(conf.Filter.FilterConditions))
+			for _, fc := range conf.Filter.FilterConditions {
+				if fc == nil {
+					continue
+				}
+				condition := &entity.NotificationFilterCondition{
+					Operator: entity.NotificationOperatorType(fc.GetOperator()),
+					Value:    fc.GetValue(),
+				}
+				if fc.GetField() != nil {
+					condition.Field = &entity.NotificationFilterField{
+						FieldType: entity.NotificationFieldType(fc.GetField().GetFieldType()),
+						FieldKey:  fc.GetField().FieldKey,
+					}
+				}
+				conditions = append(conditions, condition)
+			}
+			filter.FilterConditions = conditions
+		}
+		result.Filter = filter
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &entity.WebhookNotificationConf{
+			Enable: conf.Webhook.Enable,
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &entity.FeishuNotificationConf{
+			Enable: conf.FeishuNotification.Enable,
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result
 }

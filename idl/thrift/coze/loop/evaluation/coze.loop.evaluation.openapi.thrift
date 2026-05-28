@@ -430,6 +430,9 @@ struct SubmitExperimentOApiRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
 
+    // 通知配置
+    50: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     100: optional map<string, string> ext (api.body = 'ext')    
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
@@ -898,6 +901,9 @@ struct CreateExptTemplateOApiRequest {
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
     22: optional bool enable_extract_trajectory (api.body="enable_extract_trajectory", go.tag='json:"enable_extract_trajectory"')
 
+    // 通知配置
+    30: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
+
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
@@ -968,6 +974,9 @@ struct UpdateExptTemplateOApiRequest {
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
     22: optional bool enable_extract_trajectory (api.body="enable_extract_trajectory", go.tag='json:"enable_extract_trajectory"')
 
+    // 通知配置
+    30: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
+
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
 }
@@ -1034,6 +1043,9 @@ struct SubmitExptFromTemplateOApiRequest {
     1: optional i64 workspace_id (api.body="workspace_id", api.js_conv="true", go.tag='json:"workspace_id"')
     2: optional i64 template_id (api.body="template_id", api.js_conv="true", go.tag='json:"template_id"')
     3: optional string name (api.body="name")
+
+    // 通知配置（可选覆盖模板配置）
+    10: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

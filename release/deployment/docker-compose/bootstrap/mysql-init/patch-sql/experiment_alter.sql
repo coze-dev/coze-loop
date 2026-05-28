@@ -15,3 +15,5 @@ ALTER TABLE `experiment` ADD COLUMN `visibility` int unsigned NOT NULL DEFAULT '
 ALTER TABLE `experiment` ADD COLUMN `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID';
 
 ALTER TABLE `experiment` ADD COLUMN `trial_run_item_count` bigint unsigned DEFAULT NULL COMMENT '试运行行数';
+
+ALTER TABLE `experiment` ADD COLUMN `notification_conf` blob COMMENT '通知配置，json格式存储webhook/飞书通知配置';

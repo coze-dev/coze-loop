@@ -56,6 +56,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.Visibility = field.NewInt32(tableName, "visibility")
 	_experiment.ThreadID = field.NewString(tableName, "thread_id")
 	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
+	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
 
 	_experiment.fillFieldMap()
 
@@ -96,6 +97,7 @@ type experiment struct {
 	Visibility        field.Int32  // 可见性，默认0-可见，1-隐藏
 	ThreadID          field.String // 智能生成会话ID
 	TrialRunItemCount field.Int64  // 试运行行数
+	NotificationConf  field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
 
 	fieldMap map[string]field.Expr
 }
@@ -141,6 +143,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.Visibility = field.NewInt32(table, "visibility")
 	e.ThreadID = field.NewString(table, "thread_id")
 	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
+	e.NotificationConf = field.NewBytes(table, "notification_conf")
 
 	e.fillFieldMap()
 
@@ -167,7 +170,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 29)
+	e.fieldMap = make(map[string]field.Expr, 30)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -197,6 +200,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["visibility"] = e.Visibility
 	e.fieldMap["thread_id"] = e.ThreadID
 	e.fieldMap["trial_run_item_count"] = e.TrialRunItemCount
+	e.fieldMap["notification_conf"] = e.NotificationConf
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {

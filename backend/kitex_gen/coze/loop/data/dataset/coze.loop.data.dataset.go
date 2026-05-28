@@ -5764,8 +5764,8 @@ func (p *CountDatasetsRequest) Field255DeepEqual(src *base.Base) bool {
 	}
 	return true
 }
-type CountDatasetsResponse struct {
 
+type CountDatasetsResponse struct {
 	Total    *int64         `thrift:"total,1,optional" frugal:"1,optional,i64" json:"total" form:"total" query:"total"`
 	BaseResp *base.BaseResp `thrift:"BaseResp,255" frugal:"255,default,base.BaseResp" form:"BaseResp" json:"BaseResp" query:"BaseResp"`
 }

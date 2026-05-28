@@ -60,6 +60,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptTurnResultFilterRMQKey,
 		rocket.ExptExportCSVEventRMQKey,
 		rocket.ExptLifecycleEventRMQKey,
+		rocket.ExptWebhookNotifyEventRMQKey,
 	} {
 		p := &producer{}
 
@@ -159,6 +160,10 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 
 func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
 	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+}
+
+func (e *exptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
+	return e.batchSend(ctx, rocket.ExptWebhookNotifyEventRMQKey, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {

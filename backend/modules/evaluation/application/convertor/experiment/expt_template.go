@@ -1401,5 +1401,9 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
 	}
 
+	if req.NotificationConf != nil {
+		param.NotificationConf = notificationConfDTO2DO(req.NotificationConf)
+	}
+
 	return param, nil
 }

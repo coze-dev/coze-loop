@@ -4,12 +4,15 @@
 package main
 
 import (
+	"context"
+
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	dataapp "github.com/coze-dev/coze-loop/backend/modules/data/application"
 	dataconsumer "github.com/coze-dev/coze-loop/backend/modules/data/infra/mq/consumer"
 	exptapp "github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
 	evalconsumer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/consumer"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
 	obapp "github.com/coze-dev/coze-loop/backend/modules/observability/application"
 	obconsumer "github.com/coze-dev/coze-loop/backend/modules/observability/infra/mq/consumer"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -17,6 +20,7 @@ import (
 
 func MustInitConsumerWorkers(
 	cfactory conf.IConfigLoaderFactory,
+	mqFactory mq.IFactory,
 	experimentApplication exptapp.IExperimentApplication,
 	datasetApplication dataapp.IJobRunMsgHandler,
 	obApplication obapp.IObservabilityOpenAPIApplication,
@@ -28,7 +32,13 @@ func MustInitConsumerWorkers(
 	if err != nil {
 		panic(err)
 	}
-	workers, err := evalconsumer.NewConsumerWorkers(loader, experimentApplication)
+
+	publisher, err := producer.NewExptEventPublisher(context.Background(), cfactory, mqFactory)
+	if err != nil {
+		panic(err)
+	}
+
+	workers, err := evalconsumer.NewConsumerWorkers(loader, experimentApplication, publisher)
 	if err != nil {
 		panic(err)
 	}

@@ -98,6 +98,20 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, eve
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration)
 }
 
+// PublishExptWebhookNotifyEvent mocks base method.
+func (m *MockExptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishExptWebhookNotifyEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishExptWebhookNotifyEvent indicates an expected call of PublishExptWebhookNotifyEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishExptWebhookNotifyEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptWebhookNotifyEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptWebhookNotifyEvent), ctx, event, duration)
+}
+
 // PublishExptOnlineEvalResult mocks base method.
 func (m *MockExptEventPublisher) PublishExptOnlineEvalResult(ctx context.Context, events *entity.OnlineExptEvalResultEvent, duration *time.Duration) error {
 	m.ctrl.T.Helper()

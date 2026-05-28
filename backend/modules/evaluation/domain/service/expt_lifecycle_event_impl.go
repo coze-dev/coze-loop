@@ -35,8 +35,24 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 		return err
 	}
 
+	// Check if feishu notification is configured with filter
+	if expt.NotificationConf != nil && expt.NotificationConf.FeishuNotification != nil && expt.NotificationConf.FeishuNotification.Enable {
+		filter := expt.NotificationConf.Filter
+		if filter != nil && len(filter.FilterConditions) > 0 {
+			// Use filter to decide
+			if matchNotificationFilter(filter, event.ToStatus) {
+				logs.CtxInfo(ctx, "feishu_notify: filter matched, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+				return h.sendNotifyCard(ctx, event, expt)
+			}
+			logs.CtxInfo(ctx, "feishu_notify: filter not matched, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+			return nil
+		}
+	}
+
+	// Default behavior: only send on terminal states
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+		logs.CtxInfo(ctx, "feishu_notify: terminal state, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
 		return h.sendNotifyCard(ctx, event, expt)
 	default:
 		return nil

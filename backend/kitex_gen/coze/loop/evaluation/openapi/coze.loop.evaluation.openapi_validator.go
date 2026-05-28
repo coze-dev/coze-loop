@@ -629,6 +629,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -1303,6 +1308,11 @@ func (p *CreateExptTemplateOApiRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -1425,6 +1435,11 @@ func (p *UpdateExptTemplateOApiRequest) IsValid() error {
 			return fmt.Errorf("field CreateEvalTargetParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)
@@ -1522,6 +1537,11 @@ func (p *ListExptTemplatesOpenAPIData) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

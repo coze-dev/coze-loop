@@ -46,6 +46,9 @@ struct CreateExperimentRequest {
     50: optional expt.ExptTriggerType trigger_type
 
 
+    // 通知配置
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     100: optional map<string, string> ext (api.body = 'ext')
 
     200: optional common.Session session
@@ -95,6 +98,9 @@ struct SubmitExperimentRequest {
 
     // 智能评测相关
     60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
+
+    // 通知配置
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     100: optional map<string, string> ext (api.body = 'ext')
 
@@ -146,6 +152,9 @@ struct UpdateExperimentRequest {
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
     3: optional string name (api.body='name')
     4: optional string desc (api.body='desc')
+
+    // 通知配置（可选更新）
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     255: optional base.Base Base
 }
@@ -401,6 +410,8 @@ struct CreateExperimentTemplateRequest {
 
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    // 通知配置
+    40: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -464,6 +475,9 @@ struct UpdateExperimentTemplateRequest {
     // 实验来源（含 Scheduler 等配置）；nil 表示不修改，保留 DB 中已有值
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    // 通知配置
+    40: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     255: optional base.Base Base
 }
 
@@ -524,6 +538,9 @@ struct SubmitExptFromTemplateRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
     3: optional string name (api.body='name')
+
+    // 通知配置（可选覆盖模板配置）
+    10: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
     255: optional base.Base Base
