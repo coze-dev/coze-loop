@@ -254,6 +254,25 @@ func (e *ExptSchedulerImpl) schedule(ctx context.Context, event *entity.ExptSche
 		return err
 	}
 
+	// Publish Processing lifecycle event on first transition
+	if exptDetail.Status != entity.ExptStatus_Processing {
+		currentExpt, getErr := e.ExptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
+		if getErr == nil && currentExpt.Status == entity.ExptStatus_Processing {
+			lifecycleEvent := &entity.ExptLifecycleEvent{
+				ExptID:     event.ExptID,
+				ExptRunID:  &event.ExptRunID,
+				SpaceID:    event.SpaceID,
+				FromStatus: exptDetail.Status,
+				ToStatus:   entity.ExptStatus_Processing,
+				ExptType:   exptDetail.ExptType,
+				SourceType: exptDetail.SourceType,
+			}
+			if pubErr := e.Publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3)); pubErr != nil {
+				logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
+			}
+		}
+	}
+
 	toSubmit, incomplete, complete, err := mode.ScanEvalItems(ctx, event, exptDetail)
 	if err != nil {
 		return err

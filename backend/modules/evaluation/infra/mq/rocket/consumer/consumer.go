@@ -10,6 +10,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/application"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -17,6 +18,7 @@ import (
 func NewConsumerWorkers(
 	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
+	publisher events.ExptEventPublisher,
 ) ([]mq.IConsumerWorker, error) {
 	return []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
@@ -25,6 +27,7 @@ func NewConsumerWorkers(
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
+		NewWebhookRetryEventConsumer(NewWebhookRetryConsumer(publisher), loader),
 	}, nil
 }
 

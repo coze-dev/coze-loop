@@ -66,7 +66,7 @@ func main() {
 	signalCtx, signalCancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer signalCancel()
 
-	r := registry.NewConsumerRegistryWithShutdown(signalCtx, c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, handler, handler, handler, handler))
+	r := registry.NewConsumerRegistryWithShutdown(signalCtx, c.mqFactory).Register(MustInitConsumerWorkers(c.cfgFactory, c.mqFactory, handler, handler, handler, handler))
 	if err := r.StartAll(ctx); err != nil {
 		panic(err)
 	}
