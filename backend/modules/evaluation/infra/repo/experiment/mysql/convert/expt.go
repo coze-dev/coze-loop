@@ -68,6 +68,14 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
 
+	if experiment.NotificationConf != nil {
+		bytes, err := json.Marshal(experiment.NotificationConf)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json marshal fail")
+		}
+		expt.NotificationConf = &bytes
+	}
+
 	return expt, nil
 }
 
@@ -117,6 +125,15 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+	}
+
+	// 反序列化 notification_conf
+	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
+		notifConf := new(entity.ExptNotificationConf)
+		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notifConf); err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail, expt_id: %v", expt.ID)
+		}
+		res.NotificationConf = notifConf
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

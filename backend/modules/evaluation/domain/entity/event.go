@@ -205,6 +205,15 @@ type ExptLifecycleEvent struct {
 	SourceType SourceType `json:"source_type"`
 }
 
+type WebhookRetryEvent struct {
+	ExptID     int64  `json:"expt_id"`
+	SpaceID    int64  `json:"space_id"`
+	DeliveryID string `json:"delivery_id"`
+	WebhookURL string `json:"webhook_url"`
+	Payload    string `json:"payload"`     // JSON string of the webhook body
+	AttemptNum int    `json:"attempt_num"` // 当前第几次重试 (1/2/3)
+}
+
 type ExportScene int
 
 const (
