@@ -56,6 +56,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.Visibility = field.NewInt32(tableName, "visibility")
 	_experiment.ThreadID = field.NewString(tableName, "thread_id")
 	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
+	_experiment.OfflineExptAnalysisStatus = field.NewInt32(tableName, "offline_expt_analysis_status")
 	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
 
 	_experiment.fillFieldMap()
@@ -67,37 +68,38 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 type experiment struct {
 	experimentDo experimentDo
 
-	ALL               field.Asterisk
-	ID                field.Int64  // id
-	SpaceID           field.Int64  // 空间 id
-	CreatedBy         field.String // 创建者 id
-	Name              field.String // 实验名称
-	Description       field.String // 实验描述
-	EvalSetVersionID  field.Int64  // 评测集版本 id
-	TargetType        field.Int64  // 评估对象类型
-	TargetVersionID   field.Int64  // 评估对象版本 id
-	EvalConf          field.Bytes  // 实验评估流程配置
-	Status            field.Int32  // 状态
-	StatusMessage     field.Bytes  // 状态提示信息
-	StartAt           field.Time   // 开始执行时间
-	EndAt             field.Time   // 结束执行时间
-	CreatedAt         field.Time   // 创建时间
-	UpdatedAt         field.Time   // 更新时间
-	DeletedAt         field.Field  // 删除时间
-	LatestRunID       field.Int64  // 最后运行id
-	TargetID          field.Int64  // 评估对象 id
-	EvalSetID         field.Int64  // 评测集 id
-	ExptTemplateID    field.Int64  // 实验模板 id
-	CreditCost        field.Int32  // 权益消耗模式
-	SourceType        field.Int32  // 实验来源类型，评测:1,自动化任务:2...
-	SourceID          field.String // 实验来源id
-	ExptType          field.Int32  // 实验类型，offline:1,online:2...
-	MaxAliveTime      field.Int64  // 最大存活时间
-	TriggerType       field.String // 实验触发方式：manual/openapi/schedule
-	Visibility        field.Int32  // 可见性，默认0-可见，1-隐藏
-	ThreadID          field.String // 智能生成会话ID
-	TrialRunItemCount field.Int64  // 试运行行数
-	NotificationConf  field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
+	ALL                       field.Asterisk
+	ID                        field.Int64  // id
+	SpaceID                   field.Int64  // 空间 id
+	CreatedBy                 field.String // 创建者 id
+	Name                      field.String // 实验名称
+	Description               field.String // 实验描述
+	EvalSetVersionID          field.Int64  // 评测集版本 id
+	TargetType                field.Int64  // 评估对象类型
+	TargetVersionID           field.Int64  // 评估对象版本 id
+	EvalConf                  field.Bytes  // 实验评估流程配置
+	Status                    field.Int32  // 状态
+	StatusMessage             field.Bytes  // 状态提示信息
+	StartAt                   field.Time   // 开始执行时间
+	EndAt                     field.Time   // 结束执行时间
+	CreatedAt                 field.Time   // 创建时间
+	UpdatedAt                 field.Time   // 更新时间
+	DeletedAt                 field.Field  // 删除时间
+	LatestRunID               field.Int64  // 最后运行id
+	TargetID                  field.Int64  // 评估对象 id
+	EvalSetID                 field.Int64  // 评测集 id
+	ExptTemplateID            field.Int64  // 实验模板 id
+	CreditCost                field.Int32  // 权益消耗模式
+	SourceType                field.Int32  // 实验来源类型，评测:1,自动化任务:2...
+	SourceID                  field.String // 实验来源id
+	ExptType                  field.Int32  // 实验类型，offline:1,online:2...
+	MaxAliveTime              field.Int64  // 最大存活时间
+	TriggerType               field.String // 实验触发方式：manual/openapi/schedule
+	Visibility                field.Int32  // 可见性，默认0-可见，1-隐藏
+	ThreadID                  field.String // 智能生成会话ID
+	TrialRunItemCount         field.Int64  // 试运行行数
+	OfflineExptAnalysisStatus field.Int32  // 离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)
+	NotificationConf          field.Bytes  // 通知配置，json格式存储webhook/飞书通知配置
 
 	fieldMap map[string]field.Expr
 }
@@ -143,6 +145,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.Visibility = field.NewInt32(table, "visibility")
 	e.ThreadID = field.NewString(table, "thread_id")
 	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
+	e.OfflineExptAnalysisStatus = field.NewInt32(table, "offline_expt_analysis_status")
 	e.NotificationConf = field.NewBytes(table, "notification_conf")
 
 	e.fillFieldMap()
@@ -170,7 +173,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 30)
+	e.fieldMap = make(map[string]field.Expr, 31)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -200,6 +203,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["visibility"] = e.Visibility
 	e.fieldMap["thread_id"] = e.ThreadID
 	e.fieldMap["trial_run_item_count"] = e.TrialRunItemCount
+	e.fieldMap["offline_expt_analysis_status"] = e.OfflineExptAnalysisStatus
 	e.fieldMap["notification_conf"] = e.NotificationConf
 }
 

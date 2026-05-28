@@ -2943,6 +2943,8 @@ type SubmitExperimentRequest struct {
 	TimeRange               *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	// 智能评测相关
 	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
+	// 指定执行的评测集条目ID列表
+	ItemIds []int64 `thrift:"item_ids,70,optional" frugal:"70,optional,list<i64>" json:"item_ids" form:"item_ids" `
 	// 通知配置
 	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,110,optional" frugal:"110,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	Ext              map[string]string          `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty"`
@@ -3288,6 +3290,18 @@ func (p *SubmitExperimentRequest) GetThreadID() (v string) {
 	return *p.ThreadID
 }
 
+var SubmitExperimentRequest_ItemIds_DEFAULT []int64
+
+func (p *SubmitExperimentRequest) GetItemIds() (v []int64) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetItemIds() {
+		return SubmitExperimentRequest_ItemIds_DEFAULT
+	}
+	return p.ItemIds
+}
+
 var SubmitExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
 
 func (p *SubmitExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
@@ -3419,6 +3433,9 @@ func (p *SubmitExperimentRequest) SetTimeRange(val *expt.TaskTimeRange) {
 func (p *SubmitExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
 }
+func (p *SubmitExperimentRequest) SetItemIds(val []int64) {
+	p.ItemIds = val
+}
 func (p *SubmitExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
 	p.NotificationConf = val
 }
@@ -3461,6 +3478,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	50:  "trigger_type",
 	51:  "time_range",
 	60:  "thread_id",
+	70:  "item_ids",
 	110: "notification_conf",
 	100: "ext",
 	200: "session",
@@ -3573,6 +3591,10 @@ func (p *SubmitExperimentRequest) IsSetTimeRange() bool {
 
 func (p *SubmitExperimentRequest) IsSetThreadID() bool {
 	return p.ThreadID != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetItemIds() bool {
+	return p.ItemIds != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
@@ -3830,6 +3852,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 60:
 			if fieldTypeId == thrift.STRING {
 				if err = p.ReadField60(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 70:
+			if fieldTypeId == thrift.LIST {
+				if err = p.ReadField70(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4236,6 +4266,29 @@ func (p *SubmitExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 	p.ThreadID = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField70(iprot thrift.TProtocol) error {
+	_, size, err := iprot.ReadListBegin()
+	if err != nil {
+		return err
+	}
+	_field := make([]int64, 0, size)
+	for i := 0; i < size; i++ {
+
+		var _elem int64
+		if v, err := iprot.ReadI64(); err != nil {
+			return err
+		} else {
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	if err := iprot.ReadListEnd(); err != nil {
+		return err
+	}
+	p.ItemIds = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField110(iprot thrift.TProtocol) error {
 	_field := expt.NewExptNotificationConf()
 	if err := _field.Read(iprot); err != nil {
@@ -4406,6 +4459,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField60(oprot); err != nil {
 			fieldId = 60
+			goto WriteFieldError
+		}
+		if err = p.writeField70(oprot); err != nil {
+			fieldId = 70
 			goto WriteFieldError
 		}
 		if err = p.writeField110(oprot); err != nil {
@@ -4968,6 +5025,32 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 60 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField70(oprot thrift.TProtocol) (err error) {
+	if p.IsSetItemIds() {
+		if err = oprot.WriteFieldBegin("item_ids", thrift.LIST, 70); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteListBegin(thrift.I64, len(p.ItemIds)); err != nil {
+			return err
+		}
+		for _, v := range p.ItemIds {
+			if err := oprot.WriteI64(v); err != nil {
+				return err
+			}
+		}
+		if err := oprot.WriteListEnd(); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 70 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField110(oprot thrift.TProtocol) (err error) {
 	if p.IsSetNotificationConf() {
 		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 110); err != nil {
@@ -5148,6 +5231,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field60DeepEqual(ano.ThreadID) {
+		return false
+	}
+	if !p.Field70DeepEqual(ano.ItemIds) {
 		return false
 	}
 	if !p.Field110DeepEqual(ano.NotificationConf) {
@@ -5476,6 +5562,19 @@ func (p *SubmitExperimentRequest) Field60DeepEqual(src *string) bool {
 	}
 	if strings.Compare(*p.ThreadID, *src) != 0 {
 		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field70DeepEqual(src []int64) bool {
+
+	if len(p.ItemIds) != len(src) {
+		return false
+	}
+	for i, v := range p.ItemIds {
+		_src := src[i]
+		if v != _src {
+			return false
+		}
 	}
 	return true
 }

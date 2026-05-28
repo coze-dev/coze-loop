@@ -43,6 +43,10 @@ const (
 
 	FrequencySunday = "sunday"
 
+	FrequencyEveryHour = "every_hour"
+
+	FrequencyEveryMinute = "every_minute"
+
 	PromptUserQueryFieldKey = "builtin_prompt_user_query"
 
 	ColumnEvalTargetNameActualOutput = "actual_output"
@@ -217,6 +221,69 @@ func (p *ExptType) Scan(value interface{}) (err error) {
 }
 
 func (p *ExptType) Value() (driver.Value, error) {
+	if p == nil {
+		return nil, nil
+	}
+	return int64(*p), nil
+}
+
+// 离线实验分析状态（与表字段 offline_expt_analysis_status 一致）
+type OfflineExptAnalysisStatus int64
+
+const (
+	// 未开始
+	OfflineExptAnalysisStatus_NotStarted OfflineExptAnalysisStatus = 0
+	// 进行中
+	OfflineExptAnalysisStatus_Processing OfflineExptAnalysisStatus = 1
+	// 成功
+	OfflineExptAnalysisStatus_Success OfflineExptAnalysisStatus = 2
+	// 失败
+	OfflineExptAnalysisStatus_Failed OfflineExptAnalysisStatus = 3
+	// 已被新版本/新分析取代
+	OfflineExptAnalysisStatus_Superseded OfflineExptAnalysisStatus = 4
+)
+
+func (p OfflineExptAnalysisStatus) String() string {
+	switch p {
+	case OfflineExptAnalysisStatus_NotStarted:
+		return "NotStarted"
+	case OfflineExptAnalysisStatus_Processing:
+		return "Processing"
+	case OfflineExptAnalysisStatus_Success:
+		return "Success"
+	case OfflineExptAnalysisStatus_Failed:
+		return "Failed"
+	case OfflineExptAnalysisStatus_Superseded:
+		return "Superseded"
+	}
+	return "<UNSET>"
+}
+
+func OfflineExptAnalysisStatusFromString(s string) (OfflineExptAnalysisStatus, error) {
+	switch s {
+	case "NotStarted":
+		return OfflineExptAnalysisStatus_NotStarted, nil
+	case "Processing":
+		return OfflineExptAnalysisStatus_Processing, nil
+	case "Success":
+		return OfflineExptAnalysisStatus_Success, nil
+	case "Failed":
+		return OfflineExptAnalysisStatus_Failed, nil
+	case "Superseded":
+		return OfflineExptAnalysisStatus_Superseded, nil
+	}
+	return OfflineExptAnalysisStatus(0), fmt.Errorf("not a valid OfflineExptAnalysisStatus string")
+}
+
+func OfflineExptAnalysisStatusPtr(v OfflineExptAnalysisStatus) *OfflineExptAnalysisStatus { return &v }
+func (p *OfflineExptAnalysisStatus) Scan(value interface{}) (err error) {
+	var result sql.NullInt64
+	err = result.Scan(value)
+	*p = OfflineExptAnalysisStatus(result.Int64)
+	return
+}
+
+func (p *OfflineExptAnalysisStatus) Value() (driver.Value, error) {
 	if p == nil {
 		return nil, nil
 	}
@@ -1059,6 +1126,8 @@ type Experiment struct {
 	// 通知配置
 	NotificationConf *ExptNotificationConf `thrift:"notification_conf,80,optional" frugal:"80,optional,ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty" query:"notification_conf"`
 	Ext              map[string]string     `thrift:"ext,100,optional" frugal:"100,optional,map<string:string>" form:"ext" json:"ext,omitempty" query:"ext"`
+	// 离线实验分析状态
+	OfflineExptAnalysisStatus *OfflineExptAnalysisStatus `thrift:"offline_expt_analysis_status,101,optional" frugal:"101,optional,OfflineExptAnalysisStatus" form:"offline_expt_analysis_status" json:"offline_expt_analysis_status,omitempty" query:"offline_expt_analysis_status"`
 }
 
 func NewExperiment() *Experiment {
@@ -1523,6 +1592,18 @@ func (p *Experiment) GetExt() (v map[string]string) {
 	}
 	return p.Ext
 }
+
+var Experiment_OfflineExptAnalysisStatus_DEFAULT OfflineExptAnalysisStatus
+
+func (p *Experiment) GetOfflineExptAnalysisStatus() (v OfflineExptAnalysisStatus) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetOfflineExptAnalysisStatus() {
+		return Experiment_OfflineExptAnalysisStatus_DEFAULT
+	}
+	return *p.OfflineExptAnalysisStatus
+}
 func (p *Experiment) SetID(val *int64) {
 	p.ID = val
 }
@@ -1637,6 +1718,9 @@ func (p *Experiment) SetNotificationConf(val *ExptNotificationConf) {
 func (p *Experiment) SetExt(val map[string]string) {
 	p.Ext = val
 }
+func (p *Experiment) SetOfflineExptAnalysisStatus(val *OfflineExptAnalysisStatus) {
+	p.OfflineExptAnalysisStatus = val
+}
 
 var fieldIDToName_Experiment = map[int16]string{
 	1:   "id",
@@ -1677,6 +1761,7 @@ var fieldIDToName_Experiment = map[int16]string{
 	71:  "expt_source",
 	80:  "notification_conf",
 	100: "ext",
+	101: "offline_expt_analysis_status",
 }
 
 func (p *Experiment) IsSetID() bool {
@@ -1829,6 +1914,10 @@ func (p *Experiment) IsSetNotificationConf() bool {
 
 func (p *Experiment) IsSetExt() bool {
 	return p.Ext != nil
+}
+
+func (p *Experiment) IsSetOfflineExptAnalysisStatus() bool {
+	return p.OfflineExptAnalysisStatus != nil
 }
 
 func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
@@ -2148,6 +2237,14 @@ func (p *Experiment) Read(iprot thrift.TProtocol) (err error) {
 		case 100:
 			if fieldTypeId == thrift.MAP {
 				if err = p.ReadField100(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 101:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField101(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -2639,6 +2736,18 @@ func (p *Experiment) ReadField100(iprot thrift.TProtocol) error {
 	p.Ext = _field
 	return nil
 }
+func (p *Experiment) ReadField101(iprot thrift.TProtocol) error {
+
+	var _field *OfflineExptAnalysisStatus
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		tmp := OfflineExptAnalysisStatus(v)
+		_field = &tmp
+	}
+	p.OfflineExptAnalysisStatus = _field
+	return nil
+}
 
 func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -2796,6 +2905,10 @@ func (p *Experiment) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField100(oprot); err != nil {
 			fieldId = 100
+			goto WriteFieldError
+		}
+		if err = p.writeField101(oprot); err != nil {
+			fieldId = 101
 			goto WriteFieldError
 		}
 	}
@@ -3543,6 +3656,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 100 end error: ", p), err)
 }
+func (p *Experiment) writeField101(oprot thrift.TProtocol) (err error) {
+	if p.IsSetOfflineExptAnalysisStatus() {
+		if err = oprot.WriteFieldBegin("offline_expt_analysis_status", thrift.I32, 101); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(int32(*p.OfflineExptAnalysisStatus)); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 101 end error: ", p), err)
+}
 
 func (p *Experiment) String() string {
 	if p == nil {
@@ -3670,6 +3801,9 @@ func (p *Experiment) DeepEqual(ano *Experiment) bool {
 		return false
 	}
 	if !p.Field100DeepEqual(ano.Ext) {
+		return false
+	}
+	if !p.Field101DeepEqual(ano.OfflineExptAnalysisStatus) {
 		return false
 	}
 	return true
@@ -4083,6 +4217,18 @@ func (p *Experiment) Field100DeepEqual(src map[string]string) bool {
 		if strings.Compare(v, _src) != 0 {
 			return false
 		}
+	}
+	return true
+}
+func (p *Experiment) Field101DeepEqual(src *OfflineExptAnalysisStatus) bool {
+
+	if p.OfflineExptAnalysisStatus == src {
+		return true
+	} else if p.OfflineExptAnalysisStatus == nil || src == nil {
+		return false
+	}
+	if *p.OfflineExptAnalysisStatus != *src {
+		return false
 	}
 	return true
 }
@@ -7730,6 +7876,8 @@ type Scheduler struct {
 	StartTime *int64 `thrift:"start_time,4,optional" frugal:"4,optional,i64" form:"start_time" json:"start_time,omitempty" query:"start_time"`
 	// 生效结束时间（时间戳，秒）
 	EndTime *int64 `thrift:"end_time,5,optional" frugal:"5,optional,i64" form:"end_time" json:"end_time,omitempty" query:"end_time"`
+	// 触发间隔（every_minute时为分钟数，every_hour时为小时数）
+	TriggerInterval *int32 `thrift:"trigger_interval,6,optional" frugal:"6,optional,i32" form:"trigger_interval" json:"trigger_interval,omitempty" query:"trigger_interval"`
 }
 
 func NewScheduler() *Scheduler {
@@ -7798,6 +7946,18 @@ func (p *Scheduler) GetEndTime() (v int64) {
 	}
 	return *p.EndTime
 }
+
+var Scheduler_TriggerInterval_DEFAULT int32
+
+func (p *Scheduler) GetTriggerInterval() (v int32) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetTriggerInterval() {
+		return Scheduler_TriggerInterval_DEFAULT
+	}
+	return *p.TriggerInterval
+}
 func (p *Scheduler) SetEnabled(val *bool) {
 	p.Enabled = val
 }
@@ -7813,6 +7973,9 @@ func (p *Scheduler) SetStartTime(val *int64) {
 func (p *Scheduler) SetEndTime(val *int64) {
 	p.EndTime = val
 }
+func (p *Scheduler) SetTriggerInterval(val *int32) {
+	p.TriggerInterval = val
+}
 
 var fieldIDToName_Scheduler = map[int16]string{
 	1: "enabled",
@@ -7820,6 +7983,7 @@ var fieldIDToName_Scheduler = map[int16]string{
 	3: "trigger_at",
 	4: "start_time",
 	5: "end_time",
+	6: "trigger_interval",
 }
 
 func (p *Scheduler) IsSetEnabled() bool {
@@ -7840,6 +8004,10 @@ func (p *Scheduler) IsSetStartTime() bool {
 
 func (p *Scheduler) IsSetEndTime() bool {
 	return p.EndTime != nil
+}
+
+func (p *Scheduler) IsSetTriggerInterval() bool {
+	return p.TriggerInterval != nil
 }
 
 func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
@@ -7895,6 +8063,14 @@ func (p *Scheduler) Read(iprot thrift.TProtocol) (err error) {
 		case 5:
 			if fieldTypeId == thrift.I64 {
 				if err = p.ReadField5(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 6:
+			if fieldTypeId == thrift.I32 {
+				if err = p.ReadField6(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -7984,6 +8160,17 @@ func (p *Scheduler) ReadField5(iprot thrift.TProtocol) error {
 	p.EndTime = _field
 	return nil
 }
+func (p *Scheduler) ReadField6(iprot thrift.TProtocol) error {
+
+	var _field *int32
+	if v, err := iprot.ReadI32(); err != nil {
+		return err
+	} else {
+		_field = &v
+	}
+	p.TriggerInterval = _field
+	return nil
+}
 
 func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
 	var fieldId int16
@@ -8009,6 +8196,10 @@ func (p *Scheduler) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField5(oprot); err != nil {
 			fieldId = 5
+			goto WriteFieldError
+		}
+		if err = p.writeField6(oprot); err != nil {
+			fieldId = 6
 			goto WriteFieldError
 		}
 	}
@@ -8119,6 +8310,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 5 end error: ", p), err)
 }
+func (p *Scheduler) writeField6(oprot thrift.TProtocol) (err error) {
+	if p.IsSetTriggerInterval() {
+		if err = oprot.WriteFieldBegin("trigger_interval", thrift.I32, 6); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := oprot.WriteI32(*p.TriggerInterval); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 6 end error: ", p), err)
+}
 
 func (p *Scheduler) String() string {
 	if p == nil {
@@ -8147,6 +8356,9 @@ func (p *Scheduler) DeepEqual(ano *Scheduler) bool {
 		return false
 	}
 	if !p.Field5DeepEqual(ano.EndTime) {
+		return false
+	}
+	if !p.Field6DeepEqual(ano.TriggerInterval) {
 		return false
 	}
 	return true
@@ -8208,6 +8420,18 @@ func (p *Scheduler) Field5DeepEqual(src *int64) bool {
 		return false
 	}
 	if *p.EndTime != *src {
+		return false
+	}
+	return true
+}
+func (p *Scheduler) Field6DeepEqual(src *int32) bool {
+
+	if p.TriggerInterval == src {
+		return true
+	} else if p.TriggerInterval == nil || src == nil {
+		return false
+	}
+	if *p.TriggerInterval != *src {
 		return false
 	}
 	return true

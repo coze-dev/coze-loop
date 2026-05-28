@@ -663,6 +663,11 @@ func (p *SubmitExperimentEvalTargetParam) IsValid() error {
 			return fmt.Errorf("field CustomEvalTarget not valid, %w", err)
 		}
 	}
+	if p.AgentConnection != nil {
+		if err := p.AgentConnection.IsValid(); err != nil {
+			return fmt.Errorf("field AgentConnection not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *SubmitExperimentOApiResponse) IsValid() error {
@@ -823,6 +828,98 @@ func (p *GetExperimentAggrResultOpenAPIData) IsValid() error {
 	if p.EvalTargetAggrResult_ != nil {
 		if err := p.EvalTargetAggrResult_.IsValid(); err != nil {
 			return fmt.Errorf("field EvalTargetAggrResult_ not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RetryExperimentOApiRequest) IsValid() error {
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RetryExperimentOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RetryExperimentOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *ExportExperimentResultOApiRequest) IsValid() error {
+	if p.ExportColumns != nil {
+		if err := p.ExportColumns.IsValid(); err != nil {
+			return fmt.Errorf("field ExportColumns not valid, %w", err)
+		}
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExportExperimentResultOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExportExperimentResultOpenAPIData) IsValid() error {
+	return nil
+}
+func (p *GetExperimentResultExportRecordOApiRequest) IsValid() error {
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExperimentResultExportRecordOApiResponse) IsValid() error {
+	if p.Data != nil {
+		if err := p.Data.IsValid(); err != nil {
+			return fmt.Errorf("field Data not valid, %w", err)
+		}
+	}
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *GetExperimentResultExportRecordOpenAPIData) IsValid() error {
+	if p.ExptResultExportRecord != nil {
+		if err := p.ExptResultExportRecord.IsValid(); err != nil {
+			return fmt.Errorf("field ExptResultExportRecord not valid, %w", err)
 		}
 	}
 	return nil
@@ -1540,6 +1637,11 @@ func (p *SubmitExptFromTemplateOApiRequest) IsValid() error {
 	if p.NotificationConf != nil {
 		if err := p.NotificationConf.IsValid(); err != nil {
 			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
+	if p.TargetRuntimeParam != nil {
+		if err := p.TargetRuntimeParam.IsValid(); err != nil {
+			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
 	if p.Extra != nil {
