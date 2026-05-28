@@ -599,3 +599,46 @@ func TestExptTemplateConfiguration_GetDefaultEvaluatorsConcurNum(t *testing.T) {
 		assert.Equal(t, 3, c.GetDefaultEvaluatorsConcurNum())
 	})
 }
+
+func TestDefaultExptTemplateUpdateEvalSetWhiteList(t *testing.T) {
+	w := DefaultExptTemplateUpdateEvalSetWhiteList()
+	assert.NotNil(t, w)
+	assert.False(t, w.AllowAll)
+	assert.Empty(t, w.SpaceIDs)
+}
+
+func TestExptTemplateUpdateEvalSetWhiteList_IsSpaceAllowed(t *testing.T) {
+	t.Run("nil whitelist 返回 false", func(t *testing.T) {
+		var w *ExptTemplateUpdateEvalSetWhiteList
+		assert.False(t, w.IsSpaceAllowed(123))
+	})
+
+	t.Run("allow_all=true 任意空间放行", func(t *testing.T) {
+		w := &ExptTemplateUpdateEvalSetWhiteList{AllowAll: true}
+		assert.True(t, w.IsSpaceAllowed(0))
+		assert.True(t, w.IsSpaceAllowed(123))
+	})
+
+	t.Run("命中 space_ids 列表", func(t *testing.T) {
+		w := &ExptTemplateUpdateEvalSetWhiteList{
+			SpaceIDs: []int64{100, 200, 300},
+		}
+		assert.True(t, w.IsSpaceAllowed(100))
+		assert.True(t, w.IsSpaceAllowed(200))
+		assert.True(t, w.IsSpaceAllowed(300))
+	})
+
+	t.Run("未命中 space_ids 列表", func(t *testing.T) {
+		w := &ExptTemplateUpdateEvalSetWhiteList{
+			SpaceIDs: []int64{100, 200},
+		}
+		assert.False(t, w.IsSpaceAllowed(101))
+		assert.False(t, w.IsSpaceAllowed(0))
+	})
+
+	t.Run("space_ids 为空且 allow_all=false 全部拒绝", func(t *testing.T) {
+		w := &ExptTemplateUpdateEvalSetWhiteList{}
+		assert.False(t, w.IsSpaceAllowed(1))
+		assert.False(t, w.IsSpaceAllowed(0))
+	})
+}

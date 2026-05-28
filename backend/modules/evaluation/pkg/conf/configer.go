@@ -91,6 +91,11 @@ func (c *configer) GetExptExportWhiteList(ctx context.Context) (eec *entity.Expt
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &eec) == nil, eec, entity.DefaultExptExportWhiteList())
 }
 
+func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w *entity.ExptTemplateUpdateEvalSetWhiteList) {
+	const key = "expt_template_update_eval_set_white_list"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptTemplateUpdateEvalSetWhiteList())
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf
