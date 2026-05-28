@@ -1994,6 +1994,7 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 
 	if req.GetTripleConfig() != nil {
 		tc := req.GetTripleConfig()
+		param.EvalSetID = tc.GetEvalSetID()
 		param.EvalSetVersionID = tc.GetEvalSetVersionID()
 		param.TargetVersionID = tc.GetTargetVersionID()
 		param.EvaluatorIDVersionItems = openAPIExptTupleEvaluatorItemsToEntity(tc)

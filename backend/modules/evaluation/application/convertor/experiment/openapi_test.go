@@ -1224,6 +1224,7 @@ func TestOpenAPIUpdateExptTemplateReq2Domain(t *testing.T) {
 			ExptType: gptr.Of(openapiExperiment.ExperimentTypeOffline),
 		},
 		TripleConfig: &openapiExperiment.ExptTuple{
+			EvalSetID:        gptr.Of(int64(77)),
 			EvalSetVersionID: gptr.Of(int64(102)),
 		},
 		FieldMappingConfig: &openapiExperiment.ExptFieldMapping{
@@ -1236,6 +1237,7 @@ func TestOpenAPIUpdateExptTemplateReq2Domain(t *testing.T) {
 	if assert.NotNil(t, got) {
 		assert.Equal(t, int64(1), got.TemplateID)
 		assert.Equal(t, "updated", got.Name)
+		assert.Equal(t, int64(77), got.EvalSetID)
 		assert.Equal(t, int64(102), got.EvalSetVersionID)
 		if assert.NotNil(t, got.TemplateConf) {
 			assert.Equal(t, 2, *got.TemplateConf.ItemConcurNum)

@@ -2033,6 +2033,10 @@ func (f *fakeRecordStorageConfiger) GetTargetTrajectoryConf(ctx context.Context)
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList {
+	return nil
+}
+
 func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

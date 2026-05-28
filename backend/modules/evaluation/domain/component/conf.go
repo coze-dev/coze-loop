@@ -33,4 +33,5 @@ type IConfiger interface {
 	GetMaintainerUserIDs(ctx context.Context) map[string]bool
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
+	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
 }

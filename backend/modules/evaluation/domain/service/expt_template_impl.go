@@ -18,6 +18,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	taskfilter "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/filter"
 	taskdomain "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -43,6 +44,7 @@ func NewExptTemplateManager(
 	pipelineRPCAdapter rpc.IPipelineListAdapter,
 	exptRepo repo.IExperimentRepo,
 	scheduleAdapter rpc.IExptScheduleAdapter,
+	configer component.IConfiger,
 ) IExptTemplateManager {
 	return &ExptTemplateManagerImpl{
 		templateRepo:                templateRepo,
@@ -56,6 +58,7 @@ func NewExptTemplateManager(
 		pipelineRPCAdapter:          pipelineRPCAdapter,
 		exptRepo:                    exptRepo,
 		scheduleAdapter:             scheduleAdapter,
+		configer:                    configer,
 	}
 }
 
@@ -73,6 +76,7 @@ type ExptTemplateManagerImpl struct {
 	// scheduleAdapter SourceType=Evaluation 时通过该适配器把 Scheduler 配置投递到底层调度平台；
 	// 上游可能注入 noop 实现（无 ByteScheduler 依赖时）以便在创建/更新模板的主流程上保持一致语义。
 	scheduleAdapter rpc.IExptScheduleAdapter
+	configer        component.IConfiger
 }
 
 func (e *ExptTemplateManagerImpl) CheckName(ctx context.Context, name string, spaceID int64, exptType entity.ExptType, session *entity.Session) (bool, error) {
@@ -274,6 +278,14 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		return nil, errorx.NewByCode(errno.ResourceNotFoundCode, errorx.WithExtraMsg(fmt.Sprintf("template %d not found", param.TemplateID)))
 	}
 
+	// 白名单：仅特定空间允许在更新模板时变更 EvalSetID；其他空间只能更新评测集版本。
+	if param.EvalSetID > 0 && param.EvalSetID != existingTemplate.GetEvalSetID() {
+		if !e.configer.GetExptTemplateUpdateEvalSetWhiteList(ctx).IsSpaceAllowed(param.SpaceID) {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg(fmt.Sprintf("space %d is not allowed to update eval_set_id of experiment template", param.SpaceID)))
+		}
+	}
+
 	// 如果名称改变，检查新名称是否可用（允许和当前名称重复）；按现有模板的 expt_type 隔离判重
 	if param.Name != "" && param.Name != existingTemplate.GetName() {
 		pass, err := e.CheckName(ctx, param.Name, param.SpaceID, existingTemplate.Meta.ExptType, session)
@@ -409,6 +421,23 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	}
 	if updatedTripleConfig.TargetVersionID == 0 {
 		updatedTripleConfig.TargetVersionID = existingTemplate.GetTargetVersionID()
+	}
+
+	// 当评测集或版本相对原模板发生变化时，校验版本归属：评测集版本必须属于声明的评测集。
+	if updatedTripleConfig.EvalSetID != existingTemplate.GetEvalSetID() ||
+		updatedTripleConfig.EvalSetVersionID != existingTemplate.GetEvalSetVersionID() {
+		if updatedTripleConfig.EvalSetID <= 0 || updatedTripleConfig.EvalSetVersionID <= 0 {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg("eval_set_id and eval_set_version_id are required when updating eval set"))
+		}
+		version, _, err := e.evaluationSetVersionService.GetEvaluationSetVersion(ctx, param.SpaceID, updatedTripleConfig.EvalSetVersionID, gptr.Of(false))
+		if err != nil {
+			return nil, errorx.Wrapf(err, "get evaluation set version fail, version_id: %d", updatedTripleConfig.EvalSetVersionID)
+		}
+		if version == nil || version.EvaluationSetID != updatedTripleConfig.EvalSetID {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode,
+				errorx.WithExtraMsg(fmt.Sprintf("eval_set_version %d does not belong to eval_set %d", updatedTripleConfig.EvalSetVersionID, updatedTripleConfig.EvalSetID)))
+		}
 	}
 
 	// 如果创建了评测对象，更新 TemplateConf 中的 TargetVersionID
