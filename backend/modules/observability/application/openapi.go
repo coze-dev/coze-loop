@@ -34,13 +34,16 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/middleware/session"
+	taskdto "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/domain/task"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/openapi"
+	taskreq "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/observability/task"
 	tconv "github.com/coze-dev/coze-loop/backend/modules/observability/application/convertor/trace"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/application/utils"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/config"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/tenant"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/component/workspace"
+	taskentity "github.com/coze-dev/coze-loop/backend/modules/observability/domain/task/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/entity/loop_span"
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/trace/service"
@@ -70,6 +73,7 @@ func NewOpenAPIApplication(
 	collector collector.ICollectorProvider,
 	timeRange time_range.ITimeRangeProvider,
 	spanContextExtractor span_context_extractor.ISpanContextExtractor,
+	taskApp ITaskApplication,
 ) (IObservabilityOpenAPIApplication, error) {
 	return &OpenAPIApplication{
 		traceService:         traceService,
@@ -83,6 +87,7 @@ func NewOpenAPIApplication(
 		collector:            collector,
 		timeRange:            timeRange,
 		spanContextExtractor: spanContextExtractor,
+		taskApp:              taskApp,
 	}, nil
 }
 
@@ -98,6 +103,7 @@ type OpenAPIApplication struct {
 	collector            collector.ICollectorProvider
 	timeRange            time_range.ITimeRangeProvider
 	spanContextExtractor span_context_extractor.ISpanContextExtractor
+	taskApp              ITaskApplication
 }
 
 func (o *OpenAPIApplication) IngestTraces(ctx context.Context, req *openapi.IngestTracesRequest) (*openapi.IngestTracesResponse, error) {
@@ -1210,4 +1216,118 @@ func (p *OpenAPIApplication) AllowByKey(ctx context.Context, key string) bool {
 		return true
 	}
 	return false
+}
+
+func (o *OpenAPIApplication) CreateTaskOApi(ctx context.Context, req *openapi.CreateTaskOApiRequest) (*openapi.CreateTaskOApiResponse, error) {
+	var err error
+	st := time.Now()
+	errCode := 0
+	defer func() {
+		src := ""
+		if req.Extra != nil {
+			src = req.Extra.GetSrc()
+		}
+		o.metrics.EmitTraceOapi("CreateTaskOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "CreateTaskOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+	}()
+
+	if req == nil {
+		err = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	} else if req.GetWorkspaceID() <= 0 {
+		err = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+
+	if err = o.auth.CheckWorkspacePermission(ctx, rpc.AuthActionTraceTaskCreate, strconv.FormatInt(req.GetWorkspaceID(), 10), false); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+
+	// 构建内部 CreateTaskRequest，复用 TaskApplication 的完整逻辑
+	taskReq := &taskreq.CreateTaskRequest{
+		Task: &taskdto.Task{
+			Name:        req.GetName(),
+			Description: req.Description,
+			WorkspaceID: &req.WorkspaceID,
+			TaskType:    string(taskentity.TaskTypeAutoDataReflow),
+			Rule:        req.Rule,
+			TaskConfig: &taskdto.TaskConfig{
+				DataReflowConfig: req.DataReflowConfig,
+			},
+		},
+	}
+
+	resp, err := o.taskApp.CreateTask(ctx, taskReq)
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, err
+	}
+
+	return &openapi.CreateTaskOApiResponse{TaskID: resp.TaskID}, nil
+}
+
+func (o *OpenAPIApplication) RunTaskOApi(ctx context.Context, req *openapi.RunTaskOApiRequest) (*openapi.RunTaskOApiResponse, error) {
+	var err error
+	st := time.Now()
+	errCode := 0
+	defer func() {
+		src := ""
+		if req.Extra != nil {
+			src = req.Extra.GetSrc()
+		}
+		o.metrics.EmitTraceOapi("RunTaskOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+		o.collector.CollectTraceOpenAPIEvent(ctx, "RunTaskOApi", req.WorkspaceID, "", "", src, 0, errCode, st, err != nil)
+	}()
+
+	if req == nil {
+		err = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("no request provided"))
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	} else if req.GetWorkspaceID() <= 0 {
+		err = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	} else if req.GetTaskID() <= 0 {
+		err = errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid task_id"))
+		errCode = obErrorx.CommercialCommonInvalidParamCodeCode
+		return nil, err
+	}
+
+	if err = o.auth.CheckTaskPermission(ctx, rpc.AuthActionTraceTaskEdit, strconv.FormatInt(req.GetWorkspaceID(), 10), strconv.FormatInt(req.GetTaskID(), 10)); err != nil {
+		errCode = obErrorx.CommonNoPermissionCode
+		return nil, err
+	}
+
+	limitKey := strconv.FormatInt(req.GetWorkspaceID(), 10)
+	if !o.AllowByKey(ctx, limitKey) {
+		err = errorx.NewByCode(obErrorx.CommonRequestRateLimitCode, errorx.WithExtraMsg("qps limit exceeded"))
+		errCode = obErrorx.CommonRequestRateLimitCode
+		return nil, err
+	}
+
+	// 调用内部 UpdateTask 将任务状态设为 running
+	runningStatus := string(taskentity.TaskStatusRunning)
+	updateReq := &taskreq.UpdateTaskRequest{
+		TaskID:      req.GetTaskID(),
+		WorkspaceID: req.GetWorkspaceID(),
+		TaskStatus:  &runningStatus,
+	}
+
+	_, err = o.taskApp.UpdateTask(ctx, updateReq)
+	if err != nil {
+		errCode = obErrorx.CommonInternalErrorCode
+		return nil, err
+	}
+
+	return &openapi.RunTaskOApiResponse{}, nil
 }

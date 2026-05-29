@@ -317,3 +317,68 @@ func (p *ListTrajectoryOApiResponse) IsValid() error {
 	}
 	return nil
 }
+func (p *CreateTaskOApiRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if len(p.Name) < int(1) {
+		return fmt.Errorf("field Name min_len rule failed, current value: %d", len(p.Name))
+	}
+	if len(p.Name) > int(128) {
+		return fmt.Errorf("field Name max_len rule failed, current value: %d", len(p.Name))
+	}
+	if p.Rule != nil {
+		if err := p.Rule.IsValid(); err != nil {
+			return fmt.Errorf("field Rule not valid, %w", err)
+		}
+	}
+	if len(p.DataReflowConfig) < int(1) {
+		return fmt.Errorf("field DataReflowConfig MinLen rule failed, current value: %v", p.DataReflowConfig)
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *CreateTaskOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunTaskOApiRequest) IsValid() error {
+	if p.WorkspaceID <= int64(0) {
+		return fmt.Errorf("field WorkspaceID gt rule failed, current value: %v", p.WorkspaceID)
+	}
+	if p.TaskID <= int64(0) {
+		return fmt.Errorf("field TaskID gt rule failed, current value: %v", p.TaskID)
+	}
+	if p.Extra != nil {
+		if err := p.Extra.IsValid(); err != nil {
+			return fmt.Errorf("field Extra not valid, %w", err)
+		}
+	}
+	if p.Base != nil {
+		if err := p.Base.IsValid(); err != nil {
+			return fmt.Errorf("field Base not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *RunTaskOApiResponse) IsValid() error {
+	if p.BaseResp != nil {
+		if err := p.BaseResp.IsValid(); err != nil {
+			return fmt.Errorf("field BaseResp not valid, %w", err)
+		}
+	}
+	return nil
+}

@@ -9,6 +9,8 @@ include "./domain/filter.thrift"
 include "coze.loop.observability.trace.thrift"
 include "../extra.thrift"
 include "../trajectory.thrift"
+include "./domain/task.thrift"
+include "./domain/export_dataset.thrift"
 
 struct IngestTracesRequest {
     1: optional list<span.InputSpan> spans (api.body='spans')
@@ -218,6 +220,35 @@ struct ListTrajectoryOApiResponse {
     255: optional base.BaseResp BaseResp
 }
 
+struct CreateTaskOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
+    2: required string name (api.body="name", vt.min_size="1", vt.max_size="128")
+    3: optional string description (api.body="description")
+    4: optional task.Rule rule (api.body="rule")
+    5: optional list<task.DataReflowConfig> data_reflow_config (api.body="data_reflow_config", vt.min_size="1")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct CreateTaskOApiResponse {
+    1: optional i64 task_id (api.js_conv="true", api.body="task_id")
+
+    255: optional base.BaseResp BaseResp
+}
+
+struct RunTaskOApiRequest {
+    1: required i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"', api.body="workspace_id" vt.gt="0")
+    2: required i64 task_id (api.js_conv='true', go.tag='json:"task_id"', api.body="task_id" vt.gt="0")
+
+    254: optional extra.Extra extra (agw.source="not_body_struct")
+    255: optional base.Base Base
+}
+
+struct RunTaskOApiResponse {
+    255: optional base.BaseResp BaseResp
+}
+
 service OpenAPIService {
     IngestTracesResponse IngestTraces(1: IngestTracesRequest req) (api.post = '/v1/loop/traces/ingest')
     OtelIngestTracesResponse OtelIngestTraces(1: OtelIngestTracesRequest req) (api.post = '/v1/loop/opentelemetry/v1/traces')
@@ -229,4 +260,6 @@ service OpenAPIService {
     ListTrajectoryOApiResponse ListTrajectoryOApi(1: ListTrajectoryOApiRequest req) (api.post = '/v1/loop/traces/trajectory', api.tag="openapi")
     CreateAnnotationResponse CreateAnnotation(1: CreateAnnotationRequest req) (api.post = '/v1/loop/annotations', api.tag="openapi")
     DeleteAnnotationResponse DeleteAnnotation(1: DeleteAnnotationRequest req) (api.delete = '/v1/loop/annotations', api.tag="openapi")
+    CreateTaskOApiResponse CreateTaskOApi(1: CreateTaskOApiRequest req) (api.post = '/v1/loop/tasks', api.tag="openapi")
+    RunTaskOApiResponse RunTaskOApi(1: RunTaskOApiRequest req) (api.post = '/v1/loop/tasks/run', api.tag="openapi")
 }

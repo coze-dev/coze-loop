@@ -451,6 +451,7 @@ func InitOpenAPIApplication(
 	idgen idgen.IIDGenerator,
 	evalService evaluatorservice.Client,
 	persistentCmdable redis.PersistentCmdable,
+	taskApp ITaskApplication,
 ) (IObservabilityOpenAPIApplication, error) {
 	wire.Build(openApiSet)
 	return nil, nil

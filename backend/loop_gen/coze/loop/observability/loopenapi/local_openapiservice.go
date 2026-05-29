@@ -232,6 +232,48 @@ func (l *LocalOpenAPIService) DeleteAnnotation(ctx context.Context, req *openapi
 	return result.GetSuccess(), nil
 }
 
+func (l *LocalOpenAPIService) CreateTaskOApi(ctx context.Context, req *openapi.CreateTaskOApiRequest, callOptions ...callopt.Option) (*openapi.CreateTaskOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceCreateTaskOApiArgs)
+		result := out.(*openapi.OpenAPIServiceCreateTaskOApiResult)
+		resp, err := l.impl.CreateTaskOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceCreateTaskOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceCreateTaskOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "CreateTaskOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
+func (l *LocalOpenAPIService) RunTaskOApi(ctx context.Context, req *openapi.RunTaskOApiRequest, callOptions ...callopt.Option) (*openapi.RunTaskOApiResponse, error) {
+	chain := l.mds(func(ctx context.Context, in, out interface{}) error {
+		arg := in.(*openapi.OpenAPIServiceRunTaskOApiArgs)
+		result := out.(*openapi.OpenAPIServiceRunTaskOApiResult)
+		resp, err := l.impl.RunTaskOApi(ctx, arg.Req)
+		if err != nil {
+			return err
+		}
+		result.SetSuccess(resp)
+		return nil
+	})
+
+	arg := &openapi.OpenAPIServiceRunTaskOApiArgs{Req: req}
+	result := &openapi.OpenAPIServiceRunTaskOApiResult{}
+	ctx = l.injectRPCInfo(ctx, "RunTaskOApi")
+	if err := chain(ctx, arg, result); err != nil {
+		return nil, err
+	}
+	return result.GetSuccess(), nil
+}
+
 func (l *LocalOpenAPIService) injectRPCInfo(ctx context.Context, method string) context.Context {
 	rpcStats := rpcinfo.AsMutableRPCStats(rpcinfo.NewRPCStats())
 	ri := rpcinfo.NewRPCInfo(

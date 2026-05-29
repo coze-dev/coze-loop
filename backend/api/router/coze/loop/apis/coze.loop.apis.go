@@ -483,6 +483,9 @@ func Register(r *server.Hertz, handler *apis.APIHandler) {
 				_drafts1.POST("/save", append(_savedraftoapiMw(handler), apis.SaveDraftOApi)...)
 			}
 			_prompts0.GET("/:prompt_id", append(_getpromptoapiMw(handler), apis.GetPromptOApi)...)
+			_loop.POST("/tasks", append(_tasks1Mw(handler), apis.CreateTaskOApi)...)
+			_tasks1 := _loop.Group("/tasks", _tasks1Mw(handler)...)
+			_tasks1.POST("/run", append(_runtaskoapiMw(handler), apis.RunTaskOApi)...)
 			{
 				_eval_targets0 := _loop.Group("/eval_targets", _eval_targets0Mw(handler)...)
 				_eval_targets0.POST("/result", append(_reportevaltargetinvokeresultMw(handler), apis.ReportEvalTargetInvokeResult)...)

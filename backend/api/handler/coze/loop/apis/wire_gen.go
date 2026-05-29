@@ -180,12 +180,12 @@ func InitObservabilityHandler(ctx context.Context, db2 db.Provider, ckDb ck.Prov
 	if err != nil {
 		return nil, err
 	}
-	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, limiterFactory, authCli, meter, db2, redis2, idgen2, evalClient, persistentCmdable)
+	iWorkflowProvider := task.NewNoopTaskHookProvider()
+	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, iWorkflowProvider)
 	if err != nil {
 		return nil, err
 	}
-	iWorkflowProvider := task.NewNoopTaskHookProvider()
-	iTaskApplication, err := application6.InitTaskApplication(db2, idgen2, configFactory, benefit2, ckDb, meter, redis2, mqFactory, userClient, authCli, evalClient, evalSetClient, experimentClient, datasetClient, fileClient, taskProcessor, aid, persistentCmdable, iWorkflowProvider)
+	iObservabilityOpenAPIApplication, err := application6.InitOpenAPIApplication(mqFactory, configFactory, fileClient, ckDb, benefit2, limiterFactory, authCli, meter, db2, redis2, idgen2, evalClient, persistentCmdable, iTaskApplication)
 	if err != nil {
 		return nil, err
 	}

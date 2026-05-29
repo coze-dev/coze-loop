@@ -90,3 +90,15 @@ func ListPreSpanOApi(ctx context.Context, c *app.RequestContext) {
 func ListTrajectoryOApi(ctx context.Context, c *app.RequestContext) {
 	invokeAndRender(ctx, c, observabilityOpenAPIClient.ListTrajectoryOApi)
 }
+
+// CreateTaskOApi .
+// @router /v1/loop/tasks [POST]
+func CreateTaskOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.CreateTaskOApi)
+}
+
+// RunTaskOApi .
+// @router /v1/loop/tasks/run [POST]
+func RunTaskOApi(ctx context.Context, c *app.RequestContext) {
+	invokeAndRender(ctx, c, observabilityOpenAPIClient.RunTaskOApi)
+}

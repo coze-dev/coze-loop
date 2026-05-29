@@ -83,6 +83,20 @@ var serviceMethods = map[string]kitex.MethodInfo{
 		false,
 		kitex.WithStreamingMode(kitex.StreamingNone),
 	),
+	"CreateTaskOApi": kitex.NewMethodInfo(
+		createTaskOApiHandler,
+		newOpenAPIServiceCreateTaskOApiArgs,
+		newOpenAPIServiceCreateTaskOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
+	"RunTaskOApi": kitex.NewMethodInfo(
+		runTaskOApiHandler,
+		newOpenAPIServiceRunTaskOApiArgs,
+		newOpenAPIServiceRunTaskOApiResult,
+		false,
+		kitex.WithStreamingMode(kitex.StreamingNone),
+	),
 }
 
 var (
@@ -306,6 +320,44 @@ func newOpenAPIServiceDeleteAnnotationResult() interface{} {
 	return openapi.NewOpenAPIServiceDeleteAnnotationResult()
 }
 
+func createTaskOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceCreateTaskOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceCreateTaskOApiResult)
+	success, err := handler.(openapi.OpenAPIService).CreateTaskOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceCreateTaskOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceCreateTaskOApiArgs()
+}
+
+func newOpenAPIServiceCreateTaskOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceCreateTaskOApiResult()
+}
+
+func runTaskOApiHandler(ctx context.Context, handler interface{}, arg, result interface{}) error {
+	realArg := arg.(*openapi.OpenAPIServiceRunTaskOApiArgs)
+	realResult := result.(*openapi.OpenAPIServiceRunTaskOApiResult)
+	success, err := handler.(openapi.OpenAPIService).RunTaskOApi(ctx, realArg.Req)
+	if err != nil {
+		return err
+	}
+	realResult.Success = success
+	return nil
+}
+
+func newOpenAPIServiceRunTaskOApiArgs() interface{} {
+	return openapi.NewOpenAPIServiceRunTaskOApiArgs()
+}
+
+func newOpenAPIServiceRunTaskOApiResult() interface{} {
+	return openapi.NewOpenAPIServiceRunTaskOApiResult()
+}
+
 type kClient struct {
 	c  client.Client
 	sc client.Streaming
@@ -413,6 +465,26 @@ func (p *kClient) DeleteAnnotation(ctx context.Context, req *openapi.DeleteAnnot
 	_args.Req = req
 	var _result openapi.OpenAPIServiceDeleteAnnotationResult
 	if err = p.c.Call(ctx, "DeleteAnnotation", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) CreateTaskOApi(ctx context.Context, req *openapi.CreateTaskOApiRequest) (r *openapi.CreateTaskOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceCreateTaskOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceCreateTaskOApiResult
+	if err = p.c.Call(ctx, "CreateTaskOApi", &_args, &_result); err != nil {
+		return
+	}
+	return _result.GetSuccess(), nil
+}
+
+func (p *kClient) RunTaskOApi(ctx context.Context, req *openapi.RunTaskOApiRequest) (r *openapi.RunTaskOApiResponse, err error) {
+	var _args openapi.OpenAPIServiceRunTaskOApiArgs
+	_args.Req = req
+	var _result openapi.OpenAPIServiceRunTaskOApiResult
+	if err = p.c.Call(ctx, "RunTaskOApi", &_args, &_result); err != nil {
 		return
 	}
 	return _result.GetSuccess(), nil
