@@ -16,16 +16,18 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo         repo.IExperimentRepo
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	exptRepo          repo.IExperimentRepo
+	notifyRPCAdapter  rpc.INotifyRPCAdapter
+	userProvider      rpc.IUserProvider
+	webhookDispatcher IWebhookDispatcher
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, webhookDispatcher IWebhookDispatcher) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:         exptRepo,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		exptRepo:          exptRepo,
+		notifyRPCAdapter:  notifyRPCAdapter,
+		userProvider:      userProvider,
+		webhookDispatcher: webhookDispatcher,
 	}
 }
 
@@ -35,27 +37,43 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 		return err
 	}
 
+	// Feishu notification
+	h.handleFeishuNotification(ctx, event, expt)
+
+	// Webhook dispatch
+	h.dispatchWebhook(ctx, event, expt)
+
+	return nil
+}
+
+func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	// Check if feishu notification is configured with filter
-	if expt.NotificationConf != nil && expt.NotificationConf.FeishuNotification != nil && expt.NotificationConf.FeishuNotification.Enable {
-		filter := expt.NotificationConf.Filter
-		if filter != nil && len(filter.FilterConditions) > 0 {
-			// Use filter to decide
-			if matchNotificationFilter(filter, event.ToStatus) {
-				logs.CtxInfo(ctx, "feishu_notify: filter matched, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-				return h.sendNotifyCard(ctx, event, expt)
-			}
-			logs.CtxInfo(ctx, "feishu_notify: filter not matched, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-			return nil
-		}
+	if expt.NotificationConf == nil || expt.NotificationConf.FeishuNotification == nil || !expt.NotificationConf.FeishuNotification.Enable {
+		return
 	}
 
-	// Default behavior: only send on terminal states
-	switch event.ToStatus {
-	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		logs.CtxInfo(ctx, "feishu_notify: terminal state, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-		return h.sendNotifyCard(ctx, event, expt)
-	default:
-		return nil
+	filter := expt.NotificationConf.Filter
+	if filter != nil && len(filter.FilterConditions) > 0 {
+		if matchNotificationFilter(filter, event.ToStatus) {
+			logs.CtxInfo(ctx, "feishu_notify: filter matched, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+			h.sendNotifyCard(ctx, event, expt)
+		} else {
+			logs.CtxInfo(ctx, "feishu_notify: filter not matched, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+		}
+		return
+	}
+
+	// No filter configured but feishu notification is enabled, send for all status changes
+	logs.CtxInfo(ctx, "feishu_notify: no filter, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+	h.sendNotifyCard(ctx, event, expt)
+}
+
+func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
+	if h.webhookDispatcher == nil {
+		return
+	}
+	if err := h.webhookDispatcher.Dispatch(ctx, event, expt); err != nil {
+		logs.CtxWarn(ctx, "webhook_dispatcher: dispatch failed, expt_id: %d, err: %v", event.ExptID, err)
 	}
 }
 

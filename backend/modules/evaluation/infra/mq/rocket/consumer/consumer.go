@@ -20,14 +20,14 @@ func NewConsumerWorkers(
 	exptApp application.IExperimentApplication,
 	publisher events.ExptEventPublisher,
 ) ([]mq.IConsumerWorker, error) {
+	webhookHandler := NewWebhookRetryConsumer(publisher)
 	return []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
 		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
 		NewExptAggrCalculateEventConsumer(NewAggrCalculateConsumer(exptApp), loader),
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
-		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
-		NewWebhookRetryEventConsumer(NewWebhookRetryConsumer(publisher), loader),
+		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp, webhookHandler), loader),
 	}, nil
 }
 

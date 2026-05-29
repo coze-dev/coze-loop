@@ -27,24 +27,42 @@ import (
 
 // IWebhookDispatcher Webhook 分发器接口
 type IWebhookDispatcher interface {
-	Dispatch(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment, secret string) error
+	Dispatch(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error
+}
+
+// IWebhookSecretProvider 签名密钥提供者接口
+type IWebhookSecretProvider interface {
+	GetSecret(ctx context.Context, spaceID int64) (string, error)
+}
+
+// NoopWebhookSecretProvider 默认无签名密钥提供者（开源版默认实现）
+type NoopWebhookSecretProvider struct{}
+
+func NewNoopWebhookSecretProvider() *NoopWebhookSecretProvider {
+	return &NoopWebhookSecretProvider{}
+}
+
+func (p *NoopWebhookSecretProvider) GetSecret(ctx context.Context, spaceID int64) (string, error) {
+	return "", nil
 }
 
 // WebhookDispatcher Webhook 分发器实现
 type WebhookDispatcher struct {
-	httpClient *http.Client
-	publisher  events.ExptEventPublisher
+	httpClient     *http.Client
+	publisher      events.ExptEventPublisher
+	secretProvider IWebhookSecretProvider
 }
 
 // NewWebhookDispatcher 创建 WebhookDispatcher
-func NewWebhookDispatcher(publisher events.ExptEventPublisher) *WebhookDispatcher {
+func NewWebhookDispatcher(publisher events.ExptEventPublisher, secretProvider IWebhookSecretProvider) *WebhookDispatcher {
 	return &WebhookDispatcher{
-		httpClient: &http.Client{Timeout: 5 * time.Second},
-		publisher:  publisher,
+		httpClient:     &http.Client{Timeout: 5 * time.Second},
+		publisher:      publisher,
+		secretProvider: secretProvider,
 	}
 }
 
-func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment, secret string) error {
+func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error {
 	if expt == nil || expt.NotificationConf == nil {
 		return nil
 	}
@@ -78,6 +96,10 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 	}
 
 	// 签名参数
+	var secret string
+	if d.secretProvider != nil {
+		secret, _ = d.secretProvider.GetSecret(ctx, expt.SpaceID)
+	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	nonce := generateNonce()
 	signMessage := timestamp + "\n" + nonce + "\n"

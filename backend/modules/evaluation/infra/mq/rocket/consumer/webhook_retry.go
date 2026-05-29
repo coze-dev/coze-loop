@@ -16,13 +16,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bytedance/gg/gptr"
-
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
-	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket"
-	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -132,25 +128,4 @@ func generateRetryNonce() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
-}
-
-// WebhookRetryEventConsumer Worker
-type WebhookRetryEventConsumer struct {
-	mq.IConsumerHandler
-	conf.IConfigLoader
-}
-
-func NewWebhookRetryEventConsumer(handler mq.IConsumerHandler, loader conf.IConfigLoader) mq.IConsumerWorker {
-	return &WebhookRetryEventConsumer{
-		IConsumerHandler: handler,
-		IConfigLoader:    loader,
-	}
-}
-
-func (e *WebhookRetryEventConsumer) ConsumerCfg(ctx context.Context) (*mq.ConsumerConfig, error) {
-	rmqCfg := &rocket.RMQConf{}
-	if err := e.UnmarshalKey(ctx, rocket.ExptWebhookNotifyEventRMQKey, rmqCfg); err != nil {
-		return nil, err
-	}
-	return gptr.Of(rmqCfg.ToConsumerCfg()), nil
 }

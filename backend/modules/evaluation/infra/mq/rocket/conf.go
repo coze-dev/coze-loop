@@ -22,7 +22,10 @@ const (
 	ExptExportCSVEventRMQKey        = "expt_export_csv_event_rmq"
 	ExptAnalysisEventRMQKey         = "expt_analysis_event_rmq"
 	ExptLifecycleEventRMQKey        = "expt_lifecycle_event_rmq"
-	ExptWebhookNotifyEventRMQKey    = "expt_webhook_notify_event_rmq"
+	ExptWebhookNotifyEventRMQKey    = "expt_webhook_notify_event_rmq" // Deprecated: 已复用 lifecycle topic + TagWebhookRetry
+
+	// Tag 常量，用于在同一 Topic 内区分消息类型
+	TagWebhookRetry = "webhook_retry"
 )
 
 type RMQConf struct {

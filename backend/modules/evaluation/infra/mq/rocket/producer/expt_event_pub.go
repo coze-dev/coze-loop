@@ -60,7 +60,6 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptTurnResultFilterRMQKey,
 		rocket.ExptExportCSVEventRMQKey,
 		rocket.ExptLifecycleEventRMQKey,
-		rocket.ExptWebhookNotifyEventRMQKey,
 	} {
 		p := &producer{}
 
@@ -163,10 +162,15 @@ func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, even
 }
 
 func (e *exptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
-	return e.batchSend(ctx, rocket.ExptWebhookNotifyEventRMQKey, []any{event}, duration)
+	// 复用 lifecycle topic，通过 tag 区分 webhook 重试消息
+	return e.batchSendWithTag(ctx, rocket.ExptLifecycleEventRMQKey, rocket.TagWebhookRetry, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {
+	return e.batchSendWithTag(ctx, pk, "", events, duration)
+}
+
+func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk string, tag string, events []any, duration *time.Duration) error {
 	p, ok := e.producers[pk]
 	if !ok {
 		return fmt.Errorf("rmq producer not found %v", pk)
@@ -185,6 +189,9 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 		} else {
 			msg = mq.NewDeferMessage(p.cfg.Topic, gptr.Indirect(duration), bytes)
 		}
+		if tag != "" {
+			msg.WithTag(tag)
+		}
 		msgs = append(msgs, msg)
 	}
 	if env := os.Getenv(XttEnv); env != "" {
@@ -195,6 +202,6 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
-	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, message_id: %v, offset: %v", pk, resp.MessageID, resp.Offset)
+	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, tag: %v, message_id: %v, offset: %v", pk, tag, resp.MessageID, resp.Offset)
 	return nil
 }
