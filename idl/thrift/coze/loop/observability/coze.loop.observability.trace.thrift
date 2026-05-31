@@ -69,6 +69,9 @@ struct GetTraceRequest {
     4: required i64 end_time (api.js_conv='true', go.tag='json:"end_time"', api.query="end_time") // ms
     8: optional common.PlatformType platform_type (api.query="platform_type")
     9: optional list<string> span_ids (api.query="span_ids")
+    10: optional filter.FilterFields filters (api.query="filters")
+    11: optional i32 page_size (api.query="page_size")
+    12: optional string page_token (api.query="page_token")
 
     255: optional base.Base Base
 }
@@ -76,6 +79,8 @@ struct GetTraceRequest {
 struct GetTraceResponse {
     1: required list<span.OutputSpan> spans
     2: optional TraceAdvanceInfo traces_advance_info
+    3: optional string next_page_token
+    4: optional bool has_more
 
     255: optional base.BaseResp BaseResp
 }

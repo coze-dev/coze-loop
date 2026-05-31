@@ -130,11 +130,15 @@ type GetTraceReq struct {
 	SpanIDs      []string
 	WithDetail   bool
 	Filters      *loop_span.FilterFields
+	Limit        int32
+	PageToken    string
 }
 
 type GetTraceResp struct {
-	TraceId string
-	Spans   loop_span.SpanList
+	TraceId       string
+	Spans         loop_span.SpanList
+	NextPageToken string
+	HasMore       bool
 }
 
 type ListMetadataReq struct {
@@ -1212,17 +1216,22 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if !req.WithDetail {
 		limit = 10000
 	}
+	if req.Limit > 0 && req.Limit < limit {
+		limit = req.Limit
+	}
 	traceResult, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
-		WorkSpaceID: strconv.FormatInt(req.WorkspaceID, 10),
-		Tenants:     tenants,
-		LogID:       req.LogID,
-		TraceID:     req.TraceID,
-		StartAt:     req.StartTime,
-		EndAt:       req.EndTime,
-		Limit:       limit,
-		SpanIDs:     req.SpanIDs,
-		Filters:     req.Filters,
-		OmitColumns: omitColumns,
+		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+		Tenants:         tenants,
+		LogID:           req.LogID,
+		TraceID:         req.TraceID,
+		StartAt:         req.StartTime,
+		EndAt:           req.EndTime,
+		Limit:           limit,
+		SpanIDs:         req.SpanIDs,
+		Filters:         req.Filters,
+		OmitColumns:     omitColumns,
+		PageToken:       req.PageToken,
+		DescByStartTime: req.PageToken != "" || req.Limit > 0,
 	})
 	r.metrics.EmitGetTrace(req.WorkspaceID, st, err != nil)
 	if err != nil {
@@ -1271,8 +1280,10 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	}
 	spans.SortByStartTime(false)
 	return &GetTraceResp{
-		TraceId: req.TraceID,
-		Spans:   spans,
+		TraceId:       req.TraceID,
+		Spans:         spans,
+		NextPageToken: traceResult.PageToken,
+		HasMore:       traceResult.HasMore,
 	}, nil
 }
 
