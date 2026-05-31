@@ -21,8 +21,11 @@ const (
 	ExptTurnResultFilterRMQKey      = "expt_turn_result_filter_rmq"
 	ExptExportCSVEventRMQKey        = "expt_export_csv_event_rmq"
 	ExptAnalysisEventRMQKey         = "expt_analysis_event_rmq"
-	ExptLifecycleEventRMQKey        = "expt_lifecycle_event_rmq"
-	WebhookRetryEventRMQKey         = "webhook_retry_rmq"
+	ExptLifecycleEventRMQKey = "expt_lifecycle_event_rmq"
+
+	// WebhookRetryEventTag is the RMQ tag used to distinguish webhook retry messages
+	// on the ExptLifecycleEvent topic (reuses existing topic, no separate TCC key needed).
+	WebhookRetryEventTag = "webhook_retry"
 )
 
 type RMQConf struct {
