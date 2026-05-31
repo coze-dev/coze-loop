@@ -635,6 +635,18 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		return nil, err
 	}
 
+	if tuple.Target != nil && tuple.Target.SpaceID != req.WorkspaceID {
+		return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg(fmt.Sprintf("cannt access target %d ", tuple.Target.ID)))
+	}
+	if tuple.EvalSet != nil && tuple.EvalSet.SpaceID != req.WorkspaceID {
+		return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg(fmt.Sprintf("cannt access evalset %d", tuple.EvalSet.ID)))
+	}
+	for _, ev := range tuple.Evaluators {
+		if ev != nil && !ev.Builtin && ev.GetSpaceID() != req.WorkspaceID {
+			return nil, errorx.NewByCode(errno.CommonNoPermissionCode, errorx.WithExtraMsg(fmt.Sprintf("cannt access evaluator %d", ev.ID)))
+		}
+	}
+
 	ids, err := e.idgenerator.GenMultiIDs(ctx, 2)
 	if err != nil {
 		return nil, err
