@@ -242,7 +242,8 @@ func (m *MetricsService) buildDrillDownFields(
 	ret := make([][]*loop_span.FilterField, 0)
 	if definition.OExpression().AggrType == entity.MetricOfflineAggrTypeAvg {
 		// 对于AVG类型而言的计算都是不准确的, 需要准确就需要完全地下钻
-		ret = allDrillDownFields(fields)
+		all := allDrillDownFields(fields)
+		ret = filterExcludedDrillDowns(all, m.pMetrics.DrillDownObjects, platformCfg, groupCfg)
 	} else {
 		ret = append(ret, fields)
 	}
@@ -253,6 +254,85 @@ func (m *MetricsService) buildDrillDownFields(
 		})
 	}
 	return ret
+}
+
+// filterExcludedDrillDowns 过滤幂集中被排除的子集
+// 对每个子集，分别提取属于 platform 层和 group 层的维度 key 投影，
+// 如果某层的投影精确等于该层的某个 exclude combination，则排除该子集
+func filterExcludedDrillDowns(
+	all [][]*loop_span.FilterField,
+	drillDownObjects map[string]*loop_span.FilterField,
+	platformCfg *entity.PlatformMetricDef,
+	groupCfg *entity.MetricGroup,
+) [][]*loop_span.FilterField {
+	if len(platformCfg.ExcludeDrillDownCombinations) == 0 && len(groupCfg.ExcludeDrillDownCombinations) == 0 {
+		return all
+	}
+	// 建立 FieldName -> key 反向映射
+	fieldNameToKey := make(map[string]string, len(drillDownObjects))
+	for key, field := range drillDownObjects {
+		fieldNameToKey[field.FieldName] = key
+	}
+	// platform 和 group 的 key 集合，用于区分维度属于哪一层
+	platformKeySet := make(map[string]bool, len(platformCfg.DrillDownObjects))
+	for _, key := range platformCfg.DrillDownObjects {
+		platformKeySet[key] = true
+	}
+	groupKeySet := make(map[string]bool, len(groupCfg.DrillDownObjects))
+	for _, key := range groupCfg.DrillDownObjects {
+		groupKeySet[key] = true
+	}
+
+	ret := make([][]*loop_span.FilterField, 0, len(all))
+	for _, subset := range all {
+		var platformProjection []string
+		var groupProjection []string
+		for _, f := range subset {
+			key := fieldNameToKey[f.FieldName]
+			if platformKeySet[key] {
+				platformProjection = append(platformProjection, key)
+			}
+			if groupKeySet[key] {
+				groupProjection = append(groupProjection, key)
+			}
+		}
+		if matchesAnyExclude(platformProjection, platformCfg.ExcludeDrillDownCombinations) {
+			continue
+		}
+		if matchesAnyExclude(groupProjection, groupCfg.ExcludeDrillDownCombinations) {
+			continue
+		}
+		ret = append(ret, subset)
+	}
+	return ret
+}
+
+// matchesAnyExclude 判断 projection 是否精确等于任一 exclude combination
+func matchesAnyExclude(projection []string, excludes [][]string) bool {
+	for _, exclude := range excludes {
+		if sameStringSet(projection, exclude) {
+			return true
+		}
+	}
+	return false
+}
+
+// sameStringSet 判断两个字符串切片是否包含相同的元素集合（忽略顺序）
+func sameStringSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	counts := make(map[string]int, len(a))
+	for _, s := range a {
+		counts[s]++
+	}
+	for _, s := range b {
+		counts[s]--
+		if counts[s] < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func allDrillDownFields(fields []*loop_span.FilterField) [][]*loop_span.FilterField {
@@ -412,7 +492,7 @@ func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *Query
 			},
 		},
 	}
-	extraFilters := m.buildExtraFilter(req, mDef)
+	extraFilters := m.buildExtraFilter(ctx, req, mDef)
 	if len(extraFilters) > 0 {
 		subFilters.FilterFields = append(subFilters.FilterFields, extraFilters...)
 	}
@@ -431,7 +511,7 @@ func (m *MetricsService) buildOfflineMetricQuery(ctx context.Context, req *Query
 	return mBuilder, nil
 }
 
-func (m *MetricsService) buildExtraFilter(req *QueryMetricsReq, mDef entity.IMetricDefinition) []*loop_span.FilterField {
+func (m *MetricsService) buildExtraFilter(ctx context.Context, req *QueryMetricsReq, mDef entity.IMetricDefinition) []*loop_span.FilterField {
 	if mDef.OExpression().AggrType != entity.MetricOfflineAggrTypeAvg {
 		return nil
 	} else if m.pMetrics.PlatformMetricDefs[req.PlatformType] == nil {
@@ -445,9 +525,38 @@ func (m *MetricsService) buildExtraFilter(req *QueryMetricsReq, mDef entity.IMet
 		}
 		return nil
 	})
+	platformCfg := m.pMetrics.PlatformMetricDefs[req.PlatformType]
 	drillDownKeys := make([]string, 0)
-	drillDownKeys = append(drillDownKeys, m.pMetrics.PlatformMetricDefs[req.PlatformType].DrillDownObjects...)
-	drillDownKeys = append(drillDownKeys, m.metricDrillDown[mDef.Name()]...)
+	drillDownKeys = append(drillDownKeys, platformCfg.DrillDownObjects...)
+	groupDrillDownKeys := m.metricDrillDown[mDef.Name()]
+	drillDownKeys = append(drillDownKeys, groupDrillDownKeys...)
+
+	// 检查请求的下钻组合是否被 exclude，如果是则发出 warn
+	var platformProjection []string
+	var groupProjection []string
+	for _, key := range platformCfg.DrillDownObjects {
+		field := m.pMetrics.DrillDownObjects[key]
+		if field != nil && requestFieldName[field.FieldName] {
+			platformProjection = append(platformProjection, key)
+		}
+	}
+	for _, key := range groupDrillDownKeys {
+		field := m.pMetrics.DrillDownObjects[key]
+		if field != nil && requestFieldName[field.FieldName] {
+			groupProjection = append(groupProjection, key)
+		}
+	}
+	if matchesAnyExclude(platformProjection, platformCfg.ExcludeDrillDownCombinations) {
+		logs.CtxWarn(ctx, "query drill-down combination %v matches platform exclude for metric %s, platform %s",
+			platformProjection, mDef.Name(), req.PlatformType)
+	}
+	if groupCfg := m.metricGroupMap[mDef.Name()]; groupCfg != nil {
+		if matchesAnyExclude(groupProjection, groupCfg.ExcludeDrillDownCombinations) {
+			logs.CtxWarn(ctx, "query drill-down combination %v matches group exclude for metric %s, platform %s",
+				groupProjection, mDef.Name(), req.PlatformType)
+		}
+	}
+
 	ret := make([]*loop_span.FilterField, 0)
 	for _, key := range drillDownKeys {
 		field := m.pMetrics.DrillDownObjects[key]

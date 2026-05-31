@@ -60,6 +60,7 @@ const (
 	SpanFieldKeyResponseID           = "response_id"
 	SpanFieldThreadId                = "thread_id"
 	SpanFieldError                   = "error"
+	SpanFieldAgentName               = "agent_name"
 
 	SpanTypePrompt          = "prompt"
 	SpanTypeModel           = "model"
