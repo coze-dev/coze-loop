@@ -65,9 +65,8 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 		return
 	}
 
-	// No filter configured but feishu notification is enabled, send for all status changes
-	logs.CtxInfo(ctx, "feishu_notify: no filter, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-	h.sendNotifyCard(ctx, event, expt)
+	// No filter configured, skip sending
+	logs.CtxInfo(ctx, "feishu_notify: no filter configured, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
 }
 
 func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
