@@ -823,48 +823,6 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "invalid page_size negative",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				return fields{
-					traceCfg: mockCfg,
-				}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &trace.GetTraceRequest{
-					WorkspaceID: 12,
-					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
-					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
-					PageSize:    ptr.Of(int32(-1)),
-				},
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name: "invalid page_size too large",
-			fieldsGetter: func(ctrl *gomock.Controller) fields {
-				mockCfg := confmock.NewMockITraceConfig(ctrl)
-				return fields{
-					traceCfg: mockCfg,
-				}
-			},
-			args: args{
-				ctx: context.Background(),
-				req: &trace.GetTraceRequest{
-					WorkspaceID: 12,
-					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
-					EndTime:     time.Now().UnixMilli(),
-					TraceID:     "123",
-					PageSize:    ptr.Of(int32(MaxListSpansLimit + 1)),
-				},
-			},
-			want:    nil,
-			wantErr: true,
-		},
-		{
 			name: "success with pagination response",
 			fieldsGetter: func(ctrl *gomock.Controller) fields {
 				mockSvc := svcmock.NewMockITraceService(ctrl)

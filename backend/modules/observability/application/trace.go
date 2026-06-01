@@ -304,8 +304,6 @@ func (t *TraceApplication) validateGetTraceReq(ctx context.Context, req *trace.G
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid workspace_id"))
 	} else if req.GetTraceID() == "" {
 		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid trace_id"))
-	} else if pageSize := req.GetPageSize(); pageSize < 0 || pageSize > MaxListSpansLimit {
-		return errorx.NewByCode(obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("invalid page_size"))
 	}
 	v := utils.DateValidator{
 		Start:        req.GetStartTime(),
