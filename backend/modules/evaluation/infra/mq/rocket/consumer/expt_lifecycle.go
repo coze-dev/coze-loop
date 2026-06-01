@@ -28,6 +28,7 @@ func NewExptLifecycleConsumer(handler service.ExptLifecycleEventHandler, webhook
 }
 
 func (e *ExptLifecycleConsumer) HandleMessage(ctx context.Context, ext *mq.MessageExt) (err error) {
+	logs.CtxInfo(ctx, "ExptLifecycleConsumer received message, tag: %v, msg_id: %v, body: %v", ext.Tag, ext.MsgID, string(ext.Body))
 	defer func() {
 		if err != nil {
 			logs.CtxError(ctx, "ExptLifecycleConsumer HandleMessage fail, err: %v", err)
