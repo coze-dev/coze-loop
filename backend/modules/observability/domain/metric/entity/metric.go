@@ -233,11 +233,13 @@ type PlatformMetrics struct {
 }
 
 type PlatformMetricDef struct {
-	DrillDownObjects []string
-	MetricGroups     []string
+	DrillDownObjects             []string
+	MetricGroups                 []string
+	ExcludeDrillDownCombinations [][]string // 当子集在 platform 层的维度投影精确等于某个 combination 时，排除该子集
 }
 
 type MetricGroup struct {
-	DrillDownObjects  []string
-	MetricDefinitions []IMetricDefinition
+	DrillDownObjects             []string
+	MetricDefinitions            []IMetricDefinition
+	ExcludeDrillDownCombinations [][]string // 当子集在 group 层的维度投影精确等于某个 combination 时，排除该子集
 }

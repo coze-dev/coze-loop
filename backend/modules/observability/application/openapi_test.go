@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -3476,4 +3477,41 @@ func TestOpenAPIApplication_buildSearchTraceOApiReq_TimeRangeFallback(t *testing
 	res2, err := app.buildSearchTraceOApiReq(ctx, req2)
 	assert.Error(t, err)
 	assert.Nil(t, res2)
+}
+
+func TestOpenAPIApplication_CreateAnnotation_ValueSizeLimit(t *testing.T) {
+	t.Parallel()
+
+	largeValue := strings.Repeat("x", 4*1024*1024+1)
+
+	tests := []struct {
+		name string
+		req  *openapi.CreateAnnotationRequest
+	}{
+		{
+			name: "string type value exceeds 4MB",
+			req: &openapi.CreateAnnotationRequest{
+				WorkspaceID:         1,
+				AnnotationValueType: ptr.Of(annotation.ValueType(loop_span.AnnotationValueTypeString)),
+				AnnotationValue:     largeValue,
+			},
+		},
+		{
+			name: "default type value exceeds 4MB",
+			req: &openapi.CreateAnnotationRequest{
+				WorkspaceID:         1,
+				AnnotationValueType: ptr.Of(annotation.ValueType("unknown_type")),
+				AnnotationValue:     largeValue,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			o := &OpenAPIApplication{}
+			_, err := o.CreateAnnotation(context.Background(), tt.req)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), "4MB")
+		})
+	}
 }

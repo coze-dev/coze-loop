@@ -288,6 +288,158 @@ func TestMetricsService_buildDrillDownFields(t *testing.T) {
 	})
 }
 
+func TestSameStringSet(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		a    []string
+		b    []string
+		want bool
+	}{
+		{name: "same order", a: []string{"x", "y"}, b: []string{"x", "y"}, want: true},
+		{name: "different order", a: []string{"y", "x"}, b: []string{"x", "y"}, want: true},
+		{name: "different lengths", a: []string{"x"}, b: []string{"x", "y"}, want: false},
+		{name: "different elements", a: []string{"x", "y"}, b: []string{"x", "z"}, want: false},
+		{name: "both empty", a: []string{}, b: []string{}, want: true},
+		{name: "both nil", a: nil, b: nil, want: true},
+		{name: "duplicates match", a: []string{"x", "x", "y"}, b: []string{"x", "y", "x"}, want: true},
+		{name: "duplicates mismatch", a: []string{"x", "x", "y"}, b: []string{"x", "y", "y"}, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, sameStringSet(tt.a, tt.b))
+		})
+	}
+}
+
+func TestMatchesAnyExclude(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		projection []string
+		excludes   [][]string
+		want       bool
+	}{
+		{name: "matches first exclude", projection: []string{"a", "b"}, excludes: [][]string{{"b", "a"}, {"c"}}, want: true},
+		{name: "matches second exclude", projection: []string{"c"}, excludes: [][]string{{"a"}, {"c"}}, want: true},
+		{name: "no match", projection: []string{"a", "b"}, excludes: [][]string{{"a"}, {"b"}}, want: false},
+		{name: "empty projection no match", projection: []string{}, excludes: [][]string{{"a"}}, want: false},
+		{name: "empty excludes", projection: []string{"a"}, excludes: nil, want: false},
+		{name: "empty projection matches empty exclude", projection: []string{}, excludes: [][]string{{}}, want: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, matchesAnyExclude(tt.projection, tt.excludes))
+		})
+	}
+}
+
+func TestFilterExcludedDrillDowns(t *testing.T) {
+	t.Parallel()
+
+	// helper: build drillDownObjects map and FilterField slice
+	makeDrillDown := func(key, fieldName string) *loop_span.FilterField {
+		return &loop_span.FilterField{FieldName: fieldName}
+	}
+
+	// Setup: platform keys = ["pk1", "pk2"], group keys = ["gk1", "gk2"]
+	drillDownObjects := map[string]*loop_span.FilterField{
+		"pk1": makeDrillDown("pk1", "platform_field_1"),
+		"pk2": makeDrillDown("pk2", "platform_field_2"),
+		"gk1": makeDrillDown("gk1", "group_field_1"),
+		"gk2": makeDrillDown("gk2", "group_field_2"),
+	}
+
+	fieldByKey := func(key string) *loop_span.FilterField {
+		return drillDownObjects[key]
+	}
+
+	// Build subsets: each subset is a combination of filter fields
+	// Subset 1: pk1 only
+	// Subset 2: pk1 + pk2
+	// Subset 3: gk1 only
+	// Subset 4: gk1 + gk2
+	// Subset 5: pk1 + gk1
+	all := [][]*loop_span.FilterField{
+		{fieldByKey("pk1")},
+		{fieldByKey("pk1"), fieldByKey("pk2")},
+		{fieldByKey("gk1")},
+		{fieldByKey("gk1"), fieldByKey("gk2")},
+		{fieldByKey("pk1"), fieldByKey("gk1")},
+	}
+
+	t.Run("no excludes returns all", func(t *testing.T) {
+		t.Parallel()
+		platformCfg := &entity.PlatformMetricDef{
+			DrillDownObjects: []string{"pk1", "pk2"},
+		}
+		groupCfg := &entity.MetricGroup{
+			DrillDownObjects: []string{"gk1", "gk2"},
+		}
+		result := filterExcludedDrillDowns(all, drillDownObjects, platformCfg, groupCfg)
+		assert.Equal(t, len(all), len(result))
+	})
+
+	t.Run("platform exclude matches removes subset", func(t *testing.T) {
+		t.Parallel()
+		platformCfg := &entity.PlatformMetricDef{
+			DrillDownObjects:             []string{"pk1", "pk2"},
+			ExcludeDrillDownCombinations: [][]string{{"pk1", "pk2"}}, // matches subset 2
+		}
+		groupCfg := &entity.MetricGroup{
+			DrillDownObjects: []string{"gk1", "gk2"},
+		}
+		result := filterExcludedDrillDowns(all, drillDownObjects, platformCfg, groupCfg)
+		// Subset 2 (pk1+pk2) should be excluded
+		assert.Equal(t, len(all)-1, len(result))
+	})
+
+	t.Run("group exclude matches removes subset", func(t *testing.T) {
+		t.Parallel()
+		platformCfg := &entity.PlatformMetricDef{
+			DrillDownObjects: []string{"pk1", "pk2"},
+		}
+		groupCfg := &entity.MetricGroup{
+			DrillDownObjects:             []string{"gk1", "gk2"},
+			ExcludeDrillDownCombinations: [][]string{{"gk1", "gk2"}}, // matches subset 4
+		}
+		result := filterExcludedDrillDowns(all, drillDownObjects, platformCfg, groupCfg)
+		// Subset 4 (gk1+gk2) should be excluded
+		assert.Equal(t, len(all)-1, len(result))
+	})
+
+	t.Run("both configured only one matches", func(t *testing.T) {
+		t.Parallel()
+		platformCfg := &entity.PlatformMetricDef{
+			DrillDownObjects:             []string{"pk1", "pk2"},
+			ExcludeDrillDownCombinations: [][]string{{"pk1"}}, // matches subset 1 and subset 5 (platform projection is pk1)
+		}
+		groupCfg := &entity.MetricGroup{
+			DrillDownObjects:             []string{"gk1", "gk2"},
+			ExcludeDrillDownCombinations: [][]string{{"gk1", "gk2"}}, // matches subset 4
+		}
+		result := filterExcludedDrillDowns(all, drillDownObjects, platformCfg, groupCfg)
+		// Subsets 1 (pk1 -> platform projection ["pk1"]), 5 (pk1+gk1 -> platform projection ["pk1"]), and 4 (gk1+gk2) excluded
+		assert.Equal(t, len(all)-3, len(result))
+	})
+
+	t.Run("no match retains all", func(t *testing.T) {
+		t.Parallel()
+		platformCfg := &entity.PlatformMetricDef{
+			DrillDownObjects:             []string{"pk1", "pk2"},
+			ExcludeDrillDownCombinations: [][]string{{"nonexistent"}},
+		}
+		groupCfg := &entity.MetricGroup{
+			DrillDownObjects:             []string{"gk1", "gk2"},
+			ExcludeDrillDownCombinations: [][]string{{"nonexistent"}},
+		}
+		result := filterExcludedDrillDowns(all, drillDownObjects, platformCfg, groupCfg)
+		assert.Equal(t, len(all), len(result))
+	})
+}
+
 // TestMetricsService_extractMetrics 测试指标提取功能
 func TestMetricsService_extractMetrics(t *testing.T) {
 	t.Parallel()

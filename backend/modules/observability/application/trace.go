@@ -280,7 +280,7 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 		TagKeyIDs:    sResp.Spans.GetAnnotationTagIDs(),
 		Spans:        sResp.Spans,
 	})
-	return &trace.GetTraceResponse{
+	resp := &trace.GetTraceResponse{
 		Spans: tconv.SpanListDO2DTO(sResp.Spans, dResp.UserMap, dResp.EvalMap, dResp.TagMap, dResp.WorkflowMap, false),
 		TracesAdvanceInfo: &trace.TraceAdvanceInfo{
 			TraceID: sResp.TraceId,
@@ -289,7 +289,12 @@ func (t *TraceApplication) GetTrace(ctx context.Context, req *trace.GetTraceRequ
 				Output: outTokens,
 			},
 		},
-	}, nil
+	}
+	if sResp.HasMore || sResp.NextPageToken != "" {
+		resp.NextPageToken = &sResp.NextPageToken
+		resp.HasMore = &sResp.HasMore
+	}
+	return resp, nil
 }
 
 func (t *TraceApplication) validateGetTraceReq(ctx context.Context, req *trace.GetTraceRequest) error {
@@ -322,12 +327,24 @@ func (t *TraceApplication) buildGetTraceSvcReq(req *trace.GetTraceRequest) (*ser
 		EndTime:     req.GetEndTime(),
 		SpanIDs:     req.GetSpanIds(),
 		WithDetail:  true,
+		PageToken:   req.GetPageToken(),
+	}
+	if req.PageSize != nil {
+		ret.Limit = req.GetPageSize()
+	} else if req.PageToken != nil {
+		ret.Limit = QueryLimitDefault
 	}
 	platformType := loop_span.PlatformType(req.GetPlatformType())
 	if req.PlatformType == nil {
 		platformType = loop_span.PlatformCozeLoop
 	}
 	ret.PlatformType = platformType
+	if req.Filters != nil {
+		ret.Filters = tconv.FilterFieldsDTO2DO(req.Filters)
+		if err := ret.Filters.Validate(); err != nil {
+			return nil, err
+		}
+	}
 	return ret, nil
 }
 

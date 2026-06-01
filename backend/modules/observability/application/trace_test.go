@@ -822,6 +822,121 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "success with pagination response",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
+					HasMore:       true,
+					NextPageToken: "next_token_123",
+				}, nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					TraceID:     "123",
+					PageSize:    ptr.Of(int32(10)),
+				},
+			},
+			want: &trace.GetTraceResponse{
+				Spans: make([]*span.OutputSpan, 0),
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					Tokens: &trace.TokenCost{},
+				},
+				NextPageToken: ptr.Of("next_token_123"),
+				HasMore:       ptr.Of(true),
+			},
+			wantErr: false,
+		},
+		{
+			name: "success with page_token and filters",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
+					HasMore:       false,
+					NextPageToken: "",
+				}, nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					TraceID:     "123",
+					PageToken:   ptr.Of("some_token"),
+					Filters: &filter.FilterFields{
+						FilterFields: []*filter.FilterField{
+							{
+								FieldName: ptr.Of("span_type"),
+								QueryType: ptr.Of(filter.QueryTypeEq),
+								Values:    []string{"model"},
+							},
+						},
+					},
+				},
+			},
+			want: &trace.GetTraceResponse{
+				Spans: make([]*span.OutputSpan, 0),
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					Tokens: &trace.TokenCost{},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "invalid filter fails validation",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				return fields{
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					TraceID:     "123",
+					Filters: &filter.FilterFields{
+						FilterFields: []*filter.FilterField{
+							{
+								FieldName: ptr.Of("span_type"),
+								Values:    []string{"val"},
+							},
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
