@@ -215,6 +215,20 @@ func (mr *MockITraceConfigMockRecorder) GetSearchTraceTreeMaxSpanLimit(ctx, work
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSearchTraceTreeMaxSpanLimit", reflect.TypeOf((*MockITraceConfig)(nil).GetSearchTraceTreeMaxSpanLimit), ctx, workspaceID)
 }
 
+// GetTrajectoryMetadataConfig mocks base method.
+func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) config.TrajectoryMetadataConfig {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTrajectoryMetadataConfig", ctx)
+	ret0, _ := ret[0].(config.TrajectoryMetadataConfig)
+	return ret0
+}
+
+// GetTrajectoryMetadataConfig indicates an expected call of GetTrajectoryMetadataConfig.
+func (mr *MockITraceConfigMockRecorder) GetTrajectoryMetadataConfig(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrajectoryMetadataConfig", reflect.TypeOf((*MockITraceConfig)(nil).GetTrajectoryMetadataConfig), ctx)
+}
+
 // GetPlatformSpansTrans mocks base method.
 func (m *MockITraceConfig) GetPlatformSpansTrans(ctx context.Context) (*config.SpanTransHandlerConfig, error) {
 	m.ctrl.T.Helper()

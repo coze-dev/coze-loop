@@ -213,6 +213,10 @@ func (c *ReflowInsertConfig) GetDatasetInvokeBatchSize(workspaceID int64) int {
 	return c.DatasetInvokeBatchSize.Get(workspaceID)
 }
 
+// TrajectoryMetadataConfig 轨迹 metadata 写入配置
+// key 为 workspace_id，value 为该 workspace 允许写入的 metadata key 规则列表
+type TrajectoryMetadataConfig map[int64][]loop_span.MetaKeyRule
+
 //go:generate mockgen -destination=mocks/config.go -package=mocks . ITraceConfig
 type ITraceConfig interface {
 	GetSystemViews(ctx context.Context) ([]*SystemView, error)
@@ -236,6 +240,7 @@ type ITraceConfig interface {
 	GetBackfillConfig(ctx context.Context) *BackfillConfig
 	GetReflowInsertConfig(ctx context.Context) *ReflowInsertConfig
 	GetSearchTraceTreeMaxSpanLimit(ctx context.Context, workspaceID int64) int32
+	GetTrajectoryMetadataConfig(ctx context.Context) TrajectoryMetadataConfig
 
 	conf.IConfigLoader
 }

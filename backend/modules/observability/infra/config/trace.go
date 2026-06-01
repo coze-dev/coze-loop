@@ -33,6 +33,7 @@ const (
 	backfillCfgKey                     = "backfill_config"
 	reflowInsertCfgKey                 = "reflow_insert_config"
 	searchTraceTreeMaxSpanLimitCfgKey  = "search_trace_tree_max_span_limit"
+	trajectoryMetadataCfgKey           = "trajectory_metadata_config"
 
 	defaultBackfillDispatchBatchSize   = 10
 	defaultBackfillDispatchIntervalMs  = 1000
@@ -256,6 +257,15 @@ func (t *TraceConfigCenter) GetReflowInsertConfig(ctx context.Context) *config.R
 	}
 	if cfg.DatasetInvokeBatchSize.Default <= 0 {
 		cfg.DatasetInvokeBatchSize.Default = defaultDatasetInvokeBatchSize
+	}
+	return cfg
+}
+
+func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) config.TrajectoryMetadataConfig {
+	cfg := make(config.TrajectoryMetadataConfig)
+	if err := t.UnmarshalKey(ctx, trajectoryMetadataCfgKey, &cfg); err != nil {
+		logs.CtxWarn(ctx, "fail to unmarshal trajectory metadata cfg, %v", err)
+		return nil
 	}
 	return cfg
 }

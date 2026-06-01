@@ -2486,6 +2486,12 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		return nil, err
 	}
 
+	metaCfg := r.traceConfig.GetTrajectoryMetadataConfig(ctx)
+	var metaRules []loop_span.MetaKeyRule
+	if metaCfg != nil {
+		metaRules = metaCfg[workspaceID]
+	}
+
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{
 		Tenants: tenant,
 		Filters: &loop_span.FilterFields{
@@ -2540,7 +2546,7 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 		}
 	}
 
-	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters)
+	trajectories, err := r.buildTrajectories(ctx, &allSpans.Spans, ptr.Of(r.convertCustomNode(selectedSpans.Spans)), selectFilters, metaRules)
 	if err != nil {
 		return nil, err
 	}
@@ -2629,7 +2635,7 @@ func (r *TraceServiceImpl) getSelectFilters(traceIDs []string, trajectoryConfig 
 	return result
 }
 
-func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop_span.SpanList, selectedSpans *loop_span.SpanList, trajectoryConfig *loop_span.FilterFields) (map[string]*loop_span.Trajectory, error) {
+func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop_span.SpanList, selectedSpans *loop_span.SpanList, trajectoryConfig *loop_span.FilterFields, metaRules []loop_span.MetaKeyRule) (map[string]*loop_span.Trajectory, error) {
 	// traceID-trajectory
 	trajectoryMap := make(map[string]*loop_span.Trajectory)
 
@@ -2669,7 +2675,7 @@ func (r *TraceServiceImpl) buildTrajectories(ctx context.Context, allSpans *loop
 			return nil, err
 		}
 
-		trajectoryMap[traceID] = loop_span.BuildTrajectoryFromSpans(filteredSpans)
+		trajectoryMap[traceID] = loop_span.BuildTrajectoryFromSpans(filteredSpans, metaRules)
 	}
 	return trajectoryMap, nil
 }
