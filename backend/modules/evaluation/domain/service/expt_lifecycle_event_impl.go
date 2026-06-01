@@ -32,6 +32,7 @@ func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapte
 }
 
 func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent) error {
+	logs.CtxInfo(ctx, "HandleLifecycleEvent: received event, expt_id: %d, space_id: %d, to_status: %s", event.ExptID, event.SpaceID, event.ToStatus)
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
@@ -49,6 +50,7 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	// Check if feishu notification is configured with filter
 	if expt.NotificationConf == nil || expt.NotificationConf.FeishuNotification == nil || !expt.NotificationConf.FeishuNotification.Enable {
+		logs.CtxInfo(ctx, "feishu_notification: not configured or disabled, skip notify, expt_id: %d", expt.ID)
 		return
 	}
 
@@ -70,6 +72,7 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 
 func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
 	if h.webhookDispatcher == nil {
+		logs.CtxInfo(ctx, "webhook_dispatcher: not configured, skip dispatch, expt_id: %d", event.ExptID)
 		return
 	}
 	if err := h.webhookDispatcher.Dispatch(ctx, event, expt); err != nil {
