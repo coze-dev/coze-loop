@@ -1,0 +1,57 @@
+backend/modules/evaluation/infra/mq/rocket/consumer/expt_lifecycle.go
+  9b7793287fb607ce 31 gitai:{"mixed_line_ranges":[],"operations":[{"operation_id":"6a19a7ed40ab639c29c71d48","tool_type":"agent","tool_id":"Edit","line_ranges":[{"Single":31}]}]}
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "9eb2bd89870f84059ee5dba92be200c8753d2fee",
+  "prompts": {
+    "9b7793287fb607ce": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a19a73440ab639c29c71d2e",
+        "model": "c_o_new__dev"
+      },
+      "human_author": "wangtao.everett <wangtao.everett@bytedance.com>",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  },
+  "attestation_metadata": {
+    "backend/modules/evaluation/infra/mq/rocket/consumer/expt_lifecycle.go": [
+      {
+        "hash": "9b7793287fb607ce",
+        "line_ranges": [
+          {
+            "Single": 31
+          }
+        ],
+        "mixed_line_ranges": [],
+        "operations": [
+          {
+            "operation_id": "6a19a7ed40ab639c29c71d48",
+            "tool_type": "agent",
+            "tool_id": "Edit",
+            "line_ranges": [
+              {
+                "Single": 31
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "remote_transcripts": {
+    "9b7793287fb607ce": {
+      "tool": "trae",
+      "conversation_id": "6a19a73440ab639c29c71d2e",
+      "session_id": "6a19a73440ab639c29c71d2e",
+      "status": "remote_only",
+      "message": "Remote transcript resolution is not implemented yet for TRAE prompts."
+    }
+  }
+}
