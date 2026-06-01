@@ -947,6 +947,38 @@ func TestTraceApplication_GetTrace(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "invalid filter fails validation",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(100))
+				return fields{
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.GetTraceRequest{
+					WorkspaceID: 12,
+					StartTime:   time.Now().Add(-time.Hour).UnixMilli(),
+					EndTime:     time.Now().UnixMilli(),
+					TraceID:     "123",
+					Filters: &filter.FilterFields{
+						FilterFields: []*filter.FilterField{
+							{
+								FieldName: ptr.Of("span_type"),
+								Values:    []string{"val"},
+							},
+						},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
