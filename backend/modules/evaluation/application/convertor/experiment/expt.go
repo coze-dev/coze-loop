@@ -4,6 +4,8 @@
 package experiment
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/bytedance/gg/gcond"
@@ -558,7 +560,11 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	if cer.NotificationConf != nil {
-		param.NotificationConf = notificationConfDTO2DO(cer.NotificationConf)
+		notifConf, err := notificationConfDTO2DO(cer.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = notifConf
 	}
 	return param, nil
 }
@@ -577,9 +583,9 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 }
 
 // notificationConfDTO2DO 将 thrift ExptNotificationConf 转换为 domain entity ExptNotificationConf
-func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) *entity.ExptNotificationConf {
+func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.ExptNotificationConf, error) {
 	if conf == nil {
-		return nil
+		return nil, nil
 	}
 	result := &entity.ExptNotificationConf{}
 	if conf.Filter != nil {
@@ -590,21 +596,34 @@ func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) *entity.Expt
 		}
 		if len(conf.Filter.FilterConditions) > 0 {
 			conditions := make([]*entity.NotificationFilterCondition, 0, len(conf.Filter.FilterConditions))
-			for _, fc := range conf.Filter.FilterConditions {
+			for i, fc := range conf.Filter.FilterConditions {
 				if fc == nil {
 					continue
 				}
-				condition := &entity.NotificationFilterCondition{
-					Operator: entity.NotificationOperatorType(fc.GetOperator()),
-					Value:    fc.GetValue(),
+				operator := entity.NotificationOperatorType(fc.GetOperator())
+				if err := validateNotificationOperator(operator); err != nil {
+					return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
 				}
+				var field *entity.NotificationFilterField
 				if fc.GetField() != nil {
-					condition.Field = &entity.NotificationFilterField{
-						FieldType: entity.NotificationFieldType(fc.GetField().GetFieldType()),
+					fieldType := entity.NotificationFieldType(fc.GetField().GetFieldType())
+					if err := validateNotificationFieldType(fieldType); err != nil {
+						return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
+					}
+					field = &entity.NotificationFilterField{
+						FieldType: fieldType,
 						FieldKey:  fc.GetField().FieldKey,
 					}
 				}
-				conditions = append(conditions, condition)
+				value := fc.GetValue()
+				if err := validateNotificationFilterValue(operator, value); err != nil {
+					return nil, fmt.Errorf("notification filter condition[%d]: %w", i, err)
+				}
+				conditions = append(conditions, &entity.NotificationFilterCondition{
+					Field:    field,
+					Operator: operator,
+					Value:    value,
+				})
 			}
 			filter.FilterConditions = conditions
 		}
@@ -622,5 +641,40 @@ func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) *entity.Expt
 			UserID: conf.FeishuNotification.UserID,
 		}
 	}
-	return result
+	return result, nil
+}
+
+func validateNotificationOperator(op entity.NotificationOperatorType) error {
+	switch op {
+	case entity.NotificationOperatorType_Equal,
+		entity.NotificationOperatorType_NotEqual,
+		entity.NotificationOperatorType_In,
+		entity.NotificationOperatorType_NotIn:
+		return nil
+	default:
+		return fmt.Errorf("unsupported operator: %d", op)
+	}
+}
+
+func validateNotificationFieldType(ft entity.NotificationFieldType) error {
+	switch ft {
+	case entity.NotificationFieldType_ExptStatus:
+		return nil
+	default:
+		return fmt.Errorf("unsupported field_type: %d", ft)
+	}
+}
+
+func validateNotificationFilterValue(op entity.NotificationOperatorType, value string) error {
+	if value == "" {
+		return fmt.Errorf("value is empty")
+	}
+	var values []string
+	if err := json.Unmarshal([]byte(value), &values); err != nil {
+		return fmt.Errorf("value must be a JSON string array, e.g. [\"11\",\"12\"], got: %s", value)
+	}
+	if len(values) == 0 {
+		return fmt.Errorf("value array is empty")
+	}
+	return nil
 }

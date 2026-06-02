@@ -1405,7 +1405,11 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	}
 
 	if req.NotificationConf != nil {
-		param.NotificationConf = notificationConfDTO2DO(req.NotificationConf)
+		notifConf, err := notificationConfDTO2DO(req.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = notifConf
 	}
 
 	return param, nil

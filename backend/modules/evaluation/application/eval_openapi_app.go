@@ -1043,6 +1043,11 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
 
+	notificationConf, err := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+	if err != nil {
+		return nil, err
+	}
+
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
 		EvalSetVersionID:        gptr.Of(versions[0].ID),
@@ -1059,6 +1064,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
+		NotificationConf:        notificationConf,
 		Ext:                     req.GetExt(),
 	}
 

@@ -78,7 +78,7 @@ func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Con
 	filterJSON, _ := json.Marshal(filter)
 	logs.CtxInfo(ctx, "feishu_notification: expt_id: %d, to_status: %v, filter: %s", expt.ID, event.ToStatus, string(filterJSON))
 
-	matched := matchNotificationFilter(filter, event.ToStatus)
+	matched := matchNotificationFilter(ctx, filter, event.ToStatus)
 	logs.CtxInfo(ctx, "feishu_notification: expt_id: %d, to_status: %v, filter_matched: %v, will_send: %v",
 		expt.ID, event.ToStatus, matched, matched)
 

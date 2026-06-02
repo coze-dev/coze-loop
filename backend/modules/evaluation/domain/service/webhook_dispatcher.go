@@ -72,7 +72,7 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 
 	// 匹配 filter 条件
 	if expt.NotificationConf.Filter != nil {
-		if !matchNotificationFilter(expt.NotificationConf.Filter, event.ToStatus) {
+		if !matchNotificationFilter(ctx, expt.NotificationConf.Filter, event.ToStatus) {
 			return nil
 		}
 	}
@@ -208,19 +208,26 @@ func buildWebhookPayload(event *entity.ExptLifecycleEvent, expt *entity.Experime
 }
 
 // matchNotificationFilter 匹配通知过滤条件
-func matchNotificationFilter(filter *entity.NotificationFilter, toStatus entity.ExptStatus) bool {
+func matchNotificationFilter(ctx context.Context, filter *entity.NotificationFilter, toStatus entity.ExptStatus) bool {
 	if filter == nil || len(filter.FilterConditions) == 0 {
+		logs.CtxInfo(ctx, "matchNotificationFilter: no filter or empty conditions, default match, to_status: %v", toStatus)
 		return true
 	}
 
 	statusStr := strconv.FormatInt(int64(toStatus), 10)
+	logs.CtxInfo(ctx, "matchNotificationFilter: to_status: %v, conditions_count: %d", toStatus, len(filter.FilterConditions))
 
-	for _, cond := range filter.FilterConditions {
+	for i, cond := range filter.FilterConditions {
 		if cond.Field == nil || cond.Field.FieldType != entity.NotificationFieldType_ExptStatus {
+			logs.CtxInfo(ctx, "matchNotificationFilter: skip condition[%d], field_type not ExptStatus", i)
 			continue
 		}
 
-		values := strings.Split(cond.Value, ",")
+		values := parseFilterValues(cond.Value)
+		if len(values) == 0 {
+			logs.CtxWarn(ctx, "matchNotificationFilter: condition[%d] parse values failed or empty, raw: %s", i, cond.Value)
+			continue
+		}
 		matched := false
 		for _, v := range values {
 			if strings.TrimSpace(v) == statusStr {
@@ -229,18 +236,24 @@ func matchNotificationFilter(filter *entity.NotificationFilter, toStatus entity.
 			}
 		}
 
+		logs.CtxInfo(ctx, "matchNotificationFilter: condition[%d] operator: %v, values: %v, status: %s, matched: %v",
+			i, cond.Operator, values, statusStr, matched)
+
 		switch cond.Operator {
 		case entity.NotificationOperatorType_Equal, entity.NotificationOperatorType_In:
 			if matched {
+				logs.CtxInfo(ctx, "matchNotificationFilter: condition[%d] Equal/In matched, return true", i)
 				return true
 			}
 		case entity.NotificationOperatorType_NotEqual, entity.NotificationOperatorType_NotIn:
 			if !matched {
+				logs.CtxInfo(ctx, "matchNotificationFilter: condition[%d] NotEqual/NotIn not matched, return true", i)
 				return true
 			}
 		}
 	}
 
+	logs.CtxInfo(ctx, "matchNotificationFilter: no condition matched, return false, to_status: %v", toStatus)
 	return false
 }
 
@@ -303,4 +316,13 @@ func eventTypeToStatus(eventType string) string {
 	default:
 		return "unknown"
 	}
+}
+
+// parseFilterValues 解析 filter condition 的 value 字段（JSON 数组格式 `["11","12"]`）
+func parseFilterValues(raw string) []string {
+	var values []string
+	if err := json.Unmarshal([]byte(raw), &values); err != nil {
+		return nil
+	}
+	return values
 }

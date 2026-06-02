@@ -2698,3 +2698,31 @@ func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldM
 	}
 	return tic
 }
+
+// OpenAPINotificationConfDTO2Domain 将 OpenAPI ExptNotificationConf 转换为 domain/expt ExptNotificationConf
+func OpenAPINotificationConfDTO2Domain(conf *openapiExperiment.ExptNotificationConf) (*domainExpt.ExptNotificationConf, error) {
+	if conf == nil {
+		return nil, nil
+	}
+	result := &domainExpt.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f, err := OpenAPIExperimentFiltersDTO2Domain(conf.Filter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification filter: %w", err)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &domainExpt.WebhookNotificationConf{
+			Enable: gptr.Indirect(conf.Webhook.Enable),
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &domainExpt.FeishuNotificationConf{
+			Enable: gptr.Indirect(conf.FeishuNotification.Enable),
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result, nil
+}
