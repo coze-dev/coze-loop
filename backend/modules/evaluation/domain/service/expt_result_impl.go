@@ -21,6 +21,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/platestwrite"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/consts"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
@@ -56,6 +57,7 @@ func NewExptResultService(
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	analysisService IEvaluationAnalysisService,
 	fileProvider rpc.IFileProvider,
+	configer component.IConfiger,
 ) ExptResultService {
 	return &ExptResultServiceImpl{
 		ExptItemResultRepo:          exptItemResultRepo,
@@ -77,6 +79,7 @@ func NewExptResultService(
 		tagRPCAdapter:               tagRPCAdapter,
 		analysisService:             analysisService,
 		fileProvider:                fileProvider,
+		configer:                    configer,
 	}
 }
 
@@ -102,6 +105,8 @@ type ExptResultServiceImpl struct {
 
 	publisher       events.ExptEventPublisher
 	analysisService IEvaluationAnalysisService
+
+	configer component.IConfiger
 }
 
 func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
@@ -137,7 +142,7 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 	return res, nil
 }
 
-func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err
@@ -180,9 +185,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	// 加载实验配置：仅在 EnableScoreWeight 为 true 时从 EvaluatorConf 构建权重；否则 scoreWeights 为空，calculateWeightedScore 按等权计算。
 	var scoreWeights map[int64]float64
-	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
-	if err == nil && expt != nil &&
-		expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+	if expt != nil && expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
 			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
@@ -235,7 +238,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 						version2Record[r.EvaluatorVersionID] = r
 					}
 
-					if ws := calculateWeightedScore(version2Record, scoreWeights); ws != nil {
+					if ws := e.computeTurnWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
 						result.WeightedScore = ws
 					}
 				}
@@ -1782,6 +1785,116 @@ func (e *ExptResultBuilder) getTurnEvaluatorResult(ctx context.Context, itemID, 
 	}
 
 	return output
+}
+
+// computeTurnWeightedScore 计算某一行（turn）的行维度得分。
+// 优先经 configer.GetExptTurnScoreHookConf 判定是否走 HTTP 回调：命中则组装请求并调用 HTTP 打分，
+// 调用失败或拿不到分数时返回 nil（即不写入 weighted_score）；未命中则回退本地 calculateWeightedScore。
+func (e ExptResultServiceImpl) computeTurnWeightedScore(ctx context.Context, expt *entity.Experiment,
+	version2Record map[int64]*entity.EvaluatorRecord, scoreWeights map[int64]float64) *float64 {
+	var (
+		spaceID int64
+		exptID  int64
+	)
+	if expt != nil {
+		spaceID = expt.SpaceID
+		exptID = expt.ID
+	}
+
+	evaluatorVersionIDs := maps.ToSlice(version2Record, func(versionID int64, _ *entity.EvaluatorRecord) int64 {
+		return versionID
+	})
+
+	var (
+		hookConf *entity.ExptTurnScoreHookConf
+		hit      bool
+	)
+	if e.configer != nil {
+		hookConf, hit = e.configer.GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorVersionIDs)
+	}
+	if !hit {
+		return calculateWeightedScore(version2Record, scoreWeights)
+	}
+
+	req := buildCaseScoreRequest(expt, version2Record)
+	if req == nil || len(req.EvaluatorScore) == 0 {
+		return nil
+	}
+
+	score, err := e.callCaseScoreHook(ctx, hookConf, req)
+	if err != nil {
+		logs.CtxError(ctx, "[ExptEval] case score hook failed, expt_id=%v, err=%v", exptID, err)
+		return nil
+	}
+	if score == nil {
+		return nil
+	}
+	rounded := utils.RoundScoreToTwoDecimals(*score)
+	return &rounded
+}
+
+// callCaseScoreHook 调用行维度得分 HTTP 回调对该行多个评估器分数做聚合，返回行维度得分。
+// 开源构建未实现具体 HTTP 调用，真实逻辑由闭源仓库注入；当前恒返回未实现错误。
+func (e ExptResultServiceImpl) callCaseScoreHook(_ context.Context, _ *entity.ExptTurnScoreHookConf, _ *CaseScoreRequest) (*float64, error) {
+	return nil, ErrCaseScorerNotImplemented
+}
+
+// buildCaseScoreRequest 基于实验实体与本行评估器记录组装 /score/case 请求。
+// 评估器名称取自实验实体中的评估器实体（expt.Evaluators）。
+func buildCaseScoreRequest(expt *entity.Experiment, version2Record map[int64]*entity.EvaluatorRecord) *CaseScoreRequest {
+	if len(version2Record) == 0 {
+		return nil
+	}
+
+	type evaluatorMeta struct {
+		name        string
+		evaluatorID int64
+	}
+	versionID2Meta := make(map[int64]evaluatorMeta)
+	if expt != nil {
+		for _, ev := range expt.Evaluators {
+			if ev == nil {
+				continue
+			}
+			versionID2Meta[ev.GetEvaluatorVersionID()] = evaluatorMeta{
+				name:        ev.Name,
+				evaluatorID: ev.GetEvaluatorID(),
+			}
+		}
+	}
+
+	req := &CaseScoreRequest{EvaluatorScore: make([]*CaseScoreItem, 0, len(version2Record))}
+	if expt != nil {
+		req.ExptID = expt.ID
+	}
+
+	for versionID, record := range version2Record {
+		score := effectiveEvaluatorScore(record)
+		if score == nil {
+			continue
+		}
+		meta := versionID2Meta[versionID]
+		req.EvaluatorScore = append(req.EvaluatorScore, &CaseScoreItem{
+			EvaluatorName:      meta.name,
+			EvaluatorID:        meta.evaluatorID,
+			EvaluatorVersionID: versionID,
+			Score:              *score,
+		})
+	}
+
+	return req
+}
+
+// effectiveEvaluatorScore 取评估器记录的有效分数：优先修正分，其次原始分。
+func effectiveEvaluatorScore(record *entity.EvaluatorRecord) *float64 {
+	if record == nil || record.EvaluatorOutputData == nil || record.EvaluatorOutputData.EvaluatorResult == nil {
+		return nil
+	}
+	result := record.EvaluatorOutputData.EvaluatorResult
+	if result.Correction != nil && result.Correction.Score != nil {
+		return result.Correction.Score
+	}
+	return result.Score
 }
 
 // calculateWeightedScore 计算加权分数

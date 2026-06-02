@@ -2037,6 +2037,10 @@ func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx co
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorVersionIDs []int64) (*entity.ExptTurnScoreHookConf, bool) {
+	return nil, false
+}
+
 func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -119,6 +119,14 @@ type ExptConsumerConf struct {
 	SchedulerAbortCtrl *SchedulerAbortCtrl `json:"scheduler_abort_ctrl" mapstructure:"scheduler_abort_ctrl"`
 }
 
+// ExptTurnScoreHookConf 行维度得分 HTTP 回调配置。
+// 命中时表示该实验的行维度得分需经外部 HTTP 接口计算，回调调用信息由 URL/Method/TimeoutMS 描述。
+type ExptTurnScoreHookConf struct {
+	URL       string `json:"url" mapstructure:"url"`
+	Method    string `json:"method" mapstructure:"method"`
+	TimeoutMS int64  `json:"timeout_ms" mapstructure:"timeout_ms"`
+}
+
 func (e *ExptConsumerConf) GetExptExecConf(spaceID int64) *ExptExecConf {
 	if e == nil {
 		return nil
