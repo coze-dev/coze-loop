@@ -321,7 +321,7 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 	return nil
 }
 
-func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
+func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (string, map[string]string) {
 	param := map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
@@ -340,7 +340,7 @@ func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
 	if expt.SourceType == entity.SourceType_IntelligentGen {
 		param["thread_id"] = gptr.Indirect(expt.ThreadID)
 	}
-	switch expt.Status {
+	switch toStatus {
 	case entity.ExptStatus_Success:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess

@@ -106,6 +106,6 @@ func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, even
 		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
 		return nil
 	}
-	cardID, param := buildExptNotifyParam(expt)
+	cardID, param := buildExptNotifyParam(expt, event.ToStatus)
 	return h.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
 }

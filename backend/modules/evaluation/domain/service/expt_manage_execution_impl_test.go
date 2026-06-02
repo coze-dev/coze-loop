@@ -3608,7 +3608,7 @@ func TestBuildExptNotifyParam(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cardID, param := buildExptNotifyParam(tt.expt)
+			cardID, param := buildExptNotifyParam(tt.expt, tt.expt.Status)
 			assert.Equal(t, tt.wantCardID, cardID)
 			if tt.wantNil {
 				assert.Nil(t, param)
