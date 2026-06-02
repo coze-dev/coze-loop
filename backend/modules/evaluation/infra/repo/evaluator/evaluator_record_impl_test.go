@@ -98,7 +98,7 @@ func (f *fakeEvaluatorRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteLi
 	return nil
 }
 
-func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorVersionIDs []int64) (*entity.ExptTurnScoreHookConf, bool) {
+func (f *fakeEvaluatorRecordStorageConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	return nil, false
 }
 

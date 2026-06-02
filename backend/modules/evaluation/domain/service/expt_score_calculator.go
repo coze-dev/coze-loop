@@ -14,7 +14,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -54,16 +53,14 @@ func (c *evaluatorScoreCalculator) CalculateWeightedScore(ctx context.Context, e
 		exptID = expt.ID
 	}
 
-	evaluatorVersionIDs := maps.ToSlice(version2Record, func(versionID int64, _ *entity.EvaluatorRecord) int64 {
-		return versionID
-	})
+	evaluatorRefs := buildEvaluatorVersionRefs(expt, version2Record)
 
 	var (
 		hookConf *entity.ExptTurnScoreHookConf
 		hit      bool
 	)
 	if c.configer != nil {
-		hookConf, hit = c.configer.GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorVersionIDs)
+		hookConf, hit = c.configer.GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorRefs)
 	}
 	if !hit {
 		return calculateWeightedScore(version2Record, scoreWeights)
@@ -119,6 +116,31 @@ func (c *evaluatorScoreCalculator) callCaseScoreHook(ctx context.Context, conf *
 		return nil, fmt.Errorf("case score hook returned error: %s", resp.Error)
 	}
 	return &resp.Score, nil
+}
+
+func buildEvaluatorVersionRefs(expt *entity.Experiment, version2Record map[int64]*entity.EvaluatorRecord) []*entity.ExptEvaluatorVersionRef {
+	if len(version2Record) == 0 {
+		return nil
+	}
+
+	versionID2EvaluatorID := make(map[int64]int64)
+	if expt != nil {
+		for _, ev := range expt.Evaluators {
+			if ev == nil {
+				continue
+			}
+			versionID2EvaluatorID[ev.GetEvaluatorVersionID()] = ev.GetEvaluatorID()
+		}
+	}
+
+	refs := make([]*entity.ExptEvaluatorVersionRef, 0, len(version2Record))
+	for versionID := range version2Record {
+		refs = append(refs, &entity.ExptEvaluatorVersionRef{
+			EvaluatorID:        versionID2EvaluatorID[versionID],
+			EvaluatorVersionID: versionID,
+		})
+	}
+	return refs
 }
 
 // buildCaseScoreRequest 基于实验实体与本行评估器记录组装 /score/case 请求。

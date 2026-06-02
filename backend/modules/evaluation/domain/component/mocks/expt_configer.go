@@ -169,18 +169,18 @@ func (mr *MockIConfigerMockRecorder) GetExptTurnResultFilterBmqProducerCfg(ctx a
 }
 
 // GetExptTurnScoreHookConf mocks base method.
-func (m *MockIConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorVersionIDs []int64) (*entity.ExptTurnScoreHookConf, bool) {
+func (m *MockIConfiger) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetExptTurnScoreHookConf", ctx, spaceID, exptID, evaluatorVersionIDs)
+	ret := m.ctrl.Call(m, "GetExptTurnScoreHookConf", ctx, spaceID, exptID, evaluatorRefs)
 	ret0, _ := ret[0].(*entity.ExptTurnScoreHookConf)
 	ret1, _ := ret[1].(bool)
 	return ret0, ret1
 }
 
 // GetExptTurnScoreHookConf indicates an expected call of GetExptTurnScoreHookConf.
-func (mr *MockIConfigerMockRecorder) GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorVersionIDs any) *gomock.Call {
+func (mr *MockIConfigerMockRecorder) GetExptTurnScoreHookConf(ctx, spaceID, exptID, evaluatorRefs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnScoreHookConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnScoreHookConf), ctx, spaceID, exptID, evaluatorVersionIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExptTurnScoreHookConf", reflect.TypeOf((*MockIConfiger)(nil).GetExptTurnScoreHookConf), ctx, spaceID, exptID, evaluatorRefs)
 }
 
 // GetMaintainerUserIDs mocks base method.
