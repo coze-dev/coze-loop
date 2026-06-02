@@ -98,9 +98,6 @@ func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, eve
 }
 
 func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error {
-	if event.ToStatus != expt.Status {
-		return nil
-	}
 	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
 	if err != nil {
 		return err
