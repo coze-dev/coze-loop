@@ -51,6 +51,14 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	if req.NotificationConf != nil {
+		notifConf, err := NotificationConfDTO2DO(req.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = notifConf
+	}
+
 	return param, nil
 }
 
@@ -482,6 +490,8 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
 		dto.SetExptSource(es)
 	}
+
+	dto.NotificationConf = notificationConfDO2DTO(template.NotificationConf)
 
 	return dto
 }
@@ -1131,6 +1141,8 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
 
+	req.NotificationConf = notificationConfDO2DTO(template.NotificationConf)
+
 	return req
 }
 
@@ -1405,7 +1417,7 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	}
 
 	if req.NotificationConf != nil {
-		notifConf, err := notificationConfDTO2DO(req.NotificationConf)
+		notifConf, err := NotificationConfDTO2DO(req.NotificationConf)
 		if err != nil {
 			return nil, fmt.Errorf("invalid notification_conf: %w", err)
 		}

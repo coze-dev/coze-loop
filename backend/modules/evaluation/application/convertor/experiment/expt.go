@@ -427,6 +427,8 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
 	}
+
+	res.NotificationConf = notificationConfDO2DTO(experiment.NotificationConf)
 	res.Evaluators = make([]*evaluatordto.Evaluator, 0, len(experiment.Evaluators))
 	for _, evaluatorDO := range experiment.Evaluators {
 		res.Evaluators = append(res.Evaluators, evaluator.ConvertEvaluatorDO2DTO(evaluatorDO))
@@ -560,7 +562,7 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
 	if cer.NotificationConf != nil {
-		notifConf, err := notificationConfDTO2DO(cer.NotificationConf)
+		notifConf, err := NotificationConfDTO2DO(cer.NotificationConf)
 		if err != nil {
 			return nil, fmt.Errorf("invalid notification_conf: %w", err)
 		}
@@ -582,8 +584,8 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 	}
 }
 
-// notificationConfDTO2DO 将 thrift ExptNotificationConf 转换为 domain entity ExptNotificationConf
-func notificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.ExptNotificationConf, error) {
+// NotificationConfDTO2DO 将 thrift ExptNotificationConf 转换为 domain entity ExptNotificationConf
+func NotificationConfDTO2DO(conf *domain_expt.ExptNotificationConf) (*entity.ExptNotificationConf, error) {
 	if conf == nil {
 		return nil, nil
 	}
@@ -677,4 +679,48 @@ func validateNotificationFilterValue(op entity.NotificationOperatorType, value s
 		return fmt.Errorf("value array is empty")
 	}
 	return nil
+}
+
+// notificationConfDO2DTO converts entity ExptNotificationConf to domain DTO ExptNotificationConf
+func notificationConfDO2DTO(conf *entity.ExptNotificationConf) *domain_expt.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	result := &domain_expt.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f := &domain_expt.Filters{}
+		if conf.Filter.LogicOp != nil {
+			f.LogicOp = gptr.Of(domain_expt.FilterLogicOp(*conf.Filter.LogicOp))
+		}
+		for _, cond := range conf.Filter.FilterConditions {
+			if cond == nil {
+				continue
+			}
+			fc := &domain_expt.FilterCondition{
+				Operator: domain_expt.FilterOperatorType(cond.Operator),
+				Value:    cond.Value,
+			}
+			if cond.Field != nil {
+				fc.Field = &domain_expt.FilterField{
+					FieldType: domain_expt.FieldType(cond.Field.FieldType),
+					FieldKey:  cond.Field.FieldKey,
+				}
+			}
+			f.FilterConditions = append(f.FilterConditions, fc)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &domain_expt.WebhookNotificationConf{
+			Enable: conf.Webhook.Enable,
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &domain_expt.FeishuNotificationConf{
+			Enable: conf.FeishuNotification.Enable,
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result
 }

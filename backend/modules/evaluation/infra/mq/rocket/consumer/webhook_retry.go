@@ -19,6 +19,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/mq"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
@@ -31,14 +32,16 @@ var retryDelays = []time.Duration{
 }
 
 type WebhookRetryConsumer struct {
-	publisher  events.ExptEventPublisher
-	httpClient *http.Client
+	publisher      events.ExptEventPublisher
+	secretProvider service.IWebhookSecretProvider
+	httpClient     *http.Client
 }
 
-func NewWebhookRetryConsumer(publisher events.ExptEventPublisher) mq.IConsumerHandler {
+func NewWebhookRetryConsumer(publisher events.ExptEventPublisher, secretProvider service.IWebhookSecretProvider) mq.IConsumerHandler {
 	return &WebhookRetryConsumer{
-		publisher:  publisher,
-		httpClient: &http.Client{Timeout: 5 * time.Second},
+		publisher:      publisher,
+		secretProvider: secretProvider,
+		httpClient:     &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
@@ -60,9 +63,13 @@ func (c *WebhookRetryConsumer) HandleMessage(ctx context.Context, msg *mq.Messag
 		event.AttemptNum, event.DeliveryID, event.WebhookURL, event.ExptID)
 
 	// 重新签名（每次重试 timestamp/nonce 变化）
+	var secret string
+	if c.secretProvider != nil {
+		secret, _ = c.secretProvider.GetSecret(ctx, event.SpaceID)
+	}
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 	nonce := generateRetryNonce()
-	signature := computeRetryHMACSHA256("", timestamp+"\n"+nonce+"\n") // 空间 SK 暂用空字符串
+	signature := computeRetryHMACSHA256(secret, timestamp+"\n"+nonce+"\n")
 
 	// HTTP POST
 	if err := c.doPost(ctx, event.WebhookURL, []byte(event.Payload), timestamp, nonce, signature); err != nil {
