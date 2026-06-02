@@ -1,0 +1,26 @@
+{
+  "skill": {
+    "bytedance-agw": {
+      "source": "origin"
+    },
+    "bytedance-auth": {
+      "source": "origin"
+    },
+    "bytedance-log": {
+      "source": "origin"
+    },
+    "bytedance-tce": {
+      "source": "origin"
+    },
+    "bytedance-tools": {
+      "source": "origin"
+    },
+    "fornax-cli": {
+      "source": "local",
+      "owner": "taoyifan",
+      "repo": "skills",
+      "version": "0.0.9",
+      "gitPath": "."
+    }
+  }
+}
