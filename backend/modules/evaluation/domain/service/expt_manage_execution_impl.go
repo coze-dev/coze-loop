@@ -350,7 +350,7 @@ func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
 	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-	case entity.ExptStatus_Pending:
+	case entity.ExptStatus_Pending, entity.ExptStatus_Processing:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
 	default:
