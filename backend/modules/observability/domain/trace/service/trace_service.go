@@ -2488,8 +2488,8 @@ func (r *TraceServiceImpl) GetTrajectories(ctx context.Context, workspaceID int6
 
 	metaCfg := r.traceConfig.GetTrajectoryMetadataConfig(ctx)
 	var metaRules []loop_span.MetaKeyRule
-	if metaCfg != nil {
-		metaRules = metaCfg[workspaceID]
+	if metaCfg != nil && metaCfg.Spaces != nil {
+		metaRules = metaCfg.Spaces[workspaceID]
 	}
 
 	allSpans, err := r.traceRepo.ListSpansRepeat(ctx, &repo.ListSpansParam{

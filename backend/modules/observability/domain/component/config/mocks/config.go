@@ -216,10 +216,10 @@ func (mr *MockITraceConfigMockRecorder) GetSearchTraceTreeMaxSpanLimit(ctx, work
 }
 
 // GetTrajectoryMetadataConfig mocks base method.
-func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) config.TrajectoryMetadataConfig {
+func (m *MockITraceConfig) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetTrajectoryMetadataConfig", ctx)
-	ret0, _ := ret[0].(config.TrajectoryMetadataConfig)
+	ret0, _ := ret[0].(*config.TrajectoryMetadataConfig)
 	return ret0
 }
 

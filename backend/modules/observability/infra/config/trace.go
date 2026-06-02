@@ -261,9 +261,9 @@ func (t *TraceConfigCenter) GetReflowInsertConfig(ctx context.Context) *config.R
 	return cfg
 }
 
-func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) config.TrajectoryMetadataConfig {
-	cfg := make(config.TrajectoryMetadataConfig)
-	if err := t.UnmarshalKey(ctx, trajectoryMetadataCfgKey, &cfg); err != nil {
+func (t *TraceConfigCenter) GetTrajectoryMetadataConfig(ctx context.Context) *config.TrajectoryMetadataConfig {
+	cfg := &config.TrajectoryMetadataConfig{}
+	if err := t.UnmarshalKey(ctx, trajectoryMetadataCfgKey, cfg); err != nil {
 		logs.CtxWarn(ctx, "fail to unmarshal trajectory metadata cfg, %v", err)
 		return nil
 	}
