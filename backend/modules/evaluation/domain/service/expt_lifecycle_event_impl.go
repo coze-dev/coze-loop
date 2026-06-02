@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/bytedance/gg/gptr"
 
@@ -48,25 +49,42 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 }
 
 func (h *ExptLifecycleEventHandlerImpl) handleFeishuNotification(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
-	// Check if feishu notification is configured with filter
-	if expt.NotificationConf == nil || expt.NotificationConf.FeishuNotification == nil || !expt.NotificationConf.FeishuNotification.Enable {
+	logs.CtxInfo(ctx, "feishu_notification: enter, expt_id: %d, to_status: %v, has_notification_conf: %v",
+		expt.ID, event.ToStatus, expt.NotificationConf != nil)
+
+	// 兼容旧实验：NotificationConf 为 nil 时，保持旧行为（仅终态发送）
+	if expt.NotificationConf == nil {
+		switch event.ToStatus {
+		case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
+			logs.CtxInfo(ctx, "feishu_notification: legacy expt, sending card for terminal status, expt_id: %d, to_status: %v", expt.ID, event.ToStatus)
+			h.sendNotifyCard(ctx, event, expt)
+		default:
+			logs.CtxInfo(ctx, "feishu_notification: legacy expt, skip non-terminal status, expt_id: %d, to_status: %v", expt.ID, event.ToStatus)
+		}
+		return
+	}
+
+	// 新实验：显式检查飞书通知配置
+	feishuConf := expt.NotificationConf.FeishuNotification
+	logs.CtxInfo(ctx, "feishu_notification: expt_id: %d, has_feishu_conf: %v, enable: %v",
+		expt.ID, feishuConf != nil, feishuConf != nil && feishuConf.Enable)
+
+	if feishuConf == nil || !feishuConf.Enable {
 		logs.CtxInfo(ctx, "feishu_notification: not configured or disabled, skip notify, expt_id: %d", expt.ID)
 		return
 	}
 
 	filter := expt.NotificationConf.Filter
-	if filter != nil && len(filter.FilterConditions) > 0 {
-		if matchNotificationFilter(filter, event.ToStatus) {
-			logs.CtxInfo(ctx, "feishu_notify: filter matched, sending card, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-			h.sendNotifyCard(ctx, event, expt)
-		} else {
-			logs.CtxInfo(ctx, "feishu_notify: filter not matched, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
-		}
-		return
-	}
+	filterJSON, _ := json.Marshal(filter)
+	logs.CtxInfo(ctx, "feishu_notification: expt_id: %d, to_status: %v, filter: %s", expt.ID, event.ToStatus, string(filterJSON))
 
-	// No filter configured, skip sending
-	logs.CtxInfo(ctx, "feishu_notify: no filter configured, skip, expt_id: %v, to_status: %v", expt.ID, event.ToStatus)
+	matched := matchNotificationFilter(filter, event.ToStatus)
+	logs.CtxInfo(ctx, "feishu_notification: expt_id: %d, to_status: %v, filter_matched: %v, will_send: %v",
+		expt.ID, event.ToStatus, matched, matched)
+
+	if matched {
+		h.sendNotifyCard(ctx, event, expt)
+	}
 }
 
 func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) {
