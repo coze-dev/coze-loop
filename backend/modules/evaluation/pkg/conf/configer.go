@@ -97,11 +97,11 @@ func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w
 }
 
 func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorVersionIDs []int64) (*entity.ExptTurnScoreHookConf, bool) {
-	// 开源构建默认不命中外部打分回调，回退本地等权计算；命中判定与回调配置由闭源仓库实现。
 	return nil, false
 }
 
-func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {	const key = "system_maintainer_conf"
+func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
+	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf
 	if err := c.loader.UnmarshalKey(ctx, key, &maintainerConf); err != nil {
 		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)

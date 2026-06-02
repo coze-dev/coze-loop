@@ -2198,6 +2198,10 @@ func TestExptResultServiceImpl_RecordItemRunLogs(t *testing.T) {
 					Return((*entity.Experiment)(nil), nil).
 					AnyTimes()
 			}
+			// 未注入计算器的用例补默认实现（configer/httpClient 为 nil 时回退本地等权计算）。
+			if svc.scoreCalculator == nil {
+				svc.scoreCalculator = NewEvaluatorScoreCalculator(nil, nil)
+			}
 
 			_, err := svc.RecordItemRunLogs(context.Background(), tt.exptID, tt.exptRunID, tt.itemID, tt.spaceID, nil)
 			if (err != nil) != tt.wantErr {
@@ -2641,6 +2645,9 @@ func TestPayloadBuilder_BuildTurnResultFilter(t *testing.T) {
 
 			// 初始化 PayloadBuilder
 			builder := tt.setup(ctrl)
+			if builder.ScoreCalculator == nil {
+				builder.ScoreCalculator = NewEvaluatorScoreCalculator(nil, nil)
+			}
 
 			// 调用被测方法
 			got, err := builder.BuildTurnResultFilter(context.Background())
@@ -4102,6 +4109,7 @@ func TestNewPayloadBuilder_ExtFieldAndItemRunState(t *testing.T) {
 				nil,
 				tt.itemID2ItemRunState,
 				nil,
+				nil,
 			)
 
 			// 验证结果
@@ -5065,6 +5073,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 			publisher:              mockPublisher,
 			idgen:                  mockIdgen,
 			ExperimentRepo:         mockExperimentRepo,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		// Mock GetItemRunLog
@@ -5206,6 +5215,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 			publisher:              mockPublisher,
 			idgen:                  mockIdgen,
 			ExperimentRepo:         mockExperimentRepo,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		// Mock GetItemRunLog
@@ -5318,6 +5328,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_ScoreWeights(t *testing.T) {
 			publisher:              mockPublisher,
 			idgen:                  mockIdgen,
 			ExperimentRepo:         mockExperimentRepo,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		mockExptItemResultRepo.EXPECT().
@@ -5449,6 +5460,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore(t *testi
 			publisher:              mockPublisher,
 			idgen:                  mockIdgen,
 			ExperimentRepo:         mockExperimentRepo,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		// Mock GetItemRunLog
@@ -5600,6 +5612,7 @@ func TestExptResultServiceImpl_RecordItemRunLogs_CalculateWeightedScore(t *testi
 			publisher:              mockPublisher,
 			idgen:                  mockIdgen,
 			ExperimentRepo:         mockExperimentRepo,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		// Mock GetItemRunLog
@@ -5895,8 +5908,9 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 
 	t.Run("WeightedScore 为 nil 且启用加权分数，重新计算", func(t *testing.T) {
 		builder := &PayloadBuilder{
-			SpaceID:        100,
-			BaselineExptID: 1,
+			SpaceID:         100,
+			BaselineExptID:  1,
+			ScoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
 			BaseExptItemResultDO: []*entity.ExptItemResult{
 				{ItemID: 1, ItemIdx: 1, Status: entity.ItemRunState_Success},
 			},
@@ -5967,8 +5981,9 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 	t.Run("WeightedScore 不为 nil，使用已有值", func(t *testing.T) {
 		existingScore := 0.75
 		builder := &PayloadBuilder{
-			SpaceID:        100,
-			BaselineExptID: 1,
+			SpaceID:         100,
+			BaselineExptID:  1,
+			ScoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
 			BaseExptItemResultDO: []*entity.ExptItemResult{
 				{ItemID: 1, ItemIdx: 1, Status: entity.ItemRunState_Success},
 			},
@@ -6017,8 +6032,9 @@ func TestExptResultBuilder_FillExptTurnResultFilters_RecalculateWeightedScore(t 
 
 	t.Run("未启用配置权重时按等权补算", func(t *testing.T) {
 		builder := &PayloadBuilder{
-			SpaceID:        100,
-			BaselineExptID: 1,
+			SpaceID:         100,
+			BaselineExptID:  1,
+			ScoreCalculator: NewEvaluatorScoreCalculator(nil, nil),
 			BaseExptItemResultDO: []*entity.ExptItemResult{
 				{ItemID: 1, ItemIdx: 1, Status: entity.ItemRunState_Success},
 			},
@@ -6087,6 +6103,7 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 			ExptTurnResultRepo:     mockExptTurnResultRepo,
 			ExperimentRepo:         mockExperimentRepo,
 			evaluatorRecordService: mockEvaluatorRecordService,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		// Mock Get - 返回 turnResult
@@ -6192,6 +6209,7 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		service := ExptResultServiceImpl{
 			ExptTurnResultRepo: mockExptTurnResultRepo,
 			ExperimentRepo:     mockExperimentRepo,
+			scoreCalculator:    NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		mockExptTurnResultRepo.EXPECT().
@@ -6215,6 +6233,7 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 			ExptTurnResultRepo:     mockExptTurnResultRepo,
 			ExperimentRepo:         mockExperimentRepo,
 			evaluatorRecordService: mockEvaluatorRecordService,
+			scoreCalculator:        NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		mockExptTurnResultRepo.EXPECT().
@@ -6264,6 +6283,7 @@ func TestExptResultServiceImpl_RecalculateWeightedScore(t *testing.T) {
 		service := ExptResultServiceImpl{
 			ExptTurnResultRepo: mockExptTurnResultRepo,
 			ExperimentRepo:     mockExperimentRepo,
+			scoreCalculator:    NewEvaluatorScoreCalculator(nil, nil),
 		}
 
 		mockExptTurnResultRepo.EXPECT().

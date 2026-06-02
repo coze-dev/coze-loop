@@ -34,8 +34,5 @@ type IConfiger interface {
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
-	// GetExptTurnScoreHookConf 读取行维度得分 HTTP 回调配置：根据 (spaceID, exptID, evaluatorVersionIDs)
-	// 判定该实验是否命中外部打分回调，命中时返回回调调用配置（URL/Method/Timeout）。
-	// 未命中返回 (nil, false)，此时由调用方回退本地等权计算。
 	GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorVersionIDs []int64) (*entity.ExptTurnScoreHookConf, bool)
 }

@@ -179,21 +179,6 @@ func (mr *MockIEvaluationSetServiceMockRecorder) ParseImportSourceFile(ctx, para
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIEvaluationSetService)(nil).ParseImportSourceFile), ctx, param)
 }
 
-// ValidateMultiPartData mocks base method.
-func (m *MockIEvaluationSetService) ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateMultiPartData", ctx, spaceID, previewData, storeOption)
-	ret0, _ := ret[0].([]*entity.UploadAttachmentDetail)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidateMultiPartData indicates an expected call of ValidateMultiPartData.
-func (mr *MockIEvaluationSetServiceMockRecorder) ValidateMultiPartData(ctx, spaceID, previewData, storeOption any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMultiPartData", reflect.TypeOf((*MockIEvaluationSetService)(nil).ValidateMultiPartData), ctx, spaceID, previewData, storeOption)
-}
-
 // QueryItemSnapshotMappings mocks base method.
 func (m *MockIEvaluationSetService) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()
@@ -222,4 +207,19 @@ func (m *MockIEvaluationSetService) UpdateEvaluationSet(ctx context.Context, par
 func (mr *MockIEvaluationSetServiceMockRecorder) UpdateEvaluationSet(ctx, param any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEvaluationSet", reflect.TypeOf((*MockIEvaluationSetService)(nil).UpdateEvaluationSet), ctx, param)
+}
+
+// ValidateMultiPartData mocks base method.
+func (m *MockIEvaluationSetService) ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateMultiPartData", ctx, spaceID, previewData, storeOption)
+	ret0, _ := ret[0].([]*entity.UploadAttachmentDetail)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateMultiPartData indicates an expected call of ValidateMultiPartData.
+func (mr *MockIEvaluationSetServiceMockRecorder) ValidateMultiPartData(ctx, spaceID, previewData, storeOption any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMultiPartData", reflect.TypeOf((*MockIEvaluationSetService)(nil).ValidateMultiPartData), ctx, spaceID, previewData, storeOption)
 }

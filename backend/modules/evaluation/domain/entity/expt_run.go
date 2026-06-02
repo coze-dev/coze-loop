@@ -127,6 +127,28 @@ type ExptTurnScoreHookConf struct {
 	TimeoutMS int64  `json:"timeout_ms" mapstructure:"timeout_ms"`
 }
 
+// CaseScoreItem 为单个评估器在该行的得分，对应 score_api.md 中 /score/case 的 evaluator_score 元素，
+// 并额外携带 ExptID/EvaluatorID/EvaluatorVersionID 信息。
+type CaseScoreItem struct {
+	EvaluatorName      string  `json:"evaluator_name"`
+	EvaluatorID        int64   `json:"evaluator_id"`
+	EvaluatorVersionID int64   `json:"evaluator_version_id"`
+	Score              float64 `json:"score"`
+}
+
+// CaseScoreRequest 为 /score/case 的请求体。
+type CaseScoreRequest struct {
+	ExptID         int64            `json:"expt_id"`
+	EvaluatorScore []*CaseScoreItem `json:"evaluator_score"`
+}
+
+// CaseScoreResponse 为 /score/case 的响应体。即使打分异常，HTTP 仍返回 200，
+// score 为兜底值并在 error 字段给出说明，调用方需同时检查 error。
+type CaseScoreResponse struct {
+	Score float64 `json:"score"`
+	Error string  `json:"error"`
+}
+
 func (e *ExptConsumerConf) GetExptExecConf(spaceID int64) *ExptExecConf {
 	if e == nil {
 		return nil
