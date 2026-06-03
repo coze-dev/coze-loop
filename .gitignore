@@ -58,7 +58,6 @@ release/deployment/helm-chart/umbrella/Chart.lock
 .claude/
 .coco/
 CLAUDE.md
-AGENTS.md
 backend/script/errorx/.env
 backend/bin/
 .cursor/
