@@ -64,6 +64,14 @@ func AnnotationPO2DO(annotation *dao.Annotation) *loop_span.Annotation {
 			} else {
 				ret.Metadata = metadata
 			}
+		case loop_span.AnnotationTypeOpenAPIFeedback, loop_span.AnnotationTypeCozeFeedback, loop_span.AnnotationTypeManualFeedback:
+			var metadata loop_span.FeedbackMetadata
+			err := json.Unmarshal([]byte(annotation.Metadata), &metadata)
+			if err != nil {
+				logs.Error("json unmarshal metadata error: %v", err)
+			} else {
+				ret.Metadata = metadata
+			}
 		}
 	}
 	if annotation.Correction != "" {

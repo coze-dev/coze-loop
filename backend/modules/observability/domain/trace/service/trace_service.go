@@ -2148,6 +2148,12 @@ func (r *TraceServiceImpl) Send(ctx context.Context, event *entity.AnnotationEve
 	span := spans[0]
 	event.Annotation.StartTime = time.UnixMicro(span.StartTime)
 	event.Annotation.SpanID = span.SpanID
+	// 填充 metadata 中的 span 下钻信息
+	if event.Annotation.Metadata == nil {
+		event.Annotation.Metadata = &loop_span.FeedbackMetadata{
+			AnnotationSpanInfo: span.GetAnnotationSpanInfo(),
+		}
+	}
 	if err := event.Annotation.GenID(); err != nil {
 		logs.CtxWarn(ctx, "failed to generate annotation id for %+v, %v", event.Annotation, err)
 		return nil
