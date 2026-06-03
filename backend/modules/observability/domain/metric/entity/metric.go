@@ -27,7 +27,7 @@ const (
 	MetricTypePie        MetricType = "pie"         // 饼图
 
 	MetricSourceInnerStorage MetricSource = "storage"
-	MetricSourceOfflineOnly  MetricSource = "offline_only" // 仅支持离线查询（如 feedback 指标）
+	MetricSourceAnnotation MetricSource = "annotation" // 数据来源 annotation 表（在线查 annotation 表，离线查 metric 表）
 
 	MetricGranularity1Min  MetricGranularity = "1min"
 	MetricGranularity1Hour MetricGranularity = "1hour"

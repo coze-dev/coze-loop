@@ -61,5 +61,20 @@ type FeedbackAggregationRow struct {
 
 // IAnnotationMetricRepo annotation 表 Feedback 指标聚合查询接口
 type IAnnotationMetricRepo interface {
+	// QueryFeedbackAggregation 离线 CronJob 聚合查询（按天）
 	QueryFeedbackAggregation(ctx context.Context, param *QueryFeedbackAggregationParam) ([]*FeedbackAggregationRow, error)
+	// QueryFeedbackOnlineMetrics 在线实时查询（按时间范围）
+	QueryFeedbackOnlineMetrics(ctx context.Context, param *QueryFeedbackOnlineParam) (*GetMetricsResult, error)
+}
+
+// QueryFeedbackOnlineParam annotation 表在线查询参数
+type QueryFeedbackOnlineParam struct {
+	Tenants     []string
+	WorkspaceID string
+	StartTime   int64 // ms timestamp
+	EndTime     int64 // ms timestamp
+	MetricNames []string
+	Filters     *loop_span.FilterFields
+	Granularity entity.MetricGranularity
+	DrillDownFields []*loop_span.FilterField
 }

@@ -368,9 +368,9 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 }
 
 func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
-	// 如果所有指标都是 OfflineOnly 类型，强制走离线查询
-	if m.isAllOfflineOnly(req.MetricsNames) {
-		return m.queryOfflineMetrics(ctx, req)
+	// annotation 类型指标走专用查询路径（在线查 annotation 表，离线查 metric 表）
+	if m.isAllAnnotationSource(req.MetricsNames) {
+		return m.queryAnnotationMetrics(ctx, req)
 	}
 
 	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
@@ -403,17 +403,104 @@ func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq)
 	}
 }
 
-func (m *MetricsService) isAllOfflineOnly(metricNames []string) bool {
+func (m *MetricsService) isAllAnnotationSource(metricNames []string) bool {
 	for _, name := range metricNames {
 		mDef, ok := m.metricDefMap[name]
 		if !ok {
 			return false
 		}
-		if mDef.Source() != entity.MetricSourceOfflineOnly {
+		if mDef.Source() != entity.MetricSourceAnnotation {
 			return false
 		}
 	}
 	return len(metricNames) > 0
+}
+
+// queryAnnotationMetrics annotation 类型指标查询，走在线/离线分流
+func (m *MetricsService) queryAnnotationMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	if m.annotationMetricRepo == nil {
+		// 没有注入 annotationMetricRepo 时 fallback 到离线查询
+		return m.queryOfflineMetrics(ctx, req)
+	}
+	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
+	if !qCfg.SupportOffline || m.pMetrics.PlatformMetricDefs[req.PlatformType] == nil {
+		// 不支持离线或不在离线范围内，直接走在线查 annotation 表
+		return m.queryAnnotationOnlineMetrics(ctx, req)
+	}
+	boundary := getDaysBeforeTimeStamp(qCfg.OfflineCriticalPoint)
+	if req.StartTime >= boundary {
+		return m.queryAnnotationOnlineMetrics(ctx, req)
+	} else if req.EndTime < boundary {
+		return m.queryOfflineMetrics(ctx, req)
+	} else {
+		start, end := req.StartTime, req.EndTime
+		req.StartTime, req.EndTime = boundary, end
+		onlineMetric, err := m.queryAnnotationOnlineMetrics(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		req.StartTime, req.EndTime = start, boundary-1
+		offlineMetric, err := m.queryOfflineMetrics(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return &QueryMetricsResp{
+			Metrics: m.mergeMetrics(onlineMetric.Metrics, offlineMetric.Metrics),
+		}, nil
+	}
+}
+
+// queryAnnotationOnlineMetrics 在线查询 annotation 表
+func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, req.PlatformType)
+	if err != nil {
+		return nil, err
+	}
+	retMetric := make(map[string]*entity.Metric)
+	for _, metricName := range req.MetricsNames {
+		mDef := m.metricDefMap[metricName]
+		if mDef == nil {
+			continue
+		}
+		param := &repo.QueryFeedbackOnlineParam{
+			Tenants:         tenants,
+			WorkspaceID:     strconv.FormatInt(req.WorkspaceID, 10),
+			StartTime:       req.StartTime,
+			EndTime:         req.EndTime,
+			MetricNames:     []string{metricName},
+			Filters:         req.FilterFields,
+			Granularity:     req.Granularity,
+			DrillDownFields: req.DrillDownFields,
+		}
+		st := time.Now()
+		result, err := m.annotationMetricRepo.QueryFeedbackOnlineMetrics(ctx, param)
+		if err != nil {
+			return nil, err
+		}
+		logs.CtxInfo(ctx, "query annotation online metrics for [%s] successfully, cost %v", metricName, time.Since(st))
+
+		// 构建 metricQueryBuilder 用于格式化
+		oExpression := mDef.OExpression()
+		if oExpression.MetricName == "" {
+			oExpression.MetricName = mDef.Name()
+		}
+		mBuilder := &metricQueryBuilder{
+			metricNames: []string{metricName},
+			mInfo: &metricInfo{
+				mType: mDef.Type(),
+				mAggregation: []*entity.Dimension{
+					{
+						OExpression: oExpression,
+						Alias:       mDef.Name(),
+					},
+				},
+			},
+		}
+		for k, v := range m.formatMetrics(result.Data, mBuilder) {
+			retMetric[k] = v
+		}
+	}
+	return &QueryMetricsResp{Metrics: retMetric}, nil
 }
 
 func (m *MetricsService) queryOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {

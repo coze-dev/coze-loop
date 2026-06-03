@@ -23,7 +23,7 @@ func (m *FeedbackCountMetric) Type() entity.MetricType {
 }
 
 func (m *FeedbackCountMetric) Source() entity.MetricSource {
-	return entity.MetricSourceOfflineOnly
+	return entity.MetricSourceAnnotation
 }
 
 func (m *FeedbackCountMetric) Expression(_ entity.MetricGranularity) *entity.Expression {

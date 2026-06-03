@@ -23,7 +23,7 @@ func (m *FeedbackScoreAvgMetric) Type() entity.MetricType {
 }
 
 func (m *FeedbackScoreAvgMetric) Source() entity.MetricSource {
-	return entity.MetricSourceOfflineOnly
+	return entity.MetricSourceAnnotation
 }
 
 func (m *FeedbackScoreAvgMetric) Expression(_ entity.MetricGranularity) *entity.Expression {
