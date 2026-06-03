@@ -5,15 +5,13 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
-
-	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/infra/http"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/utils"
+	"github.com/coze-dev/coze-loop/backend/pkg/errorx"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -88,10 +86,10 @@ func (c *evaluatorScoreCalculator) CalculateWeightedScore(ctx context.Context, e
 // /score/case 即使逻辑异常也返回 200，需同时检查响应体 error 字段。
 func (c *evaluatorScoreCalculator) callCaseScoreHook(ctx context.Context, conf *entity.ExptTurnScoreHookConf, req *entity.CaseScoreRequest) (*float64, error) {
 	if c.httpClient == nil {
-		return nil, fmt.Errorf("case score http client not injected")
+		return nil, errorx.New("case score http client not injected")
 	}
 	if conf == nil || conf.URL == "" {
-		return nil, fmt.Errorf("case score hook conf invalid")
+		return nil, errorx.New("case score hook conf invalid")
 	}
 
 	method := conf.Method
@@ -107,13 +105,12 @@ func (c *evaluatorScoreCalculator) callCaseScoreHook(ctx context.Context, conf *
 		Body:       req,
 		Response:   resp,
 		Timeout:    time.Duration(conf.TimeoutMS) * time.Millisecond,
-		WithSD:     gptr.Of(true),
 	}
 	if err := c.httpClient.DoHTTPRequest(ctx, param); err != nil {
 		return nil, err
 	}
 	if resp.Error != "" {
-		return nil, fmt.Errorf("case score hook returned error: %s", resp.Error)
+		return nil, errorx.New("case score hook returned error: %s", resp.Error)
 	}
 	return &resp.Score, nil
 }
