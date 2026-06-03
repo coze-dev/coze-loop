@@ -184,13 +184,8 @@ func buildWebhookPayload(event *entity.ExptLifecycleEvent, expt *entity.Experime
 		progress["failed"] = expt.Stats.FailItemCnt
 	}
 
-	// 使用确定性 delivery_id，基于业务字段生成，保证重复消费时下游可幂等去重
-	// 包含 expt_run_id 以区分同一实验不同轮次的相同状态变更
-	var runID int64
-	if event.ExptRunID != nil {
-		runID = *event.ExptRunID
-	}
-	deliveryID := fmt.Sprintf("evt_%d_%d_%d_%d", expt.ID, runID, event.FromStatus, event.ToStatus)
+	// deliveryID 直接透传 lifecycle 消息的 IdempotentKey，保证全链路幂等一致
+	deliveryID := event.IdempotentKey
 
 	return map[string]interface{}{
 		"delivery_id":   deliveryID,

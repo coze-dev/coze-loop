@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/apache/rocketmq-client-go/v2"
 	"github.com/apache/rocketmq-client-go/v2/consumer"
@@ -34,11 +35,16 @@ func (c *Consumer) Start() error {
 	err := c.consumer.Subscribe(c.topic, selector, func(ctx context.Context, msgs ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 		for _, msg := range msgs {
 			// 转换消息格式
+			var keys []string
+			if k := msg.GetKeys(); k != "" {
+				keys = strings.Split(k, " ")
+			}
 			ext := &mq.MessageExt{
 				Message: mq.Message{
 					Topic:        msg.Topic,
 					Body:         msg.Body,
 					Tag:          msg.GetTags(),
+					Keys:         keys,
 					PartitionKey: msg.GetShardingKey(),
 					Properties:   msg.GetProperties(),
 				},

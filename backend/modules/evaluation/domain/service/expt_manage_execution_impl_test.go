@@ -511,7 +511,7 @@ func TestExptMangerImpl_Kill(t *testing.T) {
 					AnyTimes()
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,
@@ -1583,7 +1583,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				// Mock lifecycle event
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1700,7 +1700,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				// Mock lifecycle event
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1777,7 +1777,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				// Mock lifecycle event
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1853,7 +1853,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				// Mock lifecycle event
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -1934,7 +1934,7 @@ func TestExptMangerImpl_CompleteExpt(t *testing.T) {
 				// Mock lifecycle event
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(ctx, gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 
 				// Mock metrics emission
@@ -2051,7 +2051,7 @@ func TestExptMangerImpl_CompleteExpt_workflow_calls_PipelineNodeFinishCallback(t
 		EmitExptExecResult(int64(789), int64(entity.ExptType_Offline), gomock.Any(), gomock.Any()).AnyTimes()
 
 	mgr.publisher.(*eventsMocks.MockExptEventPublisher).EXPECT().
-		PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+		PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(nil)
 
 	err := mgr.CompleteExpt(ctx, 123, nil, 789, session)
@@ -3643,7 +3643,7 @@ func TestExptMangerImpl_sendExptCompleteEvent(t *testing.T) {
 			setupMock: func(mgr *ExptMangerImpl) {
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,
@@ -3656,7 +3656,7 @@ func TestExptMangerImpl_sendExptCompleteEvent(t *testing.T) {
 			setupMock: func(mgr *ExptMangerImpl) {
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(errors.New("mq publish error")).
 					AnyTimes()
 			},
@@ -3670,7 +3670,7 @@ func TestExptMangerImpl_sendExptCompleteEvent(t *testing.T) {
 			setupMock: func(mgr *ExptMangerImpl) {
 				mgr.publisher.(*eventsMocks.MockExptEventPublisher).
 					EXPECT().
-					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).
+					PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
 					Return(nil)
 			},
 			wantErr: false,

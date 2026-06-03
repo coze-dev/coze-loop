@@ -157,8 +157,12 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 	return e.batchSend(ctx, rocket.ExptTurnResultFilterRMQKey, []any{event}, duration)
 }
 
-func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
-	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration, idempotentKey string) error {
+	var keys []string
+	if idempotentKey != "" {
+		keys = []string{idempotentKey}
+	}
+	return e.batchSendWithTagAndKeys(ctx, rocket.ExptLifecycleEventRMQKey, "", []any{event}, duration, keys)
 }
 
 func (e *exptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, event *entity.WebhookRetryEvent, duration *time.Duration) error {
@@ -167,10 +171,14 @@ func (e *exptEventPublisher) PublishExptWebhookNotifyEvent(ctx context.Context, 
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {
-	return e.batchSendWithTag(ctx, pk, "", events, duration)
+	return e.batchSendWithTagAndKeys(ctx, pk, "", events, duration, nil)
 }
 
 func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk string, tag string, events []any, duration *time.Duration) error {
+	return e.batchSendWithTagAndKeys(ctx, pk, tag, events, duration, nil)
+}
+
+func (e *exptEventPublisher) batchSendWithTagAndKeys(ctx context.Context, pk string, tag string, events []any, duration *time.Duration, keys []string) error {
 	p, ok := e.producers[pk]
 	if !ok {
 		return fmt.Errorf("rmq producer not found %v", pk)
@@ -191,6 +199,9 @@ func (e *exptEventPublisher) batchSendWithTag(ctx context.Context, pk string, ta
 		}
 		if tag != "" {
 			msg.WithTag(tag)
+		}
+		if len(keys) > 0 {
+			msg.WithKeys(keys)
 		}
 		msgs = append(msgs, msg)
 	}

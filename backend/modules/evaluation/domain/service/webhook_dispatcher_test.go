@@ -98,11 +98,11 @@ func TestBuildWebhookPayload_BitsUT(t *testing.T) {
 
 	t.Run("Processing status maps to experiment.started", func(t *testing.T) {
 		t.Parallel()
-		event := &entity.ExptLifecycleEvent{ExptID: 1, ExptRunID: gptr.Of(int64(10)), FromStatus: entity.ExptStatus_Pending, ToStatus: entity.ExptStatus_Processing}
+		event := &entity.ExptLifecycleEvent{ExptID: 1, ExptRunID: gptr.Of(int64(10)), FromStatus: entity.ExptStatus_Pending, ToStatus: entity.ExptStatus_Processing, IdempotentKey: "expt_1_10_2_3"}
 		expt := &entity.Experiment{ID: 1, Name: "test-expt"}
 		payload := buildWebhookPayload(event, expt)
 		assert.Equal(t, "experiment.started", payload["event_type"])
-		assert.Equal(t, "evt_1_10_2_3", payload["delivery_id"])
+		assert.Equal(t, "expt_1_10_2_3", payload["delivery_id"])
 	})
 
 	t.Run("Success status maps to experiment.succeeded", func(t *testing.T) {
@@ -122,10 +122,10 @@ func TestBuildWebhookPayload_BitsUT(t *testing.T) {
 
 	t.Run("nil ExptRunID uses 0", func(t *testing.T) {
 		t.Parallel()
-		event := &entity.ExptLifecycleEvent{ExptID: 3, FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Failed}
+		event := &entity.ExptLifecycleEvent{ExptID: 3, FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Failed, IdempotentKey: "expt_3_0_3_12"}
 		expt := &entity.Experiment{ID: 3, Name: "expt-3"}
 		payload := buildWebhookPayload(event, expt)
-		assert.Equal(t, "evt_3_0_3_12", payload["delivery_id"])
+		assert.Equal(t, "expt_3_0_3_12", payload["delivery_id"])
 	})
 }
 
@@ -261,6 +261,7 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		event := &entity.ExptLifecycleEvent{
 			ExptID: 42, SpaceID: 100, ExptRunID: gptr.Of(int64(5)),
 			FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Success,
+			IdempotentKey: "expt_42_5_3_11",
 		}
 
 		err := d.Dispatch(context.Background(), event, expt)
@@ -317,6 +318,7 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		event := &entity.ExptLifecycleEvent{
 			ExptID: 42, SpaceID: 100, ExptRunID: gptr.Of(int64(1)),
 			FromStatus: entity.ExptStatus_Processing, ToStatus: entity.ExptStatus_Success,
+			IdempotentKey: "expt_42_1_3_11",
 		}
 
 		err := d.Dispatch(context.Background(), event, expt)

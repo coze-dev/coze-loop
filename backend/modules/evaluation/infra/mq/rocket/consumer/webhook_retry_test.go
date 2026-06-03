@@ -66,7 +66,7 @@ func (m *mockPublisher) PublishExptExportCSVEvent(ctx context.Context, events *e
 	return nil
 }
 
-func (m *mockPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
+func (m *mockPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration, idempotentKey string) error {
 	return nil
 }
 

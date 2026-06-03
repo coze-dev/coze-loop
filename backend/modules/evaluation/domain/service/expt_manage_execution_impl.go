@@ -692,8 +692,15 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 		ExptType:   expt.ExptType,
 		SourceType: expt.SourceType,
 	}
+	// 确定性幂等 Key：同一 run 同一状态变更产出相同 Key，透传给 webhook 做 deliveryID
+	var runID int64
+	if exptRunID != nil {
+		runID = *exptRunID
+	}
+	idempotentKey := fmt.Sprintf("expt_%d_%d_%d_%d", expt.ID, runID, event.FromStatus, event.ToStatus)
+	event.IdempotentKey = idempotentKey
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
-		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
+		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3), idempotentKey)
 	}); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
 	}

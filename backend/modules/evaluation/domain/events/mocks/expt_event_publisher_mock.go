@@ -85,17 +85,17 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptExportCSVEvent(ctx, eve
 }
 
 // PublishExptLifecycleEvent mocks base method.
-func (m *MockExptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
+func (m *MockExptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration, idempotentKey string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PublishExptLifecycleEvent", ctx, event, duration)
+	ret := m.ctrl.Call(m, "PublishExptLifecycleEvent", ctx, event, duration, idempotentKey)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // PublishExptLifecycleEvent indicates an expected call of PublishExptLifecycleEvent.
-func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, event, duration any) *gomock.Call {
+func (mr *MockExptEventPublisherMockRecorder) PublishExptLifecycleEvent(ctx, event, duration, idempotentKey any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptLifecycleEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptLifecycleEvent), ctx, event, duration, idempotentKey)
 }
 
 // PublishExptWebhookNotifyEvent mocks base method.
