@@ -27,6 +27,7 @@ const (
 	MetricTypePie        MetricType = "pie"         // 饼图
 
 	MetricSourceInnerStorage MetricSource = "storage"
+	MetricSourceOfflineOnly  MetricSource = "offline_only" // 仅支持离线查询（如 feedback 指标）
 
 	MetricGranularity1Min  MetricGranularity = "1min"
 	MetricGranularity1Hour MetricGranularity = "1hour"
@@ -104,6 +105,13 @@ const (
 	MetricNameAgentStepAvg      = "agent_step_avg"
 	MetricNameAgentToolStepAvg  = "agent_tool_step_avg"
 	MetricNameAgentModelStepAvg = "agent_model_step_avg"
+
+	// Feedback相关指标
+	MetricNameFeedbackCount             = "feedback_count"
+	MetricNameFeedbackScoreAvg          = "feedback_score_avg"
+	MetricNameFeedbackScoreMax          = "feedback_score_max"
+	MetricNameFeedbackScoreMin          = "feedback_score_min"
+	MetricNameFeedbackValueDistribution = "feedback_value_distribution"
 
 	// 复合指标计算
 	MetricOperatorDivide MetricOperator = "divide"

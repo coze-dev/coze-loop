@@ -368,6 +368,11 @@ func (m *MetricsService) queryCompoundMetric(ctx context.Context, req *QueryMetr
 }
 
 func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
+	// 如果所有指标都是 OfflineOnly 类型，强制走离线查询
+	if m.isAllOfflineOnly(req.MetricsNames) {
+		return m.queryOfflineMetrics(ctx, req)
+	}
+
 	qCfg := m.traceConfig.GetMetricQueryConfig(ctx)
 	if !qCfg.SupportOffline { // 不支持离线指标
 		return m.queryOnlineMetrics(ctx, req)
@@ -396,6 +401,19 @@ func (m *MetricsService) queryMetrics(ctx context.Context, req *QueryMetricsReq)
 			Metrics: m.mergeMetrics(onlineMetric.Metrics, offlineMetric.Metrics),
 		}, nil
 	}
+}
+
+func (m *MetricsService) isAllOfflineOnly(metricNames []string) bool {
+	for _, name := range metricNames {
+		mDef, ok := m.metricDefMap[name]
+		if !ok {
+			return false
+		}
+		if mDef.Source() != entity.MetricSourceOfflineOnly {
+			return false
+		}
+	}
+	return len(metricNames) > 0
 }
 
 func (m *MetricsService) queryOnlineMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error) {
