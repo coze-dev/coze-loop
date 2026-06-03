@@ -52,6 +52,10 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 
 	// return publisher, nil
 
+	optionalKeys := map[string]bool{
+		rocket.WebhookDeliveryEventRMQKey: true,
+	}
+
 	for _, key := range []string{
 		rocket.ExptScheduleEventRMQKey,
 		rocket.ExptRecordEvalEventRMQKey,
@@ -62,36 +66,60 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptLifecycleEventRMQKey,
 		rocket.WebhookDeliveryEventRMQKey,
 	} {
+		logs.CtxInfo(ctx, "[RMQ Init] loading config for key: %v", key)
 		p := &producer{}
 
 		if err := loader.UnmarshalKey(ctx, key, &p.cfg); err != nil {
+			logs.CtxError(ctx, "[RMQ Init] unmarshal config failed, key: %v, err: %v", key, err)
+			if optionalKeys[key] {
+				logs.CtxWarn(ctx, "[RMQ Init] skipping optional producer, key: %v", key)
+				continue
+			}
 			return nil, err
 		}
 
 		if gptr.Indirect(p.cfg.DisableProduce) {
+			logs.CtxInfo(ctx, "[RMQ Init] producer disabled, key: %v", key)
 			continue
 		}
 
 		if !p.cfg.Valid() {
+			logs.CtxError(ctx, "[RMQ Init] invalid config, key: %v, conf: %v", key, json.Jsonify(p.cfg))
+			if optionalKeys[key] {
+				logs.CtxWarn(ctx, "[RMQ Init] skipping optional producer with invalid config, key: %v", key)
+				continue
+			}
 			return nil, fmt.Errorf("rmq config with invalid addr, key: %v, conf: %v", key, json.Jsonify(p.cfg))
 		}
 
 		if exist := publisher.getProducerWithAddr(p.cfg.Addr); exist != nil {
 			p.p = exist.p
 			publisher.producers[key] = p
+			logs.CtxInfo(ctx, "[RMQ Init] reusing existing producer, key: %v, addr: %v", key, p.cfg.Addr)
 			continue
 		}
 
 		pcfg := p.cfg.ToProducerCfg()
 		p.p, err = mqFactory.NewProducer(pcfg)
 		if err != nil {
+			logs.CtxError(ctx, "[RMQ Init] new producer failed, key: %v, err: %v", key, err)
+			if optionalKeys[key] {
+				logs.CtxWarn(ctx, "[RMQ Init] skipping optional producer after create failure, key: %v", key)
+				continue
+			}
 			return nil, errorx.Wrapf(err, "new mq producer fail, cfg: %v", pcfg)
 		}
 
 		if err := p.p.Start(); err != nil {
+			logs.CtxError(ctx, "[RMQ Init] start producer failed, key: %v, err: %v", key, err)
+			if optionalKeys[key] {
+				logs.CtxWarn(ctx, "[RMQ Init] skipping optional producer after start failure, key: %v", key)
+				continue
+			}
 			return nil, errorx.Wrapf(err, "start mq producer fail, cfg: %v", pcfg)
 		}
 
+		logs.CtxInfo(ctx, "[RMQ Init] producer started successfully, key: %v, addr: %v, topic: %v", key, p.cfg.Addr, p.cfg.Topic)
 		publisher.producers[key] = p
 	}
 
@@ -163,6 +191,10 @@ func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, even
 }
 
 func (e *exptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryEvent, duration *time.Duration) error {
+	if _, ok := e.producers[rocket.WebhookDeliveryEventRMQKey]; !ok {
+		logs.CtxWarn(ctx, "[RMQ] webhook delivery producer not available, skipping publish")
+		return nil
+	}
 	return e.batchSend(ctx, rocket.WebhookDeliveryEventRMQKey, []any{event}, duration)
 }
 
