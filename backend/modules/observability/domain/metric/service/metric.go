@@ -81,19 +81,21 @@ type TraverseMetricDetail struct {
 type IMetricsService interface {
 	QueryMetrics(ctx context.Context, req *QueryMetricsReq) (*QueryMetricsResp, error)
 	TraverseMetrics(ctx context.Context, req *TraverseMetricsReq) (*TraverseMetricsResp, error)
+	TraverseFeedbackMetrics(ctx context.Context, req *TraverseFeedbackMetricsReq) (*TraverseFeedbackMetricsResp, error)
 	GetMetricGroupBy(metricName string) ([]string, error)
 }
 
 type MetricsService struct {
-	metricRepo      repo.IMetricRepo
-	oMetricRepo     repo.IOfflineMetricRepo
-	metricDefMap    map[string]entity.IMetricDefinition
-	metricDrillDown map[string][]string
-	metricGroupMap  map[string]*entity.MetricGroup
-	buildHelper     trace_service.TraceFilterProcessorBuilder
-	tenantProvider  tenant.ITenantProvider
-	traceConfig     config.ITraceConfig
-	pMetrics        *entity.PlatformMetrics
+	metricRepo              repo.IMetricRepo
+	oMetricRepo             repo.IOfflineMetricRepo
+	annotationMetricRepo    repo.IAnnotationMetricRepo
+	metricDefMap            map[string]entity.IMetricDefinition
+	metricDrillDown         map[string][]string
+	metricGroupMap          map[string]*entity.MetricGroup
+	buildHelper             trace_service.TraceFilterProcessorBuilder
+	tenantProvider          tenant.ITenantProvider
+	traceConfig             config.ITraceConfig
+	pMetrics                *entity.PlatformMetrics
 }
 
 func NewMetricsService(
@@ -103,6 +105,7 @@ func NewMetricsService(
 	buildHelper trace_service.TraceFilterProcessorBuilder,
 	traceConfig config.ITraceConfig,
 	pMetrics *entity.PlatformMetrics,
+	opts ...MetricsServiceOption,
 ) (IMetricsService, error) {
 	ret := &MetricsService{
 		metricRepo:     metricRepo,
@@ -112,6 +115,9 @@ func NewMetricsService(
 		traceConfig:    traceConfig,
 		pMetrics:       pMetrics,
 	}
+	for _, opt := range opts {
+		opt(ret)
+	}
 	if err := ret.registerMetrics(); err != nil {
 		return nil, err
 	}
@@ -119,6 +125,16 @@ func NewMetricsService(
 		return nil, err
 	}
 	return ret, nil
+}
+
+// MetricsServiceOption 可选配置
+type MetricsServiceOption func(*MetricsService)
+
+// WithAnnotationMetricRepo 设置 annotation 指标仓储（用于 Feedback 离线指标）
+func WithAnnotationMetricRepo(r repo.IAnnotationMetricRepo) MetricsServiceOption {
+	return func(s *MetricsService) {
+		s.annotationMetricRepo = r
+	}
 }
 
 func (m *MetricsService) registerMetrics() error {
