@@ -196,13 +196,15 @@ type ExportCSVEvent struct {
 }
 
 type ExptLifecycleEvent struct {
-	ExptID     int64      `json:"expt_id"`
-	ExptRunID  *int64     `json:"expt_run_id"`
-	SpaceID    int64      `json:"space_id"`
-	FromStatus ExptStatus `json:"from_status"`
-	ToStatus   ExptStatus `json:"to_status"`
-	ExptType   ExptType   `json:"expt_type"`
-	SourceType SourceType `json:"source_type"`
+	ExptID           int64                 `json:"expt_id"`
+	ExptRunID        *int64                `json:"expt_run_id"`
+	SpaceID          int64                 `json:"space_id"`
+	FromStatus       ExptStatus            `json:"from_status"`
+	ToStatus         ExptStatus            `json:"to_status"`
+	ExptType         ExptType              `json:"expt_type"`
+	SourceType       SourceType            `json:"source_type"`
+	CreatedBy        string                `json:"created_by"`
+	NotificationConf *ExptNotificationConf `json:"notification_conf,omitempty"`
 }
 
 type ExportScene int
@@ -211,3 +213,13 @@ const (
 	ExportSceneDefault         ExportScene = 0
 	ExportSceneInsightAnalysis ExportScene = 1
 )
+
+// WebhookDeliveryEvent Webhook 投递事件（用于异步投递 / 重试）
+type WebhookDeliveryEvent struct {
+	DeliveryID   string           `json:"delivery_id"`
+	SpaceID      int64            `json:"space_id"`
+	ExperimentID int64            `json:"experiment_id"`
+	EventType    WebhookEventType `json:"event_type"`
+	WebhookURL   string           `json:"webhook_url"`
+	RetryCount   int32            `json:"retry_count"`
+}

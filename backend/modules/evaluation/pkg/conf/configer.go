@@ -96,6 +96,11 @@ func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptTemplateUpdateEvalSetWhiteList())
 }
 
+func (c *configer) GetWebhookConf(ctx context.Context) (w *entity.WebhookGlobalConf) {
+	const key = "webhook_conf"
+	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil && w != nil, w, entity.DefaultWebhookGlobalConf())
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

@@ -384,21 +384,6 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) ParseImportSourceFile(ctx, param a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseImportSourceFile", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ParseImportSourceFile), ctx, param)
 }
 
-// ValidateMultiPartData mocks base method.
-func (m *MockIDatasetRPCAdapter) ValidateMultiPartData(arg0 context.Context, arg1 int64, arg2 []string, arg3 *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateMultiPartData", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].([]*entity.UploadAttachmentDetail)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidateMultiPartData indicates an expected call of ValidateMultiPartData.
-func (mr *MockIDatasetRPCAdapterMockRecorder) ValidateMultiPartData(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMultiPartData", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ValidateMultiPartData), arg0, arg1, arg2, arg3)
-}
-
 // QueryItemSnapshotMappings mocks base method.
 func (m *MockIDatasetRPCAdapter) QueryItemSnapshotMappings(ctx context.Context, req *rpc.QueryItemSnapshotMappingRequest) ([]*entity.ItemSnapshotFieldMapping, string, error) {
 	m.ctrl.T.Helper()
@@ -430,17 +415,17 @@ func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDataset(ctx, spaceID, evalua
 }
 
 // UpdateDatasetItem mocks base method.
-func (m *MockIDatasetRPCAdapter) UpdateDatasetItem(arg0 context.Context, arg1, arg2, arg3 int64, arg4 []*entity.Turn, arg5 []*entity.FieldWriteOption) error {
+func (m *MockIDatasetRPCAdapter) UpdateDatasetItem(ctx context.Context, spaceID, evaluationSetID, itemID int64, turns []*entity.Turn, fieldWriteOptions []*entity.FieldWriteOption) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateDatasetItem", arg0, arg1, arg2, arg3, arg4, arg5)
+	ret := m.ctrl.Call(m, "UpdateDatasetItem", ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateDatasetItem indicates an expected call of UpdateDatasetItem.
-func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetItem(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) *gomock.Call {
+func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetItem(ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetItem", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetItem), arg0, arg1, arg2, arg3, arg4, arg5)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetItem", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetItem), ctx, spaceID, evaluationSetID, itemID, turns, fieldWriteOptions)
 }
 
 // UpdateDatasetSchema mocks base method.
@@ -455,4 +440,19 @@ func (m *MockIDatasetRPCAdapter) UpdateDatasetSchema(ctx context.Context, spaceI
 func (mr *MockIDatasetRPCAdapterMockRecorder) UpdateDatasetSchema(ctx, spaceID, evaluationSetID, schemas any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDatasetSchema", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).UpdateDatasetSchema), ctx, spaceID, evaluationSetID, schemas)
+}
+
+// ValidateMultiPartData mocks base method.
+func (m *MockIDatasetRPCAdapter) ValidateMultiPartData(ctx context.Context, spaceID int64, previewData []string, storeOption *entity.MultiModalStoreOption) ([]*entity.UploadAttachmentDetail, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateMultiPartData", ctx, spaceID, previewData, storeOption)
+	ret0, _ := ret[0].([]*entity.UploadAttachmentDetail)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateMultiPartData indicates an expected call of ValidateMultiPartData.
+func (mr *MockIDatasetRPCAdapterMockRecorder) ValidateMultiPartData(ctx, spaceID, previewData, storeOption any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateMultiPartData", reflect.TypeOf((*MockIDatasetRPCAdapter)(nil).ValidateMultiPartData), ctx, spaceID, previewData, storeOption)
 }

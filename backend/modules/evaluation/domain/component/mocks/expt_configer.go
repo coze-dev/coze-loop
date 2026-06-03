@@ -209,3 +209,17 @@ func (mr *MockIConfigerMockRecorder) GetTargetTrajectoryConf(ctx any) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTargetTrajectoryConf", reflect.TypeOf((*MockIConfiger)(nil).GetTargetTrajectoryConf), ctx)
 }
+
+// GetWebhookConf mocks base method.
+func (m *MockIConfiger) GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWebhookConf", ctx)
+	ret0, _ := ret[0].(*entity.WebhookGlobalConf)
+	return ret0
+}
+
+// GetWebhookConf indicates an expected call of GetWebhookConf.
+func (mr *MockIConfigerMockRecorder) GetWebhookConf(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWebhookConf", reflect.TypeOf((*MockIConfiger)(nil).GetWebhookConf), ctx)
+}

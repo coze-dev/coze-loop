@@ -34,4 +34,5 @@ type IConfiger interface {
 	GetSchedulerAbortCtrl(ctx context.Context) *entity.SchedulerAbortCtrl
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
+	GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf
 }

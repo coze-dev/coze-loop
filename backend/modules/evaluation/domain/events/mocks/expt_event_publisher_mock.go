@@ -153,3 +153,17 @@ func (mr *MockExptEventPublisherMockRecorder) PublishExptTurnResultFilterEvent(c
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishExptTurnResultFilterEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishExptTurnResultFilterEvent), ctx, event, duration)
 }
+
+// PublishWebhookDeliveryEvent mocks base method.
+func (m *MockExptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryEvent, duration *time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PublishWebhookDeliveryEvent", ctx, event, duration)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PublishWebhookDeliveryEvent indicates an expected call of PublishWebhookDeliveryEvent.
+func (mr *MockExptEventPublisherMockRecorder) PublishWebhookDeliveryEvent(ctx, event, duration any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PublishWebhookDeliveryEvent", reflect.TypeOf((*MockExptEventPublisher)(nil).PublishWebhookDeliveryEvent), ctx, event, duration)
+}
