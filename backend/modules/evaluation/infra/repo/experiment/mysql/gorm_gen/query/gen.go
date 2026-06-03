@@ -38,6 +38,7 @@ func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 		ExptTurnResultFilterKeyMapping:     newExptTurnResultFilterKeyMapping(db, opts...),
 		ExptTurnResultRunLog:               newExptTurnResultRunLog(db, opts...),
 		ExptTurnResultTagRef:               newExptTurnResultTagRef(db, opts...),
+		WebhookDelivery:                    newWebhookDelivery(db, opts...),
 	}
 }
 
@@ -64,6 +65,7 @@ type Query struct {
 	ExptTurnResultFilterKeyMapping     exptTurnResultFilterKeyMapping
 	ExptTurnResultRunLog               exptTurnResultRunLog
 	ExptTurnResultTagRef               exptTurnResultTagRef
+	WebhookDelivery                    webhookDelivery
 }
 
 func (q *Query) Available() bool { return q.db != nil }
@@ -91,6 +93,7 @@ func (q *Query) clone(db *gorm.DB) *Query {
 		ExptTurnResultFilterKeyMapping:     q.ExptTurnResultFilterKeyMapping.clone(db),
 		ExptTurnResultRunLog:               q.ExptTurnResultRunLog.clone(db),
 		ExptTurnResultTagRef:               q.ExptTurnResultTagRef.clone(db),
+		WebhookDelivery:                    q.WebhookDelivery.clone(db),
 	}
 }
 
@@ -125,6 +128,7 @@ func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 		ExptTurnResultFilterKeyMapping:     q.ExptTurnResultFilterKeyMapping.replaceDB(db),
 		ExptTurnResultRunLog:               q.ExptTurnResultRunLog.replaceDB(db),
 		ExptTurnResultTagRef:               q.ExptTurnResultTagRef.replaceDB(db),
+		WebhookDelivery:                    q.WebhookDelivery.replaceDB(db),
 	}
 }
 
@@ -149,6 +153,7 @@ type queryCtx struct {
 	ExptTurnResultFilterKeyMapping     *exptTurnResultFilterKeyMappingDo
 	ExptTurnResultRunLog               *exptTurnResultRunLogDo
 	ExptTurnResultTagRef               *exptTurnResultTagRefDo
+	WebhookDelivery                    *webhookDeliveryDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
@@ -173,6 +178,7 @@ func (q *Query) WithContext(ctx context.Context) *queryCtx {
 		ExptTurnResultFilterKeyMapping:     q.ExptTurnResultFilterKeyMapping.WithContext(ctx),
 		ExptTurnResultRunLog:               q.ExptTurnResultRunLog.WithContext(ctx),
 		ExptTurnResultTagRef:               q.ExptTurnResultTagRef.WithContext(ctx),
+		WebhookDelivery:                    q.WebhookDelivery.WithContext(ctx),
 	}
 }
 

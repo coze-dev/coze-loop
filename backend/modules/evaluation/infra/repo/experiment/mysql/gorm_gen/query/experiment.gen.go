@@ -57,6 +57,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.ThreadID = field.NewString(tableName, "thread_id")
 	_experiment.TrialRunItemCount = field.NewInt64(tableName, "trial_run_item_count")
 	_experiment.OfflineExptAnalysisStatus = field.NewInt32(tableName, "offline_expt_analysis_status")
+	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
 
 	_experiment.fillFieldMap()
 
@@ -98,6 +99,7 @@ type experiment struct {
 	ThreadID                  field.String // 智能生成会话ID
 	TrialRunItemCount         field.Int64  // 试运行行数
 	OfflineExptAnalysisStatus field.Int32  // 离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)
+	NotificationConf          field.Bytes  // 通知配置，JSON格式存储ExptNotificationConf
 
 	fieldMap map[string]field.Expr
 }
@@ -144,6 +146,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.ThreadID = field.NewString(table, "thread_id")
 	e.TrialRunItemCount = field.NewInt64(table, "trial_run_item_count")
 	e.OfflineExptAnalysisStatus = field.NewInt32(table, "offline_expt_analysis_status")
+	e.NotificationConf = field.NewBytes(table, "notification_conf")
 
 	e.fillFieldMap()
 
@@ -170,7 +173,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 30)
+	e.fieldMap = make(map[string]field.Expr, 31)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -201,6 +204,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["thread_id"] = e.ThreadID
 	e.fieldMap["trial_run_item_count"] = e.TrialRunItemCount
 	e.fieldMap["offline_expt_analysis_status"] = e.OfflineExptAnalysisStatus
+	e.fieldMap["notification_conf"] = e.NotificationConf
 }
 
 func (e experiment) clone(db *gorm.DB) experiment {
