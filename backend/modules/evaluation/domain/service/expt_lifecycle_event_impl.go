@@ -8,6 +8,7 @@ import (
 
 	"github.com/bytedance/gg/gptr"
 
+	webhookcomp "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
@@ -16,16 +17,18 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo         repo.IExperimentRepo
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	exptRepo            repo.IExperimentRepo
+	notifyRPCAdapter    rpc.INotifyRPCAdapter
+	userProvider        rpc.IUserProvider
+	webhookDispatcher   webhookcomp.IWebhookDispatcher
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, webhookDispatcher webhookcomp.IWebhookDispatcher) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:         exptRepo,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		exptRepo:            exptRepo,
+		notifyRPCAdapter:    notifyRPCAdapter,
+		userProvider:        userProvider,
+		webhookDispatcher:   webhookDispatcher,
 	}
 }
 
@@ -37,9 +40,26 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		return h.sendNotifyCard(ctx, event, expt)
+		if err := h.sendNotifyCard(ctx, event, expt); err != nil {
+			logs.CtxWarn(ctx, "[Lifecycle] sendNotifyCard failed, expt_id=%d err=%v", expt.ID, err)
+		}
+		h.dispatchWebhook(ctx, expt, event.ToStatus)
+		return nil
+	case entity.ExptStatus_Processing:
+		h.dispatchWebhook(ctx, expt, event.ToStatus)
+		return nil
 	default:
 		return nil
+	}
+}
+
+func (h *ExptLifecycleEventHandlerImpl) dispatchWebhook(ctx context.Context, expt *entity.Experiment, status entity.ExptStatus) {
+	eventType, ok := entity.ExptStatusToWebhookEvent(status)
+	if !ok {
+		return
+	}
+	if err := h.webhookDispatcher.Dispatch(ctx, expt, eventType); err != nil {
+		logs.CtxWarn(ctx, "[Lifecycle] webhook dispatch failed, expt_id=%d err=%v", expt.ID, err)
 	}
 }
 

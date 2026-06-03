@@ -2037,6 +2037,10 @@ func (f *fakeRecordStorageConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx co
 	return nil
 }
 
+func (f *fakeRecordStorageConfiger) GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf {
+	return nil
+}
+
 func TestEvalTargetRepoImpl_SaveEvalTargetRecord(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

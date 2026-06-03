@@ -61,6 +61,8 @@ func (f *fakeConfiger) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context
 	return nil
 }
 
+func (f *fakeConfiger) GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf { return nil }
+
 type nopReader struct{ buf *bytes.Reader }
 
 func newNopReader(b []byte) *nopReader                       { return &nopReader{buf: bytes.NewReader(b)} }

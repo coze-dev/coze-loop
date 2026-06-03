@@ -704,13 +704,15 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 	}
 
 	event := &entity.ExptLifecycleEvent{
-		ExptID:     expt.ID,
-		ExptRunID:  exptRunID,
-		SpaceID:    expt.SpaceID,
-		FromStatus: fromStatus,
-		ToStatus:   expt.Status,
-		ExptType:   expt.ExptType,
-		SourceType: expt.SourceType,
+		ExptID:           expt.ID,
+		ExptRunID:        exptRunID,
+		SpaceID:          expt.SpaceID,
+		FromStatus:       fromStatus,
+		ToStatus:         expt.Status,
+		ExptType:         expt.ExptType,
+		SourceType:       expt.SourceType,
+		CreatedBy:        expt.CreatedBy,
+		NotificationConf: expt.NotificationConf,
 	}
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
 		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
