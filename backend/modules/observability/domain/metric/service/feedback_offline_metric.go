@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"slices"
 	"strconv"
 
 	"github.com/coze-dev/coze-loop/backend/modules/observability/domain/metric/entity"
@@ -19,6 +20,8 @@ const (
 	MetricFeedbackScoreMax          = "feedback_score_max"
 	MetricFeedbackScoreMin          = "feedback_score_min"
 	MetricFeedbackValueDistribution = "feedback_value_distribution"
+
+	MetricGroupFeedback = "feedback"
 )
 
 // TraverseFeedbackMetricsReq Feedback 离线指标遍历请求
@@ -43,7 +46,10 @@ func (m *MetricsService) TraverseFeedbackMetrics(ctx context.Context, req *Trave
 
 	resp := &TraverseFeedbackMetricsResp{}
 
-	for platformType := range m.pMetrics.PlatformMetricDefs {
+	for platformType, platformDef := range m.pMetrics.PlatformMetricDefs {
+		if !slices.Contains(platformDef.MetricGroups, MetricGroupFeedback) {
+			continue
+		}
 		tenants, err := m.tenantProvider.GetMetricTenantsByPlatformType(ctx, platformType)
 		if err != nil {
 			logs.CtxError(ctx, "get tenants for feedback metrics failed, platformType=%s: %v", platformType, err)
