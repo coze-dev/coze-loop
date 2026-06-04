@@ -2214,6 +2214,15 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 		}
 	}
 
+	// 通知配置覆盖：如果请求中带了 notification_conf，覆盖从模板继承的配置
+	if req.NotificationConf != nil {
+		domainConf, convertErr := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+		if convertErr != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid notification_conf: "+convertErr.Error()))
+		}
+		submitReq.NotificationConf = domainConf
+	}
+
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, submitReq)
 	if err != nil {
 		return nil, err
