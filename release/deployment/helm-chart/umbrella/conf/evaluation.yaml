@@ -58,6 +58,11 @@ expt_lifecycle_event_rmq:
   consumer_group: 'expt_lifecycle_event_cg'
   producer_group: 'expt_lifecycle_event_pg'
   consume_timeout: 1m
+webhook_delivery_event_rmq:
+  addr: 'cozeloop-namesrv:9876'
+  topic: 'webhook_delivery_event'
+  consumer_group: 'webhook_delivery_event_cg'
+  producer_group: 'webhook_delivery_event_pg'
 
 # ClickHouse table configuration
 clickhouse_table_config:
