@@ -38,15 +38,19 @@ func NewExptLifecycleEventHandler(
 }
 
 func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent) error {
+	logs.CtxInfo(ctx, "[ExptLifecycle] handle event, expt_id=%d space_id=%d to_status=%d webhook_dispatcher_nil=%v", event.ExptID, event.SpaceID, event.ToStatus, h.webhookDispatcher == nil)
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
 	}
 
-	if _, ok := entity.ExptStatusToWebhookEvent(event.ToStatus); ok && h.webhookDispatcher != nil {
+	_, webhookEventOK := entity.ExptStatusToWebhookEvent(event.ToStatus)
+	if webhookEventOK && h.webhookDispatcher != nil {
 		if err := h.webhookDispatcher.Dispatch(ctx, expt, event); err != nil {
 			return err
 		}
+	} else {
+		logs.CtxInfo(ctx, "[ExptLifecycle] webhook dispatch not invoked, expt_id=%d to_status=%d status_mapped=%v dispatcher_nil=%v", event.ExptID, event.ToStatus, webhookEventOK, h.webhookDispatcher == nil)
 	}
 
 	switch event.ToStatus {

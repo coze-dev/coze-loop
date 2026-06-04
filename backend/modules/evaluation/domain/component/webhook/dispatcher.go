@@ -13,6 +13,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
+	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
 type IWebhookDispatcher interface {
@@ -45,13 +46,17 @@ func NewWebhookDispatcher(
 
 func (d *dispatcherImpl) Dispatch(ctx context.Context, expt *entity.Experiment, event *entity.ExptLifecycleEvent) error {
 	if d == nil || expt == nil || event == nil {
+		logs.CtxInfo(ctx, "[Webhook] dispatch skipped: nil receiver/expt/event, d_nil=%v expt_nil=%v event_nil=%v", d == nil, expt == nil, event == nil)
 		return nil
 	}
+	logs.CtxInfo(ctx, "[Webhook] dispatch start, expt_id=%d space_id=%d to_status=%d", expt.ID, expt.SpaceID, event.ToStatus)
 	if event.ToStatus != expt.Status {
+		logs.CtxInfo(ctx, "[Webhook] dispatch skipped: status mismatch, expt_id=%d event_to_status=%d expt_status=%d", expt.ID, event.ToStatus, expt.Status)
 		return nil
 	}
 	eventType, ok := entity.ExptStatusToWebhookEvent(event.ToStatus)
 	if !ok {
+		logs.CtxInfo(ctx, "[Webhook] dispatch skipped: status not mapped to webhook event, expt_id=%d to_status=%d", expt.ID, event.ToStatus)
 		return nil
 	}
 	webhookConf := entity.DefaultWebhookGlobalConf()
@@ -59,6 +64,8 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, expt *entity.Experiment, 
 		webhookConf = d.configer.GetWebhookConf(ctx)
 	}
 	if !webhookConf.IsEnabled(expt.SpaceID) {
+		globalEnable := webhookConf != nil && webhookConf.Enable
+		logs.CtxInfo(ctx, "[Webhook] dispatch skipped: webhook disabled at config level, expt_id=%d space_id=%d global_enable=%v configer_nil=%v", expt.ID, expt.SpaceID, globalEnable, d.configer == nil)
 		return nil
 	}
 	targets := make([]*deliveryTarget, 0)
@@ -80,6 +87,19 @@ func (d *dispatcherImpl) Dispatch(ctx context.Context, expt *entity.Experiment, 
 		})
 	}
 	if len(targets) == 0 {
+		notifConfNil := notificationConf == nil
+		userWebhookEnable := false
+		userURLsCount := 0
+		matchStatus := false
+		if !notifConfNil {
+			matchStatus = notificationConf.MatchStatus(event.ToStatus)
+			if notificationConf.Webhook != nil {
+				userWebhookEnable = notificationConf.Webhook.Enable
+				userURLsCount = len(notificationConf.Webhook.GetWebhookURLs())
+			}
+		}
+		logs.CtxInfo(ctx, "[Webhook] dispatch skipped: no targets, expt_id=%d space_id=%d source_type=%d event_type=%v notif_conf_nil=%v user_webhook_enable=%v user_url_count=%d match_status=%v",
+			expt.ID, expt.SpaceID, expt.SourceType, eventType, notifConfNil, userWebhookEnable, userURLsCount, matchStatus)
 		return nil
 	}
 
