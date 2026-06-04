@@ -157,7 +157,8 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
-		ExptSource: param.ExptSource,
+		ExptSource:       param.ExptSource,
+		NotificationConf: param.NotificationConf,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
