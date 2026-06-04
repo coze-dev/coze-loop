@@ -26,7 +26,10 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/userinfo"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
@@ -48,6 +51,15 @@ type IExperimentApplication interface {
 	service.IExptResultExportService
 	service.IExptInsightAnalysisService
 	service.ExptLifecycleEventHandler
+	WebhookDeliveryComponents() (
+		componentwebhook.IWebhookSender,
+		repo.IWebhookDeliveryRepo,
+		events.WebhookDeliveryEventPublisher,
+		component.IWebhookConfiger,
+		repo.IExperimentRepo,
+		service.ExptResultService,
+		service.ExptAggrResultService,
+	)
 }
 
 type experimentApplication struct {
@@ -76,6 +88,12 @@ type experimentApplication struct {
 
 	// 实验模板管理服务
 	templateManager service.IExptTemplateManager
+
+	webhookSender    componentwebhook.IWebhookSender
+	webhookRepo      repo.IWebhookDeliveryRepo
+	webhookPublisher events.WebhookDeliveryEventPublisher
+	webhookConfiger  component.IWebhookConfiger
+	exptRepo         repo.IExperimentRepo
 }
 
 func NewExperimentApplication(
@@ -98,6 +116,11 @@ func NewExperimentApplication(
 	templateManager service.IExptTemplateManager,
 	fileProvider rpc.IFileProvider,
 	lifecycleEventHandler service.ExptLifecycleEventHandler,
+	webhookSender componentwebhook.IWebhookSender,
+	webhookRepo repo.IWebhookDeliveryRepo,
+	webhookPublisher events.WebhookDeliveryEventPublisher,
+	webhookConfiger component.IWebhookConfiger,
+	exptRepo repo.IExperimentRepo,
 ) IExperimentApplication {
 	return &experimentApplication{
 		resultSvc:                   resultSvc,
@@ -119,7 +142,24 @@ func NewExperimentApplication(
 		evaluatorService:            evaluatorService,
 		templateManager:             templateManager,
 		fileProvider:                fileProvider,
+		webhookSender:               webhookSender,
+		webhookRepo:                 webhookRepo,
+		webhookPublisher:            webhookPublisher,
+		webhookConfiger:             webhookConfiger,
+		exptRepo:                    exptRepo,
 	}
+}
+
+func (e *experimentApplication) WebhookDeliveryComponents() (
+	componentwebhook.IWebhookSender,
+	repo.IWebhookDeliveryRepo,
+	events.WebhookDeliveryEventPublisher,
+	component.IWebhookConfiger,
+	repo.IExperimentRepo,
+	service.ExptResultService,
+	service.ExptAggrResultService,
+) {
+	return e.webhookSender, e.webhookRepo, e.webhookPublisher, e.webhookConfiger, e.exptRepo, e.resultSvc, e.ExptAggrResultService
 }
 
 func (e *experimentApplication) CreateExperiment(ctx context.Context, req *expt.CreateExperimentRequest) (r *expt.CreateExperimentResponse, err error) {
@@ -516,6 +556,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		NotificationConf:        req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -921,6 +962,9 @@ func (e *experimentApplication) SubmitExptFromTemplate(ctx context.Context, req 
 	if submitReq == nil {
 		return nil, errorx.NewByCode(errno.CommonInternalErrorCode, errorx.WithExtraMsg("failed to build submit request from template"))
 	}
+	if req.IsSetNotificationConf() {
+		submitReq.NotificationConf = req.NotificationConf
+	}
 	// ByteScheduler 模板周期回调经本接口提交，与 trigger_type=schedule 对齐
 	submitReq.TriggerType = gptr.Of(domain_expt.Schedule)
 	submitReq.Session = &common.Session{}
@@ -1074,11 +1118,16 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 		return nil, err
 	}
 
+	notificationConf, err := experiment.NotificationConfDTO2DO(req.GetNotificationConf())
+	if err != nil {
+		return nil, err
+	}
 	if err := e.manager.Update(ctx, &entity.Experiment{
-		ID:          req.GetExptID(),
-		SpaceID:     req.WorkspaceID,
-		Name:        req.GetName(),
-		Description: req.GetDesc(),
+		ID:               req.GetExptID(),
+		SpaceID:          req.WorkspaceID,
+		Name:             req.GetName(),
+		Description:      req.GetDesc(),
+		NotificationConf: notificationConf,
 	}, session); err != nil {
 		return nil, err
 	}

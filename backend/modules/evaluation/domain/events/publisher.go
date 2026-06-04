@@ -22,6 +22,10 @@ type ExptEventPublisher interface {
 	PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error
 }
 
+type WebhookDeliveryEventPublisher interface {
+	PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryMessage, duration *time.Duration) error
+}
+
 //go:generate mockgen -destination mocks/evaluator_event_publisher_mock.go -package mocks . EvaluatorEventPublisher
 type EvaluatorEventPublisher interface {
 	PublishEvaluatorRecordCorrection(ctx context.Context, events *entity.EvaluatorRecordCorrectionEvent, duration *time.Duration) error

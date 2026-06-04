@@ -42,6 +42,10 @@ func NewExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 	return publisherSingleton, err
 }
 
+func NewWebhookDeliveryEventPublisher(p events.ExptEventPublisher) events.WebhookDeliveryEventPublisher {
+	return p.(events.WebhookDeliveryEventPublisher)
+}
+
 func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFactory, mqFactory mq.IFactory) (events.ExptEventPublisher, error) {
 	loader, err := cfgFactory.NewConfigLoader(consts.EvaluationConfigFileName)
 	if err != nil {
@@ -60,6 +64,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		rocket.ExptTurnResultFilterRMQKey,
 		rocket.ExptExportCSVEventRMQKey,
 		rocket.ExptLifecycleEventRMQKey,
+		rocket.WebhookDeliveryRMQKey,
 	} {
 		p := &producer{}
 
@@ -159,6 +164,10 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 
 func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
 	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+}
+
+func (e *exptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryMessage, duration *time.Duration) error {
+	return e.batchSend(ctx, rocket.WebhookDeliveryRMQKey, []any{event}, duration)
 }
 
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {

@@ -37,6 +37,11 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -81,6 +86,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TimeRange != nil {
 		if err := p.TimeRange.IsValid(); err != nil {
 			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
 	if p.Session != nil {
@@ -146,6 +156,11 @@ func (p *BatchGetExperimentsResponse) IsValid() error {
 	return nil
 }
 func (p *UpdateExperimentRequest) IsValid() error {
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -441,6 +456,11 @@ func (p *CreateExperimentTemplateRequest) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -539,6 +559,11 @@ func (p *UpdateExperimentTemplateRequest) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Base != nil {
 		if err := p.Base.IsValid(); err != nil {
 			return fmt.Errorf("field Base not valid, %w", err)
@@ -613,6 +638,11 @@ func (p *CheckExperimentTemplateNameResponse) IsValid() error {
 	return nil
 }
 func (p *SubmitExptFromTemplateRequest) IsValid() error {
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)

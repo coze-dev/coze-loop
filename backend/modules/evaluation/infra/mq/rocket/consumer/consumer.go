@@ -18,6 +18,7 @@ func NewConsumerWorkers(
 	loader conf.IConfigLoader,
 	exptApp application.IExperimentApplication,
 ) ([]mq.IConsumerWorker, error) {
+	webhookSender, webhookDeliveryRepo, webhookPublisher, webhookConfiger, exptRepo, exptResultSvc, exptAggrResultSvc := exptApp.WebhookDeliveryComponents()
 	return []mq.IConsumerWorker{
 		NewExptSchedulerEventConsumer(NewExptSchedulerConsumer(exptApp), loader),
 		NewExptRecordEvalEventConsumer(NewExptRecordEvalConsumer(exptApp), loader),
@@ -25,6 +26,7 @@ func NewConsumerWorkers(
 		NewExptTurnResultFilterEventConsumer(NewExptTurnResultFilterConsumer(exptApp), loader),
 		NewExptExportEventConsumer(NewExptExportConsumer(exptApp, exptApp), loader),
 		NewExptLifecycleEventConsumer(NewExptLifecycleConsumer(exptApp), loader),
+		NewWebhookDeliveryEventConsumer(NewWebhookDeliveryConsumer(webhookSender, webhookDeliveryRepo, webhookPublisher, webhookConfiger, exptRepo, exptResultSvc, exptAggrResultSvc), loader),
 	}, nil
 }
 

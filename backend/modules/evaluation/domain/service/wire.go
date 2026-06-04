@@ -9,6 +9,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	mtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/metrics"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	evaluatormtr "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/metrics/evaluator"
 	rmqproducer "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/mq/rocket/producer"
@@ -41,6 +42,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
 	NewExptLifecycleEventHandler,
+	componentwebhook.NewWebhookDispatcher,
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
 )

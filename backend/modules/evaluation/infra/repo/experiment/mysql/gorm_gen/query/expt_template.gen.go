@@ -39,6 +39,7 @@ func newExptTemplate(db *gorm.DB, opts ...gen.DOOption) exptTemplate {
 	_exptTemplate.ExptType = field.NewInt32(tableName, "expt_type")
 	_exptTemplate.CronActivate = field.NewBool(tableName, "cron_activate")
 	_exptTemplate.TemplateConf = field.NewBytes(tableName, "template_conf")
+	_exptTemplate.NotificationConf = field.NewBytes(tableName, "notification_conf")
 	_exptTemplate.ExptInfo = field.NewBytes(tableName, "expt_info")
 	_exptTemplate.CreatedBy = field.NewString(tableName, "created_by")
 	_exptTemplate.UpdatedBy = field.NewString(tableName, "updated_by")
@@ -69,6 +70,7 @@ type exptTemplate struct {
 	ExptType         field.Int32  // 实验类型，offline:1,online:2...
 	CronActivate     field.Bool   // 是否开启定时触发
 	TemplateConf     field.Bytes  // 实验模板配置，包含评估器列表、字段映射、加权配置、默认并发及调度等，json
+	NotificationConf field.Bytes  // 通知配置 JSON
 	ExptInfo         field.Bytes  // 实验运行状态，包含创建实验数量，最后一次实验执行状态，json
 	CreatedBy        field.String // 创建人
 	UpdatedBy        field.String // 更新人
@@ -104,6 +106,7 @@ func (e *exptTemplate) updateTableName(table string) *exptTemplate {
 	e.ExptType = field.NewInt32(table, "expt_type")
 	e.CronActivate = field.NewBool(table, "cron_activate")
 	e.TemplateConf = field.NewBytes(table, "template_conf")
+	e.NotificationConf = field.NewBytes(table, "notification_conf")
 	e.ExptInfo = field.NewBytes(table, "expt_info")
 	e.CreatedBy = field.NewString(table, "created_by")
 	e.UpdatedBy = field.NewString(table, "updated_by")
@@ -139,7 +142,7 @@ func (e *exptTemplate) GetFieldByName(fieldName string) (field.OrderExpr, bool) 
 }
 
 func (e *exptTemplate) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 19)
+	e.fieldMap = make(map[string]field.Expr, 20)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["name"] = e.Name
@@ -152,6 +155,7 @@ func (e *exptTemplate) fillFieldMap() {
 	e.fieldMap["expt_type"] = e.ExptType
 	e.fieldMap["cron_activate"] = e.CronActivate
 	e.fieldMap["template_conf"] = e.TemplateConf
+	e.fieldMap["notification_conf"] = e.NotificationConf
 	e.fieldMap["expt_info"] = e.ExptInfo
 	e.fieldMap["created_by"] = e.CreatedBy
 	e.fieldMap["updated_by"] = e.UpdatedBy

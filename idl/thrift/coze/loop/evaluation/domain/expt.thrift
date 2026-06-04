@@ -54,6 +54,24 @@ const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
 
+struct WebhookNotificationConf {
+    1: optional bool enable
+    // Multiple webhook URLs are stored as a comma-separated string for API compatibility.
+    2: optional string urls
+}
+
+struct FeishuNotificationConf {
+    1: optional bool enable
+    // Empty means notify experiment creator.
+    2: optional string user_id
+}
+
+struct ExptNotificationConf {
+    1: optional Filters filter
+    2: optional WebhookNotificationConf webhook
+    3: optional FeishuNotificationConf feishu_notification
+}
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
@@ -101,6 +119,8 @@ struct Experiment {
     // 触发方式
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
+
+    80: optional ExptNotificationConf notification_conf
 
     100: optional map<string, string> ext
     // 离线实验分析状态
@@ -152,6 +172,8 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    10: optional ExptNotificationConf notification_conf
 
     255: optional common.BaseInfo base_info
 }
@@ -728,4 +750,3 @@ const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
-

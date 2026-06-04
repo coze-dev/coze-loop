@@ -25,11 +25,15 @@ import (
 	exptpb "github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/expt"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/openapi"
 	"github.com/coze-dev/coze-loop/backend/kitex_gen/coze/loop/evaluation/spi"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component"
 	configermocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
 	rpcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
 	eventmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	repomocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service"
 	servicemocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
@@ -2426,6 +2430,18 @@ func (f *fakeExperimentApp) GetExptResultExportRecord(_ context.Context, req *ex
 		return f.getExportRecordResp, f.getExportRecordErr
 	}
 	return &exptpb.GetExptResultExportRecordResponse{}, nil
+}
+
+func (f *fakeExperimentApp) WebhookDeliveryComponents() (
+	componentwebhook.IWebhookSender,
+	repo.IWebhookDeliveryRepo,
+	events.WebhookDeliveryEventPublisher,
+	component.IWebhookConfiger,
+	repo.IExperimentRepo,
+	service.ExptResultService,
+	service.ExptAggrResultService,
+) {
+	return nil, nil, nil, nil, nil, nil, nil
 }
 
 var _ IExperimentApplication = (*fakeExperimentApp)(nil)

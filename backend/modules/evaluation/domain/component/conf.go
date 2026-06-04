@@ -35,3 +35,11 @@ type IConfiger interface {
 	GetTargetTrajectoryConf(ctx context.Context) *entity.TargetTrajectoryConf
 	GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) *entity.ExptTemplateUpdateEvalSetWhiteList
 }
+
+type IWebhookConfiger interface {
+	GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf
+	GetWebhookRetryConf(ctx context.Context) *entity.WebhookRetryConf
+	GetWebhookRateLimitConf(ctx context.Context) *entity.WebhookRateLimitConf
+	GetWebhookURLLimitConf(ctx context.Context) *entity.WebhookURLLimitConf
+	GetWebhookSecurityConf(ctx context.Context) *entity.WebhookSecurityConf
+}

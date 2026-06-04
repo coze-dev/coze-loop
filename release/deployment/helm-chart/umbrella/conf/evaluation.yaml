@@ -58,6 +58,25 @@ expt_lifecycle_event_rmq:
   consumer_group: 'expt_lifecycle_event_cg'
   producer_group: 'expt_lifecycle_event_pg'
   consume_timeout: 1m
+webhook_delivery_rmq:
+  addr: 'cozeloop-namesrv:9876'
+  topic: 'evaluation_webhook_delivery'
+  consumer_group: 'evaluation_webhook_delivery_cg'
+  producer_group: 'evaluation_webhook_delivery_pg'
+  consume_timeout: 30s
+  produce_timeout: 5s
+  retry_times: 3
+  disable_consume: false
+  disable_produce: false
+
+webhook:
+  enable: true
+  secret: 'cozeloop-webhook-secret'
+  space_secrets:
+    default: 'cozeloop-webhook-secret'
+  result_url_template: '/evaluation/experiments/{experiment_id}?workspace_id={space_id}'
+  bits_callback_url_template: ''
+  disabled_spaces: []
 
 # ClickHouse table configuration
 clickhouse_table_config:

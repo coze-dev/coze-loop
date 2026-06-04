@@ -361,6 +361,7 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		MaxAliveTime:              gptr.Of(experiment.MaxAliveTime),
 		TargetRuntimeParam:        trtp,
 		EvaluatorIDVersionList:    evaluatorIDVersionList,
+		NotificationConf:          NotificationConfDO2DTO(experiment.NotificationConf),
 	}
 	if experiment.Visibility == entity.Visibility_Hidden {
 		res.Visibility = gptr.Of(domain_expt.VisibilityHidden)
@@ -550,6 +551,11 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 		return nil, err
 	}
 	param.ExptConf = evaluationConfiguration
+	notificationConf, err := NotificationConfDTO2DO(cer.GetNotificationConf())
+	if err != nil {
+		return nil, err
+	}
+	param.NotificationConf = notificationConf
 
 	if cer.IsSetExptTemplateID() {
 		param.ExptTemplateID = cer.GetExptTemplateID()

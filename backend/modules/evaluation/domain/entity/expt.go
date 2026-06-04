@@ -136,6 +136,7 @@ type Experiment struct {
 	TargetID            int64
 	EvaluatorVersionRef []*ExptEvaluatorVersionRef
 	EvalConf            *EvaluationConfiguration
+	NotificationConf    *ExptNotificationConf
 
 	Target     *EvalTarget
 	EvalSet    *EvaluationSet

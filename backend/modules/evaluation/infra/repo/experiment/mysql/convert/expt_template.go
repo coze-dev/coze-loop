@@ -88,6 +88,13 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		}
 		po.TemplateConf = &bytes
 	}
+	if template.NotificationConf != nil {
+		bytes, err := json.Marshal(template.NotificationConf)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "ExptNotificationConf json marshal fail")
+		}
+		po.NotificationConf = &bytes
+	}
 
 	// 序列化 ExptInfo
 	if template.ExptInfo != nil {
@@ -110,6 +117,13 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		func() error { return json.Unmarshal(gptr.Indirect(po.TemplateConf), templateConf) },
 	); err != nil {
 		return nil, errorx.Wrapf(err, "ExptTemplateConfiguration json unmarshal fail, template_id: %v", po.ID)
+	}
+	var notificationConf *entity.ExptNotificationConf
+	if po.NotificationConf != nil && len(*po.NotificationConf) > 0 {
+		notificationConf = new(entity.ExptNotificationConf)
+		if err := json.Unmarshal(*po.NotificationConf, notificationConf); err != nil {
+			return nil, errorx.Wrapf(err, "ExptNotificationConf json unmarshal fail, template_id: %v", po.ID)
+		}
 	}
 
 	evaluatorVersionRef := make([]*entity.ExptTemplateEvaluatorVersionRef, 0, len(refs))
@@ -277,6 +291,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
 		ExptSource:          exptSource,
+		NotificationConf:    notificationConf,
 	}, nil
 }
 

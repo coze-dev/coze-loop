@@ -64,6 +64,13 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		}
 		expt.EvalConf = &bytes
 	}
+	if experiment.NotificationConf != nil {
+		bytes, err := json.Marshal(experiment.NotificationConf)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "ExptNotificationConf json marshal fail")
+		}
+		expt.NotificationConf = &bytes
+	}
 	if experiment.TrialRunItemCount != 0 {
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
@@ -79,6 +86,13 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		func() error { return json.Unmarshal(gptr.Indirect(expt.EvalConf), evalConf) },
 	); err != nil {
 		return nil, errorx.Wrapf(err, "EvaluationConfiguration json unmarshal fail, expt_id: %v, raw: %v", expt.ID, conv.UnsafeBytesToString(gptr.Indirect(expt.EvalConf)))
+	}
+	var notificationConf *entity.ExptNotificationConf
+	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
+		notificationConf = new(entity.ExptNotificationConf)
+		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notificationConf); err != nil {
+			return nil, errorx.Wrapf(err, "ExptNotificationConf json unmarshal fail, expt_id: %v", expt.ID)
+		}
 	}
 
 	evaluatorVersionRef := make([]*entity.ExptEvaluatorVersionRef, 0, len(refs))
@@ -102,6 +116,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		TargetID:                  expt.TargetID,
 		EvaluatorVersionRef:       evaluatorVersionRef,
 		EvalConf:                  evalConf,
+		NotificationConf:          notificationConf,
 		Status:                    entity.ExptStatus(expt.Status),
 		StatusMessage:             conv.UnsafeBytesToString(gptr.Indirect(expt.StatusMessage)),
 		OfflineExptAnalysisStatus: entity.OfflineExptAnalysisStatus(expt.OfflineExptAnalysisStatus),

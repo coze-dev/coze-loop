@@ -48,6 +48,11 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 	if req.ExptSource != nil {
 		param.ExptSource = exptSourceDTO2DO(req.ExptSource)
 	}
+	notificationConf, err := NotificationConfDTO2DO(req.GetNotificationConf())
+	if err != nil {
+		return nil, err
+	}
+	param.NotificationConf = notificationConf
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
@@ -423,6 +428,7 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.TripleConfig = buildTemplateTripleConfigDTO(template)
 	dto.FieldMappingConfig = buildTemplateFieldMappingDTO(template)
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
+	dto.NotificationConf = NotificationConfDO2DTO(template.NotificationConf)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
@@ -1130,6 +1136,7 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 	if template.TemplateConf != nil && template.TemplateConf.EnableExtractTrajectory != nil {
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
+	req.NotificationConf = NotificationConfDO2DTO(template.NotificationConf)
 
 	return req
 }
@@ -1403,6 +1410,11 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
 	}
+	notificationConf, err := NotificationConfDTO2DO(req.GetNotificationConf())
+	if err != nil {
+		return nil, err
+	}
+	param.NotificationConf = notificationConf
 
 	return param, nil
 }

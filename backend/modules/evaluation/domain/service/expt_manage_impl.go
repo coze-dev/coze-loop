@@ -807,6 +807,13 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 	if triggerType == "" {
 		triggerType = "manual"
 	}
+	notificationConf := req.NotificationConf
+	if notificationConf == nil {
+		notificationConf = entity.DefaultNotificationConf()
+	}
+	if err := notificationConf.Validate(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	do := &entity.Experiment{
 		ID:                  ids[0],
 		SpaceID:             req.WorkspaceID,
@@ -817,6 +824,7 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		EvalSetID:           req.EvalSetID,
 		EvaluatorVersionRef: evaluatorRefs,
 		EvalConf:            req.ExptConf,
+		NotificationConf:    notificationConf,
 		Status:              entity.ExptStatus_Pending,
 		StartAt:             gptr.Of(time.Now()),
 		ExptType:            req.ExptType,
@@ -1002,6 +1010,11 @@ func (e *ExptMangerImpl) ListExptRaw(ctx context.Context, page, pageSize int32, 
 }
 
 func (e *ExptMangerImpl) Update(ctx context.Context, expt *entity.Experiment, session *entity.Session) error {
+	if expt.NotificationConf != nil {
+		if err := expt.NotificationConf.Validate(); err != nil {
+			return errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+	}
 	data := map[string]string{
 		"texts": strings.Join([]string{expt.Name, expt.Description}, ","),
 	}

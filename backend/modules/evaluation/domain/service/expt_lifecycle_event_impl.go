@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/gg/gptr"
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc"
+	componentwebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
@@ -16,16 +17,23 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo         repo.IExperimentRepo
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	exptRepo          repo.IExperimentRepo
+	notifyRPCAdapter  rpc.INotifyRPCAdapter
+	userProvider      rpc.IUserProvider
+	webhookDispatcher componentwebhook.IWebhookDispatcher
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(
+	exptRepo repo.IExperimentRepo,
+	notifyRPCAdapter rpc.INotifyRPCAdapter,
+	userProvider rpc.IUserProvider,
+	webhookDispatcher componentwebhook.IWebhookDispatcher,
+) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:         exptRepo,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		exptRepo:          exptRepo,
+		notifyRPCAdapter:  notifyRPCAdapter,
+		userProvider:      userProvider,
+		webhookDispatcher: webhookDispatcher,
 	}
 }
 
@@ -33,6 +41,12 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
+	}
+
+	if _, ok := entity.ExptStatusToWebhookEvent(event.ToStatus); ok && h.webhookDispatcher != nil {
+		if err := h.webhookDispatcher.Dispatch(ctx, expt, event); err != nil {
+			return err
+		}
 	}
 
 	switch event.ToStatus {
@@ -45,6 +59,12 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, event *entity.ExptLifecycleEvent, expt *entity.Experiment) error {
 	if event.ToStatus != expt.Status {
+		return nil
+	}
+	if expt.NotificationConf != nil && !expt.NotificationConf.MatchStatus(event.ToStatus) {
+		return nil
+	}
+	if expt.NotificationConf != nil && expt.NotificationConf.FeishuNotification != nil && !expt.NotificationConf.FeishuNotification.Enable {
 		return nil
 	}
 	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})

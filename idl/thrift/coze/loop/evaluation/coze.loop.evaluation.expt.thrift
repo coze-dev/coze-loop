@@ -48,6 +48,8 @@ struct CreateExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -101,6 +103,8 @@ struct SubmitExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -149,6 +153,8 @@ struct UpdateExperimentRequest {
     2: required i64 expt_id (api.path='expt_id',api.js_conv='true', go.tag='json:"expt_id"')
     3: optional string name (api.body='name')
     4: optional string desc (api.body='desc')
+
+    110: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     255: optional base.Base Base
 }
@@ -404,6 +410,7 @@ struct CreateExperimentTemplateRequest {
 
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    40: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -467,6 +474,8 @@ struct UpdateExperimentTemplateRequest {
     // 实验来源（含 Scheduler 等配置）；nil 表示不修改，保留 DB 中已有值
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    40: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
+
     255: optional base.Base Base
 }
 
@@ -527,6 +536,9 @@ struct SubmitExptFromTemplateRequest {
     1: required i64 workspace_id (api.body='workspace_id', api.js_conv='true', go.tag='json:"workspace_id"')
     2: required i64 template_id (api.body='template_id', api.js_conv='true', go.tag='json:"template_id"')
     3: optional string name (api.body='name')
+
+    // Optional override; nil means inherit the template notification_conf.
+    10: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -916,4 +928,3 @@ service ExperimentService {
     )
     SubmitExptFromTemplateResponse SubmitExptFromTemplate(1: SubmitExptFromTemplateRequest req)
 }
-

@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `target_type`         bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象类型',
     `target_version_id`   bigint unsigned                                                NOT NULL DEFAULT '0' COMMENT '评估对象版本 id',
     `eval_conf`           blob COMMENT '实验评估流程配置',
+    `notification_conf`   blob COMMENT '通知配置 JSON',
     `status`              int unsigned                                                   NOT NULL DEFAULT '0' COMMENT '状态',
     `status_message`      blob COMMENT '状态提示信息',
     `start_at`            timestamp                                                      NULL     DEFAULT NULL COMMENT '开始执行时间',

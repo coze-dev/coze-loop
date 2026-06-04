@@ -49,6 +49,7 @@ import (
 	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
+	infrawebhook "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/webhook"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
 )
@@ -65,6 +66,7 @@ var (
 		domainservice.EvaluationSetDomainServiceSet,
 		domainservice.TargetDomainServiceSet,
 		domainservice.EvaluatorDomainServiceSet,
+		evalconf.NewWebhookConfiger,
 		// Infrastructure Sets
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
@@ -72,6 +74,7 @@ var (
 		tagrpc.TagRPCSet,
 		agentrpc.AgentRPCSet,
 		notifyrpc.NotifyRPCSet,
+		infrawebhook.WebhookSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		flagSet,

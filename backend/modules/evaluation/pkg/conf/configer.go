@@ -26,6 +26,10 @@ func NewConfiger(configFactory conf.IConfigLoaderFactory) (component.IConfiger, 
 	}, nil
 }
 
+func NewWebhookConfiger(configer component.IConfiger) component.IWebhookConfiger {
+	return configer.(component.IWebhookConfiger)
+}
+
 type configer struct {
 	loader conf.IConfigLoader
 }
@@ -107,4 +111,54 @@ func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 		return gslice.ToMap(maintainerConf.UserIDs, func(t string) (string, bool) { return t, true })
 	}
 	return nil
+}
+
+func (c *configer) GetWebhookConf(ctx context.Context) *entity.WebhookGlobalConf {
+	const key = "webhook"
+	cfg := entity.DefaultWebhookGlobalConf()
+	if err := c.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)
+		return entity.DefaultWebhookGlobalConf()
+	}
+	return cfg
+}
+
+func (c *configer) GetWebhookRetryConf(ctx context.Context) *entity.WebhookRetryConf {
+	const key = "webhook.retry"
+	cfg := entity.DefaultWebhookRetryConf()
+	if err := c.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)
+		return entity.DefaultWebhookRetryConf()
+	}
+	return cfg
+}
+
+func (c *configer) GetWebhookRateLimitConf(ctx context.Context) *entity.WebhookRateLimitConf {
+	const key = "webhook.rate_limit"
+	cfg := entity.DefaultWebhookRateLimitConf()
+	if err := c.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)
+		return entity.DefaultWebhookRateLimitConf()
+	}
+	return cfg
+}
+
+func (c *configer) GetWebhookURLLimitConf(ctx context.Context) *entity.WebhookURLLimitConf {
+	const key = "webhook.url_limit"
+	cfg := entity.DefaultWebhookURLLimitConf()
+	if err := c.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)
+		return entity.DefaultWebhookURLLimitConf()
+	}
+	return cfg
+}
+
+func (c *configer) GetWebhookSecurityConf(ctx context.Context) *entity.WebhookSecurityConf {
+	const key = "webhook.security"
+	cfg := entity.DefaultWebhookSecurityConf()
+	if err := c.loader.UnmarshalKey(ctx, key, cfg); err != nil {
+		logs.CtxWarn(ctx, "cfg %s parse fail, err: %v", key, err)
+		return entity.DefaultWebhookSecurityConf()
+	}
+	return cfg
 }

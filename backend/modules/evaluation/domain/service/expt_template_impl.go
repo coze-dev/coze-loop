@@ -128,6 +128,13 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 
 	// 构建模板实体
 	now := time.Now()
+	notificationConf := param.NotificationConf
+	if notificationConf == nil {
+		notificationConf = entity.DefaultNotificationConf()
+	}
+	if err := notificationConf.Validate(); err != nil {
+		return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+	}
 	template := &entity.ExptTemplate{
 		Meta: &entity.ExptTemplateMeta{
 			ID:          templateID,
@@ -157,7 +164,8 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
-		ExptSource: param.ExptSource,
+		ExptSource:       param.ExptSource,
+		NotificationConf: notificationConf,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
@@ -307,6 +315,11 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 	// 验证模板配置
 	if param.TemplateConf != nil {
 		if err := param.TemplateConf.Valid(ctx); err != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
+		}
+	}
+	if param.NotificationConf != nil {
+		if err := param.NotificationConf.Validate(); err != nil {
 			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg(err.Error()))
 		}
 	}
@@ -466,6 +479,10 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		TemplateConf:        param.TemplateConf,
 		BaseInfo:            baseInfo,
 		ExptInfo:            mergedExptInfo,
+		NotificationConf:    param.NotificationConf,
+	}
+	if updatedTemplate.NotificationConf == nil {
+		updatedTemplate.NotificationConf = existingTemplate.NotificationConf
 	}
 
 	// 如果 TemplateConf 为空，保持原有值

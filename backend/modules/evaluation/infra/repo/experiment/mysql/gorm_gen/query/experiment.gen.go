@@ -36,6 +36,7 @@ func newExperiment(db *gorm.DB, opts ...gen.DOOption) experiment {
 	_experiment.TargetType = field.NewInt64(tableName, "target_type")
 	_experiment.TargetVersionID = field.NewInt64(tableName, "target_version_id")
 	_experiment.EvalConf = field.NewBytes(tableName, "eval_conf")
+	_experiment.NotificationConf = field.NewBytes(tableName, "notification_conf")
 	_experiment.Status = field.NewInt32(tableName, "status")
 	_experiment.StatusMessage = field.NewBytes(tableName, "status_message")
 	_experiment.StartAt = field.NewTime(tableName, "start_at")
@@ -77,6 +78,7 @@ type experiment struct {
 	TargetType                field.Int64  // 评估对象类型
 	TargetVersionID           field.Int64  // 评估对象版本 id
 	EvalConf                  field.Bytes  // 实验评估流程配置
+	NotificationConf          field.Bytes  // 通知配置 JSON
 	Status                    field.Int32  // 状态
 	StatusMessage             field.Bytes  // 状态提示信息
 	StartAt                   field.Time   // 开始执行时间
@@ -123,6 +125,7 @@ func (e *experiment) updateTableName(table string) *experiment {
 	e.TargetType = field.NewInt64(table, "target_type")
 	e.TargetVersionID = field.NewInt64(table, "target_version_id")
 	e.EvalConf = field.NewBytes(table, "eval_conf")
+	e.NotificationConf = field.NewBytes(table, "notification_conf")
 	e.Status = field.NewInt32(table, "status")
 	e.StatusMessage = field.NewBytes(table, "status_message")
 	e.StartAt = field.NewTime(table, "start_at")
@@ -170,7 +173,7 @@ func (e *experiment) GetFieldByName(fieldName string) (field.OrderExpr, bool) {
 }
 
 func (e *experiment) fillFieldMap() {
-	e.fieldMap = make(map[string]field.Expr, 30)
+	e.fieldMap = make(map[string]field.Expr, 31)
 	e.fieldMap["id"] = e.ID
 	e.fieldMap["space_id"] = e.SpaceID
 	e.fieldMap["created_by"] = e.CreatedBy
@@ -180,6 +183,7 @@ func (e *experiment) fillFieldMap() {
 	e.fieldMap["target_type"] = e.TargetType
 	e.fieldMap["target_version_id"] = e.TargetVersionID
 	e.fieldMap["eval_conf"] = e.EvalConf
+	e.fieldMap["notification_conf"] = e.NotificationConf
 	e.fieldMap["status"] = e.Status
 	e.fieldMap["status_message"] = e.StatusMessage
 	e.fieldMap["start_at"] = e.StartAt
