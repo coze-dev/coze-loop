@@ -86,16 +86,16 @@ type IMetricsService interface {
 }
 
 type MetricsService struct {
-	metricRepo              repo.IMetricRepo
-	oMetricRepo             repo.IOfflineMetricRepo
-	annotationMetricRepo    repo.IAnnotationMetricRepo
-	metricDefMap            map[string]entity.IMetricDefinition
-	metricDrillDown         map[string][]string
-	metricGroupMap          map[string]*entity.MetricGroup
-	buildHelper             trace_service.TraceFilterProcessorBuilder
-	tenantProvider          tenant.ITenantProvider
-	traceConfig             config.ITraceConfig
-	pMetrics                *entity.PlatformMetrics
+	metricRepo           repo.IMetricRepo
+	oMetricRepo          repo.IOfflineMetricRepo
+	annotationMetricRepo repo.IAnnotationMetricRepo
+	metricDefMap         map[string]entity.IMetricDefinition
+	metricDrillDown      map[string][]string
+	metricGroupMap       map[string]*entity.MetricGroup
+	buildHelper          trace_service.TraceFilterProcessorBuilder
+	tenantProvider       tenant.ITenantProvider
+	traceConfig          config.ITraceConfig
+	pMetrics             *entity.PlatformMetrics
 }
 
 func NewMetricsService(
@@ -469,8 +469,10 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 			EndTime:         req.EndTime,
 			MetricNames:     []string{metricName},
 			Filters:         req.FilterFields,
-			Granularity:     req.Granularity,
 			DrillDownFields: req.DrillDownFields,
+		}
+		if mDef.Type() == entity.MetricTypeTimeSeries {
+			param.Granularity = req.Granularity
 		}
 		st := time.Now()
 		result, err := m.annotationMetricRepo.QueryFeedbackOnlineMetrics(ctx, param)
