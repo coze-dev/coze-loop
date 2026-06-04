@@ -1720,27 +1720,6 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 	}
 	keyInfoMap := make(map[string]*keyInfo)
 	for _, span := range listSpansResp.Spans {
-		for key := range span.SystemTagsString {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeString}
-			}
-		}
-		for key := range span.SystemTagsLong {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeLong}
-			}
-		}
-		for key := range span.SystemTagsDouble {
-			if info, ok := keyInfoMap[key]; ok {
-				info.count++
-			} else {
-				keyInfoMap[key] = &keyInfo{count: 1, valueType: loop_span.MetadataValueTypeDouble}
-			}
-		}
 		for key := range span.TagsString {
 			if info, ok := keyInfoMap[key]; ok {
 				info.count++
@@ -1786,22 +1765,8 @@ func (r *TraceServiceImpl) ListMetadata(ctx context.Context, req *ListMetadataRe
 		return keys[i] < keys[j]
 	})
 
-	structFieldSet := make(map[string]struct{}, len(loop_span.SpanStructFieldKeys))
-	for _, k := range loop_span.SpanStructFieldKeys {
-		structFieldSet[k] = struct{}{}
-	}
-
-	items := make([]*trace.MetadataItemInfo, 0, len(loop_span.SpanStructFieldKeys)+len(keys))
-	for _, key := range loop_span.SpanStructFieldKeys {
-		items = append(items, &trace.MetadataItemInfo{
-			Key:       key,
-			ValueType: loop_span.SpanStructFieldValueTypes[key],
-		})
-	}
+	items := make([]*trace.MetadataItemInfo, 0, len(keys))
 	for _, key := range keys {
-		if _, ok := structFieldSet[key]; ok {
-			continue
-		}
 		items = append(items, &trace.MetadataItemInfo{
 			Key:       key,
 			ValueType: keyInfoMap[key].valueType,
