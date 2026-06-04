@@ -2332,6 +2332,9 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateOApi(ctx context.Context, req
 		return nil, err
 	}
 
+	logs.CtxInfo(ctx, "[UpdateExptTemplateOApi] req.NotificationConf=%+v, param.NotificationConf=%+v",
+		req.NotificationConf, param.NotificationConf)
+
 	do, err := e.exptTemplateManager.Update(ctx, param, session)
 	if err != nil {
 		return nil, err
