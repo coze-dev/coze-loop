@@ -73,6 +73,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		}
 
 		if gptr.Indirect(p.cfg.DisableProduce) {
+			logs.CtxWarn(ctx, "[ExptProducer] producer skipped by DisableProduce=true, key=%s addr=%s topic=%s", key, p.cfg.Addr, p.cfg.Topic)
 			continue
 		}
 
@@ -83,6 +84,7 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		if exist := publisher.getProducerWithAddr(p.cfg.Addr); exist != nil {
 			p.p = exist.p
 			publisher.producers[key] = p
+			logs.CtxInfo(ctx, "[ExptProducer] producer reuse existing by addr, key=%s addr=%s topic=%s", key, p.cfg.Addr, p.cfg.Topic)
 			continue
 		}
 
@@ -97,8 +99,13 @@ func newExptEventPublisher(ctx context.Context, cfgFactory conf.IConfigLoaderFac
 		}
 
 		publisher.producers[key] = p
+		logs.CtxInfo(ctx, "[ExptProducer] producer registered, key=%s addr=%s topic=%s producer_group=%s", key, p.cfg.Addr, p.cfg.Topic, p.cfg.ProducerGroup)
 	}
 
+	logs.CtxInfo(ctx, "[ExptProducer] publisher init complete, total_producers=%d lifecycle_registered=%v webhook_registered=%v",
+		len(publisher.producers),
+		publisher.producers[rocket.ExptLifecycleEventRMQKey] != nil,
+		publisher.producers[rocket.WebhookDeliveryRMQKey] != nil)
 	return publisher, nil
 }
 
@@ -163,7 +170,21 @@ func (e *exptEventPublisher) PublishExptTurnResultFilterEvent(ctx context.Contex
 }
 
 func (e *exptEventPublisher) PublishExptLifecycleEvent(ctx context.Context, event *entity.ExptLifecycleEvent, duration *time.Duration) error {
-	return e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+	p, hit := e.producers[rocket.ExptLifecycleEventRMQKey]
+	var topic, addr string
+	if hit && p != nil {
+		topic = p.cfg.Topic
+		addr = p.cfg.Addr
+	}
+	logs.CtxInfo(ctx, "[ExptProducer] publish lifecycle event: key=%s producer_hit=%v topic=%s addr=%s expt_id=%d space_id=%d from_status=%d to_status=%d",
+		rocket.ExptLifecycleEventRMQKey, hit, topic, addr, event.ExptID, event.SpaceID, event.FromStatus, event.ToStatus)
+	err := e.batchSend(ctx, rocket.ExptLifecycleEventRMQKey, []any{event}, duration)
+	if err != nil {
+		logs.CtxError(ctx, "[ExptProducer] publish lifecycle event FAILED: expt_id=%d to_status=%d err=%v", event.ExptID, event.ToStatus, err)
+	} else {
+		logs.CtxInfo(ctx, "[ExptProducer] publish lifecycle event OK: expt_id=%d to_status=%d topic=%s", event.ExptID, event.ToStatus, topic)
+	}
+	return err
 }
 
 func (e *exptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, event *entity.WebhookDeliveryMessage, duration *time.Duration) error {
@@ -173,13 +194,19 @@ func (e *exptEventPublisher) PublishWebhookDeliveryEvent(ctx context.Context, ev
 func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []any, duration *time.Duration) error {
 	p, ok := e.producers[pk]
 	if !ok {
+		logs.CtxError(ctx, "[ExptProducer] batchSend producer NOT FOUND, producer_key=%s registered_keys=%v event_cnt=%d", pk, e.registeredKeys(), len(events))
 		return fmt.Errorf("rmq producer not found %v", pk)
+	}
+	if p == nil || p.p == nil {
+		logs.CtxError(ctx, "[ExptProducer] batchSend producer entry is nil, producer_key=%s p_nil=%v inner_nil=%v", pk, p == nil, p != nil && p.p == nil)
+		return fmt.Errorf("rmq producer nil entry %v", pk)
 	}
 
 	msgs := make([]*mq.Message, 0, len(events))
 	for _, e := range events {
 		bytes, err := json.Marshal(e)
 		if err != nil {
+			logs.CtxError(ctx, "[ExptProducer] batchSend marshal fail, producer_key=%s err=%v", pk, err)
 			return errorx.Wrapf(err, "json marshal fail")
 		}
 
@@ -194,11 +221,21 @@ func (e *exptEventPublisher) batchSend(ctx context.Context, pk string, events []
 	if env := os.Getenv(XttEnv); env != "" {
 		ctx = context.WithValue(ctx, CtxKeyEnv, env) //nolint:staticcheck
 	}
+	logs.CtxInfo(ctx, "[ExptProducer] batchSend dispatching to MQ, producer_key=%s topic=%s addr=%s msg_cnt=%d defer=%v", pk, p.cfg.Topic, p.cfg.Addr, len(msgs), duration != nil)
 	resp, err := p.p.SendBatch(ctx, msgs)
 	if err != nil {
+		logs.CtxError(ctx, "[ExptProducer] batchSend SendBatch FAILED, producer_key=%s topic=%s addr=%s err=%v", pk, p.cfg.Topic, p.cfg.Addr, err)
 		return errorx.Wrapf(err, "send batch message fail, producer_key: %v, msgs: %v", pk, json.Jsonify(msgs))
 	}
 
 	logs.CtxInfo(ctx, "expt event batch send success, producer_key: %v, message_id: %v, offset: %v", pk, resp.MessageID, resp.Offset)
 	return nil
+}
+
+func (e *exptEventPublisher) registeredKeys() []string {
+	keys := make([]string, 0, len(e.producers))
+	for k := range e.producers {
+		keys = append(keys, k)
+	}
+	return keys
 }

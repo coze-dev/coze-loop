@@ -540,6 +540,7 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	for _, fn := range opts {
 		fn(opt)
 	}
+	logs.CtxInfo(ctx, "[ExptProducer] CompleteExpt enter, expt_id=%d space_id=%d expt_run_id=%v opt_status=%d cid=%s", exptID, spaceID, exptRunID, opt.Status, opt.CID)
 	if interval := opt.CompleteInterval; interval > 0 {
 		time.Sleep(interval)
 	}
@@ -668,6 +669,8 @@ func (e *ExptMangerImpl) CompleteExpt(ctx context.Context, exptID int64, exptRun
 	got.Status = status
 	got.EndAt = exptDo.EndAt
 
+	logs.CtxInfo(ctx, "[ExptProducer] CompleteExpt will call sendExptCompleteEvent, expt_id=%d from_status=%d to_status=%d will_publish=%v",
+		exptID, fromStatus, status, entity.IsExptFinished(status))
 	if err = e.sendExptCompleteEvent(ctx, got, exptRunID, fromStatus); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] AfterCompleteExpt failed, expt_id: %v, status: %v, error: %v", exptID, status, err)
 	}
@@ -699,7 +702,10 @@ func (e *ExptMangerImpl) notifyWorkflowPipelineOnExptFinished(ctx context.Contex
 }
 
 func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
+	logs.CtxInfo(ctx, "[ExptProducer] sendExptCompleteEvent enter, expt_id=%d space_id=%d from_status=%d to_status=%d is_finished=%v publisher_nil=%v",
+		expt.ID, expt.SpaceID, fromStatus, expt.Status, entity.IsExptFinished(expt.Status), e.publisher == nil)
 	if !entity.IsExptFinished(expt.Status) {
+		logs.CtxInfo(ctx, "[ExptProducer] sendExptCompleteEvent SKIP: status not finished, expt_id=%d to_status=%d", expt.ID, expt.Status)
 		return nil
 	}
 
@@ -712,10 +718,14 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 		ExptType:   expt.ExptType,
 		SourceType: expt.SourceType,
 	}
+	logs.CtxInfo(ctx, "[ExptProducer] sendExptCompleteEvent will publish, expt_id=%d to_status=%d expt_type=%d source_type=%d",
+		expt.ID, expt.Status, expt.ExptType, expt.SourceType)
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
 		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
 	}); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
+	} else {
+		logs.CtxInfo(ctx, "[ExptProducer] sendExptCompleteEvent publish succeeded, expt_id=%d to_status=%d", expt.ID, expt.Status)
 	}
 
 	return nil
