@@ -41,6 +41,9 @@ func (d *defaultConsumerRegistry) StartAll(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		if cfg == nil || (cfg.IsEnabled != nil && !ptr.From(cfg.IsEnabled)) {
+			continue
+		}
 
 		consumer, err := d.factory.NewConsumer(ptr.From(cfg))
 		if err != nil {
