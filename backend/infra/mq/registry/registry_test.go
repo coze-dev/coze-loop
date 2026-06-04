@@ -66,6 +66,18 @@ func TestDefaultConsumerRegistry_StartAll(t *testing.T) {
 			expectedError: errors.New("config error"),
 		},
 		{
+			name: "skip disabled worker",
+			workers: []mq.IConsumerWorker{
+				mocks.NewMockIConsumerWorker(gomock.NewController(t)),
+			},
+			setupMocks: func(factory *mocks.MockIFactory, consumers []*mocks.MockIConsumer, workers []*mocks.MockIConsumerWorker) {
+				disabled := false
+				cfg := &mq.ConsumerConfig{IsEnabled: &disabled}
+				workers[0].EXPECT().ConsumerCfg(gomock.Any()).Return(cfg, nil)
+			},
+			expectedError: nil,
+		},
+		{
 			name: "fail to create consumer",
 			workers: []mq.IConsumerWorker{
 				mocks.NewMockIConsumerWorker(gomock.NewController(t)),
