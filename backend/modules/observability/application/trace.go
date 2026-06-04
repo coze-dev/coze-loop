@@ -361,6 +361,7 @@ func (t *TraceApplication) SearchTraceTree(ctx context.Context, req *trace.Searc
 	if err != nil {
 		return nil, errorx.WrapByCode(err, obErrorx.CommercialCommonInvalidParamCodeCode, errorx.WithExtraMsg("Get trace req is invalid"))
 	}
+	sReq.Limit = t.traceConfig.GetSearchTraceTreeMaxSpanLimit(ctx, req.GetWorkspaceID())
 	sResp, err := t.traceService.GetTrace(ctx, sReq)
 	if err != nil {
 		return nil, err

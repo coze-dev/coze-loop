@@ -1216,8 +1216,10 @@ func (r *TraceServiceImpl) GetTrace(ctx context.Context, req *GetTraceReq) (*Get
 	if !req.WithDetail {
 		limit = 10000
 	}
-	if req.Limit > 0 && req.Limit < limit {
-		limit = req.Limit
+	if req.Limit > 0 {
+		if !req.WithDetail || req.Limit < limit {
+			limit = req.Limit
+		}
 	}
 	traceResult, err := r.traceRepo.GetTrace(ctx, &repo.GetTraceParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),

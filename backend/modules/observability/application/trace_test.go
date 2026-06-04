@@ -981,6 +981,7 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(&service.GetTraceResp{
 					TraceId: "trace-1",
@@ -1017,6 +1018,7 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
 				mockCfg := confmock.NewMockITraceConfig(ctrl)
 				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), gomock.Any()).Return(int32(10000))
 				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).Return(nil, assert.AnError)
 				return fields{
@@ -1036,6 +1038,47 @@ func TestTraceApplication_SearchTraceTree(t *testing.T) {
 			},
 			want:    nil,
 			wantErr: true,
+		},
+		{
+			name: "success case with custom span limit",
+			fieldsGetter: func(ctrl *gomock.Controller) fields {
+				mockSvc := svcmock.NewMockITraceService(ctrl)
+				mockAuth := rpcmock.NewMockIAuthProvider(ctrl)
+				mockCfg := confmock.NewMockITraceConfig(ctrl)
+				mockCfg.EXPECT().GetTraceDataMaxDurationDay(gomock.Any(), gomock.Any()).Return(int64(30))
+				mockCfg.EXPECT().GetSearchTraceTreeMaxSpanLimit(gomock.Any(), int64(12)).Return(int32(5000))
+				mockAuth.EXPECT().CheckWorkspacePermission(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+				mockSvc.EXPECT().GetTrace(gomock.Any(), gomock.Any()).DoAndReturn(
+					func(ctx context.Context, req *service.GetTraceReq) (*service.GetTraceResp, error) {
+						assert.Equal(t, int32(5000), req.Limit)
+						return &service.GetTraceResp{
+							TraceId: "trace-1",
+							Spans:   loop_span.SpanList{},
+						}, nil
+					})
+				return fields{
+					traceSvc: mockSvc,
+					auth:     mockAuth,
+					traceCfg: mockCfg,
+				}
+			},
+			args: args{
+				ctx: context.Background(),
+				req: &trace.SearchTraceTreeRequest{
+					WorkspaceID: 12,
+					TraceID:     "trace-1",
+					StartTime:   start,
+					EndTime:     end,
+				},
+			},
+			want: &trace.SearchTraceTreeResponse{
+				Spans: []*span.OutputSpan{},
+				TracesAdvanceInfo: &trace.TraceAdvanceInfo{
+					TraceID: "trace-1",
+					Tokens:  &trace.TokenCost{},
+				},
+			},
+			wantErr: false,
 		},
 		{
 			name: "permission error",
