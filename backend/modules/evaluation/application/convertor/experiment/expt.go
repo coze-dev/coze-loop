@@ -445,6 +445,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(fallback)
 	}
 
+	// notification_conf
+	if experiment.NotificationConf != nil {
+		res.NotificationConf = notificationConfDO2DTO(experiment.NotificationConf)
+	}
+
 	return res
 }
 
@@ -557,7 +562,101 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.IsSetNotificationConf() {
+		param.NotificationConf = notificationConfDTO2DO(cer.GetNotificationConf())
+	}
 	return param, nil
+}
+
+// notificationConfDTO2DO converts IDL ExptNotificationConf to entity NotificationConf.
+func notificationConfDTO2DO(dto *domain_expt.ExptNotificationConf) *entity.NotificationConf {
+	if dto == nil || !dto.IsSetRules() {
+		return nil
+	}
+	rules := make([]*entity.NotificationRule, 0, len(dto.GetRules()))
+	for _, r := range dto.GetRules() {
+		if r == nil {
+			continue
+		}
+		rule := &entity.NotificationRule{}
+		if r.IsSetCondition() {
+			cond := r.GetCondition()
+			rule.Condition = &entity.NotificationFilterCondition{
+				Field:    cond.GetField(),
+				Operator: entity.NotificationOperator(cond.GetOperator()),
+			}
+			if cond.IsSetValues() {
+				values := make([]entity.ExptStatus, 0, len(cond.GetValues()))
+				for _, v := range cond.GetValues() {
+					values = append(values, entity.ExptStatus(v))
+				}
+				rule.Condition.Values = values
+			}
+		}
+		if r.IsSetWebhook() {
+			wh := r.GetWebhook()
+			rule.Webhook = &entity.WebhookChannelConf{
+				Enabled: wh.GetEnabled(),
+				URLs:    wh.GetUrls(),
+			}
+		}
+		if r.IsSetFeishu() {
+			fs := r.GetFeishu()
+			rule.Feishu = &entity.FeishuChannelConf{
+				Enabled: fs.GetEnabled(),
+			}
+		}
+		rules = append(rules, rule)
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+	return &entity.NotificationConf{Rules: rules}
+}
+
+// notificationConfDO2DTO converts entity NotificationConf to IDL ExptNotificationConf.
+func notificationConfDO2DTO(do *entity.NotificationConf) *domain_expt.ExptNotificationConf {
+	if do == nil || len(do.Rules) == 0 {
+		return nil
+	}
+	rules := make([]*domain_expt.NotificationRule, 0, len(do.Rules))
+	for _, r := range do.Rules {
+		if r == nil {
+			continue
+		}
+		rule := domain_expt.NewNotificationRule()
+		if r.Condition != nil {
+			cond := domain_expt.NewNotificationFilterCondition()
+			cond.SetField(gptr.Of(r.Condition.Field))
+			cond.SetOperator(gptr.Of(domain_expt.NotificationOperator(r.Condition.Operator)))
+			if len(r.Condition.Values) > 0 {
+				values := make([]domain_expt.ExptStatus, 0, len(r.Condition.Values))
+				for _, v := range r.Condition.Values {
+					values = append(values, domain_expt.ExptStatus(v))
+				}
+				cond.SetValues(values)
+			}
+			rule.SetCondition(cond)
+		}
+		if r.Webhook != nil {
+			wh := domain_expt.NewWebhookChannelConf()
+			wh.SetEnabled(gptr.Of(r.Webhook.Enabled))
+			wh.SetUrls(r.Webhook.URLs)
+			rule.SetWebhook(wh)
+		}
+		if r.Feishu != nil {
+			fs := domain_expt.NewFeishuChannelConf()
+			fs.SetEnabled(gptr.Of(r.Feishu.Enabled))
+			rule.SetFeishu(fs)
+		}
+		rules = append(rules, rule)
+	}
+	if len(rules) == 0 {
+		return nil
+	}
+	dto := domain_expt.NewExptNotificationConf()
+	dto.SetRules(rules)
+	return dto
 }
 
 func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
