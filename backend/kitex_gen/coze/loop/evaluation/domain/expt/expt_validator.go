@@ -67,6 +67,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -130,6 +135,11 @@ func (p *ExptTemplate) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
 	if p.BaseInfo != nil {
@@ -197,6 +207,30 @@ func (p *EvaluatorFieldMapping) IsValid() error {
 	return nil
 }
 func (p *FieldMapping) IsValid() error {
+	return nil
+}
+func (p *ExptNotificationConf) IsValid() error {
+	if p.Filter != nil {
+		if err := p.Filter.IsValid(); err != nil {
+			return fmt.Errorf("field Filter not valid, %w", err)
+		}
+	}
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	if p.FeishuNotification != nil {
+		if err := p.FeishuNotification.IsValid(); err != nil {
+			return fmt.Errorf("field FeishuNotification not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *WebhookNotificationConf) IsValid() error {
+	return nil
+}
+func (p *FeishuNotificationConf) IsValid() error {
 	return nil
 }
 func (p *ExptFilterOption) IsValid() error {

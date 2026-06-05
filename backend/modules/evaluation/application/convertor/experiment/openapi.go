@@ -286,6 +286,7 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
+	result.NotificationConf = domainNotificationConfToOpenAPI(dto.NotificationConf)
 	return result
 }
 
@@ -600,6 +601,8 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			ExptType:    OpenAPIExptTypeDO2DTO(experiment.ExptTemplateMeta.ExptType),
 		}
 	}
+
+	result.NotificationConf = entityNotificationConfToOpenAPI(experiment.NotificationConf)
 
 	return result
 }
@@ -1711,6 +1714,8 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
 
+	dto.NotificationConf = entityNotificationConfToOpenAPI(template.NotificationConf)
+
 	return dto
 }
 
@@ -1972,6 +1977,18 @@ func OpenAPICreateExptTemplateReq2Domain(req *openapi.CreateExptTemplateOApiRequ
 		}
 	}
 
+	if req.NotificationConf != nil {
+		domainConf, err := OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		entityConf, err := NotificationConfDTO2DO(domainConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = entityConf
+	}
+
 	return param, nil
 }
 
@@ -2075,6 +2092,18 @@ func OpenAPIUpdateExptTemplateReq2Domain(req *openapi.UpdateExptTemplateOApiRequ
 		param.TemplateConf = &entity.ExptTemplateConfiguration{
 			EnableExtractTrajectory: gptr.Of(req.GetEnableExtractTrajectory()),
 		}
+	}
+
+	if req.NotificationConf != nil {
+		domainConf, err := OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		entityConf, err := NotificationConfDTO2DO(domainConf)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification_conf: %w", err)
+		}
+		param.NotificationConf = entityConf
 	}
 
 	return param, nil
@@ -2697,4 +2726,120 @@ func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldM
 		}
 	}
 	return tic
+}
+
+// OpenAPINotificationConfDTO2Domain 将 OpenAPI ExptNotificationConf 转换为 domain/expt ExptNotificationConf
+func OpenAPINotificationConfDTO2Domain(conf *openapiExperiment.ExptNotificationConf) (*domainExpt.ExptNotificationConf, error) {
+	if conf == nil {
+		return nil, nil
+	}
+	result := &domainExpt.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f, err := OpenAPIExperimentFiltersDTO2Domain(conf.Filter)
+		if err != nil {
+			return nil, fmt.Errorf("invalid notification filter: %w", err)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &domainExpt.WebhookNotificationConf{
+			Enable: gptr.Indirect(conf.Webhook.Enable),
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &domainExpt.FeishuNotificationConf{
+			Enable: gptr.Indirect(conf.FeishuNotification.Enable),
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result, nil
+}
+
+// entityNotificationConfToOpenAPI converts entity.ExptNotificationConf to OpenAPI ExptNotificationConf
+func entityNotificationConfToOpenAPI(conf *entity.ExptNotificationConf) *openapiExperiment.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	result := &openapiExperiment.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f := &openapiExperiment.Filters{}
+		if conf.Filter.LogicOp != nil {
+			f.LogicOp = gptr.Of(strconv.FormatInt(int64(*conf.Filter.LogicOp), 10))
+		}
+		for _, cond := range conf.Filter.FilterConditions {
+			if cond == nil {
+				continue
+			}
+			fc := &openapiExperiment.FilterCondition{
+				Operator: gptr.Of(strconv.FormatInt(int64(cond.Operator), 10)),
+				Value:    gptr.Of(cond.Value),
+			}
+			if cond.Field != nil {
+				fc.Field = &openapiExperiment.FilterField{
+					FieldType: gptr.Of(strconv.FormatInt(int64(cond.Field.FieldType), 10)),
+					FieldKey:  cond.Field.FieldKey,
+				}
+			}
+			f.FilterConditions = append(f.FilterConditions, fc)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &openapiExperiment.WebhookNotificationConf{
+			Enable: gptr.Of(conf.Webhook.Enable),
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &openapiExperiment.FeishuNotificationConf{
+			Enable: gptr.Of(conf.FeishuNotification.Enable),
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result
+}
+
+// domainNotificationConfToOpenAPI converts domain DTO ExptNotificationConf to OpenAPI ExptNotificationConf
+func domainNotificationConfToOpenAPI(conf *domainExpt.ExptNotificationConf) *openapiExperiment.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	result := &openapiExperiment.ExptNotificationConf{}
+	if conf.Filter != nil {
+		f := &openapiExperiment.Filters{}
+		if conf.Filter.LogicOp != nil {
+			f.LogicOp = gptr.Of(strconv.FormatInt(int64(*conf.Filter.LogicOp), 10))
+		}
+		for _, cond := range conf.Filter.FilterConditions {
+			if cond == nil {
+				continue
+			}
+			fc := &openapiExperiment.FilterCondition{
+				Operator: gptr.Of(strconv.FormatInt(int64(cond.GetOperator()), 10)),
+				Value:    gptr.Of(cond.GetValue()),
+			}
+			if cond.Field != nil {
+				fc.Field = &openapiExperiment.FilterField{
+					FieldType: gptr.Of(strconv.FormatInt(int64(cond.Field.GetFieldType()), 10)),
+					FieldKey:  cond.Field.FieldKey,
+				}
+			}
+			f.FilterConditions = append(f.FilterConditions, fc)
+		}
+		result.Filter = f
+	}
+	if conf.Webhook != nil {
+		result.Webhook = &openapiExperiment.WebhookNotificationConf{
+			Enable: gptr.Of(conf.Webhook.GetEnable()),
+			Urls:   conf.Webhook.Urls,
+		}
+	}
+	if conf.FeishuNotification != nil {
+		result.FeishuNotification = &openapiExperiment.FeishuNotificationConf{
+			Enable: gptr.Of(conf.FeishuNotification.GetEnable()),
+			UserID: conf.FeishuNotification.UserID,
+		}
+	}
+	return result
 }

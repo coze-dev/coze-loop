@@ -25,7 +25,6 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/maps"
-	"github.com/coze-dev/coze-loop/backend/pkg/lang/ptr"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
 
@@ -319,29 +318,10 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
-	switch runMode {
-	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
-		if err := e.sendNotifyCard(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
-		}
-	}
 	return nil
 }
 
-func (e *ExptMangerImpl) sendNotifyCard(ctx context.Context, expt *entity.Experiment) error {
-	userInfos, err := e.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
-	if err != nil {
-		return err
-	}
-	if len(userInfos) != 1 || userInfos[0] == nil || len(gptr.Indirect(userInfos[0].Email)) == 0 {
-		logs.CtxWarn(ctx, "expt %v notify card without target email", expt.ID)
-		return nil
-	}
-	cardID, param := buildExptNotifyParam(expt)
-	return e.notifyRPCAdapter.SendMessageCard(ctx, ptr.From(userInfos[0].Email), cardID, param)
-}
-
-func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
+func buildExptNotifyParam(expt *entity.Experiment, toStatus entity.ExptStatus) (string, map[string]string) {
 	param := map[string]string{
 		"expt_name": expt.Name,
 		"space_id":  strconv.FormatInt(expt.SpaceID, 10),
@@ -360,7 +340,7 @@ func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
 	if expt.SourceType == entity.SourceType_IntelligentGen {
 		param["thread_id"] = gptr.Indirect(expt.ThreadID)
 	}
-	switch expt.Status {
+	switch toStatus {
 	case entity.ExptStatus_Success:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleSuccess
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorSuccess
@@ -370,7 +350,7 @@ func buildExptNotifyParam(expt *entity.Experiment) (string, map[string]string) {
 	case entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleTerminated
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorTerminated
-	case entity.ExptStatus_Pending:
+	case entity.ExptStatus_Pending, entity.ExptStatus_Processing:
 		param[consts.ExptEventNotifyTitle] = consts.ExptEventNotifyTitleStarting
 		param[consts.ExptEventNotifyTitleColor] = consts.ExptEventNotifyTitleColorStarting
 	default:
@@ -712,8 +692,15 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 		ExptType:   expt.ExptType,
 		SourceType: expt.SourceType,
 	}
+	// 确定性幂等 Key：同一 run 同一状态变更产出相同 Key，透传给 webhook 做 deliveryID
+	var runID int64
+	if exptRunID != nil {
+		runID = *exptRunID
+	}
+	idempotentKey := fmt.Sprintf("expt_%d_%d_%d_%d", expt.ID, runID, event.FromStatus, event.ToStatus)
+	event.IdempotentKey = idempotentKey
 	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
-		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3))
+		return e.publisher.PublishExptLifecycleEvent(ctx, event, gptr.Of(time.Second*3), idempotentKey)
 	}); err != nil {
 		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent failed after retry, expt_id: %v, err: %v", expt.ID, err)
 	}

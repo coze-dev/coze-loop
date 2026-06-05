@@ -70,6 +70,9 @@ func (p *Producer) convertMessage(message *mq.Message) *primitive.Message {
 	msg := primitive.NewMessage(message.Topic, message.Body).
 		WithTag(message.Tag).
 		WithShardingKey(message.PartitionKey)
+	if len(message.Keys) > 0 {
+		msg.WithKeys(message.Keys)
+	}
 	if len(message.Properties) > 0 {
 		msg.WithProperties(message.Properties)
 	}

@@ -1043,6 +1043,11 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		evaluatorMap[fmt.Sprintf("%d_%s", evaluator.GetEvaluatorID(), evaluator.GetVersion())] = versionID
 	}
 
+	notificationConf, err := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+	if err != nil {
+		return nil, err
+	}
+
 	createReq := &exptpb.SubmitExperimentRequest{
 		WorkspaceID:             req.GetWorkspaceID(),
 		EvalSetVersionID:        gptr.Of(versions[0].ID),
@@ -1059,6 +1064,7 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		ItemRetryNum:            req.ItemRetryNum,
 		TriggerType:             gptr.Of(domain_expt.OpenAPI),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
+		NotificationConf:        notificationConf,
 		Ext:                     req.GetExt(),
 	}
 
@@ -2208,6 +2214,15 @@ func (e *EvalOpenAPIApplication) SubmitExptFromTemplateOApi(ctx context.Context,
 		}
 	}
 
+	// 通知配置覆盖：如果请求中带了 notification_conf，覆盖从模板继承的配置
+	if req.NotificationConf != nil {
+		domainConf, convertErr := experiment_convertor.OpenAPINotificationConfDTO2Domain(req.NotificationConf)
+		if convertErr != nil {
+			return nil, errorx.NewByCode(errno.CommonInvalidParamCode, errorx.WithExtraMsg("invalid notification_conf: "+convertErr.Error()))
+		}
+		submitReq.NotificationConf = domainConf
+	}
+
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, submitReq)
 	if err != nil {
 		return nil, err
@@ -2325,6 +2340,9 @@ func (e *EvalOpenAPIApplication) UpdateExptTemplateOApi(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
+
+	logs.CtxInfo(ctx, "[UpdateExptTemplateOApi] req.NotificationConf=%+v, param.NotificationConf=%+v",
+		req.NotificationConf, param.NotificationConf)
 
 	do, err := e.exptTemplateManager.Update(ctx, param, session)
 	if err != nil {
