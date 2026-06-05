@@ -28,6 +28,10 @@ export interface CreateEvalTargetParam {
   env?: string,
   /** type=8时需填写，评测对象操作说明 */
   operation_instruction?: string,
+  /** type=10时需填写，自定义智能体所属集群 */
+  cluster?: string,
+  /** type=10时需填写，自定义智能体连接信息 */
+  agent_connection?: eval_target.AgentConnection,
 }
 export interface CreateEvalTargetResponse {
   id?: string,

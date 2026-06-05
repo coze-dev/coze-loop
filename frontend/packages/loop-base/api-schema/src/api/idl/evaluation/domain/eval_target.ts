@@ -60,6 +60,10 @@ export interface EvalTargetContent {
   custom_rpc_server?: CustomRPCServer,
   /** EvalTargetType=8 时，传参此字段。 评测对象为 WebAgent 时, 需要设置 WebAgent 信息 */
   web_agent?: WebAgent,
+  /** EvalTargetType=9 时，传参此字段。 评测对象为 A2AAgent 时, 需要设置 A2AAgent 信息 */
+  a2a_agent?: A2AAgent,
+  /** EvalTargetType=10 时，传参此字段。 评测对象为 CustomAgent 时, 需要设置 CustomAgent 信息 */
+  custom_agent?: CustomAgent,
 }
 export interface WebAgent {
   /** 应用ID */
@@ -98,6 +102,10 @@ export enum EvalTargetType {
   VolcengineAgentAgentkit = 7,
   /** Web智能体 */
   WebAgent = 8,
+  /** A2A协议智能体 */
+  A2AAgent = 9,
+  /** 自定义智能体 for内场,目前支持长链接方式访问 */
+  CustomAgent = 10,
   /** CozeBot在线(评测过程中不执行对象，仅用于展示对象) */
   CozeBotOnline = 11,
   /** Prompt在线(评测过程中不执行对象，仅用于展示对象) */
@@ -274,6 +282,65 @@ export enum ModelPlatform {
   Unknown = 0,
   GPTOpenAPI = 1,
   MAAS = 2,
+}
+export interface A2AAgent {
+  /** 应用ID */
+  id?: number,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  server_name?: string,
+  url?: string,
+  /** 执行区域 */
+  exec_region?: Region,
+  /** 执行环境 */
+  exec_env?: string,
+}
+export interface CustomAgent {
+  /** 应用ID */
+  id?: number,
+  /** DTO使用，不存数据库 */
+  name?: string,
+  /** DTO使用，不存数据库 */
+  description?: string,
+  /** 执行区域 */
+  exec_region?: Region,
+  /** 执行环境 */
+  exec_env?: string,
+  /** 执行集群 */
+  cluster?: string,
+  timeout_ms?: number,
+  first_token_timeout_ms?: number,
+  AgentConnection?: AgentConnection,
+}
+export interface AgentConnection {
+  frontier_info?: FrontierInfo,
+  ip?: string,
+  region?: string,
+  idc?: string,
+  sdk_version?: string,
+  protocol_version?: string,
+  psm?: string,
+  agent_impl?: AgentImpl,
+}
+export interface FrontierInfo {
+  /** frontier应用ID */
+  app_id?: string,
+  /** frontier产品ID */
+  product_id?: string,
+  /** frontier连接标识参数，随机 */
+  user_id?: string,
+  /** frontier连接标识参数，随机 */
+  device_id?: string,
+}
+export interface AgentImpl {
+  /** go/python */
+  language?: string,
+  /** Eino/Langchain */
+  framework?: string,
+  /** 用户agent的具体实体类型标识 */
+  kind?: string,
 }
 export interface EvalTargetRecord {
   /** 评估记录ID */

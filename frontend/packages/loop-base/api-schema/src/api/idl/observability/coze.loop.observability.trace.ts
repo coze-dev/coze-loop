@@ -34,6 +34,7 @@ export interface ListSpansRequest {
   platform_type?: common.PlatformType,
   /** default root span */
   span_list_type?: common.SpanListType,
+  without_clip?: boolean,
 }
 export interface ListSpansResponse {
   spans: span.OutputSpan[],
@@ -69,10 +70,15 @@ export interface GetTraceRequest {
   end_time: string,
   platform_type?: common.PlatformType,
   span_ids?: string[],
+  filters?: filter.FilterFields,
+  page_size?: number,
+  page_token?: string,
 }
 export interface GetTraceResponse {
   spans: span.OutputSpan[],
   traces_advance_info?: TraceAdvanceInfo,
+  next_page_token?: string,
+  has_more?: boolean,
 }
 export interface SearchTraceTreeRequest {
   workspace_id: string,
@@ -334,13 +340,93 @@ export interface MetadataItemInfo {
 export interface ListMetadataResponse {
   metadataItemList: MetadataItemInfo[]
 }
+export interface ColumnExtractRule {
+  column: string,
+  json_path: string,
+}
+export interface UpsertColumnExtractConfigRequest {
+  workspace_id?: string,
+  platform_type: common.PlatformType,
+  span_list_type: common.SpanListType,
+  agent_name?: string,
+  columns: ColumnExtractRule[],
+}
+export interface UpsertColumnExtractConfigResponse {}
+export interface GetColumnExtractConfigRequest {
+  workspace_id?: string,
+  platform_type: common.PlatformType,
+  span_list_type: common.SpanListType,
+  agent_name?: string,
+}
+export interface GetColumnExtractConfigResponse {
+  columns?: ColumnExtractRule[]
+}
+export interface AgentMetadata {
+  agent_name: string
+}
+export interface GetAgentMetadataRequest {
+  workspace_id: string,
+  platform_type?: common.PlatformType,
+}
+export interface GetAgentMetadataResponse {
+  agents?: AgentMetadata[]
+}
+export interface ListTraceChatRequest {
+  workspace_id: string,
+  trace_id: string,
+  start_time?: string,
+  end_time?: string,
+  page_size?: number,
+  page_token?: string,
+  platform_type?: common.PlatformType,
+  filters?: filter.FilterFields,
+  without_detail?: boolean,
+}
+export interface ListTraceChatResponse {
+  messages: ChatMessage[],
+  next_page_token: string,
+  has_more: boolean,
+}
+export interface ListThreadChatRequest {
+  workspace_id: string,
+  thread_id: string,
+  start_time?: string,
+  end_time?: string,
+  page_size?: number,
+  page_token?: string,
+  platform_type?: common.PlatformType,
+}
+export interface ListThreadChatResponse {
+  messages: ChatMessage[],
+  next_page_token: string,
+  has_more: boolean,
+}
+export interface GetThreadStatRequest {
+  workspace_id: string,
+  thread_id: string,
+  start_time?: string,
+  end_time?: string,
+  platform_type?: common.PlatformType,
+}
+export interface GetThreadStatResponse {
+  thread_id: string,
+  start_time?: string,
+  duration?: string,
+  user_id?: string,
+  total_tokens?: string,
+  used_models?: string[],
+}
+export interface ChatMessage {
+  role: string,
+  span?: span.OutputSpan,
+}
 export const ListSpans = /*#__PURE__*/createAPI<ListSpansRequest, ListSpansResponse>({
   "url": "/api/observability/v1/spans/list",
   "method": "POST",
   "name": "ListSpans",
   "reqType": "ListSpansRequest",
   "reqMapping": {
-    "body": ["workspace_id", "start_time", "end_time", "filters", "page_size", "order_bys", "page_token", "platform_type", "span_list_type"]
+    "body": ["workspace_id", "start_time", "end_time", "filters", "page_size", "order_bys", "page_token", "platform_type", "span_list_type", "without_clip"]
   },
   "resType": "ListSpansResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
@@ -364,7 +450,7 @@ export const GetTrace = /*#__PURE__*/createAPI<GetTraceRequest, GetTraceResponse
   "name": "GetTrace",
   "reqType": "GetTraceRequest",
   "reqMapping": {
-    "query": ["workspace_id", "start_time", "end_time", "platform_type", "span_ids"],
+    "query": ["workspace_id", "start_time", "end_time", "platform_type", "span_ids", "filters", "page_size", "page_token"],
     "path": ["trace_id"]
   },
   "resType": "GetTraceResponse",
@@ -624,6 +710,78 @@ export const ListMetadata = /*#__PURE__*/createAPI<ListMetadataRequest, ListMeta
     "body": ["workspace_id", "platform_type", "span_list_type"]
   },
   "resType": "ListMetadataResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListTraceChat = /*#__PURE__*/createAPI<ListTraceChatRequest, ListTraceChatResponse>({
+  "url": "/api/observability/v1/traces/chat/list",
+  "method": "POST",
+  "name": "ListTraceChat",
+  "reqType": "ListTraceChatRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "trace_id", "start_time", "end_time", "page_size", "page_token", "platform_type", "filters", "without_detail"]
+  },
+  "resType": "ListTraceChatResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const ListThreadChat = /*#__PURE__*/createAPI<ListThreadChatRequest, ListThreadChatResponse>({
+  "url": "/api/observability/v1/threads/chat/list",
+  "method": "POST",
+  "name": "ListThreadChat",
+  "reqType": "ListThreadChatRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "thread_id", "start_time", "end_time", "page_size", "page_token", "platform_type"]
+  },
+  "resType": "ListThreadChatResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const GetThreadStat = /*#__PURE__*/createAPI<GetThreadStatRequest, GetThreadStatResponse>({
+  "url": "/api/observability/v1/threads/stat",
+  "method": "POST",
+  "name": "GetThreadStat",
+  "reqType": "GetThreadStatRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "thread_id", "start_time", "end_time", "platform_type"]
+  },
+  "resType": "GetThreadStatResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const UpsertColumnExtractConfig = /*#__PURE__*/createAPI<UpsertColumnExtractConfigRequest, UpsertColumnExtractConfigResponse>({
+  "url": "/api/observability/v1/column_extract_config",
+  "method": "POST",
+  "name": "UpsertColumnExtractConfig",
+  "reqType": "UpsertColumnExtractConfigRequest",
+  "reqMapping": {
+    "body": ["workspace_id", "platform_type", "span_list_type", "agent_name", "columns"]
+  },
+  "resType": "UpsertColumnExtractConfigResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const GetColumnExtractConfig = /*#__PURE__*/createAPI<GetColumnExtractConfigRequest, GetColumnExtractConfigResponse>({
+  "url": "/api/observability/v1/column_extract_config",
+  "method": "GET",
+  "name": "GetColumnExtractConfig",
+  "reqType": "GetColumnExtractConfigRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "platform_type", "span_list_type", "agent_name"]
+  },
+  "resType": "GetColumnExtractConfigResponse",
+  "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
+  "service": "observabilityTrace"
+});
+export const GetAgentMetadata = /*#__PURE__*/createAPI<GetAgentMetadataRequest, GetAgentMetadataResponse>({
+  "url": "/api/observability/v1/trace/agent/metadata",
+  "method": "GET",
+  "name": "GetAgentMetadata",
+  "reqType": "GetAgentMetadataRequest",
+  "reqMapping": {
+    "query": ["workspace_id", "platform_type"]
+  },
+  "resType": "GetAgentMetadataResponse",
   "schemaRoot": "api://schemas/observability_coze.loop.observability.trace",
   "service": "observabilityTrace"
 });
