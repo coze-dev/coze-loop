@@ -515,6 +515,9 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		return nil, err
 	}
 
+	// 设置写标志，用于主从延迟兜底（与 Create 路径对齐；后续 MGet 通过 CheckWriteFlagByID 升级为 WriteDB ctx 避免读到 stale 从库副本）
+	e.lwt.SetWriteFlag(ctx, platestwrite.ResourceTypeExptTemplate, param.TemplateID)
+
 	// 重新获取更新后的模板（强制走主库避免主从延迟导致字段 stale，例如首次写入的 notification_conf 在从库尚未应用 binlog 时被读为 NULL）
 	updatedTemplate, err = e.templateRepo.GetByID(contexts.WithCtxWriteDB(ctx), param.TemplateID, &param.SpaceID)
 	if err != nil {
