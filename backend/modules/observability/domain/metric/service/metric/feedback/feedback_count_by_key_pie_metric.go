@@ -45,10 +45,6 @@ func (m *FeedbackCountByKeyPieMetric) GroupBy() []*entity.Dimension {
 	}
 }
 
-func (m *FeedbackCountByKeyPieMetric) Wrappers() []entity.IMetricWrapper {
-	return nil
-}
-
 func (m *FeedbackCountByKeyPieMetric) OExpression() *entity.OExpression {
 	return &entity.OExpression{
 		AggrType: entity.MetricOfflineAggrTypeSum,
