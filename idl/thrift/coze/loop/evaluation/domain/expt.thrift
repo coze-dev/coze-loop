@@ -24,6 +24,50 @@ enum ExptStatus {
     Draining = 21 // online expt draining
 }
 
+// 通知渠道类型
+enum NotificationChannelType {
+    Unknown = 0
+    Webhook = 1
+    Feishu = 2
+}
+
+// 通知过滤运算符
+enum NotificationOperator {
+    Unknown = 0
+    Includes = 1
+    Excludes = 2
+}
+
+// 通知过滤条件（field + operator + values 模型）
+struct NotificationFilterCondition {
+    1: optional string field                       // 过滤字段，当前固定为 "experiment_status"
+    2: optional NotificationOperator operator       // 运算符：includes / excludes
+    3: optional list<ExptStatus> values            // 条件值：多选实验状态
+}
+
+// Webhook 渠道配置
+struct WebhookChannelConf {
+    1: optional bool enabled
+    2: optional list<string> urls                  // Webhook 目标 URL 列表
+}
+
+// 飞书渠道配置
+struct FeishuChannelConf {
+    1: optional bool enabled
+}
+
+// 单条通知规则
+struct NotificationRule {
+    1: optional NotificationFilterCondition condition
+    2: optional WebhookChannelConf webhook
+    3: optional FeishuChannelConf feishu
+}
+
+// 实验通知配置（顶层）
+struct ExptNotificationConf {
+    1: optional list<NotificationRule> rules
+}
+
 enum ExptType {
     Offline = 1
     Online = 2
@@ -102,6 +146,9 @@ struct Experiment {
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
 
+    // 通知配置
+    80: optional ExptNotificationConf notification_conf
+
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
@@ -152,6 +199,7 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+    8: optional ExptNotificationConf notification_conf
 
     255: optional common.BaseInfo base_info
 }

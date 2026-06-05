@@ -21,6 +21,36 @@ var (
 	_ = time.Nanosecond
 )
 
+func (p *NotificationFilterCondition) IsValid() error {
+	return nil
+}
+func (p *WebhookChannelConf) IsValid() error {
+	return nil
+}
+func (p *FeishuChannelConf) IsValid() error {
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	if p.Condition != nil {
+		if err := p.Condition.IsValid(); err != nil {
+			return fmt.Errorf("field Condition not valid, %w", err)
+		}
+	}
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	if p.Feishu != nil {
+		if err := p.Feishu.IsValid(); err != nil {
+			return fmt.Errorf("field Feishu not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptNotificationConf) IsValid() error {
+	return nil
+}
 func (p *Experiment) IsValid() error {
 	if p.EvalSet != nil {
 		if err := p.EvalSet.IsValid(); err != nil {
@@ -65,6 +95,11 @@ func (p *Experiment) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
 	return nil
@@ -130,6 +165,11 @@ func (p *ExptTemplate) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
 	if p.BaseInfo != nil {

@@ -17,3 +17,5 @@ ALTER TABLE `experiment` ADD COLUMN `thread_id` varchar(255) DEFAULT NULL COMMEN
 ALTER TABLE `experiment` ADD COLUMN `trial_run_item_count` bigint unsigned DEFAULT NULL COMMENT '试运行行数';
 
 ALTER TABLE `experiment` ADD COLUMN `offline_expt_analysis_status` int unsigned NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)';
+
+ALTER TABLE `experiment` ADD COLUMN `notification_conf` text DEFAULT NULL COMMENT 'webhook通知配置，json格式';

@@ -41,6 +41,952 @@ var (
 	_ = thrift.STOP
 )
 
+func (p *NotificationFilterCondition) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.I32 {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_NotificationFilterCondition[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *NotificationFilterCondition) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *string
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Field = _field
+	return offset, nil
+}
+
+func (p *NotificationFilterCondition) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *NotificationOperator
+	if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+
+		tmp := NotificationOperator(v)
+		_field = &tmp
+	}
+	p.Operator = _field
+	return offset, nil
+}
+
+func (p *NotificationFilterCondition) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]ExptStatus, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem ExptStatus
+		if v, l, err := thrift.Binary.ReadI32(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+
+			_elem = ExptStatus(v)
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Values = _field
+	return offset, nil
+}
+
+func (p *NotificationFilterCondition) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *NotificationFilterCondition) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *NotificationFilterCondition) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *NotificationFilterCondition) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetField() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 1)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.Field)
+	}
+	return offset
+}
+
+func (p *NotificationFilterCondition) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetOperator() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I32, 2)
+		offset += thrift.Binary.WriteI32(buf[offset:], int32(*p.Operator))
+	}
+	return offset
+}
+
+func (p *NotificationFilterCondition) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetValues() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 3)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Values {
+			length++
+			offset += thrift.Binary.WriteI32(buf[offset:], int32(v))
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.I32, length)
+	}
+	return offset
+}
+
+func (p *NotificationFilterCondition) field1Length() int {
+	l := 0
+	if p.IsSetField() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.Field)
+	}
+	return l
+}
+
+func (p *NotificationFilterCondition) field2Length() int {
+	l := 0
+	if p.IsSetOperator() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I32Length()
+	}
+	return l
+}
+
+func (p *NotificationFilterCondition) field3Length() int {
+	l := 0
+	if p.IsSetValues() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Values {
+			_ = v
+			l += thrift.Binary.I32Length()
+		}
+	}
+	return l
+}
+
+func (p *NotificationFilterCondition) DeepCopy(s interface{}) error {
+	src, ok := s.(*NotificationFilterCondition)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Field != nil {
+		var tmp string
+		if *src.Field != "" {
+			tmp = kutils.StringDeepCopy(*src.Field)
+		}
+		p.Field = &tmp
+	}
+
+	if src.Operator != nil {
+		tmp := *src.Operator
+		p.Operator = &tmp
+	}
+
+	if src.Values != nil {
+		p.Values = make([]ExptStatus, 0, len(src.Values))
+		for _, elem := range src.Values {
+			var _elem ExptStatus
+			_elem = elem
+			p.Values = append(p.Values, _elem)
+		}
+	}
+
+	return nil
+}
+
+func (p *WebhookChannelConf) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebhookChannelConf[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *WebhookChannelConf) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Enabled = _field
+	return offset, nil
+}
+
+func (p *WebhookChannelConf) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]string, 0, size)
+	for i := 0; i < size; i++ {
+		var _elem string
+		if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+			_elem = v
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Urls = _field
+	return offset, nil
+}
+
+func (p *WebhookChannelConf) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *WebhookChannelConf) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *WebhookChannelConf) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *WebhookChannelConf) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnabled() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Enabled)
+	}
+	return offset
+}
+
+func (p *WebhookChannelConf) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetUrls() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 2)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Urls {
+			length++
+			offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, v)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRING, length)
+	}
+	return offset
+}
+
+func (p *WebhookChannelConf) field1Length() int {
+	l := 0
+	if p.IsSetEnabled() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *WebhookChannelConf) field2Length() int {
+	l := 0
+	if p.IsSetUrls() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Urls {
+			_ = v
+			l += thrift.Binary.StringLengthNocopy(v)
+		}
+	}
+	return l
+}
+
+func (p *WebhookChannelConf) DeepCopy(s interface{}) error {
+	src, ok := s.(*WebhookChannelConf)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Enabled != nil {
+		tmp := *src.Enabled
+		p.Enabled = &tmp
+	}
+
+	if src.Urls != nil {
+		p.Urls = make([]string, 0, len(src.Urls))
+		for _, elem := range src.Urls {
+			var _elem string
+			if elem != "" {
+				_elem = kutils.StringDeepCopy(elem)
+			}
+			p.Urls = append(p.Urls, _elem)
+		}
+	}
+
+	return nil
+}
+
+func (p *FeishuChannelConf) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.BOOL {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FeishuChannelConf[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *FeishuChannelConf) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *bool
+	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.Enabled = _field
+	return offset, nil
+}
+
+func (p *FeishuChannelConf) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *FeishuChannelConf) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *FeishuChannelConf) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *FeishuChannelConf) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEnabled() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Enabled)
+	}
+	return offset
+}
+
+func (p *FeishuChannelConf) field1Length() int {
+	l := 0
+	if p.IsSetEnabled() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *FeishuChannelConf) DeepCopy(s interface{}) error {
+	src, ok := s.(*FeishuChannelConf)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Enabled != nil {
+		tmp := *src.Enabled
+		p.Enabled = &tmp
+	}
+
+	return nil
+}
+
+func (p *NotificationRule) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 2:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField2(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 3:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField3(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_NotificationRule[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *NotificationRule) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+	_field := NewNotificationFilterCondition()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Condition = _field
+	return offset, nil
+}
+
+func (p *NotificationRule) FastReadField2(buf []byte) (int, error) {
+	offset := 0
+	_field := NewWebhookChannelConf()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Webhook = _field
+	return offset, nil
+}
+
+func (p *NotificationRule) FastReadField3(buf []byte) (int, error) {
+	offset := 0
+	_field := NewFeishuChannelConf()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.Feishu = _field
+	return offset, nil
+}
+
+func (p *NotificationRule) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *NotificationRule) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *NotificationRule) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+		l += p.field2Length()
+		l += p.field3Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *NotificationRule) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetCondition() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 1)
+		offset += p.Condition.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *NotificationRule) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetWebhook() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += p.Webhook.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *NotificationRule) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetFeishu() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += p.Feishu.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *NotificationRule) field1Length() int {
+	l := 0
+	if p.IsSetCondition() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Condition.BLength()
+	}
+	return l
+}
+
+func (p *NotificationRule) field2Length() int {
+	l := 0
+	if p.IsSetWebhook() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Webhook.BLength()
+	}
+	return l
+}
+
+func (p *NotificationRule) field3Length() int {
+	l := 0
+	if p.IsSetFeishu() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.Feishu.BLength()
+	}
+	return l
+}
+
+func (p *NotificationRule) DeepCopy(s interface{}) error {
+	src, ok := s.(*NotificationRule)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	var _condition *NotificationFilterCondition
+	if src.Condition != nil {
+		_condition = &NotificationFilterCondition{}
+		if err := _condition.DeepCopy(src.Condition); err != nil {
+			return err
+		}
+	}
+	p.Condition = _condition
+
+	var _webhook *WebhookChannelConf
+	if src.Webhook != nil {
+		_webhook = &WebhookChannelConf{}
+		if err := _webhook.DeepCopy(src.Webhook); err != nil {
+			return err
+		}
+	}
+	p.Webhook = _webhook
+
+	var _feishu *FeishuChannelConf
+	if src.Feishu != nil {
+		_feishu = &FeishuChannelConf{}
+		if err := _feishu.DeepCopy(src.Feishu); err != nil {
+			return err
+		}
+	}
+	p.Feishu = _feishu
+
+	return nil
+}
+
+func (p *ExptNotificationConf) FastRead(buf []byte) (int, error) {
+
+	var err error
+	var offset int
+	var l int
+	var fieldTypeId thrift.TType
+	var fieldId int16
+	for {
+		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
+		offset += l
+		if err != nil {
+			goto ReadFieldBeginError
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 1:
+			if fieldTypeId == thrift.LIST {
+				l, err = p.FastReadField1(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		default:
+			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+			offset += l
+			if err != nil {
+				goto SkipFieldError
+			}
+		}
+	}
+
+	return offset, nil
+ReadFieldBeginError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
+ReadFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_ExptNotificationConf[fieldId]), err)
+SkipFieldError:
+	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
+}
+
+func (p *ExptNotificationConf) FastReadField1(buf []byte) (int, error) {
+	offset := 0
+
+	_, size, l, err := thrift.Binary.ReadListBegin(buf[offset:])
+	offset += l
+	if err != nil {
+		return offset, err
+	}
+	_field := make([]*NotificationRule, 0, size)
+	values := make([]NotificationRule, size)
+	for i := 0; i < size; i++ {
+		_elem := &values[i]
+		_elem.InitDefault()
+		if l, err := _elem.FastRead(buf[offset:]); err != nil {
+			return offset, err
+		} else {
+			offset += l
+		}
+
+		_field = append(_field, _elem)
+	}
+	p.Rules = _field
+	return offset, nil
+}
+
+func (p *ExptNotificationConf) FastWrite(buf []byte) int {
+	return p.FastWriteNocopy(buf, nil)
+}
+
+func (p *ExptNotificationConf) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p != nil {
+		offset += p.fastWriteField1(buf[offset:], w)
+	}
+	offset += thrift.Binary.WriteFieldStop(buf[offset:])
+	return offset
+}
+
+func (p *ExptNotificationConf) BLength() int {
+	l := 0
+	if p != nil {
+		l += p.field1Length()
+	}
+	l += thrift.Binary.FieldStopLength()
+	return l
+}
+
+func (p *ExptNotificationConf) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetRules() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.LIST, 1)
+		listBeginOffset := offset
+		offset += thrift.Binary.ListBeginLength()
+		var length int
+		for _, v := range p.Rules {
+			length++
+			offset += v.FastWriteNocopy(buf[offset:], w)
+		}
+		thrift.Binary.WriteListBegin(buf[listBeginOffset:], thrift.STRUCT, length)
+	}
+	return offset
+}
+
+func (p *ExptNotificationConf) field1Length() int {
+	l := 0
+	if p.IsSetRules() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.ListBeginLength()
+		for _, v := range p.Rules {
+			_ = v
+			l += v.BLength()
+		}
+	}
+	return l
+}
+
+func (p *ExptNotificationConf) DeepCopy(s interface{}) error {
+	src, ok := s.(*ExptNotificationConf)
+	if !ok {
+		return fmt.Errorf("%T's type not matched %T", s, p)
+	}
+
+	if src.Rules != nil {
+		p.Rules = make([]*NotificationRule, 0, len(src.Rules))
+		for _, elem := range src.Rules {
+			var _elem *NotificationRule
+			if elem != nil {
+				_elem = &NotificationRule{}
+				if err := _elem.DeepCopy(elem); err != nil {
+					return err
+				}
+			}
+
+			p.Rules = append(p.Rules, _elem)
+		}
+	}
+
+	return nil
+}
+
 func (p *Experiment) FastRead(buf []byte) (int, error) {
 
 	var err error
@@ -551,6 +1497,20 @@ func (p *Experiment) FastRead(buf []byte) (int, error) {
 		case 71:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField71(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 80:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField80(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -1143,6 +2103,18 @@ func (p *Experiment) FastReadField71(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *Experiment) FastReadField80(buf []byte) (int, error) {
+	offset := 0
+	_field := NewExptNotificationConf()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.NotificationConf = _field
+	return offset, nil
+}
+
 func (p *Experiment) FastReadField100(buf []byte) (int, error) {
 	offset := 0
 
@@ -1234,6 +2206,7 @@ func (p *Experiment) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField63(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField71(buf[offset:], w)
+		offset += p.fastWriteField80(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
 		offset += p.fastWriteField101(buf[offset:], w)
 	}
@@ -1280,6 +2253,7 @@ func (p *Experiment) BLength() int {
 		l += p.field64Length()
 		l += p.field70Length()
 		l += p.field71Length()
+		l += p.field80Length()
 		l += p.field100Length()
 		l += p.field101Length()
 	}
@@ -1635,6 +2609,15 @@ func (p *Experiment) fastWriteField71(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetExptSource() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 71)
 		offset += p.ExptSource.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
+func (p *Experiment) fastWriteField80(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNotificationConf() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 80)
+		offset += p.NotificationConf.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -2003,6 +2986,15 @@ func (p *Experiment) field71Length() int {
 	return l
 }
 
+func (p *Experiment) field80Length() int {
+	l := 0
+	if p.IsSetNotificationConf() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.NotificationConf.BLength()
+	}
+	return l
+}
+
 func (p *Experiment) field100Length() int {
 	l := 0
 	if p.IsSetExt() {
@@ -2300,6 +3292,15 @@ func (p *Experiment) DeepCopy(s interface{}) error {
 		}
 	}
 	p.ExptSource = _exptSource
+
+	var _notificationConf *ExptNotificationConf
+	if src.NotificationConf != nil {
+		_notificationConf = &ExptNotificationConf{}
+		if err := _notificationConf.DeepCopy(src.NotificationConf); err != nil {
+			return err
+		}
+	}
+	p.NotificationConf = _notificationConf
 
 	if src.Ext != nil {
 		p.Ext = make(map[string]string, len(src.Ext))
@@ -3958,6 +4959,20 @@ func (p *ExptTemplate) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 8:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField8(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -4076,6 +5091,18 @@ func (p *ExptTemplate) FastReadField7(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *ExptTemplate) FastReadField8(buf []byte) (int, error) {
+	offset := 0
+	_field := NewExptNotificationConf()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.NotificationConf = _field
+	return offset, nil
+}
+
 func (p *ExptTemplate) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewBaseInfo()
@@ -4102,6 +5129,7 @@ func (p *ExptTemplate) FastWriteNocopy(buf []byte, w thrift.NocopyWriter) int {
 		offset += p.fastWriteField4(buf[offset:], w)
 		offset += p.fastWriteField5(buf[offset:], w)
 		offset += p.fastWriteField6(buf[offset:], w)
+		offset += p.fastWriteField8(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
@@ -4118,6 +5146,7 @@ func (p *ExptTemplate) BLength() int {
 		l += p.field5Length()
 		l += p.field6Length()
 		l += p.field7Length()
+		l += p.field8Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -4183,6 +5212,15 @@ func (p *ExptTemplate) fastWriteField7(buf []byte, w thrift.NocopyWriter) int {
 	if p.IsSetEnableExtractTrajectory() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 7)
 		offset += thrift.Binary.WriteBool(buf[offset:], *p.EnableExtractTrajectory)
+	}
+	return offset
+}
+
+func (p *ExptTemplate) fastWriteField8(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNotificationConf() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 8)
+		offset += p.NotificationConf.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
@@ -4255,6 +5293,15 @@ func (p *ExptTemplate) field7Length() int {
 	if p.IsSetEnableExtractTrajectory() {
 		l += thrift.Binary.FieldBeginLength()
 		l += thrift.Binary.BoolLength()
+	}
+	return l
+}
+
+func (p *ExptTemplate) field8Length() int {
+	l := 0
+	if p.IsSetNotificationConf() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.NotificationConf.BLength()
 	}
 	return l
 }
@@ -4332,6 +5379,15 @@ func (p *ExptTemplate) DeepCopy(s interface{}) error {
 		tmp := *src.EnableExtractTrajectory
 		p.EnableExtractTrajectory = &tmp
 	}
+
+	var _notificationConf *ExptNotificationConf
+	if src.NotificationConf != nil {
+		_notificationConf = &ExptNotificationConf{}
+		if err := _notificationConf.DeepCopy(src.NotificationConf); err != nil {
+			return err
+		}
+	}
+	p.NotificationConf = _notificationConf
 
 	var _baseInfo *common.BaseInfo
 	if src.BaseInfo != nil {

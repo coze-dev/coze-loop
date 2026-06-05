@@ -14,6 +14,31 @@ import (
 	"github.com/coze-dev/coze-loop/backend/pkg/lang/conv"
 )
 
+// marshalNotificationConf serializes *entity.NotificationConf to *string (JSON).
+func marshalNotificationConf(nc *entity.NotificationConf) (*string, error) {
+	if nc == nil {
+		return nil, nil
+	}
+	bytes, err := json.Marshal(nc)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf json marshal fail")
+	}
+	s := conv.UnsafeBytesToString(bytes)
+	return &s, nil
+}
+
+// unmarshalNotificationConf deserializes *string (JSON) to *entity.NotificationConf.
+func unmarshalNotificationConf(s *string) (*entity.NotificationConf, error) {
+	if s == nil || len(*s) == 0 {
+		return nil, nil
+	}
+	nc := new(entity.NotificationConf)
+	if err := json.Unmarshal(conv.UnsafeStringToBytes(*s), nc); err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail")
+	}
+	return nc, nil
+}
+
 func NewExptConverter() ExptConverter {
 	return ExptConverter{}
 }
@@ -67,6 +92,12 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 	if experiment.TrialRunItemCount != 0 {
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
+
+	notifConfStr, err := marshalNotificationConf(experiment.NotificationConf)
+	if err != nil {
+		return nil, err
+	}
+	expt.NotificationConf = notifConfStr
 
 	return expt, nil
 }
@@ -125,6 +156,12 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 			ID: expt.ExptTemplateID,
 		}
 	}
+
+	notifConf, err := unmarshalNotificationConf(expt.NotificationConf)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf unmarshal fail, expt_id: %v", expt.ID)
+	}
+	res.NotificationConf = notifConf
 
 	return res, nil
 }

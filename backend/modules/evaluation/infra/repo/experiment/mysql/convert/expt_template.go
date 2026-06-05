@@ -98,6 +98,13 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		po.ExptInfo = &bytes
 	}
 
+	// 序列化 NotificationConf
+	notifConfStr, err := marshalNotificationConf(template.NotificationConf)
+	if err != nil {
+		return nil, err
+	}
+	po.NotificationConf = notifConfStr
+
 	return po, nil
 }
 
@@ -268,6 +275,12 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		exptSource = templateConf.ExptSource
 	}
 
+	// 反序列化 NotificationConf
+	notifConf, err := unmarshalNotificationConf(po.NotificationConf)
+	if err != nil {
+		return nil, errorx.Wrapf(err, "NotificationConf unmarshal fail, template_id: %v", po.ID)
+	}
+
 	return &entity.ExptTemplate{
 		Meta:                meta,
 		TripleConfig:        tripleConfig,
@@ -277,6 +290,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
 		ExptSource:          exptSource,
+		NotificationConf:    notifConf,
 	}, nil
 }
 

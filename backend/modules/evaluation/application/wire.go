@@ -48,6 +48,7 @@ import (
 	notifyrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/notify"
 	tagrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/tag"
 	trajectoryrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/trajectory"
+	webhookrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/storage"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 	"github.com/coze-dev/coze-loop/backend/pkg/conf"
@@ -72,6 +73,7 @@ var (
 		tagrpc.TagRPCSet,
 		agentrpc.AgentRPCSet,
 		notifyrpc.NotifyRPCSet,
+		webhookrpc.WebhookRPCSet,
 		userinfo.NewUserInfoServiceImpl,
 		NewLock,
 		flagSet,

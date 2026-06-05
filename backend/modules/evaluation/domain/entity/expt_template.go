@@ -37,6 +37,9 @@ type ExptTemplate struct {
 
 	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
 	ExptSource *ExptSource
+
+	// NotificationConf 实验模板通知配置
+	NotificationConf *NotificationConf
 }
 
 // ExptSource 实验来源信息
