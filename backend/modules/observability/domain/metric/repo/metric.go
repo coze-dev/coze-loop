@@ -57,6 +57,9 @@ type FeedbackAggregationRow struct {
 	AvgFloat       float64
 	MaxFloat       float64
 	MinFloat       float64
+	P50Float       float64
+	P90Float       float64
+	P99Float       float64
 }
 
 // IAnnotationMetricRepo annotation 表 Feedback 指标聚合查询接口

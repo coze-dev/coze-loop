@@ -19,6 +19,9 @@ const (
 	MetricFeedbackScoreAvg          = "feedback_score_avg"
 	MetricFeedbackScoreMax          = "feedback_score_max"
 	MetricFeedbackScoreMin          = "feedback_score_min"
+	MetricFeedbackScoreP50          = "feedback_score_p50"
+	MetricFeedbackScoreP90          = "feedback_score_p90"
+	MetricFeedbackScoreP99          = "feedback_score_p99"
 	MetricFeedbackValueDistribution = "feedback_value_distribution"
 
 	MetricGroupFeedback = "feedback"
@@ -114,7 +117,31 @@ func (m *MetricsService) convertFeedbackRows(rows []*repo.FeedbackAggregationRow
 			ObjectKeys:   copyObjectKeys(baseObjectKeys),
 		})
 
-		// numeric 类型: 写入 avg/max/min
+		// feedback_count_by_key_pie: 按 annotation_key 维度聚合
+		events = append(events, &entity.MetricEvent{
+			PlatformType: platformType,
+			WorkspaceID:  row.SpaceID,
+			StartDate:    startDate,
+			MetricName:   entity.MetricNameFeedbackCountByKeyPie,
+			MetricValue:  strconv.FormatInt(row.Count, 10),
+			ObjectKeys: map[string]string{
+				"annotation_key": row.AnnotationKey,
+			},
+		})
+
+		// feedback_count_by_source_pie: 按 feedback_source 维度聚合
+		events = append(events, &entity.MetricEvent{
+			PlatformType: platformType,
+			WorkspaceID:  row.SpaceID,
+			StartDate:    startDate,
+			MetricName:   entity.MetricNameFeedbackCountBySourcePie,
+			MetricValue:  strconv.FormatInt(row.Count, 10),
+			ObjectKeys: map[string]string{
+				"feedback_source": row.FeedbackSource,
+			},
+		})
+
+		// numeric 类型: 写入 avg/max/min/p50/p90/p99
 		if isNumericValueType(row.ValueType) {
 			events = append(events, &entity.MetricEvent{
 				PlatformType: platformType,
@@ -138,6 +165,30 @@ func (m *MetricsService) convertFeedbackRows(rows []*repo.FeedbackAggregationRow
 				StartDate:    startDate,
 				MetricName:   MetricFeedbackScoreMin,
 				MetricValue:  strconv.FormatFloat(row.MinFloat, 'f', -1, 64),
+				ObjectKeys:   copyObjectKeys(baseObjectKeys),
+			})
+			events = append(events, &entity.MetricEvent{
+				PlatformType: platformType,
+				WorkspaceID:  row.SpaceID,
+				StartDate:    startDate,
+				MetricName:   MetricFeedbackScoreP50,
+				MetricValue:  strconv.FormatFloat(row.P50Float, 'f', -1, 64),
+				ObjectKeys:   copyObjectKeys(baseObjectKeys),
+			})
+			events = append(events, &entity.MetricEvent{
+				PlatformType: platformType,
+				WorkspaceID:  row.SpaceID,
+				StartDate:    startDate,
+				MetricName:   MetricFeedbackScoreP90,
+				MetricValue:  strconv.FormatFloat(row.P90Float, 'f', -1, 64),
+				ObjectKeys:   copyObjectKeys(baseObjectKeys),
+			})
+			events = append(events, &entity.MetricEvent{
+				PlatformType: platformType,
+				WorkspaceID:  row.SpaceID,
+				StartDate:    startDate,
+				MetricName:   MetricFeedbackScoreP99,
+				MetricValue:  strconv.FormatFloat(row.P99Float, 'f', -1, 64),
 				ObjectKeys:   copyObjectKeys(baseObjectKeys),
 			})
 		}
