@@ -4,6 +4,7 @@
 package experiment
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -2739,6 +2740,15 @@ func OpenAPINotificationConfDTO2Domain(conf *openapiExperiment.ExptNotificationC
 		if err != nil {
 			return nil, fmt.Errorf("invalid notification filter: %w", err)
 		}
+		// Convert English value strings to internal numeric format for notification filter
+		if f != nil {
+			for _, cond := range f.FilterConditions {
+				if cond == nil {
+					continue
+				}
+				cond.Value = openAPIFilterValueToDomain(cond.Field.GetFieldType(), cond.GetValue())
+			}
+		}
 		result.Filter = f
 	}
 	if conf.Webhook != nil {
@@ -2765,19 +2775,20 @@ func entityNotificationConfToOpenAPI(conf *entity.ExptNotificationConf) *openapi
 	if conf.Filter != nil {
 		f := &openapiExperiment.Filters{}
 		if conf.Filter.LogicOp != nil {
-			f.LogicOp = gptr.Of(strconv.FormatInt(int64(*conf.Filter.LogicOp), 10))
+			f.LogicOp = gptr.Of(domainFilterLogicOpToOpenAPI(domainExpt.FilterLogicOp(*conf.Filter.LogicOp)))
 		}
 		for _, cond := range conf.Filter.FilterConditions {
 			if cond == nil {
 				continue
 			}
+			fieldType := domainExpt.FieldType(cond.Field.FieldType)
 			fc := &openapiExperiment.FilterCondition{
-				Operator: gptr.Of(strconv.FormatInt(int64(cond.Operator), 10)),
-				Value:    gptr.Of(cond.Value),
+				Operator: gptr.Of(domainFilterOperatorToOpenAPI(domainExpt.FilterOperatorType(cond.Operator))),
+				Value:    gptr.Of(domainFilterValueToOpenAPI(fieldType, cond.Value)),
 			}
 			if cond.Field != nil {
 				fc.Field = &openapiExperiment.FilterField{
-					FieldType: gptr.Of(strconv.FormatInt(int64(cond.Field.FieldType), 10)),
+					FieldType: gptr.Of(openapiExperiment.FilterFieldType(domainFieldTypeToOpenAPI(fieldType))),
 					FieldKey:  cond.Field.FieldKey,
 				}
 			}
@@ -2809,19 +2820,20 @@ func domainNotificationConfToOpenAPI(conf *domainExpt.ExptNotificationConf) *ope
 	if conf.Filter != nil {
 		f := &openapiExperiment.Filters{}
 		if conf.Filter.LogicOp != nil {
-			f.LogicOp = gptr.Of(strconv.FormatInt(int64(*conf.Filter.LogicOp), 10))
+			f.LogicOp = gptr.Of(domainFilterLogicOpToOpenAPI(*conf.Filter.LogicOp))
 		}
 		for _, cond := range conf.Filter.FilterConditions {
 			if cond == nil {
 				continue
 			}
+			fieldType := cond.Field.GetFieldType()
 			fc := &openapiExperiment.FilterCondition{
-				Operator: gptr.Of(strconv.FormatInt(int64(cond.GetOperator()), 10)),
-				Value:    gptr.Of(cond.GetValue()),
+				Operator: gptr.Of(domainFilterOperatorToOpenAPI(cond.GetOperator())),
+				Value:    gptr.Of(domainFilterValueToOpenAPI(fieldType, cond.GetValue())),
 			}
 			if cond.Field != nil {
 				fc.Field = &openapiExperiment.FilterField{
-					FieldType: gptr.Of(strconv.FormatInt(int64(cond.Field.GetFieldType()), 10)),
+					FieldType: gptr.Of(openapiExperiment.FilterFieldType(domainFieldTypeToOpenAPI(fieldType))),
 					FieldKey:  cond.Field.FieldKey,
 				}
 			}
@@ -2842,4 +2854,274 @@ func domainNotificationConfToOpenAPI(conf *domainExpt.ExptNotificationConf) *ope
 		}
 	}
 	return result
+}
+
+// domainFilterLogicOpToOpenAPI converts domain FilterLogicOp number to OpenAPI string.
+func domainFilterLogicOpToOpenAPI(op domainExpt.FilterLogicOp) string {
+	switch op {
+	case domainExpt.FilterLogicOp_And:
+		return "and"
+	case domainExpt.FilterLogicOp_Or:
+		return "or"
+	default:
+		return strconv.FormatInt(int64(op), 10)
+	}
+}
+
+// domainFieldTypeToOpenAPI converts domain FieldType number to OpenAPI string.
+func domainFieldTypeToOpenAPI(ft domainExpt.FieldType) string {
+	switch ft {
+	case domainExpt.FieldType_EvaluatorScore:
+		return "evaluator_score"
+	case domainExpt.FieldType_CreatorBy:
+		return "creator_by"
+	case domainExpt.FieldType_UpdatedBy:
+		return "updated_by"
+	case domainExpt.FieldType_ExptStatus:
+		return "expt_status"
+	case domainExpt.FieldType_TurnRunState:
+		return "turn_run_state"
+	case domainExpt.FieldType_TargetID:
+		return "target_id"
+	case domainExpt.FieldType_EvalSetID:
+		return "eval_set_id"
+	case domainExpt.FieldType_EvaluatorID:
+		return "evaluator_id"
+	case domainExpt.FieldType_TargetType:
+		return "target_type"
+	case domainExpt.FieldType_SourceTarget:
+		return "source_target"
+	case domainExpt.FieldType_EvaluatorVersionID:
+		return "evaluator_version_id"
+	case domainExpt.FieldType_TargetVersionID:
+		return "target_version_id"
+	case domainExpt.FieldType_EvalSetVersionID:
+		return "eval_set_version_id"
+	case domainExpt.FieldType_ExptType:
+		return "expt_type"
+	case domainExpt.FieldType_SourceType:
+		return "source_type"
+	case domainExpt.FieldType_SourceID:
+		return "source_id"
+	case domainExpt.FieldType_KeywordSearch:
+		return "keyword_search"
+	case domainExpt.FieldType_EvalSetColumn:
+		return "eval_set_column"
+	case domainExpt.FieldType_Annotation:
+		return "annotation"
+	case domainExpt.FieldType_ActualOutput:
+		return "actual_output"
+	case domainExpt.FieldType_EvaluatorScoreCorrected:
+		return "evaluator_score_corrected"
+	case domainExpt.FieldType_Evaluator:
+		return "evaluator"
+	case domainExpt.FieldType_ItemID:
+		return "item_id"
+	case domainExpt.FieldType_ItemRunState:
+		return "item_run_state"
+	case domainExpt.FieldType_AnnotationScore:
+		return "annotation_score"
+	case domainExpt.FieldType_AnnotationText:
+		return "annotation_text"
+	case domainExpt.FieldType_AnnotationCategorical:
+		return "annotation_categorical"
+	case domainExpt.FieldType_TotalLatency:
+		return "total_latency"
+	case domainExpt.FieldType_InputTokens:
+		return "input_tokens"
+	case domainExpt.FieldType_OutputTokens:
+		return "output_tokens"
+	case domainExpt.FieldType_TotalTokens:
+		return "total_tokens"
+	case domainExpt.FieldType_ExperimentTemplateID:
+		return "experiment_template_id"
+	case domainExpt.FieldType_EvaluatorWeightedScore:
+		return "evaluator_weighted_score"
+	default:
+		return strconv.FormatInt(int64(ft), 10)
+	}
+}
+
+// domainFilterOperatorToOpenAPI converts domain FilterOperatorType number to OpenAPI string.
+func domainFilterOperatorToOpenAPI(op domainExpt.FilterOperatorType) string {
+	switch op {
+	case domainExpt.FilterOperatorType_Equal:
+		return "equal"
+	case domainExpt.FilterOperatorType_NotEqual:
+		return "not_equal"
+	case domainExpt.FilterOperatorType_Greater:
+		return "greater"
+	case domainExpt.FilterOperatorType_GreaterOrEqual:
+		return "greater_or_equal"
+	case domainExpt.FilterOperatorType_Less:
+		return "less"
+	case domainExpt.FilterOperatorType_LessOrEqual:
+		return "less_or_equal"
+	case domainExpt.FilterOperatorType_In:
+		return "in"
+	case domainExpt.FilterOperatorType_NotIn:
+		return "not_in"
+	case domainExpt.FilterOperatorType_Like:
+		return "like"
+	case domainExpt.FilterOperatorType_NotLike:
+		return "not_like"
+	case domainExpt.FilterOperatorType_IsNull:
+		return "is_null"
+	case domainExpt.FilterOperatorType_IsNotNull:
+		return "is_not_null"
+	default:
+		return strconv.FormatInt(int64(op), 10)
+	}
+}
+
+// domainFilterValueToOpenAPI converts filter value from internal numeric representation to OpenAPI English strings
+// based on field_type. For field types with known enum mappings (like ExptStatus), numeric values are converted
+// to their English equivalents. For other field types, the value is returned as-is.
+func domainFilterValueToOpenAPI(ft domainExpt.FieldType, value string) string {
+	switch ft {
+	case domainExpt.FieldType_ExptStatus:
+		return convertExptStatusValueToOpenAPI(value)
+	default:
+		return value
+	}
+}
+
+// convertExptStatusValueToOpenAPI converts expt_status numeric values to OpenAPI English strings.
+// Supports JSON array format like ["3","11","12"] and comma-separated format like "3,11,12".
+func convertExptStatusValueToOpenAPI(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return value
+	}
+
+	// Handle JSON array format: ["3","11","12"]
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		var items []string
+		if err := json.Unmarshal([]byte(value), &items); err != nil {
+			return value
+		}
+		result := make([]string, 0, len(items))
+		for _, item := range items {
+			result = append(result, singleExptStatusToOpenAPI(strings.TrimSpace(item)))
+		}
+		marshaled, err := json.Marshal(result)
+		if err != nil {
+			return value
+		}
+		return string(marshaled)
+	}
+
+	// Handle comma-separated format: "3,11,12"
+	if strings.Contains(value, ",") {
+		parts := strings.Split(value, ",")
+		result := make([]string, 0, len(parts))
+		for _, p := range parts {
+			result = append(result, singleExptStatusToOpenAPI(strings.TrimSpace(p)))
+		}
+		return strings.Join(result, ",")
+	}
+
+	// Single value
+	return singleExptStatusToOpenAPI(value)
+}
+
+func singleExptStatusToOpenAPI(s string) string {
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		// Already a string (e.g. "success"), return as-is
+		return s
+	}
+	switch domainExpt.ExptStatus(n) {
+	case domainExpt.ExptStatus_Pending:
+		return "pending"
+	case domainExpt.ExptStatus_Processing:
+		return "processing"
+	case domainExpt.ExptStatus_Success:
+		return "success"
+	case domainExpt.ExptStatus_Failed:
+		return "failed"
+	case domainExpt.ExptStatus_Terminated:
+		return "terminated"
+	case domainExpt.ExptStatus_SystemTerminated:
+		return "system_terminated"
+	case domainExpt.ExptStatus_Draining:
+		return "draining"
+	default:
+		return s
+	}
+}
+
+// openAPIFilterValueToDomain converts OpenAPI English value strings to internal numeric format
+// based on field_type. Only applies to notification filter input.
+func openAPIFilterValueToDomain(ft domainExpt.FieldType, value string) string {
+	switch ft {
+	case domainExpt.FieldType_ExptStatus:
+		return convertExptStatusValueToDomain(value)
+	default:
+		return value
+	}
+}
+
+// convertExptStatusValueToDomain converts expt_status English strings to numeric values.
+// Supports JSON array format like ["success","failed"] and comma-separated format like "success,failed".
+func convertExptStatusValueToDomain(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return value
+	}
+
+	// Handle JSON array format: ["success","failed"]
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		var items []string
+		if err := json.Unmarshal([]byte(value), &items); err != nil {
+			return value
+		}
+		result := make([]string, 0, len(items))
+		for _, item := range items {
+			result = append(result, singleExptStatusToDomain(strings.TrimSpace(item)))
+		}
+		marshaled, err := json.Marshal(result)
+		if err != nil {
+			return value
+		}
+		return string(marshaled)
+	}
+
+	// Handle comma-separated format: "success,failed"
+	if strings.Contains(value, ",") {
+		parts := strings.Split(value, ",")
+		result := make([]string, 0, len(parts))
+		for _, p := range parts {
+			result = append(result, singleExptStatusToDomain(strings.TrimSpace(p)))
+		}
+		return strings.Join(result, ",")
+	}
+
+	// Single value
+	return singleExptStatusToDomain(value)
+}
+
+func singleExptStatusToDomain(s string) string {
+	// If already numeric, return as-is
+	if _, err := strconv.ParseInt(s, 10, 64); err == nil {
+		return s
+	}
+	switch strings.ToLower(s) {
+	case "pending":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Pending), 10)
+	case "processing":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Processing), 10)
+	case "success":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Success), 10)
+	case "failed":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Failed), 10)
+	case "terminated":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Terminated), 10)
+	case "system_terminated":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_SystemTerminated), 10)
+	case "draining":
+		return strconv.FormatInt(int64(domainExpt.ExptStatus_Draining), 10)
+	default:
+		return s
+	}
 }
