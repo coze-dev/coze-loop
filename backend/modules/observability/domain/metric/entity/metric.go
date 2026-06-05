@@ -114,7 +114,9 @@ const (
 	MetricNameFeedbackScoreP50          = "feedback_score_p50"
 	MetricNameFeedbackScoreP90          = "feedback_score_p90"
 	MetricNameFeedbackScoreP99          = "feedback_score_p99"
-	MetricNameFeedbackValueDistribution = "feedback_value_distribution"
+	MetricNameFeedbackValueDistribution  = "feedback_value_distribution"
+	MetricNameFeedbackCountByKeyPie      = "feedback_count_by_key_pie"
+	MetricNameFeedbackCountBySourcePie   = "feedback_count_by_source_pie"
 
 	// 复合指标计算
 	MetricOperatorDivide MetricOperator = "divide"

@@ -18,6 +18,10 @@ const (
 	DrillDownValueTypeToolName = "tool_name"
 
 	DrillDownValueTypeInnerModelName = "inner_model_name"
+
+	DrillDownValueTypeAnnotationKey = "annotation_key"
+
+	DrillDownValueTypeFeedbackSource = "feedback_source"
 )
 
 type CompareType = string

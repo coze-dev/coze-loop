@@ -471,6 +471,12 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 			Filters:         req.FilterFields,
 			DrillDownFields: req.DrillDownFields,
 		}
+		// 把指标定义的 GroupBy 维度合并到 DrillDownFields
+		for _, dim := range mDef.GroupBy() {
+			if dim.Field != nil {
+				param.DrillDownFields = append(param.DrillDownFields, dim.Field)
+			}
+		}
 		if mDef.Type() == entity.MetricTypeTimeSeries {
 			param.Granularity = req.Granularity
 		}
