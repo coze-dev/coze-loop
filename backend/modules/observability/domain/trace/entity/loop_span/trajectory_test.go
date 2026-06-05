@@ -13,7 +13,7 @@ import (
 func TestBuildTrajectoryFromSpans_Empty(t *testing.T) {
 	t.Parallel()
 	var spans SpanList
-	traj := BuildTrajectoryFromSpans(spans)
+	traj := BuildTrajectoryFromSpans(spans, nil)
 	assert.Nil(t, traj)
 }
 
@@ -127,7 +127,7 @@ func TestBuildTrajectoryFromSpans_ComplexTree(t *testing.T) {
 	}
 
 	spans := SpanList{root, p1, m1, t1, a1, o2, m2, t2}
-	traj := BuildTrajectoryFromSpans(spans)
+	traj := BuildTrajectoryFromSpans(spans, nil)
 	assert.NotNil(t, traj)
 	assert.NotNil(t, traj.RootStep)
 	assert.NotNil(t, traj.ID)
@@ -257,7 +257,7 @@ func TestBuildTrajectoryFromSpans_ModelIsParentOfTool(t *testing.T) {
 	}
 
 	spans := SpanList{root, m1, t1}
-	traj := BuildTrajectoryFromSpans(spans)
+	traj := BuildTrajectoryFromSpans(spans, nil)
 	assert.NotNil(t, traj)
 	assert.NotNil(t, traj.RootStep)
 	assert.NotNil(t, traj.ID)
@@ -348,7 +348,7 @@ func TestBuildTrajectoryFromSpans_NoRoot(t *testing.T) {
 	a := &Span{SpanID: "a", ParentID: "p", TraceID: traceID, SpanType: "agent", StartTime: 20, DurationMicros: 1000000}
 	tool := &Span{SpanID: "t", ParentID: "a", TraceID: traceID, SpanType: "tool", StartTime: 30, DurationMicros: 500000}
 	spans := SpanList{p, a, tool}
-	traj := BuildTrajectoryFromSpans(spans)
+	traj := BuildTrajectoryFromSpans(spans, nil)
 	assert.NotNil(t, traj)
 	assert.Nil(t, traj.RootStep)
 	assert.NotNil(t, traj.ID)
@@ -364,8 +364,8 @@ func TestBuildRootMetricsInfo_Dedup(t *testing.T) {
 	// 构造两个 AgentStep，包含重复的同一 model Step ID
 	mSpan := &Span{SpanID: "m", ParentID: "p", SpanType: "model", DurationMicros: 1000000}
 	toolSpan := &Span{SpanID: "t", ParentID: "p", SpanType: "tool", DurationMicros: 1000000}
-	modelStep := buildStep(mSpan)
-	toolStep := buildStep(toolSpan)
+	modelStep := buildStep(mSpan, nil)
+	toolStep := buildStep(toolSpan, nil)
 	as1 := &AgentStep{Steps: []*Step{modelStep, toolStep}}
 	// 重复加入同一 ID 的 modelStep
 	as2 := &AgentStep{Steps: []*Step{modelStep}}
@@ -376,4 +376,265 @@ func TestBuildRootMetricsInfo_Dedup(t *testing.T) {
 	assert.Equal(t, "1000", *mi.LlmDuration)
 	assert.NotNil(t, mi.ToolDuration)
 	assert.Equal(t, "1000", *mi.ToolDuration)
+}
+
+func TestMatchMetaKey(t *testing.T) {
+	t.Parallel()
+
+	rules := []MetaKeyRule{
+		{Key: "bot_id", MatchType: "exact"},
+		{Key: "custom_", MatchType: "prefix"},
+	}
+
+	tests := []struct {
+		key      string
+		expected bool
+	}{
+		{"bot_id", true},
+		{"bot_id_extra", false},
+		{"custom_field", true},
+		{"custom_", true},
+		{"custom", false},
+		{"other_key", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.key, func(t *testing.T) {
+			assert.Equal(t, tt.expected, matchMetaKey(tt.key, rules))
+		})
+	}
+
+	// 空规则返回 false
+	assert.False(t, matchMetaKey("any", nil))
+	assert.False(t, matchMetaKey("any", []MetaKeyRule{}))
+
+	// 未知 MatchType 不匹配
+	assert.False(t, matchMetaKey("foo", []MetaKeyRule{{Key: "foo", MatchType: "regex"}}))
+}
+
+func TestBuildMetadata(t *testing.T) {
+	t.Parallel()
+
+	rules := []MetaKeyRule{
+		{Key: "bot_id", MatchType: "exact"},
+		{Key: "app_", MatchType: "prefix"},
+		{Key: "count", MatchType: "exact"},
+		{Key: "ratio", MatchType: "exact"},
+		{Key: "enabled", MatchType: "exact"},
+		{Key: "raw_data", MatchType: "exact"},
+	}
+
+	t.Run("nil span returns nil", func(t *testing.T) {
+		assert.Nil(t, buildMetadata(nil, rules))
+	})
+
+	t.Run("nil rules returns nil", func(t *testing.T) {
+		span := &Span{TagsString: map[string]string{"bot_id": "123"}}
+		assert.Nil(t, buildMetadata(span, nil))
+	})
+
+	t.Run("empty rules returns nil", func(t *testing.T) {
+		span := &Span{TagsString: map[string]string{"bot_id": "123"}}
+		assert.Nil(t, buildMetadata(span, []MetaKeyRule{}))
+	})
+
+	t.Run("no matching keys returns nil", func(t *testing.T) {
+		span := &Span{
+			TagsString: map[string]string{"unrelated": "val"},
+			TagsLong:   map[string]int64{"other": 1},
+		}
+		assert.Nil(t, buildMetadata(span, rules))
+	})
+
+	t.Run("extracts from TagsString", func(t *testing.T) {
+		span := &Span{
+			TagsString: map[string]string{
+				"bot_id":    "b123",
+				"app_name":  "myapp",
+				"app_ver":   "1.0",
+				"unrelated": "skip",
+			},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, map[string]string{
+			"bot_id":   "b123",
+			"app_name": "myapp",
+			"app_ver":  "1.0",
+		}, meta)
+	})
+
+	t.Run("extracts from TagsLong", func(t *testing.T) {
+		span := &Span{
+			TagsLong: map[string]int64{
+				"count":   42,
+				"ignored": 99,
+			},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, map[string]string{"count": "42"}, meta)
+	})
+
+	t.Run("extracts from TagsDouble", func(t *testing.T) {
+		span := &Span{
+			TagsDouble: map[string]float64{
+				"ratio":   0.75,
+				"ignored": 1.5,
+			},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, map[string]string{"ratio": "0.75"}, meta)
+	})
+
+	t.Run("extracts from TagsBool", func(t *testing.T) {
+		span := &Span{
+			TagsBool: map[string]bool{
+				"enabled": true,
+				"ignored": false,
+			},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, map[string]string{"enabled": "true"}, meta)
+	})
+
+	t.Run("extracts from TagsByte", func(t *testing.T) {
+		span := &Span{
+			TagsByte: map[string]string{
+				"raw_data": "binary_content",
+				"ignored":  "skip",
+			},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, map[string]string{"raw_data": "binary_content"}, meta)
+	})
+
+	t.Run("extracts from all tag types combined", func(t *testing.T) {
+		span := &Span{
+			TagsString: map[string]string{"bot_id": "b1"},
+			TagsLong:   map[string]int64{"count": 10},
+			TagsDouble: map[string]float64{"ratio": 3.14},
+			TagsBool:   map[string]bool{"enabled": false},
+			TagsByte:   map[string]string{"raw_data": "bytes"},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, "b1", meta["bot_id"])
+		assert.Equal(t, "10", meta["count"])
+		assert.Equal(t, "3.14", meta["ratio"])
+		assert.Equal(t, "false", meta["enabled"])
+		assert.Equal(t, "bytes", meta["raw_data"])
+		assert.Len(t, meta, 5)
+	})
+
+	t.Run("prefix match across different tag types", func(t *testing.T) {
+		span := &Span{
+			TagsString: map[string]string{"app_name": "test"},
+			TagsLong:   map[string]int64{"app_count": 5},
+			TagsDouble: map[string]float64{"app_ratio": 0.1},
+		}
+		meta := buildMetadata(span, rules)
+		assert.Equal(t, "test", meta["app_name"])
+		assert.Equal(t, "5", meta["app_count"])
+		assert.Equal(t, "0.1", meta["app_ratio"])
+		assert.Len(t, meta, 3)
+	})
+}
+
+func TestBuildTrajectoryFromSpans_WithMetadataRules(t *testing.T) {
+	t.Parallel()
+	traceID := "trace_meta"
+
+	rules := []MetaKeyRule{
+		{Key: "bot_id", MatchType: "exact"},
+		{Key: "custom_", MatchType: "prefix"},
+	}
+
+	root := &Span{
+		SpanID:         "r",
+		ParentID:       "",
+		TraceID:        traceID,
+		SpanName:       "root-agent",
+		SpanType:       "agent",
+		StartTime:      0,
+		DurationMicros: 3000000,
+		Input:          "in",
+		Output:         "out",
+		TagsString: map[string]string{
+			"bot_id":       "bot_123",
+			"custom_field": "val1",
+			"unrelated":    "skip",
+		},
+		TagsLong: map[string]int64{
+			"custom_count": 7,
+		},
+	}
+
+	child := &Span{
+		SpanID:    "c1",
+		ParentID:  "r",
+		TraceID:   traceID,
+		SpanName:  "tool-1",
+		SpanType:  "tool",
+		StartTime: 100,
+		TagsString: map[string]string{
+			"bot_id":    "bot_456",
+			"other_key": "ignore",
+		},
+		TagsBool: map[string]bool{
+			"custom_flag": true,
+		},
+	}
+
+	spans := SpanList{root, child}
+	traj := BuildTrajectoryFromSpans(spans, rules)
+	assert.NotNil(t, traj)
+
+	// RootStep metadata 包含匹配的 key
+	assert.NotNil(t, traj.RootStep.Metadata)
+	assert.Equal(t, "bot_123", traj.RootStep.Metadata["bot_id"])
+	assert.Equal(t, "val1", traj.RootStep.Metadata["custom_field"])
+	assert.Equal(t, "7", traj.RootStep.Metadata["custom_count"])
+	assert.NotContains(t, traj.RootStep.Metadata, "unrelated")
+
+	// AgentStep metadata
+	assert.Equal(t, 1, len(traj.AgentSteps))
+	assert.NotNil(t, traj.AgentSteps[0].Metadata)
+	assert.Equal(t, "bot_123", traj.AgentSteps[0].Metadata["bot_id"])
+	assert.Equal(t, "val1", traj.AgentSteps[0].Metadata["custom_field"])
+
+	// Child step (tool) metadata
+	assert.NotEmpty(t, traj.AgentSteps[0].Steps)
+	var toolStep *Step
+	for _, s := range traj.AgentSteps[0].Steps {
+		if s != nil && s.ID != nil && *s.ID == "c1" {
+			toolStep = s
+		}
+	}
+	assert.NotNil(t, toolStep)
+	assert.NotNil(t, toolStep.Metadata)
+	assert.Equal(t, "bot_456", toolStep.Metadata["bot_id"])
+	assert.Equal(t, "true", toolStep.Metadata["custom_flag"])
+	assert.NotContains(t, toolStep.Metadata, "other_key")
+}
+
+func TestBuildTrajectoryFromSpans_NilRulesNoMetadata(t *testing.T) {
+	t.Parallel()
+	traceID := "trace_no_meta"
+
+	root := &Span{
+		SpanID:         "r",
+		ParentID:       "",
+		TraceID:        traceID,
+		SpanName:       "root-agent",
+		SpanType:       "agent",
+		StartTime:      0,
+		DurationMicros: 1000000,
+		TagsString:     map[string]string{"bot_id": "b1", "key": "val"},
+	}
+
+	spans := SpanList{root}
+	traj := BuildTrajectoryFromSpans(spans, nil)
+	assert.NotNil(t, traj)
+	// nil rules 不填充 metadata
+	assert.Nil(t, traj.RootStep.Metadata)
+	assert.Nil(t, traj.AgentSteps[0].Metadata)
 }
