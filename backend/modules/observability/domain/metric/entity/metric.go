@@ -111,6 +111,9 @@ const (
 	MetricNameFeedbackScoreAvg          = "feedback_score_avg"
 	MetricNameFeedbackScoreMax          = "feedback_score_max"
 	MetricNameFeedbackScoreMin          = "feedback_score_min"
+	MetricNameFeedbackScoreP50          = "feedback_score_p50"
+	MetricNameFeedbackScoreP90          = "feedback_score_p90"
+	MetricNameFeedbackScoreP99          = "feedback_score_p99"
 	MetricNameFeedbackValueDistribution = "feedback_value_distribution"
 
 	// 复合指标计算
