@@ -515,8 +515,8 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		return nil, err
 	}
 
-	// 重新获取更新后的模板
-	updatedTemplate, err = e.templateRepo.GetByID(ctx, param.TemplateID, &param.SpaceID)
+	// 重新获取更新后的模板（强制走主库避免主从延迟导致字段 stale，例如首次写入的 notification_conf 在从库尚未应用 binlog 时被读为 NULL）
+	updatedTemplate, err = e.templateRepo.GetByID(contexts.WithCtxWriteDB(ctx), param.TemplateID, &param.SpaceID)
 	if err != nil {
 		return nil, err
 	}

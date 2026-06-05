@@ -37,6 +37,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	repo_mocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 	svcmocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/service/mocks"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/contexts"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/errno"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 )
@@ -765,7 +766,7 @@ func TestExptTemplateManagerImpl_Update_PreservesExptSourceInTemplateConf(t *tes
 		},
 	}
 	mockRepo.EXPECT().
-		GetByID(ctx, templateID, gomock.AssignableToTypeOf(&spaceID)).
+		GetByID(contexts.WithCtxWriteDB(ctx), templateID, gomock.AssignableToTypeOf(&spaceID)).
 		Return(updatedFromDB, nil)
 
 	mockTargetSvc.EXPECT().

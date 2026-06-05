@@ -56,7 +56,11 @@ func (d *exptTemplateDAOImpl) Create(ctx context.Context, template *model.ExptTe
 
 func (d *exptTemplateDAOImpl) GetByID(ctx context.Context, id int64) (*model.ExptTemplate, error) {
 	q := query.Use(d.db.NewSession(ctx)).ExptTemplate
-	result, err := q.WithContext(ctx).Where(q.ID.Eq(id)).First()
+	stmt := q.WithContext(ctx)
+	if contexts.CtxWriteDB(ctx) {
+		stmt = stmt.WriteDB()
+	}
+	result, err := stmt.Where(q.ID.Eq(id)).First()
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
