@@ -300,7 +300,32 @@ struct ExptTemplate {
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     5: optional bool enable_extract_trajectory
 
+    // 通知配置（公共触发条件 filter + 各渠道独立开关 / 参数）
+    10: optional ExptNotificationConf notification_conf
+
     100: optional common.BaseInfo base_info
+}
+
+// 通知配置（公共触发条件 + 各渠道独立开关/参数）
+struct ExptNotificationConf {
+    // 公共触发条件
+    1: optional Filters filter
+    // Webhook 渠道
+    2: optional WebhookNotificationConf webhook
+    // 飞书渠道
+    3: optional FeishuNotificationConf feishu_notification
+}
+
+struct WebhookNotificationConf {
+    1: optional bool enable
+    // Multiple webhook URLs are stored as a comma-separated string for API compatibility.
+    2: optional string urls
+}
+
+struct FeishuNotificationConf {
+    1: optional bool enable
+    // Empty means notify the experiment creator.
+    2: optional string user_id
 }
 
 // ===============================

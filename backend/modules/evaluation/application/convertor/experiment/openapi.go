@@ -1711,7 +1711,179 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
 
+	dto.NotificationConf = OpenAPINotificationConfDO2DTO(template.NotificationConf)
+
 	return dto
+}
+
+// OpenAPINotificationConfDO2DTO 将 entity.ExptNotificationConf 转为 OpenAPI 的 ExptNotificationConf。
+func OpenAPINotificationConfDO2DTO(conf *entity.ExptNotificationConf) *openapiExperiment.ExptNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	return &openapiExperiment.ExptNotificationConf{
+		Filter:             openAPINotificationFilterDO2DTO(conf.Filter),
+		Webhook:            openAPIWebhookNotificationConfDO2DTO(conf.Webhook),
+		FeishuNotification: openAPIFeishuNotificationConfDO2DTO(conf.FeishuNotification),
+	}
+}
+
+func openAPIWebhookNotificationConfDO2DTO(conf *entity.WebhookNotificationConf) *openapiExperiment.WebhookNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	return &openapiExperiment.WebhookNotificationConf{
+		Enable: gptr.Of(conf.Enable),
+		Urls:   gptr.Of(conf.URLs),
+	}
+}
+
+func openAPIFeishuNotificationConfDO2DTO(conf *entity.FeishuNotificationConf) *openapiExperiment.FeishuNotificationConf {
+	if conf == nil {
+		return nil
+	}
+	return &openapiExperiment.FeishuNotificationConf{
+		Enable: gptr.Of(conf.Enable),
+		UserID: gptr.Of(conf.UserID),
+	}
+}
+
+// openAPINotificationFilterDO2DTO 将 entity.NotificationFilter 转为 OpenAPI 的 Filters（字符串枚举）。
+// 仅透传 conditions，logic_op 默认 AND 但不显式回填（OpenAPI Filters 仅在多条 condition 场景下需要）。
+// entity 侧 FieldType / Operator 为 int64，OpenAPI 侧为 snake_case 字符串，逐项查表映射。
+func openAPINotificationFilterDO2DTO(filter *entity.NotificationFilter) *openapiExperiment.Filters {
+	if filter == nil {
+		return nil
+	}
+	conditions := make([]*openapiExperiment.FilterCondition, 0, len(filter.FilterConditions))
+	for _, cond := range filter.FilterConditions {
+		if cond == nil {
+			continue
+		}
+		var field *openapiExperiment.FilterField
+		if cond.Field != nil {
+			ftStr := openAPIFieldTypeFromDomain(domainExpt.FieldType(cond.Field.FieldType))
+			field = &openapiExperiment.FilterField{
+				FieldType: gptr.Of(openapiExperiment.FilterFieldType(ftStr)),
+				FieldKey:  gptr.Of(cond.Field.FieldKey),
+			}
+		}
+		opStr := openAPIFilterOperatorFromDomain(domainExpt.FilterOperatorType(cond.Operator))
+		conditions = append(conditions, &openapiExperiment.FilterCondition{
+			Field:    field,
+			Operator: gptr.Of(openapiExperiment.FilterOperatorType(opStr)),
+			Value:    gptr.Of(cond.Value),
+		})
+	}
+	if len(conditions) == 0 {
+		return nil
+	}
+	return &openapiExperiment.Filters{
+		FilterConditions: conditions,
+	}
+}
+
+// openAPIFieldTypeFromDomain 把 domain/expt FieldType 数值映射到 OpenAPI 字符串枚举（snake_case）。
+// 与 openAPIExperimentFilterFieldTypeToDomain 的反向映射保持一一对应。
+func openAPIFieldTypeFromDomain(ft domainExpt.FieldType) string {
+	switch ft {
+	case domainExpt.FieldType_EvaluatorScore:
+		return "evaluator_score"
+	case domainExpt.FieldType_CreatorBy:
+		return "creator_by"
+	case domainExpt.FieldType_UpdatedBy:
+		return "updated_by"
+	case domainExpt.FieldType_ExptStatus:
+		return "expt_status"
+	case domainExpt.FieldType_TurnRunState:
+		return "turn_run_state"
+	case domainExpt.FieldType_TargetID:
+		return "target_id"
+	case domainExpt.FieldType_EvalSetID:
+		return "eval_set_id"
+	case domainExpt.FieldType_EvaluatorID:
+		return "evaluator_id"
+	case domainExpt.FieldType_TargetType:
+		return "target_type"
+	case domainExpt.FieldType_SourceTarget:
+		return "source_target"
+	case domainExpt.FieldType_EvaluatorVersionID:
+		return "evaluator_version_id"
+	case domainExpt.FieldType_TargetVersionID:
+		return "target_version_id"
+	case domainExpt.FieldType_EvalSetVersionID:
+		return "eval_set_version_id"
+	case domainExpt.FieldType_ExptType:
+		return "expt_type"
+	case domainExpt.FieldType_SourceType:
+		return "source_type"
+	case domainExpt.FieldType_SourceID:
+		return "source_id"
+	case domainExpt.FieldType_KeywordSearch:
+		return "keyword_search"
+	case domainExpt.FieldType_EvalSetColumn:
+		return "eval_set_column"
+	case domainExpt.FieldType_Annotation:
+		return "annotation"
+	case domainExpt.FieldType_ActualOutput:
+		return "actual_output"
+	case domainExpt.FieldType_EvaluatorScoreCorrected:
+		return "evaluator_score_corrected"
+	case domainExpt.FieldType_Evaluator:
+		return "evaluator"
+	case domainExpt.FieldType_ItemID:
+		return "item_id"
+	case domainExpt.FieldType_ItemRunState:
+		return "item_run_state"
+	case domainExpt.FieldType_AnnotationScore:
+		return "annotation_score"
+	case domainExpt.FieldType_AnnotationText:
+		return "annotation_text"
+	case domainExpt.FieldType_AnnotationCategorical:
+		return "annotation_categorical"
+	case domainExpt.FieldType_TotalLatency:
+		return "total_latency"
+	case domainExpt.FieldType_InputTokens:
+		return "input_tokens"
+	case domainExpt.FieldType_OutputTokens:
+		return "output_tokens"
+	case domainExpt.FieldType_TotalTokens:
+		return "total_tokens"
+	case domainExpt.FieldType_ExperimentTemplateID:
+		return "experiment_template_id"
+	case domainExpt.FieldType_EvaluatorWeightedScore:
+		return "evaluator_weighted_score"
+	default:
+		return ""
+	}
+}
+
+// openAPIFilterOperatorFromDomain 把 domain/expt FilterOperatorType 数值映射到 OpenAPI 字符串枚举（snake_case）。
+func openAPIFilterOperatorFromDomain(op domainExpt.FilterOperatorType) string {
+	switch op {
+	case domainExpt.FilterOperatorType_Equal:
+		return "equal"
+	case domainExpt.FilterOperatorType_NotEqual:
+		return "not_equal"
+	case domainExpt.FilterOperatorType_Greater:
+		return "greater"
+	case domainExpt.FilterOperatorType_GreaterOrEqual:
+		return "greater_or_equal"
+	case domainExpt.FilterOperatorType_Less:
+		return "less"
+	case domainExpt.FilterOperatorType_LessOrEqual:
+		return "less_or_equal"
+	case domainExpt.FilterOperatorType_In:
+		return "in"
+	case domainExpt.FilterOperatorType_NotIn:
+		return "not_in"
+	case domainExpt.FilterOperatorType_Like:
+		return "like"
+	case domainExpt.FilterOperatorType_NotLike:
+		return "not_like"
+	default:
+		return ""
+	}
 }
 
 // buildOpenAPIExptScoreWeightFromTemplate 从 entity.ExptTemplate 抽取评估器权重配置，转为 openapi ExptScoreWeight（与 expt_template.buildTemplateScoreWeightConfigDTO 逻辑一致）
