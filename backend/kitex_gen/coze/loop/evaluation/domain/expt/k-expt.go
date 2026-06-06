@@ -48,7 +48,6 @@ func (p *WebhookNotificationConf) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetEnable bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -66,7 +65,6 @@ func (p *WebhookNotificationConf) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEnable = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -97,10 +95,6 @@ func (p *WebhookNotificationConf) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetEnable {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -108,19 +102,17 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_WebhookNotificationConf[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_WebhookNotificationConf[fieldId]))
 }
 
 func (p *WebhookNotificationConf) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field bool
+	var _field *bool
 	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.Enable = _field
 	return offset, nil
@@ -166,8 +158,10 @@ func (p *WebhookNotificationConf) BLength() int {
 
 func (p *WebhookNotificationConf) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
-	offset += thrift.Binary.WriteBool(buf[offset:], p.Enable)
+	if p.IsSetEnable() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Enable)
+	}
 	return offset
 }
 
@@ -182,8 +176,10 @@ func (p *WebhookNotificationConf) fastWriteField2(buf []byte, w thrift.NocopyWri
 
 func (p *WebhookNotificationConf) field1Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.BoolLength()
+	if p.IsSetEnable() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
 	return l
 }
 
@@ -202,7 +198,10 @@ func (p *WebhookNotificationConf) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	p.Enable = src.Enable
+	if src.Enable != nil {
+		tmp := *src.Enable
+		p.Enable = &tmp
+	}
 
 	if src.Urls != nil {
 		var tmp string
@@ -222,7 +221,6 @@ func (p *FeishuNotificationConf) FastRead(buf []byte) (int, error) {
 	var l int
 	var fieldTypeId thrift.TType
 	var fieldId int16
-	var issetEnable bool = false
 	for {
 		fieldTypeId, fieldId, l, err = thrift.Binary.ReadFieldBegin(buf[offset:])
 		offset += l
@@ -240,7 +238,6 @@ func (p *FeishuNotificationConf) FastRead(buf []byte) (int, error) {
 				if err != nil {
 					goto ReadFieldError
 				}
-				issetEnable = true
 			} else {
 				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 				offset += l
@@ -271,10 +268,6 @@ func (p *FeishuNotificationConf) FastRead(buf []byte) (int, error) {
 		}
 	}
 
-	if !issetEnable {
-		fieldId = 1
-		goto RequiredFieldNotSetError
-	}
 	return offset, nil
 ReadFieldBeginError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d begin error: ", p, fieldId), err)
@@ -282,19 +275,17 @@ ReadFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T read field %d '%s' error: ", p, fieldId, fieldIDToName_FeishuNotificationConf[fieldId]), err)
 SkipFieldError:
 	return offset, thrift.PrependError(fmt.Sprintf("%T field %d skip type %d error: ", p, fieldId, fieldTypeId), err)
-RequiredFieldNotSetError:
-	return offset, thrift.NewProtocolException(thrift.INVALID_DATA, fmt.Sprintf("required field %s is not set", fieldIDToName_FeishuNotificationConf[fieldId]))
 }
 
 func (p *FeishuNotificationConf) FastReadField1(buf []byte) (int, error) {
 	offset := 0
 
-	var _field bool
+	var _field *bool
 	if v, l, err := thrift.Binary.ReadBool(buf[offset:]); err != nil {
 		return offset, err
 	} else {
 		offset += l
-		_field = v
+		_field = &v
 	}
 	p.Enable = _field
 	return offset, nil
@@ -340,8 +331,10 @@ func (p *FeishuNotificationConf) BLength() int {
 
 func (p *FeishuNotificationConf) fastWriteField1(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
-	offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
-	offset += thrift.Binary.WriteBool(buf[offset:], p.Enable)
+	if p.IsSetEnable() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.BOOL, 1)
+		offset += thrift.Binary.WriteBool(buf[offset:], *p.Enable)
+	}
 	return offset
 }
 
@@ -356,8 +349,10 @@ func (p *FeishuNotificationConf) fastWriteField2(buf []byte, w thrift.NocopyWrit
 
 func (p *FeishuNotificationConf) field1Length() int {
 	l := 0
-	l += thrift.Binary.FieldBeginLength()
-	l += thrift.Binary.BoolLength()
+	if p.IsSetEnable() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.BoolLength()
+	}
 	return l
 }
 
@@ -376,7 +371,10 @@ func (p *FeishuNotificationConf) DeepCopy(s interface{}) error {
 		return fmt.Errorf("%T's type not matched %T", s, p)
 	}
 
-	p.Enable = src.Enable
+	if src.Enable != nil {
+		tmp := *src.Enable
+		p.Enable = &tmp
+	}
 
 	if src.UserID != nil {
 		var tmp string
@@ -420,9 +418,9 @@ func (p *ExptNotificationConf) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 10:
+		case 2:
 			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField10(buf[offset:])
+				l, err = p.FastReadField2(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -434,9 +432,9 @@ func (p *ExptNotificationConf) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 11:
+		case 3:
 			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField11(buf[offset:])
+				l, err = p.FastReadField3(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -478,7 +476,7 @@ func (p *ExptNotificationConf) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExptNotificationConf) FastReadField10(buf []byte) (int, error) {
+func (p *ExptNotificationConf) FastReadField2(buf []byte) (int, error) {
 	offset := 0
 	_field := NewWebhookNotificationConf()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -490,7 +488,7 @@ func (p *ExptNotificationConf) FastReadField10(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExptNotificationConf) FastReadField11(buf []byte) (int, error) {
+func (p *ExptNotificationConf) FastReadField3(buf []byte) (int, error) {
 	offset := 0
 	_field := NewFeishuNotificationConf()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -510,8 +508,8 @@ func (p *ExptNotificationConf) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField10(buf[offset:], w)
-		offset += p.fastWriteField11(buf[offset:], w)
+		offset += p.fastWriteField2(buf[offset:], w)
+		offset += p.fastWriteField3(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -521,8 +519,8 @@ func (p *ExptNotificationConf) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field10Length()
-		l += p.field11Length()
+		l += p.field2Length()
+		l += p.field3Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -537,19 +535,19 @@ func (p *ExptNotificationConf) fastWriteField1(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *ExptNotificationConf) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptNotificationConf) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetWebhook() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
 		offset += p.Webhook.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
-func (p *ExptNotificationConf) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptNotificationConf) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFeishuNotification() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
 		offset += p.FeishuNotification.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
@@ -564,7 +562,7 @@ func (p *ExptNotificationConf) field1Length() int {
 	return l
 }
 
-func (p *ExptNotificationConf) field10Length() int {
+func (p *ExptNotificationConf) field2Length() int {
 	l := 0
 	if p.IsSetWebhook() {
 		l += thrift.Binary.FieldBeginLength()
@@ -573,7 +571,7 @@ func (p *ExptNotificationConf) field10Length() int {
 	return l
 }
 
-func (p *ExptNotificationConf) field11Length() int {
+func (p *ExptNotificationConf) field3Length() int {
 	l := 0
 	if p.IsSetFeishuNotification() {
 		l += thrift.Binary.FieldBeginLength()
