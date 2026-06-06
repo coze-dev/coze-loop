@@ -68,8 +68,8 @@ struct FeishuNotificationConf {
 
 struct ExptNotificationConf {
     1: optional Filters filter
-    2: optional WebhookNotificationConf webhook
-    3: optional FeishuNotificationConf feishu_notification
+    10: optional WebhookNotificationConf webhook
+    11: optional FeishuNotificationConf feishu_notification
 }
 
 struct Experiment {

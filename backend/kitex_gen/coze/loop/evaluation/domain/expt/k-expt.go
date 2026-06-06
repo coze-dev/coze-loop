@@ -418,9 +418,9 @@ func (p *ExptNotificationConf) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 2:
+		case 10:
 			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField2(buf[offset:])
+				l, err = p.FastReadField10(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -432,9 +432,9 @@ func (p *ExptNotificationConf) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
-		case 3:
+		case 11:
 			if fieldTypeId == thrift.STRUCT {
-				l, err = p.FastReadField3(buf[offset:])
+				l, err = p.FastReadField11(buf[offset:])
 				offset += l
 				if err != nil {
 					goto ReadFieldError
@@ -476,7 +476,7 @@ func (p *ExptNotificationConf) FastReadField1(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExptNotificationConf) FastReadField2(buf []byte) (int, error) {
+func (p *ExptNotificationConf) FastReadField10(buf []byte) (int, error) {
 	offset := 0
 	_field := NewWebhookNotificationConf()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -488,7 +488,7 @@ func (p *ExptNotificationConf) FastReadField2(buf []byte) (int, error) {
 	return offset, nil
 }
 
-func (p *ExptNotificationConf) FastReadField3(buf []byte) (int, error) {
+func (p *ExptNotificationConf) FastReadField11(buf []byte) (int, error) {
 	offset := 0
 	_field := NewFeishuNotificationConf()
 	if l, err := _field.FastRead(buf[offset:]); err != nil {
@@ -508,8 +508,8 @@ func (p *ExptNotificationConf) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
-		offset += p.fastWriteField2(buf[offset:], w)
-		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField10(buf[offset:], w)
+		offset += p.fastWriteField11(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -519,8 +519,8 @@ func (p *ExptNotificationConf) BLength() int {
 	l := 0
 	if p != nil {
 		l += p.field1Length()
-		l += p.field2Length()
-		l += p.field3Length()
+		l += p.field10Length()
+		l += p.field11Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -535,19 +535,19 @@ func (p *ExptNotificationConf) fastWriteField1(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
-func (p *ExptNotificationConf) fastWriteField2(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptNotificationConf) fastWriteField10(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetWebhook() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 2)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 10)
 		offset += p.Webhook.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
 }
 
-func (p *ExptNotificationConf) fastWriteField3(buf []byte, w thrift.NocopyWriter) int {
+func (p *ExptNotificationConf) fastWriteField11(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetFeishuNotification() {
-		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 3)
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 11)
 		offset += p.FeishuNotification.FastWriteNocopy(buf[offset:], w)
 	}
 	return offset
@@ -562,7 +562,7 @@ func (p *ExptNotificationConf) field1Length() int {
 	return l
 }
 
-func (p *ExptNotificationConf) field2Length() int {
+func (p *ExptNotificationConf) field10Length() int {
 	l := 0
 	if p.IsSetWebhook() {
 		l += thrift.Binary.FieldBeginLength()
@@ -571,7 +571,7 @@ func (p *ExptNotificationConf) field2Length() int {
 	return l
 }
 
-func (p *ExptNotificationConf) field3Length() int {
+func (p *ExptNotificationConf) field11Length() int {
 	l := 0
 	if p.IsSetFeishuNotification() {
 		l += thrift.Binary.FieldBeginLength()
