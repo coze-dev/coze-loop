@@ -12054,9 +12054,9 @@ type ExptNotificationConf struct {
 	// 公共触发条件
 	Filter *Filters `thrift:"filter,1,optional" frugal:"1,optional,Filters" form:"filter" json:"filter,omitempty" query:"filter"`
 	// Webhook 渠道
-	Webhook *WebhookNotificationConf `thrift:"webhook,2,optional" frugal:"2,optional,WebhookNotificationConf" form:"webhook" json:"webhook,omitempty" query:"webhook"`
+	Webhook *WebhookNotificationConf `thrift:"webhook,10,optional" frugal:"10,optional,WebhookNotificationConf" form:"webhook" json:"webhook,omitempty" query:"webhook"`
 	// 飞书渠道
-	FeishuNotification *FeishuNotificationConf `thrift:"feishu_notification,3,optional" frugal:"3,optional,FeishuNotificationConf" form:"feishu_notification" json:"feishu_notification,omitempty" query:"feishu_notification"`
+	FeishuNotification *FeishuNotificationConf `thrift:"feishu_notification,11,optional" frugal:"11,optional,FeishuNotificationConf" form:"feishu_notification" json:"feishu_notification,omitempty" query:"feishu_notification"`
 }
 
 func NewExptNotificationConf() *ExptNotificationConf {
@@ -12112,9 +12112,9 @@ func (p *ExptNotificationConf) SetFeishuNotification(val *FeishuNotificationConf
 }
 
 var fieldIDToName_ExptNotificationConf = map[int16]string{
-	1: "filter",
-	2: "webhook",
-	3: "feishu_notification",
+	1:  "filter",
+	10: "webhook",
+	11: "feishu_notification",
 }
 
 func (p *ExptNotificationConf) IsSetFilter() bool {
@@ -12155,17 +12155,17 @@ func (p *ExptNotificationConf) Read(iprot thrift.TProtocol) (err error) {
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 2:
+		case 10:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField2(iprot); err != nil {
+				if err = p.ReadField10(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
 				goto SkipFieldError
 			}
-		case 3:
+		case 11:
 			if fieldTypeId == thrift.STRUCT {
-				if err = p.ReadField3(iprot); err != nil {
+				if err = p.ReadField11(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -12208,7 +12208,7 @@ func (p *ExptNotificationConf) ReadField1(iprot thrift.TProtocol) error {
 	p.Filter = _field
 	return nil
 }
-func (p *ExptNotificationConf) ReadField2(iprot thrift.TProtocol) error {
+func (p *ExptNotificationConf) ReadField10(iprot thrift.TProtocol) error {
 	_field := NewWebhookNotificationConf()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12216,7 +12216,7 @@ func (p *ExptNotificationConf) ReadField2(iprot thrift.TProtocol) error {
 	p.Webhook = _field
 	return nil
 }
-func (p *ExptNotificationConf) ReadField3(iprot thrift.TProtocol) error {
+func (p *ExptNotificationConf) ReadField11(iprot thrift.TProtocol) error {
 	_field := NewFeishuNotificationConf()
 	if err := _field.Read(iprot); err != nil {
 		return err
@@ -12235,12 +12235,12 @@ func (p *ExptNotificationConf) Write(oprot thrift.TProtocol) (err error) {
 			fieldId = 1
 			goto WriteFieldError
 		}
-		if err = p.writeField2(oprot); err != nil {
-			fieldId = 2
+		if err = p.writeField10(oprot); err != nil {
+			fieldId = 10
 			goto WriteFieldError
 		}
-		if err = p.writeField3(oprot); err != nil {
-			fieldId = 3
+		if err = p.writeField11(oprot); err != nil {
+			fieldId = 11
 			goto WriteFieldError
 		}
 	}
@@ -12279,9 +12279,9 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 1 end error: ", p), err)
 }
-func (p *ExptNotificationConf) writeField2(oprot thrift.TProtocol) (err error) {
+func (p *ExptNotificationConf) writeField10(oprot thrift.TProtocol) (err error) {
 	if p.IsSetWebhook() {
-		if err = oprot.WriteFieldBegin("webhook", thrift.STRUCT, 2); err != nil {
+		if err = oprot.WriteFieldBegin("webhook", thrift.STRUCT, 10); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := p.Webhook.Write(oprot); err != nil {
@@ -12293,13 +12293,13 @@ func (p *ExptNotificationConf) writeField2(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 2 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 10 end error: ", p), err)
 }
-func (p *ExptNotificationConf) writeField3(oprot thrift.TProtocol) (err error) {
+func (p *ExptNotificationConf) writeField11(oprot thrift.TProtocol) (err error) {
 	if p.IsSetFeishuNotification() {
-		if err = oprot.WriteFieldBegin("feishu_notification", thrift.STRUCT, 3); err != nil {
+		if err = oprot.WriteFieldBegin("feishu_notification", thrift.STRUCT, 11); err != nil {
 			goto WriteFieldBeginError
 		}
 		if err := p.FeishuNotification.Write(oprot); err != nil {
@@ -12311,9 +12311,9 @@ func (p *ExptNotificationConf) writeField3(oprot thrift.TProtocol) (err error) {
 	}
 	return nil
 WriteFieldBeginError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 begin error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 begin error: ", p), err)
 WriteFieldEndError:
-	return thrift.PrependError(fmt.Sprintf("%T write field 3 end error: ", p), err)
+	return thrift.PrependError(fmt.Sprintf("%T write field 11 end error: ", p), err)
 }
 
 func (p *ExptNotificationConf) String() string {
@@ -12333,10 +12333,10 @@ func (p *ExptNotificationConf) DeepEqual(ano *ExptNotificationConf) bool {
 	if !p.Field1DeepEqual(ano.Filter) {
 		return false
 	}
-	if !p.Field2DeepEqual(ano.Webhook) {
+	if !p.Field10DeepEqual(ano.Webhook) {
 		return false
 	}
-	if !p.Field3DeepEqual(ano.FeishuNotification) {
+	if !p.Field11DeepEqual(ano.FeishuNotification) {
 		return false
 	}
 	return true
@@ -12349,14 +12349,14 @@ func (p *ExptNotificationConf) Field1DeepEqual(src *Filters) bool {
 	}
 	return true
 }
-func (p *ExptNotificationConf) Field2DeepEqual(src *WebhookNotificationConf) bool {
+func (p *ExptNotificationConf) Field10DeepEqual(src *WebhookNotificationConf) bool {
 
 	if !p.Webhook.DeepEqual(src) {
 		return false
 	}
 	return true
 }
-func (p *ExptNotificationConf) Field3DeepEqual(src *FeishuNotificationConf) bool {
+func (p *ExptNotificationConf) Field11DeepEqual(src *FeishuNotificationConf) bool {
 
 	if !p.FeishuNotification.DeepEqual(src) {
 		return false

@@ -311,9 +311,9 @@ struct ExptNotificationConf {
     // 公共触发条件
     1: optional Filters filter
     // Webhook 渠道
-    2: optional WebhookNotificationConf webhook
+    10: optional WebhookNotificationConf webhook
     // 飞书渠道
-    3: optional FeishuNotificationConf feishu_notification
+    11: optional FeishuNotificationConf feishu_notification
 }
 
 struct WebhookNotificationConf {
