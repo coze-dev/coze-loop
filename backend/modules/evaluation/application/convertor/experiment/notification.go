@@ -103,7 +103,7 @@ func webhookNotificationConfDO2DTO(conf *entity.WebhookNotificationConf) *domain
 		return nil
 	}
 	return &domainExpt.WebhookNotificationConf{
-		Enable: gptr.Of(conf.Enable),
+		Enable: conf.Enable,
 		Urls:   gptr.Of(conf.URLs),
 	}
 }
@@ -123,7 +123,7 @@ func feishuNotificationConfDO2DTO(conf *entity.FeishuNotificationConf) *domainEx
 		return nil
 	}
 	return &domainExpt.FeishuNotificationConf{
-		Enable: gptr.Of(conf.Enable),
+		Enable: conf.Enable,
 		UserID: gptr.Of(conf.UserID),
 	}
 }

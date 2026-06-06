@@ -55,21 +55,21 @@ const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
 
 struct WebhookNotificationConf {
-    1: optional bool enable
+    1: required bool enable
     // Multiple webhook URLs are stored as a comma-separated string for API compatibility.
     2: optional string urls
 }
 
 struct FeishuNotificationConf {
-    1: optional bool enable
+    1: required bool enable
     // Empty means notify experiment creator.
     2: optional string user_id
 }
 
 struct ExptNotificationConf {
     1: optional Filters filter
-    2: optional WebhookNotificationConf webhook
-    3: optional FeishuNotificationConf feishu_notification
+    10: optional WebhookNotificationConf webhook
+    11: optional FeishuNotificationConf feishu_notification
 }
 
 struct Experiment {
