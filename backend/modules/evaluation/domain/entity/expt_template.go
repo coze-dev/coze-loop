@@ -205,6 +205,8 @@ type ExptTemplateConfiguration struct {
 
 	// ExptSource 实验来源信息
 	ExptSource *ExptSource `json:"expt_source,omitempty"`
+
+	NotificationConf *NotificationConf `json:"notification_conf,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO

@@ -421,6 +421,10 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 	}
 
+	if nc := NotificationConfDO2DTO(experiment.NotificationConf); nc != nil {
+		res.SetNotificationConf(nc)
+	}
+
 	res.EvalTarget = target.EvalTargetDO2DTO(experiment.Target)
 	if experiment.EvalSet != nil {
 		res.EvalSet = evaluation_set.EvaluationSetDO2DTO(experiment.EvalSet)
@@ -556,6 +560,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	}
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
+	}
+	if cer.IsSetNotificationConf() {
+		param.NotificationConf = NotificationConfDTO2DO(cer.GetNotificationConf())
 	}
 	return param, nil
 }

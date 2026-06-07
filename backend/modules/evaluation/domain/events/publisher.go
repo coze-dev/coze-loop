@@ -26,3 +26,7 @@ type ExptEventPublisher interface {
 type EvaluatorEventPublisher interface {
 	PublishEvaluatorRecordCorrection(ctx context.Context, events *entity.EvaluatorRecordCorrectionEvent, duration *time.Duration) error
 }
+
+type WebhookRetryEventPublisher interface {
+	PublishWebhookRetryEvent(ctx context.Context, event *entity.WebhookRetryEvent, delay time.Duration) error
+}

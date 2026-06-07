@@ -516,6 +516,7 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		TriggerType:             gptr.Of(triggerType),
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
+		NotificationConf:        req.NotificationConf,
 	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
@@ -1075,10 +1076,11 @@ func (e *experimentApplication) UpdateExperiment(ctx context.Context, req *expt.
 	}
 
 	if err := e.manager.Update(ctx, &entity.Experiment{
-		ID:          req.GetExptID(),
-		SpaceID:     req.WorkspaceID,
-		Name:        req.GetName(),
-		Description: req.GetDesc(),
+		ID:               req.GetExptID(),
+		SpaceID:          req.WorkspaceID,
+		Name:             req.GetName(),
+		Description:      req.GetDesc(),
+		NotificationConf: experiment.NotificationConfDTO2DO(req.GetNotificationConf()),
 	}, session); err != nil {
 		return nil, err
 	}

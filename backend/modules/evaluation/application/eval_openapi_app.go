@@ -1062,6 +1062,11 @@ func (e *EvalOpenAPIApplication) SubmitExperimentOApi(ctx context.Context, req *
 		Ext:                     req.GetExt(),
 	}
 
+	// Map OpenAPI NotificationConf to domain DTO NotificationConf
+	if req.IsSetNotificationConf() {
+		createReq.NotificationConf = experiment_convertor.OpenAPINotificationConfDTO2Domain(req.GetNotificationConf())
+	}
+
 	cresp, err := e.experimentApp.SubmitExperiment(ctx, createReq)
 	if err != nil {
 		return nil, err

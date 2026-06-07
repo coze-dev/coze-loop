@@ -57,6 +57,14 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		expt.MaxAliveTime = gptr.Of(experiment.MaxAliveTime)
 	}
 
+	// Serialize NotificationConf to JSON bytes
+	if experiment.NotificationConf != nil {
+		ncBytes := entity.SerializeNotificationConf(experiment.NotificationConf)
+		if ncBytes != nil {
+			expt.NotificationConf = &ncBytes
+		}
+	}
+
 	if experiment.EvalConf != nil {
 		bytes, err := json.Marshal(experiment.EvalConf)
 		if err != nil {
@@ -117,6 +125,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+		NotificationConf:          entity.ParseNotificationConf(gptr.Indirect(expt.NotificationConf)),
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

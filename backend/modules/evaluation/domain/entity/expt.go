@@ -169,6 +169,8 @@ type Experiment struct {
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
 	ThreadID   *string    // 关联的智能评测会话ID
+
+	NotificationConf *NotificationConf
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

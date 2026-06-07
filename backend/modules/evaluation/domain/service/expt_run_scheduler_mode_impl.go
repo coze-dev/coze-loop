@@ -233,6 +233,20 @@ func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.Expt
 		return err
 	}
 
+	// publish Processing lifecycle event (non-blocking)
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  &event.ExptRunID,
+		SpaceID:    event.SpaceID,
+		FromStatus: entity.ExptStatus_Pending,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
+	}
+
 	var templateID int64
 	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
 		templateID = expt.ExptTemplateMeta.ID
@@ -622,6 +636,20 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 		return err
 	}
 
+	// publish Processing lifecycle event (non-blocking)
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  &event.ExptRunID,
+		SpaceID:    event.SpaceID,
+		FromStatus: entity.ExptStatus_Pending,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
+	}
+
 	// 如果实验关联了模板，更新模板的 ExptInfo
 	var templateID int64
 	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
@@ -870,8 +898,23 @@ func (e *ExptFailRetryExec) ExptStart(ctx context.Context, event *entity.ExptSch
 		SpaceID: event.SpaceID,
 	}
 
+	fromStatus := expt.Status
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
+	}
+
+	// publish Processing lifecycle event (non-blocking)
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  &event.ExptRunID,
+		SpaceID:    event.SpaceID,
+		FromStatus: fromStatus,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
 	}
 
 	// 如果实验关联了模板，在 FailRetry 模式下重新开始时，也需要更新模板上的最新实验状态
@@ -1095,6 +1138,20 @@ func (e *ExptAppendExec) ScheduleStart(ctx context.Context, event *entity.ExptSc
 		}); err != nil {
 			logs.CtxError(ctx, "update expt status failed, expt_id: %v, expt_run_id: %v, err: %v", event.ExptID, event.ExptRunID, err)
 		} else {
+			// publish Processing lifecycle event (non-blocking)
+			lifecycleEvent := &entity.ExptLifecycleEvent{
+				ExptID:     event.ExptID,
+				ExptRunID:  &event.ExptRunID,
+				SpaceID:    event.SpaceID,
+				FromStatus: entity.ExptStatus_Pending,
+				ToStatus:   entity.ExptStatus_Processing,
+				ExptType:   expt.ExptType,
+				SourceType: expt.SourceType,
+			}
+			if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+				logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
+			}
+
 			// 如果实验关联了模板，更新模板的 ExptInfo（状态变更，数量不变）
 			if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 && e.templateManager != nil {
 				if err := e.templateManager.UpdateExptInfo(ctx, expt.ExptTemplateMeta.ID, event.SpaceID, event.ExptID, newStatus, 0, nil); err != nil {
@@ -1493,8 +1550,23 @@ func (e *ExptRetryAllExec) ExptStart(ctx context.Context, event *entity.ExptSche
 		SpaceID: event.SpaceID,
 	}
 
+	fromStatus := expt.Status
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
+	}
+
+	// publish Processing lifecycle event (non-blocking)
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  &event.ExptRunID,
+		SpaceID:    event.SpaceID,
+		FromStatus: fromStatus,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
 	}
 
 	if e.templateManager != nil {
@@ -1613,12 +1685,27 @@ func (e *ExptRetryItemsExec) ExptStart(ctx context.Context, event *entity.ExptSc
 		return err
 	}
 
+	fromStatus := expt.Status
 	if err := e.exptRepo.Update(ctx, &entity.Experiment{
 		Status:  entity.ExptStatus_Processing,
 		ID:      event.ExptID,
 		SpaceID: event.SpaceID,
 	}); err != nil {
 		return err
+	}
+
+	// publish Processing lifecycle event (non-blocking)
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  &event.ExptRunID,
+		SpaceID:    event.SpaceID,
+		FromStatus: fromStatus,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if pubErr := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, nil); pubErr != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(Processing) failed, expt_id: %v, err: %v", event.ExptID, pubErr)
 	}
 
 	if e.templateManager != nil {

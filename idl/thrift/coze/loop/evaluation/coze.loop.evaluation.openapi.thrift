@@ -429,8 +429,9 @@ struct SubmitExperimentOApiRequest {
 
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+    47: optional experiment.ExptNotificationConf notification_conf (api.body = 'notification_conf')
 
-    100: optional map<string, string> ext (api.body = 'ext')    
+    100: optional map<string, string> ext (api.body = 'ext')
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -968,6 +969,7 @@ struct CreateExptTemplateOApiRequest {
     20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
     22: optional bool enable_extract_trajectory (api.body="enable_extract_trajectory", go.tag='json:"enable_extract_trajectory"')
+    23: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -1038,6 +1040,7 @@ struct UpdateExptTemplateOApiRequest {
     20: optional SubmitExperimentEvalTargetParam create_eval_target_param (api.body="create_eval_target_param")
     21: optional i32 default_evaluators_concur_num (api.body="default_evaluators_concur_num")
     22: optional bool enable_extract_trajectory (api.body="enable_extract_trajectory", go.tag='json:"enable_extract_trajectory"')
+    23: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base
@@ -1108,6 +1111,7 @@ struct SubmitExptFromTemplateOApiRequest {
 
     // 创建实验时，判断不为空则替换模板上的信息
     20: optional common.RuntimeParam target_runtime_param (api.body="target_runtime_param")
+    21: optional experiment.ExptNotificationConf notification_conf (api.body="notification_conf")
 
     254: optional extra.Extra extra (agw.source="not_body_struct")
     255: optional base.Base Base

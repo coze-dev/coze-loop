@@ -286,6 +286,16 @@ func DomainExperimentDTO2OpenAPI(dto *domainExpt.Experiment) *openapiExperiment.
 	result.EvaluatorIDVersionList = DomainEvaluatorIDVersionListDTO2OpenAPI(dto.EvaluatorIDVersionList)
 	result.ExptTemplateMeta = DomainExptTemplateMetaDTO2OpenAPI(dto.ExptTemplateMeta)
 	result.OfflineExptAnalysisStatus = mapOfflineExptAnalysisStatusDTO2OpenAPI(dto.OfflineExptAnalysisStatus)
+
+	// NotificationConf: domain DTO -> OpenAPI DTO
+	if dto.NotificationConf != nil {
+		// Convert domain NotificationConf to entity first, then to OpenAPI
+		entityNC := NotificationConfDTO2DO(dto.NotificationConf)
+		if nc := openAPINotificationConfDO2DTO(entityNC); nc != nil {
+			result.SetNotificationConf(nc)
+		}
+	}
+
 	return result
 }
 
@@ -599,6 +609,11 @@ func OpenAPIExptDO2DTO(experiment *entity.Experiment) *openapiExperiment.Experim
 			Description: gptr.Of(experiment.ExptTemplateMeta.Desc),
 			ExptType:    OpenAPIExptTypeDO2DTO(experiment.ExptTemplateMeta.ExptType),
 		}
+	}
+
+	// NotificationConf
+	if nc := openAPINotificationConfDO2DTO(experiment.NotificationConf); nc != nil {
+		result.SetNotificationConf(nc)
 	}
 
 	return result
@@ -1709,6 +1724,9 @@ func OpenAPIExptTemplateDO2DTO(template *entity.ExptTemplate) *openapiExperiment
 	dto.ScoreWeightConfig = buildOpenAPIExptScoreWeightFromTemplate(template)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+		if nc := openAPINotificationConfDO2DTO(template.TemplateConf.NotificationConf); nc != nil {
+			dto.SetNotificationConf(nc)
+		}
 	}
 
 	return dto
@@ -2697,4 +2715,63 @@ func toTargetFieldMappingDOForTemplateV2(mapping *openapiExperiment.TargetFieldM
 		}
 	}
 	return tic
+}
+
+// openAPINotificationConfDO2DTO converts entity NotificationConf to OpenAPI ExptNotificationConf.
+func openAPINotificationConfDO2DTO(do *entity.NotificationConf) *openapiExperiment.ExptNotificationConf {
+	if do == nil {
+		return nil
+	}
+	dto := openapiExperiment.NewExptNotificationConf()
+
+	if do.Filter != nil {
+		dto.Filter = openAPINotificationFilterDO2DTO(do.Filter)
+	}
+	if do.Webhook != nil {
+		dto.Webhook = &openapiExperiment.WebhookNotificationConf{
+			Enable: do.Webhook.Enable,
+			Urls:   gptr.Of(do.Webhook.URLs),
+			Secret: gptr.Of(do.Webhook.Secret),
+		}
+	}
+	if do.FeishuNotification != nil {
+		dto.FeishuNotification = &openapiExperiment.FeishuNotificationConf{
+			Enable: do.FeishuNotification.Enable,
+		}
+	}
+	return dto
+}
+
+// openAPINotificationFilterDO2DTO converts entity ExptListFilter to OpenAPI Filters for notification context.
+func openAPINotificationFilterDO2DTO(do *entity.ExptListFilter) *openapiExperiment.Filters {
+	if do == nil {
+		return nil
+	}
+	conditions := make([]*openapiExperiment.FilterCondition, 0)
+
+	fieldType := openapiExperiment.FilterFieldTypeExptStatus
+	if do.Includes != nil && len(do.Includes.Status) > 0 {
+		opIn := openapiExperiment.FilterOperatorTypeIn
+		conditions = append(conditions, &openapiExperiment.FilterCondition{
+			Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+			Operator: &opIn,
+			Value:    gptr.Of(joinInt64Slice(do.Includes.Status)),
+		})
+	}
+	if do.Excludes != nil && len(do.Excludes.Status) > 0 {
+		opNotIn := openapiExperiment.FilterOperatorTypeNotIn
+		conditions = append(conditions, &openapiExperiment.FilterCondition{
+			Field:    &openapiExperiment.FilterField{FieldType: &fieldType},
+			Operator: &opNotIn,
+			Value:    gptr.Of(joinInt64Slice(do.Excludes.Status)),
+		})
+	}
+	if len(conditions) == 0 {
+		return nil
+	}
+	logicOp := openapiExperiment.FilterLogicOpAnd
+	return &openapiExperiment.Filters{
+		FilterConditions: conditions,
+		LogicOp:          &logicOp,
+	}
 }
