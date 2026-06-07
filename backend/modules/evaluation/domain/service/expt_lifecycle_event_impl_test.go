@@ -19,26 +19,40 @@ import (
 )
 
 type testLifecycleEventMocks struct {
-	exptRepo         *repoMocks.MockIExperimentRepo
-	notifyRPCAdapter *rpcMocks.MockINotifyRPCAdapter
-	userProvider     *rpcMocks.MockIUserProvider
+	exptRepo               *repoMocks.MockIExperimentRepo
+	notifyRPCAdapter       *rpcMocks.MockINotifyRPCAdapter
+	userProvider           *rpcMocks.MockIUserProvider
+	notificationTriggerSvc *mockNotificationTriggerService
+}
+
+type mockNotificationTriggerService struct {
+	triggerErr error
+	called     bool
+}
+
+func (m *mockNotificationTriggerService) TriggerNotification(ctx context.Context, event *entity.ExptLifecycleEvent, notificationConf *entity.NotificationConf) error {
+	m.called = true
+	return m.triggerErr
 }
 
 func newTestLifecycleEventHandler(ctrl *gomock.Controller) (*ExptLifecycleEventHandlerImpl, *testLifecycleEventMocks) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockNotifTrigger := &mockNotificationTriggerService{}
 
 	handler := &ExptLifecycleEventHandlerImpl{
-		exptRepo:         mockExptRepo,
-		notifyRPCAdapter: mockNotifyRPCAdapter,
-		userProvider:     mockUserProvider,
+		exptRepo:               mockExptRepo,
+		notifyRPCAdapter:       mockNotifyRPCAdapter,
+		userProvider:           mockUserProvider,
+		notificationTriggerSvc: mockNotifTrigger,
 	}
 
 	return handler, &testLifecycleEventMocks{
-		exptRepo:         mockExptRepo,
-		notifyRPCAdapter: mockNotifyRPCAdapter,
-		userProvider:     mockUserProvider,
+		exptRepo:               mockExptRepo,
+		notifyRPCAdapter:       mockNotifyRPCAdapter,
+		userProvider:           mockUserProvider,
+		notificationTriggerSvc: mockNotifTrigger,
 	}
 }
 
@@ -49,8 +63,9 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockNotifTrigger := &mockNotificationTriggerService{}
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, mockNotifTrigger)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)
@@ -58,6 +73,7 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	assert.Equal(t, mockExptRepo, impl.exptRepo)
 	assert.Equal(t, mockNotifyRPCAdapter, impl.notifyRPCAdapter)
 	assert.Equal(t, mockUserProvider, impl.userProvider)
+	assert.Equal(t, mockNotifTrigger, impl.notificationTriggerSvc)
 }
 
 func TestHandleLifecycleEvent(t *testing.T) {
