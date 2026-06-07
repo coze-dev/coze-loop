@@ -16,16 +16,18 @@ import (
 )
 
 type ExptLifecycleEventHandlerImpl struct {
-	exptRepo         repo.IExperimentRepo
-	notifyRPCAdapter rpc.INotifyRPCAdapter
-	userProvider     rpc.IUserProvider
+	exptRepo               repo.IExperimentRepo
+	notifyRPCAdapter       rpc.INotifyRPCAdapter
+	userProvider           rpc.IUserProvider
+	notificationTriggerSvc INotificationTriggerService
 }
 
-func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider) ExptLifecycleEventHandler {
+func NewExptLifecycleEventHandler(exptRepo repo.IExperimentRepo, notifyRPCAdapter rpc.INotifyRPCAdapter, userProvider rpc.IUserProvider, notificationTriggerSvc INotificationTriggerService) ExptLifecycleEventHandler {
 	return &ExptLifecycleEventHandlerImpl{
-		exptRepo:         exptRepo,
-		notifyRPCAdapter: notifyRPCAdapter,
-		userProvider:     userProvider,
+		exptRepo:               exptRepo,
+		notifyRPCAdapter:       notifyRPCAdapter,
+		userProvider:           userProvider,
+		notificationTriggerSvc: notificationTriggerSvc,
 	}
 }
 
@@ -33,6 +35,10 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 	expt, err := h.exptRepo.GetByID(ctx, event.ExptID, event.SpaceID)
 	if err != nil {
 		return err
+	}
+
+	if expt.NotificationConf != nil && len(expt.NotificationConf.Rules) > 0 {
+		return h.notificationTriggerSvc.TriggerNotification(ctx, event, expt.NotificationConf)
 	}
 
 	switch event.ToStatus {
