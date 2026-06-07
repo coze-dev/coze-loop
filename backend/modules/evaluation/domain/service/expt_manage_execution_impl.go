@@ -319,12 +319,13 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 		return err
 	}
 
-	switch runMode {
-	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
-		if err := e.sendNotifyCard(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
-		}
+	// Publish Processing lifecycle event for webhook notification
+	processingExpt := *expt
+	processingExpt.Status = entity.ExptStatus_Processing
+	if err := e.sendExptLifecycleEvent(ctx, &processingExpt, &runID, entity.ExptStatus_Pending); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] sendExptLifecycleEvent(Processing) failed, expt_id=%d, err=%v", exptID, err)
 	}
+
 	return nil
 }
 
@@ -702,7 +703,10 @@ func (e *ExptMangerImpl) sendExptCompleteEvent(ctx context.Context, expt *entity
 	if !entity.IsExptFinished(expt.Status) {
 		return nil
 	}
+	return e.sendExptLifecycleEvent(ctx, expt, exptRunID, fromStatus)
+}
 
+func (e *ExptMangerImpl) sendExptLifecycleEvent(ctx context.Context, expt *entity.Experiment, exptRunID *int64, fromStatus entity.ExptStatus) error {
 	event := &entity.ExptLifecycleEvent{
 		ExptID:     expt.ID,
 		ExptRunID:  exptRunID,

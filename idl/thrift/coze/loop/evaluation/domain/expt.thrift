@@ -102,6 +102,9 @@ struct Experiment {
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
 
+    // 通知配置
+    72: optional ExptNotificationConf notification_conf
+
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
@@ -152,8 +155,30 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+    8: optional ExptNotificationConf notification_conf
 
     255: optional common.BaseInfo base_info
+}
+
+// Webhook + 飞书双渠道通知配置
+struct ExptNotificationConf {
+    // 公共触发条件 (field_type=ExptStatus + operator=In + value=[status...])
+    1: optional Filters filter
+    // Webhook 通知配置
+    10: optional WebhookNotificationConf webhook
+    // 飞书消息通知配置
+    11: optional FeishuNotificationConf feishu_notification
+}
+
+struct WebhookNotificationConf {
+    1: optional bool enable
+    2: optional list<string> urls
+    // 用户自定义签名密钥，为空时使用空间 SK
+    3: optional string secret
+}
+
+struct FeishuNotificationConf {
+    1: optional bool enable
 }
 
 struct TaskTimeRange {

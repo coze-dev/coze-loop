@@ -557,6 +557,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	if cer.IsSetNotificationConf() {
+		param.NotificationConf = ConvertNotificationConfDTO2DO(cer.GetNotificationConf())
+	}
 	return param, nil
 }
 
@@ -571,4 +574,85 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 	default:
 		return entity.EvaluationModeUnknown
 	}
+}
+
+// ConvertNotificationConfDTO2DO converts IDL ExptNotificationConf to domain ExptNotificationConf.
+func ConvertNotificationConfDTO2DO(dto *domain_expt.ExptNotificationConf) *entity.ExptNotificationConf {
+	if dto == nil {
+		return nil
+	}
+	conf := &entity.ExptNotificationConf{}
+	if dto.IsSetFilter() {
+		f := dto.GetFilter()
+		nf := &entity.NotificationFilter{
+			LogicOp: int(f.GetLogicOp()),
+		}
+		for _, fc := range f.GetFilterConditions() {
+			if fc == nil {
+				continue
+			}
+			cond := &entity.NotificationFilterCondition{
+				Operator: int(fc.GetOperator()),
+				Value:    fc.GetValue(),
+			}
+			if fc.GetField() != nil {
+				cond.FieldType = int(fc.GetField().GetFieldType())
+			}
+			nf.Conditions = append(nf.Conditions, cond)
+		}
+		conf.Filter = nf
+	}
+	if dto.IsSetWebhook() {
+		w := dto.GetWebhook()
+		conf.Webhook = &entity.WebhookNotificationConf{
+			Enable: w.GetEnable(),
+			URLs:   w.GetUrls(),
+			Secret: w.GetSecret(),
+		}
+	}
+	if dto.IsSetFeishuNotification() {
+		fn := dto.GetFeishuNotification()
+		conf.FeishuNotification = &entity.FeishuNotificationConf{
+			Enable: fn.GetEnable(),
+		}
+	}
+	return conf
+}
+
+// ConvertNotificationConfDO2DTO converts domain ExptNotificationConf to IDL ExptNotificationConf.
+func ConvertNotificationConfDO2DTO(do *entity.ExptNotificationConf) *domain_expt.ExptNotificationConf {
+	if do == nil {
+		return nil
+	}
+	dto := domain_expt.NewExptNotificationConf()
+	if do.Filter != nil {
+		f := domain_expt.NewFilters()
+		f.LogicOp = gptr.Of(domain_expt.FilterLogicOp(do.Filter.LogicOp))
+		for _, cond := range do.Filter.Conditions {
+			if cond == nil {
+				continue
+			}
+			fc := domain_expt.NewFilterCondition()
+			fc.Field = &domain_expt.FilterField{
+				FieldType: domain_expt.FieldType(cond.FieldType),
+			}
+			fc.Operator = domain_expt.FilterOperatorType(cond.Operator)
+			fc.Value = cond.Value
+			f.FilterConditions = append(f.FilterConditions, fc)
+		}
+		dto.Filter = f
+	}
+	if do.Webhook != nil {
+		w := domain_expt.NewWebhookNotificationConf()
+		w.Enable = gptr.Of(do.Webhook.Enable)
+		w.Urls = do.Webhook.URLs
+		w.Secret = gptr.Of(do.Webhook.Secret)
+		dto.Webhook = w
+	}
+	if do.FeishuNotification != nil {
+		fn := domain_expt.NewFeishuNotificationConf()
+		fn.Enable = gptr.Of(do.FeishuNotification.Enable)
+		dto.FeishuNotification = fn
+	}
+	return dto
 }

@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS `experiment`
     `thread_id` varchar(255) DEFAULT NULL COMMENT '智能生成会话ID',
     `trial_run_item_count`      bigint unsigned                                                         DEFAULT NULL COMMENT '试运行行数',
     `offline_expt_analysis_status` int unsigned                                             NOT NULL DEFAULT '0' COMMENT '离线实验分析状态：0-未开始，1-进行中，2-成功，3-失败，4-已被取代(superseded)',
+    `notification_conf` blob DEFAULT NULL COMMENT '通知配置（Webhook + 飞书双渠道）',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_expt_item_idx` (`space_id`, `name`, `deleted_at`),
     KEY `idx_space_deleted_created_by` (`space_id`, `created_by`, `deleted_at`),

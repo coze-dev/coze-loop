@@ -205,6 +205,16 @@ type ExptLifecycleEvent struct {
 	SourceType SourceType `json:"source_type"`
 }
 
+type WebhookRetryEvent struct {
+	DeliveryID   string `json:"delivery_id"`
+	AttemptNum   int    `json:"attempt_num"`
+	WebhookURL   string `json:"webhook_url"`
+	RequestBody  []byte `json:"request_body"`
+	ExperimentID int64  `json:"experiment_id"`
+	SpaceID      int64  `json:"space_id"`
+	Secret       string `json:"secret"`
+}
+
 type ExportScene int
 
 const (

@@ -478,6 +478,12 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 		}
 	}
 
+	// 增量更新请求未带 notification_conf 时，避免整份 template_conf 覆盖导致 DB 中 notification_conf 丢失
+	if updatedTemplate.TemplateConf != nil && updatedTemplate.TemplateConf.NotificationConf == nil &&
+		existingTemplate.TemplateConf != nil && existingTemplate.TemplateConf.NotificationConf != nil {
+		updatedTemplate.TemplateConf.NotificationConf = existingTemplate.TemplateConf.NotificationConf
+	}
+
 	// 显式传入 expt_source（含 Scheduler 等）时覆盖到 TemplateConf；
 	// 当 templateConf 还未初始化（请求未带字段映射等），克隆现有再写入，避免污染其他字段。
 	if param.ExptSource != nil {
@@ -485,6 +491,14 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
 		}
 		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
+	// 显式传入 notification_conf 时覆盖到 TemplateConf
+	if param.NotificationConf != nil {
+		if updatedTemplate.TemplateConf == nil {
+			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		updatedTemplate.TemplateConf.NotificationConf = param.NotificationConf
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重

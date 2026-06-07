@@ -170,6 +170,9 @@ struct Experiment {
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
+    // 通知配置
+    63: optional ExptNotificationConf notification_conf
+
     100: optional common.BaseInfo base_info
 }
 
@@ -299,6 +302,7 @@ struct ExptTemplate {
     3: optional ExptFieldMapping field_mapping_config
     4: optional ExptScoreWeight score_weight_config (go.tag = 'json:"score_weight_config"')
     5: optional bool enable_extract_trajectory
+    6: optional ExptNotificationConf notification_conf
 
     100: optional common.BaseInfo base_info
 }
@@ -418,6 +422,27 @@ struct ExperimentFilterOption {
 struct ExperimentResultFilter {
     1: optional Filters filters
     2: optional KeywordSearch keyword_search
+}
+
+// ===============================
+// 通知配置结构
+// ===============================
+
+// Webhook + 飞书双渠道通知配置
+struct ExptNotificationConf {
+    1: optional Filters filter
+    10: optional WebhookNotificationConf webhook
+    11: optional FeishuNotificationConf feishu_notification
+}
+
+struct WebhookNotificationConf {
+    1: optional bool enable
+    2: optional list<string> urls
+    3: optional string secret
+}
+
+struct FeishuNotificationConf {
+    1: optional bool enable
 }
 
 // ===============================

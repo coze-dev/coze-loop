@@ -37,7 +37,12 @@ func (h *ExptLifecycleEventHandlerImpl) HandleLifecycleEvent(ctx context.Context
 
 	switch event.ToStatus {
 	case entity.ExptStatus_Success, entity.ExptStatus_Failed, entity.ExptStatus_Terminated, entity.ExptStatus_SystemTerminated:
-		return h.sendNotifyCard(ctx, event, expt)
+		if err := h.sendNotifyCard(ctx, event, expt); err != nil {
+			logs.CtxWarn(ctx, "[ExptLifecycle] sendNotifyCard failed, expt_id=%d, err=%v", expt.ID, err)
+		}
+		return nil
+	case entity.ExptStatus_Processing:
+		return nil
 	default:
 		return nil
 	}
@@ -47,6 +52,13 @@ func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, even
 	if event.ToStatus != expt.Status {
 		return nil
 	}
+
+	if expt.NotificationConf != nil {
+		if !expt.NotificationConf.ShouldFeishu(event.ToStatus) {
+			return nil
+		}
+	}
+
 	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
 	if err != nil {
 		return err

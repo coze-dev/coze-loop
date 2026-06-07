@@ -51,6 +51,10 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	if req.IsSetNotificationConf() {
+		param.NotificationConf = ConvertNotificationConfDTO2DO(req.GetNotificationConf())
+	}
+
 	return param, nil
 }
 
@@ -284,6 +288,11 @@ func buildTemplateConfForCreate(
 	// 设置 ExptSource
 	if param.ExptSource != nil {
 		templateConf.ExptSource = param.ExptSource
+	}
+
+	// 设置 NotificationConf
+	if param.NotificationConf != nil {
+		templateConf.NotificationConf = param.NotificationConf
 	}
 
 	return templateConf
@@ -1131,6 +1140,11 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
 
+	// 从 TemplateConf 继承 NotificationConf
+	if template.TemplateConf != nil && template.TemplateConf.NotificationConf != nil {
+		req.NotificationConf = ConvertNotificationConfDO2DTO(template.TemplateConf.NotificationConf)
+	}
+
 	return req
 }
 
@@ -1370,8 +1384,9 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 	hasScoreWeight := len(evaluatorScoreWeights) > 0
 	hasConcurNum := itemConcurNum != nil || req.DefaultEvaluatorsConcurNum != nil
 	hasEnableExtractTrajectory := req.IsSetEnableExtractTrajectory()
+	hasNotificationConf := req.IsSetNotificationConf()
 
-	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory {
+	if hasFieldMapping || hasScoreWeight || hasConcurNum || hasEnableExtractTrajectory || hasNotificationConf {
 		templateConf := &entity.ExptTemplateConfiguration{
 			ItemConcurNum:       ptr.ConvIntPtr[int32, int](itemConcurNum),
 			EvaluatorsConcurNum: ptr.ConvIntPtr[int32, int](req.DefaultEvaluatorsConcurNum),
@@ -1397,11 +1412,19 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 			}
 		}
 
+		if hasNotificationConf {
+			templateConf.NotificationConf = ConvertNotificationConfDTO2DO(req.GetNotificationConf())
+		}
+
 		param.TemplateConf = templateConf
 	}
 
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
+	}
+
+	if req.IsSetNotificationConf() {
+		param.NotificationConf = ConvertNotificationConfDTO2DO(req.GetNotificationConf())
 	}
 
 	return param, nil
