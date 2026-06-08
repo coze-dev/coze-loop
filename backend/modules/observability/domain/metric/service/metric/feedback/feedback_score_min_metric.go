@@ -27,7 +27,7 @@ func (m *FeedbackScoreMinMetric) Source() entity.MetricSource {
 }
 
 func (m *FeedbackScoreMinMetric) Expression(_ entity.MetricGranularity) *entity.Expression {
-	return nil
+	return &entity.Expression{Expression: "min(value_float)"}
 }
 
 func (m *FeedbackScoreMinMetric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

@@ -27,7 +27,7 @@ func (m *FeedbackScoreAvgMetric) Source() entity.MetricSource {
 }
 
 func (m *FeedbackScoreAvgMetric) Expression(_ entity.MetricGranularity) *entity.Expression {
-	return nil
+	return &entity.Expression{Expression: "avg(value_float)"}
 }
 
 func (m *FeedbackScoreAvgMetric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

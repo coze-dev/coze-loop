@@ -462,14 +462,19 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 		if mDef == nil {
 			continue
 		}
+		metricExpressions := make(map[string]string)
+		if expr := mDef.Expression(req.Granularity); expr != nil {
+			metricExpressions[metricName] = expr.Expression
+		}
 		param := &repo.QueryFeedbackOnlineParam{
-			Tenants:         tenants,
-			WorkspaceID:     strconv.FormatInt(req.WorkspaceID, 10),
-			StartTime:       req.StartTime,
-			EndTime:         req.EndTime,
-			MetricNames:     []string{metricName},
-			Filters:         req.FilterFields,
-			DrillDownFields: req.DrillDownFields,
+			Tenants:           tenants,
+			WorkspaceID:       strconv.FormatInt(req.WorkspaceID, 10),
+			StartTime:         req.StartTime,
+			EndTime:           req.EndTime,
+			MetricNames:       []string{metricName},
+			MetricExpressions: metricExpressions,
+			Filters:           req.FilterFields,
+			DrillDownFields:   req.DrillDownFields,
 		}
 		// 把指标定义的 GroupBy 维度合并到 DrillDownFields
 		for _, dim := range mDef.GroupBy() {
@@ -506,6 +511,11 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 		}
 		mBuilder := &metricQueryBuilder{
 			metricNames: []string{metricName},
+			granularity: req.Granularity,
+			mRepoReq: &repo.GetMetricsParam{
+				StartAt: req.StartTime,
+				EndAt:   req.EndTime,
+			},
 			mInfo: &metricInfo{
 				mType: mDef.Type(),
 				mAggregation: []*entity.Dimension{

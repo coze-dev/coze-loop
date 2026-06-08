@@ -27,7 +27,7 @@ func (m *FeedbackScoreMaxMetric) Source() entity.MetricSource {
 }
 
 func (m *FeedbackScoreMaxMetric) Expression(_ entity.MetricGranularity) *entity.Expression {
-	return nil
+	return &entity.Expression{Expression: "max(value_float)"}
 }
 
 func (m *FeedbackScoreMaxMetric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

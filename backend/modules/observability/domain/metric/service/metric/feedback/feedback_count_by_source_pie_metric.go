@@ -26,7 +26,7 @@ func (m *FeedbackCountBySourcePieMetric) Source() entity.MetricSource {
 }
 
 func (m *FeedbackCountBySourcePieMetric) Expression(_ entity.MetricGranularity) *entity.Expression {
-	return nil
+	return &entity.Expression{Expression: "count()"}
 }
 
 func (m *FeedbackCountBySourcePieMetric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {

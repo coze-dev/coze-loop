@@ -27,7 +27,7 @@ func (m *FeedbackScoreP90Metric) Source() entity.MetricSource {
 }
 
 func (m *FeedbackScoreP90Metric) Expression(_ entity.MetricGranularity) *entity.Expression {
-	return nil
+	return &entity.Expression{Expression: "quantile(0.9)(value_float)"}
 }
 
 func (m *FeedbackScoreP90Metric) Where(_ context.Context, _ span_filter.Filter, _ *span_filter.SpanEnv) ([]*loop_span.FilterField, error) {
