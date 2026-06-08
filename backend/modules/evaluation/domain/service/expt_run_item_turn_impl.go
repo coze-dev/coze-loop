@@ -329,6 +329,8 @@ func (e *DefaultExptTurnEvaluationImpl) CallEvaluators(ctx context.Context, etec
 		if !etec.Event.IgnoreExistedEvaluatorResult(ctx) && existResult != nil && (existResult.Status == entity.EvaluatorRunStatusSuccess || existResult.Status == entity.EvaluatorRunStatusAsyncInvoking) {
 			evaluatorResults[evaluatorVersion.GetEvaluatorVersionID()] = existResult
 			continue
+		} else {
+			logs.CtxInfo(ctx, "[ExptTurnEval] Ignore existed evaluator result: %v", json.Jsonify(existResult))
 		}
 
 		pendingEvaluatorVersionIDs = append(pendingEvaluatorVersionIDs, evaluatorVersion.GetEvaluatorVersionID())

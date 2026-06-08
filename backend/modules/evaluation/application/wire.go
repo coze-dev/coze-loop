@@ -16,6 +16,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/infra/external/audit"
 	"github.com/coze-dev/coze-loop/backend/infra/external/benefit"
 	"github.com/coze-dev/coze-loop/backend/infra/fileserver"
+	infrahttp "github.com/coze-dev/coze-loop/backend/infra/http"
 	"github.com/coze-dev/coze-loop/backend/infra/idgen"
 	"github.com/coze-dev/coze-loop/backend/infra/limiter"
 	"github.com/coze-dev/coze-loop/backend/infra/lock"
@@ -68,6 +69,7 @@ var (
 		// Infrastructure Sets
 		experimentmetrics.ExperimentMetricsSet,
 		evaltargetmetrics.EvalTargetMetricsSet,
+		infrahttp.NewHTTPClient,
 		foundationrpc.FoundationRPCSet,
 		tagrpc.TagRPCSet,
 		agentrpc.AgentRPCSet,
@@ -88,6 +90,7 @@ var (
 		domainservice.NewExptResultService,
 		domainservice.NewEvaluationAnalysisService,
 		// Infrastructure Sets
+		infrahttp.NewHTTPClient,
 		foundationrpc.FoundationRPCSet,
 		tagrpc.TagRPCSet,
 		trajectoryrpc.TrajectoryRPCSet,

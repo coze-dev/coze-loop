@@ -69,7 +69,7 @@ func (e *ExptItemEvalEvent) CtxTargetCalled(ctx context.Context) bool {
 
 func (e *ExptItemEvalEvent) IgnoreExistedEvaluatorResult(ctx context.Context) bool {
 	if e.CtxTargetCalled(ctx) {
-		return false
+		return true
 	}
 	return e.ignoreExistedResult()
 }

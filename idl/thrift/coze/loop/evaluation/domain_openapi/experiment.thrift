@@ -6,7 +6,7 @@ include "evaluator.thrift"
 include "eval_target.thrift"
 
 // 实验状态
-typedef string ExperimentStatus(ts.enum="true")
+typedef string ExperimentStatus (ts.enum = "true")
 const ExperimentStatus ExperimentStatus_Pending = "pending"
 const ExperimentStatus ExperimentStatus_Processing = "processing"
 const ExperimentStatus ExperimentStatus_Success = "success"
@@ -16,12 +16,12 @@ const ExperimentStatus ExperimentStatus_SystemTerminated = "system_terminated"
 const ExperimentStatus ExperimentStatus_Draining = "draining"
 
 // 实验类型
-typedef string ExperimentType(ts.enum="true")
+typedef string ExperimentType (ts.enum = "true")
 const ExperimentType ExperimentType_Offline = "offline"
 const ExperimentType ExperimentType_Online = "online"
 
 // 离线实验分析状态（OpenAPI 字符串枚举，与 domain OfflineExptAnalysisStatus 对应）
-typedef string OfflineExptAnalysisStatus(ts.enum="true")
+typedef string OfflineExptAnalysisStatus (ts.enum = "true")
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_NotStarted = "not_started"
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Processing = "processing"
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Success = "success"
@@ -29,7 +29,7 @@ const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Failed = "failed"
 const OfflineExptAnalysisStatus OfflineExptAnalysisStatus_Superseded = "superseded"
 
 // 聚合器类型
-typedef string AggregatorType(ts.enum="true")
+typedef string AggregatorType (ts.enum = "true")
 const AggregatorType AggregatorType_Average = "average"
 const AggregatorType AggregatorType_Sum = "sum"
 const AggregatorType AggregatorType_Max = "max"
@@ -37,11 +37,11 @@ const AggregatorType AggregatorType_Min = "min"
 const AggregatorType AggregatorType_Distribution = "distribution"
 
 // 数据类型
-typedef string DataType(ts.enum="true")
+typedef string DataType (ts.enum = "true")
 const DataType DataType_Double = "double"
 const DataType DataType_ScoreDistribution = "score_distribution"
 
-typedef string ItemRunState(ts.enum="true")
+typedef string ItemRunState (ts.enum = "true")
 const ItemRunState ItemRunState_Queueing = "queueing"
 const ItemRunState ItemRunState_Processing = "processing"
 const ItemRunState ItemRunState_Success = "success"
@@ -49,14 +49,14 @@ const ItemRunState ItemRunState_Fail = "fail"
 const ItemRunState ItemRunState_Terminal = "terminal"
 
 
-typedef string TurnRunState(ts.enum="true")
+typedef string TurnRunState (ts.enum = "true")
 const TurnRunState TurnRunState_Queueing = "queueing"
 const TurnRunState TurnRunState_Processing = "processing"
 const TurnRunState TurnRunState_Success = "success"
 const TurnRunState TurnRunState_Fail = "fail"
 const TurnRunState TurnRunState_Terminal = "terminal"
 
-typedef string ExptRetryMode(ts.enum="true")
+typedef string ExptRetryMode (ts.enum = "true")
 const ExptRetryMode ExptRetryMode_RetryAll = "retry_all"
 const ExptRetryMode ExptRetryMode_RetryFailure = "retry_failure"
 const ExptRetryMode ExptRetryMode_RetryTargetItems = "retry_target_items"
@@ -74,7 +74,7 @@ struct TargetFieldMapping {
 
 // 评估器字段映射
 struct EvaluatorFieldMapping {
-    1: optional i64 evaluator_id (api.js_conv="true", go.tag='json:"evaluator_id"')
+    1: optional i64 evaluator_id (api.js_conv = "true", go.tag = 'json:"evaluator_id"')
     2: optional string version
     3: optional list<FieldMapping> from_eval_set
     4: optional list<FieldMapping> from_target
@@ -124,7 +124,7 @@ struct ScoreDistribution {
 
 struct ScoreDistributionItem {
     1: optional string score
-    2: optional i64 count (api.js_conv='true', go.tag='json:"count"')
+    2: optional i64 count (api.js_conv = 'true', go.tag = 'json:"count"')
     3: optional double percentage
 }
 
@@ -140,14 +140,14 @@ struct ExperimentStatistics {
 // 评测实验
 struct Experiment {
     // 基本信息
-    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
+    1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
     2: optional string name
     3: optional string description
 
     // 运行信息
     10: optional ExperimentStatus status // 实验状态
-    11: optional i64 started_at  (api.js_conv='true', go.tag='json:"started_at"') // ISO 8601格式
-    12: optional i64 ended_at    (api.js_conv='true', go.tag='json:"ended_at"') // ISO 8601格式
+    11: optional i64 started_at (api.js_conv = 'true', go.tag = 'json:"started_at"') // ISO 8601格式
+    12: optional i64 ended_at (api.js_conv = 'true', go.tag = 'json:"ended_at"') // ISO 8601格式
     13: optional i32 item_concur_num // 评测集并发数
     14: optional common.RuntimeParam target_runtime_param   // 运行时参数
     15: optional i32 item_retry_num // 单条数据失败重试次数
@@ -184,8 +184,8 @@ struct ColumnEvalSetField {
 
 // 列定义 - 评估器
 struct ColumnEvaluator {
-    1: optional i64 evaluator_version_id (api.js_conv='true', go.tag='json:"evaluator_version_id"')
-    2: optional i64 evaluator_id (api.js_conv='true', go.tag='json:"evaluator_id"')
+    1: optional i64 evaluator_version_id (api.js_conv = 'true', go.tag = 'json:"evaluator_version_id"')
+    2: optional i64 evaluator_id (api.js_conv = 'true', go.tag = 'json:"evaluator_id"')
     3: optional evaluator.EvaluatorType evaluator_type
     4: optional string name
     5: optional string version
@@ -223,6 +223,8 @@ struct ResultPayload {
     2: optional eval_target.EvalTargetRecord target_record  // 评测对象执行结果
     3: optional list<evaluator.EvaluatorRecord> evaluator_records   // 评估器执行结果列表
 
+    10: optional double weighted_score // 评估器加权得分
+
     20: optional TurnSystemInfo system_info
 }
 
@@ -233,13 +235,13 @@ struct TurnSystemInfo {
 
 // 轮次结果
 struct TurnResult {
-    1: optional string turn_id (api.js_conv='true', go.tag='json:"turn_id"')
+    1: optional string turn_id (api.js_conv = 'true', go.tag = 'json:"turn_id"')
     2: optional ResultPayload payload
 }
 
 // 数据项结果
 struct ItemResult {
-    1: optional i64 item_id (api.js_conv='true', go.tag='json:"item_id"')   // 数据项(行)ID
+    1: optional i64 item_id (api.js_conv = 'true', go.tag = 'json:"item_id"')   // 数据项(行)ID
     2: optional list<TurnResult> turn_results   // 轮次结果，单轮仅有一个元素
 
     20: optional ItemSystemInfo system_info
@@ -256,8 +258,8 @@ struct ItemSystemInfo {
 
 // 实验模板基础信息
 struct ExptTemplateMeta {
-    1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
-    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
+    1: optional i64 id (api.js_conv = 'true', go.tag = 'json:"id"')
+    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
     3: optional string name
     4: optional string description
     5: optional ExperimentType expt_type   // 模板对应的实验类型，当前主要为 Offline
@@ -265,10 +267,10 @@ struct ExptTemplateMeta {
 
 // 实验三元组配置
 struct ExptTuple {
-    1: optional i64 eval_set_id (api.js_conv='true', go.tag='json:"eval_set_id"')
-    2: optional i64 eval_set_version_id (api.js_conv='true', go.tag='json:"eval_set_version_id"')
-    3: optional i64 target_id (api.js_conv='true', go.tag='json:"target_id"')
-    4: optional i64 target_version_id (api.js_conv='true', go.tag='json:"target_version_id"')
+    1: optional i64 eval_set_id (api.js_conv = 'true', go.tag = 'json:"eval_set_id"')
+    2: optional i64 eval_set_version_id (api.js_conv = 'true', go.tag = 'json:"eval_set_version_id"')
+    3: optional i64 target_id (api.js_conv = 'true', go.tag = 'json:"target_id"')
+    4: optional i64 target_version_id (api.js_conv = 'true', go.tag = 'json:"target_version_id"')
     5: optional list<evaluator.EvaluatorIDVersionItem> evaluator_id_version_items (go.tag = 'json:"evaluator_id_version_items"')
 
     // 兼容内部结构
@@ -308,13 +310,13 @@ struct ExptTemplate {
 // ===============================
 
 // 筛选逻辑操作符（对应 domain/expt FilterLogicOp）
-typedef string FilterLogicOp(ts.enum="true")
+typedef string FilterLogicOp (ts.enum = "true")
 const FilterLogicOp FilterLogicOp_Unknown = "unknown"
 const FilterLogicOp FilterLogicOp_And = "and"
 const FilterLogicOp FilterLogicOp_Or = "or"
 
 // 筛选操作符类型（对应 domain/expt FilterOperatorType）
-typedef string FilterOperatorType(ts.enum="true")
+typedef string FilterOperatorType (ts.enum = "true")
 const FilterOperatorType FilterOperatorType_Unknown = "unknown"
 const FilterOperatorType FilterOperatorType_Equal = "equal"
 const FilterOperatorType FilterOperatorType_NotEqual = "not_equal"
@@ -330,7 +332,7 @@ const FilterOperatorType FilterOperatorType_IsNull = "is_null"
 const FilterOperatorType FilterOperatorType_IsNotNull = "is_not_null"
 
 // 筛选字段类型（对应 domain/expt FieldType）
-typedef string FilterFieldType(ts.enum="true")
+typedef string FilterFieldType (ts.enum = "true")
 const FilterFieldType FilterFieldType_Unknown = "unknown"
 const FilterFieldType FilterFieldType_EvaluatorScore = "evaluator_score"
 const FilterFieldType FilterFieldType_CreatorBy = "creator_by"
@@ -425,11 +427,11 @@ struct ExperimentResultFilter {
 // ===============================
 
 // 实验报告导出类型
-typedef string ExptResultExportType(ts.enum="true")
+typedef string ExptResultExportType (ts.enum = "true")
 const ExptResultExportType ExptResultExportType_CSV = "CSV"
 
 // CSV 导出任务状态
-typedef string CSVExportStatus(ts.enum="true")
+typedef string CSVExportStatus (ts.enum = "true")
 const CSVExportStatus CSVExportStatus_Unknown = "Unknown"
 const CSVExportStatus CSVExportStatus_Running = "Running"
 const CSVExportStatus CSVExportStatus_Success = "Success"
@@ -437,7 +439,7 @@ const CSVExportStatus CSVExportStatus_Failed = "Failed"
 
 // 运行错误（对应 domain/expt RunError）
 struct RunError {
-    1: optional i64 code (api.js_conv='true', go.tag='json:"code"')
+    1: optional i64 code (api.js_conv = 'true', go.tag = 'json:"code"')
     2: optional string message
     3: optional string detail
 }
@@ -460,13 +462,13 @@ struct ExptResultExportColumnSpec {
 
 // 实验报告导出记录（对应 domain/expt ExptResultExportRecord）
 struct ExptResultExportRecord {
-    1: optional i64 export_id (api.js_conv='true', go.tag='json:"export_id"')
-    2: optional i64 workspace_id (api.js_conv='true', go.tag='json:"workspace_id"')
-    3: optional i64 expt_id (api.js_conv='true', go.tag='json:"expt_id"')
+    1: optional i64 export_id (api.js_conv = 'true', go.tag = 'json:"export_id"')
+    2: optional i64 workspace_id (api.js_conv = 'true', go.tag = 'json:"workspace_id"')
+    3: optional i64 expt_id (api.js_conv = 'true', go.tag = 'json:"expt_id"')
     4: optional CSVExportStatus csv_export_status
     5: optional common.BaseInfo base_info
-    6: optional i64 start_time (api.js_conv='true', go.tag='json:"start_time"')
-    7: optional i64 end_time (api.js_conv='true', go.tag='json:"end_time"')
+    6: optional i64 start_time (api.js_conv = 'true', go.tag = 'json:"start_time"')
+    7: optional i64 end_time (api.js_conv = 'true', go.tag = 'json:"end_time"')
     8: optional bool expired
     9: optional RunError error
     10: optional string url

@@ -2438,12 +2438,12 @@ func (e *EvalOpenAPIApplication) ReportEvaluatorInvokeResult_(ctx context.Contex
 		return nil, err
 	}
 	if actx == nil {
-		logs.CtxWarn(ctx, "report evaluator record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
+		logs.CtxWarn(ctx, "[ExptTurnEval] report evaluator record, actx missing, invoke_id: %v, space_id: %v", req.GetInvokeID(), req.GetWorkspaceID())
 		return nil, errorx.New("eval async context not found, invoke_id: %v", req.GetInvokeID())
 	}
 
-	logs.CtxInfo(ctx, "report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v",
-		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID())
+	logs.CtxInfo(ctx, "[ExptTurnEval] report evaluator record, invoke_id: %v, evaluator_version_id: %v, space_id: %v, expt_id: %v, expt_run_id: %v, item_id: %v， status: %v",
+		req.GetInvokeID(), actx.EvaluatorVersionID, req.GetWorkspaceID(), actx.Event.GetExptID(), actx.Event.GetExptRunID(), actx.Event.GetEvalSetItemID(), req.GetStatus())
 
 	outputData := evaluator_convertor.ToInvokeEvaluatorOutputDataDO(req.GetOutput(), req.GetStatus())
 	if outputData != nil {

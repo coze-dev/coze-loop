@@ -49,6 +49,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 var EvaluatorDomainServiceSet = wire.NewSet(
 	NewEvaluatorServiceImpl,
 	NewEvaluatorRecordServiceImpl,
+	NewEvaluatorScoreCalculator,
 	NewEvaluatorTemplateService,
 	NewEvaluatorSourceServices,
 	NewCodeBuilderFactory,

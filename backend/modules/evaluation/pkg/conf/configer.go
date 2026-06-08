@@ -96,6 +96,10 @@ func (c *configer) GetExptTemplateUpdateEvalSetWhiteList(ctx context.Context) (w
 	return lo.Ternary(c.loader.UnmarshalKey(ctx, key, &w) == nil, w, entity.DefaultExptTemplateUpdateEvalSetWhiteList())
 }
 
+func (c *configer) GetExptTurnScoreHookConf(ctx context.Context, spaceID, exptID int64, evaluatorRefs []*entity.ExptEvaluatorVersionRef) (*entity.ExptTurnScoreHookConf, bool) {
+	return nil, false
+}
+
 func (c *configer) GetMaintainerUserIDs(ctx context.Context) map[string]bool {
 	const key = "system_maintainer_conf"
 	var maintainerConf *entity.SystemMaintainerConf

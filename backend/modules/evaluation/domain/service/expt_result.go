@@ -13,8 +13,8 @@ import (
 //go:generate  mockgen -destination  ./mocks/expt_result.go  --package mocks . ExptResultService,ExptAggrResultService
 type ExptResultService interface {
 	MGetExperimentResult(ctx context.Context, param *entity.MGetExperimentResultParam) (*entity.MGetExperimentReportResult, error)
-	// RecordItemRunLogs sync results from run_log table to result table
-	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error)
+	// RecordItemRunLogs sync results from run_log table to result table.
+	RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error)
 	GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error)
 
 	CreateStats(ctx context.Context, exptStats *entity.ExptStats, session *entity.Session) error

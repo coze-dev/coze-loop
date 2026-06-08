@@ -203,18 +203,18 @@ func (mr *MockExptResultServiceMockRecorder) RecalculateWeightedScore(ctx, space
 }
 
 // RecordItemRunLogs mocks base method.
-func (m *MockExptResultService) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+func (m *MockExptResultService) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordItemRunLogs", ctx, exptID, exptRunID, itemID, spaceID)
+	ret := m.ctrl.Call(m, "RecordItemRunLogs", ctx, exptID, exptRunID, itemID, spaceID, expt)
 	ret0, _ := ret[0].([]*entity.ExptTurnEvaluatorResultRef)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // RecordItemRunLogs indicates an expected call of RecordItemRunLogs.
-func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID any) *gomock.Call {
+func (mr *MockExptResultServiceMockRecorder) RecordItemRunLogs(ctx, exptID, exptRunID, itemID, spaceID, expt any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), ctx, exptID, exptRunID, itemID, spaceID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordItemRunLogs", reflect.TypeOf((*MockExptResultService)(nil).RecordItemRunLogs), ctx, exptID, exptRunID, itemID, spaceID, expt)
 }
 
 // UpsertExptTurnResultFilter mocks base method.

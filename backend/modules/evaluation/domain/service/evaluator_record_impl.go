@@ -34,6 +34,7 @@ func NewEvaluatorRecordServiceImpl(idgen idgen.IIDGenerator,
 	userInfoService userinfo.UserInfoService,
 	exptRepo repo.IExperimentRepo,
 	exptTurnResultRepo repo.IExptTurnResultRepo,
+	scoreCalculator IEvaluatorScoreCalculator,
 ) EvaluatorRecordService {
 	evaluatorRecordServiceOnce.Do(func() {
 		singletonEvaluatorRecordService = &EvaluatorRecordServiceImpl{
@@ -44,6 +45,7 @@ func NewEvaluatorRecordServiceImpl(idgen idgen.IIDGenerator,
 			userInfoService:     userInfoService,
 			exptRepo:            exptRepo,
 			exptTurnResultRepo:  exptTurnResultRepo,
+			scoreCalculator:     scoreCalculator,
 		}
 	})
 	return singletonEvaluatorRecordService
@@ -58,6 +60,7 @@ type EvaluatorRecordServiceImpl struct {
 	userInfoService     userinfo.UserInfoService
 	exptRepo            repo.IExperimentRepo
 	exptTurnResultRepo  repo.IExptTurnResultRepo
+	scoreCalculator     IEvaluatorScoreCalculator
 }
 
 // CorrectEvaluatorRecord 创建 evaluator_version 运行结果
@@ -215,8 +218,8 @@ func (s *EvaluatorRecordServiceImpl) recalculateWeightedScoreForTurn(ctx context
 		}
 	}
 
-	// 7. 计算新的 weighted_score（共用 expt_result_impl.go 中的 calculateWeightedScore）
-	ws := calculateWeightedScore(version2Record, scoreWeights)
+	// 7. 计算新的 weighted_score（共用注入的行维度得分计算器）
+	ws := s.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights)
 
 	// 8. 写回 expt_turn_result 的 weighted_score 字段
 	updateFields := map[string]any{

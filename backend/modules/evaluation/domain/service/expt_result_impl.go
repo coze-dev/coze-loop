@@ -56,6 +56,7 @@ func NewExptResultService(
 	tagRPCAdapter rpc.ITagRPCAdapter,
 	analysisService IEvaluationAnalysisService,
 	fileProvider rpc.IFileProvider,
+	scoreCalculator IEvaluatorScoreCalculator,
 ) ExptResultService {
 	return &ExptResultServiceImpl{
 		ExptItemResultRepo:          exptItemResultRepo,
@@ -77,6 +78,7 @@ func NewExptResultService(
 		tagRPCAdapter:               tagRPCAdapter,
 		analysisService:             analysisService,
 		fileProvider:                fileProvider,
+		scoreCalculator:             scoreCalculator,
 	}
 }
 
@@ -102,6 +104,8 @@ type ExptResultServiceImpl struct {
 
 	publisher       events.ExptEventPublisher
 	analysisService IEvaluationAnalysisService
+
+	scoreCalculator IEvaluatorScoreCalculator
 }
 
 func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptID, itemID, spaceID int64, session *entity.Session) ([]*entity.ExptTurnResult, error) {
@@ -137,7 +141,7 @@ func (e ExptResultServiceImpl) GetExptItemTurnResults(ctx context.Context, exptI
 	return res, nil
 }
 
-func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64) ([]*entity.ExptTurnEvaluatorResultRef, error) {
+func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, exptRunID, itemID, spaceID int64, expt *entity.Experiment) ([]*entity.ExptTurnEvaluatorResultRef, error) {
 	itemRunLog, err := e.ExptItemResultRepo.GetItemRunLog(ctx, exptID, exptRunID, itemID, spaceID)
 	if err != nil {
 		return nil, err
@@ -180,9 +184,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 
 	// 加载实验配置：仅在 EnableScoreWeight 为 true 时从 EvaluatorConf 构建权重；否则 scoreWeights 为空，calculateWeightedScore 按等权计算。
 	var scoreWeights map[int64]float64
-	expt, err := e.ExperimentRepo.GetByID(ctx, exptID, spaceID)
-	if err == nil && expt != nil &&
-		expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
+	if expt != nil && expt.EvalConf != nil && expt.EvalConf.ConnectorConf.EvaluatorsConf != nil &&
 		expt.EvalConf.ConnectorConf.EvaluatorsConf.EnableScoreWeight {
 		for _, ec := range expt.EvalConf.ConnectorConf.EvaluatorsConf.EvaluatorConf {
 			if ec == nil || ec.ScoreWeight == nil || *ec.ScoreWeight <= 0 {
@@ -235,7 +237,7 @@ func (e ExptResultServiceImpl) RecordItemRunLogs(ctx context.Context, exptID, ex
 						version2Record[r.EvaluatorVersionID] = r
 					}
 
-					if ws := calculateWeightedScore(version2Record, scoreWeights); ws != nil {
+					if ws := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights); ws != nil {
 						result.WeightedScore = ws
 					}
 				}
@@ -524,7 +526,7 @@ func (e ExptResultServiceImpl) MGetExperimentResult(ctx context.Context, param *
 		}
 	}
 
-	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider)
+	payloadBuilder := NewPayloadBuilder(ctx, param, baseExptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo, e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, itemID2ItemRunState, e.fileProvider, e.scoreCalculator)
 
 	// 写回 item 级别 logid 到 payload.SystemInfo，供 BatchGetExperimentResult 返回给业务方
 	for _, item := range payloadBuilder.ItemResults {
@@ -1044,6 +1046,7 @@ type PayloadBuilder struct {
 	EvaluatorRecordService                      EvaluatorRecordService
 	AnalysisService                             IEvaluationAnalysisService
 	FileProvider                                rpc.IFileProvider
+	ScoreCalculator                             IEvaluatorScoreCalculator
 	ExptTurnResultFilterKeyMappingEvaluatorMap  map[string]*entity.ExptTurnResultFilterKeyMapping
 	ExptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping
 
@@ -1071,6 +1074,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 	exptTurnResultFilterKeyMappingAnnotationMap map[string]*entity.ExptTurnResultFilterKeyMapping,
 	itemID2ItemRunState map[int64]entity.ItemRunState,
 	fileProvider rpc.IFileProvider,
+	scoreCalculator IEvaluatorScoreCalculator,
 ) *PayloadBuilder {
 	builder := &PayloadBuilder{
 		BaselineExptID:           baselineExptID,
@@ -1093,6 +1097,7 @@ func NewPayloadBuilder(ctx context.Context, param *entity.MGetExperimentResultPa
 		LoadEvalTargetFullContent:     resolveLoadEvalTargetFullContent(param),
 		LoadEvalTargetOutputFieldKeys: append([]string(nil), param.LoadEvalTargetOutputFieldKeys...),
 		FileProvider:                  fileProvider,
+		ScoreCalculator:               scoreCalculator,
 	}
 
 	builder.ItemResults = make([]*entity.ItemResult, 0)
@@ -1495,7 +1500,7 @@ func (b *PayloadBuilder) fillExptTurnResultFilters(ctx context.Context, createdD
 				}
 			}
 			if len(evaluatorRecords) > 0 {
-				weightedScore = calculateWeightedScore(evaluatorRecords, scoreWeights)
+				weightedScore = b.ScoreCalculator.CalculateWeightedScore(ctx, exptDO, evaluatorRecords, scoreWeights)
 			}
 		}
 		exptTurnResultFilter.EvaluatorWeightedScore = weightedScore
@@ -1782,97 +1787,6 @@ func (e *ExptResultBuilder) getTurnEvaluatorResult(ctx context.Context, itemID, 
 	}
 
 	return output
-}
-
-// calculateWeightedScore 计算加权分数
-func calculateWeightedScore(
-	evaluatorRecords map[int64]*entity.EvaluatorRecord,
-	weights map[int64]float64,
-) *float64 {
-	if len(evaluatorRecords) == 0 {
-		return nil
-	}
-
-	// 如果未配置权重（weights 为空），则按所有评估器权重相同计算加权分（即简单平均）
-	if len(weights) == 0 {
-		var (
-			sumScore float64
-			cnt      int
-		)
-		for _, record := range evaluatorRecords {
-			if record == nil {
-				continue
-			}
-			// 获取评估器分数（优先使用修正分数）
-			var score *float64
-			if record.EvaluatorOutputData != nil && record.EvaluatorOutputData.EvaluatorResult != nil {
-				if record.EvaluatorOutputData.EvaluatorResult.Correction != nil &&
-					record.EvaluatorOutputData.EvaluatorResult.Correction.Score != nil {
-					score = record.EvaluatorOutputData.EvaluatorResult.Correction.Score
-				} else if record.EvaluatorOutputData.EvaluatorResult.Score != nil {
-					score = record.EvaluatorOutputData.EvaluatorResult.Score
-				}
-			}
-			if score == nil {
-				continue
-			}
-			sumScore += *score
-			cnt++
-		}
-		if cnt == 0 {
-			return nil
-		}
-		avg := sumScore / float64(cnt)
-		roundedAvg := utils.RoundScoreToTwoDecimals(avg)
-		return &roundedAvg
-	}
-
-	var totalWeightedScore float64
-	var totalWeight float64
-	hasValidScore := false
-
-	for evaluatorVersionID, record := range evaluatorRecords {
-		if record == nil {
-			continue
-		}
-
-		// 获取评估器分数（优先使用修正分数）
-		var score *float64
-		if record.EvaluatorOutputData != nil && record.EvaluatorOutputData.EvaluatorResult != nil {
-			if record.EvaluatorOutputData.EvaluatorResult.Correction != nil &&
-				record.EvaluatorOutputData.EvaluatorResult.Correction.Score != nil {
-				score = record.EvaluatorOutputData.EvaluatorResult.Correction.Score
-			} else if record.EvaluatorOutputData.EvaluatorResult.Score != nil {
-				score = record.EvaluatorOutputData.EvaluatorResult.Score
-			}
-		}
-
-		// 如果没有有效分数，跳过
-		if score == nil {
-			continue
-		}
-
-		// 获取权重（0 合法：不参与分子/分母，等价于乘 0）
-		weight, ok := weights[evaluatorVersionID]
-		if !ok || weight <= 0 {
-			continue
-		}
-
-		// 累加加权分数
-		totalWeightedScore += *score * weight
-		totalWeight += weight
-		hasValidScore = true
-	}
-
-	// 如果没有有效分数或权重总和为0，返回nil
-	if !hasValidScore || totalWeight <= 0 {
-		return nil
-	}
-
-	// 计算加权平均分数
-	weightedScore := totalWeightedScore / totalWeight
-	roundedScore := utils.RoundScoreToTwoDecimals(weightedScore)
-	return &roundedScore
 }
 
 func (e *ExptResultBuilder) buildAnnotateRecords(ctx context.Context) error {
@@ -2482,7 +2396,7 @@ func (e ExptResultServiceImpl) UpsertExptTurnResultFilter(ctx context.Context, s
 		ExptIDs: []int64{exptID},
 	}
 	payloadBuilder := NewPayloadBuilder(ctx, param, exptID, allTurnResults, itemResults, e.ExperimentRepo,
-		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider)
+		e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, exptTurnResultFilterKeyMappingEvaluatorMap, exptTurnResultFilterKeyMappingAnnotationMap, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 
 	exptTurnResultFilters, err := payloadBuilder.BuildTurnResultFilter(ctx)
 	if err != nil {
@@ -2754,7 +2668,7 @@ func (e ExptResultServiceImpl) CompareExptTurnResultFilters(ctx context.Context,
 			ExptIDs: []int64{exptID},
 		}
 		payloadBuilder := NewPayloadBuilder(ctx, param, exptID, turnResultDAOs, itemResultDAOs, e.ExperimentRepo,
-			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider)
+			e.ExptTurnResultRepo, e.ExptAnnotateRepo, e.evalTargetService, e.evaluatorRecordService, e.evaluationSetItemService, e.analysisService, nil, nil, make(map[int64]entity.ItemRunState), e.fileProvider, e.scoreCalculator)
 		itemResults, err := payloadBuilder.BuildItemResults(ctx)
 		if err != nil {
 			return err
@@ -3173,7 +3087,7 @@ func (e *ExptResultServiceImpl) RecalculateWeightedScore(ctx context.Context, sp
 		}
 	}
 
-	weightedScore := calculateWeightedScore(version2Record, scoreWeights)
+	weightedScore := e.scoreCalculator.CalculateWeightedScore(ctx, expt, version2Record, scoreWeights)
 
 	// 更新 expt_turn_result 的 weighted_score
 	updateFields := map[string]any{
