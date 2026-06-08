@@ -250,7 +250,7 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 		mockPub := mocks.NewMockExptEventPublisher(ctrl)
 		secretProvider := NewNoopWebhookSecretProvider()
 
-		d := NewWebhookDispatcher(mockPub, secretProvider)
+		d := NewWebhookDispatcher(mockPub, secretProvider, nil)
 
 		expt := &entity.Experiment{
 			ID: 42, SpaceID: 100, Name: "webhook-test",
@@ -307,7 +307,7 @@ func TestWebhookDispatcher_Dispatch_BitsUT(t *testing.T) {
 				return nil
 			})
 
-		d := NewWebhookDispatcher(mockPub, NewNoopWebhookSecretProvider())
+		d := NewWebhookDispatcher(mockPub, NewNoopWebhookSecretProvider(), nil)
 
 		expt := &entity.Experiment{
 			ID: 42, SpaceID: 100, Name: "fail-test",

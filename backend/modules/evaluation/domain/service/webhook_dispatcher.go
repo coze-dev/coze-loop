@@ -19,6 +19,7 @@ import (
 
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/events"
+	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo"
 	"github.com/coze-dev/coze-loop/backend/pkg/json"
 	"github.com/coze-dev/coze-loop/backend/pkg/logs"
 )
@@ -49,14 +50,16 @@ type WebhookDispatcher struct {
 	httpClient     *http.Client
 	publisher      events.ExptEventPublisher
 	secretProvider IWebhookSecretProvider
+	statsRepo      repo.IExptStatsRepo
 }
 
 // NewWebhookDispatcher 创建 WebhookDispatcher
-func NewWebhookDispatcher(publisher events.ExptEventPublisher, secretProvider IWebhookSecretProvider) *WebhookDispatcher {
+func NewWebhookDispatcher(publisher events.ExptEventPublisher, secretProvider IWebhookSecretProvider, statsRepo repo.IExptStatsRepo) *WebhookDispatcher {
 	return &WebhookDispatcher{
 		httpClient:     &http.Client{Timeout: 5 * time.Second},
 		publisher:      publisher,
 		secretProvider: secretProvider,
+		statsRepo:      statsRepo,
 	}
 }
 
@@ -84,6 +87,16 @@ func (d *WebhookDispatcher) Dispatch(ctx context.Context, event *entity.ExptLife
 
 	logs.CtxInfo(ctx, "webhook_dispatcher: dispatching, expt_id: %v, space_id: %v, from: %v, to: %v, urls: %v",
 		expt.ID, expt.SpaceID, event.FromStatus, event.ToStatus, urls)
+
+	// 查询 Stats（exptRepo.GetByID 不会填充 Stats，需要单独查询）
+	if expt.Stats == nil && d.statsRepo != nil {
+		stats, err := d.statsRepo.Get(ctx, expt.ID, expt.SpaceID)
+		if err != nil {
+			logs.CtxWarn(ctx, "webhook_dispatcher: get stats failed, expt_id: %v, err: %v", expt.ID, err)
+		} else {
+			expt.Stats = stats
+		}
+	}
 
 	// 构造 payload
 	payload := buildWebhookPayload(event, expt)
