@@ -487,6 +487,18 @@ func (m *MetricsService) queryAnnotationOnlineMetrics(ctx context.Context, req *
 		}
 		logs.CtxInfo(ctx, "query annotation online metrics for [%s] successfully, cost %v", metricName, time.Since(st))
 
+		// 将 GroupBy 的 FieldName 重命名为 Alias，使在线查询结果与离线查询的列名一致
+		for _, dim := range mDef.GroupBy() {
+			if dim.Field != nil && dim.Alias != "" && dim.Field.FieldName != dim.Alias {
+				for _, row := range result.Data {
+					if v, ok := row[dim.Field.FieldName]; ok {
+						row[dim.Alias] = v
+						delete(row, dim.Field.FieldName)
+					}
+				}
+			}
+		}
+
 		// 构建 metricQueryBuilder 用于格式化
 		oExpression := mDef.OExpression()
 		if oExpression.MetricName == "" {
