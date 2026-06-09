@@ -19,7 +19,7 @@ func (m *FeedbackValueDistributionMetric) Name() string {
 }
 
 func (m *FeedbackValueDistributionMetric) Type() entity.MetricType {
-	return entity.MetricTypeSummary
+	return entity.MetricTypePie
 }
 
 func (m *FeedbackValueDistributionMetric) Source() entity.MetricSource {
@@ -35,7 +35,15 @@ func (m *FeedbackValueDistributionMetric) Where(_ context.Context, _ span_filter
 }
 
 func (m *FeedbackValueDistributionMetric) GroupBy() []*entity.Dimension {
-	return nil
+	return []*entity.Dimension{
+		{
+			Field: &loop_span.FilterField{
+				FieldName: "value_string",
+				FieldType: loop_span.FieldTypeString,
+			},
+			Alias: "name",
+		},
+	}
 }
 
 func (m *FeedbackValueDistributionMetric) Wrappers() []entity.IMetricWrapper {
