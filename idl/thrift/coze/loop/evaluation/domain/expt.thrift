@@ -518,6 +518,51 @@ enum FilterOperatorType {
 
 }
 
+// ============ 实验通知配置（experiment-notify-webhook） ============
+// 持久化到 experiment.notification_conf（BLOB）；模板放 template_conf 子键。
+// 所有新增字段 optional，向前兼容；旧实验该配置为 null 时维持 base handler 默认行为。
+
+// 通知渠道动作类型
+enum NotificationActionType {
+    Unknown = 0
+    Webhook = 1   // HTTP 回调
+    Feishu  = 2   // 飞书消息（默认发实验创建人）
+}
+
+// Webhook 渠道配置
+struct WebhookNotificationConf {
+    1: optional list<string> urls   // 回调 URL 列表，选中 Webhook 时非空、均为 http/https
+}
+
+// 飞书渠道配置（本期不允许改通知人，默认发创建人；结构预留以便后续扩展，如自定义接收人）
+struct FeishuNotificationConf {
+}
+
+// 单个渠道动作
+struct NotificationAction {
+    1: required NotificationActionType type
+    2: optional WebhookNotificationConf webhook   // type=Webhook 时有效
+    3: optional FeishuNotificationConf  feishu    // type=Feishu 时有效
+}
+
+// 单条通知规则：条件（filter）+ 动作（多渠道）。
+// 条件复用既有筛选器 Filters/FilterCondition：本期字段固定 FieldType.ExptStatus(=3)，
+// 运算符固定 FilterOperatorType.In(=7)/NotIn(=8)。
+// 通知条件值为「实验状态多选」，序列化进 FilterCondition.value（单 string）。
+// value 编码约定：复用既有 ExptStatus 过滤约定 —— 逗号分隔的 ExptStatus 枚举整数值字符串
+// （由 application 层 parseIntList(strings.Split(",")) 解析），例如开始执行+成功+失败 = "3,11,12"。
+// 状态映射：开始执行=Processing(3)；运行成功=Success(11)；运行失败=Failed(12)；
+// 被终止=Terminated(13)+SystemTerminated(14)（不区分用户手动/系统自动终止）。
+struct NotificationRule {
+    1: optional Filters filters
+    2: optional list<NotificationAction> actions
+}
+
+// 实验通知配置（持久化到 experiment.notification_conf；模板放 template_conf 子键）
+struct ExptNotificationConf {
+    1: optional list<NotificationRule> rules
+}
+
 enum ExptAggregateCalculateStatus {
     Unknown = 0
     Idle = 1

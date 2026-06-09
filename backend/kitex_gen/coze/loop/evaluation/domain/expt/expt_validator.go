@@ -372,6 +372,36 @@ func (p *FilterCondition) IsValid() error {
 func (p *SourceTarget) IsValid() error {
 	return nil
 }
+func (p *WebhookNotificationConf) IsValid() error {
+	return nil
+}
+func (p *FeishuNotificationConf) IsValid() error {
+	return nil
+}
+func (p *NotificationAction) IsValid() error {
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	if p.Feishu != nil {
+		if err := p.Feishu.IsValid(); err != nil {
+			return fmt.Errorf("field Feishu not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	if p.Filters != nil {
+		if err := p.Filters.IsValid(); err != nil {
+			return fmt.Errorf("field Filters not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *ExptNotificationConf) IsValid() error {
+	return nil
+}
 func (p *ExptAggregateResult_) IsValid() error {
 	if p.EvalTargetAggrResult_ != nil {
 		if err := p.EvalTargetAggrResult_.IsValid(); err != nil {

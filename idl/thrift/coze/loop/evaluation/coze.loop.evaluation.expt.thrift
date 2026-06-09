@@ -40,6 +40,7 @@ struct CreateExperimentRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
     47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+    48: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf') // 实验通知配置（条件+webhook/飞书渠道），可继承自模板，可覆盖
 
     60: optional string thread_id  (api.body = 'thread_id') // 关联的智能评测会话ID
 
@@ -89,6 +90,7 @@ struct SubmitExperimentRequest {
     45: optional i32 item_retry_num (api.body = 'item_retry_num')
     46: optional i64 trial_run_item_count (api.body = 'trial_run_item_count') // 试运行行数
     47: optional bool enable_extract_trajectory (api.body = 'enable_extract_trajectory', go.tag='json:"enable_extract_trajectory"')
+    48: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf') // 实验通知配置（条件+webhook/飞书渠道）
 
     50: optional expt.ExptTriggerType trigger_type
     51: optional expt.TaskTimeRange time_range (api.body = 'time_range')
@@ -404,6 +406,7 @@ struct CreateExperimentTemplateRequest {
 
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    40: optional expt.ExptNotificationConf notification_conf (api.body = 'notification_conf') // 模板通知配置，由该模板创建的实验（含 BITs/定时触发）自动继承
 
     200: optional common.Session session
     255: optional base.Base Base

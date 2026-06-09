@@ -57,6 +57,8 @@ type CreateExperimentRequest struct {
 	// 试运行行数
 	TrialRunItemCount       *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
 	EnableExtractTrajectory *bool  `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	// 实验通知配置（条件+webhook/飞书渠道），可继承自模板，可覆盖
+	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,48,optional" frugal:"48,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
 	// 关联的智能评测会话ID
 	ThreadID    *string               `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	TriggerType *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
@@ -379,6 +381,18 @@ func (p *CreateExperimentRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var CreateExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
+
+func (p *CreateExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return CreateExperimentRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var CreateExperimentRequest_ThreadID_DEFAULT string
 
 func (p *CreateExperimentRequest) GetThreadID() (v string) {
@@ -516,6 +530,9 @@ func (p *CreateExperimentRequest) SetTrialRunItemCount(val *int64) {
 func (p *CreateExperimentRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *CreateExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *CreateExperimentRequest) SetThreadID(val *string) {
 	p.ThreadID = val
 }
@@ -559,6 +576,7 @@ var fieldIDToName_CreateExperimentRequest = map[int16]string{
 	45:  "item_retry_num",
 	46:  "trial_run_item_count",
 	47:  "enable_extract_trajectory",
+	48:  "notification_conf",
 	60:  "thread_id",
 	50:  "trigger_type",
 	100: "ext",
@@ -664,6 +682,10 @@ func (p *CreateExperimentRequest) IsSetTrialRunItemCount() bool {
 
 func (p *CreateExperimentRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *CreateExperimentRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *CreateExperimentRequest) IsSetThreadID() bool {
@@ -909,6 +931,14 @@ func (p *CreateExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 47:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField47(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 48:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField48(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -1322,6 +1352,14 @@ func (p *CreateExperimentRequest) ReadField47(iprot thrift.TProtocol) error {
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *CreateExperimentRequest) ReadField48(iprot thrift.TProtocol) error {
+	_field := expt.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *CreateExperimentRequest) ReadField60(iprot thrift.TProtocol) error {
 
 	var _field *string
@@ -1498,6 +1536,10 @@ func (p *CreateExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField47(oprot); err != nil {
 			fieldId = 47
+			goto WriteFieldError
+		}
+		if err = p.writeField48(oprot); err != nil {
+			fieldId = 48
 			goto WriteFieldError
 		}
 		if err = p.writeField60(oprot); err != nil {
@@ -2039,6 +2081,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 47 end error: ", p), err)
 }
+func (p *CreateExperimentRequest) writeField48(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 48); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 end error: ", p), err)
+}
 func (p *CreateExperimentRequest) writeField60(oprot thrift.TProtocol) (err error) {
 	if p.IsSetThreadID() {
 		if err = oprot.WriteFieldBegin("thread_id", thrift.STRING, 60); err != nil {
@@ -2231,6 +2291,9 @@ func (p *CreateExperimentRequest) DeepEqual(ano *CreateExperimentRequest) bool {
 		return false
 	}
 	if !p.Field47DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field48DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field60DeepEqual(ano.ThreadID) {
@@ -2543,6 +2606,13 @@ func (p *CreateExperimentRequest) Field47DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentRequest) Field48DeepEqual(src *expt.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -2867,10 +2937,12 @@ type SubmitExperimentRequest struct {
 	ExptTemplateID      *int64 `thrift:"expt_template_id,42,optional" frugal:"42,optional,i64" json:"expt_template_id" form:"expt_template_id" `
 	ItemRetryNum        *int32 `thrift:"item_retry_num,45,optional" frugal:"45,optional,i32" form:"item_retry_num" json:"item_retry_num,omitempty"`
 	// 试运行行数
-	TrialRunItemCount       *int64                `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
-	EnableExtractTrajectory *bool                 `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
-	TriggerType             *expt.ExptTriggerType `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
-	TimeRange               *expt.TaskTimeRange   `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
+	TrialRunItemCount       *int64 `thrift:"trial_run_item_count,46,optional" frugal:"46,optional,i64" form:"trial_run_item_count" json:"trial_run_item_count,omitempty"`
+	EnableExtractTrajectory *bool  `thrift:"enable_extract_trajectory,47,optional" frugal:"47,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
+	// 实验通知配置（条件+webhook/飞书渠道）
+	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,48,optional" frugal:"48,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	TriggerType      *expt.ExptTriggerType      `thrift:"trigger_type,50,optional" frugal:"50,optional,string" form:"trigger_type" json:"trigger_type,omitempty" query:"trigger_type"`
+	TimeRange        *expt.TaskTimeRange        `thrift:"time_range,51,optional" frugal:"51,optional,expt.TaskTimeRange" form:"time_range" json:"time_range,omitempty"`
 	// 智能评测相关
 	ThreadID *string `thrift:"thread_id,60,optional" frugal:"60,optional,string" form:"thread_id" json:"thread_id,omitempty"`
 	// 指定执行的评测集条目ID列表
@@ -3182,6 +3254,18 @@ func (p *SubmitExperimentRequest) GetEnableExtractTrajectory() (v bool) {
 	return *p.EnableExtractTrajectory
 }
 
+var SubmitExperimentRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
+
+func (p *SubmitExperimentRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return SubmitExperimentRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var SubmitExperimentRequest_TriggerType_DEFAULT expt.ExptTriggerType
 
 func (p *SubmitExperimentRequest) GetTriggerType() (v expt.ExptTriggerType) {
@@ -3340,6 +3424,9 @@ func (p *SubmitExperimentRequest) SetTrialRunItemCount(val *int64) {
 func (p *SubmitExperimentRequest) SetEnableExtractTrajectory(val *bool) {
 	p.EnableExtractTrajectory = val
 }
+func (p *SubmitExperimentRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *SubmitExperimentRequest) SetTriggerType(val *expt.ExptTriggerType) {
 	p.TriggerType = val
 }
@@ -3388,6 +3475,7 @@ var fieldIDToName_SubmitExperimentRequest = map[int16]string{
 	45:  "item_retry_num",
 	46:  "trial_run_item_count",
 	47:  "enable_extract_trajectory",
+	48:  "notification_conf",
 	50:  "trigger_type",
 	51:  "time_range",
 	60:  "thread_id",
@@ -3491,6 +3579,10 @@ func (p *SubmitExperimentRequest) IsSetTrialRunItemCount() bool {
 
 func (p *SubmitExperimentRequest) IsSetEnableExtractTrajectory() bool {
 	return p.EnableExtractTrajectory != nil
+}
+
+func (p *SubmitExperimentRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *SubmitExperimentRequest) IsSetTriggerType() bool {
@@ -3736,6 +3828,14 @@ func (p *SubmitExperimentRequest) Read(iprot thrift.TProtocol) (err error) {
 		case 47:
 			if fieldTypeId == thrift.BOOL {
 				if err = p.ReadField47(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 48:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField48(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -4136,6 +4236,14 @@ func (p *SubmitExperimentRequest) ReadField47(iprot thrift.TProtocol) error {
 	p.EnableExtractTrajectory = _field
 	return nil
 }
+func (p *SubmitExperimentRequest) ReadField48(iprot thrift.TProtocol) error {
+	_field := expt.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *SubmitExperimentRequest) ReadField50(iprot thrift.TProtocol) error {
 
 	var _field *expt.ExptTriggerType
@@ -4339,6 +4447,10 @@ func (p *SubmitExperimentRequest) Write(oprot thrift.TProtocol) (err error) {
 		}
 		if err = p.writeField47(oprot); err != nil {
 			fieldId = 47
+			goto WriteFieldError
+		}
+		if err = p.writeField48(oprot); err != nil {
+			fieldId = 48
 			goto WriteFieldError
 		}
 		if err = p.writeField50(oprot); err != nil {
@@ -4859,6 +4971,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 47 end error: ", p), err)
 }
+func (p *SubmitExperimentRequest) writeField48(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 48); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 48 end error: ", p), err)
+}
 func (p *SubmitExperimentRequest) writeField50(oprot thrift.TProtocol) (err error) {
 	if p.IsSetTriggerType() {
 		if err = oprot.WriteFieldBegin("trigger_type", thrift.STRING, 50); err != nil {
@@ -5092,6 +5222,9 @@ func (p *SubmitExperimentRequest) DeepEqual(ano *SubmitExperimentRequest) bool {
 		return false
 	}
 	if !p.Field47DeepEqual(ano.EnableExtractTrajectory) {
+		return false
+	}
+	if !p.Field48DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field50DeepEqual(ano.TriggerType) {
@@ -5397,6 +5530,13 @@ func (p *SubmitExperimentRequest) Field47DeepEqual(src *bool) bool {
 		return false
 	}
 	if *p.EnableExtractTrajectory != *src {
+		return false
+	}
+	return true
+}
+func (p *SubmitExperimentRequest) Field48DeepEqual(src *expt.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
@@ -18388,8 +18528,10 @@ type CreateExperimentTemplateRequest struct {
 	ExptInfo                *expt.ExptInfo   `thrift:"expt_info,23,optional" frugal:"23,optional,expt.ExptInfo" form:"expt_info" json:"expt_info,omitempty"`
 	EnableExtractTrajectory *bool            `thrift:"enable_extract_trajectory,24,optional" frugal:"24,optional,bool" json:"enable_extract_trajectory" form:"enable_extract_trajectory" `
 	ExptSource              *expt.ExptSource `thrift:"expt_source,30,optional" frugal:"30,optional,expt.ExptSource" form:"expt_source" json:"expt_source,omitempty"`
-	Session                 *common.Session  `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
-	Base                    *base.Base       `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
+	// 模板通知配置，由该模板创建的实验（含 BITs/定时触发）自动继承
+	NotificationConf *expt.ExptNotificationConf `thrift:"notification_conf,40,optional" frugal:"40,optional,expt.ExptNotificationConf" form:"notification_conf" json:"notification_conf,omitempty"`
+	Session          *common.Session            `thrift:"session,200,optional" frugal:"200,optional,common.Session" form:"session" json:"session,omitempty" query:"session"`
+	Base             *base.Base                 `thrift:"Base,255,optional" frugal:"255,optional,base.Base" form:"Base" json:"Base,omitempty" query:"Base"`
 }
 
 func NewCreateExperimentTemplateRequest() *CreateExperimentTemplateRequest {
@@ -18514,6 +18656,18 @@ func (p *CreateExperimentTemplateRequest) GetExptSource() (v *expt.ExptSource) {
 	return p.ExptSource
 }
 
+var CreateExperimentTemplateRequest_NotificationConf_DEFAULT *expt.ExptNotificationConf
+
+func (p *CreateExperimentTemplateRequest) GetNotificationConf() (v *expt.ExptNotificationConf) {
+	if p == nil {
+		return
+	}
+	if !p.IsSetNotificationConf() {
+		return CreateExperimentTemplateRequest_NotificationConf_DEFAULT
+	}
+	return p.NotificationConf
+}
+
 var CreateExperimentTemplateRequest_Session_DEFAULT *common.Session
 
 func (p *CreateExperimentTemplateRequest) GetSession() (v *common.Session) {
@@ -18567,6 +18721,9 @@ func (p *CreateExperimentTemplateRequest) SetEnableExtractTrajectory(val *bool) 
 func (p *CreateExperimentTemplateRequest) SetExptSource(val *expt.ExptSource) {
 	p.ExptSource = val
 }
+func (p *CreateExperimentTemplateRequest) SetNotificationConf(val *expt.ExptNotificationConf) {
+	p.NotificationConf = val
+}
 func (p *CreateExperimentTemplateRequest) SetSession(val *common.Session) {
 	p.Session = val
 }
@@ -18585,6 +18742,7 @@ var fieldIDToName_CreateExperimentTemplateRequest = map[int16]string{
 	23:  "expt_info",
 	24:  "enable_extract_trajectory",
 	30:  "expt_source",
+	40:  "notification_conf",
 	200: "session",
 	255: "Base",
 }
@@ -18623,6 +18781,10 @@ func (p *CreateExperimentTemplateRequest) IsSetEnableExtractTrajectory() bool {
 
 func (p *CreateExperimentTemplateRequest) IsSetExptSource() bool {
 	return p.ExptSource != nil
+}
+
+func (p *CreateExperimentTemplateRequest) IsSetNotificationConf() bool {
+	return p.NotificationConf != nil
 }
 
 func (p *CreateExperimentTemplateRequest) IsSetSession() bool {
@@ -18728,6 +18890,14 @@ func (p *CreateExperimentTemplateRequest) Read(iprot thrift.TProtocol) (err erro
 		case 30:
 			if fieldTypeId == thrift.STRUCT {
 				if err = p.ReadField30(iprot); err != nil {
+					goto ReadFieldError
+				}
+			} else if err = iprot.Skip(fieldTypeId); err != nil {
+				goto SkipFieldError
+			}
+		case 40:
+			if fieldTypeId == thrift.STRUCT {
+				if err = p.ReadField40(iprot); err != nil {
 					goto ReadFieldError
 				}
 			} else if err = iprot.Skip(fieldTypeId); err != nil {
@@ -18876,6 +19046,14 @@ func (p *CreateExperimentTemplateRequest) ReadField30(iprot thrift.TProtocol) er
 	p.ExptSource = _field
 	return nil
 }
+func (p *CreateExperimentTemplateRequest) ReadField40(iprot thrift.TProtocol) error {
+	_field := expt.NewExptNotificationConf()
+	if err := _field.Read(iprot); err != nil {
+		return err
+	}
+	p.NotificationConf = _field
+	return nil
+}
 func (p *CreateExperimentTemplateRequest) ReadField200(iprot thrift.TProtocol) error {
 	_field := common.NewSession()
 	if err := _field.Read(iprot); err != nil {
@@ -18937,6 +19115,10 @@ func (p *CreateExperimentTemplateRequest) Write(oprot thrift.TProtocol) (err err
 		}
 		if err = p.writeField30(oprot); err != nil {
 			fieldId = 30
+			goto WriteFieldError
+		}
+		if err = p.writeField40(oprot); err != nil {
+			fieldId = 40
 			goto WriteFieldError
 		}
 		if err = p.writeField200(oprot); err != nil {
@@ -19143,6 +19325,24 @@ WriteFieldBeginError:
 WriteFieldEndError:
 	return thrift.PrependError(fmt.Sprintf("%T write field 30 end error: ", p), err)
 }
+func (p *CreateExperimentTemplateRequest) writeField40(oprot thrift.TProtocol) (err error) {
+	if p.IsSetNotificationConf() {
+		if err = oprot.WriteFieldBegin("notification_conf", thrift.STRUCT, 40); err != nil {
+			goto WriteFieldBeginError
+		}
+		if err := p.NotificationConf.Write(oprot); err != nil {
+			return err
+		}
+		if err = oprot.WriteFieldEnd(); err != nil {
+			goto WriteFieldEndError
+		}
+	}
+	return nil
+WriteFieldBeginError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 begin error: ", p), err)
+WriteFieldEndError:
+	return thrift.PrependError(fmt.Sprintf("%T write field 40 end error: ", p), err)
+}
 func (p *CreateExperimentTemplateRequest) writeField200(oprot thrift.TProtocol) (err error) {
 	if p.IsSetSession() {
 		if err = oprot.WriteFieldBegin("session", thrift.STRUCT, 200); err != nil {
@@ -19222,6 +19422,9 @@ func (p *CreateExperimentTemplateRequest) DeepEqual(ano *CreateExperimentTemplat
 		return false
 	}
 	if !p.Field30DeepEqual(ano.ExptSource) {
+		return false
+	}
+	if !p.Field40DeepEqual(ano.NotificationConf) {
 		return false
 	}
 	if !p.Field200DeepEqual(ano.Session) {
@@ -19314,6 +19517,13 @@ func (p *CreateExperimentTemplateRequest) Field24DeepEqual(src *bool) bool {
 func (p *CreateExperimentTemplateRequest) Field30DeepEqual(src *expt.ExptSource) bool {
 
 	if !p.ExptSource.DeepEqual(src) {
+		return false
+	}
+	return true
+}
+func (p *CreateExperimentTemplateRequest) Field40DeepEqual(src *expt.ExptNotificationConf) bool {
+
+	if !p.NotificationConf.DeepEqual(src) {
 		return false
 	}
 	return true
