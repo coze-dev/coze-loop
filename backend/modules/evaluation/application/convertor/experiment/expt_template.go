@@ -51,6 +51,14 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	// Notifications passthrough: store in TemplateConf
+	if req.IsSetNotifications() {
+		if param.TemplateConf == nil {
+			param.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		param.TemplateConf.NotificationConfig = notificationConfigDTOToEntity(req.GetNotifications())
+	}
+
 	return param, nil
 }
 
@@ -425,6 +433,9 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+		if template.TemplateConf.NotificationConfig != nil {
+			dto.Notifications = notificationConfigEntityToDTO(template.TemplateConf.NotificationConfig)
+		}
 	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
@@ -1402,6 +1413,14 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
+	}
+
+	// Notifications passthrough: store in TemplateConf
+	if req.IsSetNotifications() {
+		if param.TemplateConf == nil {
+			param.TemplateConf = &entity.ExptTemplateConfiguration{}
+		}
+		param.TemplateConf.NotificationConfig = notificationConfigDTOToEntity(req.GetNotifications())
 	}
 
 	return param, nil

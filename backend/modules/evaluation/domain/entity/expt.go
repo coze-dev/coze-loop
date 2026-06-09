@@ -237,6 +237,50 @@ type EvaluationConfiguration struct {
 	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
 	Ext                     map[string]string
+	NotificationConfig      *NotificationConfig `json:"notification_config,omitempty"`
+}
+
+// NotificationConfig defines the notification settings for an experiment or template.
+type NotificationConfig struct {
+	Condition      *NotificationCondition `json:"condition,omitempty"`
+	WebhookChannel *WebhookChannelConfig  `json:"webhook_channel,omitempty"`
+	LarkChannel    *LarkChannelConfig     `json:"lark_channel,omitempty"`
+}
+
+// NotificationCondition defines when notifications should fire.
+type NotificationCondition struct {
+	Field    string   `json:"field"`
+	Operator string   `json:"operator"` // "in" or "not_in"
+	Values   []string `json:"values"`
+}
+
+// WebhookChannelConfig defines Webhook notification channel settings.
+type WebhookChannelConfig struct {
+	Enabled bool     `json:"enabled"`
+	URLs    []string `json:"urls,omitempty"`
+}
+
+// LarkChannelConfig defines Lark notification channel settings.
+type LarkChannelConfig struct {
+	Enabled bool `json:"enabled"`
+}
+
+// DefaultNotificationConfig returns the default notification config:
+// conditions match processing/success/failed, Lark enabled, Webhook disabled.
+func DefaultNotificationConfig() *NotificationConfig {
+	return &NotificationConfig{
+		Condition: &NotificationCondition{
+			Field:    "expt_status",
+			Operator: "in",
+			Values:   []string{"processing", "success", "failed"},
+		},
+		WebhookChannel: &WebhookChannelConfig{
+			Enabled: false,
+		},
+		LarkChannel: &LarkChannelConfig{
+			Enabled: true,
+		},
+	}
 }
 
 type Connector struct {

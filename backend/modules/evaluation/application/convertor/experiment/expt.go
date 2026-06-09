@@ -64,6 +64,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	if cer.IsSetEnableExtractTrajectory() {
 		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
 	}
+	if cer.IsSetNotifications() {
+		ec.NotificationConfig = notificationConfigDTOToEntity(cer.GetNotifications())
+	}
 	return ec, nil
 }
 
@@ -392,6 +395,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 		res.Ext = experiment.EvalConf.Ext
+		if experiment.EvalConf.NotificationConfig != nil {
+			res.Notifications = notificationConfigEntityToDTO(experiment.EvalConf.NotificationConfig)
+		}
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）

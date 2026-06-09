@@ -205,6 +205,18 @@ type ExptLifecycleEvent struct {
 	SourceType SourceType `json:"source_type"`
 }
 
+// WebhookDeliveryEvent represents a single webhook delivery attempt.
+type WebhookDeliveryEvent struct {
+	DeliveryID string     `json:"delivery_id"`
+	WebhookURL string     `json:"webhook_url"`
+	ExptID     int64      `json:"expt_id"`
+	SpaceID    int64      `json:"space_id"`
+	ExptStatus ExptStatus `json:"expt_status"`
+	RetryCount int        `json:"retry_count"`
+	MaxRetries int        `json:"max_retries"`
+	CreatedAt  int64      `json:"created_at"`
+}
+
 type ExportScene int
 
 const (

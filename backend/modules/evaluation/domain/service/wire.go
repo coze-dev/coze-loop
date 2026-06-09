@@ -20,6 +20,7 @@ import (
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/pipeline"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/prompt"
 	taskrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/task"
+	webhookrpc "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/webhook"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/runtime"
 	evalconf "github.com/coze-dev/coze-loop/backend/modules/evaluation/pkg/conf"
 )
@@ -40,6 +41,7 @@ var ExperimentDomainServiceSet = wire.NewSet(
 	// Infrastructure Sets
 	taskrpc.TaskRPCSet,
 	pipeline.PipelineRPCSet,
+	webhookrpc.WebhookRPCSet,
 	NewExptLifecycleEventHandler,
 	// Repo Sets
 	experimentrepo.ExperimentRepoSet,
