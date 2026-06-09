@@ -67,6 +67,38 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationConfig) IsValid() error {
+	if p.Condition != nil {
+		if err := p.Condition.IsValid(); err != nil {
+			return fmt.Errorf("field Condition not valid, %w", err)
+		}
+	}
+	if p.WebhookChannel != nil {
+		if err := p.WebhookChannel.IsValid(); err != nil {
+			return fmt.Errorf("field WebhookChannel not valid, %w", err)
+		}
+	}
+	if p.LarkChannel != nil {
+		if err := p.LarkChannel.IsValid(); err != nil {
+			return fmt.Errorf("field LarkChannel not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationCondition) IsValid() error {
+	return nil
+}
+func (p *WebhookChannelConfig) IsValid() error {
+	return nil
+}
+func (p *LarkChannelConfig) IsValid() error {
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -130,6 +162,11 @@ func (p *ExptTemplate) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.Notifications != nil {
+		if err := p.Notifications.IsValid(); err != nil {
+			return fmt.Errorf("field Notifications not valid, %w", err)
 		}
 	}
 	if p.BaseInfo != nil {

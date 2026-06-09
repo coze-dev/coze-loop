@@ -105,6 +105,34 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // 通知配置
+    110: optional NotificationConfig notifications
+}
+
+// 通知配置
+struct NotificationConfig {
+    1: optional NotificationCondition condition
+    2: optional WebhookChannelConfig webhook_channel
+    3: optional LarkChannelConfig lark_channel
+}
+
+// 通知触发条件
+struct NotificationCondition {
+    1: optional string field
+    2: optional FilterOperatorType operator
+    3: optional list<string> values
+}
+
+// Webhook 通道配置
+struct WebhookChannelConfig {
+    1: optional bool enabled
+    2: optional list<string> urls
+}
+
+// Lark 通道配置
+struct LarkChannelConfig {
+    1: optional bool enabled
 }
 
 // 实验模板基础信息
@@ -152,6 +180,8 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    10: optional NotificationConfig notifications
 
     255: optional common.BaseInfo base_info
 }
