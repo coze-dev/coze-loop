@@ -9997,6 +9997,34 @@ func (p *ListWorkspaceAnnotationsRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 5:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField5(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
+		case 6:
+			if fieldTypeId == thrift.I64 {
+				l, err = p.FastReadField6(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 255:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField255(buf[offset:])
@@ -10091,6 +10119,34 @@ func (p *ListWorkspaceAnnotationsRequest) FastReadField4(buf []byte) (int, error
 	return offset, nil
 }
 
+func (p *ListWorkspaceAnnotationsRequest) FastReadField5(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.StartTime = _field
+	return offset, nil
+}
+
+func (p *ListWorkspaceAnnotationsRequest) FastReadField6(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *int64
+	if v, l, err := thrift.Binary.ReadI64(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.EndTime = _field
+	return offset, nil
+}
+
 func (p *ListWorkspaceAnnotationsRequest) FastReadField255(buf []byte) (int, error) {
 	offset := 0
 	_field := base.NewBase()
@@ -10111,6 +10167,8 @@ func (p *ListWorkspaceAnnotationsRequest) FastWriteNocopy(buf []byte, w thrift.N
 	offset := 0
 	if p != nil {
 		offset += p.fastWriteField1(buf[offset:], w)
+		offset += p.fastWriteField5(buf[offset:], w)
+		offset += p.fastWriteField6(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
 		offset += p.fastWriteField4(buf[offset:], w)
@@ -10127,6 +10185,8 @@ func (p *ListWorkspaceAnnotationsRequest) BLength() int {
 		l += p.field2Length()
 		l += p.field3Length()
 		l += p.field4Length()
+		l += p.field5Length()
+		l += p.field6Length()
 		l += p.field255Length()
 	}
 	l += thrift.Binary.FieldStopLength()
@@ -10163,6 +10223,24 @@ func (p *ListWorkspaceAnnotationsRequest) fastWriteField4(buf []byte, w thrift.N
 	if p.IsSetSpanListType() {
 		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
 		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.SpanListType)
+	}
+	return offset
+}
+
+func (p *ListWorkspaceAnnotationsRequest) fastWriteField5(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetStartTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 5)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.StartTime)
+	}
+	return offset
+}
+
+func (p *ListWorkspaceAnnotationsRequest) fastWriteField6(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetEndTime() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.I64, 6)
+		offset += thrift.Binary.WriteI64(buf[offset:], *p.EndTime)
 	}
 	return offset
 }
@@ -10210,6 +10288,24 @@ func (p *ListWorkspaceAnnotationsRequest) field4Length() int {
 	return l
 }
 
+func (p *ListWorkspaceAnnotationsRequest) field5Length() int {
+	l := 0
+	if p.IsSetStartTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
+func (p *ListWorkspaceAnnotationsRequest) field6Length() int {
+	l := 0
+	if p.IsSetEndTime() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.I64Length()
+	}
+	return l
+}
+
 func (p *ListWorkspaceAnnotationsRequest) field255Length() int {
 	l := 0
 	if p.IsSetBase() {
@@ -10240,6 +10336,16 @@ func (p *ListWorkspaceAnnotationsRequest) DeepCopy(s interface{}) error {
 	if src.SpanListType != nil {
 		tmp := *src.SpanListType
 		p.SpanListType = &tmp
+	}
+
+	if src.StartTime != nil {
+		tmp := *src.StartTime
+		p.StartTime = &tmp
+	}
+
+	if src.EndTime != nil {
+		tmp := *src.EndTime
+		p.EndTime = &tmp
 	}
 
 	var _base *base.Base

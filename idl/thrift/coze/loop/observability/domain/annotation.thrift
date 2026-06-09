@@ -75,4 +75,5 @@ struct SimpleAnnotationInfo {
     1: required string key
     2: optional AnnotationType annotation_type
     3: optional string original_key
+    4: optional ValueType value_type
 }

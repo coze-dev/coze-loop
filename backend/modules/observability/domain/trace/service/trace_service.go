@@ -309,6 +309,7 @@ type ListAnnotationsResp struct {
 type ListWorkspaceAnnotationsReq struct {
 	WorkspaceID    int64
 	StartTime      int64
+	EndTime        int64
 	AnnotationType string
 	SpanListType   loop_span.SpanListType
 	PlatformType   loop_span.PlatformType
@@ -1841,12 +1842,16 @@ func (r *TraceServiceImpl) ListWorkspaceAnnotations(ctx context.Context, req *Li
 		defaultLimit           = 300
 		defaultDescByUpdatedAt = true
 	)
+	endAt := req.EndTime
+	if endAt <= 0 {
+		endAt = time.Now().UnixMilli()
+	}
 	annotations, err := r.traceRepo.ListWorkspaceAnnotations(ctx, &repo.ListWorkspaceAnnotationsParam{
 		WorkSpaceID:     strconv.FormatInt(req.WorkspaceID, 10),
 		Tenants:         tenants,
 		AnnotationType:  req.AnnotationType,
 		StartAt:         req.StartTime,
-		EndAt:           time.Now().UnixMilli(),
+		EndAt:           endAt,
 		DescByUpdatedAt: defaultDescByUpdatedAt,
 		Limit:           defaultLimit,
 	})

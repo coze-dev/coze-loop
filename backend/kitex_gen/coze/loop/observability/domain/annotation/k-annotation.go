@@ -2387,6 +2387,20 @@ func (p *SimpleAnnotationInfo) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 4:
+			if fieldTypeId == thrift.STRING {
+				l, err = p.FastReadField4(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		default:
 			l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
 			offset += l
@@ -2453,6 +2467,20 @@ func (p *SimpleAnnotationInfo) FastReadField3(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SimpleAnnotationInfo) FastReadField4(buf []byte) (int, error) {
+	offset := 0
+
+	var _field *ValueType
+	if v, l, err := thrift.Binary.ReadString(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+		_field = &v
+	}
+	p.ValueType = _field
+	return offset, nil
+}
+
 func (p *SimpleAnnotationInfo) FastWrite(buf []byte) int {
 	return p.FastWriteNocopy(buf, nil)
 }
@@ -2463,6 +2491,7 @@ func (p *SimpleAnnotationInfo) FastWriteNocopy(buf []byte, w thrift.NocopyWriter
 		offset += p.fastWriteField1(buf[offset:], w)
 		offset += p.fastWriteField2(buf[offset:], w)
 		offset += p.fastWriteField3(buf[offset:], w)
+		offset += p.fastWriteField4(buf[offset:], w)
 	}
 	offset += thrift.Binary.WriteFieldStop(buf[offset:])
 	return offset
@@ -2474,6 +2503,7 @@ func (p *SimpleAnnotationInfo) BLength() int {
 		l += p.field1Length()
 		l += p.field2Length()
 		l += p.field3Length()
+		l += p.field4Length()
 	}
 	l += thrift.Binary.FieldStopLength()
 	return l
@@ -2504,6 +2534,15 @@ func (p *SimpleAnnotationInfo) fastWriteField3(buf []byte, w thrift.NocopyWriter
 	return offset
 }
 
+func (p *SimpleAnnotationInfo) fastWriteField4(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetValueType() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRING, 4)
+		offset += thrift.Binary.WriteStringNocopy(buf[offset:], w, *p.ValueType)
+	}
+	return offset
+}
+
 func (p *SimpleAnnotationInfo) field1Length() int {
 	l := 0
 	l += thrift.Binary.FieldBeginLength()
@@ -2529,6 +2568,15 @@ func (p *SimpleAnnotationInfo) field3Length() int {
 	return l
 }
 
+func (p *SimpleAnnotationInfo) field4Length() int {
+	l := 0
+	if p.IsSetValueType() {
+		l += thrift.Binary.FieldBeginLength()
+		l += thrift.Binary.StringLengthNocopy(*p.ValueType)
+	}
+	return l
+}
+
 func (p *SimpleAnnotationInfo) DeepCopy(s interface{}) error {
 	src, ok := s.(*SimpleAnnotationInfo)
 	if !ok {
@@ -2550,6 +2598,11 @@ func (p *SimpleAnnotationInfo) DeepCopy(s interface{}) error {
 			tmp = kutils.StringDeepCopy(*src.OriginalKey)
 		}
 		p.OriginalKey = &tmp
+	}
+
+	if src.ValueType != nil {
+		tmp := *src.ValueType
+		p.ValueType = &tmp
 	}
 
 	return nil
