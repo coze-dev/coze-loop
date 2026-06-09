@@ -629,6 +629,11 @@ func (p *SubmitExperimentOApiRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConfig != nil {
+		if err := p.NotificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConfig not valid, %w", err)
+		}
+	}
 	if p.Extra != nil {
 		if err := p.Extra.IsValid(); err != nil {
 			return fmt.Errorf("field Extra not valid, %w", err)

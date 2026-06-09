@@ -15,6 +15,7 @@ import (
 
 	rpcMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/component/rpc/mocks"
 	"github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/entity"
+	webhookinfra "github.com/coze-dev/coze-loop/backend/modules/evaluation/infra/rpc/webhook"
 	repoMocks "github.com/coze-dev/coze-loop/backend/modules/evaluation/domain/repo/mocks"
 )
 
@@ -33,6 +34,7 @@ func newTestLifecycleEventHandler(ctrl *gomock.Controller) (*ExptLifecycleEventH
 		exptRepo:         mockExptRepo,
 		notifyRPCAdapter: mockNotifyRPCAdapter,
 		userProvider:     mockUserProvider,
+		webhookAdapter:   webhookinfra.NewNoopWebhookDeliveryAdapter(),
 	}
 
 	return handler, &testLifecycleEventMocks{
@@ -49,8 +51,9 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	noopWebhook := webhookinfra.NewNoopWebhookDeliveryAdapter()
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider, noopWebhook)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)

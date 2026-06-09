@@ -321,8 +321,28 @@ func (e *ExptMangerImpl) Run(ctx context.Context, exptID, runID, spaceID int64, 
 
 	switch runMode {
 	case entity.EvaluationModeSubmit, entity.EvaluationModeTrialRun:
-		if err := e.sendNotifyCard(ctx, expt); err != nil {
-			logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
+		nc := expt.GetNotificationConfig()
+		shouldNotifyStarting := nc == nil || nc.ShouldNotify(entity.ExptStatus_Processing)
+		feishuEnabled := nc == nil || (nc.Channels != nil && nc.Channels.FeishuEnabled)
+
+		if shouldNotifyStarting && feishuEnabled {
+			if err := e.sendNotifyCard(ctx, expt); err != nil {
+				logs.CtxWarn(ctx, "NotifyCard send failed, expt_id: %v, error: %v", exptID, err)
+			}
+		}
+
+		if nc != nil && shouldNotifyStarting && nc.Channels != nil && len(nc.Channels.Webhooks) > 0 {
+			lifecycleEvent := &entity.ExptLifecycleEvent{
+				ExptID:     expt.ID,
+				SpaceID:    expt.SpaceID,
+				FromStatus: entity.ExptStatus_Pending,
+				ToStatus:   entity.ExptStatus_Processing,
+				ExptType:   expt.ExptType,
+				SourceType: expt.SourceType,
+			}
+			if err := e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3)); err != nil {
+				logs.CtxWarn(ctx, "PublishExptLifecycleEvent for starting failed, expt_id: %v, error: %v", exptID, err)
+			}
 		}
 	}
 	return nil

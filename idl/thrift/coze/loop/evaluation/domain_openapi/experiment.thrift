@@ -170,6 +170,9 @@ struct Experiment {
     // 离线实验分析状态
     61: optional OfflineExptAnalysisStatus offline_expt_analysis_status
 
+    // 通知配置
+    70: optional NotificationConfig notification_config
+
     100: optional common.BaseInfo base_info
 }
 
@@ -286,6 +289,7 @@ struct ExptFieldMapping {
     3: optional common.RuntimeParam target_runtime_param
     4: optional i32 item_concur_num
     5: optional i32 item_retry_num
+    10: optional NotificationConfig notification_config
 }
 
 // 实验评估器得分加权配置（evaluator_id -> weight）
@@ -472,4 +476,36 @@ struct ExptResultExportRecord {
     8: optional bool expired
     9: optional RunError error
     10: optional string url
+}
+
+// ===============================
+// 通知配置相关结构（对应 domain/expt.thrift NotificationConfig 等）
+// ===============================
+
+// 通知运算符（对应 domain/expt NotificationOperator）
+typedef string NotificationOperator (ts.enum = "true")
+const NotificationOperator NotificationOperator_In = "in"
+const NotificationOperator NotificationOperator_NotIn = "not_in"
+
+// 通知触发条件（对应 domain/expt NotificationTriggerCondition）
+struct NotificationTriggerCondition {
+    1: optional NotificationOperator operator
+    2: optional list<ExperimentStatus> statuses
+}
+
+// Webhook 渠道（对应 domain/expt WebhookChannel）
+struct WebhookChannel {
+    1: optional string url
+}
+
+// 通知渠道配置（对应 domain/expt NotificationChannels）
+struct NotificationChannels {
+    1: optional bool feishu_enabled
+    2: optional list<WebhookChannel> webhooks
+}
+
+// 通知配置（实验级别，对应 domain/expt NotificationConfig）
+struct NotificationConfig {
+    1: optional NotificationTriggerCondition trigger_condition
+    2: optional NotificationChannels channels
 }

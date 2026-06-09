@@ -459,3 +459,149 @@ func TestContainsEvalTarget(t *testing.T) {
 		})
 	}
 }
+
+func TestNotificationConfig_ShouldNotify(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   *NotificationConfig
+		status   ExptStatus
+		expected bool
+	}{
+		{
+			name:     "nil config returns false",
+			config:   nil,
+			status:   ExptStatus_Success,
+			expected: false,
+		},
+		{
+			name:     "nil trigger condition returns false",
+			config:   &NotificationConfig{},
+			status:   ExptStatus_Success,
+			expected: false,
+		},
+		{
+			name: "in operator - matched status",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_In,
+					Statuses: []ExptStatus{ExptStatus_Success, ExptStatus_Failed},
+				},
+			},
+			status:   ExptStatus_Success,
+			expected: true,
+		},
+		{
+			name: "in operator - unmatched status",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_In,
+					Statuses: []ExptStatus{ExptStatus_Success, ExptStatus_Failed},
+				},
+			},
+			status:   ExptStatus_Processing,
+			expected: false,
+		},
+		{
+			name: "not_in operator - matched status returns false",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_NotIn,
+					Statuses: []ExptStatus{ExptStatus_Success},
+				},
+			},
+			status:   ExptStatus_Success,
+			expected: false,
+		},
+		{
+			name: "not_in operator - unmatched status returns true",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_NotIn,
+					Statuses: []ExptStatus{ExptStatus_Success},
+				},
+			},
+			status:   ExptStatus_Failed,
+			expected: true,
+		},
+		{
+			name: "default operator (empty) behaves as in",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: "",
+					Statuses: []ExptStatus{ExptStatus_Processing},
+				},
+			},
+			status:   ExptStatus_Processing,
+			expected: true,
+		},
+		{
+			name: "terminated covers both user and system terminated",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_In,
+					Statuses: []ExptStatus{ExptStatus_Terminated, ExptStatus_SystemTerminated},
+				},
+			},
+			status:   ExptStatus_SystemTerminated,
+			expected: true,
+		},
+		{
+			name: "empty statuses list - in operator always false",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_In,
+					Statuses: []ExptStatus{},
+				},
+			},
+			status:   ExptStatus_Success,
+			expected: false,
+		},
+		{
+			name: "empty statuses list - not_in operator always true",
+			config: &NotificationConfig{
+				TriggerCondition: &NotificationTriggerCondition{
+					Operator: NotificationOperator_NotIn,
+					Statuses: []ExptStatus{},
+				},
+			},
+			status:   ExptStatus_Success,
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.config.ShouldNotify(tt.status))
+		})
+	}
+}
+
+func TestDefaultNotificationConfig(t *testing.T) {
+	nc := DefaultNotificationConfig()
+	assert.NotNil(t, nc)
+	assert.NotNil(t, nc.TriggerCondition)
+	assert.Equal(t, NotificationOperator_In, nc.TriggerCondition.Operator)
+	assert.ElementsMatch(t, []ExptStatus{ExptStatus_Processing, ExptStatus_Success, ExptStatus_Failed}, nc.TriggerCondition.Statuses)
+	assert.NotNil(t, nc.Channels)
+	assert.True(t, nc.Channels.FeishuEnabled)
+	assert.Empty(t, nc.Channels.Webhooks)
+}
+
+func TestExperiment_GetNotificationConfig(t *testing.T) {
+	t.Run("nil experiment", func(t *testing.T) {
+		var e *Experiment
+		assert.Nil(t, e.GetNotificationConfig())
+	})
+	t.Run("nil eval conf", func(t *testing.T) {
+		e := &Experiment{}
+		assert.Nil(t, e.GetNotificationConfig())
+	})
+	t.Run("nil notification config", func(t *testing.T) {
+		e := &Experiment{EvalConf: &EvaluationConfiguration{}}
+		assert.Nil(t, e.GetNotificationConfig())
+	})
+	t.Run("has notification config", func(t *testing.T) {
+		nc := DefaultNotificationConfig()
+		e := &Experiment{EvalConf: &EvaluationConfiguration{NotificationConfig: nc}}
+		assert.Equal(t, nc, e.GetNotificationConfig())
+	})
+}

@@ -64,6 +64,9 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	if cer.IsSetEnableExtractTrajectory() {
 		ec.EnableExtractTrajectory = gptr.Of(cer.GetEnableExtractTrajectory())
 	}
+	if cer.IsSetNotificationConfig() {
+		ec.NotificationConfig = convertNotificationConfigToEntity(cer.GetNotificationConfig())
+	}
 	return ec, nil
 }
 
@@ -392,6 +395,9 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		}
 		res.EnableExtractTrajectory = experiment.EvalConf.EnableExtractTrajectory
 		res.Ext = experiment.EvalConf.Ext
+		if experiment.EvalConf.NotificationConfig != nil {
+			res.NotificationConfig = convertNotificationConfigToDTO(experiment.EvalConf.NotificationConfig)
+		}
 	}
 
 	// 填充权重配置（score_weight_config 和 enable_weighted_score）
@@ -571,4 +577,60 @@ func ConvRetryMode(m domain_expt.ExptRetryMode) entity.ExptRunMode {
 	default:
 		return entity.EvaluationModeUnknown
 	}
+}
+
+func convertNotificationConfigToEntity(nc *domain_expt.NotificationConfig) *entity.NotificationConfig {
+	if nc == nil {
+		return nil
+	}
+	result := &entity.NotificationConfig{}
+	if tc := nc.GetTriggerCondition(); tc != nil {
+		statuses := make([]entity.ExptStatus, 0, len(tc.GetStatuses()))
+		for _, s := range tc.GetStatuses() {
+			statuses = append(statuses, entity.ExptStatus(s))
+		}
+		result.TriggerCondition = &entity.NotificationTriggerCondition{
+			Operator: entity.NotificationOperator(tc.GetOperator()),
+			Statuses: statuses,
+		}
+	}
+	if ch := nc.GetChannels(); ch != nil {
+		result.Channels = &entity.NotificationChannels{
+			FeishuEnabled: ch.GetFeishuEnabled(),
+		}
+		for _, wh := range ch.GetWebhooks() {
+			result.Channels.Webhooks = append(result.Channels.Webhooks, &entity.WebhookChannel{
+				URL: wh.GetURL(),
+			})
+		}
+	}
+	return result
+}
+
+func convertNotificationConfigToDTO(nc *entity.NotificationConfig) *domain_expt.NotificationConfig {
+	if nc == nil {
+		return nil
+	}
+	result := &domain_expt.NotificationConfig{}
+	if tc := nc.TriggerCondition; tc != nil {
+		statuses := make([]domain_expt.ExptStatus, 0, len(tc.Statuses))
+		for _, s := range tc.Statuses {
+			statuses = append(statuses, domain_expt.ExptStatus(s))
+		}
+		result.TriggerCondition = &domain_expt.NotificationTriggerCondition{
+			Operator: gptr.Of(domain_expt.NotificationOperator(tc.Operator)),
+			Statuses: statuses,
+		}
+	}
+	if ch := nc.Channels; ch != nil {
+		result.Channels = &domain_expt.NotificationChannels{
+			FeishuEnabled: gptr.Of(ch.FeishuEnabled),
+		}
+		for _, wh := range ch.Webhooks {
+			result.Channels.Webhooks = append(result.Channels.Webhooks, &domain_expt.WebhookChannel{
+				URL: gptr.Of(wh.URL),
+			})
+		}
+	}
+	return result
 }

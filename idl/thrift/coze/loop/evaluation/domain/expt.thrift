@@ -54,6 +54,34 @@ const ExptTriggerType Manual = "manual"
 const ExptTriggerType OpenAPI = "openapi"
 const ExptTriggerType Schedule = "schedule"
 
+// 通知运算符
+typedef string NotificationOperator (ts.enum="true")
+const NotificationOperator NotificationOperator_In = "in"
+const NotificationOperator NotificationOperator_NotIn = "not_in"
+
+// 通知触发条件
+struct NotificationTriggerCondition {
+    1: optional NotificationOperator operator
+    2: optional list<ExptStatus> statuses
+}
+
+// Webhook 渠道
+struct WebhookChannel {
+    1: optional string url
+}
+
+// 通知渠道配置
+struct NotificationChannels {
+    1: optional bool feishu_enabled
+    2: optional list<WebhookChannel> webhooks
+}
+
+// 通知配置（实验级别）
+struct NotificationConfig {
+    1: optional NotificationTriggerCondition trigger_condition
+    2: optional NotificationChannels channels
+}
+
 struct Experiment {
     1: optional i64 id (api.js_conv='true', go.tag='json:"id"')
     2: optional string name
@@ -105,6 +133,8 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+    // 通知配置
+    110: optional NotificationConfig notification_config
 }
 
 // 实验模板基础信息
@@ -136,6 +166,7 @@ struct ExptFieldMapping {
     3: optional common.RuntimeParam target_runtime_param
     4: optional i32 item_concur_num
     5: optional i32 item_retry_num
+    10: optional NotificationConfig notification_config
 }
 
 // 实验评估器得分加权配置

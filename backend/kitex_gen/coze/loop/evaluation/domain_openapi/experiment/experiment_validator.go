@@ -95,6 +95,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptTemplateMeta not valid, %w", err)
 		}
 	}
+	if p.NotificationConfig != nil {
+		if err := p.NotificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConfig not valid, %w", err)
+		}
+	}
 	if p.BaseInfo != nil {
 		if err := p.BaseInfo.IsValid(); err != nil {
 			return fmt.Errorf("field BaseInfo not valid, %w", err)
@@ -184,6 +189,11 @@ func (p *ExptFieldMapping) IsValid() error {
 	if p.TargetRuntimeParam != nil {
 		if err := p.TargetRuntimeParam.IsValid(); err != nil {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
+		}
+	}
+	if p.NotificationConfig != nil {
+		if err := p.NotificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConfig not valid, %w", err)
 		}
 	}
 	return nil
@@ -293,6 +303,28 @@ func (p *ExptResultExportRecord) IsValid() error {
 	if p.Error != nil {
 		if err := p.Error.IsValid(); err != nil {
 			return fmt.Errorf("field Error not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationTriggerCondition) IsValid() error {
+	return nil
+}
+func (p *WebhookChannel) IsValid() error {
+	return nil
+}
+func (p *NotificationChannels) IsValid() error {
+	return nil
+}
+func (p *NotificationConfig) IsValid() error {
+	if p.TriggerCondition != nil {
+		if err := p.TriggerCondition.IsValid(); err != nil {
+			return fmt.Errorf("field TriggerCondition not valid, %w", err)
+		}
+	}
+	if p.Channels != nil {
+		if err := p.Channels.IsValid(); err != nil {
+			return fmt.Errorf("field Channels not valid, %w", err)
 		}
 	}
 	return nil

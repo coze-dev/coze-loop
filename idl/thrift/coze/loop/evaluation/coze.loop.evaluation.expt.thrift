@@ -48,6 +48,9 @@ struct CreateExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    // 通知配置
+    110: optional expt.NotificationConfig notification_config (api.body = 'notification_config')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -100,6 +103,9 @@ struct SubmitExperimentRequest {
     70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 通知配置
+    110: optional expt.NotificationConfig notification_config (api.body = 'notification_config')
 
     200: optional common.Session session
 

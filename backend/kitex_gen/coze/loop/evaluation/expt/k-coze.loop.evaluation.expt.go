@@ -464,6 +464,20 @@ func (p *CreateExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 110:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField110(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -988,6 +1002,18 @@ func (p *CreateExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *CreateExperimentRequest) FastReadField110(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewNotificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.NotificationConfig = _field
+	return offset, nil
+}
+
 func (p *CreateExperimentRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -1048,6 +1074,7 @@ func (p *CreateExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField50(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -1087,6 +1114,7 @@ func (p *CreateExperimentRequest) BLength() int {
 		l += p.field60Length()
 		l += p.field50Length()
 		l += p.field100Length()
+		l += p.field110Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -1390,6 +1418,15 @@ func (p *CreateExperimentRequest) fastWriteField100(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *CreateExperimentRequest) fastWriteField110(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNotificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 110)
+		offset += p.NotificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *CreateExperimentRequest) fastWriteField200(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSession() {
@@ -1685,6 +1722,15 @@ func (p *CreateExperimentRequest) field100Length() int {
 	return l
 }
 
+func (p *CreateExperimentRequest) field110Length() int {
+	l := 0
+	if p.IsSetNotificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.NotificationConfig.BLength()
+	}
+	return l
+}
+
 func (p *CreateExperimentRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -1918,6 +1964,15 @@ func (p *CreateExperimentRequest) DeepCopy(s interface{}) error {
 			p.Ext[_key] = _val
 		}
 	}
+
+	var _notificationConfig *expt.NotificationConfig
+	if src.NotificationConfig != nil {
+		_notificationConfig = &expt.NotificationConfig{}
+		if err := _notificationConfig.DeepCopy(src.NotificationConfig); err != nil {
+			return err
+		}
+	}
+	p.NotificationConfig = _notificationConfig
 
 	var _session *common.Session
 	if src.Session != nil {
@@ -2549,6 +2604,20 @@ func (p *SubmitExperimentRequest) FastRead(buf []byte) (int, error) {
 					goto SkipFieldError
 				}
 			}
+		case 110:
+			if fieldTypeId == thrift.STRUCT {
+				l, err = p.FastReadField110(buf[offset:])
+				offset += l
+				if err != nil {
+					goto ReadFieldError
+				}
+			} else {
+				l, err = thrift.Binary.Skip(buf[offset:], fieldTypeId)
+				offset += l
+				if err != nil {
+					goto SkipFieldError
+				}
+			}
 		case 200:
 			if fieldTypeId == thrift.STRUCT {
 				l, err = p.FastReadField200(buf[offset:])
@@ -3077,6 +3146,18 @@ func (p *SubmitExperimentRequest) FastReadField100(buf []byte) (int, error) {
 	return offset, nil
 }
 
+func (p *SubmitExperimentRequest) FastReadField110(buf []byte) (int, error) {
+	offset := 0
+	_field := expt.NewNotificationConfig()
+	if l, err := _field.FastRead(buf[offset:]); err != nil {
+		return offset, err
+	} else {
+		offset += l
+	}
+	p.NotificationConfig = _field
+	return offset, nil
+}
+
 func (p *SubmitExperimentRequest) FastReadField200(buf []byte) (int, error) {
 	offset := 0
 	_field := common.NewSession()
@@ -3138,6 +3219,7 @@ func (p *SubmitExperimentRequest) FastWriteNocopy(buf []byte, w thrift.NocopyWri
 		offset += p.fastWriteField60(buf[offset:], w)
 		offset += p.fastWriteField70(buf[offset:], w)
 		offset += p.fastWriteField100(buf[offset:], w)
+		offset += p.fastWriteField110(buf[offset:], w)
 		offset += p.fastWriteField200(buf[offset:], w)
 		offset += p.fastWriteField255(buf[offset:], w)
 	}
@@ -3178,6 +3260,7 @@ func (p *SubmitExperimentRequest) BLength() int {
 		l += p.field60Length()
 		l += p.field70Length()
 		l += p.field100Length()
+		l += p.field110Length()
 		l += p.field200Length()
 		l += p.field255Length()
 	}
@@ -3489,6 +3572,15 @@ func (p *SubmitExperimentRequest) fastWriteField100(buf []byte, w thrift.NocopyW
 	return offset
 }
 
+func (p *SubmitExperimentRequest) fastWriteField110(buf []byte, w thrift.NocopyWriter) int {
+	offset := 0
+	if p.IsSetNotificationConfig() {
+		offset += thrift.Binary.WriteFieldBegin(buf[offset:], thrift.STRUCT, 110)
+		offset += p.NotificationConfig.FastWriteNocopy(buf[offset:], w)
+	}
+	return offset
+}
+
 func (p *SubmitExperimentRequest) fastWriteField200(buf []byte, w thrift.NocopyWriter) int {
 	offset := 0
 	if p.IsSetSession() {
@@ -3793,6 +3885,15 @@ func (p *SubmitExperimentRequest) field100Length() int {
 	return l
 }
 
+func (p *SubmitExperimentRequest) field110Length() int {
+	l := 0
+	if p.IsSetNotificationConfig() {
+		l += thrift.Binary.FieldBeginLength()
+		l += p.NotificationConfig.BLength()
+	}
+	return l
+}
+
 func (p *SubmitExperimentRequest) field200Length() int {
 	l := 0
 	if p.IsSetSession() {
@@ -4031,6 +4132,15 @@ func (p *SubmitExperimentRequest) DeepCopy(s interface{}) error {
 			p.Ext[_key] = _val
 		}
 	}
+
+	var _notificationConfig *expt.NotificationConfig
+	if src.NotificationConfig != nil {
+		_notificationConfig = &expt.NotificationConfig{}
+		if err := _notificationConfig.DeepCopy(src.NotificationConfig); err != nil {
+			return err
+		}
+	}
+	p.NotificationConfig = _notificationConfig
 
 	var _session *common.Session
 	if src.Session != nil {

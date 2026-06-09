@@ -37,6 +37,11 @@ func (p *CreateExperimentRequest) IsValid() error {
 			return fmt.Errorf("field TargetRuntimeParam not valid, %w", err)
 		}
 	}
+	if p.NotificationConfig != nil {
+		if err := p.NotificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConfig not valid, %w", err)
+		}
+	}
 	if p.Session != nil {
 		if err := p.Session.IsValid(); err != nil {
 			return fmt.Errorf("field Session not valid, %w", err)
@@ -81,6 +86,11 @@ func (p *SubmitExperimentRequest) IsValid() error {
 	if p.TimeRange != nil {
 		if err := p.TimeRange.IsValid(); err != nil {
 			return fmt.Errorf("field TimeRange not valid, %w", err)
+		}
+	}
+	if p.NotificationConfig != nil {
+		if err := p.NotificationConfig.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConfig not valid, %w", err)
 		}
 	}
 	if p.Session != nil {

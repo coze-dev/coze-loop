@@ -71,6 +71,63 @@ const (
 	SourceType_IntelligentGen SourceType = 4
 )
 
+type NotificationOperator string
+
+const (
+	NotificationOperator_In    NotificationOperator = "in"
+	NotificationOperator_NotIn NotificationOperator = "not_in"
+)
+
+type NotificationTriggerCondition struct {
+	Operator NotificationOperator `json:"operator"`
+	Statuses []ExptStatus         `json:"statuses"`
+}
+
+type WebhookChannel struct {
+	URL string `json:"url"`
+}
+
+type NotificationChannels struct {
+	FeishuEnabled bool              `json:"feishu_enabled"`
+	Webhooks      []*WebhookChannel `json:"webhooks,omitempty"`
+}
+
+type NotificationConfig struct {
+	TriggerCondition *NotificationTriggerCondition `json:"trigger_condition,omitempty"`
+	Channels         *NotificationChannels         `json:"channels,omitempty"`
+}
+
+func (nc *NotificationConfig) ShouldNotify(status ExptStatus) bool {
+	if nc == nil || nc.TriggerCondition == nil {
+		return false
+	}
+	matched := false
+	for _, s := range nc.TriggerCondition.Statuses {
+		if s == status {
+			matched = true
+			break
+		}
+	}
+	switch nc.TriggerCondition.Operator {
+	case NotificationOperator_NotIn:
+		return !matched
+	default:
+		return matched
+	}
+}
+
+func DefaultNotificationConfig() *NotificationConfig {
+	return &NotificationConfig{
+		TriggerCondition: &NotificationTriggerCondition{
+			Operator: NotificationOperator_In,
+			Statuses: []ExptStatus{ExptStatus_Processing, ExptStatus_Success, ExptStatus_Failed},
+		},
+		Channels: &NotificationChannels{
+			FeishuEnabled: true,
+		},
+	}
+}
+
 type ExptRunLog struct {
 	ID            int64
 	SpaceID       int64
@@ -221,6 +278,13 @@ func (e *Experiment) ContainsEvalTarget() bool {
 	return e != nil && e.TargetVersionID > 0
 }
 
+func (e *Experiment) GetNotificationConfig() *NotificationConfig {
+	if e == nil || e.EvalConf == nil {
+		return nil
+	}
+	return e.EvalConf.NotificationConfig
+}
+
 type ExptEvaluatorVersionRef struct {
 	EvaluatorID        int64
 	EvaluatorVersionID int64
@@ -236,6 +300,7 @@ type EvaluationConfiguration struct {
 	ItemRetryNum            *int
 	TimeRange               *TaskTimeRangeDO `json:"time_range,omitempty"`
 	EnableExtractTrajectory *bool
+	NotificationConfig      *NotificationConfig `json:"notification_config,omitempty"`
 	Ext                     map[string]string
 }
 

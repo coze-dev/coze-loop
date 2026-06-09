@@ -432,6 +432,9 @@ struct SubmitExperimentOApiRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    // 通知配置
+    110: optional experiment.NotificationConfig notification_config (api.body = 'notification_config')
+
     254: optional extra.Extra extra (agw.source = "not_body_struct")
     255: optional base.Base Base
 }
