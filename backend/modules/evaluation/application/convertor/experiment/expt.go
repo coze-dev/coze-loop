@@ -557,6 +557,17 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
 	}
+	// 通知配置：IDL（FilterCondition 模型）→ 领域 DO，并做合法性校验（裁决①/②）
+	if cer.IsSetNotificationConf() {
+		notificationConf, err := NotificationConfDTO2DO(cer.GetNotificationConf())
+		if err != nil {
+			return nil, err
+		}
+		if err := notificationConf.Valid(); err != nil {
+			return nil, err
+		}
+		param.NotificationConf = notificationConf
+	}
 	return param, nil
 }
 

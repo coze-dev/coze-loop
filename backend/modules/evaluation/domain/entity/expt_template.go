@@ -205,6 +205,9 @@ type ExptTemplateConfiguration struct {
 
 	// ExptSource 实验来源信息
 	ExptSource *ExptSource `json:"expt_source,omitempty"`
+
+	// NotificationConf 实验通知配置；模板派生实验时继承（可被创建请求覆盖）。
+	NotificationConf *NotificationConf `json:"notification_conf,omitempty"`
 }
 
 // ToEvaluatorRefDO 转换为评估器引用DO
@@ -424,6 +427,8 @@ type CreateExptTemplateParam struct {
 	CronActivate            bool // 是否开启定时触发
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	ExptSource              *ExptSource // 实验来源信息
+	// NotificationConf 实验通知配置（条件 + 双通道），nil 表示不配置。
+	NotificationConf *NotificationConf
 }
 
 // UpdateExptTemplateParam 更新实验模板参数

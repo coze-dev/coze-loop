@@ -49,6 +49,19 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 		param.ExptSource = exptSourceDTO2DO(req.ExptSource)
 	}
 
+	// 通知配置：IDL（FilterCondition 模型）→ 领域 DO，并做合法性校验（裁决①/②）
+	// 模板派生实验时继承，可被创建请求覆盖
+	if req.IsSetNotificationConf() {
+		notificationConf, err := NotificationConfDTO2DO(req.GetNotificationConf())
+		if err != nil {
+			return nil, err
+		}
+		if err := notificationConf.Valid(); err != nil {
+			return nil, err
+		}
+		param.NotificationConf = notificationConf
+	}
+
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
 	return param, nil
@@ -258,6 +271,11 @@ func buildTemplateConfForCreate(
 	}
 	if req.IsSetEnableExtractTrajectory() {
 		templateConf.EnableExtractTrajectory = gptr.Of(req.GetEnableExtractTrajectory())
+	}
+
+	// 模板配置携带通知配置，派生实验时继承（可被创建请求覆盖）
+	if param.NotificationConf != nil {
+		templateConf.NotificationConf = param.NotificationConf
 	}
 
 	if targetFieldMapping == nil && len(evaluatorConfs) == 0 {
@@ -1129,6 +1147,11 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 
 	if template.TemplateConf != nil && template.TemplateConf.EnableExtractTrajectory != nil {
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
+	// 模板通知配置继承到派生实验（DO→DTO 回填，后续 ConvertCreateReq 再转回 DO）
+	if template.TemplateConf != nil && template.TemplateConf.NotificationConf != nil {
+		req.NotificationConf = NotificationConfDO2DTO(template.TemplateConf.NotificationConf)
 	}
 
 	return req

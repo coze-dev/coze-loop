@@ -837,6 +837,11 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		do.ThreadID = req.ThreadID
 	}
 
+	// 通知配置：创建请求显式携带则覆盖（模板派生场景下，模板继承的配置已由 application 层回填到 req）
+	if req.NotificationConf != nil {
+		do.NotificationConf = req.NotificationConf
+	}
+
 	// 如果提供了模板 ID，设置 ExptTemplateMeta
 	if req.ExptTemplateID > 0 {
 		do.ExptTemplateMeta = &entity.ExptTemplateMeta{

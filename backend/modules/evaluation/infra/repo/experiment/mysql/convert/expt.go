@@ -68,6 +68,14 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
 
+	if experiment.NotificationConf != nil {
+		bytes, err := json.Marshal(experiment.NotificationConf)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json marshal fail")
+		}
+		expt.NotificationConf = &bytes
+	}
+
 	return expt, nil
 }
 
@@ -124,6 +132,14 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		res.ExptTemplateMeta = &entity.ExptTemplateMeta{
 			ID: expt.ExptTemplateID,
 		}
+	}
+
+	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
+		notificationConf := new(entity.NotificationConf)
+		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notificationConf); err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConf json unmarshal fail, expt_id: %v", expt.ID)
+		}
+		res.NotificationConf = notificationConf
 	}
 
 	return res, nil

@@ -233,6 +233,20 @@ func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.Expt
 		return err
 	}
 
+	// 发布「开始执行」生命周期事件（裁决：started=Processing），供通知投递引擎按需触发 Webhook。
+	// 失败仅告警，不阻塞启动流程；终态事件仍由 sendExptCompleteEvent 负责。
+	startEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		SpaceID:    event.SpaceID,
+		FromStatus: expt.Status,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   expt.ExptType,
+		SourceType: expt.SourceType,
+	}
+	if err := e.publisher.PublishExptLifecycleEvent(ctx, startEvent, gptr.Of(time.Second*3)); err != nil {
+		logs.CtxWarn(ctx, "finishExptStart PublishExptLifecycleEvent(started) failed, expt_id: %v, err: %v", event.ExptID, err)
+	}
+
 	var templateID int64
 	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
 		templateID = expt.ExptTemplateMeta.ID

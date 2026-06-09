@@ -169,6 +169,10 @@ type Experiment struct {
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
 	ThreadID   *string    // 关联的智能评测会话ID
+
+	// NotificationConf 实验通知配置（条件 + 双通道），持久化到 experiment.notification_conf（JSON/BLOB）。
+	// 为 nil 时走默认行为（终态发飞书，不发 Webhook），向前兼容。
+	NotificationConf *NotificationConf
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

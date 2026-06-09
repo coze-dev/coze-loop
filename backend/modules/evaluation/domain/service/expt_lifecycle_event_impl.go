@@ -47,6 +47,10 @@ func (h *ExptLifecycleEventHandlerImpl) sendNotifyCard(ctx context.Context, even
 	if event.ToStatus != expt.Status {
 		return nil
 	}
+	// 通知配置：为 nil 时维持默认行为（终态飞书）；非 nil 时按规则判定是否需要飞书。
+	if expt.NotificationConf != nil && !expt.NotificationConf.ShouldFeishu(expt.Status) {
+		return nil
+	}
 	userInfos, err := h.userProvider.MGetUserInfo(ctx, []string{expt.CreatedBy})
 	if err != nil {
 		return err

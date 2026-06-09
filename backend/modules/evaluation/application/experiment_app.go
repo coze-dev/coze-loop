@@ -517,6 +517,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 		EnableExtractTrajectory: req.EnableExtractTrajectory,
 		Ext:                     req.Ext,
 	}
+	if req.IsSetNotificationConf() {
+		createReq.NotificationConf = req.GetNotificationConf()
+	}
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
