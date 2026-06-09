@@ -66,6 +66,8 @@ func (e *EvalConfConvert) ConvertToEntity(cer *expt.CreateExperimentRequest, eva
 	}
 	if cer.IsSetNotificationConfig() {
 		ec.NotificationConfig = convertNotificationConfigToEntity(cer.GetNotificationConfig())
+	} else {
+		ec.NotificationConfig = entity.DefaultNotificationConfig()
 	}
 	return ec, nil
 }
