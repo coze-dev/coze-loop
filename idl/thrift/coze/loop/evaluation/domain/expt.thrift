@@ -105,6 +105,9 @@ struct Experiment {
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
+
+    // 实验通知配置
+    110: optional NotificationConfig notification_conf
 }
 
 // 实验模板基础信息
@@ -152,6 +155,9 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    // 实验通知配置
+    8: optional NotificationConfig notification_conf
 
     255: optional common.BaseInfo base_info
 }
@@ -728,4 +734,57 @@ const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
+
+// ============================
+// 实验通知配置相关结构体
+// ============================
+
+// 通知触发字段
+enum NotificationField {
+    Unknown = 0
+    ExptStatus = 1      // 实验状态
+}
+
+// 通知运算符
+enum NotificationOperator {
+    Unknown = 0
+    In = 1              // 包含
+    NotIn = 2           // 不包含
+}
+
+// 通知渠道类型
+enum NotificationChannelType {
+    Unknown = 0
+    Webhook = 1         // Webhook POST 回调
+    Feishu = 2          // 飞书消息
+}
+
+// 触发条件
+struct NotificationTrigger {
+    1: optional NotificationField field            // 触发字段（本期固定为 ExptStatus）
+    2: optional NotificationOperator operator      // 运算符（In / NotIn）
+    3: optional list<string> values                // 条件值列表（如 ["processing", "success", "failed"]）
+}
+
+// Webhook 动作详情
+struct WebhookAction {
+    1: optional string url                         // 回调 URL
+}
+
+// 通知动作
+struct NotificationAction {
+    1: optional NotificationChannelType channel    // 渠道类型
+    2: optional WebhookAction webhook              // Webhook 配置（channel=Webhook 时有效）
+}
+
+// 单条通知规则
+struct NotificationRule {
+    1: optional NotificationTrigger trigger        // 触发条件
+    2: optional list<NotificationAction> actions   // 通知动作列表
+}
+
+// 通知配置（实验/模板级别）
+struct NotificationConfig {
+    1: optional list<NotificationRule> rules       // 通知规则列表
+}
 

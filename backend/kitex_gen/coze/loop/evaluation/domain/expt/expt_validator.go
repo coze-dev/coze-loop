@@ -67,6 +67,11 @@ func (p *Experiment) IsValid() error {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
 		}
 	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
+		}
+	}
 	return nil
 }
 func (p *ExptTemplateMeta) IsValid() error {
@@ -130,6 +135,11 @@ func (p *ExptTemplate) IsValid() error {
 	if p.ExptSource != nil {
 		if err := p.ExptSource.IsValid(); err != nil {
 			return fmt.Errorf("field ExptSource not valid, %w", err)
+		}
+	}
+	if p.NotificationConf != nil {
+		if err := p.NotificationConf.IsValid(); err != nil {
+			return fmt.Errorf("field NotificationConf not valid, %w", err)
 		}
 	}
 	if p.BaseInfo != nil {
@@ -482,5 +492,30 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 	return nil
 }
 func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
+	return nil
+}
+func (p *NotificationTrigger) IsValid() error {
+	return nil
+}
+func (p *WebhookAction) IsValid() error {
+	return nil
+}
+func (p *NotificationAction) IsValid() error {
+	if p.Webhook != nil {
+		if err := p.Webhook.IsValid(); err != nil {
+			return fmt.Errorf("field Webhook not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	if p.Trigger != nil {
+		if err := p.Trigger.IsValid(); err != nil {
+			return fmt.Errorf("field Trigger not valid, %w", err)
+		}
+	}
+	return nil
+}
+func (p *NotificationConfig) IsValid() error {
 	return nil
 }

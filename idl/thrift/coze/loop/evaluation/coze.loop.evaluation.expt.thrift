@@ -48,6 +48,9 @@ struct CreateExperimentRequest {
 
     100: optional map<string, string> ext (api.body = 'ext')
 
+    // 实验通知配置
+    111: optional expt.NotificationConfig notification_conf (api.body = 'notification_conf')
+
     200: optional common.Session session
 
     255: optional base.Base Base
@@ -100,6 +103,9 @@ struct SubmitExperimentRequest {
     70: optional list<i64> item_ids (api.body = 'item_ids', api.js_conv = 'true', go.tag = 'json:"item_ids"')
 
     100: optional map<string, string> ext (api.body = 'ext')
+
+    // 实验通知配置
+    111: optional expt.NotificationConfig notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
 
@@ -404,6 +410,8 @@ struct CreateExperimentTemplateRequest {
 
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
 
+    // 实验通知配置
+    40: optional expt.NotificationConfig notification_conf (api.body = 'notification_conf')
 
     200: optional common.Session session
     255: optional base.Base Base
@@ -466,6 +474,9 @@ struct UpdateExperimentTemplateRequest {
 
     // 实验来源（含 Scheduler 等配置）；nil 表示不修改，保留 DB 中已有值
     30: optional expt.ExptSource expt_source (api.body = 'expt_source')
+
+    // 实验通知配置；nil 表示不修改，保留 DB 中已有值
+    40: optional expt.NotificationConfig notification_conf (api.body = 'notification_conf')
 
     255: optional base.Base Base
 }
