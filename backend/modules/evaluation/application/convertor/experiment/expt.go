@@ -445,7 +445,102 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.SetExptSource(fallback)
 	}
 
+	// 填充 notification_conf
+	res.NotificationConf = notificationConfDO2DTO(experiment.NotificationConf)
+
 	return res
+}
+
+// notificationConfDO2DTO converts domain NotificationConfig to IDL DTO.
+func notificationConfDO2DTO(nc *entity.NotificationConfig) *domain_expt.NotificationConfig {
+	if nc == nil {
+		return nil
+	}
+	dto := domain_expt.NewNotificationConfig()
+	if len(nc.Rules) == 0 {
+		return dto
+	}
+	rules := make([]*domain_expt.NotificationRule, 0, len(nc.Rules))
+	for _, r := range nc.Rules {
+		if r == nil {
+			continue
+		}
+		rule := domain_expt.NewNotificationRule()
+		if r.Trigger != nil {
+			trigger := domain_expt.NewNotificationTrigger()
+			trigger.Field = gptr.Of(domain_expt.NotificationField(r.Trigger.Field))
+			trigger.Operator = gptr.Of(domain_expt.NotificationOperator(r.Trigger.Operator))
+			trigger.Values = r.Trigger.Values
+			rule.Trigger = trigger
+		}
+		if len(r.Actions) > 0 {
+			actions := make([]*domain_expt.NotificationAction, 0, len(r.Actions))
+			for _, a := range r.Actions {
+				if a == nil {
+					continue
+				}
+				action := domain_expt.NewNotificationAction()
+				action.Channel = gptr.Of(domain_expt.NotificationChannelType(a.Channel))
+				if a.Webhook != nil {
+					wh := domain_expt.NewWebhookAction()
+					wh.URL = gptr.Of(a.Webhook.URL)
+					action.Webhook = wh
+				}
+				actions = append(actions, action)
+			}
+			rule.Actions = actions
+		}
+		rules = append(rules, rule)
+	}
+	dto.Rules = rules
+	return dto
+}
+
+// NotificationConfDTO2DO converts IDL DTO NotificationConfig to domain entity.
+func NotificationConfDTO2DO(dto *domain_expt.NotificationConfig) *entity.NotificationConfig {
+	if dto == nil {
+		return nil
+	}
+	nc := &entity.NotificationConfig{}
+	if len(dto.GetRules()) == 0 {
+		return nc
+	}
+	rules := make([]*entity.NotificationRule, 0, len(dto.GetRules()))
+	for _, r := range dto.GetRules() {
+		if r == nil {
+			continue
+		}
+		rule := &entity.NotificationRule{}
+		if r.GetTrigger() != nil {
+			t := r.GetTrigger()
+			rule.Trigger = &entity.NotificationTrigger{
+				Field:    entity.NotificationField(t.GetField()),
+				Operator: entity.NotificationOperator(t.GetOperator()),
+				Values:   t.GetValues(),
+			}
+		}
+		if len(r.GetActions()) > 0 {
+			actions := make([]*entity.NotificationAction, 0, len(r.GetActions()))
+			for _, a := range r.GetActions() {
+				if a == nil {
+					continue
+				}
+				action := &entity.NotificationAction{
+					Channel: entity.NotificationChannelType(a.GetChannel()),
+				}
+				if a.GetWebhook() != nil {
+					action.Webhook = &entity.WebhookAction{
+						URL: a.GetWebhook().GetURL(),
+					}
+				}
+				actions = append(actions, action)
+			}
+			rule.Actions = actions
+		}
+		rules = append(rules, rule)
+	}
+	nc.Rules = rules
+	return nc
 }
 
 func ToExptStatsDTO(stats *entity.ExptStats, aggrResult *entity.ExptAggregateResult) *domain_expt.ExptStatistics {
@@ -556,6 +651,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	}
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
+	}
+	if cer.IsSetNotificationConf() {
+		param.NotificationConf = NotificationConfDTO2DO(cer.GetNotificationConf())
 	}
 	return param, nil
 }

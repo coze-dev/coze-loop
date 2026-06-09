@@ -520,6 +520,9 @@ func (e *experimentApplication) SubmitExperiment(ctx context.Context, req *expt.
 	if req.IsSetExptTemplateID() {
 		createReq.ExptTemplateID = gptr.Of(req.GetExptTemplateID())
 	}
+	if req.IsSetNotificationConf() {
+		createReq.NotificationConf = req.GetNotificationConf()
+	}
 
 	cresp, err := e.CreateExperiment(ctx, createReq)
 	if err != nil {

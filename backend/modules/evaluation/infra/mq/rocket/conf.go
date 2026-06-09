@@ -22,6 +22,8 @@ const (
 	ExptExportCSVEventRMQKey        = "expt_export_csv_event_rmq"
 	ExptAnalysisEventRMQKey         = "expt_analysis_event_rmq"
 	ExptLifecycleEventRMQKey        = "expt_lifecycle_event_rmq"
+	WebhookLifecycleEventRMQKey     = "webhook_lifecycle_event_rmq"
+	WebhookDeliveryEventRMQKey      = "webhook_delivery_event_rmq"
 )
 
 type RMQConf struct {

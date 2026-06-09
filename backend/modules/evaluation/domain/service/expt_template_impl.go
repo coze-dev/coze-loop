@@ -158,6 +158,7 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
 		ExptSource: param.ExptSource,
+		NotificationConf: param.NotificationConf,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
@@ -485,6 +486,13 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
 		}
 		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
+	// notification_conf: 显式传入时覆盖，否则保留已有值
+	if param.NotificationConf != nil {
+		updatedTemplate.NotificationConf = param.NotificationConf
+	} else {
+		updatedTemplate.NotificationConf = existingTemplate.NotificationConf
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重

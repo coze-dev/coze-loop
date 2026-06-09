@@ -51,6 +51,11 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	// 透传 notification_conf
+	if req.IsSetNotificationConf() {
+		param.NotificationConf = NotificationConfDTO2DO(req.GetNotificationConf())
+	}
+
 	return param, nil
 }
 
@@ -482,6 +487,9 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	if es := ExptSourceDO2DTO(template.ExptSource); es != nil {
 		dto.SetExptSource(es)
 	}
+
+	// 填充 notification_conf
+	dto.NotificationConf = notificationConfDO2DTO(template.NotificationConf)
 
 	return dto
 }
@@ -1131,6 +1139,11 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		req.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
 	}
 
+	// 透传模板的通知配置
+	if template.NotificationConf != nil {
+		req.NotificationConf = notificationConfDO2DTO(template.NotificationConf)
+	}
+
 	return req
 }
 
@@ -1402,6 +1415,11 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
+	}
+
+	// 透传 notification_conf
+	if req.IsSetNotificationConf() {
+		param.NotificationConf = NotificationConfDTO2DO(req.GetNotificationConf())
 	}
 
 	return param, nil
