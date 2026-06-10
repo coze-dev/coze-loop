@@ -484,3 +484,9 @@ func (p *ExptInsightAnalysisFeedbackComment) IsValid() error {
 func (p *ExptInsightAnalysisFeedbackVote) IsValid() error {
 	return nil
 }
+func (p *NotificationAction) IsValid() error {
+	return nil
+}
+func (p *NotificationRule) IsValid() error {
+	return nil
+}

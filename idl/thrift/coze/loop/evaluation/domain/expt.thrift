@@ -102,6 +102,9 @@ struct Experiment {
     70: optional ExptTriggerType trigger_type
     71: optional ExptSource expt_source
 
+    // 通知配置
+    80: optional list<NotificationRule> notification_conf
+
     100: optional map<string, string> ext
     // 离线实验分析状态
     101: optional OfflineExptAnalysisStatus offline_expt_analysis_status
@@ -152,6 +155,9 @@ struct ExptTemplate {
     5: optional ExptInfo expt_info
     6: optional ExptSource expt_source
     7: optional bool enable_extract_trajectory
+
+    // 通知配置
+    8: optional list<NotificationRule> notification_conf
 
     255: optional common.BaseInfo base_info
 }
@@ -728,4 +734,26 @@ const FeedbackActionType FeedbackActionType_Cancel_Downvote = "Cancel_Downvote"
 const FeedbackActionType FeedbackActionType_Create_Comment = "Create_Comment"
 const FeedbackActionType FeedbackActionType_Update_Comment = "Update_Comment"
 const FeedbackActionType FeedbackActionType_Delete_Comment = "Delete_Comment"
+
+// ========== Notification 配置 ==========
+
+typedef string NotificationTrigger (ts.enum="true")
+const NotificationTrigger NotificationTriggerStarted    = "started"
+const NotificationTrigger NotificationTriggerSucceeded  = "succeeded"
+const NotificationTrigger NotificationTriggerFailed     = "failed"
+const NotificationTrigger NotificationTriggerTerminated = "terminated"
+
+typedef string NotificationActionType (ts.enum="true")
+const NotificationActionType NotificationActionTypeWebhook = "webhook"
+const NotificationActionType NotificationActionTypeFeishu  = "feishu"
+
+struct NotificationAction {
+    1: optional NotificationActionType type
+    2: optional string url   // webhook 类型时必填
+}
+
+struct NotificationRule {
+    1: optional NotificationTrigger trigger
+    2: optional list<NotificationAction> actions
+}
 
