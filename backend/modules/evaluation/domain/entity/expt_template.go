@@ -37,6 +37,10 @@ type ExptTemplate struct {
 
 	// ExptSource 实验来源信息（存储在 template_conf JSON 中）
 	ExptSource *ExptSource
+
+	// Notifications 模板通知配置（webhook/feishu 规则），存储于 notification_conf BLOB；
+	// 模板创建实验时被继承。为 nil 表示未配置，按 DefaultNotificationConfig 兜底。
+	Notifications *NotificationConfig
 }
 
 // ExptSource 实验来源信息
@@ -424,6 +428,7 @@ type CreateExptTemplateParam struct {
 	CronActivate            bool // 是否开启定时触发
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	ExptSource              *ExptSource // 实验来源信息
+	Notifications           *NotificationConfig // 通知配置，模板创建实验时继承
 }
 
 // UpdateExptTemplateParam 更新实验模板参数
@@ -442,6 +447,8 @@ type UpdateExptTemplateParam struct {
 	CreateEvalTargetParam   *CreateEvalTargetParam
 	// ExptSource 实验来源信息；nil 表示不修改，由 service 层保留 DB 已有值
 	ExptSource *ExptSource
+	// Notifications 通知配置；nil 表示不修改，由 service 层保留 DB 已有值
+	Notifications *NotificationConfig
 }
 
 // UpdateExptTemplateMetaParam 更新实验模板 Meta 参数

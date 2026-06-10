@@ -98,6 +98,15 @@ func (ExptTemplateConverter) DO2PO(template *entity.ExptTemplate) (*model.ExptTe
 		po.ExptInfo = &bytes
 	}
 
+	// 通知配置：直接序列化 IDL 结构为 JSON 存入 notification_conf BLOB，格式与 IDL 一致。
+	if template.Notifications != nil {
+		bytes, err := json.Marshal(template.Notifications)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConfig json marshal fail")
+		}
+		po.NotificationConf = &bytes
+	}
+
 	return po, nil
 }
 
@@ -268,6 +277,14 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		exptSource = templateConf.ExptSource
 	}
 
+	var notifications *entity.NotificationConfig
+	if len(gptr.Indirect(po.NotificationConf)) > 0 {
+		notifications = &entity.NotificationConfig{}
+		if err := json.Unmarshal(gptr.Indirect(po.NotificationConf), notifications); err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConfig json unmarshal fail, template_id: %v", po.ID)
+		}
+	}
+
 	return &entity.ExptTemplate{
 		Meta:                meta,
 		TripleConfig:        tripleConfig,
@@ -277,6 +294,7 @@ func (ExptTemplateConverter) PO2DO(po *model.ExptTemplate, refs []*model.ExptTem
 		BaseInfo:            baseInfo,
 		ExptInfo:            exptInfo,
 		ExptSource:          exptSource,
+		Notifications:       notifications,
 	}, nil
 }
 

@@ -373,6 +373,11 @@ func ToExptDTO(experiment *entity.Experiment) *domain_expt.Experiment {
 		res.TriggerType = &tt
 	}
 
+	// 通知配置：领域实体直接持 IDL 类型，原样透传给 DTO（响应侧透传 notifications）。
+	if experiment.Notifications != nil {
+		res.Notifications = experiment.Notifications
+	}
+
 	// 注意：Experiment DTO 中没有 TripleConfig 字段，如果需要可以通过其他方式传递
 
 	if experiment.StartAt != nil {
@@ -556,6 +561,9 @@ func ConvertCreateReq(cer *expt.CreateExperimentRequest, evaluatorVersionRunConf
 	}
 	if cer.IsSetTriggerType() {
 		param.TriggerType = strings.TrimSpace(cer.GetTriggerType())
+	}
+	if cer.IsSetNotifications() {
+		param.Notifications = cer.GetNotifications()
 	}
 	return param, nil
 }

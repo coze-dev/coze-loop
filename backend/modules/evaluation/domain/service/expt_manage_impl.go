@@ -837,6 +837,17 @@ func (e *ExptMangerImpl) CreateExpt(ctx context.Context, req *entity.CreateExptP
 		do.ThreadID = req.ThreadID
 	}
 
+	// 通知配置：优先用请求携带的 notifications；为空则尝试继承模板配置（模板创建实验时继承，决策5）。
+	if req.Notifications != nil {
+		do.Notifications = req.Notifications
+	} else if req.ExptTemplateID > 0 {
+		if tmpl, terr := e.templateRepo.GetByID(ctx, req.ExptTemplateID, gptr.Of(req.WorkspaceID)); terr == nil && tmpl != nil && tmpl.Notifications != nil {
+			do.Notifications = tmpl.Notifications
+		} else if terr != nil {
+			logs.CtxWarn(ctx, "[Notify] inherit template notifications fail, template_id: %v, err: %v", req.ExptTemplateID, terr)
+		}
+	}
+
 	// 如果提供了模板 ID，设置 ExptTemplateMeta
 	if req.ExptTemplateID > 0 {
 		do.ExptTemplateMeta = &entity.ExptTemplateMeta{

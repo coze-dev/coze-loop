@@ -208,6 +208,37 @@ func (e *ExptTrialRunExec) Mode() entity.ExptRunMode {
 	return entity.EvaluationModeTrialRun
 }
 
+// sendExptStartedEvent 在实验进入 Processing 状态成功后发布 started 生命周期事件（决策1）。
+// 与 sendExptCompleteEvent 并列、独立发布，不放宽其 IsExptFinished 判断；
+// 仅当 fromStatus != Processing 时发布，避免重入双发。事件为 FromStatus=Pending, ToStatus=Processing。
+// 发布失败仅记录日志，不阻塞实验启动主流程。
+func (e *ExptSubmitExec) sendExptStartedEvent(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment) {
+	if e.publisher == nil {
+		return
+	}
+	if expt != nil && expt.Status == entity.ExptStatus_Processing {
+		// 已是 Processing（重入/重试场景），不重复发布。
+		return
+	}
+	lifecycleEvent := &entity.ExptLifecycleEvent{
+		ExptID:     event.ExptID,
+		ExptRunID:  gptr.Of(event.ExptRunID),
+		SpaceID:    event.SpaceID,
+		FromStatus: entity.ExptStatus_Pending,
+		ToStatus:   entity.ExptStatus_Processing,
+		ExptType:   event.ExptType,
+	}
+	if expt != nil {
+		lifecycleEvent.ExptType = expt.ExptType
+		lifecycleEvent.SourceType = expt.SourceType
+	}
+	if err := backoff.RetryWithElapsedTime(ctx, 15*time.Second, func() error {
+		return e.publisher.PublishExptLifecycleEvent(ctx, lifecycleEvent, gptr.Of(time.Second*3))
+	}); err != nil {
+		logs.CtxWarn(ctx, "[ExptEval] PublishExptLifecycleEvent(started) failed after retry, expt_id: %v, err: %v", event.ExptID, err)
+	}
+}
+
 // finishExptStart 完成实验启动的收尾逻辑：更新统计、状态、模板信息、幂等标记
 func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.ExptScheduleEvent, expt *entity.Experiment, itemCnt int, idemKey string) error {
 	err := e.resultSvc.UpsertExptTurnResultFilter(ctx, event.SpaceID, event.ExptID, nil)
@@ -232,6 +263,9 @@ func (e *ExptSubmitExec) finishExptStart(ctx context.Context, event *entity.Expt
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+
+	// 进入 Processing 成功后发布 started 生命周期事件（决策1）。
+	e.sendExptStartedEvent(ctx, event, expt)
 
 	var templateID int64
 	if expt.ExptTemplateMeta != nil && expt.ExptTemplateMeta.ID > 0 {
@@ -621,6 +655,9 @@ func (e *ExptSubmitExec) ExptStart(ctx context.Context, event *entity.ExptSchedu
 	if err := e.exptRepo.Update(ctx, exptDo); err != nil {
 		return err
 	}
+
+	// 进入 Processing 成功后发布 started 生命周期事件（决策1）。
+	e.sendExptStartedEvent(ctx, event, expt)
 
 	// 如果实验关联了模板，更新模板的 ExptInfo
 	var templateID int64

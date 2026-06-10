@@ -51,6 +51,10 @@ func ConvertCreateExptTemplateReq(req *expt.CreateExperimentTemplateRequest) (*e
 
 	param.TemplateConf = buildTemplateConfForCreate(param, req, targetFieldMapping, evaluatorConfs, itemConcurNum)
 
+	if req.IsSetNotifications() {
+		param.Notifications = req.GetNotifications()
+	}
+
 	return param, nil
 }
 
@@ -425,6 +429,11 @@ func ToExptTemplateDTO(template *entity.ExptTemplate) *domain_expt.ExptTemplate 
 	dto.ScoreWeightConfig = buildTemplateScoreWeightConfigDTO(template)
 	if template.TemplateConf != nil {
 		dto.EnableExtractTrajectory = template.TemplateConf.EnableExtractTrajectory
+	}
+
+	// 通知配置透传（DTO 字段与 IDL 同类型，直接赋值）。
+	if template.Notifications != nil {
+		dto.Notifications = template.Notifications
 	}
 
 	// 填充关联数据（EvalSet、EvalTarget、Evaluators）到 TripleConfig
@@ -1080,6 +1089,11 @@ func TemplateToSubmitExperimentRequest(template *entity.ExptTemplate, name strin
 		ExptTemplateID: gptr.Of(template.Meta.ID),
 	}
 
+	// 模板创建实验继承通知配置（决策5）。
+	if template.Notifications != nil {
+		req.Notifications = template.Notifications
+	}
+
 	if template.TripleConfig == nil {
 		return req
 	}
@@ -1402,6 +1416,10 @@ func ConvertUpdateExptTemplateReq(req *expt.UpdateExperimentTemplateRequest) (*e
 
 	if req.IsSetExptSource() && req.GetExptSource() != nil {
 		param.ExptSource = exptSourceDTO2DO(req.GetExptSource())
+	}
+
+	if req.IsSetNotifications() {
+		param.Notifications = req.GetNotifications()
 	}
 
 	return param, nil

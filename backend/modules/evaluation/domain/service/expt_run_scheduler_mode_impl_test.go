@@ -438,6 +438,8 @@ func TestExptSubmitExec_ExptStart(t *testing.T) {
 				evaluatorRecordService:   f.evaluatorRecordService,
 				templateManager:          f.templateManager,
 			}
+			// 允许 started 生命周期事件发布（决策1 新增触发点），不强制次数。
+			f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 			err := e.ExptStart(tt.args.ctx, tt.args.event, tt.args.expt)
 			if tt.assertErr != nil {
@@ -2385,6 +2387,7 @@ func TestExptTrialRunExec_ExptStart(t *testing.T) {
 
 			f := newTrialFields(ctrl)
 			tt.prepareMock(f)
+			f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			exec := buildExec(f)
 
 			err := exec.ExptStart(context.Background(), baseEvent, tt.expt)
@@ -2701,6 +2704,8 @@ func TestExptSubmitExec_ExptStart_error_scenarios(t *testing.T) {
 				evaluatorRecordService:   f.evaluatorRecordService,
 				templateManager:          f.templateManager,
 			}
+			// 允许 started 生命周期事件发布（决策1 新增触发点），不强制次数。
+			f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 			err := e.ExptStart(tt.args.ctx, tt.args.event, tt.args.expt)
 			tt.assertErr(t, err)
@@ -5163,6 +5168,7 @@ func TestExptTrialRunExec_ExptStartByItemIds(t *testing.T) {
 
 			f := newTrialFields(ctrl)
 			tt.prepareMock(f)
+			f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			exec := buildExec(f)
 
 			err := exec.ExptStart(context.Background(), tt.event, tt.expt)
@@ -5668,6 +5674,7 @@ func TestExptTrialRunExec_ExptStart_OriginalPath(t *testing.T) {
 
 			f := newFields(ctrl)
 			tt.prepareMock(f)
+			f.publisher.EXPECT().PublishExptLifecycleEvent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 			exec := buildExec(f)
 
 			err := exec.ExptStart(context.Background(), tt.event, tt.expt)

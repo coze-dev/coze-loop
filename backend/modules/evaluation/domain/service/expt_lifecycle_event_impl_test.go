@@ -19,26 +19,34 @@ import (
 )
 
 type testLifecycleEventMocks struct {
-	exptRepo         *repoMocks.MockIExperimentRepo
-	notifyRPCAdapter *rpcMocks.MockINotifyRPCAdapter
-	userProvider     *rpcMocks.MockIUserProvider
+	exptRepo           *repoMocks.MockIExperimentRepo
+	exptTurnResultRepo *repoMocks.MockIExptTurnResultRepo
+	notifyRPCAdapter   *rpcMocks.MockINotifyRPCAdapter
+	userProvider       *rpcMocks.MockIUserProvider
+	webhookSender      *rpcMocks.MockIWebhookSender
 }
 
 func newTestLifecycleEventHandler(ctrl *gomock.Controller) (*ExptLifecycleEventHandlerImpl, *testLifecycleEventMocks) {
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockWebhookSender := rpcMocks.NewMockIWebhookSender(ctrl)
 
 	handler := &ExptLifecycleEventHandlerImpl{
-		exptRepo:         mockExptRepo,
-		notifyRPCAdapter: mockNotifyRPCAdapter,
-		userProvider:     mockUserProvider,
+		exptRepo:           mockExptRepo,
+		exptTurnResultRepo: mockExptTurnResultRepo,
+		notifyRPCAdapter:   mockNotifyRPCAdapter,
+		userProvider:       mockUserProvider,
+		webhookSender:      mockWebhookSender,
 	}
 
 	return handler, &testLifecycleEventMocks{
-		exptRepo:         mockExptRepo,
-		notifyRPCAdapter: mockNotifyRPCAdapter,
-		userProvider:     mockUserProvider,
+		exptRepo:           mockExptRepo,
+		exptTurnResultRepo: mockExptTurnResultRepo,
+		notifyRPCAdapter:   mockNotifyRPCAdapter,
+		userProvider:       mockUserProvider,
+		webhookSender:      mockWebhookSender,
 	}
 }
 
@@ -47,10 +55,12 @@ func TestNewExptLifecycleEventHandler(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockExptRepo := repoMocks.NewMockIExperimentRepo(ctrl)
+	mockExptTurnResultRepo := repoMocks.NewMockIExptTurnResultRepo(ctrl)
 	mockNotifyRPCAdapter := rpcMocks.NewMockINotifyRPCAdapter(ctrl)
 	mockUserProvider := rpcMocks.NewMockIUserProvider(ctrl)
+	mockWebhookSender := rpcMocks.NewMockIWebhookSender(ctrl)
 
-	handler := NewExptLifecycleEventHandler(mockExptRepo, mockNotifyRPCAdapter, mockUserProvider)
+	handler := NewExptLifecycleEventHandler(mockExptRepo, mockExptTurnResultRepo, mockNotifyRPCAdapter, mockUserProvider, mockWebhookSender)
 	assert.NotNil(t, handler)
 
 	impl, ok := handler.(*ExptLifecycleEventHandlerImpl)
@@ -207,7 +217,7 @@ func TestHandleLifecycleEvent(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("ToStatus is Processing, returns nil without sending", func(t *testing.T) {
+	t.Run("ToStatus is Processing, sends started notify card (default config)", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 		handler, mocks := newTestLifecycleEventHandler(ctrl)
@@ -218,11 +228,17 @@ func TestHandleLifecycleEvent(t *testing.T) {
 			ToStatus: entity.ExptStatus_Processing,
 		}
 		expt := &entity.Experiment{
-			ID:      6,
-			SpaceID: 600,
-			Status:  entity.ExptStatus_Processing,
+			ID:        6,
+			SpaceID:   600,
+			Name:      "test-expt-processing",
+			Status:    entity.ExptStatus_Processing,
+			CreatedBy: "user6",
 		}
 		mocks.exptRepo.EXPECT().GetByID(ctx, int64(6), int64(600)).Return(expt, nil)
+		mocks.userProvider.EXPECT().MGetUserInfo(ctx, []string{"user6"}).Return([]*entity.UserInfo{
+			{Email: gptr.Of("user6@example.com")},
+		}, nil)
+		mocks.notifyRPCAdapter.EXPECT().SendMessageCard(ctx, "user6@example.com", gomock.Any(), gomock.Any()).Return(nil)
 
 		err := handler.HandleLifecycleEvent(ctx, event)
 		assert.NoError(t, err)

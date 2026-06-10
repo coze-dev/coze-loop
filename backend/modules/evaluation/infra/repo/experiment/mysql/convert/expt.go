@@ -68,6 +68,15 @@ func (ExptConverter) DO2PO(experiment *entity.Experiment) (*model.Experiment, er
 		expt.TrialRunItemCount = gptr.Of(experiment.TrialRunItemCount)
 	}
 
+	// 通知配置：直接序列化 IDL 结构为 JSON 存入 notification_conf BLOB，格式与 IDL 一致。
+	if experiment.Notifications != nil {
+		bytes, err := json.Marshal(experiment.Notifications)
+		if err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConfig json marshal fail")
+		}
+		expt.NotificationConf = &bytes
+	}
+
 	return expt, nil
 }
 
@@ -87,6 +96,14 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 			EvaluatorVersionID: ref.EvaluatorVersionID,
 			EvaluatorID:        ref.EvaluatorID,
 		})
+	}
+
+	var notifications *entity.NotificationConfig
+	if len(gptr.Indirect(expt.NotificationConf)) > 0 {
+		notifications = &entity.NotificationConfig{}
+		if err := json.Unmarshal(gptr.Indirect(expt.NotificationConf), notifications); err != nil {
+			return nil, errorx.Wrapf(err, "NotificationConfig json unmarshal fail, expt_id: %v, raw: %v", expt.ID, conv.UnsafeBytesToString(gptr.Indirect(expt.NotificationConf)))
+		}
 	}
 
 	res := &entity.Experiment{
@@ -117,6 +134,7 @@ func (ExptConverter) PO2DO(expt *model.Experiment, refs []*model.ExptEvaluatorRe
 		ThreadID:                  expt.ThreadID,
 		TrialRunItemCount:         gptr.Indirect(expt.TrialRunItemCount),
 		TriggerType:               expt.TriggerType,
+		Notifications:             notifications,
 	}
 
 	// 如果数据库中有模板 ID，则在 ExptTemplateMeta 中回填 ID，方便上层按模板 ID 查询和聚合

@@ -9,4 +9,6 @@ import (
 
 var NotifyRPCSet = wire.NewSet(
 	NewNotifyRPCAdapter,
+	NewWebhookSender,
+	NewWebhookSecretProvider,
 )

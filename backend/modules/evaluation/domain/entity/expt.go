@@ -169,6 +169,10 @@ type Experiment struct {
 
 	Visibility Visibility // 实验模板可见性，默认为空，可见
 	ThreadID   *string    // 关联的智能评测会话ID
+
+	// Notifications 实验通知配置（webhook/feishu 规则），存储于 notification_conf BLOB；
+	// 为 nil 表示未配置，按 DefaultNotificationConfig 兜底（向前兼容）。
+	Notifications *NotificationConfig
 }
 
 func (e *Experiment) ToEvaluatorRefDO() []*ExptEvaluatorRef {

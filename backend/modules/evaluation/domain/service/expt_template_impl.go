@@ -157,7 +157,8 @@ func (e *ExptTemplateManagerImpl) Create(ctx context.Context, param *entity.Crea
 			CreatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 			UpdatedBy: &entity.UserInfo{UserID: gptr.Of(session.UserID)},
 		},
-		ExptSource: param.ExptSource,
+		ExptSource:    param.ExptSource,
+		Notifications: param.Notifications,
 	}
 	if param.Visibility != nil {
 		template.Meta.Visibility = *param.Visibility
@@ -485,6 +486,13 @@ func (e *ExptTemplateManagerImpl) Update(ctx context.Context, param *entity.Upda
 			updatedTemplate.TemplateConf = &entity.ExptTemplateConfiguration{}
 		}
 		updatedTemplate.TemplateConf.ExptSource = param.ExptSource
+	}
+
+	// 通知配置：请求携带则更新，否则保留 DB 已有值（nil 表示不修改）。
+	if param.Notifications != nil {
+		updatedTemplate.Notifications = param.Notifications
+	} else {
+		updatedTemplate.Notifications = existingTemplate.Notifications
 	}
 
 	// 从 TemplateConf 构建 FieldMappingConfig，并根据 EvaluatorConf.ScoreWeight 设置是否启用分数权重
