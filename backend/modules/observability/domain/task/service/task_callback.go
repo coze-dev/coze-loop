@@ -134,7 +134,7 @@ func (t *TaskCallbackServiceImpl) AutoEvalCallback(ctx context.Context, event *e
 			AnnotationType: gptr.Of(loop_span.AnnotationTypeAutoEvaluate),
 		})
 		if err != nil {
-			return err
+			logs.CtxWarn(ctx, "fail to insert annotations, %v", err)
 		}
 	}
 	return nil
