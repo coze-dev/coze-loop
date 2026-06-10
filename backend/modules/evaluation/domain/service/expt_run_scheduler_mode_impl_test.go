@@ -5682,3 +5682,33 @@ func TestExptTrialRunExec_ExptStart_OriginalPath(t *testing.T) {
 		})
 	}
 }
+
+func TestMakeRetryItemsStartIdemKey(t *testing.T) {
+	base := &entity.ExptScheduleEvent{ExptID: 100, ExptRunID: 200}
+
+	// 同 (exptID, runID, itemIDs) → 同 key（MQ 重投递保护不变）
+	a := *base
+	a.ExecEvalSetItemIDs = []int64{1, 2, 3}
+	b := *base
+	b.ExecEvalSetItemIDs = []int64{1, 2, 3}
+	assert.Equal(t, makeRetryItemsStartIdemKey(&a), makeRetryItemsStartIdemKey(&b))
+
+	// itemIDs 顺序变了 → 同 key（依赖排序）
+	c := *base
+	c.ExecEvalSetItemIDs = []int64{3, 1, 2}
+	assert.Equal(t, makeRetryItemsStartIdemKey(&a), makeRetryItemsStartIdemKey(&c))
+
+	// 同 (exptID, runID) 不同 itemIDs → 不同 key（修复点）
+	d := *base
+	d.ExecEvalSetItemIDs = []int64{1, 2, 4}
+	assert.NotEqual(t, makeRetryItemsStartIdemKey(&a), makeRetryItemsStartIdemKey(&d))
+
+	// 不同 (exptID, runID) → 不同 key
+	e := entity.ExptScheduleEvent{ExptID: 100, ExptRunID: 999, ExecEvalSetItemIDs: []int64{1, 2, 3}}
+	assert.NotEqual(t, makeRetryItemsStartIdemKey(&a), makeRetryItemsStartIdemKey(&e))
+
+	// 空 itemIDs 不 panic
+	empty := *base
+	empty.ExecEvalSetItemIDs = nil
+	assert.NotEmpty(t, makeRetryItemsStartIdemKey(&empty))
+}

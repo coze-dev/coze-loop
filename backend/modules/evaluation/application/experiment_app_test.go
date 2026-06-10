@@ -6895,7 +6895,8 @@ func TestExperimentApplication_RetryExperiment_Branches(t *testing.T) {
 		mockManager.EXPECT().Get(gomock.Any(), validExptID, validWorkspaceID, gomock.Any()).Return(baseExpt, nil)
 		mockAuth.EXPECT().AuthorizationWithoutSPI(gomock.Any(), gomock.Any()).Return(nil)
 		mockManager.EXPECT().LogRetryItemsRun(gomock.Any(), validExptID, entity.EvaluationModeRetryItems, validWorkspaceID, []int64{1}, gomock.Any()).Return(validRunID, true, nil)
-		// RetryItems should NOT be called since retried=true
+		// RetryItems IS called even when retried=true, so the scheduler picks up appended items
+		mockManager.EXPECT().RetryItems(gomock.Any(), validExptID, validRunID, validWorkspaceID, itemRetryNum, []int64{1}, gomock.Any(), gomock.Any()).Return(nil)
 
 		resp, err := app.RetryExperiment(context.Background(), &exptpb.RetryExperimentRequest{
 			WorkspaceID: gptr.Of(validWorkspaceID),

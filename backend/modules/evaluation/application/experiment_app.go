@@ -1254,16 +1254,14 @@ func (e *experimentApplication) RetryExperiment(ctx context.Context, req *expt.R
 
 	switch runMode {
 	case entity.EvaluationModeRetryItems:
-		rid, retried, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
+		rid, _, err := e.manager.LogRetryItemsRun(ctx, req.GetExptID(), runMode, req.GetWorkspaceID(), req.GetItemIds(), session)
 		if err != nil {
 			return nil, err
 		}
 		runID = rid
 
-		if !retried {
-			if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), req.GetItemIds(), session, req.GetExt()); err != nil {
-				return nil, err
-			}
+		if err := e.manager.RetryItems(ctx, req.GetExptID(), runID, req.GetWorkspaceID(), gptr.Indirect(got.EvalConf.ItemRetryNum), req.GetItemIds(), session, req.GetExt()); err != nil {
+			return nil, err
 		}
 	default:
 		if runID, err = e.idgen.GenID(ctx); err != nil {
